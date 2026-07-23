@@ -4,6 +4,7 @@ import { FormInput } from "@/components/form/form-input";
 import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
 import { FormTextarea } from "@/components/form/form-textarea";
 import type { ConnectionStringFormData } from "@/components/ai-connection-string/ai-connection-string-utils";
+import { AdvancedFields } from "@/components/ai-connection-string/provider-fields/advanced-fields";
 import { EmbeddingsMaxConcurrentBatchesField } from "@/components/ai-connection-string/provider-fields/shared-fields";
 
 const MODELS = ["gemini-embedding-001", "text-embedding-005", "text-multilingual-embedding-002"];
@@ -14,17 +15,13 @@ const AI_VERSION_OPTIONS: FormSelectOption<ConnectionStringFormData["vertexSetti
 ];
 
 export function VertexFields() {
-    const { control } = useFormContext<ConnectionStringFormData>();
+    const { control, getValues } = useFormContext<ConnectionStringFormData>();
+
+    const settings = getValues("vertexSettings");
+    const hasAdvancedValues = Boolean(settings.aiVersion || settings.embeddingsMaxConcurrentBatches != null);
 
     return (
         <>
-            <FormSelect
-                control={control}
-                name="vertexSettings.aiVersion"
-                label="AI Version (optional)"
-                placeholder="Default"
-                options={AI_VERSION_OPTIONS}
-            />
             <FormTextarea
                 control={control}
                 name="vertexSettings.googleCredentialsJson"
@@ -47,7 +44,16 @@ export function VertexFields() {
                 placeholder="us-central1"
                 description="The Google Cloud region where your Vertex AI resource is deployed."
             />
-            <EmbeddingsMaxConcurrentBatchesField baseName="vertexSettings" />
+            <AdvancedFields defaultOpen={hasAdvancedValues}>
+                <FormSelect
+                    control={control}
+                    name="vertexSettings.aiVersion"
+                    label="AI Version (optional)"
+                    placeholder="Default"
+                    options={AI_VERSION_OPTIONS}
+                />
+                <EmbeddingsMaxConcurrentBatchesField baseName="vertexSettings" />
+            </AdvancedFields>
         </>
     );
 }

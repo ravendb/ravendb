@@ -4,6 +4,7 @@ import { FormAutocomplete } from "@/components/form/form-autocomplete";
 import { FormInput } from "@/components/form/form-input";
 import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
 import type { ConnectionStringFormData } from "@/components/ai-connection-string/ai-connection-string-utils";
+import { AdvancedFields } from "@/components/ai-connection-string/provider-fields/advanced-fields";
 import {
     EmbeddingsMaxConcurrentBatchesField,
     TemperatureField,
@@ -17,8 +18,13 @@ const THINK_OPTIONS: FormSelectOption<ConnectionStringFormData["ollamaSettings"]
 ];
 
 export function OllamaFields({ modelType }: { modelType: AiModelType }) {
-    const { control } = useFormContext<ConnectionStringFormData>();
+    const { control, getValues } = useFormContext<ConnectionStringFormData>();
     const isChat = modelType === "Chat";
+
+    const settings = getValues("ollamaSettings");
+    const hasAdvancedValues = Boolean(
+        settings.think !== "default" || settings.isSetTemperature || settings.embeddingsMaxConcurrentBatches != null,
+    );
 
     const uri = useWatch({ control, name: "ollamaSettings.uri" });
     const trimmedUri = uri.trim();
@@ -42,20 +48,22 @@ export function OllamaFields({ modelType }: { modelType: AiModelType }) {
                 options={models}
                 emptyMessage={trimmedUri ? "No models found." : "Provide a URI to load available models."}
             />
-            {isChat ? (
-                <>
-                    <FormSelect
-                        control={control}
-                        name="ollamaSettings.think"
-                        label="Thinking mode"
-                        options={THINK_OPTIONS}
-                        description="Whether the model exposes its reasoning steps before answering."
-                    />
-                    <TemperatureField baseName="ollamaSettings" />
-                </>
-            ) : (
-                <EmbeddingsMaxConcurrentBatchesField baseName="ollamaSettings" />
-            )}
+            <AdvancedFields defaultOpen={hasAdvancedValues}>
+                {isChat ? (
+                    <>
+                        <FormSelect
+                            control={control}
+                            name="ollamaSettings.think"
+                            label="Thinking mode"
+                            options={THINK_OPTIONS}
+                            description="Whether the model exposes its reasoning steps before answering."
+                        />
+                        <TemperatureField baseName="ollamaSettings" />
+                    </>
+                ) : (
+                    <EmbeddingsMaxConcurrentBatchesField baseName="ollamaSettings" />
+                )}
+            </AdvancedFields>
         </>
     );
 }
