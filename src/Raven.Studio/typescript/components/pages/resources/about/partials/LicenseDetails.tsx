@@ -1300,7 +1300,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
-                quill: { value: Infinity },
+                quill: { value: true },
                 fieldInLicense: "HasClientConfiguration",
             },
             {
@@ -1322,7 +1322,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
-                quill: { value: Infinity },
+                quill: { value: true },
                 fieldInLicense: "HasSchemaValidation",
             },
             {
