@@ -64,11 +64,17 @@ internal static class AgentConfigValidator
             return Results.BadRequest(new ApiErrorResponse(
                 $"connection string '{aiCs.Name}' has ModelType={aiCs.ModelType}; agent provisioning requires Chat"));
 
-        // re-gate provider: a CS added via Studio bypasses the POST-time gate
         var provider = aiCs.GetActiveProvider();
-        if (provider != AiConnectorType.OpenAi && provider != AiConnectorType.Ollama)
-            return Results.BadRequest(new ApiErrorResponse(
-                $"connection string '{aiCs.Name}' uses unsupported provider '{provider}' in demo; supported: OpenAi, Ollama"));
+        switch (provider)
+        {
+            case AiConnectorType.OpenAi:
+            case AiConnectorType.AzureOpenAi:
+            case AiConnectorType.Ollama:
+                // supported providers
+                break;
+            default:
+                return Results.BadRequest(new ApiErrorResponse($"unsupported provider '{provider}'"));
+        }
 
         body.Disabled = false;
         body.ChatTrimming = new AiAgentChatTrimmingConfiguration(new AiAgentSummarizationByTokens

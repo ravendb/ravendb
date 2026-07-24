@@ -6,12 +6,6 @@ using Xunit;
 
 namespace QuillTests;
 
-/// <summary>
-/// <see cref="BootstrapStateFlag"/> derives its startup phase — and the <c>StartedWithSetupPackage</c>
-/// flag the readiness service gates its bootstrap-Ready flip on — from whether the setup package
-/// (<c>A/settings.json</c>) is on disk at construction. This is the discriminator that keeps the
-/// first/unsecured start (package appears mid-process) from racing the post-restart secure start.
-/// </summary>
 public class BootstrapStateFlagTests(ITestOutputHelper output) : RavenTestBase(output)
 {
     [RavenFact(RavenTestCategory.Quill)]

@@ -2,47 +2,26 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Net.WebSockets;
 using System.Text.Json;
-using FastTests;
 using QuillTests.E2E.Fixtures;
-using Raven.Client.Documents;
-using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Operations;
+using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Quill.Auth;
 using Raven.Quill.Channels;
+using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints;
-using Raven.Quill.Wizard;
 using Tests.Infrastructure;
 using Xunit;
 
 namespace QuillTests;
 
-/// <summary>
-/// RavenDB-26700 (T-6) channel lifecycle + wizard read-side coverage:
-/// list / edit / delete channels, the <c>/cdc/progress</c> WebSocket, and the
-/// <c>/setup/try</c> draft "Test agent" smoke stream, plus the two channel-adjacent
-/// embed gates (CSP header + agent-deleted 404). The minted-token embed lifecycle
-/// lives in <see cref="EmbedLinksTests"/> (RavenDB-26775). The real-LLM reply path
-/// is asserted in the E2E (<see cref="E2E.ApplianceFullFlowTests"/> T14); here we
-/// only prove the stream wiring opens with valid NDJSON against the draft, so these
-/// run without a live LLM.
-/// </summary>
-public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTestBase(output)
+public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTestBase(output)
 {
-    // ---- list ----
-
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Channels_list_returns_the_created_channel()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        await using var app = await NewAppAsync();
+        var widgetId = await ProvisionIFrameChannelAsync(app);
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        var widgetId = await ProvisionIFrameChannelAsync(client, "my-app");
-
-        var resp = await client.GetAsync("/api/apps/my-app/channels");
+        var resp = await Host.Client.GetAsync(QuillRoutes.Channels(app.Slug));
         Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
 
         var items = await resp.Content.ReadFromJsonAsync<JsonElement>();
@@ -52,7 +31,6 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
         Assert.Equal("IFrame", item.GetProperty("type").GetString());
         Assert.Equal("demo-agent", item.GetProperty("agentId").GetString());
         Assert.True(item.GetProperty("enabled").GetBoolean());
-        // No secrets / origins / bindingId leaked in the summary.
         Assert.False(item.TryGetProperty("allowedOrigins", out _));
         Assert.False(item.TryGetProperty("bindingId", out _));
     }
@@ -60,54 +38,30 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Channels_list_is_empty_for_app_with_no_channels()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        await using var app = await NewAppAsync();
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        var resp = await client.GetAsync("/api/apps/my-app/channels");
-        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
-        var items = await resp.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal(0, items.GetArrayLength());
+        var items = await app.GetChannelsAsync();
+        Assert.Empty(items);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Channels_list_returns_404_for_unknown_slug()
     {
-        var store = GetDocumentStore();
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        var resp = await client.GetAsync("/api/apps/nonexistent/channels");
-        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => Host.GetChannelsAsync("nonexistent"));
+        Assert.Equal(HttpStatusCode.NotFound, ex.StatusCode);
     }
-
-    // ---- edit ----
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Channel_edit_toggles_enabled_and_updates_display_name()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        await using var app = await NewAppAsync();
+        var widgetId = await ProvisionIFrameChannelAsync(app);
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-        var widgetId = await ProvisionIFrameChannelAsync(client, "my-app");
+        var summary = await app.UpdateChannelAsync(widgetId, new UpdateChannelRequest("Storefront bot", null, Enabled: false));
+        Assert.Equal("Storefront bot", summary.DisplayName);
+        Assert.False(summary.Enabled);
 
-        var resp = await client.PutAsJsonAsync($"/api/apps/my-app/channels/{widgetId}",
-            new { displayName = "Storefront bot", enabled = false });
-        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
-
-        var summary = await resp.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal("Storefront bot", summary.GetProperty("displayName").GetString());
-        Assert.False(summary.GetProperty("enabled").GetBoolean());
-
-        using var session = store.OpenAsyncSession(perAppDb);
+        using var session = app.Store.OpenAsyncSession(app.Slug);
         var channel = await session.LoadAsync<Channel>($"channels/{widgetId}");
         Assert.Equal("Storefront bot", channel.DisplayName);
         Assert.False(channel.Enabled);
@@ -116,122 +70,72 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Channel_edit_rejects_invalid_origin()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        await using var app = await NewAppAsync();
+        var widgetId = await ProvisionIFrameChannelAsync(app);
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-        var widgetId = await ProvisionIFrameChannelAsync(client, "my-app");
-
-        var resp = await client.PutAsJsonAsync($"/api/apps/my-app/channels/{widgetId}",
-            new { allowedOrigins = new[] { "not-a-url" } });
-        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.UpdateChannelAsync(widgetId, new UpdateChannelRequest(null, new[] { "not-a-url" }, null)));
+        Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Channel_edit_returns_404_for_unknown_widget()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        await using var app = await NewAppAsync();
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        var resp = await client.PutAsJsonAsync("/api/apps/my-app/channels/wgt_nope",
-            new { enabled = false });
-        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.UpdateChannelAsync("wgt_nope", new UpdateChannelRequest(null, null, false)));
+        Assert.Equal(HttpStatusCode.NotFound, ex.StatusCode);
     }
-
-    // ---- delete ----
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Channel_delete_removes_channel_and_allows_reprovision()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        await using var app = await NewAppAsync();
+        var widgetId = await ProvisionIFrameChannelAsync(app);
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-        var widgetId = await ProvisionIFrameChannelAsync(client, "my-app");
-
-        using (var session = store.OpenAsyncSession(perAppDb))
+        using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
             var bindings = await session.Advanced.LoadStartingWithAsync<object>("channel-bindings/");
             Assert.Empty(bindings);
         }
 
-        var del = await client.DeleteAsync($"/api/apps/my-app/channels/{widgetId}");
-        Assert.Equal(HttpStatusCode.NoContent, del.StatusCode);
+        await app.DeleteChannelAsync(widgetId);
 
-        using (var session = store.OpenAsyncSession(perAppDb))
+        using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
             Assert.Null(await session.LoadAsync<Channel>($"channels/{widgetId}"));
         }
 
-        var reWidgetId = await ProvisionIFrameChannelAsync(client, "my-app");
-        Assert.False(string.IsNullOrEmpty(reWidgetId));
+        var reChannel = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", new[] { "http://localhost" }));
+        Assert.False(string.IsNullOrEmpty(reChannel.WidgetId));
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Channel_delete_returns_404_for_unknown_widget()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        await using var app = await NewAppAsync();
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        var resp = await client.DeleteAsync("/api/apps/my-app/channels/wgt_nope");
-        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.DeleteChannelAsync("wgt_nope"));
+        Assert.Equal(HttpStatusCode.NotFound, ex.StatusCode);
     }
-
-    // ---- embed page (RavenDB-26775: minted token links) ----
-    // The page/chat-by-token lifecycle (renders, malformed-token 404, cap,
-    // expiry, revoke, origin matrix, conversation binding) lives in
-    // EmbedLinksTests. Here we keep the two channel-adjacent gates: the exact
-    // CSP header derived from the channel, and the agent-deleted 404.
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Embed_page_csp_reflects_allowed_origins()
     {
-        var store = GetDocumentStore();
-        var (dbA, cleanupA) = await CreatePerAppDatabaseAsync(store);
-        using var _dbA = cleanupA;
-        var (dbB, cleanupB) = await CreatePerAppDatabaseAsync(store);
-        using var _dbB = cleanupB;
-        await SeedAppAsync(store, slug: "app-a", database: dbA);
-        await SeedAppAsync(store, slug: "app-b", database: dbB);
+        await using var appA = await NewAppAsync();
+        await using var appB = await NewAppAsync();
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        // Non-empty origins -> frame-ancestors CSP on the embed page. 'self'
-        // is always present so the appliance's own UI can preview the widget.
-        var restrictedWidgetId = await ProvisionIFrameChannelAsync(client, "app-a");
-        var restrictedToken = await MintLinkAsync(client, "app-a", restrictedWidgetId);
-        var restricted = await client.GetAsync($"/apps/app-a/embed/{restrictedToken}");
+        var restrictedWidgetId = await ProvisionIFrameChannelAsync(appA);
+        var restrictedToken = await MintLinkAsync(appA, restrictedWidgetId);
+        // raw: asserts the CSP response header, which the string-body wrapper can't expose.
+        var restricted = await Host.Client.GetAsync(QuillRoutes.EmbedPage(appA.Slug, restrictedToken));
         Assert.Equal(HttpStatusCode.OK, restricted.StatusCode);
         var csp = Assert.Single(restricted.Headers.GetValues("Content-Security-Policy"));
         Assert.Equal($"{EmbedEndpoints.BaseCsp}; frame-ancestors 'self' http://localhost", csp);
 
-        // Empty origins -> the resource CSP is still present, but with NO frame-ancestors: the embed
-        // page stays embeddable from anywhere (M1 decision 2026-06-04) while operator CSS stays contained.
-        await ApplianceTestSeed.SeedMockAgentAsync(client, "app-b", "demo-agent");
-        var openProvision = await client.PostAsJsonAsync("/api/apps/app-b/setup/channel",
-            new { type = "iframe", agentId = "demo-agent", allowedOrigins = Array.Empty<string>() });
-        Assert.True(openProvision.IsSuccessStatusCode, await openProvision.Content.ReadAsStringAsync());
-        var openWidgetId = (await openProvision.Content.ReadFromJsonAsync<JsonElement>())
-            .GetProperty("widgetId").GetString()!;
-        var openToken = await MintLinkAsync(client, "app-b", openWidgetId);
-        var open = await client.GetAsync($"/apps/app-b/embed/{openToken}");
+        await SeedDemoAgentAsync(appB);
+        var openChannel = await appB.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", Array.Empty<string>()));
+        var openToken = await MintLinkAsync(appB, openChannel.WidgetId);
+        var open = await Host.Client.GetAsync(QuillRoutes.EmbedPage(appB.Slug, openToken));
         Assert.Equal(HttpStatusCode.OK, open.StatusCode);
         var openCsp = Assert.Single(open.Headers.GetValues("Content-Security-Policy"));
         Assert.Equal(EmbedEndpoints.BaseCsp, openCsp);
@@ -241,18 +145,12 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Embed_returns_404_when_token_resolves_to_a_non_iframe_channel()
     {
-        // The embed surface is iFrame-only: a token whose channel is a non-IFrame
-        // type (e.g. Telegram) must be a miss. Covers the channel.Type != IFrame
-        // guard in EmbedEndpoints.ResolveAsync. Seed the link + channel directly
-        // (the API can't provision a Telegram channel — it 501s).
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        // Seed the link + channel directly: the API can't provision a Telegram channel (501).
+        await using var app = await NewAppAsync();
 
         var token = Guid.NewGuid().ToString("N");
         const string widgetId = "wgt_telegram_x";
-        using (var session = store.OpenAsyncSession(perAppDb))
+        using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
             await session.StoreAsync(new Channel
             {
@@ -273,31 +171,22 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
             await session.SaveChangesAsync();
         }
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
+        var pageEx = await Assert.ThrowsAsync<QuillHttpException>(() => app.GetEmbedPageAsync(token));
+        Assert.Equal(HttpStatusCode.NotFound, pageEx.StatusCode);
 
-        var page = await client.GetAsync($"/apps/my-app/embed/{token}");
-        Assert.Equal(HttpStatusCode.NotFound, page.StatusCode);
-
-        var chat = await client.PostAsJsonAsync($"/apps/my-app/embed/{token}/chat", new { prompt = "hi" });
-        Assert.Equal(HttpStatusCode.NotFound, chat.StatusCode);
+        var chatEx = await Assert.ThrowsAsync<QuillHttpException>(() => app.SendEmbedChatAsync(token, "hi"));
+        Assert.Equal(HttpStatusCode.NotFound, chatEx.StatusCode);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Embed_chat_returns_404_for_unregistered_agent()
     {
-        // L1 (review 2026-06-04): a link whose channel's AgentId no longer
-        // resolves to a persisted agent (e.g. the agent was deleted) must fail
-        // with a clean 404 before the NDJSON stream opens — not 200 + an error
-        // frame. Seed the link + channel directly with a ghost agent.
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        // Seed the link + channel directly: no EP creates a channel pointing at a deleted agent.
+        await using var app = await NewAppAsync();
 
         var token = Guid.NewGuid().ToString("N");
         const string widgetId = "wgt_ghost_agent";
-        using (var session = store.OpenAsyncSession(perAppDb))
+        using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
             await session.StoreAsync(new Channel
             {
@@ -318,15 +207,10 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
             await session.SaveChangesAsync();
         }
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.SendEmbedChatAsync(token, "hi"));
+        Assert.Equal(HttpStatusCode.NotFound, ex.StatusCode);
 
-        var resp = await client.PostAsJsonAsync($"/apps/my-app/embed/{token}/chat", new { prompt = "hi" });
-        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
-
-        // The gate reserves an invocation before the agent lookup; a deleted agent
-        // must refund it (Copilot review C2) so the 404 doesn't permanently burn one.
-        using (var session = store.OpenAsyncSession(perAppDb))
+        using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
             var link = await session.LoadAsync<EmbedLink>($"embed-links/{token}");
             Assert.Equal(0, link.InvocationCount);
@@ -336,54 +220,31 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Channel_lifecycle_provision_update_delete_reprovision()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        await using var app = await NewAppAsync();
+        var widgetId = await ProvisionIFrameChannelAsync(app);
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
+        await app.UpdateChannelAsync(widgetId, new UpdateChannelRequest(null, null, Enabled: false));
 
-        var widgetId = await ProvisionIFrameChannelAsync(client, "my-app");
+        await app.DeleteChannelAsync(widgetId);
 
-        var update = await client.PutAsJsonAsync($"/api/apps/my-app/channels/{widgetId}", new { enabled = false });
-        Assert.True(update.IsSuccessStatusCode, await update.Content.ReadAsStringAsync());
-
-        var delete = await client.DeleteAsync($"/api/apps/my-app/channels/{widgetId}");
-        Assert.Equal(HttpStatusCode.NoContent, delete.StatusCode);
-
-        var reResp = await client.PostAsJsonAsync("/api/apps/my-app/setup/channel",
-            new { type = "iframe", agentId = "demo-agent", allowedOrigins = new[] { "http://localhost" } });
-        Assert.True(reResp.IsSuccessStatusCode, await reResp.Content.ReadAsStringAsync());
-        var reJson = await reResp.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.NotEqual(widgetId, reJson.GetProperty("widgetId").GetString());
+        var reChannel = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", new[] { "http://localhost" }));
+        Assert.NotEqual(widgetId, reChannel.WidgetId);
     }
-
-    // ---- cdc/progress WebSocket ----
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task CdcProgress_relays_a_live_frame_over_websocket()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        await using var app = await NewAppAsync();
 
-        using var factory = NewApplianceFactory(store);
-
-        var wsClient = factory.Server.CreateWebSocketClient();
-        // cdc/progress is under the gated /api/apps group — carry the operator key on the upgrade.
+        var wsClient = Host.Factory.Server.CreateWebSocketClient();
         wsClient.ConfigureRequest = request =>
-            request.Headers[Raven.Quill.Auth.ApiKeyAuthenticationHandler.HeaderName] =
-                ApplianceWebApplicationFactory.TestApiKey;
-        var wsUri = new Uri(factory.Server.BaseAddress, "api/apps/my-app/cdc/progress");
+            request.Headers[ApiKeyAuthenticationHandler.HeaderName] = ApplianceWebApplicationFactory.TestApiKey;
+        var wsUri = new Uri(Host.Factory.Server.BaseAddress, $"api/apps/{app.Slug}/cdc/progress");
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
         using var ws = await wsClient.ConnectAsync(wsUri, cts.Token);
 
-        // The bridge proxies RavenDB's cdc-sink/performance/live feed, which
-        // emits a heartbeat every ~4s even with no CDC task — so at least one
-        // (non-close) frame relays through.
+        // The proxied cdc-sink feed emits a ~4s heartbeat even with no CDC task, so a frame always arrives.
         var buffer = new byte[16 * 1024];
         var result = await ws.ReceiveAsync(new ArraySegment<byte>(buffer), cts.Token);
         Assert.NotEqual(WebSocketMessageType.Close, result.MessageType);
@@ -392,35 +253,20 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
     [RavenFact(RavenTestCategory.Quill)]
     public async Task CdcProgress_returns_404_for_unknown_slug()
     {
-        var store = GetDocumentStore();
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        // Plain GET (no WS upgrade): the app-not-found check runs first -> 404.
-        var resp = await client.GetAsync("/api/apps/nonexistent/cdc/progress");
+        // Plain GET (not a WS upgrade): the app-not-found check runs first → 404.
+        var resp = await Host.Client.GetAsync(QuillRoutes.CdcProgress("nonexistent"));
         Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
     }
-
-    // ---- setup/try ----
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task SetupTry_streams_ndjson_for_the_draft()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        await using var app = await NewAppAsync();
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        // Seed the connection string the draft references (this also provisions a throwaway
-        // agent, which the draft test ignores — it runs the posted configuration, not a
-        // persisted agent).
-        await ApplianceTestSeed.SeedMockAgentAsync(client, "my-app", "demo-agent");
+        var csName = await SeedDemoAgentAsync(app);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        var req = new HttpRequestMessage(HttpMethod.Post, "/api/apps/my-app/setup/try")
+        var req = new HttpRequestMessage(HttpMethod.Post, QuillRoutes.SetupTry(app.Slug))
         {
             Content = JsonContent.Create(new
             {
@@ -429,16 +275,14 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
                 {
                     name = "Draft Agent",
                     systemPrompt = "You are a placeholder draft agent.",
-                    connectionStringName = "demo-llm",
+                    connectionStringName = csName,
                 },
             }),
         };
-        var resp = await client.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cts.Token);
+        var resp = await Host.Client.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cts.Token);
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
         Assert.Contains("application/x-ndjson", resp.Content.Headers.ContentType?.ToString() ?? "");
 
-        // No live LLM in this unit test, so the wiring surfaces a valid NDJSON frame: chunk/done
-        // if a model happened to be reachable, otherwise an error frame.
         var line = await ReadFirstLineAsync(resp, l => string.IsNullOrWhiteSpace(l) == false, cts.Token);
         Assert.NotNull(line);
         using var doc = JsonDocument.Parse(line!);
@@ -449,16 +293,10 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
     [RavenFact(RavenTestCategory.Quill)]
     public async Task SetupTry_returns_400_when_prompt_missing()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        await using var app = await NewAppAsync();
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        var resp = await client.PostAsJsonAsync(
-            "/api/apps/my-app/setup/try",
+        // raw: setup/try is a streaming endpoint — no typed happy wrapper to reuse
+        var resp = await Host.Client.PostAsJsonAsync(QuillRoutes.SetupTry(app.Slug),
             new { configuration = new { name = "Draft", systemPrompt = "p", connectionStringName = "demo-llm" } });
         Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
     }
@@ -466,61 +304,47 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
     [RavenFact(RavenTestCategory.Quill)]
     public async Task SetupTry_returns_400_when_configuration_missing()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        await using var app = await NewAppAsync();
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        var resp = await client.PostAsJsonAsync("/api/apps/my-app/setup/try", new { prompt = "hi" });
+        // raw: setup/try is a streaming endpoint — no typed happy wrapper to reuse
+        var resp = await Host.Client.PostAsJsonAsync(QuillRoutes.SetupTry(app.Slug), new { prompt = "hi" });
         Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task SetupTry_returns_404_for_unknown_slug()
     {
-        var store = GetDocumentStore();
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        var resp = await client.PostAsJsonAsync(
-            "/api/apps/nonexistent/setup/try",
-            new
-            {
-                prompt = "hi",
-                configuration = new { name = "Draft", systemPrompt = "p", connectionStringName = "demo-llm" },
-            });
+        // raw: setup/try is a streaming endpoint — no typed happy wrapper to reuse
+        var resp = await Host.Client.PostAsJsonAsync(QuillRoutes.SetupTry("nonexistent"),
+            new { prompt = "hi", configuration = new { name = "Draft", systemPrompt = "p", connectionStringName = "demo-llm" } });
         Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
     }
 
-    // ---- helpers ----
-
-    private static async Task<string> ProvisionIFrameChannelAsync(HttpClient client, string slug, string agentId = "demo-agent")
+    private static async Task<string> ProvisionIFrameChannelAsync(QuillApp app, string agentId = "demo-agent")
     {
-        await ApplianceTestSeed.SeedMockAgentAsync(client, slug, agentId);
-
-        var resp = await client.PostAsJsonAsync($"/api/apps/{slug}/setup/channel",
-            new { type = "iframe", agentId, allowedOrigins = new[] { "http://localhost" } });
-        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
-        var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
-        return json.GetProperty("widgetId").GetString()!;
+        await SeedDemoAgentAsync(app, agentId);
+        var channel = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, agentId, new[] { "http://localhost" }));
+        return channel.WidgetId;
     }
 
-    private static async Task<string> MintLinkAsync(HttpClient client, string slug, string widgetId)
+    private static async Task<string> SeedDemoAgentAsync(QuillApp app, string agentId = "demo-agent")
     {
-        var resp = await client.PostAsJsonAsync($"/api/apps/{slug}/embed-links",
-            new { widgetId, ttlSeconds = 3600, maxInvocations = 50 });
-        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
-        var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
-        return json.GetProperty("token").GetString()!;
+        await app.ProvisionAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = agentId,
+            Name = "Demo Agent",
+            SystemPrompt = "You are a placeholder demo agent.",
+            ConnectionStringName = app.Host.ConnectionStringName,
+        });
+        return app.Host.ConnectionStringName;
     }
 
-    /// <summary>Reads the streamed response line by line and returns the first
-    /// line satisfying <paramref name="match"/>, or null on end-of-stream /
-    /// cancellation. Cancellation comes from the caller's CTS so the test never
-    /// hangs on the open-ended NDJSON stream.</summary>
+    private static async Task<string> MintLinkAsync(QuillApp app, string widgetId)
+    {
+        var minted = await app.MintEmbedLinkAsync(new MintEmbedLinkRequest(widgetId, new Dictionary<string, string>(), 3600, 50));
+        return minted.Token;
+    }
+
     private static async Task<string?> ReadFirstLineAsync(HttpResponseMessage resp, Func<string, bool> match, CancellationToken ct)
     {
         try
@@ -538,37 +362,8 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
         }
         catch (OperationCanceledException)
         {
-            // Timed out waiting for a matching line.
         }
 
         return null;
     }
-
-    private ApplianceWebApplicationFactory NewApplianceFactory(IDocumentStore store) =>
-        new(licenseApiUrl: "http://unused-in-unit-tests",
-            setupPackagePath: NewDataPath(forceCreateDir: true),
-            applianceStore: store,
-            configureOptions: opts => opts.ConfigDatabase = store.Database);
-
-    private async Task<(string Name, IDisposable Cleanup)> CreatePerAppDatabaseAsync(IDocumentStore store)
-    {
-        var name = "per-app-" + Guid.NewGuid().ToString("N");
-        await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(name)));
-        return (name, Databases.EnsureDatabaseDeletion(name, store));
-    }
-
-    private static async Task SeedAppAsync(IDocumentStore store, string slug, string database)
-    {
-        using var session = store.OpenAsyncSession();
-        await session.StoreAsync(new App
-        {
-            Slug = slug,
-            AppName = slug,
-            Database = database,
-            CdcTaskName = $"{slug}-cdc",
-            CreatedAt = DateTime.UtcNow,
-        }, id: $"apps/{slug}");
-        await session.SaveChangesAsync();
-    }
-
 }

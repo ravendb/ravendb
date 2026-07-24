@@ -6,14 +6,8 @@ using Xunit;
 
 namespace QuillTests;
 
-/// <summary>
-/// Fast unit tests for the data-driven reply-field helpers (replaces the indirect coverage the deleted
-/// AgentSchemaRegistryTests used to provide in this area).
-/// </summary>
 public class AgentOutputShapeTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 {
-    // ---- ResolveReplyField ----
-
     [RavenFact(RavenTestCategory.Quill)]
     public void ResolveReplyField_takes_first_sample_object_property()
     {
@@ -55,12 +49,9 @@ public class AgentOutputShapeTests(ITestOutputHelper output) : NoDisposalNeeded(
     [RavenFact(RavenTestCategory.Quill)]
     public void ResolveReplyField_ignores_non_object_sample()
     {
-        // A JSON array isn't an output object; fall through to the default.
         var config = new AiAgentConfiguration { SampleObject = "[1,2,3]" };
         Assert.Equal("reply", AgentOutputShape.ResolveReplyField(config));
     }
-
-    // ---- ExtractReplyText ----
 
     [RavenFact(RavenTestCategory.Quill)]
     public void ExtractReplyText_matches_field_case_insensitively()

@@ -1,40 +1,40 @@
-using Raven.Client.Documents;
+using QuillTests.E2E.Fixtures;
+using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Quill.Channels;
+using Raven.Quill.Contracts;
 using Tests.Infrastructure;
 using Xunit;
+using static QuillTests.E2E.Fixtures.ConversationSeed;
 
 namespace QuillTests;
 
-/// <summary>
-/// Coverage for chat-history rendering on the public embed page
-/// (<c>GET /apps/{slug}/embed/{token}</c>, RavenDB-26916): a returning visitor sees the
-/// prior turns of the link's conversation, and a fresh link renders an empty feed.
-/// </summary>
-public class EmbedPageHistoryTests(ITestOutputHelper output) : ApplianceMetricsTestBase(output)
+public class EmbedPageHistoryTests(ITestOutputHelper output) : QuillTestBase(output)
 {
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Embed_page_renders_prior_conversation_history()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        await using var app = await NewAppAsync();
 
         var now = DateTime.UtcNow;
-        await SeedConversationAsync(store, perAppDb, "chats/embed", "demo", now.AddMinutes(-5),
+        await SeedConversationAsync(app.Store, app.Slug, "chats/embed", "demo", now.AddMinutes(-5),
             turns: [("user", "hello there"), ("assistant", "hi, how can I help?")]);
-        await SeedChannelAsync(store, perAppDb, channelId: "wgt1", enabled: true);
+        await app.ProvisionAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = "demo", Name = "Demo", SystemPrompt = "You help.", ConnectionStringName = Host.ConnectionStringName,
+        });
+        var channel = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "demo", Array.Empty<string>()));
 
-        var token = Guid.NewGuid().ToString("N");
-        await SeedEmbedLinkAsync(store, perAppDb, token, widgetId: "wgt1", conversationId: "chats/embed", now: now);
+        // ConversationId is set directly: the mint EP doesn't expose it (the server binds it on the first live-LLM turn).
+        var token = (await app.MintEmbedLinkAsync(new MintEmbedLinkRequest(channel.WidgetId))).Token;
+        using (var session = app.Store.OpenAsyncSession(app.Slug))
+        {
+            var link = await session.LoadAsync<EmbedLink>(EmbedLink.IdPrefix + token);
+            link.ConversationId = "chats/embed";
+            await session.SaveChangesAsync();
+        }
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
+        var html = await app.GetEmbedPageAsync(token);
 
-        var html = await client.GetStringAsync($"/apps/my-app/embed/{token}");
-
-        // The placeholder is replaced with a script-safe JSON array carrying the prior turns,
-        // rendered into the feed on load.
         Assert.DoesNotContain("__HISTORY__", html);
         Assert.Contains("for (const turn of [{", html);
         Assert.Contains("hello there", html);
@@ -44,38 +44,18 @@ public class EmbedPageHistoryTests(ITestOutputHelper output) : ApplianceMetricsT
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Embed_page_for_a_fresh_link_renders_an_empty_feed()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
-        await SeedChannelAsync(store, perAppDb, channelId: "wgt1", enabled: true);
+        await using var app = await NewAppAsync();
+        await app.ProvisionAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = "demo", Name = "Demo", SystemPrompt = "You help.", ConnectionStringName = Host.ConnectionStringName,
+        });
+        var channel = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "demo", Array.Empty<string>()));
 
-        var token = Guid.NewGuid().ToString("N");
-        // No conversation bound yet (fresh link) → empty history array.
-        await SeedEmbedLinkAsync(store, perAppDb, token, widgetId: "wgt1", conversationId: null, now: DateTime.UtcNow);
+        var token = (await app.MintEmbedLinkAsync(new MintEmbedLinkRequest(channel.WidgetId))).Token;
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        var html = await client.GetStringAsync($"/apps/my-app/embed/{token}");
+        var html = await app.GetEmbedPageAsync(token);
 
         Assert.DoesNotContain("__HISTORY__", html);
         Assert.Contains("for (const turn of [])", html);
-    }
-
-    private static async Task SeedEmbedLinkAsync(
-        IDocumentStore store, string database, string token, string widgetId, string? conversationId, DateTime now)
-    {
-        using var appSession = store.OpenAsyncSession(database);
-        await appSession.StoreAsync(new EmbedLink
-        {
-            WidgetId = widgetId,
-            AgentId = "demo",
-            ExpiresAt = now.AddHours(1),
-            MaxInvocations = 5,
-            ConversationId = conversationId,
-            CreatedAt = now,
-        }, $"{EmbedLink.IdPrefix}{token}");
-        await appSession.SaveChangesAsync();
     }
 }

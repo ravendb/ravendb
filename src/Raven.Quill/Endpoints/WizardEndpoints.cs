@@ -289,7 +289,7 @@ public static class WizardEndpoints
             return Results.BadRequest(new ApiErrorResponse($"slug '{slug}' is reserved"));
 
         CdcSinkConfiguration cdcConfig;
-        using (var session = store.OpenAsyncSession(new global::Raven.Client.Documents.Session.SessionOptions { NoTracking = true }))
+        using (var session = store.OpenAsyncSession(new Client.Documents.Session.SessionOptions { NoTracking = true }))
         {
             var state = await session.LoadAsync<WizardState>(WizardState.DocumentId, ct);
             if (state?.LastMapConfiguration is null)
@@ -334,24 +334,8 @@ public static class WizardEndpoints
         cdcConfig.Name = $"{slug}-cdc";
         await store.Maintenance.ForDatabase(slug).SendAsync(new AddCdcSinkOperation(cdcConfig), ct);
 
-        await AppDatabaseFeatures.ConfigureAsync(store, slug, ct);
-
-        var app = new App
-        {
-            Slug = slug,
-            AppName = body.AppName,
-            Database = slug,
-            CdcTaskName = cdcConfig.Name,
-            CreatedAt = DateTime.UtcNow,
-        };
-
-        using (var session = store.OpenAsyncSession())
-        {
-            session.Advanced.OptimisticConcurrencyMode = OptimisticConcurrencyMode.Writes;
-            // slug-keyed id (not HiLo): avoids the W6->W7 index-staleness race (C1/C2)
-            await session.StoreAsync(app, id: $"apps/{slug}", ct);
-            await session.SaveChangesAsync(ct);
-        }
+        // Shared app-creation: read-model indexes + expiration/revisions + the apps/{slug} doc.
+        var app = await AppProvisioner.CreateAppAsync(store, slug, body.AppName, cdcConfig.Name, ct);
 
         // the wizard is done with the source credentials; the probe CS must not outlive it
         await store.Maintenance.ForDatabase(store.Database).SendAsync(

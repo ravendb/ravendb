@@ -51,7 +51,7 @@ public class RavenStoreFactoryTests(ITestOutputHelper output) : RavenTestBase(ou
 
     private static async Task UnlockAndDeleteAsync(IDocumentStore store, string database)
     {
-        // teardown can't delete a PreventDeletes database, so release the lock first
+        // teardown can't delete a PreventDeletes db — unlock first
         await store.Maintenance.Server.SendAsync(new SetDatabasesLockOperation(database, DatabaseLockMode.Unlock));
         await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(database, hardDelete: true));
     }

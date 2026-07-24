@@ -35,8 +35,7 @@ public class HealthEndpointsTests(ITestOutputHelper output, HealthEndpointsTests
 
     public sealed class Factory : WebApplicationFactory<Program>
     {
-        // RavenHealthCheck reads IBootstrapState (not IServerReady) — controlling
-        // that flag is what flips /healthz between 503 and 200.
+        // RavenHealthCheck reads IBootstrapState, not IServerReady — this flag flips /healthz 503↔200.
         public IBootstrapState Bootstrap { get; } = new BootstrapStateFlag(
             Microsoft.Extensions.Options.Options.Create(new ApplianceOptions
             {
@@ -53,9 +52,7 @@ public class HealthEndpointsTests(ITestOutputHelper output, HealthEndpointsTests
                 services.RemoveAll<IBootstrapState>();
                 services.AddSingleton<IBootstrapState>(Bootstrap);
 
-                // Drop only RavenReadinessService — RemoveAll<IHostedService>()
-                // would also kill GenericWebHostService and leave the test host
-                // unable to serve traffic.
+                // Drop only RavenReadinessService — RemoveAll<IHostedService>() would also kill GenericWebHostService.
                 var toRemove = services
                     .Where(d => d.ImplementationType == typeof(RavenReadinessService))
                     .ToList();

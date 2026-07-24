@@ -8,35 +8,31 @@ using Raven.Quill.Hosting;
 
 namespace QuillTests.E2E.Fixtures;
 
-/// Hosts the appliance Program for tests:
-///   - Points ApplianceOptions at the test's mock license API and a temp setup-package dir, and seeds
-///     a known operator API key (<see cref="TestApiKey"/>) so the now-gated admin endpoints authenticate.
-///   - Replaces IDocumentStore with the test's in-process store so wizard endpoints exercise real
-///     RavenDB code paths without launching a second instance.
-///   - Removes RavenReadinessService and flips IServerReady ready (the test store is already ready).
-///   - Every CreateClient() carries the TestApiKey header by default; tests that exercise the
-///     unauthenticated path remove it. Startup activation is inert unless a license key / mock zip is
-///     configured (see ApplianceActivationService), so it stays out of the way of non-activation tests.
-internal sealed class ApplianceWebApplicationFactory : WebApplicationFactory<Program>
+/// Hosts the appliance Program for tests: seeds a known operator API key, swaps in the test's in-process
+/// IDocumentStore, and flips IServerReady ready. Every CreateClient() carries the TestApiKey by default;
+/// unauthenticated-path tests remove it.
+public sealed class ApplianceWebApplicationFactory : WebApplicationFactory<Program>
 {
-    /// <summary>Operator API key seeded into the appliance and sent by default on every test client.</summary>
     public const string TestApiKey = "test-api-key";
 
     private readonly string _licenseApiUrl;
     private readonly string _setupPackagePath;
     private readonly IDocumentStore _applianceStore;
     private readonly Action<ApplianceOptions>? _configureOptions;
+    private readonly Action<IServiceCollection>? _configureServices;
 
     public ApplianceWebApplicationFactory(
         string licenseApiUrl,
         string setupPackagePath,
         IDocumentStore applianceStore,
-        Action<ApplianceOptions>? configureOptions = null)
+        Action<ApplianceOptions>? configureOptions = null,
+        Action<IServiceCollection>? configureServices = null)
     {
         _licenseApiUrl = licenseApiUrl;
         _setupPackagePath = setupPackagePath;
         _applianceStore = applianceStore;
         _configureOptions = configureOptions;
+        _configureServices = configureServices;
     }
 
     protected override IHost CreateHost(IHostBuilder builder)
@@ -59,6 +55,9 @@ internal sealed class ApplianceWebApplicationFactory : WebApplicationFactory<Pro
                 .ToList();
             foreach (var d in toRemove)
                 services.Remove(d);
+
+            // last, so a test's swap wins over everything the appliance registered
+            _configureServices?.Invoke(services);
         });
 
         var host = base.CreateHost(builder);

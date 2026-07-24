@@ -7,10 +7,6 @@ using Xunit;
 
 namespace QuillTests;
 
-/// <summary>
-/// Fast unit tests for reconstructing the query tool-call transcript from a draft agent test
-/// run's result object (the data the wizard's "Test agent" panel renders).
-/// </summary>
 public class AgentTestTranscriptTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 {
     private static AiAgentConfiguration ConfigWithSearchProducts() => new()
@@ -92,8 +88,6 @@ public class AgentTestTranscriptTests(ITestOutputHelper output) : NoDisposalNeed
     [RavenFact(RavenTestCategory.Quill)]
     public void Skips_calls_that_do_not_match_a_configured_query_tool()
     {
-        // The model invoked some other tool name (e.g. an action) — the appliance only surfaces
-        // query tools, so it is dropped.
         const string json = """
         {
             "Documents": {
@@ -115,8 +109,6 @@ public class AgentTestTranscriptTests(ITestOutputHelper output) : NoDisposalNeed
     [RavenFact(RavenTestCategory.Quill)]
     public void Skips_tool_calls_that_are_not_on_an_assistant_message()
     {
-        // Only assistant messages carry the model's tool invocations; tool_calls riding on any
-        // other role (here a "tool" message) are not the model's calls and must be ignored.
         const string json = """
         {
             "Documents": {

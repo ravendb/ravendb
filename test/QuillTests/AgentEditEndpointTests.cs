@@ -1,52 +1,30 @@
 using System.Net;
-using System.Net.Http.Json;
-using System.Text.Json;
-using Raven.Client.Documents;
+using QuillTests.E2E.Fixtures;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Tests.Infrastructure;
 using Xunit;
 
 namespace QuillTests;
 
-/// <summary>
-/// Coverage for <c>POST /api/apps/{slug}/agent</c> (edit). Edit is update-only:
-/// the body's identifier must point at an existing agent (404 otherwise). It
-/// reuses the same demo gating as provisioning (required fields, connection-string /
-/// provider checks), so a well-formed update rewrites the stored config in place.
-/// </summary>
-public class AgentEditEndpointTests(ITestOutputHelper output) : ApplianceMetricsTestBase(output)
+public class AgentEditEndpointTests(ITestOutputHelper output) : QuillTestBase(output)
 {
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Edit_updates_existing_agent_in_place()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
-        await SeedAgentAsync(store, perAppDb, name: "Support");
-        var agentId = await FirstAgentIdAsync(store, perAppDb);
+        await using var app = await NewAppAsync();
+        var agentId = (await app.ProvisionAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = "support", Name = "Support", SystemPrompt = "You help.",
+            ConnectionStringName = app.Host.ConnectionStringName,
+        })).AgentId;
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
+        var edited = await app.EditAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = agentId, Name = "Support", SystemPrompt = "You are the updated support agent.", ConnectionStringName = Host.ConnectionStringName,
+        });
+        Assert.Equal(agentId, edited.AgentId);
 
-        // keep the name (identifier is bound to it); change the system prompt
-        var resp = await client.PostAsJsonAsync(
-            "/api/apps/my-app/agent",
-            new
-            {
-                identifier = agentId,
-                name = "Support",
-                systemPrompt = "You are the updated support agent.",
-                connectionStringName = "demo-llm",
-            });
-
-        Assert.True(resp.IsSuccessStatusCode,
-            $"edit returned {resp.StatusCode}: {await resp.Content.ReadAsStringAsync()}");
-        var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal(agentId, json.GetProperty("agentId").GetString());
-
-        // update in place: still one agent, same id, new prompt applied
-        var agents = await store.Maintenance.ForDatabase(perAppDb).SendAsync(new GetAiAgentsOperation());
+        var agents = await app.Store.Maintenance.ForDatabase(app.Slug).SendAsync(new GetAiAgentsOperation());
         var agent = Assert.Single(agents.AiAgents);
         Assert.Equal(agentId, agent.Identifier);
         Assert.Equal("Support", agent.Name);
@@ -56,110 +34,81 @@ public class AgentEditEndpointTests(ITestOutputHelper output) : ApplianceMetrics
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Edit_returns_400_when_renaming()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
-        await SeedAgentAsync(store, perAppDb, name: "Support");
-        var agentId = await FirstAgentIdAsync(store, perAppDb);
+        await using var app = await NewAppAsync();
+        var agentId = (await app.ProvisionAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = "support", Name = "Support", SystemPrompt = "You help.",
+            ConnectionStringName = app.Host.ConnectionStringName,
+        })).AgentId;
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
+        // server binds identifier to name; renaming is refused
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.EditAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = agentId, Name = "Renamed", SystemPrompt = "You help.", ConnectionStringName = Host.ConnectionStringName,
+        }));
 
-        // the server binds identifier to name; renaming is refused with a clear 400
-        var resp = await client.PostAsJsonAsync(
-            "/api/apps/my-app/agent",
-            new
-            {
-                identifier = agentId,
-                name = "Renamed",
-                systemPrompt = "You help.",
-                connectionStringName = "demo-llm",
-            });
-
-        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Edit_returns_404_for_unknown_agent()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
-        await SeedAgentAsync(store, perAppDb, name: "Support");
+        await using var app = await NewAppAsync();
+        await app.ProvisionAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = "support", Name = "Support", SystemPrompt = "You help.",
+            ConnectionStringName = app.Host.ConnectionStringName,
+        });
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.EditAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = "ghost-agent", Name = "Renamed", SystemPrompt = "You help.", ConnectionStringName = Host.ConnectionStringName,
+        }));
 
-        var resp = await client.PostAsJsonAsync(
-            "/api/apps/my-app/agent",
-            new
-            {
-                identifier = "ghost-agent",
-                name = "Renamed",
-                systemPrompt = "You help.",
-                connectionStringName = "demo-llm",
-            });
-
-        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, ex.StatusCode);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Edit_returns_404_for_unknown_slug()
     {
-        var store = GetDocumentStore();
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => Host.EditAgentAsync("nonexistent", new AiAgentConfiguration
+        {
+            Identifier = "x", Name = "Y", SystemPrompt = "Z", ConnectionStringName = "demo-llm",
+        }));
 
-        var resp = await client.PostAsJsonAsync(
-            "/api/apps/nonexistent/agent",
-            new { identifier = "x", name = "Y", systemPrompt = "Z", connectionStringName = "demo-llm" });
-
-        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, ex.StatusCode);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Edit_returns_400_when_identifier_missing()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        await using var app = await NewAppAsync();
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
+        // leave Identifier unset (null)
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.EditAgentAsync(new AiAgentConfiguration
+        {
+            Name = "Renamed", SystemPrompt = "You help.", ConnectionStringName = "demo-llm",
+        }));
 
-        var resp = await client.PostAsJsonAsync(
-            "/api/apps/my-app/agent",
-            new { name = "Renamed", systemPrompt = "You help.", connectionStringName = "demo-llm" });
-
-        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Edit_returns_400_when_name_missing()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
-        await SeedAgentAsync(store, perAppDb, name: "Support");
-        var agentId = await FirstAgentIdAsync(store, perAppDb);
+        await using var app = await NewAppAsync();
+        var agentId = (await app.ProvisionAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = "support", Name = "Support", SystemPrompt = "You help.",
+            ConnectionStringName = app.Host.ConnectionStringName,
+        })).AgentId;
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
+        // leave Name unset (null)
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.EditAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = agentId, SystemPrompt = "You help.", ConnectionStringName = Host.ConnectionStringName,
+        }));
 
-        var resp = await client.PostAsJsonAsync(
-            "/api/apps/my-app/agent",
-            new { identifier = agentId, systemPrompt = "You help.", connectionStringName = "demo-llm" });
-
-        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
-    }
-
-    private static async Task<string> FirstAgentIdAsync(IDocumentStore store, string database)
-    {
-        var agents = await store.Maintenance.ForDatabase(database).SendAsync(new GetAiAgentsOperation());
-        return agents.AiAgents![0].Identifier!;
+        Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
     }
 }

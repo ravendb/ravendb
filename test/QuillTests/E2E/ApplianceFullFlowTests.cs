@@ -13,17 +13,6 @@ using Xunit;
 
 namespace QuillTests.E2E;
 
-/// End-to-end happy path for the Quill. Drives the full feature flow:
-/// license redemption -> CDC wizard (Connect / Discover / Map / Test / Provision)
-/// -> initial load -> AI agent + iFrame channel. Written upfront with all 13 step
-/// assertions present; goes RED at the first unimplemented step. Each slice in
-/// the plan's "Roadmap to E2E GREEN" turns one more assertion GREEN.
-///
-/// Prereqs:
-///   - RAVEN_NPGSQL_CONNECTION_STRING env var pointing at a Postgres the test
-///     infrastructure can create + drop databases on.
-///   - *.egor-ai.ravendb.run DNS -> 127.0.0.1 (the wildcard cert from the
-///     embedded setup-package zip is for that domain).
 public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrationTestBase(output)
 {
     private const string HardcodedLicenseKey = "egor-ai-test-license";
@@ -31,28 +20,16 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
     [RavenFact(RavenTestCategory.Quill | RavenTestCategory.Sinks, NpgSqlRequired = true)]
     public async Task EndToEnd_FullApplianceFlow_PostgresSourceToIFrameAgent_Works()
     {
-        // ---------- T1. Mock license API serving the real setup-package zip ----------
-        // The zip carries a real license + admin cert and is never committed. Caller supplies its
-        // location via APPLIANCE_E2E_SETUP_PACKAGE_PATH. Nothing in CI sets it today; this test
-        // runs only on a hand-provisioned dev box (CI lane with a synthetic zip: RavenDB-27092).
         var zipPath = Environment.GetEnvironmentVariable("APPLIANCE_E2E_SETUP_PACKAGE_PATH");
         if (string.IsNullOrWhiteSpace(zipPath))
         {
-            // A missing prerequisite is a "can't run here", not a failure — skip
-            // (matches how the rest of the integration suite gates on env). The
-            // test is already Postgres-gated via NpgSqlRequired.
             Assert.Skip("Set APPLIANCE_E2E_SETUP_PACKAGE_PATH to the absolute path of the setup-package zip " +
                 "(the one with your real RavenDB license + cert) to run this end-to-end test.");
         }
-        // A path that IS set but points nowhere is a misconfiguration, not an
-        // absent prerequisite — keep that a hard failure.
         Assert.True(File.Exists(zipPath),
             $"APPLIANCE_E2E_SETUP_PACKAGE_PATH points at '{zipPath}' but no file is there.");
         var zipBytes = await File.ReadAllBytesAsync(zipPath);
 
-        // T14 asserts a real streamed agent reply, so the agent's AI connection
-        // string (T11a) needs a live OpenAI key. Same env var the rest of the
-        // AI-integration suite uses — skip (don't fail) when it's absent.
         var openAiKey = RavenTestHelper.EnvironmentVariables.AiIntegrationOpenAiApiKey;
         if (string.IsNullOrWhiteSpace(openAiKey))
         {
@@ -63,14 +40,6 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         await using var licenseApi = await MockLicenseApi.StartAsync(HardcodedLicenseKey, zipBytes);
         var setupRoot = NewDataPath(forceCreateDir: true, prefix: "egor-ai-setup");
 
-        // ---------- T2. Appliance activates from QUILL_LICENSE_KEY at startup ----------
-        // Single owner: the WAF registers `store` as a singleton in its DI
-        // container, which disposes IDisposable singletons during host shutdown
-        // — so no `using` here. (RavenTestBase tracks the store separately for
-        // class teardown; that's a second touch but DocumentStore.Dispose is
-        // idempotent, so it's a no-op when the WAF got there first.)
-        // The license key (QUILL_LICENSE_KEY) drives startup activation; the WAF seeds the operator
-        // API key and authenticates every client by default, so the now-gated admin calls below pass.
         var store = GetDocumentStore();
         using var factory = new ApplianceWebApplicationFactory(
             licenseApiUrl: licenseApi.BaseAddress,
@@ -79,27 +48,14 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
             configureOptions: opts => opts.LicenseKey = HardcodedLicenseKey);
         var client = factory.CreateClient();
 
-        // ---------- T3. Startup activation pulls the package by license key; wait for READY ----------
-        // No operator redeem call anymore: ApplianceActivationService runs at startup, fetches the
-        // setup-package zip from the (mock) license API by QUILL_LICENSE_KEY, unpacks it, and — with no
-        // s6 in the test host — flips bootstrap to Ready inline.
         await WaitForBootstrapStateAsync(client, expected: "Ready", timeoutMs: 60_000);
 
         var healthAfter = await client.GetAsync("/healthz");
         Assert.Equal(HttpStatusCode.OK, healthAfter.StatusCode);
 
-        // ---------- T4. Source Postgres with the full canonical Northwind ----------
-        // The `northwind-full` dataset (test/SlowTests/Data/npgsql.northwind-full.{create,insert}.sql)
-        // is the standard 830-orders / 91-customers / 77-products dump, table
-        // names are lowercase plural ("customers", "orders", "products"), all
-        // columns snake_case.
         using var sqlTeardown = WithSqlDatabase(MigrationProvider.NpgSQL,
             out var pgConnStr, out _, dataSet: "northwind-full", includeData: true);
 
-        // ---------- T5. Connect (reachability probe) ----------
-        // Connect is now a plain SQL test-connection: "can we open a connection to
-        // the source?" All CDC-readiness verification moved into Discover (the merged
-        // /admin/cdc-sink/schema), so no table list is sent here.
         var connectResp = await client.PostAsJsonAsync("/api/setup/connect", new
         {
             provider         = "Npgsql",
@@ -111,7 +67,6 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         Assert.True(connect.GetProperty("success").GetBoolean(),
             $"connect (reachability) should succeed against a live Postgres; payload: {connect}");
 
-        // ---------- T6. Discover schema ----------
         var discoverResp = await client.PostAsJsonAsync("/api/setup/discover",
             new { provider = "Npgsql", connectionString = pgConnStr });
         Assert.True(discoverResp.IsSuccessStatusCode,
@@ -126,15 +81,11 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         Assert.Contains("orders",    tableNames);
         Assert.Contains("products",  tableNames);
 
-        // Verification is now folded into discovery. The source is provably CDC-ready
-        // (T10 below runs a real initial load over a logical-replication slot), so the
-        // merged /schema must report success and the connecting user's setup permission.
         Assert.True(schema.GetProperty("success").GetBoolean(),
             $"discover should report a CDC-ready source; payload: {schema}");
         Assert.True(schema.GetProperty("hasPermissionToSetup").GetBoolean(),
             "the connecting user provisions CDC in T10, so hasPermissionToSetup must be true");
 
-        // ---------- T7. Map: POST a pre-built CdcSinkConfiguration for Northwind ----------
         var configFixturePath = Path.Combine(AppContext.BaseDirectory, "E2E", "Fixtures", "northwind-cdc-config.json");
         Assert.True(File.Exists(configFixturePath),
             $"Pre-built CDC config fixture missing at {configFixturePath}. Populated by the W3 Map slice.");
@@ -145,9 +96,6 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         Assert.True(mapResp.IsSuccessStatusCode,
             $"map returned {mapResp.StatusCode}: {await mapResp.Content.ReadAsStringAsync()}");
 
-        // ---------- T8. Test-mapping ----------
-        // "customers" exists in the Map fixture and has 91 rows in the
-        // northwind-full dataset.
         var testResp = await client.PostAsJsonAsync("/api/setup/test-mapping",
             new { sourceTableName = "customers", maxRows = 50 });
         Assert.True(testResp.IsSuccessStatusCode,
@@ -157,7 +105,6 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         Assert.True(testResult!.Results.Count > 0,
             $"expected non-empty test-mapping result; errors=[{string.Join("; ", testResult.Errors)}]");
 
-        // ---------- T9. Provision ----------
         var provisionResp = await client.PostAsJsonAsync("/api/setup/provision",
             new { appName = "Northwind Demo", slug = "northwind-demo" });
         Assert.True(provisionResp.IsSuccessStatusCode,
@@ -168,12 +115,7 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         Assert.Equal("northwind-demo", slug);
         Assert.False(string.IsNullOrEmpty(appDocId));
 
-        // ---------- T9b. cdc/progress live feed (WebSocket) ----------
-        // During the initial-load window, the bridge proxies RavenDB's native
-        // cdc-sink/performance/live feed. Assert at least one (non-close) frame
-        // relays through — the ticket's "progress event during initial load" AC.
         var cdcWsClient = factory.Server.CreateWebSocketClient();
-        // The cdc/progress upgrade is under the gated /api/apps group — carry the operator key.
         cdcWsClient.ConfigureRequest = request =>
             request.Headers[Raven.Quill.Auth.ApiKeyAuthenticationHandler.HeaderName] =
                 ApplianceWebApplicationFactory.TestApiKey;
@@ -186,9 +128,6 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
             Assert.NotEqual(WebSocketMessageType.Close, frame.MessageType);
         }
 
-        // ---------- T10. Wait for initial load ----------
-        // The northwind-full dataset has 830 orders; 800 is a comfortable
-        // floor that still proves the bulk of the dump made it through CDC.
         await WaitForPerAppCdcInitialLoadAsync(store, perAppDatabase: slug!, configName: $"{slug}-cdc", timeoutMs: 120_000);
         var ordersCount = await WaitForPerAppDocumentCountAsync(store, perAppDatabase: slug!, collectionName: "Orders", expectedCount: 800, timeoutMs: 30_000);
         Assert.True(ordersCount >= 800,
@@ -201,13 +140,8 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
             "expected at least one recent CDC batch after the initial load");
         Assert.True(perf.GetProperty("recentWrites").GetInt64() > 0,
             $"expected recentWrites>0 from the mirrored dump; got {perf.GetProperty("recentWrites").GetInt64()}");
-        // A sink that just ingested cleanly is active or idle — never error.
         Assert.NotEqual("error", perf.GetProperty("status").GetString());
 
-        // ---------- T11a. Create the AI connection string ----------
-        // Wizard step: operator picks "add new" on the LLM step and submits
-        // their LLM details (provider, endpoint, model, api key). OpenAI here
-        // so T14 can stream a real agent reply against the CDC-mirrored data.
         var csResp = await client.PostAsJsonAsync($"/api/ai/connection-strings",
             new
             {
@@ -219,12 +153,7 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         Assert.True(csResp.IsSuccessStatusCode,
             $"ai connection-string returned {csResp.StatusCode}: {await csResp.Content.ReadAsStringAsync()}");
 
-        // ---------- T11b. Provision agent referencing the CS ----------
-        // The T12 channel step and T14 embed chat resolve this agent from the
-        // per-app database (no compile-time registry). sampleObject uses
-        // PascalCase keys so the streamed reply field ("Reply", resolved at
-        // runtime from sampleObject's first property) matches the keys the model
-        // emits and the reply streams incrementally as chunks.
+        // sampleObject keys are PascalCase so the streamed "Reply" field (resolved at runtime from its first property) matches the model's output.
         var agentResp = await client.PostAsJsonAsync($"/api/apps/{slug}/setup/agent",
             new
             {
@@ -240,7 +169,6 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         var agentId = agentJson.GetProperty("agentId").GetString();
         Assert.False(string.IsNullOrEmpty(agentId));
 
-        // ---------- T12. iFrame channel ----------
         var channelResp = await client.PostAsJsonAsync($"/api/apps/{slug}/setup/channel",
             new { type = "iframe", agentId, allowedOrigins = new[] { "http://localhost" } });
         Assert.True(channelResp.IsSuccessStatusCode,
@@ -249,10 +177,6 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         var widgetId = channelJson.GetProperty("widgetId").GetString();
         Assert.False(string.IsNullOrEmpty(widgetId));
 
-        // ---------- T12b. Mint a per-user embed link (RavenDB-26775) ----------
-        // The widgetId is the durable config anchor; the customer's backend mints a
-        // short-lived, invocation-capped token link per end-user. The token is the
-        // bearer credential in the iframe URL — there is no static public widget URL.
         var linkResp = await client.PostAsJsonAsync($"/api/apps/{slug}/embed-links",
             new { widgetId, ttlSeconds = 3600, maxInvocations = 10 });
         Assert.True(linkResp.IsSuccessStatusCode,
@@ -262,7 +186,6 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         Assert.Matches("^[a-f0-9]{32}$", token!);
         Assert.EndsWith($"/apps/{slug}/embed/{token}", linkJson.GetProperty("url").GetString());
 
-        // ---------- T13. Embed page renders ----------
         var embedResp = await client.GetAsync($"/apps/{slug}/embed/{token}");
         Assert.Equal(HttpStatusCode.OK, embedResp.StatusCode);
         Assert.Contains("text/html", embedResp.Content.Headers.ContentType?.ToString() ?? "");
@@ -270,11 +193,6 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         Assert.False(string.IsNullOrWhiteSpace(embedHtml), "embed page body was empty");
         Assert.Contains(token!, embedHtml);
 
-        // ---------- T14. Embed chat streams a real agent reply ----------
-        // Public token route -> AgentRouter -> the per-app "demo-agent" registered
-        // in T11b -> the OpenAI CS from T11a. The demo's closing moment: a browser
-        // chatting with the agent over the CDC-mirrored Postgres data. Parameters
-        // and the conversation are owned by the minted link; the body is just the prompt.
         using var chatCts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
         var chatReq = new HttpRequestMessage(HttpMethod.Post, $"/apps/{slug}/embed/{token}/chat")
         {
@@ -290,9 +208,6 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         Assert.True(sawDone, "embed chat stream did not emit a 'done' frame");
         Assert.False(string.IsNullOrWhiteSpace(replyText), "embed chat produced no reply text");
 
-        // ---------- T14b. The link owns the conversation across turns ----------
-        // Turn 2 reuses the same token; the server binds it to the same conversation
-        // (the public surface no longer accepts a client-supplied conversation id).
         using var chat2Cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
         var chat2Req = new HttpRequestMessage(HttpMethod.Post, $"/apps/{slug}/embed/{token}/chat")
         {
@@ -308,12 +223,6 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         Assert.False(string.IsNullOrWhiteSpace(reply2), "embed chat turn 2 produced no reply text");
     }
 
-    /// <summary>
-    /// Reads the embed chat NDJSON stream, accumulating <c>chunk</c> text until
-    /// a <c>done</c> or <c>error</c> frame (or end of stream). Also captures the
-    /// <c>conversationId</c> echoed in the <c>done</c> frame so the caller can
-    /// continue the thread.
-    /// </summary>
     private static async Task<(string Reply, bool SawDone, string? Error, string? ConversationId)> ReadEmbedChatAsync(
         HttpResponseMessage resp, CancellationToken ct)
     {
@@ -343,8 +252,6 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
                 if (doc.RootElement.TryGetProperty("conversationId", out var cid) && cid.ValueKind == JsonValueKind.String)
                     conversationId = cid.GetString();
 
-                // Fall back to the final structured answer when the reply didn't
-                // stream incrementally, so we still assert a real reply arrived.
                 if (sb.Length == 0 &&
                     doc.RootElement.TryGetProperty("answer", out var answer) &&
                     answer.ValueKind == JsonValueKind.Object &&
@@ -366,11 +273,6 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         return (sb.ToString(), sawDone, error, conversationId);
     }
 
-    /// <summary>
-    /// Per-app variant of <see cref="WaitForCdcInitialLoadAsync(IDocumentStore, string, int)"/>.
-    /// The base helper resolves the in-process DocumentDatabase from the store's
-    /// default DB; we need to target the per-app DB Provision just created.
-    /// </summary>
     private static async Task<JsonElement> WaitForPopulatedCdcPerformanceAsync(HttpClient client, string slug, int timeoutMs)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
@@ -398,13 +300,9 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         if (completed != process.InitialLoadCompleted)
             throw new TimeoutException($"CDC Sink '{configName}' on '{perAppDatabase}' initial load did not complete within {timeoutMs}ms");
 
-        await process.InitialLoadCompleted; // propagate exception if any
+        await process.InitialLoadCompleted;
     }
 
-    /// <summary>
-    /// Per-app variant of <see cref="WaitForDocumentCountAsync(IDocumentStore, string, int, int)"/>.
-    /// Opens the session against the per-app database explicitly.
-    /// </summary>
     private static async Task<int> WaitForPerAppDocumentCountAsync(IDocumentStore store, string perAppDatabase, string collectionName, int expectedCount, int timeoutMs)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
@@ -436,7 +334,6 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
             }
             catch (Exception)
             {
-                // status endpoint may be momentarily unavailable mid-bootstrap; keep polling.
             }
 
             await Task.Delay(250);

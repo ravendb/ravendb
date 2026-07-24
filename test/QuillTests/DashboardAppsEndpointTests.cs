@@ -1,81 +1,68 @@
 using System.Net;
-using System.Net.Http.Json;
-using System.Text.Json;
+using QuillTests.E2E.Fixtures;
+using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Quill.Channels;
+using Raven.Quill.Contracts;
 using Tests.Infrastructure;
 using Xunit;
 
 namespace QuillTests;
 
-/// <summary>
-/// Coverage for <c>GET /api/dashboard/apps</c> — the enriched apps list (mock-api
-/// <c>listApps()</c>): per-app counts, channels label, and derived status, via
-/// fan-out. (CDC-dependent <c>source.type</c>/<c>tablesCount</c> are exercised by the
-/// real-data path; with no CDC config they're "" / 0.)
-/// </summary>
-public class DashboardAppsEndpointTests(ITestOutputHelper output) : ApplianceMetricsTestBase(output)
+[Collection(QuillFanOutCollection.Name)]
+public class DashboardAppsEndpointTests(ITestOutputHelper output, QuillCollectionHost collection)
+    : QuillTestBase(output, collection)
 {
     [RavenFact(RavenTestCategory.Quill)]
     public async Task DashboardApps_enriches_each_app_with_counts_and_status()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
-        await SeedAgentAsync(store, perAppDb, name: "Support");
-        await SeedChannelAsync(store, perAppDb, channelId: "wgt1", enabled: true);
+        await using var app = await NewAppAsync();
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
+        await app.ProvisionAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = "support", Name = "Support", SystemPrompt = "You help.",
+            ConnectionStringName = app.Host.ConnectionStringName,
+        });
+        await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "support", Array.Empty<string>()));
 
-        var apps = await client.GetFromJsonAsync<JsonElement>("/api/dashboard/apps");
-        var app = apps.EnumerateArray().Single(a => a.GetProperty("slug").GetString() == "my-app");
+        var appResp = (await Host.GetDashboardAppsAsync()).Single(a => a.Slug == app.Slug);
 
-        Assert.Equal("my-app", app.GetProperty("id").GetString());               // id == slug (routing key)
-        Assert.Equal(1, app.GetProperty("agentsCount").GetInt32());
-        Assert.Equal(1, app.GetProperty("channelsCount").GetInt32());
-        Assert.Equal("running", app.GetProperty("status").GetString());          // agents>0, channel enabled, no CDC pause
-        Assert.True(app.GetProperty("documentsCount").GetInt64() >= 1);           // the channel doc, at least
-        Assert.Equal("Web widget", app.GetProperty("channelsLabel").GetString()); // IFrame → Web widget
-        Assert.Equal(0, app.GetProperty("tablesCount").GetInt32());               // no CDC config
-        Assert.Equal("", app.GetProperty("source").GetProperty("type").GetString());
-        Assert.Equal(JsonValueKind.Null, app.GetProperty("writesPerMonth").ValueKind); // no write counter
+        Assert.Equal(app.Slug, appResp.Id);
+        Assert.Equal(1, appResp.AgentsCount);
+        Assert.Equal(1, appResp.ChannelsCount);
+        Assert.Equal("running", appResp.Status);
+        Assert.True(appResp.DocumentsCount >= 1);
+        Assert.Equal("Web widget", appResp.ChannelsLabel);
+        Assert.Equal(0, appResp.TablesCount);
+        Assert.Equal("", appResp.Source.Type);
+        Assert.Null(appResp.WritesPerMonth);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task DashboardApps_status_is_setup_when_no_agents()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "fresh-app", database: perAppDb);
+        await using var app = await NewAppAsync();
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        var apps = await client.GetFromJsonAsync<JsonElement>("/api/dashboard/apps");
-        var app = apps.EnumerateArray().Single(a => a.GetProperty("slug").GetString() == "fresh-app");
-        Assert.Equal("setup", app.GetProperty("status").GetString());
-        Assert.Equal(0, app.GetProperty("agentsCount").GetInt32());
+        var appResp = (await Host.GetDashboardAppsAsync()).Single(a => a.Slug == app.Slug);
+        Assert.Equal("setup", appResp.Status);
+        Assert.Equal(0, appResp.AgentsCount);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task DashboardApp_single_returns_enriched_app_or_404()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
-        await SeedAgentAsync(store, perAppDb, name: "Support");
+        await using var app = await NewAppAsync();
+        await app.ProvisionAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = "support", Name = "Support", SystemPrompt = "You help.",
+            ConnectionStringName = app.Host.ConnectionStringName,
+        });
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
+        var appResp = await Host.GetDashboardAppAsync(app.Slug);
+        Assert.Equal(app.Slug, appResp.Id);
+        Assert.Equal(app.Slug, appResp.Slug);
+        Assert.Equal(1, appResp.AgentsCount);
 
-        var app = await client.GetFromJsonAsync<JsonElement>("/api/dashboard/apps/my-app");
-        Assert.Equal("my-app", app.GetProperty("id").GetString());     // id == slug (N2)
-        Assert.Equal("my-app", app.GetProperty("slug").GetString());
-        Assert.Equal(1, app.GetProperty("agentsCount").GetInt32());
-
-        var missing = await client.GetAsync("/api/dashboard/apps/does-not-exist");
+        var missing = await Assert.ThrowsAsync<QuillHttpException>(() => Host.GetDashboardAppAsync("does-not-exist"));
         Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
     }
 }
