@@ -17,7 +17,7 @@ public sealed class ApplianceActivationService(
     {
         var opts = options.Value;
 
-        if (string.IsNullOrWhiteSpace(opts.LicenseToken))
+        if (string.IsNullOrWhiteSpace(opts.LicenseKey))
         {
             logger.LogInformation(
                 "No QUILL_LICENSE_KEY; skipping startup activation (appliance stays in NeedsActivation).");
@@ -38,7 +38,7 @@ public sealed class ApplianceActivationService(
             try
             {
                 await using (var tempFile = File.Create(tempZipPath))
-                    await licenseClient.DownloadSetupPackageToAsync(opts.LicenseToken ?? string.Empty, tempFile, stoppingToken);
+                    await licenseClient.DownloadSetupPackageToAsync(opts.LicenseKey ?? string.Empty, tempFile, stoppingToken);
 
                 Directory.CreateDirectory(opts.SetupPackagePath);
                 // zip-slip guard: ExtractToDirectory rejects ../ and absolute entries
