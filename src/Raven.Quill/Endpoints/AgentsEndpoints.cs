@@ -53,7 +53,7 @@ public static class AgentsEndpoints
 
         var agents = await maintenance.SendAsync(new GetAiAgentsOperation(), ct);
 
-        var modelByConnectionString = await MetricsReadService.ModelByConnectionStringAsync(store, ct);
+        var modelByConnectionString = await MetricsReadService.ModelByConnectionStringAsync(store, slug, ct);
         var activity = await MetricsReadService.GetAgentActivityAsync(store, app.Database, ct);
 
         var items = (agents.AiAgents ?? [])

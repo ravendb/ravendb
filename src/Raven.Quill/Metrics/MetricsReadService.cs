@@ -4,6 +4,7 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide.Operations;
@@ -161,7 +162,7 @@ internal static class MetricsReadService
 
         var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database), ct);
         
-        var modelByConnectionString = await ModelByConnectionStringAsync(store, ct);
+        var modelByConnectionString = await ModelByConnectionStringAsync(store, database, ct);
 
         var modelByAgent = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var nameByAgent = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -209,12 +210,10 @@ internal static class MetricsReadService
             TopCapabilities: topCapabilities);
     }
 
-    public static async Task<Dictionary<string, string>> ModelByConnectionStringAsync(IDocumentStore store, CancellationToken ct)
+    public static async Task<Dictionary<string, string>> ModelByConnectionStringAsync(IDocumentStore store, string slug, CancellationToken ct)
     {
-        var connectionStrings = await store.Maintenance.Server.SendAsync(new GetServerWideConnectionStringsOperation(), ct);
-        return connectionStrings.Results
-            .Select(c => c.ConnectionString).OfType<AiConnectionString>()
-            .ToDictionary(cs => cs.Name, AiConnectionStringModel.Resolve, StringComparer.OrdinalIgnoreCase)!;
+        var connectionStrings = await store.Maintenance.ForDatabase(slug).SendAsync(new GetConnectionStringsOperation(), ct);
+        return connectionStrings.AiConnectionStrings.ToDictionary(cs => cs.Key, cs => AiConnectionStringModel.Resolve(cs.Value), StringComparer.OrdinalIgnoreCase)!;
     }
 
     private const string TimeAxisKey = "t";
