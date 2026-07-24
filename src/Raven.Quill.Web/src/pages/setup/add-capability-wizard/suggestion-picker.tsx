@@ -1,7 +1,6 @@
 import { useFormContext, useWatch } from "react-hook-form";
 import { cn } from "@/lib/utils";
 import { SELECTED_CARD_CLASSES } from "@/components/form/form-radio-cards";
-import type { AiAgentConfiguration } from "@/api/generated/server-api";
 import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
 import { applySuggestionToForm } from "@/pages/setup/add-capability-wizard/agent-config-form";
 import { useCapabilityWizardStore } from "@/pages/setup/add-capability-wizard/capability-wizard-store";
@@ -38,18 +37,12 @@ export function SuggestionPicker() {
                         )}
                     >
                         <span className="block text-sm font-semibold">{config.name}</span>
-                        <span className="mt-2 block text-xs leading-5 text-muted-foreground">
-                            {describeTools(config)}
+                        <span className="mt-2 line-clamp-4 block text-xs leading-5 text-muted-foreground">
+                            {config.systemPrompt}
                         </span>
                     </button>
                 );
             })}
         </div>
     );
-}
-
-function describeTools(config: AiAgentConfiguration) {
-    const toolNames = (config.queries ?? []).map((query) => query.name).filter(Boolean);
-
-    return toolNames.length > 0 ? `Tools: ${toolNames.join(", ")}` : "No query tools.";
 }
