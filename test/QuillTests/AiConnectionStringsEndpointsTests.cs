@@ -1,59 +1,65 @@
 using System.Net;
-using System.Net.Http.Json;
-using System.Text.Json;
-using FastTests;
+using System.Text;
 using QuillTests.E2E.Fixtures;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
-using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Operations;
+using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.ServerWide.Operations.ConnectionStrings;
-using Raven.Quill.Wizard;
 using Tests.Infrastructure;
 using Xunit;
 
 namespace QuillTests;
 
-/// AI connection-string CRUD endpoints under /api/ai/connection-strings.
-/// W7 (provision-agent) now references a connection string by name; these endpoints
-/// own the create/list/get/delete lifecycle. Both POST and W7 gate ModelType=Chat
-/// and provider in {OpenAi, Ollama} — defence in depth, since a CS created via
-/// direct RavenDB Studio could bypass the POST-time gate.
-public class AiConnectionStringsEndpointsTests(ITestOutputHelper output) : RavenTestBase(output)
+[Collection(QuillAiConnectionStringsCollection.Name)]
+public class AiConnectionStringsEndpointsTests(ITestOutputHelper output, QuillCollectionHost collection)
+    : QuillTestBase(output, collection)
 {
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Post_creates_openai_connection_string()
+    {
+        var created = await Host.PostConnectionStringAsync(OpenAiCs("demo-llm"));
+        Assert.Equal("demo-llm", created.Name);
+
+        var aiCs = await Host.GetConnectionStringAsync("demo-llm");
+        Assert.Equal(AiModelType.Chat, aiCs.ModelType);
+        Assert.NotNull(aiCs.OpenAiSettings);
+        Assert.Equal("gpt-4o-mini", aiCs.OpenAiSettings.Model);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Post_creates_azure_openai_connection_string()
+    {
+        var created = await Host.PostConnectionStringAsync(new AiConnectionString
+        {
+            Name = "azure-llm",
+            ModelType = AiModelType.Chat,
+            AzureOpenAiSettings = new AzureOpenAiSettings
+            {
+                ApiKey = "azure-key",
+                Endpoint = "https://contoso.openai.azure.com/",
+                Model = "gpt-4o-mini",
+                DeploymentName = "gpt-4o-mini",
+            },
+        });
+        Assert.Equal("azure-llm", created.Name);
+
+        var aiCs = await Host.GetConnectionStringAsync("azure-llm");
+        Assert.Equal(AiModelType.Chat, aiCs.ModelType);
+        Assert.NotNull(aiCs.AzureOpenAiSettings);
+        Assert.Equal("gpt-4o-mini", aiCs.AzureOpenAiSettings.DeploymentName);
+    }
+
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Post_creates_ollama_connection_string()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _ = perAppDbCleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        var created = await Host.PostConnectionStringAsync(new AiConnectionString
+        {
+            Name = "ollama-cs",
+            ModelType = AiModelType.Chat,
+            OllamaSettings = new OllamaSettings { Uri = "http://localhost:11434/", Model = "llama3.1" },
+        });
+        Assert.Equal("ollama-cs", created.Name);
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        var resp = await client.PostAsJsonAsync(
-            "/api/ai/connection-strings",
-            new
-            {
-                name = "demo-llm",
-                identifier = "demo-llm",
-                modelType = "Chat",
-                ollamaSettings = new { uri = "http://localhost:11434/", model = "llama3.1" }
-            });
-
-        Assert.True(resp.IsSuccessStatusCode,
-            $"POST returned {resp.StatusCode}: {await resp.Content.ReadAsStringAsync()}");
-
-        var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal("demo-llm", json.GetProperty("name").GetString());
-
-        // Confirm the CS landed server-wide.
-        var cs = await store.Maintenance.Server.SendAsync(
-            new GetServerWideConnectionStringsOperation("demo-llm", ConnectionStringType.Ai));
-        var aiCs = cs.Results.Single().ConnectionString as AiConnectionString;
-        Assert.NotNull(aiCs);
+        var aiCs = await Host.GetConnectionStringAsync("ollama-cs");
         Assert.Equal(AiModelType.Chat, aiCs.ModelType);
         Assert.NotNull(aiCs.OllamaSettings);
         Assert.Equal("llama3.1", aiCs.OllamaSettings.Model);
@@ -62,379 +68,185 @@ public class AiConnectionStringsEndpointsTests(ITestOutputHelper output) : Raven
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Post_returns_400_for_empty_body()
     {
-        // C1 from Copilot review #4362803113: minimal APIs can bind an empty
-        // request body as null. Without a defensive null-check the handler
-        // dereferences body.Name and 500s; this asserts the 400 short-circuit.
-        var store = GetDocumentStore();
-        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _ = perAppDbCleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
-
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        // Empty body, application/json content type. ASP.NET minimal API
-        // binding for a non-nullable complex param 400s before the handler
-        // — verifies the framework default is wired up correctly.
-        var emptyResp = await client.PostAsync(
-            "/api/ai/connection-strings",
-            new StringContent("", System.Text.Encoding.UTF8, "application/json"));
+        // raw: exercises minimal-API binding of an empty/absent body
+        var emptyResp = await Host.Client.PostAsync(
+            QuillRoutes.ConnectionStrings, new StringContent("", Encoding.UTF8, "application/json"));
         Assert.Equal(HttpStatusCode.BadRequest, emptyResp.StatusCode);
 
-        // Literal `null` JSON body. The binder parses this as null, hands
-        // the null to the handler, and without an explicit null-check the
-        // handler dereferences body.Name → NRE → 500. This is the hole
-        // Copilot's C1 flagged.
-        var nullResp = await client.PostAsync(
-            "/api/ai/connection-strings",
-            new StringContent("null", System.Text.Encoding.UTF8, "application/json"));
+        var nullResp = await Host.Client.PostAsync(
+            QuillRoutes.ConnectionStrings, new StringContent("null", Encoding.UTF8, "application/json"));
         Assert.Equal(HttpStatusCode.BadRequest, nullResp.StatusCode);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Post_rejects_empty_name()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _ = perAppDbCleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => Host.PostConnectionStringAsync(new AiConnectionString
+        {
+            Name = "",
+            ModelType = AiModelType.Chat,
+            OllamaSettings = new OllamaSettings { Uri = "http://localhost:11434/", Model = "llama3.1" },
+        }));
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        var resp = await client.PostAsJsonAsync(
-            "/api/ai/connection-strings",
-            new
-            {
-                name = "",
-                identifier = "demo-llm",
-                modelType = "Chat",
-                ollamaSettings = new { uri = "http://localhost:11434/", model = "llama3.1" }
-            });
-
-        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Post_rejects_non_chat_model_type()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _ = perAppDbCleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => Host.PostConnectionStringAsync(new AiConnectionString
+        {
+            Name = "embed-llm",
+            ModelType = AiModelType.TextEmbeddings,
+            OpenAiSettings = new OpenAiSettings { ApiKey = "sk-test", Endpoint = "https://api.openai.com/v1/", Model = "text-embedding-3-small" },
+        }));
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        var resp = await client.PostAsJsonAsync(
-            "/api/ai/connection-strings",
-            new
-            {
-                name = "embed-llm",
-                identifier = "embed-llm",
-                modelType = "TextEmbeddings",
-                ollamaSettings = new { uri = "http://localhost:11434/", model = "nomic-embed-text" }
-            });
-
-        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
     }
 
-    [RavenFact(RavenTestCategory.Quill)]
-    public async Task Post_rejects_unsupported_provider_in_demo()
+    [RavenTheory(RavenTestCategory.Quill)]
+    [InlineData("mistral")]
+    [InlineData("google")]
+    public async Task Post_rejects_provider_outside_the_supported_set(string provider)
     {
-        var store = GetDocumentStore();
-        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _ = perAppDbCleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        // body substring pins the allow-list gate, not an earlier 400
+        var cs = new AiConnectionString { Name = $"{provider}-cs", ModelType = AiModelType.Chat };
+        switch (provider)
+        {
+            case "mistral":
+                cs.MistralAiSettings = new MistralAiSettings { ApiKey = "mistral-key", Endpoint = "https://api.mistral.ai/v1/", Model = "mistral-tiny" };
+                break;
+            case "google":
+                cs.GoogleSettings = new GoogleSettings { ApiKey = "g-key", Endpoint = "https://generativelanguage.googleapis.com/v1/", Model = "gemini-1.5-flash" };
+                break;
+        }
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        // MistralAi is a fully-valid RavenDB provider, but the 8-week demo
-        // hasn't smoke-tested it end-to-end. Gate at intake so an operator
-        // doesn't wire an agent to a provider we can't yet support.
-        var resp = await client.PostAsJsonAsync(
-            "/api/ai/connection-strings",
-            new
-            {
-                name = "mistral-llm",
-                identifier = "mistral-llm",
-                modelType = "Chat",
-                mistralAiSettings = new { apiKey = "mistral-key", endpoint = "https://api.mistral.ai/v1/", model = "mistral-tiny" }
-            });
-
-        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => Host.PostConnectionStringAsync(cs));
+        Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
+        Assert.Contains("unsupported provider", ex.Body);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Post_rejects_multiple_providers()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _ = perAppDbCleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => Host.PostConnectionStringAsync(new AiConnectionString
+        {
+            Name = "mixed-llm",
+            ModelType = AiModelType.Chat,
+            OpenAiSettings = new OpenAiSettings { ApiKey = "sk-test", Endpoint = "https://api.openai.com/v1/", Model = "gpt-4o-mini" },
+            OllamaSettings = new OllamaSettings { Uri = "http://localhost:11434/", Model = "llama3.1" },
+        }));
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        // Both openAi and ollama settings set — AiConnectionString.ValidateImpl
-        // enforces "exactly one provider". Surface the error as 400, not 500.
-        var resp = await client.PostAsJsonAsync(
-            "/api/ai/connection-strings",
-            new
-            {
-                name = "mixed-llm",
-                identifier = "mixed-llm",
-                modelType = "Chat",
-                openAiSettings = new { apiKey = "sk-test", endpoint = "https://api.openai.com/v1/", model = "gpt-4o-mini" },
-                ollamaSettings = new { uri = "http://localhost:11434/", model = "llama3.1" }
-            });
-
-        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Post_rejects_empty_openai_api_key()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _ = perAppDbCleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => Host.PostConnectionStringAsync(new AiConnectionString
+        {
+            Name = "openai-llm",
+            ModelType = AiModelType.Chat,
+            OpenAiSettings = new OpenAiSettings { ApiKey = "", Endpoint = "https://api.openai.com/v1/", Model = "gpt-4o-mini" },
+        }));
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        // OpenAiBaseSettings.ValidateFields rejects empty ApiKey. Caught by the
-        // base ConnectionString.Validate() call; we just need to surface it.
-        var resp = await client.PostAsJsonAsync(
-            "/api/ai/connection-strings",
-            new
-            {
-                name = "openai-llm",
-                identifier = "openai-llm",
-                modelType = "Chat",
-                openAiSettings = new { apiKey = "", endpoint = "https://api.openai.com/v1/", model = "gpt-4o-mini" }
-            });
-
-        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
     }
-
-    // ---- GET list ----
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task List_returns_created_connection_strings()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _ = perAppDbCleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        await Host.PostConnectionStringAsync(OpenAiCs("list-demo-llm"));
+        await Host.PostConnectionStringAsync(OpenAiCs("list-ops-llm"));
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
+        var list = await Host.GetConnectionStringsAsync();
+        var names = list.Select(c => c.Name).ToArray();
 
-        await PostOllamaCsAsync(client, "my-app", "demo-llm");
-        await PostOllamaCsAsync(client, "my-app", "ops-llm");
-
-        var listResp = await client.GetAsync("/api/ai/connection-strings");
-        Assert.True(listResp.IsSuccessStatusCode, await listResp.Content.ReadAsStringAsync());
-
-        var json = await listResp.Content.ReadFromJsonAsync<JsonElement>();
-        var names = json.GetProperty("results").EnumerateArray()
-            .Select(e => e.GetProperty("connectionString").GetProperty("name").GetString())
-            .ToArray();
-
-        // server-wide strings are global, so other tests' entries may also be present
-        Assert.Contains("demo-llm", names);
-        Assert.Contains("ops-llm", names);
+        // this class shares one server, so sibling tests' strings may be present too
+        Assert.Contains("list-demo-llm", names);
+        Assert.Contains("list-ops-llm", names);
     }
 
-    // ---- GET by name ----
-
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task GetByName_returns_ollama_connection_string()
+    public async Task GetByName_returns_openai_connection_string()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _ = perAppDbCleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        await Host.PostConnectionStringAsync(OpenAiCs("get-demo-llm"));
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        await PostOllamaCsAsync(client, "my-app", "demo-llm");
-
-        var resp = await client.GetAsync("/api/ai/connection-strings/demo-llm");
-        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
-
-        var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal("demo-llm", json.GetProperty("name").GetString());
-        Assert.Equal("llama3.1", json.GetProperty("ollamaSettings").GetProperty("model").GetString());
+        var cs = await Host.GetConnectionStringAsync("get-demo-llm");
+        Assert.Equal("get-demo-llm", cs.Name);
+        Assert.Equal("gpt-4o-mini", cs.OpenAiSettings!.Model);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task GetByName_returns_provider_api_key_to_authenticated_admin()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _ = perAppDbCleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        await Host.PostConnectionStringAsync(new AiConnectionString
+        {
+            Name = "key-openai-llm",
+            ModelType = AiModelType.Chat,
+            OpenAiSettings = new OpenAiSettings { ApiKey = "sk-real-test-key", Endpoint = "https://api.openai.com/v1/", Model = "gpt-4o-mini" },
+        });
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        var postResp = await client.PostAsJsonAsync(
-            "/api/ai/connection-strings",
-            new
-            {
-                name = "openai-llm",
-                identifier = "openai-llm",
-                modelType = "Chat",
-                openAiSettings = new { apiKey = "sk-real-test-key", endpoint = "https://api.openai.com/v1/", model = "gpt-4o-mini" }
-            });
-        Assert.True(postResp.IsSuccessStatusCode, await postResp.Content.ReadAsStringAsync());
-
-        var resp = await client.GetAsync("/api/ai/connection-strings/openai-llm");
-        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
-
-        // The detail endpoint is admin-only and returns the full provider key by design: the edit
-        // form pre-fills from this response (same contract as RavenDB Studio). Masking the key would
-        // need the coordinated write-only-secret pattern (server mask + UI "keep existing on save"),
-        // tracked as a follow-up in the RavenDB-26629 family — not a server-only change.
-        var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
-        var apiKey = json.GetProperty("openAiSettings").GetProperty("apiKey").GetString();
-        Assert.Equal("sk-real-test-key", apiKey);
-        Assert.Equal("gpt-4o-mini", json.GetProperty("openAiSettings").GetProperty("model").GetString());
+        // returns the full provider key by design — edit form pre-fills from it
+        var cs = await Host.GetConnectionStringAsync("key-openai-llm");
+        Assert.Equal("sk-real-test-key", cs.OpenAiSettings!.ApiKey);
+        Assert.Equal("gpt-4o-mini", cs.OpenAiSettings.Model);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task GetByName_returns_404_for_unknown_name()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _ = perAppDbCleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
-
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        var resp = await client.GetAsync("/api/ai/connection-strings/ghost-llm");
-        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => Host.GetConnectionStringAsync("ghost-llm"));
+        Assert.Equal(HttpStatusCode.NotFound, ex.StatusCode);
     }
-
-    // ---- DELETE ----
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Delete_removes_connection_string()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _ = perAppDbCleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        // own name: the class shares a server, so deleting a name a sibling test created would be order-dependent
+        await Host.PostConnectionStringAsync(OpenAiCs("delete-me-llm"));
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
+        await Host.DeleteConnectionStringAsync("delete-me-llm");
 
-        await PostOllamaCsAsync(client, "my-app", "demo-llm");
-
-        var deleteResp = await client.DeleteAsync("/api/ai/connection-strings/demo-llm");
-        Assert.Equal(HttpStatusCode.NoContent, deleteResp.StatusCode);
-
-        var getResp = await client.GetAsync("/api/ai/connection-strings/demo-llm");
-        Assert.Equal(HttpStatusCode.NotFound, getResp.StatusCode);
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => Host.GetConnectionStringAsync("delete-me-llm"));
+        Assert.Equal(HttpStatusCode.NotFound, ex.StatusCode);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Delete_returns_404_for_unknown_name()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _ = perAppDbCleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
-
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        var resp = await client.DeleteAsync("/api/ai/connection-strings/ghost-llm");
-        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => Host.DeleteConnectionStringAsync("ghost-llm"));
+        Assert.Equal(HttpStatusCode.NotFound, ex.StatusCode);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Delete_returns_409_when_referenced_by_agent()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _ = perAppDbCleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        await using var app = await NewAppAsync(Host);
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
+        await Host.PostConnectionStringAsync(OpenAiCs("referenced-llm"));
 
-        // CS exists -> agent created referencing it -> DELETE must block with
-        // 409 and surface the agent identifier so the dashboard can render
-        // "remove agent(s) first".
-        await PostOllamaCsAsync(client, "my-app", "demo-llm");
-
-        var agentResp = await client.PostAsJsonAsync(
-            "/api/apps/my-app/setup/agent",
-            new
-            {
-                name = "Support Bot",
-                systemPrompt = "You help.",
-                connectionStringName = "demo-llm",
-            });
-        Assert.True(agentResp.IsSuccessStatusCode, await agentResp.Content.ReadAsStringAsync());
-
-        var agentId = (await agentResp.Content.ReadFromJsonAsync<JsonElement>())
-            .GetProperty("agentId").GetString();
-
-        var deleteResp = await client.DeleteAsync("/api/ai/connection-strings/demo-llm");
-        Assert.Equal(HttpStatusCode.Conflict, deleteResp.StatusCode);
-
-        var body = await deleteResp.Content.ReadAsStringAsync();
-        Assert.Contains(agentId!, body);
-    }
-
-    // ---- helpers ----
-
-    private static async Task PostOllamaCsAsync(HttpClient client, string slug, string name)
-    {
-        var resp = await client.PostAsJsonAsync(
-            $"/api/ai/connection-strings",
-            new
-            {
-                name,
-                identifier = name,
-                modelType = "Chat",
-                ollamaSettings = new { uri = "http://localhost:11434/", model = "llama3.1" }
-            });
-        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
-    }
-
-
-    private ApplianceWebApplicationFactory NewApplianceFactory(IDocumentStore store) =>
-        new(licenseApiUrl: "http://unused-in-unit-tests",
-            setupPackagePath: NewDataPath(forceCreateDir: true),
-            applianceStore: store,
-            configureOptions: opts => opts.ConfigDatabase = store.Database);
-
-    private async Task<(string Name, IDisposable Cleanup)> CreatePerAppDatabaseAsync(IDocumentStore store)
-    {
-        var name = "per-app-" + Guid.NewGuid().ToString("N");
-        await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(name)));
-        return (name, Databases.EnsureDatabaseDeletion(name, store));
-    }
-
-    private static async Task SeedAppAsync(IDocumentStore store, string slug, string database)
-    {
-        using var session = store.OpenAsyncSession();
-        await session.StoreAsync(new App
+        // a server-wide CS lands in an app DB under the product's prefix, not the bare name
+        var prefixed = ServerWideConnectionString.GetDatabaseRecordConnectionStringName("referenced-llm");
+        var csName = (await app.GetConnectionStringsAsync())
+            .Single(c => c.Name == "referenced-llm" || c.Name == prefixed).Name;
+        var provisioned = await app.ProvisionAgentAsync(new AiAgentConfiguration
         {
-            Slug = slug,
-            AppName = slug,
-            Database = database,
-            CdcTaskName = $"{slug}-cdc",
-            CreatedAt = DateTime.UtcNow,
-        }, id: $"apps/{slug}");
-        await session.SaveChangesAsync();
+            Name = "Support Bot",
+            SystemPrompt = "You help.",
+            ConnectionStringName = csName,
+        });
+
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => Host.DeleteConnectionStringAsync("referenced-llm"));
+        Assert.Equal(HttpStatusCode.Conflict, ex.StatusCode);
+
+        Assert.Contains(provisioned.AgentId, ex.Body);
     }
+
+    private static AiConnectionString OpenAiCs(string name) => new()
+    {
+        Name = name,
+        ModelType = AiModelType.Chat,
+        OpenAiSettings = new OpenAiSettings { ApiKey = "sk-test", Endpoint = "https://api.openai.com/v1/", Model = "gpt-4o-mini" },
+    };
 }

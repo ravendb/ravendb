@@ -1,341 +1,214 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Nodes;
-using FastTests;
 using QuillTests.E2E.Fixtures;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.CdcSink;
+using Raven.Quill.Contracts;
+using Raven.Quill.Wizard;
 using Tests.Infrastructure;
 using Xunit;
 
 namespace QuillTests;
 
-public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output) : RavenTestBase(output)
+[Collection(QuillSuggestCdcCollection.Name)]
+public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHelperFixture fixture)
+    : QuillAiHelperTestBase(output, fixture)
 {
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Returns_draft_from_internal_service_and_does_not_persist_map_config()
     {
-        var store = GetDocumentStore();
-        await using var mockAi = await MockAiApi.StartAsync();
-        mockAi.CdcResponse = (200, AiHelperSamples.CdcEnvelope(AiHelperSamples.BuildCdcConfig()));
+        Mock.CdcResponse = (200, AiHelperSamples.CdcEnvelope(AiHelperSamples.BuildCdcConfig()));
+        await SeedDiscoveredSchemaAsync(Host);
 
-        using var factory = NewApplianceFactory(store, mockAi.BaseAddress);
-        var client = factory.CreateClient();
-        await SeedDiscoveredSchemaAsync(client);
+        var resp = await Host.SuggestCdcAsync(new SuggestCdcRequest("shopping cart assistant"));
+        Assert.Equal("Success", resp.Status);
+        Assert.True(resp.Rationale.Count > 0);
 
-        var resp = await client.PostAsJsonAsync("/api/setup/suggest/cdc", new { intentPrompt = "shopping cart assistant" });
-        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+        var config = resp.Configuration!;
+        Assert.Equal("shop-cdc", config.Name);
+        var table = config.Tables[0];
+        Assert.Equal("Orders", table.CollectionName);
+        Assert.Equal("Lines", table.EmbeddedTables[0].PropertyName);
+        Assert.Equal("Customer", table.LinkedTables[0].PropertyName);
 
-        var node = JsonNode.Parse(await resp.Content.ReadAsStringAsync())!;
-        Assert.Equal("Success", (string?)node["status"]);
-        Assert.True(node["rationale"]!.AsArray().Count > 0);
-
-        // Nested structure survives the conventions round-trip (MockAiApi canonical JSON
-        // -> client conventions deserialize -> object -> endpoint serialize).
-        var table = node["configuration"]!["tables"]!.AsArray()[0]!;
-        Assert.Equal("shop-cdc", (string?)node["configuration"]!["name"]);
-        Assert.Equal("Orders", (string?)table["collectionName"]);
-        Assert.Equal("Lines", (string?)table["embeddedTables"]![0]!["propertyName"]);
-        Assert.Equal("Customer", (string?)table["linkedTables"]![0]!["propertyName"]);
-
-        // OperationType still rides on the request (the proxy reads the exact enum name to route).
-        // License + CertificateThumbprint are now injected by the bundled RavenDB /assistant/assist
-        // proxy, so the appliance must NOT attach them itself.
-        var sent = JsonNode.Parse(mockAi.LastCdcRequestBody!)!;
+        // opaque mock-AI request body, not a Quill contract — stays JsonNode
+        var sent = JsonNode.Parse(Mock.LastCdcRequestBody!)!;
         Assert.Equal("CdcConfigSetup", (string?)sent["OperationType"]);
         Assert.Null(sent["License"]);
         Assert.Null(sent["CertificateThumbprint"]);
 
-        // Generate-only: the suggest call must not persist a map configuration;
-        // test-mapping has nothing to read back.
-        var testMapping = await client.PostAsJsonAsync("/api/setup/test-mapping", new { sourceTableName = "orders" });
+        // raw: test-mapping is a separate endpoint, outside the suggest wrapper
+        var testMapping = await Host.Client.PostAsJsonAsync(QuillRoutes.SetupTestMapping, new { sourceTableName = "orders" });
         Assert.Equal(HttpStatusCode.BadRequest, testMapping.StatusCode);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Requires_a_discovered_schema()
     {
-        var store = GetDocumentStore();
-        await using var mockAi = await MockAiApi.StartAsync();
-
-        using var factory = NewApplianceFactory(store, mockAi.BaseAddress);
-        var client = factory.CreateClient();
-
-        var resp = await client.PostAsJsonAsync("/api/setup/suggest/cdc", new { intentPrompt = "x" });
-        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
-        Assert.Null(mockAi.LastCdcRequestBody); // internal service not called
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => Host.SuggestCdcAsync(new SuggestCdcRequest("x")));
+        Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
+        Assert.Null(Mock.LastCdcRequestBody); // internal service not called
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Blank_prompt_falls_back_to_premade_default()
     {
-        var store = GetDocumentStore();
-        await using var mockAi = await MockAiApi.StartAsync();
-        mockAi.CdcResponse = (200, AiHelperSamples.CdcEnvelope(AiHelperSamples.BuildCdcConfig()));
+        Mock.CdcResponse = (200, AiHelperSamples.CdcEnvelope(AiHelperSamples.BuildCdcConfig()));
+        await SeedDiscoveredSchemaAsync(Host);
 
-        using var factory = NewApplianceFactory(store, mockAi.BaseAddress);
-        var client = factory.CreateClient();
-        await SeedDiscoveredSchemaAsync(client);
+        var resp = await Host.SuggestCdcAsync(new SuggestCdcRequest("  "));
+        Assert.Equal("Success", resp.Status);
 
-        // A blank intent prompt is now accepted; the endpoint substitutes a premade default.
-        var resp = await client.PostAsJsonAsync("/api/setup/suggest/cdc", new { intentPrompt = "  " });
-        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
-
-        var node = JsonNode.Parse(await resp.Content.ReadAsStringAsync())!;
-        Assert.Equal("Success", (string?)node["status"]);
-
-        // The AI received a non-empty prompt (the premade default), not the blank input.
-        var sent = JsonNode.Parse(mockAi.LastCdcRequestBody!)!;
+        var sent = JsonNode.Parse(Mock.LastCdcRequestBody!)!;
         Assert.False(string.IsNullOrWhiteSpace((string?)sent["Prompt"]));
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Surfaces_out_of_tokens_status_without_error()
     {
-        var store = GetDocumentStore();
-        await using var mockAi = await MockAiApi.StartAsync();
-        mockAi.CdcResponse = (429, "{}");
+        Mock.CdcResponse = (429, "{}");
+        await SeedDiscoveredSchemaAsync(Host);
 
-        using var factory = NewApplianceFactory(store, mockAi.BaseAddress);
-        var client = factory.CreateClient();
-        await SeedDiscoveredSchemaAsync(client);
-
-        var resp = await client.PostAsJsonAsync("/api/setup/suggest/cdc", new { intentPrompt = "x" });
-        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
-
-        var node = JsonNode.Parse(await resp.Content.ReadAsStringAsync())!;
-        Assert.Equal("OutOfTokens", (string?)node["status"]);
-        Assert.True(node["configuration"] is null);
+        var resp = await Host.SuggestCdcAsync(new SuggestCdcRequest("x"));
+        Assert.Equal("OutOfTokens", resp.Status);
+        Assert.Null(resp.Configuration);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Returns_422_when_internal_service_returns_invalid_config()
     {
-        var store = GetDocumentStore();
-        await using var mockAi = await MockAiApi.StartAsync();
-
-        // Success envelope with a structurally invalid config (no tables); defensive re-validation rejects it.
+        // structurally invalid config: no tables
         var invalid = new CdcSinkConfiguration { Name = "x", ConnectionStringName = "src" };
-        mockAi.CdcResponse = (200, AiHelperSamples.CdcEnvelope(invalid));
+        Mock.CdcResponse = (200, AiHelperSamples.CdcEnvelope(invalid));
+        await SeedDiscoveredSchemaAsync(Host);
 
-        using var factory = NewApplianceFactory(store, mockAi.BaseAddress);
-        var client = factory.CreateClient();
-        await SeedDiscoveredSchemaAsync(client);
-
-        var resp = await client.PostAsJsonAsync("/api/setup/suggest/cdc", new { intentPrompt = "x" });
-        Assert.Equal(HttpStatusCode.UnprocessableEntity, resp.StatusCode);
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => Host.SuggestCdcAsync(new SuggestCdcRequest("x")));
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, ex.StatusCode);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Maps_401_to_invalid_credentials()
     {
-        var store = GetDocumentStore();
-        await using var mockAi = await MockAiApi.StartAsync();
-        mockAi.CdcResponse = (401, "{}");
+        Mock.CdcResponse = (401, "{}");
+        await SeedDiscoveredSchemaAsync(Host);
 
-        using var factory = NewApplianceFactory(store, mockAi.BaseAddress);
-        var client = factory.CreateClient();
-        await SeedDiscoveredSchemaAsync(client);
-
-        var resp = await client.PostAsJsonAsync("/api/setup/suggest/cdc", new { intentPrompt = "x" });
-        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
-
-        var node = JsonNode.Parse(await resp.Content.ReadAsStringAsync())!;
-        Assert.Equal("InvalidCredentials", (string?)node["status"]);
+        var resp = await Host.SuggestCdcAsync(new SuggestCdcRequest("x"));
+        Assert.Equal("InvalidCredentials", resp.Status);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Surfaces_internal_error_when_ai_service_is_unreachable()
     {
-        var store = GetDocumentStore();
+        // own host: points at a dead address instead of the shared mock
+        await using var host = await NewMockAiHostAsync("http://nonexistent.invalid");
+        await SeedDiscoveredSchemaAsync(host);
 
-        // Point AiApiUrl at an unresolvable host so the HTTP send throws. The client
-        // must surface that as InternalError, not a 500.
-        using var factory = NewApplianceFactory(store, "http://nonexistent.invalid");
-        var client = factory.CreateClient();
-        await SeedDiscoveredSchemaAsync(client);
-
-        var resp = await client.PostAsJsonAsync("/api/setup/suggest/cdc", new { intentPrompt = "x" });
-        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
-
-        var node = JsonNode.Parse(await resp.Content.ReadAsStringAsync())!;
-        Assert.Equal("InternalError", (string?)node["status"]);
+        var resp = await host.SuggestCdcAsync(new SuggestCdcRequest("x"));
+        Assert.Equal("InternalError", resp.Status);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Surfaces_consent_required_status_without_error()
     {
-        var store = GetDocumentStore();
-        await using var mockAi = await MockAiApi.StartAsync();
-        // 200 with a ConsentRequired envelope status: the appliance must pass the status through
-        // and surface no configuration for a non-success status.
-        mockAi.CdcResponse = (200, AiHelperSamples.CdcEnvelope(AiHelperSamples.BuildCdcConfig(), status: "ConsentRequired"));
+        // non-success status on a 200 must surface no configuration
+        Mock.CdcResponse = (200, AiHelperSamples.CdcEnvelope(AiHelperSamples.BuildCdcConfig(), status: "ConsentRequired"));
+        await SeedDiscoveredSchemaAsync(Host);
 
-        using var factory = NewApplianceFactory(store, mockAi.BaseAddress);
-        var client = factory.CreateClient();
-        await SeedDiscoveredSchemaAsync(client);
-
-        var resp = await client.PostAsJsonAsync("/api/setup/suggest/cdc", new { intentPrompt = "x" });
-        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
-
-        var node = JsonNode.Parse(await resp.Content.ReadAsStringAsync())!;
-        Assert.Equal("ConsentRequired", (string?)node["status"]);
-        Assert.True(node["configuration"] is null);
+        var resp = await Host.SuggestCdcAsync(new SuggestCdcRequest("x"));
+        Assert.Equal("ConsentRequired", resp.Status);
+        Assert.Null(resp.Configuration);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Maps_malformed_success_body_to_internal_error()
     {
-        var store = GetDocumentStore();
-        await using var mockAi = await MockAiApi.StartAsync();
-        // 200 but an unreadable body. The client must collapse the parse failure to
-        // InternalError rather than letting it escape as a 500.
-        mockAi.CdcResponse = (200, "not json");
+        Mock.CdcResponse = (200, "not json");
+        await SeedDiscoveredSchemaAsync(Host);
 
-        using var factory = NewApplianceFactory(store, mockAi.BaseAddress);
-        var client = factory.CreateClient();
-        await SeedDiscoveredSchemaAsync(client);
-
-        var resp = await client.PostAsJsonAsync("/api/setup/suggest/cdc", new { intentPrompt = "x" });
-        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
-
-        var node = JsonNode.Parse(await resp.Content.ReadAsStringAsync())!;
-        Assert.Equal("InternalError", (string?)node["status"]);
+        var resp = await Host.SuggestCdcAsync(new SuggestCdcRequest("x"));
+        Assert.Equal("InternalError", resp.Status);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Consent_required_then_signs_consent_and_retries_successfully()
     {
-        var store = GetDocumentStore();
-        await using var mockAi = await MockAiApi.StartAsync();
-        // The real service 401s with ConsentRequired until consent is signed; mirror that gate.
-        mockAi.RequireConsentForAssist = true;
-        mockAi.CdcResponse = (200, AiHelperSamples.CdcEnvelope(AiHelperSamples.BuildCdcConfig()));
+        // mock mirrors the real consent gate
+        Mock.RequireConsentForAssist = true;
+        Mock.CdcResponse = (200, AiHelperSamples.CdcEnvelope(AiHelperSamples.BuildCdcConfig()));
+        await SeedDiscoveredSchemaAsync(Host);
 
-        using var factory = NewApplianceFactory(store, mockAi.BaseAddress);
-        var client = factory.CreateClient();
-        await SeedDiscoveredSchemaAsync(client);
+        var resp = await Host.SuggestCdcAsync(new SuggestCdcRequest("shopping cart assistant"));
+        Assert.Equal("Success", resp.Status);
+        Assert.Equal("shop-cdc", resp.Configuration!.Name);
 
-        var resp = await client.PostAsJsonAsync("/api/setup/suggest/cdc", new { intentPrompt = "shopping cart assistant" });
-        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
-
-        var node = JsonNode.Parse(await resp.Content.ReadAsStringAsync())!;
-        Assert.Equal("Success", (string?)node["status"]);
-        Assert.Equal("shop-cdc", (string?)node["configuration"]!["name"]);
-
-        // Consent was signed exactly once, then the assist was retried and succeeded.
-        Assert.Equal(1, mockAi.GiveConsentCallCount);
+        Assert.Equal(1, Mock.GiveConsentCallCount);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Give_consent_rejection_surfaces_invalid_credentials()
     {
-        var store = GetDocumentStore();
-        await using var mockAi = await MockAiApi.StartAsync();
-        mockAi.RequireConsentForAssist = true;
-        // give-consent's own license check rejects the license -> a genuine credential problem,
-        // surfaced as InvalidCredentials rather than looping on consent.
-        mockAi.GiveConsentResponse = (401, "{\"Status\":\"InvalidCredentials\"}");
+        Mock.RequireConsentForAssist = true;
+        Mock.GiveConsentResponse = (401, "{\"Status\":\"InvalidCredentials\"}");
+        await SeedDiscoveredSchemaAsync(Host);
 
-        using var factory = NewApplianceFactory(store, mockAi.BaseAddress);
-        var client = factory.CreateClient();
-        await SeedDiscoveredSchemaAsync(client);
-
-        var resp = await client.PostAsJsonAsync("/api/setup/suggest/cdc", new { intentPrompt = "x" });
-        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
-
-        var node = JsonNode.Parse(await resp.Content.ReadAsStringAsync())!;
-        Assert.Equal("InvalidCredentials", (string?)node["status"]);
-        Assert.Equal(1, mockAi.GiveConsentCallCount);
+        var resp = await Host.SuggestCdcAsync(new SuggestCdcRequest("x"));
+        Assert.Equal("InvalidCredentials", resp.Status);
+        Assert.Equal(1, Mock.GiveConsentCallCount);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Post_retry_consent_required_is_surfaced_verbatim()
     {
-        var store = GetDocumentStore();
-        await using var mockAi = await MockAiApi.StartAsync();
-        mockAi.RequireConsentForAssist = true;
-        // give-consent succeeds but the gate stays closed (propagation lag / thumbprint mismatch):
-        // the client retries exactly once and surfaces ConsentRequired honestly — no masking as
-        // InvalidCredentials, no consent loop.
-        mockAi.ConsentGrantHasNoEffect = true;
+        Mock.RequireConsentForAssist = true;
+        // grant succeeds but gate stays closed: retry once, surface ConsentRequired, don't loop
+        Mock.ConsentGrantHasNoEffect = true;
+        await SeedDiscoveredSchemaAsync(Host);
 
-        using var factory = NewApplianceFactory(store, mockAi.BaseAddress);
-        var client = factory.CreateClient();
-        await SeedDiscoveredSchemaAsync(client);
-
-        var resp = await client.PostAsJsonAsync("/api/setup/suggest/cdc", new { intentPrompt = "x" });
-        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
-
-        var node = JsonNode.Parse(await resp.Content.ReadAsStringAsync())!;
-        Assert.Equal("ConsentRequired", (string?)node["status"]);
-        Assert.True(node["configuration"] is null);
-        Assert.Equal(1, mockAi.GiveConsentCallCount);
+        var resp = await Host.SuggestCdcAsync(new SuggestCdcRequest("x"));
+        Assert.Equal("ConsentRequired", resp.Status);
+        Assert.Null(resp.Configuration);
+        Assert.Equal(1, Mock.GiveConsentCallCount);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Slow_generation_within_timeout_returns_success()
     {
-        var store = GetDocumentStore();
-        await using var mockAi = await MockAiApi.StartAsync();
-        mockAi.CdcResponse = (200, AiHelperSamples.CdcEnvelope(AiHelperSamples.BuildCdcConfig()));
-        mockAi.AssistDelay = TimeSpan.FromSeconds(2);
+        Mock.CdcResponse = (200, AiHelperSamples.CdcEnvelope(AiHelperSamples.BuildCdcConfig()));
+        Mock.AssistDelay = TimeSpan.FromSeconds(2);   // well within the shared host's 30s assist timeout
+        await SeedDiscoveredSchemaAsync(Host);
 
-        using var factory = NewApplianceFactory(store, mockAi.BaseAddress, aiAssistTimeout: TimeSpan.FromSeconds(30));
-        var client = factory.CreateClient();
-        await SeedDiscoveredSchemaAsync(client);
-
-        var resp = await client.PostAsJsonAsync("/api/setup/suggest/cdc", new { intentPrompt = "shopping cart assistant" });
-        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
-
-        var node = JsonNode.Parse(await resp.Content.ReadAsStringAsync())!;
-        Assert.Equal("Success", (string?)node["status"]);
-        Assert.Equal("shop-cdc", (string?)node["configuration"]!["name"]);
+        var resp = await Host.SuggestCdcAsync(new SuggestCdcRequest("shopping cart assistant"));
+        Assert.Equal("Success", resp.Status);
+        Assert.Equal("shop-cdc", resp.Configuration!.Name);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Generation_exceeding_timeout_surfaces_internal_error()
     {
-        var store = GetDocumentStore();
+        // own host + own mock: needs a 1s assist timeout to trip, which the shared 30s host can't provide
         await using var mockAi = await MockAiApi.StartAsync();
         mockAi.CdcResponse = (200, AiHelperSamples.CdcEnvelope(AiHelperSamples.BuildCdcConfig()));
         mockAi.AssistDelay = TimeSpan.FromSeconds(10);
 
-        using var factory = NewApplianceFactory(store, mockAi.BaseAddress, aiAssistTimeout: TimeSpan.FromSeconds(1));
-        var client = factory.CreateClient();
-        await SeedDiscoveredSchemaAsync(client);
+        await using var host = await NewMockAiHostAsync(mockAi.BaseAddress, TimeSpan.FromSeconds(1));
+        await SeedDiscoveredSchemaAsync(host);
 
-        var resp = await client.PostAsJsonAsync("/api/setup/suggest/cdc", new { intentPrompt = "x" });
-        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
-
-        var node = JsonNode.Parse(await resp.Content.ReadAsStringAsync())!;
-        Assert.Equal("InternalError", (string?)node["status"]);
+        var resp = await host.SuggestCdcAsync(new SuggestCdcRequest("x"));
+        Assert.Equal("InternalError", resp.Status);
     }
 
-    private static async Task SeedDiscoveredSchemaAsync(HttpClient client)
+    private static async Task SeedDiscoveredSchemaAsync(QuillHost host)
     {
-        // Discovering with an invalid connection string persists a non-null error schema,
-        // enough to satisfy the "schema present" gate without a real source DB.
-        var resp = await client.PostAsJsonAsync(
-            "/api/setup/discover",
-            new { provider = "SqlClient", connectionString = "invalid" });
-        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+        await host.SetupDiscoverAsync(new DiscoverRequest("SqlClient", "invalid"));
     }
 
-    private ApplianceWebApplicationFactory NewApplianceFactory(IDocumentStore store, string aiApiUrl, TimeSpan? aiAssistTimeout = null)
-    {
-        var setupPath = NewDataPath(forceCreateDir: true);
-
-        return new ApplianceWebApplicationFactory(
-            licenseApiUrl: "http://unused-in-unit-tests",
-            setupPackagePath: setupPath,
-            applianceStore: store,
-            configureOptions: opts =>
+    private Task<QuillHost> NewMockAiHostAsync(string aiApiUrl, TimeSpan? aiAssistTimeout = null) =>
+        NewHostAsync(
+            configure: opts =>
             {
-                opts.ConfigDatabase = store.Database;
                 opts.AiApiUrl = aiApiUrl;
                 if (aiAssistTimeout is not null)
                     opts.AiAssistTimeout = aiAssistTimeout.Value;
-            });
-    }
+            },
+            setupPackagePath: NewDataPath(forceCreateDir: true));
 }

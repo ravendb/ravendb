@@ -1,9 +1,5 @@
 using System.Net;
-using System.Net.Http.Json;
-using System.Text.Json;
-using Raven.Client.Documents.Operations.CdcSink;
-using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Client.Documents.Operations.ETL.SQL;
+using QuillTests.E2E.Fixtures;
 using Raven.Quill.Auth;
 using Raven.Quill.Cdc;
 using Tests.Infrastructure;
@@ -11,14 +7,7 @@ using Xunit;
 
 namespace QuillTests;
 
-/// <summary>
-/// Coverage for the CDC performance snapshot — the pure <see cref="CdcPerformanceShaper"/>
-/// folding (verifiable without a live CDC source) and the
-/// <c>GET /api/apps/{slug}/cdc/performance</c> endpoint's not-configured / auth behaviour.
-/// The populated end-to-end path depends on the server collecting CDC stats (RavenDB-26780 /
-/// ravendb#23046) plus a live source, exercised in the gated Postgres E2E lane.
-/// </summary>
-public class CdcPerformanceEndpointTests(ITestOutputHelper output) : ApplianceMetricsTestBase(output)
+public class CdcPerformanceEndpointTests(ITestOutputHelper output) : QuillTestBase(output)
 {
     private static CdcSinkPerformanceRaw Raw(params CdcPerfBatchRaw[] batches) =>
         new()
@@ -42,17 +31,16 @@ public class CdcPerformanceEndpointTests(ITestOutputHelper output) : ApplianceMe
             new CdcPerfBatchRaw { Id = 1, Started = now.AddMinutes(-5), Completed = now.AddMinutes(-5).AddSeconds(2), NumberOfReadMessages = 10, NumberOfProcessedMessages = 8 },
             new CdcPerfBatchRaw { Id = 2, Started = now.AddSeconds(-30), Completed = null, NumberOfReadMessages = 4, NumberOfProcessedMessages = 2 });
 
-        // Durable totals from the persisted @cdc-states doc are passed through unchanged and normalized to UTC.
         var snap = CdcPerformanceShaper.Shape(raw, disabled: false, now, lastActivityAt: now.AddMinutes(-2));
 
         Assert.True(snap.Enabled);
-        Assert.Equal("active", snap.Status);          // one batch still in-progress
+        Assert.Equal("active", snap.Status);
         Assert.Equal(14, snap.RecentReads);
         Assert.Equal(10, snap.RecentWrites);
         Assert.Equal(0, snap.ErrorCount);
         Assert.Equal(2, snap.RecentBatches.Length);
         Assert.NotNull(snap.LastSyncAt);
-        Assert.Equal(DateTimeKind.Utc, snap.LastSyncAt!.Value.Kind);   // serializes with Z
+        Assert.Equal(DateTimeKind.Utc, snap.LastSyncAt!.Value.Kind);
         Assert.Equal(now.AddMinutes(-5).AddSeconds(2), snap.LastSyncAt);
     }
 
@@ -73,9 +61,7 @@ public class CdcPerformanceEndpointTests(ITestOutputHelper output) : ApplianceMe
     {
         var now = new DateTime(2026, 6, 25, 12, 0, 0, DateTimeKind.Utc);
 
-        // A configured-but-idle sink (no batches yet) shapes as enabled/idle. "not-configured"
-        // is an endpoint concern (no CDC task at all → CdcPerformanceShaper.NotConfigured()),
-        // not something Shape infers from an empty batch window.
+        // empty batches → idle; "not-configured" is an endpoint concern, not inferred by Shape
         var idle = CdcPerformanceShaper.Shape(new CdcSinkPerformanceRaw(), disabled: false, now, lastActivityAt: null);
         Assert.True(idle.Enabled);
         Assert.Equal("idle", idle.Status);
@@ -111,12 +97,12 @@ public class CdcPerformanceEndpointTests(ITestOutputHelper output) : ApplianceMe
         var errors = CdcPerformanceShaper.ShapeErrors(raw);
 
         Assert.Equal(2, errors.Length);
-        // Newest first: the item error (t0+5m) precedes the process error (t0).
         Assert.Equal("orders/1", errors[0].DocumentId);
         Assert.Null(errors[0].AffectedDocumentsCount);
         Assert.Equal("Transformation", errors[0].Step);
         Assert.Equal("bad row", errors[0].Error);
-        Assert.Equal(DateTimeKind.Utc, errors[0].CreatedAt.Kind);   // normalized so it serializes with Z
+        // input was Unspecified → normalized to Utc (serializes with Z)
+        Assert.Equal(DateTimeKind.Utc, errors[0].CreatedAt.Kind);
 
         Assert.Null(errors[1].DocumentId);
         Assert.Equal(7, errors[1].AffectedDocumentsCount);
@@ -141,97 +127,56 @@ public class CdcPerformanceEndpointTests(ITestOutputHelper output) : ApplianceMe
         var errors = CdcPerformanceShaper.ShapeErrors(raw);
 
         Assert.Equal(25, errors.Length);
-        Assert.Equal("e39", errors[0].Error);   // newest kept
-        Assert.Equal("e15", errors[24].Error);  // oldest 15 dropped
+        Assert.Equal("e39", errors[0].Error);
+        Assert.Equal("e15", errors[24].Error);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task CdcPerformance_returns_404_when_no_cdc()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        await using var app = await NewAppAsync();
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        // No CDC sink configured on the app → 404 (no snapshot to shape).
-        var resp = await client.GetAsync("/api/apps/my-app/cdc/performance");
-        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.GetCdcPerformanceAsync());
+        Assert.Equal(HttpStatusCode.NotFound, ex.StatusCode);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task CdcPerformance_returns_200_before_first_sink_state_is_persisted()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        await using var app = await NewAppAsync();
 
-        await store.Maintenance.ForDatabase(perAppDb).SendAsync(
-            new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString
-            {
-                Name = "src",
-                FactoryName = "Npgsql",
-                ConnectionString = "Host=localhost;Database=src",
-            }));
+        // disabled + SkipInitialLoad → no CdcSinkTaskState doc yet; endpoint must survive that window
+        await app.SeedCdcSinkAsync(AiHelperSamples.BuildCdcConfig());
 
-        // Disabled + SkipInitialLoad: the sink never runs, so no CdcSinkTaskState doc
-        // exists yet — the just-provisioned window the endpoint must survive.
-        var cdc = AiHelperSamples.BuildCdcConfig();
-        cdc.ConnectionStringName = "src";
-        cdc.Disabled = true;
-        cdc.SkipInitialLoad = true;
-        await store.Maintenance.ForDatabase(perAppDb).SendAsync(new AddCdcSinkOperation(cdc));
-
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        var resp = await client.GetAsync("/api/apps/my-app/cdc/performance");
-        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
-
-        var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.False(json.GetProperty("enabled").GetBoolean());
-        Assert.Equal("disabled", json.GetProperty("status").GetString());
+        var perf = await app.GetCdcPerformanceAsync();
+        Assert.False(perf.Enabled);
+        Assert.Equal("disabled", perf.Status);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task CdcPerformance_requires_authentication()
     {
-        var store = GetDocumentStore();
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
+        // fresh client (not shared Host.Client) so other tests unaffected; auth runs before app lookup
+        using var client = Host.Factory.CreateClient();
         client.DefaultRequestHeaders.Remove(ApiKeyAuthenticationHandler.HeaderName);
 
-        var resp = await client.GetAsync("/api/apps/my-app/cdc/performance");
+        var resp = await client.GetAsync(QuillRoutes.AppCdcPerformance("my-app"));
         Assert.Equal(HttpStatusCode.Unauthorized, resp.StatusCode);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task CdcErrors_returns_empty_list_when_no_cdc()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        await using var app = await NewAppAsync();
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        var json = await client.GetFromJsonAsync<JsonElement>("/api/apps/my-app/cdc/errors");
-        Assert.Equal(JsonValueKind.Array, json.ValueKind);
-        Assert.Equal(0, json.GetArrayLength());
+        var errors = await app.GetCdcErrorsAsync();
+        Assert.Empty(errors);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task CdcErrors_returns_404_for_unknown_app()
     {
-        var store = GetDocumentStore();
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        var resp = await client.GetAsync("/api/apps/does-not-exist/cdc/errors");
-        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => Host.GetCdcErrorsAsync("does-not-exist"));
+        Assert.Equal(HttpStatusCode.NotFound, ex.StatusCode);
     }
 }

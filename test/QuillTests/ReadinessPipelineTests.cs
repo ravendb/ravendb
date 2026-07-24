@@ -6,14 +6,7 @@ using Xunit;
 
 namespace QuillTests;
 
-/// <summary>
-/// Coverage for the readiness probe's resilience pipeline
-/// (<see cref="RavenReadinessService.ConfigureProbePipeline"/>) and the
-/// <see cref="IServerReady"/>/<see cref="IBootstrapState"/> transitions the
-/// re-probe loop depends on. Polly executes strategies in add-order (first added =
-/// outermost), so the overall timeout must be added before the retry, and the
-/// per-attempt timeout after it.
-/// </summary>
+// Polly executes strategies in add-order: overall timeout before retry, per-attempt timeout after.
 public class ReadinessPipelineTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 {
     [RavenFact(RavenTestCategory.Quill)]

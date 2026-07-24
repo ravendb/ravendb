@@ -1,47 +1,34 @@
-using System.Net.Http.Json;
-using System.Text.Json;
+using QuillTests.E2E.Fixtures;
 using Raven.Client.Documents.Operations.AI.Agents;
-using Raven.Quill.Metrics;
 using Tests.Infrastructure;
 using Xunit;
+using static QuillTests.E2E.Fixtures.ConversationSeed;
 
 namespace QuillTests;
 
-/// <summary>
-/// The agents list (<c>GET /api/apps/{slug}/agents</c>) is enriched with usage from
-/// the conversation index — <c>invocations</c> (conversation count) and
-/// <c>lastInvokedAt</c> — joined to the provisioned agent by its identifier.
-/// </summary>
-public class AgentsListEndpointTests(ITestOutputHelper output) : ApplianceMetricsTestBase(output)
+public class AgentsListEndpointTests(ITestOutputHelper output) : QuillTestBase(output)
 {
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Agents_list_includes_invocations_and_last_invoked()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
-        await new ConversationMetricsIndex().ExecuteAsync(store, database: perAppDb);
-        await SeedAgentAsync(store, perAppDb, name: "Support");
-
-        var agents = await store.Maintenance.ForDatabase(perAppDb).SendAsync(new GetAiAgentsOperation());
-        var agentId = agents.AiAgents![0].Identifier;
+        await using var app = await NewAppAsync();
+        var agentId = (await app.ProvisionAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = "support", Name = "Support", SystemPrompt = "You help.",
+            ConnectionStringName = app.Host.ConnectionStringName,
+        })).AgentId;
 
         var now = DateTime.UtcNow;
-        await SeedConversationAsync(store, perAppDb, "chats/a", agentId, now.AddHours(-1));
-        await SeedConversationAsync(store, perAppDb, "chats/b", agentId, now.AddHours(-2));
-        await Indexes.WaitForIndexingAsync(store, perAppDb);
+        await SeedConversationAsync(app.Store, app.Slug, "chats/a", agentId, now.AddHours(-1));
+        await SeedConversationAsync(app.Store, app.Slug, "chats/b", agentId, now.AddHours(-2));
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
+        var list = await app.GetAgentsAsync();
+        var agent = list.Single(a => a.AgentId == agentId);
 
-        var list = await client.GetFromJsonAsync<JsonElement>("/api/apps/my-app/agents");
-        var agent = list.EnumerateArray().Single(a => a.GetProperty("agentId").GetString() == agentId);
-
-        Assert.Equal(2, agent.GetProperty("conversations").GetInt64());        // two conversations
-        Assert.Equal(2, agent.GetProperty("messages").GetInt64());             // one user message each
-        Assert.Equal("gpt-4o-mini", agent.GetProperty("model").GetString());   // from the connection string
-        Assert.Equal(JsonValueKind.String, agent.GetProperty("lastInvokedAt").ValueKind); // present
-        Assert.EndsWith("Z\"", agent.GetProperty("lastInvokedAt").GetRawText()); // I1: UTC, ISO-8601 with Z
+        Assert.Equal(2, agent.Conversations);
+        Assert.Equal(2, agent.Messages);
+        Assert.Equal("llama3.1", agent.Model);
+        Assert.NotNull(agent.LastInvokedAt);
+        Assert.Equal(DateTimeKind.Utc, agent.LastInvokedAt!.Value.Kind);
     }
 }

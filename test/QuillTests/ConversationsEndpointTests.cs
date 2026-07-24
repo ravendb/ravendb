@@ -1,232 +1,170 @@
 using System.Net;
-using System.Net.Http.Json;
-using System.Text.Json;
+using QuillTests.E2E.Fixtures;
+using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Quill.Channels;
+using Raven.Quill.Contracts;
 using Raven.Quill.Metrics;
 using Tests.Infrastructure;
 using Xunit;
+using static QuillTests.E2E.Fixtures.ConversationSeed;
 
 namespace QuillTests;
 
-/// <summary>
-/// Coverage for <c>GET /api/apps/{slug}/conversations</c> (list) and <c>/conversations/{*id}</c> (detail).
-/// The list reads the <see cref="ConversationPreview"/> read-model (one row per conversation); the detail
-/// reads the full transcript from the AI conversation (<c>@conversations</c>).
-/// </summary>
-public class ConversationsEndpointTests(ITestOutputHelper output) : ApplianceMetricsTestBase(output)
+public class ConversationsEndpointTests(ITestOutputHelper output) : QuillTestBase(output)
 {
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Conversations_list_and_detail_shape_transcript_state_and_agent()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
-        await new ConversationPreviewIndex().ExecuteAsync(store, database: perAppDb);
-
+        await using var app = await NewAppAsync();
         var now = DateTime.UtcNow;
-        // chats/recent: served through the wgt1 channel; chats/old is a direct chat. Both seed a
-        // conversation, which co-writes the read-model preview the list reads.
-        await SeedConversationAsync(store, perAppDb, "chats/recent", "order-support", now.AddMinutes(-10),
-            turns: [("user", "hello"), ("assistant", "hi there")], channelWidgetId: "wgt1");
-        await SeedConversationAsync(store, perAppDb, "chats/old", "billing", now.AddDays(-3));
-        await SeedChannelAsync(store, perAppDb, channelId: "wgt1", enabled: true);
+        await app.ProvisionAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = "demo", Name = "Demo", SystemPrompt = "You help.", ConnectionStringName = Host.ConnectionStringName,
+        });
+        var channel = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "demo", Array.Empty<string>(), "Support Widget"));
+        await SeedConversationAsync(app.Store, app.Slug, "chats/recent", "order-support", now.AddMinutes(-10),
+            turns: [("user", "hello"), ("assistant", "hi there")], channelWidgetId: channel.WidgetId);
+        await SeedConversationAsync(app.Store, app.Slug, "chats/old", "billing", now.AddDays(-3));
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        // List — newest first, with a last-exchange preview (full transcript stays detail-only),
-        // derived state/initials, channel attribution.
-        var response = await client.GetFromJsonAsync<JsonElement>($"/api/apps/my-app/conversations?year={now.Year}");
-        var list = response.GetProperty("conversations");
-        Assert.Equal(2, list.GetArrayLength());
+        var list = (await app.GetConversationsAsync(year: now.Year)).Conversations;
+        Assert.Equal(2, list.Count);
 
         var first = list[0];
-        Assert.Equal("chats/recent", first.GetProperty("id").GetString());
-        Assert.Equal("my-app", first.GetProperty("appId").GetString());
-        Assert.Equal("order-support", first.GetProperty("agentName").GetString());
-        Assert.Equal("active", first.GetProperty("state").GetString());          // 10 min ago
-        var firstExchange = first.GetProperty("lastExchange");                   // last-exchange preview, newest first
-        Assert.Equal(2, firstExchange.GetArrayLength());
-        Assert.Equal("assistant", firstExchange[0].GetProperty("role").GetString());
-        Assert.Equal("hi there", firstExchange[0].GetProperty("content").GetString());
-        Assert.Equal("user", firstExchange[1].GetProperty("role").GetString());
-        Assert.Equal("hello", firstExchange[1].GetProperty("content").GetString());
-        Assert.Equal(JsonValueKind.Null, first.GetProperty("transcript").ValueKind);
-        Assert.Equal("wgt1", first.GetProperty("channelName").GetString());      // attributed via the preview's ChannelId (no display name → bare widget-id label)
+        Assert.Equal("chats/recent", first.Id);
+        Assert.Equal(app.Slug, first.AppId);
+        Assert.Equal("order-support", first.AgentName);
+        Assert.Equal("active", first.State);
+        var firstExchange = first.LastExchange;
+        Assert.Equal(2, firstExchange.Length);
+        Assert.Equal(AiMessageRole.Assistant, firstExchange[0].Role);
+        Assert.Equal("hi there", firstExchange[0].Content);
+        Assert.Equal(AiMessageRole.User, firstExchange[1].Role);
+        Assert.Equal("hello", firstExchange[1].Content);
+        Assert.Null(first.Transcript);
+        Assert.Equal("Support Widget", first.ChannelName);
 
-        Assert.Equal("closed", list[1].GetProperty("state").GetString());        // 3 days ago
-        Assert.Equal("", list[1].GetProperty("channelName").GetString());        // direct chat → unattributed
+        Assert.Equal("closed", list[1].State);
+        Assert.Equal("", list[1].ChannelName);
 
-        // Detail — full transcript, chronological.
-        var detail = await client.GetFromJsonAsync<JsonElement>("/api/apps/my-app/conversations/chats/recent");
-        var transcript = detail.GetProperty("transcript");
-        Assert.Equal(2, transcript.GetArrayLength());
-        Assert.Equal("user", transcript[0].GetProperty("role").GetString());
-        Assert.Equal("hello", transcript[0].GetProperty("content").GetString());
+        var detail = await app.GetConversationAsync("chats/recent");
+        var transcript = detail.Transcript;
+        Assert.Equal(2, transcript.Length);
+        Assert.Equal(AiMessageRole.User, transcript[0].Role);
+        Assert.Equal("hello", transcript[0].Content);
 
-        // I1: outbound timestamps are UTC, ISO-8601 with a trailing Z (so the browser parses as UTC).
-        Assert.EndsWith("Z\"", detail.GetProperty("lastActivityAt").GetRawText());
-        Assert.EndsWith("Z\"", detail.GetProperty("startedAt").GetRawText());
+        Assert.Equal(DateTimeKind.Utc, detail.LastActivityAt.Kind);
+        Assert.Equal(DateTimeKind.Utc, detail.StartedAt!.Value.Kind);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Conversations_list_folds_channels_into_the_query_with_no_extra_round_trips()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
-        await new ConversationPreviewIndex().ExecuteAsync(store, database: perAppDb);
-
-        // three conversations, each served through a DISTINCT channel (real write path co-writes the preview)
+        await using var app = await NewAppAsync();
         var now = DateTime.UtcNow;
+        await app.ProvisionAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = "demo", Name = "Demo", SystemPrompt = "You help.", ConnectionStringName = Host.ConnectionStringName,
+        });
         for (var i = 0; i < 3; i++)
         {
-            await SeedChannelAsync(store, perAppDb, channelId: $"wgt{i}", enabled: true, displayName: $"Widget {i}");
-            // strictly in the past: the current-year period clamps End to now, and the filter is `< End`
-            await SeedConversationAsync(store, perAppDb, $"chats/c{i}", "demo", now.AddMinutes(-(i + 1)), channelWidgetId: $"wgt{i}");
+            var channel = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "demo", Array.Empty<string>(), $"Widget {i}"));
+            await SeedConversationAsync(app.Store, app.Slug, $"chats/c{i}", "demo", now.AddMinutes(-(i + 1)), channelWidgetId: channel.WidgetId);
         }
-        await Indexes.WaitForIndexingAsync(store, perAppDb);
+        // Calls MetricsReadService directly to count round-trips, so it waits for indexing explicitly.
+        await app.WaitForIndexingAsync();
 
-        // call the real production query on an observable session (the endpoint's own session isn't visible)
-        using var session = store.OpenAsyncSession(perAppDb);
+        using var session = app.Store.OpenAsyncSession(app.Slug);
         var result = await MetricsReadService.GetConversationsAsync(
-            session, "my-app", new UsagePeriod(now.Year, null, null, now), start: 0, pageSize: 50, now, CancellationToken.None);
+            session, app.Slug, new UsagePeriod(now.Year, null, null, now), start: 0, pageSize: 50, now, CancellationToken.None);
 
-        // every row resolves its own channel name…
         Assert.Equal(3, result.Conversations.Count);
         Assert.Equal("Widget 0", result.Conversations.Single(c => c.Id == "chats/c0").ChannelName);
         Assert.Equal("Widget 2", result.Conversations.Single(c => c.Id == "chats/c2").ChannelName);
 
-        // …in a SINGLE round trip: the Include folded all 3 channel docs into the query, so the per-row
-        // ChannelNameAsync loads are cache hits. Without the include this would be 1 + 3 requests (N+1).
+        // Single round trip: the Include folded the channel docs, else N+1 (1 + 3).
         Assert.Equal(1, session.Advanced.NumberOfRequests);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Conversations_list_shows_the_stored_last_exchange_newest_first()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
-        await new ConversationPreviewIndex().ExecuteAsync(store, database: perAppDb);
-
-        // the read-model stores the last exchange directly (no transcript scan); the row renders it newest-first
+        await using var app = await NewAppAsync();
         var now = DateTime.UtcNow;
-        await SeedConversationAsync(store, perAppDb, "chats/x", "agent-x", now.AddMinutes(-5),
+        await SeedConversationAsync(app.Store, app.Slug, "chats/x", "agent-x", now.AddMinutes(-5),
             turns: [("user", "m13"), ("assistant", "m14")]);
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
+        var list = (await app.GetConversationsAsync(year: now.Year)).Conversations;
+        var conversation = Assert.Single(list);
 
-        var response = await client.GetFromJsonAsync<JsonElement>($"/api/apps/my-app/conversations?year={now.Year}");
-        var list = response.GetProperty("conversations");
-        Assert.Equal(1, list.GetArrayLength());
-
-        var exchange = list[0].GetProperty("lastExchange");
-        Assert.Equal(2, exchange.GetArrayLength());
-        Assert.Equal("assistant", exchange[0].GetProperty("role").GetString());
-        Assert.Equal("m14", exchange[0].GetProperty("content").GetString());
-        Assert.Equal("user", exchange[1].GetProperty("role").GetString());
-        Assert.Equal("m13", exchange[1].GetProperty("content").GetString());
+        var exchange = conversation.LastExchange;
+        Assert.Equal(2, exchange.Length);
+        Assert.Equal(AiMessageRole.Assistant, exchange[0].Role);
+        Assert.Equal("m14", exchange[0].Content);
+        Assert.Equal(AiMessageRole.User, exchange[1].Role);
+        Assert.Equal("m13", exchange[1].Content);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task GetConversation_resolves_a_percent_encoded_slash_in_the_id()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
-        await SeedConversationAsync(store, perAppDb, "chats/recent", "order-support", DateTime.UtcNow.AddMinutes(-5),
+        await using var app = await NewAppAsync();
+        await SeedConversationAsync(app.Store, app.Slug, "chats/recent", "order-support", DateTime.UtcNow.AddMinutes(-5),
             turns: [("user", "hello"), ("assistant", "hi there")]);
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        // The browser client percent-encodes the document-id slash (chats/recent -> chats%2Frecent);
-        // the endpoint must still resolve it to the real conversation.
-        var detail = await client.GetFromJsonAsync<JsonElement>("/api/apps/my-app/conversations/chats%2Frecent");
-        var transcript = detail.GetProperty("transcript");
-        Assert.Equal(2, transcript.GetArrayLength());
-        Assert.Equal("hello", transcript[0].GetProperty("content").GetString());
+        var detail = await app.GetConversationAsync("chats%2Frecent");
+        var transcript = detail.Transcript;
+        Assert.Equal(2, transcript.Length);
+        Assert.Equal("hello", transcript[0].Content);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task GetConversation_returns_404_for_non_conversation_or_unknown_id()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
-        // A real, non-conversation doc in the per-app DB (channels/wgt1).
-        await SeedChannelAsync(store, perAppDb, channelId: "wgt1", enabled: true);
+        await using var app = await NewAppAsync();
+        await app.ProvisionAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = "demo", Name = "Demo", SystemPrompt = "You help.", ConnectionStringName = Host.ConnectionStringName,
+        });
+        var channel = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "demo", Array.Empty<string>()));
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        // M5: an id without the chats/ prefix must not load some other doc and shape it
-        // as a conversation — it must 404.
-        var nonConversation = await client.GetAsync("/api/apps/my-app/conversations/channels/wgt1");
+        var nonConversation = await Assert.ThrowsAsync<QuillHttpException>(() => app.GetConversationAsync($"channels/{channel.WidgetId}"));
         Assert.Equal(HttpStatusCode.NotFound, nonConversation.StatusCode);
 
-        // An unknown chats/ id also 404s.
-        var unknown = await client.GetAsync("/api/apps/my-app/conversations/chats/does-not-exist");
+        var unknown = await Assert.ThrowsAsync<QuillHttpException>(() => app.GetConversationAsync("chats/does-not-exist"));
         Assert.Equal(HttpStatusCode.NotFound, unknown.StatusCode);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Conversations_list_pages_by_recency_newest_first()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
-        await new ConversationPreviewIndex().ExecuteAsync(store, database: perAppDb);
-
-        // c0 is newest (LastMessageAt = now), c4 oldest; the list pages newest-first via the index.
+        await using var app = await NewAppAsync();
         var now = DateTime.UtcNow;
         for (var i = 0; i < 5; i++)
-            await SeedConversationAsync(store, perAppDb, $"chats/c{i}", "demo", now.AddMinutes(-i));
+            await SeedConversationAsync(app.Store, app.Slug, $"chats/c{i}", "demo", now.AddMinutes(-i));
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
+        var page1 = await app.GetConversationsAsync(year: now.Year, pageSize: 2);
+        Assert.Equal(new[] { "chats/c0", "chats/c1" }, page1.Conversations.Select(x => x.Id).ToArray());
+        Assert.Equal(5, page1.TotalResults);
 
-        var page1 = await client.GetFromJsonAsync<JsonElement>($"/api/apps/my-app/conversations?year={now.Year}&pageSize=2");
-        Assert.Equal(new[] { "chats/c0", "chats/c1" },
-            page1.GetProperty("conversations").EnumerateArray().Select(x => x.GetProperty("id").GetString()).ToArray());
-        Assert.Equal(5, page1.GetProperty("totalResults").GetInt64());   // full count, independent of the page
-
-        var page2 = await client.GetFromJsonAsync<JsonElement>($"/api/apps/my-app/conversations?year={now.Year}&start=2&pageSize=2");
-        Assert.Equal(new[] { "chats/c2", "chats/c3" },
-            page2.GetProperty("conversations").EnumerateArray().Select(x => x.GetProperty("id").GetString()).ToArray());
+        var page2 = await app.GetConversationsAsync(year: now.Year, start: 2, pageSize: 2);
+        Assert.Equal(new[] { "chats/c2", "chats/c3" }, page2.Conversations.Select(x => x.Id).ToArray());
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Conversation_detail_filters_scaffolding_and_extracts_array_content()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        await using var app = await NewAppAsync();
 
-        // Real-shaped doc: system prompt + user + assistant(array content) + tool message.
-        await SeedRealisticConversationAsync(store, perAppDb, "chats/real", "order-support", DateTime.UtcNow.AddMinutes(-5));
+        await SeedRealisticConversationAsync(app.Store, app.Slug, "chats/real", "order-support", DateTime.UtcNow.AddMinutes(-5));
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
+        var detail = await app.GetConversationAsync("chats/real");
+        var transcript = detail.Transcript;
 
-        var detail = await client.GetFromJsonAsync<JsonElement>("/api/apps/my-app/conversations/chats/real");
-        var transcript = detail.GetProperty("transcript");
-
-        // system prompt + tool-result scaffolding dropped; user + assistant turns kept,
-        // including the contentless tool-call step (tool calls are now surfaced to the user).
-        Assert.Equal(3, transcript.GetArrayLength());
-        Assert.Equal("user", transcript[0].GetProperty("role").GetString());
-        Assert.Equal("hello", transcript[0].GetProperty("content").GetString());
-        Assert.Equal("assistant", transcript[1].GetProperty("role").GetString());      // assistant → agent
-        Assert.Equal("hi there", transcript[1].GetProperty("content").GetString());   // array-of-parts extracted, not raw JSON
-        Assert.Equal("assistant", transcript[2].GetProperty("role").GetString());      // contentless tool-call step, kept
+        Assert.Equal(3, transcript.Length);
+        Assert.Equal(AiMessageRole.User, transcript[0].Role);
+        Assert.Equal("hello", transcript[0].Content);
+        Assert.Equal(AiMessageRole.Assistant, transcript[1].Role);
+        Assert.Equal("hi there", transcript[1].Content);
+        Assert.Equal(AiMessageRole.Assistant, transcript[2].Role);
     }
 }

@@ -1,0 +1,45 @@
+using Xunit;
+
+namespace QuillTests.E2E.Fixtures;
+
+[CollectionDefinition(Name)]
+public class QuillAiConnectionStringsCollection : ICollectionFixture<QuillCollectionHost>
+{
+    public const string Name = "quill-ai-connection-strings";
+}
+
+[CollectionDefinition(Name)]
+public class QuillFanOutCollection : ICollectionFixture<QuillCollectionHost>
+{
+    public const string Name = "quill-fan-out";
+}
+
+[CollectionDefinition(Name)]
+public class QuillWizardCollection : ICollectionFixture<QuillCollectionHost>
+{
+    public const string Name = "quill-wizard";
+}
+
+[CollectionDefinition(Name)]
+public class QuillFeedbackCollection : ICollectionFixture<QuillFeedbackFixture>
+{
+    public const string Name = "quill-feedback";
+}
+
+[CollectionDefinition(Name)]
+public class QuillAiModelsCollection : ICollectionFixture<QuillAiModelsFixture>
+{
+    public const string Name = "quill-ai-models";
+}
+
+[CollectionDefinition(Name)]
+public class QuillSuggestAgentCollection : ICollectionFixture<QuillAiHelperFixture>
+{
+    public const string Name = "quill-suggest-agent";
+}
+
+[CollectionDefinition(Name)]
+public class QuillSuggestCdcCollection : ICollectionFixture<QuillAiHelperFixture>
+{
+    public const string Name = "quill-suggest-cdc";
+}

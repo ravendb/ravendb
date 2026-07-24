@@ -9,7 +9,6 @@ internal sealed class WizardState
 
     public string? Provider { get; set; }
 
-
     public ConnectResult? LastVerifyResult { get; set; }
     public DateTime? LastVerifyAt { get; set; }
 

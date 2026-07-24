@@ -5,9 +5,8 @@ using Sparrow.Json;
 
 namespace QuillTests;
 
-/// Shared sample configs and internal-API response envelopes for AI-Helper tests.
-/// Envelopes are serialized through RavenDB conventions to match the wire shape the internal
-/// service produces; the client deserializes them via the same conventions.
+/// Shared sample configs and internal-API response envelopes for AI-Helper tests. Envelopes are serialized
+/// through RavenDB conventions to match the wire shape the internal service produces.
 internal static class AiHelperSamples
 {
     public static CdcSinkConfiguration BuildCdcConfig() => new()

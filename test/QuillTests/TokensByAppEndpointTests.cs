@@ -1,57 +1,35 @@
-using System.Net.Http.Json;
-using System.Text.Json;
+using QuillTests.E2E.Fixtures;
 using Raven.Quill.Metrics;
 using Tests.Infrastructure;
 using Xunit;
+using static QuillTests.E2E.Fixtures.ConversationSeed;
 
 namespace QuillTests;
 
-/// <summary>
-/// Coverage for <c>GET /api/usage/by-app</c> — backs the prototype's
-/// <c>api.getTokensByApp()</c>. Contract (mock-api.ts): <c>{ apps: [{ slug, tokens }],
-/// refreshedMinutesAgo }</c> — one row per app with all-time token usage summed from
-/// its <c>@conversations</c>, sorted by tokens descending. Aggregated via fan-out over
-/// the per-app <see cref="ConversationMetricsIndex"/>; no live LLM.
-/// </summary>
-public class TokensByAppEndpointTests(ITestOutputHelper output) : ApplianceMetricsTestBase(output)
+[Collection(QuillFanOutCollection.Name)]
+public class TokensByAppEndpointTests(ITestOutputHelper output, QuillCollectionHost collection)
+    : QuillTestBase(output, collection)
 {
     [RavenFact(RavenTestCategory.Quill)]
     public async Task TokensByApp_sums_tokens_per_app_sorted_descending()
     {
-        var store = GetDocumentStore();
-        var (appDb1, cleanup1) = await CreatePerAppDatabaseAsync(store);
-        using var _db1 = cleanup1;
-        var (appDb2, cleanup2) = await CreatePerAppDatabaseAsync(store);
-        using var _db2 = cleanup2;
-        await SeedAppAsync(store, slug: "app-one", database: appDb1);
-        await SeedAppAsync(store, slug: "app-two", database: appDb2);
-        await new ConversationMetricsIndex().ExecuteAsync(store, database: appDb1);
-        await new ConversationMetricsIndex().ExecuteAsync(store, database: appDb2);
+        await using var appOne = await NewAppAsync();
+        await using var appTwo = await NewAppAsync();
 
         var now = DateTime.UtcNow;
-        // app-one: 100 + 50 across two hours (and an old one) — all-time, no window.
-        await SeedConversationAsync(store, appDb1, "chats/a", "demo", now.AddHours(-1), tokens: 100);
-        await SeedConversationAsync(store, appDb1, "chats/b", "demo", now.AddDays(-10), tokens: 50);
-        await SeedConversationAsync(store, appDb2, "chats/c", "demo", now.AddHours(-2), tokens: 400);
-        await Indexes.WaitForIndexingAsync(store, appDb1);
-        await Indexes.WaitForIndexingAsync(store, appDb2);
+        await SeedConversationAsync(appOne.Store, appOne.Slug, "chats/a", "demo", now.AddHours(-1), tokens: 100);
+        await SeedConversationAsync(appOne.Store, appOne.Slug, "chats/b", "demo", now.AddDays(-10), tokens: 50);
+        await SeedConversationAsync(appTwo.Store, appTwo.Slug, "chats/c", "demo", now.AddHours(-2), tokens: 400);
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
+        var result = await Host.GetTokensByAppAsync();
 
-        var resp = await client.GetAsync("/api/usage/by-app");
-        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+        var apps = result.Apps;
+        Assert.Equal(2, apps.Length);
 
-        var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.True(json.TryGetProperty("refreshedMinutesAgo", out _), "missing 'refreshedMinutesAgo'");
-
-        var apps = json.GetProperty("apps");
-        Assert.Equal(2, apps.GetArrayLength());
-
-        // Sorted by tokens descending: app-two (400) before app-one (150 = 100 + 50, all-time).
-        Assert.Equal("app-two", apps[0].GetProperty("slug").GetString());
-        Assert.Equal(400, apps[0].GetProperty("tokens").GetInt64());
-        Assert.Equal("app-one", apps[1].GetProperty("slug").GetString());
-        Assert.Equal(150, apps[1].GetProperty("tokens").GetInt64());
+        // all-time (no window): appOne = 100 + 50, incl. the -10d conversation
+        Assert.Equal(appTwo.Slug, apps[0].Slug);
+        Assert.Equal(400, apps[0].Tokens);
+        Assert.Equal(appOne.Slug, apps[1].Slug);
+        Assert.Equal(150, apps[1].Tokens);
     }
 }

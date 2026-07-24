@@ -8,10 +8,8 @@ using Microsoft.Extensions.Logging;
 
 namespace QuillTests.E2E.Fixtures;
 
-/// In-process stand-in for api.ravendb.net. Hosts the RavenDB-26783 endpoint
-/// GET /api/v1/quill/licenses/{licenseKey} returning the embedded setup-package zip
-/// bytes when the license key matches the configured one, 404 otherwise. Caller disposes;
-/// the bound base URL is exposed for the appliance to dial.
+/// In-process stand-in for api.ravendb.net's license endpoint: serves the setup-package zip when the
+/// presented key matches, 404 otherwise. Caller disposes.
 public sealed class MockLicenseApi : IAsyncDisposable
 {
     private readonly WebApplication _app;

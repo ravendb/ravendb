@@ -1,43 +1,27 @@
-using System.Net.Http.Json;
-using System.Text.Json;
-using FastTests;
 using QuillTests.E2E.Fixtures;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Quill.Wizard;
 using Tests.Infrastructure;
 using Xunit;
 
 namespace QuillTests;
 
-public class WizardSourceConnectionFlowTests(ITestOutputHelper output) : RavenTestBase(output)
+public class WizardSourceConnectionFlowTests(ITestOutputHelper output) : QuillTestBase(output)
 {
     private const string WizardSourceProbeName = "_wizard-source-probe";
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Discover_uses_inline_connection_string_and_does_not_persist_probe()
     {
-        var store = GetDocumentStore();
+        await using var host = await NewHostAsync();
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
+        // unreachable source: success=false with errors, not an HTTP error
+        var discover = await host.SetupDiscoverAsync(new DiscoverRequest("SqlClient", "invalid"));
+        Assert.False(discover.Success);
+        Assert.NotEmpty(discover.Errors);
 
-        var resp = await client.PostAsJsonAsync(
-            "/api/setup/discover",
-            new
-            {
-                provider = "SqlClient",
-                connectionString = "invalid",
-            });
-
-        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
-
-        // Discover now carries the merged verification result. An unreachable source
-        // surfaces as success=false with a non-empty errors list (not an HTTP error).
-        var discover = await resp.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.False(discover.GetProperty("success").GetBoolean());
-        Assert.NotEmpty(discover.GetProperty("errors").EnumerateArray());
-
-        var result = await store.Maintenance.ForDatabase(store.Database)
+        // maintenance op: discover must NOT persist the probe CS
+        var result = await host.Config.Maintenance.ForDatabase(host.Config.Database)
             .SendAsync(new GetConnectionStringsOperation(WizardSourceProbeName, ConnectionStringType.Sql));
 
         Assert.True(result.SqlConnectionStrings is null || result.SqlConnectionStrings.ContainsKey(WizardSourceProbeName) == false);
@@ -46,40 +30,20 @@ public class WizardSourceConnectionFlowTests(ITestOutputHelper output) : RavenTe
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Connect_persists_probe_connection_string_and_reports_reachability()
     {
-        var store = GetDocumentStore();
+        await using var host = await NewHostAsync();
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
+        var connect = await host.SetupConnectAsync(new ConnectRequest("SqlClient", "invalid"));
+        Assert.False(connect.Success);
 
-        var resp = await client.PostAsJsonAsync(
-            "/api/setup/connect",
-            new
-            {
-                provider = "SqlClient",
-                connectionString = "invalid",
-            });
+        var error = Assert.Single(connect.Errors);
+        Assert.Contains("Could not connect to the source database", error.Message);
+        Assert.DoesNotContain("Exception", error.Message);
+        Assert.DoesNotContain("   at ", error.Message);
 
-        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+        Assert.False(string.IsNullOrEmpty(error.Details));
 
-        // Connect is a plain reachability probe now (SQL test-connection); an
-        // unparseable connection string fails fast with success=false.
-        var connect = await resp.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.False(connect.GetProperty("success").GetBoolean());
-
-        // The failure is surfaced as an actionable, stack-trace-free summary; the raw exception
-        // text (with its stack trace) is kept in `details` for the UI's "show details" disclosure.
-        var error = Assert.Single(connect.GetProperty("errors").EnumerateArray());
-        var message = error.GetProperty("message").GetString();
-        Assert.Contains("Could not connect to the source database", message);
-        Assert.DoesNotContain("Exception", message);
-        Assert.DoesNotContain("   at ", message);
-
-        var details = error.GetProperty("details").GetString();
-        Assert.False(string.IsNullOrEmpty(details));
-
-        // The probe connection string is still persisted on the config DB —
-        // Provision later transplants its credentials into the per-app database.
-        var result = await store.Maintenance.ForDatabase(store.Database)
+        // maintenance op: probe CS persisted on the config DB; Provision transplants it later
+        var result = await host.Config.Maintenance.ForDatabase(host.Config.Database)
             .SendAsync(new GetConnectionStringsOperation(WizardSourceProbeName, ConnectionStringType.Sql));
         var probe = Assert.Single(result.SqlConnectionStrings!).Value;
 
@@ -87,10 +51,4 @@ public class WizardSourceConnectionFlowTests(ITestOutputHelper output) : RavenTe
         Assert.Equal("Microsoft.Data.SqlClient", probe.FactoryName);
         Assert.Equal("invalid", probe.ConnectionString);
     }
-
-    private ApplianceWebApplicationFactory NewApplianceFactory(IDocumentStore store) =>
-        new(licenseApiUrl: "http://unused-in-unit-tests",
-            setupPackagePath: NewDataPath(forceCreateDir: true),
-            applianceStore: store,
-            configureOptions: opts => opts.ConfigDatabase = store.Database);
 }

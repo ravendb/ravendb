@@ -1,42 +1,38 @@
-using System.Net.Http.Json;
-using System.Text.Json;
+using QuillTests.E2E.Fixtures;
+using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Quill.Channels;
+using Raven.Quill.Contracts;
 using Tests.Infrastructure;
 using Xunit;
 
 namespace QuillTests;
 
-/// <summary>
-/// Coverage for <c>GET /api/apps/{slug}/overview</c>: an index-free snapshot of
-/// the app's document volume, configured-agent count, and channel counts for
-/// the App Overview view.
-/// </summary>
-public class AppOverviewEndpointTests(ITestOutputHelper output) : ApplianceMetricsTestBase(output)
+public class AppOverviewEndpointTests(ITestOutputHelper output) : QuillTestBase(output)
 {
     [RavenFact(RavenTestCategory.Quill)]
     public async Task App_overview_reports_documents_agents_and_channels()
     {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        await using var app = await NewAppAsync();
 
-        await SeedAgentAsync(store, perAppDb, name: "Support");
-        await SeedAgentAsync(store, perAppDb, name: "Sales");
-        await SeedChannelAsync(store, perAppDb, "alpha", enabled: true);
-        await SeedChannelAsync(store, perAppDb, "beta", enabled: true);
-        await SeedChannelAsync(store, perAppDb, "gamma", enabled: false);
+        await app.ProvisionAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = "support", Name = "Support", SystemPrompt = "You help.", ConnectionStringName = Host.ConnectionStringName,
+        });
+        await app.ProvisionAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = "sales", Name = "Sales", SystemPrompt = "You help.", ConnectionStringName = Host.ConnectionStringName,
+        });
 
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
+        await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "support", Array.Empty<string>()));
+        await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "support", Array.Empty<string>()));
+        var gamma = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "support", Array.Empty<string>()));
+        await app.UpdateChannelAsync(gamma.WidgetId, new UpdateChannelRequest(null, null, Enabled: false));
 
-        var resp = await client.GetAsync("/api/apps/my-app/overview");
-        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
-
-        var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal("my-app", json.GetProperty("slug").GetString());
-        Assert.Equal(2, json.GetProperty("configuredAgents").GetInt32());
-        Assert.Equal(3, json.GetProperty("channels").GetInt32());
-        Assert.Equal(2, json.GetProperty("activeChannels").GetInt32());
-        Assert.True(json.GetProperty("documents").GetInt64() >= 3);
+        var overview = await app.GetOverviewAsync();
+        Assert.Equal(app.Slug, overview.Slug);
+        Assert.Equal(2, overview.ConfiguredAgents);
+        Assert.Equal(3, overview.Channels);
+        Assert.Equal(2, overview.ActiveChannels);
+        Assert.True(overview.Documents >= 3);
     }
 }
