@@ -1,0 +1,185 @@
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using FastTests;
+using FastTests.Voron.SharedJournal;
+using Raven.Server.Utils;
+using Tests.Infrastructure;
+using Voron;
+using Voron.Impl.Journal;
+using Xunit;
+
+namespace SlowTests.Voron.Issues;
+
+public class RavenDB_27156(ITestOutputHelper output) : RavenTestBase(output)
+{
+    [RavenFact(RavenTestCategory.Voron)]
+    public void FailedSharedJournalWrite_WithPendingFlushStateUpdate_PoisonsBranchAndRecoversOnRestart()
+        => RunScenario(flushPendingDuringDoomedCommit: true);
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void FailedSharedJournalWrite_WithoutPendingFlush_PoisonsBranchAndRecoversOnRestart()
+        => RunScenario(flushPendingDuringDoomedCommit: false);
+
+    private void RunScenario(bool flushPendingDuringDoomedCommit)
+    {
+        var rootPath = NewDataPath(suffix: "root");
+        var branchPath = NewDataPath(suffix: "branch");
+        IOExtensions.DeleteDirectory(rootPath);
+        IOExtensions.DeleteDirectory(branchPath);
+
+        var values = new Dictionary<string, string>();
+
+        // ----- phase 1: seed, then fail a shared-journal write on the root -----
+        {
+            using var rootOptions = StorageEnvironmentOptions.ForPathForTests(rootPath);
+            rootOptions.ManualFlushing = true;
+            rootOptions.ManualSyncing = true;
+
+            using var root = new StorageEnvironment(rootOptions);
+            using var scope = root.Journal.SharedJournalsScope();
+            using var pump = new MergerPump(root);
+
+            StorageEnvironment branch = null;
+            var releaseFlusher = new ManualResetEventSlim(false);
+            Task flushTask = Task.CompletedTask;
+            try
+            {
+                branch = SharedJournalTests.CreateBranchEnv(branchPath, root);
+
+                // committed data - lives in the branch scratch file until a flush moves it to the data file
+                for (int c = 0; c < 3; c++)
+                {
+                    using var tx = branch.WriteTransaction();
+                    var tree = tx.CreateTree("tree");
+                    for (int i = 0; i < 32; i++)
+                    {
+                        var key = $"key-{c}-{i}";
+                        var value = $"{c}-{i}-" + new string((char)('a' + i % 26), 128);
+                        tree.Add(key, value);
+                        values[key] = value;
+                    }
+                    tx.Commit();
+                }
+
+                if (flushPendingDuringDoomedCommit)
+                {
+                    // park the flusher right after it copied the pages to the data file and installed
+                    // _updateJournalStateAfterFlush - the doomed commit applies it in CommitStage1, and
+                    // its rollback is what corrupted the scratch state before the fix
+                    var installed = new ManualResetEventSlim(false);
+                    branch.Journal.Applicator.ForTestingPurposesOnly().OnWaitForJournalStateToBeUpdated_AfterAssigning_updateJournalStateAfterFlush = () =>
+                    {
+                        installed.Set();
+                        releaseFlusher.Wait();
+                    };
+                    flushTask = Task.Run(() => branch.FlushLogToDataFile());
+                    Assert.True(installed.Wait(TimeSpan.FromSeconds(30)), "flush did not reach the journal-state-update stage");
+                }
+
+                // fail the next merged commit on the root (one-shot): throw just before the actual
+                // journal write, so the branch entries are not yet released with success
+                var armed = 1;
+                root.ForTestingPurposesOnly().ModifyNewLowLevelTransaction = t =>
+                {
+                    if (Interlocked.Exchange(ref armed, 0) == 1)
+                        t.ActionToCallJustBeforeWritingToJournal = () => throw new InvalidOperationException("RavenDB-27156 simulated commit-stage-2 write failure");
+                };
+
+                using (var tx = branch.WriteTransaction())
+                {
+                    var tree = tx.CreateTree("tree");
+                    tree.Add("doomed", "doomed");
+                    var doomedEx = Assert.Throws<InvalidOperationException>(() => tx.Commit());
+                    Output.WriteLine($"doomed commit failed with: {doomedEx.Message}");
+                }
+
+                // the fix: the branch env taking part in the failed merged commit must be marked as
+                // catastrophically failed, so it refuses further transactions instead of serving
+                // corrupted state
+                Assert.True(branch.Options.IsCatastrophicFailureSet, "branch env was not marked as catastrophically failed");
+
+                Assert.Throws<InvalidOperationException>(() =>
+                {
+                    using var tx = branch.WriteTransaction();
+                });
+
+                releaseFlusher.Set();
+                var flushEx = Record.Exception(() => flushTask.Wait(TimeSpan.FromSeconds(30)));
+                if (flushEx != null)
+                    Output.WriteLine($"flush completion: {flushEx.GetType().Name}: {flushEx.Message}");
+            }
+            finally
+            {
+                releaseFlusher.Set();
+                branch?.Dispose();
+            }
+        }
+
+        // ----- phase 2: restart - recovery replays the journals; the doomed write never reached the
+        // journal (it threw before the write), so its data is simply absent and no committed data is lost -----
+        {
+            using var rootOptions = StorageEnvironmentOptions.ForPathForTests(rootPath);
+            rootOptions.ManualFlushing = true;
+            rootOptions.ManualSyncing = true;
+
+            using var root = new StorageEnvironment(rootOptions);
+            using var scope = root.Journal.SharedJournalsScope();
+            using var pump = new MergerPump(root);
+
+            using var branch = SharedJournalTests.CreateBranchEnv(branchPath, root);
+            using var rtx = branch.ReadTransaction();
+            var tree = rtx.ReadTree("tree");
+            Assert.NotNull(tree);
+            foreach (var (key, expected) in values)
+            {
+                var read = tree.Read(key);
+                Assert.True(read != null, $"value for '{key}' is gone after restart");
+                Assert.Equal(expected, read.Reader.ToStringValue());
+            }
+
+            Assert.Null(tree.Read("doomed"));
+        }
+    }
+
+    // standing merger mimicking SharedIndexJournals.WriteSharedJournals, including its failure
+    // handling (swap SharedJournalState + SetException on all pending branch commits)
+    private sealed class MergerPump : IDisposable
+    {
+        private readonly ManualResetEventSlim _mergeSubmitted = new(false);
+        private readonly Thread _thread;
+        private volatile bool _stop;
+
+        public MergerPump(StorageEnvironment root)
+        {
+            root.Journal.BranchJournalMerger = new SharedJournalTests.MyJournalMerger(_mergeSubmitted);
+            _thread = new Thread(() =>
+            {
+                while (_stop == false)
+                {
+                    if (_mergeSubmitted.Wait(TimeSpan.FromMilliseconds(50)) == false)
+                        continue;
+                    _mergeSubmitted.Reset();
+                    try
+                    {
+                        using var tx = root.WriteTransaction();
+                        tx.Commit();
+                    }
+                    catch (Exception e)
+                    {
+                        Interlocked.Exchange(ref root.Journal.SharedJournalState, new SharedJournalState()).SetException(e);
+                    }
+                }
+            }) { IsBackground = true, Name = "RavenDB_27156 merger pump" };
+            _thread.Start();
+        }
+
+        public void Dispose()
+        {
+            _stop = true;
+            _thread.Join();
+            _mergeSubmitted.Dispose();
+        }
+    }
+}

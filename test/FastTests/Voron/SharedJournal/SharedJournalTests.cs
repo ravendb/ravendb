@@ -7,7 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Utils;
 using Tests.Infrastructure;
 using Voron;
@@ -893,7 +892,7 @@ public class SharedJournalTests(ITestOutputHelper output) : RavenTestBase(output
     [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Voron)]
     public async Task SharedJournalsCanHandleFailures()
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(new Options { RunInMemory = false }))
         {
             await new Users_ByName().ExecuteAsync(store);
 
@@ -907,7 +906,9 @@ public class SharedJournalTests(ITestOutputHelper output) : RavenTestBase(output
             await Indexes.WaitForIndexingAsync(store);
 
             var database = await GetDatabase(store.Database);
-            database.IndexStore.SharedJournals.Env.ForTestingPurposesOnly().ModifyNewLowLevelTransaction = t => t.ThrowSimulateErrorOnCommitStage2();
+
+            database.IndexStore.SharedJournals.Env.ForTestingPurposesOnly().ModifyNewLowLevelTransaction =
+                t => t.ActionToCallJustBeforeWritingToJournal = () => throw new InvalidOperationException("Simulation error");
 
             using (var session = store.OpenSession())
             {
@@ -920,8 +921,29 @@ public class SharedJournalTests(ITestOutputHelper output) : RavenTestBase(output
 
             database.IndexStore.SharedJournals.Env.ForTestingPurposesOnly().ModifyNewLowLevelTransaction = null;
 
-            await store.Maintenance.SendAsync(new DeleteIndexErrorsOperation());
-            await store.Maintenance.SendAsync(new EnableIndexOperation(new Users_ByName().IndexName));
+            // RavenDB-27156: a failed merged commit is non-recoverable for the environments taking part
+            // in it - they are marked as catastrophically failed, which forces the database to be
+            // unloaded and reloaded. Recovery replays the journals and indexing resumes on its own.
+            var reloaded = await WaitForValueAsync(async () =>
+            {
+                try
+                {
+                    return await GetDatabase(store.Database) != database;
+                }
+                catch
+                {
+                    return false; // the database is being unloaded / briefly locked
+                }
+            }, true);
+            Assert.True(reloaded, "the database was not reloaded after the failed shared-journal commit");
+
+            // the reloaded database initializes its indexes asynchronously
+            var indexLoaded = await WaitForValueAsync(async () =>
+            {
+                var db = await GetDatabase(store.Database);
+                return db.IndexStore.GetIndex(new Users_ByName().IndexName) != null;
+            }, true);
+            Assert.True(indexLoaded, "the index was not loaded after the database reload");
 
             using (var session = store.OpenSession())
             {
