@@ -54,6 +54,7 @@ const mockJQueryPromise = () => $().promise();
 studioSettings.default.configureLoaders(mockJQueryPromise, mockJQueryPromise, mockJQueryPromise, mockJQueryPromise);
 
 Storage.prototype.getObject = jest.fn(() => null);
+Storage.prototype.setObject = jest.fn();
 
 global.define = function() {};
 

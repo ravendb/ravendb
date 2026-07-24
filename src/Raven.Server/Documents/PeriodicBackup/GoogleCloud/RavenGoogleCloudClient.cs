@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
                 throw new ArgumentException("Google Credentials JSON cannot be null or empty");
             try
             {
-                _client = StorageClient.Create(GoogleCredential.FromJson(settings.GoogleCredentialsJson));
+                _client = StorageClient.Create(CredentialFactory.FromJson<GoogleCredential>(settings.GoogleCredentialsJson));
                 _client.Service.HttpClient.Timeout = configuration.CloudStorageOperationTimeout.AsTimeSpan;
             }
             catch (Exception e)
