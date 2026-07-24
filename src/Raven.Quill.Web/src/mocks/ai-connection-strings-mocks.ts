@@ -1,4 +1,5 @@
 import type { AiConnectionString } from "@/api/generated/server-api";
+import { getServerConnectionStringName } from "@/components/ai-connection-string/ai-connection-string-utils";
 import { apiHttp } from "./api-http";
 
 export const aiConnectionStringsMocks = {
@@ -36,3 +37,13 @@ export const sampleConnectionStrings: AiConnectionString[] = [
         embeddedSettings: {},
     },
 ];
+
+// The per-app endpoint reads the database record, where server-wide connection
+// strings appear under their propagated (prefixed) names — unlike the server-wide
+// endpoints above, which use bare names.
+export const samplePropagatedConnectionStrings: AiConnectionString[] = sampleConnectionStrings.map(
+    (connectionString) => ({
+        ...connectionString,
+        name: getServerConnectionStringName(connectionString.name ?? ""),
+    }),
+);

@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { api } from "@/api/api";
 import type { AiConnectionStringDeleteConflictResponse } from "@/api/generated/server-api";
 import { isApiError } from "@/api/http-client";
+import { invalidateAiConnectionStringQueries } from "@/lib/query-invalidation";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
 import { Spinner } from "@/components/shadcn/ui/spinner";
@@ -45,7 +46,7 @@ export function DeleteAiConnectionStringDialog({ name, trigger }: DeleteAiConnec
         mutationFn: () => api.services.aiConnectionStrings.delete(name),
         onSuccess: async () => {
             await Promise.all([
-                queryClient.invalidateQueries({ queryKey: api.queries.aiConnectionStrings.list().queryKey }),
+                invalidateAiConnectionStringQueries(queryClient),
                 // Drop the deleted string's cached detail so a stale edit sheet can't resurrect it.
                 queryClient.invalidateQueries({
                     queryKey: api.queries.aiConnectionStrings.detail(name).queryKey,

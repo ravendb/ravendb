@@ -408,8 +408,19 @@ export function getProviderLabel(connectionString: AiConnectionString): string {
     return providerKey ? PROVIDER_LABELS[providerKey] : "—";
 }
 
-export function getConnectionStringOptionLabel(connectionString: AiConnectionString): string {
-    return `${connectionString.name ?? ""} · ${getProviderLabel(connectionString)}`;
+const SERVER_WIDE_CS_PREFIX = "Server Wide Connection String, ";
+
+export function getServerConnectionStringName(name: string): string {
+    if (name.startsWith(SERVER_WIDE_CS_PREFIX)) {
+        return name;
+    }
+    return SERVER_WIDE_CS_PREFIX + name;
+}
+
+export function getConnectionStringLabel(connectionString: AiConnectionString): string {
+    const fullName = connectionString.name ?? "";
+    const name = fullName.startsWith(SERVER_WIDE_CS_PREFIX) ? fullName.slice(SERVER_WIDE_CS_PREFIX.length) : fullName;
+    return `${name} · ${getProviderLabel(connectionString)}`;
 }
 
 export const MODEL_TYPE_LABELS: Record<AiModelType, string> = {

@@ -10,7 +10,7 @@ export function AppAgentEdit() {
     const { slug = "", agentId = "" } = useParams();
 
     const agentQuery = useQuery(api.queries.agents.detail(slug, agentId));
-    const connectionStringsQuery = useQuery(api.queries.aiConnectionStrings.list());
+    const connectionStringsQuery = useQuery(api.queries.apps.aiConnectionStringsList(slug));
 
     const onRetry = async () => {
         if (agentQuery.isError) {

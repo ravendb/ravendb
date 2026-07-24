@@ -3,6 +3,10 @@ import type { ServerApi } from "@/api/generated/server-api";
 
 const baseKey = "apps";
 
+// Partial key covering every app's connection strings list, so mutations on the
+// (server-wide) connection strings can invalidate all of them at once.
+export const APP_AI_CONNECTION_STRINGS_KEY = [baseKey, "aiConnectionStringsList"] as const;
+
 export function createAppsQueries(api: ServerApi["apps"]) {
     return {
         detail: (slug: string) =>
@@ -39,6 +43,11 @@ export function createAppsQueries(api: ServerApi["apps"]) {
                 // wizard. An empty one (failure or no candidates) stays stale so the next
                 // fetch retries.
                 staleTime: (query) => ((query.state.data?.length ?? 0) > 0 ? Infinity : 0),
+            }),
+        aiConnectionStringsList: (slug: string) =>
+            queryOptions({
+                queryKey: [...APP_AI_CONNECTION_STRINGS_KEY, slug],
+                queryFn: () => api.aiConnectionStringsList(slug),
             }),
     };
 }

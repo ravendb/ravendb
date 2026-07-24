@@ -40,6 +40,7 @@ export const defaultApiMocks = {
         appsMocks.provisionAgent(),
         appsMocks.setupTry(),
         appsMocks.suggestAgent(),
+        appsMocks.aiConnectionStringsList(),
     ],
     auth: [authMocks.status(), authMocks.login(), authMocks.logout()],
     bootstrap: [bootstrapMocks.status()],
