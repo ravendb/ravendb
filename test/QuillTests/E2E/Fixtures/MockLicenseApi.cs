@@ -9,8 +9,8 @@ using Microsoft.Extensions.Logging;
 namespace QuillTests.E2E.Fixtures;
 
 /// In-process stand-in for api.ravendb.net. Hosts the RavenDB-26783 endpoint
-/// GET /api/v1/quill/licenses/{token} returning the embedded setup-package zip
-/// bytes when {token} matches the configured key, 404 otherwise. Caller disposes;
+/// GET /api/v1/quill/licenses/{licenseKey} returning the embedded setup-package zip
+/// bytes when the license key matches the configured one, 404 otherwise. Caller disposes;
 /// the bound base URL is exposed for the appliance to dial.
 public sealed class MockLicenseApi : IAsyncDisposable
 {
@@ -32,9 +32,9 @@ public sealed class MockLicenseApi : IAsyncDisposable
 
         var app = builder.Build();
 
-        app.MapGet("/api/v1/quill/licenses/{token}", (string token, HttpContext ctx) =>
+        app.MapGet("/api/v1/quill/licenses/{presentedKey}", (string presentedKey, HttpContext ctx) =>
         {
-            if (!string.Equals(token, licenseKey, StringComparison.Ordinal))
+            if (!string.Equals(presentedKey, licenseKey, StringComparison.Ordinal))
                 return Results.NotFound();
 
             return Results.File(setupPackageZipBytes,

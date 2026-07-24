@@ -15,7 +15,7 @@ namespace QuillTests.E2E.Fixtures;
 ///     RavenDB code paths without launching a second instance.
 ///   - Removes RavenReadinessService and flips IServerReady ready (the test store is already ready).
 ///   - Every CreateClient() carries the TestApiKey header by default; tests that exercise the
-///     unauthenticated path remove it. Startup activation is inert unless a license token / mock zip is
+///     unauthenticated path remove it. Startup activation is inert unless a license key / mock zip is
 ///     configured (see ApplianceActivationService), so it stays out of the way of non-activation tests.
 internal sealed class ApplianceWebApplicationFactory : WebApplicationFactory<Program>
 {

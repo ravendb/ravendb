@@ -9,7 +9,7 @@ services:
       - quill-data:/var/lib/quill
     environment:
       QUILL_API_KEY: ${QUILL_API_KEY:?QUILL_API_KEY is required (operator login key)}
-      QUILL_LICENSE_KEY: ${QUILL_LICENSE_KEY:?QUILL_LICENSE_KEY is required (activation token)}
+      QUILL_LICENSE_KEY: ${QUILL_LICENSE_KEY:?QUILL_LICENSE_KEY is required (license key)}
 
 volumes:
   quill-data:

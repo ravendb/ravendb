@@ -69,17 +69,17 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         // — so no `using` here. (RavenTestBase tracks the store separately for
         // class teardown; that's a second touch but DocumentStore.Dispose is
         // idempotent, so it's a no-op when the WAF got there first.)
-        // The license token (QUILL_LICENSE_KEY) drives startup activation; the WAF seeds the operator
+        // The license key (QUILL_LICENSE_KEY) drives startup activation; the WAF seeds the operator
         // API key and authenticates every client by default, so the now-gated admin calls below pass.
         var store = GetDocumentStore();
         using var factory = new ApplianceWebApplicationFactory(
             licenseApiUrl: licenseApi.BaseAddress,
             setupPackagePath: setupRoot,
             applianceStore: store,
-            configureOptions: opts => opts.LicenseToken = HardcodedLicenseKey);
+            configureOptions: opts => opts.LicenseKey = HardcodedLicenseKey);
         var client = factory.CreateClient();
 
-        // ---------- T3. Startup activation pulls the package by token; wait for READY ----------
+        // ---------- T3. Startup activation pulls the package by license key; wait for READY ----------
         // No operator redeem call anymore: ApplianceActivationService runs at startup, fetches the
         // setup-package zip from the (mock) license API by QUILL_LICENSE_KEY, unpacks it, and — with no
         // s6 in the test host — flips bootstrap to Ready inline.

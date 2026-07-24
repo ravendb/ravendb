@@ -4,9 +4,9 @@ public sealed class LicenseHttpClient(HttpClient httpClient) : ILicenseClient
 {
     private const string LicensePathPrefix = "/api/v1/quill/licenses";
 
-    public async Task DownloadSetupPackageToAsync(string token, Stream destination, CancellationToken ct)
+    public async Task DownloadSetupPackageToAsync(string licenseKey, Stream destination, CancellationToken ct)
     {
-        var url = $"{LicensePathPrefix}/{Uri.EscapeDataString(token)}";
+        var url = $"{LicensePathPrefix}/{Uri.EscapeDataString(licenseKey)}";
 
         HttpResponseMessage response;
         try

@@ -17,7 +17,7 @@ public sealed class ApplianceOptions
 
     public string SetupPackagePath { get; set; } = "/setup";
 
-    public string? LicenseToken { get; set; }
+    public string? LicenseKey { get; set; }
 
     public string? ApiKey { get; set; }
 

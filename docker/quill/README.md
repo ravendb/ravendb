@@ -112,7 +112,7 @@ docker pull ravendb/quill:latest             # or a pinned tag: ravendb/quill:0.
 ```bash
 cd docker/quill/compose
 cp .env.example .env
-# Fill in QUILL_API_KEY (operator login) and QUILL_LICENSE_KEY (activation token).
+# Fill in QUILL_API_KEY (operator login) and QUILL_LICENSE_KEY (license key).
 ```
 
 The image **activates itself at startup** using `QUILL_LICENSE_KEY` — no operator action. Status walks
@@ -264,7 +264,7 @@ docker rm -f nw-postgres            # if you used the throwaway Postgres
 
 | Symptom | Cause / fix |
 |---|---|
-| Bootstrap stuck at `NeedsActivation` | Startup activation had nothing to redeem. Set `QUILL_LICENSE_KEY` in `.env` to a real token issued by the Quill sign-up flow and confirm the appliance can reach `api.ravendb.net`. Check `docker compose logs` for the activation line. |
+| Bootstrap stuck at `NeedsActivation` | Startup activation had nothing to redeem. Set `QUILL_LICENSE_KEY` in `.env` to a real license key issued by the Quill sign-up flow and confirm the appliance can reach `api.ravendb.net`. Check `docker compose logs` for the activation line. |
 | `401 Unauthorized` on `/api/*` (or bounced to `/login`) | Missing/wrong API key or an expired session. Pass `-H "X-Api-Key: <key>"` (the `QUILL_API_KEY` from `.env`) or sign in again. `QUILL_API_KEY` is **required** — auth fails closed when it's unset. |
 | `https://…:443` connection refused | nginx only starts after activation extracts the wildcard cert. During pre-activation, check status via `docker exec quill curl -s http://127.0.0.1:5000/api/bootstrap/status` or watch `docker compose logs quill`. If `:443` never comes up after activation reports `Ready`, check the `03-proxy` service in the logs. |
 | Wizard **Connect** fails | The connection-string host isn't reachable **from the container**. Use a LAN IP or `host.docker.internal`, not `localhost`. |
