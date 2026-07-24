@@ -1,6 +1,6 @@
 import { api } from "@/api/api";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
-import { toConnectionError } from "@/pages/setup/add-app-wizard/steps/connect/connect-error";
+import { toWizardStepError } from "@/components/form/wizard/wizard-step-error";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import { getTableKey, isTableSupported } from "@/pages/setup/add-app-wizard/discover-utils";
 import { discoverTables } from "@/pages/setup/add-app-wizard/steps/verify/use-discover-tables";
@@ -31,7 +31,7 @@ export function useConnectSourceStep() {
         });
 
         if (!connectResult.success) {
-            throw toConnectionError(connectResult.errors);
+            throw toWizardStepError(connectResult.errors, "Connection failed.");
         }
 
         const schemas = store.discoverSchemas;

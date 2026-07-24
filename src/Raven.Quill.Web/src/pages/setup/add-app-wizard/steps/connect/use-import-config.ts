@@ -19,7 +19,7 @@ import {
 } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
 import { discoverTables } from "@/pages/setup/add-app-wizard/steps/verify/use-discover-tables";
 import { computeConnectKey } from "@/pages/setup/add-app-wizard/steps/connect/use-connect-source-step";
-import { toConnectionError } from "@/pages/setup/add-app-wizard/steps/connect/connect-error";
+import { toWizardStepError } from "@/components/form/wizard/wizard-step-error";
 import { computeMapKey } from "@/pages/setup/add-app-wizard/steps/map/use-map-schema-step";
 
 type ImportResult = {
@@ -42,7 +42,7 @@ export function useImportConfig() {
             });
 
             if (!connectResult.success) {
-                throw toConnectionError(connectResult.errors);
+                throw toWizardStepError(connectResult.errors, "Connection failed.");
             }
 
             // Discover every schema the configuration touches, not just the default one, so tables
@@ -54,7 +54,7 @@ export function useImportConfig() {
             );
 
             if (!discoverResult.success) {
-                throw new Error(discoverResult.errors?.join("\n") || "Could not discover tables.");
+                throw toWizardStepError(discoverResult.errors, "Could not discover tables.");
             }
 
             const unavailable = collectSourceTableRefs(config.tables).filter((ref) => {
