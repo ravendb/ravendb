@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow;
 using Sparrow.Logging;
@@ -12,8 +13,6 @@ using Sparrow.Threading;
 using Voron.Global;
 using Voron.Impl.Paging;
 using Voron.Logging;
-using Voron.Platform.Posix;
-using Voron.Platform.Win32;
 using Voron.Util.Settings;
 
 namespace Voron.Impl.Journal
@@ -80,6 +79,12 @@ namespace Voron.Impl.Journal
         public void Write(long posBy4Kb, Span<Pal.journal_entry> entries, long totalNumberOf4Kbs)
         {
             Debug.Assert(_options.IoMetrics != null);
+
+            if (_options.ForTestingPurposes?.SimulatePartialJournalWriteFailure?.Invoke(totalNumberOf4Kbs) is { } failure)
+            {
+                SimulatePartialWriteAndThrow(posBy4Kb, entries, failure);
+                return;
+            }
 
             fixed (Pal.journal_entry* pEntries = entries)
             {
@@ -209,6 +214,33 @@ namespace Voron.Impl.Journal
                     exceptions.Add(e);
                 }
             }
+        }
+
+        private void SimulatePartialWriteAndThrow(long posBy4Kb, Span<Pal.journal_entry> entries, StorageEnvironmentOptions.TestingStuff.PartialJournalWriteFailure failure)
+        {
+            var remaining = failure.NumberOf4KbsToWrite;
+            if (remaining > 0)
+            {
+                var partial = new List<Pal.journal_entry>();
+                foreach (var entry in entries)
+                {
+                    if (remaining <= 0)
+                        break;
+                    var take = Math.Min(entry.NumberOf4Kbs, remaining);
+                    partial.Add(new Pal.journal_entry { Base = entry.Base, NumberOf4Kbs = take });
+                    remaining -= take;
+                }
+
+                var partialSpan = CollectionsMarshal.AsSpan(partial);
+                fixed (Pal.journal_entry* pEntries = partialSpan)
+                {
+                    var result = Pal.rvn_write_journal(_writeHandle, pEntries, partialSpan.Length, posBy4Kb * Constants.Storage.JournalPageSize, out var error);
+                    if (result != PalFlags.FailCodes.Success)
+                        PalHelper.ThrowLastError(result, error, $"Attempted to write (simulated partial write) to journal file - Path: {FileName.FullPath}");
+                }
+            }
+
+            throw failure.Error;
         }
 
         ~JournalWriter()

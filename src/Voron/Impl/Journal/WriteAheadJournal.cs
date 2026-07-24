@@ -430,6 +430,11 @@ namespace Voron.Impl.Journal
 
                     lastProcessedJournal = journalNumber;
 
+                    // Must run before the RequireHeaderUpdate break: a journal that ends with an incomplete transaction
+                    // may still have grown the pager for its earlier valid transactions, and skipping the publish leaves
+                    // DataPagerState smaller than NextPageNumber
+                    _env.UpdateDataPagerState(dataPagerState);
+
                     if (journalReader.RequireHeaderUpdate) //this should prevent further load of transactions
                     {
                         requireHeaderUpdate = true;
@@ -437,8 +442,6 @@ namespace Voron.Impl.Journal
                     }
 
                     addToInitLog?.Invoke(LogLevel.Debug, $"Journal {journalNumber:#,#;;0} Recovered");
-
-                    _env.UpdateDataPagerState(dataPagerState);
                 }
                 catch (InvalidJournalException)
                 {
