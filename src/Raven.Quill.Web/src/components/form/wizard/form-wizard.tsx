@@ -7,7 +7,7 @@ import {
     type Path,
     type UseFormGetValues,
 } from "react-hook-form";
-import { ArrowRight, Check } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { Button } from "@/components/shadcn/ui/button";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { WizardErrorAlert } from "@/components/form/wizard/wizard-error-alert";
@@ -52,8 +52,6 @@ export type WizardStep<StepId extends string, Values extends FieldValues = Field
     bodyComponent: (props: WizardBodyComponentProps<StepId>) => ReactNode;
     /** Makes the step body fill the visible area so it can manage its own scrolling. */
     isFullHeight?: boolean;
-    /** Lets the step body span the whole main column instead of the default centered max width. */
-    isFullWidth?: boolean;
     validate: WizardValidationTarget<Values>;
     onValidationFailed?: WizardAction;
     beforeNext?: WizardAction;
@@ -200,8 +198,7 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
                         <section
                             key={currentStepIdInFlow}
                             className={cn(
-                                "mx-auto w-full",
-                                !currentStep.isFullWidth && "max-w-5xl",
+                                "mx-auto w-full max-w-7xl",
                                 currentStep.isFullHeight ? "flex h-full flex-col gap-5" : "grid gap-5",
                             )}
                         >
@@ -379,38 +376,48 @@ function WizardFooter<StepId extends string>({
     const isLast = stepPosition === "last";
 
     return (
-        <div className="flex items-center border-t px-4 py-2">
-            <div className="flex gap-2">
-                {canCancel && (
-                    <Button onClick={cancel} variant="outline" disabled={isBusy}>
-                        Cancel
-                    </Button>
-                )}
-                {stepPosition !== "first" && canGoBack && (
-                    <Button onClick={goPrev} variant="secondary" disabled={isBusy}>
-                        Back
-                    </Button>
-                )}
-            </div>
+        <div className="border-t px-5 py-3 sm:px-8 lg:px-24">
+            <div className={cn("mx-auto flex w-full max-w-7xl items-center")}>
+                <div className="flex gap-2">
+                    {canCancel && (
+                        <Button onClick={cancel} variant="outline" size="lg" disabled={isBusy}>
+                            Cancel
+                        </Button>
+                    )}
+                    {stepPosition !== "first" && canGoBack && (
+                        <Button onClick={goPrev} variant="secondary" size="lg" disabled={isBusy}>
+                            <ArrowLeft aria-hidden="true" />
+                            Back
+                        </Button>
+                    )}
+                </div>
 
-            <div className="ml-auto flex items-center gap-2">
-                {FooterComponent && <FooterComponent isBusy={isBusy} />}
-                {isLast && completion.type === "action" ? (
-                    <Button type="button" onClick={handleComplete} disabled={isBusy} key={`${currentStepId}:complete`}>
-                        {isBusy && <Spinner />}
-                        {completion.label ?? "Finish"}
-                    </Button>
-                ) : isLast ? (
-                    <Button type="submit" disabled={isBusy} key={`${currentStepId}:submit`}>
-                        {isBusy && <Spinner />}
-                        {completion.label ?? "Submit"}
-                    </Button>
-                ) : (
-                    <Button onClick={handleNext} disabled={isBusy} key={`${currentStepId}:next`}>
-                        {isBusy && <Spinner />}
-                        {nextLabel ?? "Next"}
-                    </Button>
-                )}
+                <div className="ml-auto flex items-center gap-2">
+                    {FooterComponent && <FooterComponent isBusy={isBusy} />}
+                    {isLast && completion.type === "action" ? (
+                        <Button
+                            type="button"
+                            onClick={handleComplete}
+                            size="lg"
+                            disabled={isBusy}
+                            key={`${currentStepId}:complete`}
+                        >
+                            {isBusy ? <Spinner /> : <Check aria-hidden="true" />}
+                            {completion.label ?? "Finish"}
+                        </Button>
+                    ) : isLast ? (
+                        <Button type="submit" size="lg" disabled={isBusy} key={`${currentStepId}:submit`}>
+                            {isBusy ? <Spinner /> : <Check aria-hidden="true" />}
+                            {completion.label ?? "Submit"}
+                        </Button>
+                    ) : (
+                        <Button onClick={handleNext} size="lg" disabled={isBusy} key={`${currentStepId}:next`}>
+                            {isBusy && <Spinner />}
+                            {nextLabel ?? "Next"}
+                            <ArrowRight aria-hidden="true" />
+                        </Button>
+                    )}
+                </div>
             </div>
         </div>
     );

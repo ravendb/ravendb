@@ -50,6 +50,7 @@ export function ReviewTestAgentButton({ isBusy }: WizardFooterComponentProps) {
                 <Button
                     type="button"
                     variant="outline"
+                    size="lg"
                     disabled={isBusy || !isReady}
                     title={
                         isReady ? undefined : "Add a name, system prompt, and AI provider connection before testing."
