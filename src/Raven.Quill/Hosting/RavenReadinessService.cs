@@ -4,6 +4,7 @@ using Polly.Registry;
 using Polly.Retry;
 using Polly.Timeout;
 using Raven.Client.Documents;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Quill.Infrastructure;
 
@@ -61,7 +62,7 @@ public sealed class RavenReadinessService(
                         await store.Maintenance.Server.SendAsync(new GetBuildNumberOperation(), ct);
                     }, stoppingToken);
 
-                    var created = await RavenStoreFactory.EnsureDatabaseAsync(store, opts.ConfigDatabase, stoppingToken);
+                    var created = await RavenStoreFactory.EnsureDatabaseAsync(store, opts.ConfigDatabase, DatabaseLockMode.PreventDeletesError, stoppingToken);
                     logger.LogInformation(
                         "RavenDB ready at {Url}; config database {Database} {Action}.",
                         opts.RavenUrl, opts.ConfigDatabase, created ? "created" : "already present");
