@@ -9,7 +9,10 @@ export function WizardErrorDetails({ details }: { details: string }) {
     return (
         <Collapsible open={isOpen} onOpenChange={setIsOpen}>
             <CollapsibleTrigger className="flex items-center gap-1 text-xs font-medium underline-offset-2 hover:underline">
-                <ChevronRight className={cn("size-3.5 transition-transform", isOpen && "rotate-90")} aria-hidden="true" />
+                <ChevronRight
+                    className={cn("size-3.5 transition-transform", isOpen && "rotate-90")}
+                    aria-hidden="true"
+                />
                 {isOpen ? "Hide details" : "Show details"}
             </CollapsibleTrigger>
             <CollapsibleContent>

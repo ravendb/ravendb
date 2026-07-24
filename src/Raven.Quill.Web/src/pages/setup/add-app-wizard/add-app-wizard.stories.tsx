@@ -130,8 +130,8 @@ const connectFailureHandlers = {
             errors: [
                 {
                     message:
-                        'Could not connect to the source database. Check that the host and port are reachable, ' +
-                        'the database name is correct, and the credentials are valid. ' +
+                        "Could not connect to the source database. Check that the host and port are reachable, " +
+                        "the database name is correct, and the credentials are valid. " +
                         '28P01: password authentication failed for user "admin"',
                     details:
                         'Npgsql.NpgsqlException (0x80004005): 28P01: password authentication failed for user "admin"\n' +
