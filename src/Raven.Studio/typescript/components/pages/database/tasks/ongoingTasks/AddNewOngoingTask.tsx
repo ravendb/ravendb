@@ -85,21 +85,6 @@ export default function AddNewOngoingTask({ queryParams }: ReactQueryParamsProps
                 ) : (
                     <AboutViewHeading title="Add a database task" icon="tasks" iconAddon="plus" marginBottom={4} />
                 )}
-                {!isAiOnly && (
-                    <div className="d-flex align-items-start gap-3">
-                        <Button
-                            size="sm"
-                            target="_blank"
-                            href={serverWideTasksUrl}
-                            title="Go to the Server-Wide Tasks view"
-                            variant="link"
-                        >
-                            <Icon icon="server-wide-tasks" />
-                            Server-Wide Tasks
-                        </Button>
-                        <AddNewOngoingTaskAboutView />
-                    </div>
-                )}
                 <div className="d-flex align-items-center gap-3">
                     <RadioToggleWithIcon
                         name="task-display-mode"
@@ -108,7 +93,7 @@ export default function AddNewOngoingTask({ queryParams }: ReactQueryParamsProps
                         selectedValue={displayMode}
                         setSelectedValue={(val) => setDisplayMode(val)}
                     />
-                    <AddNewOngoingTaskAboutView />
+                    {!isAiOnly && <AddNewOngoingTaskAboutView />}
                 </div>
             </div>
             <div className="add-new-ongoing-task-horizontal-nav gap-1">
@@ -147,7 +132,7 @@ export default function AddNewOngoingTask({ queryParams }: ReactQueryParamsProps
                     </a>
                 </div>
                 <div className="add-new-ongoing-task-content pb-4">
-                    <OngoingTasksList filteredTasks={filteredTasks} displayMode={displayMode} />
+                    <OngoingTasksList filteredTasks={filteredTasks} isAiOnly={isAiOnly} displayMode={displayMode} />
                 </div>
             </div>
         </div>

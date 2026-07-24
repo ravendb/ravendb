@@ -77,12 +77,15 @@ import { AmazonSqsEtlPanel } from "components/pages/database/tasks/ongoingTasks/
 import { EmbeddingsGenerationPanel } from "components/pages/database/tasks/ongoingTasks/panels/EmbeddingsGenerationPanel";
 import { GenAiPanel } from "./panels/GenAiPanel";
 
-interface OngoingTasksPageProps {
-    isAiOnly?: boolean;
-    queryParams: ReactQueryParamsProps<{allowEmpty?: string}>;
+interface OngoingTasksPageQueryParams {
+    allowEmpty?: string;
 }
 
-export function OngoingTasksPage({ isAiOnly = false, queryParams = {} }: OngoingTasksPageProps) {
+interface OngoingTasksPageProps extends ReactQueryParamsProps<OngoingTasksPageQueryParams> {
+    isAiOnly?: boolean;
+}
+
+export function OngoingTasksPage({ isAiOnly = false, queryParams }: OngoingTasksPageProps = {}) {
     const db = useAppSelector(databaseSelectors.activeDatabase);
 
     const { tasksService } = useServices();
@@ -274,6 +277,12 @@ export function OngoingTasksPage({ isAiOnly = false, queryParams = {} }: Ongoing
         tasks.subscriptions.length +
         (DatabaseUtils.hasInternalReplication(db) ? 1 : 0);
 
+    const aiTasksCount = tasks.tasks.filter((x) =>
+        ["GenAi", "EmbeddingsGeneration"].includes(x.shared.taskType)
+    ).length;
+
+    const relevantTasksCount = isAiOnly ? aiTasksCount : allTasksCount;
+
     const refreshSubscriptionInfo = async (taskId: number, taskName: string) => {
         const loadTasks = db.nodes.map(async (nodeInfo) => {
             const nodeTag = nodeInfo.tag;
@@ -374,7 +383,7 @@ export function OngoingTasksPage({ isAiOnly = false, queryParams = {} }: Ongoing
 
     // Once tasks have been seen, don't redirect away again if they're later deleted down to zero.
     const hasSeenTasksRef = useRef(false);
-    if (allTasksCount > 0 || showInternalReplication) {
+    if (relevantTasksCount > 0 || showInternalReplication) {
         hasSeenTasksRef.current = true;
     }
 
@@ -383,10 +392,10 @@ export function OngoingTasksPage({ isAiOnly = false, queryParams = {} }: Ongoing
     }
 
     const shouldRedirectToAddTask =
-        !queryParams?.allowEmpty && allTasksCount === 0 && !showInternalReplication && !hasSeenTasksRef.current;
+        !queryParams?.allowEmpty && relevantTasksCount === 0 && !showInternalReplication && !hasSeenTasksRef.current;
 
     if (shouldRedirectToAddTask) {
-        router.navigate(forCurrentDatabase.addNewOngoingTaskUrl(true)());
+        router.navigate(forCurrentDatabase.addNewOngoingTaskUrl(isAiOnly, true)());
         return null;
     }
 
@@ -450,7 +459,7 @@ export function OngoingTasksPage({ isAiOnly = false, queryParams = {} }: Ongoing
             {operationConfirm && <OngoingTaskOperationConfirm {...operationConfirm} toggle={cancelOperationConfirm} />}
             <OngoingTasksHeader
                 reload={reload}
-                allTasksCount={allTasksCount}
+                allTasksCount={relevantTasksCount}
                 tasks={tasks}
                 hasInternalReplication={DatabaseUtils.hasInternalReplication(db)}
                 selectedTaskIds={selectedTaskIds}
@@ -463,7 +472,7 @@ export function OngoingTasksPage({ isAiOnly = false, queryParams = {} }: Ongoing
             <Row className="gy-sm">
                 <div className="flex-vertical">
                     <div className="scroll flex-grow">
-                        {allTasksCount === 0 && !showInternalReplication && (
+                        {relevantTasksCount === 0 && !showInternalReplication && (
                             <EmptySet>No tasks have been created for this Database Group.</EmptySet>
                         )}
                         {showInternalReplication && internalReplications.length > 0 && (
