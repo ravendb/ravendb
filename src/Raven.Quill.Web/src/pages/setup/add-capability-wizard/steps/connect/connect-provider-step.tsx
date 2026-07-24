@@ -6,7 +6,10 @@ import { ApiState } from "@/components/data/api-state";
 import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
 import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
 import { AddAiConnectionString } from "@/components/ai-connection-string/add-ai-connection-string";
-import { getProviderLabel } from "@/components/ai-connection-string/ai-connection-string-utils";
+import {
+    getConnectionStringLabel,
+    getServerConnectionStringName,
+} from "@/components/ai-connection-string/ai-connection-string-utils";
 import { FormCombobox } from "@/components/form/form-combobox";
 import { Field, FieldLabel } from "@/components/shadcn/ui/field";
 
@@ -18,7 +21,7 @@ export function ConnectProviderStep({ isBusy }: WizardBodyComponentProps) {
     // the operator picks a connection string; the step's beforeNext awaits the same query.
     usePrefetchQuery(api.queries.apps.suggestAgentFromData(slug));
 
-    const connectionStringsQuery = useQuery(api.queries.aiConnectionStrings.list());
+    const connectionStringsQuery = useQuery(api.queries.apps.aiConnectionStringsList(slug));
     const items = connectionStringsQuery.data ?? [];
 
     return (
@@ -47,7 +50,7 @@ export function ConnectProviderStep({ isBusy }: WizardBodyComponentProps) {
                         disabled={isBusy}
                         options={items.map((item) => ({
                             value: item.name ?? "",
-                            label: `${item.name} · ${getProviderLabel(item)}`,
+                            label: getConnectionStringLabel(item),
                         }))}
                         addons={<AddButton />}
                     />
@@ -64,7 +67,7 @@ function AddButton() {
         <AddAiConnectionString
             modelType="Chat"
             onCreated={(name) =>
-                setValue("connection.connectionStringName", name, {
+                setValue("connection.connectionStringName", getServerConnectionStringName(name), {
                     shouldValidate: true,
                     shouldDirty: true,
                 })

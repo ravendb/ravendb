@@ -9,7 +9,10 @@ import { toast } from "sonner";
 import { api } from "@/api/api";
 import type { AiAgentConfiguration, AiConnectionString } from "@/api/generated/server-api";
 import { AddAiConnectionString } from "@/components/ai-connection-string/add-ai-connection-string";
-import { getProviderLabel } from "@/components/ai-connection-string/ai-connection-string-utils";
+import {
+    getConnectionStringLabel,
+    getServerConnectionStringName,
+} from "@/components/ai-connection-string/ai-connection-string-utils";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/shadcn/ui/collapsible";
@@ -132,16 +135,20 @@ export function EditAgentForm({ slug, agentId, config, connectionStrings }: Edit
                                 placeholder="Select..."
                                 options={connectionStrings.map((item) => ({
                                     value: item.name ?? "",
-                                    label: `${item.name} · ${getProviderLabel(item)}`,
+                                    label: getConnectionStringLabel(item),
                                 }))}
                                 addons={
                                     <AddAiConnectionString
                                         modelType="Chat"
                                         onCreated={(name) =>
-                                            form.setValue("connection.connectionStringName", name, {
-                                                shouldValidate: true,
-                                                shouldDirty: true,
-                                            })
+                                            form.setValue(
+                                                "connection.connectionStringName",
+                                                getServerConnectionStringName(name),
+                                                {
+                                                    shouldValidate: true,
+                                                    shouldDirty: true,
+                                                },
+                                            )
                                         }
                                     />
                                 }

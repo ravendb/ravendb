@@ -10,6 +10,7 @@ import { SheetClose, SheetFooter } from "@/components/shadcn/ui/sheet";
 import { FormInput } from "@/components/form/form-input";
 import { FormSelect } from "@/components/form/form-select";
 import { withNestedSubmit } from "@/lib/form-utils";
+import { invalidateAiConnectionStringQueries } from "@/lib/query-invalidation";
 import {
     type ConnectionStringFormData,
     createConnectionStringSchema,
@@ -88,7 +89,7 @@ export function AiConnectionStringForm({
         },
         onSuccess: async (name) => {
             await Promise.all([
-                queryClient.invalidateQueries({ queryKey: api.queries.aiConnectionStrings.list().queryKey }),
+                invalidateAiConnectionStringQueries(queryClient),
                 // Refresh the cached detail so reopening the edit sheet shows the saved values.
                 queryClient.invalidateQueries({
                     queryKey: api.queries.aiConnectionStrings.detail(name).queryKey,

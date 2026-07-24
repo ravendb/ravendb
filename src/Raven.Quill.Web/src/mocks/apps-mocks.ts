@@ -1,8 +1,15 @@
 import { delay, http, HttpResponse, ws, type RequestHandler } from "msw";
-import type { AppResponse, CdcError, ProvisionAgentResponse, SuggestAgentResponse } from "@/api/generated/server-api";
+import type {
+    AiConnectionString,
+    AppResponse,
+    CdcError,
+    ProvisionAgentResponse,
+    SuggestAgentResponse,
+} from "@/api/generated/server-api";
 import type { AgentStreamEvent } from "@/api/custom-services/agent-stream";
 import type { CdcLiveRawFrame } from "@/pages/apps/use-cdc-live-performance";
 import { apiHttp } from "./api-http";
+import { samplePropagatedConnectionStrings } from "./ai-connection-strings-mocks";
 
 // WS-only relay route, so it has no generated client or `apiHttp` path to lean on.
 // The pattern must start with "*": msw resolves other patterns through `new URL()`,
@@ -46,6 +53,8 @@ export const appsMocks = {
         }),
     suggestAgent: (suggestion: SuggestAgentResponse = sampleAgentSuggestion) =>
         apiHttp.post("/api/apps/{slug}/suggest/agent", ({ response }) => response(200).json(suggestion)),
+    aiConnectionStringsList: (connectionStrings: AiConnectionString[] = samplePropagatedConnectionStrings) =>
+        apiHttp.get("/api/apps/{slug}/connection-strings", ({ response }) => response(200).json(connectionStrings)),
 };
 
 export const sampleApps: AppResponse[] = [

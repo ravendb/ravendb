@@ -1,6 +1,8 @@
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.CdcSink;
+using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Quill.Agents;
@@ -68,6 +70,25 @@ public static class AppsEndpoints
             .WithName("apps.delete")
             .Produces(StatusCodes.Status204NoContent)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
+
+        group.MapGet("/{slug}/connection-strings", ListConnectionStringsAsync)
+            .WithName("apps.aiConnectionStringsList")
+            .Produces<List<AiConnectionString>>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
+    }
+
+    private static async Task<IResult> ListConnectionStringsAsync(
+        string slug,
+        IDocumentStore store,
+        CancellationToken ct)
+    {
+        var app = await AppLookup.LoadAppAsync(store, slug, ct);
+
+        if (app is null)
+            return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
+
+        var r = await store.Maintenance.ForDatabase(slug).SendAsync(new GetConnectionStringsOperation(), ct);
+        return Results.Ok(r.AiConnectionStrings?.Values.ToList() ?? []);
     }
 
     private static async Task<IResult> DeleteAppAsync(
@@ -176,7 +197,7 @@ public static class AppsEndpoints
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
-        var validationError = await AgentConfigValidator.ValidateAndPrepareAsync(store, body, ct);
+        var validationError = await AgentConfigValidator.ValidateAndPrepareAsync(store, slug, body, ct);
         if (validationError is not null)
             return validationError;
 

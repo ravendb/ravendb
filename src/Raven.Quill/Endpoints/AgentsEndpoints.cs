@@ -120,7 +120,7 @@ public static class AgentsEndpoints
         if (existing is null)
             return Results.NotFound(new ApiErrorResponse($"no agent '{body.Identifier}' in app '{slug}'"));
 
-        var validationError = await AgentConfigValidator.ValidateAndPrepareAsync(store, body, ct);
+        var validationError = await AgentConfigValidator.ValidateAndPrepareAsync(store, slug, body, ct);
         if (validationError is not null)
             return validationError;
 

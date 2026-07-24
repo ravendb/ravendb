@@ -7,8 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
 import { FormWizard } from "@/components/form/wizard/form-wizard";
 import { preventEnterKeySubmission } from "@/lib/form-utils";
-import { sampleAgentSuggestion } from "@/mocks/apps-mocks";
-import { aiConnectionStringsMocks } from "@/mocks/ai-connection-strings-mocks";
+import { appsMocks, sampleAgentSuggestion } from "@/mocks/apps-mocks";
 import { channelsMocks } from "@/mocks/channels-mocks";
 import { AddCapabilityWizard } from "./add-capability-wizard";
 import { suggestionToAgentConfiguration } from "./agent-config-form";
@@ -110,9 +109,13 @@ export const ConnectProvider: Story = {
 };
 
 // No connection strings yet: the step hides the selector and shows only the "Add" button.
+// Overriding the `apps` key drops its other default handlers, so re-add the suggestion
+// mock the step prefetches.
 export const ConnectProviderEmpty: Story = {
     render: () => <CapabilityWizardAtStep initialStep="connection" />,
-    parameters: { msw: { handlers: { aiConnectionStrings: [aiConnectionStringsMocks.list([])] } } },
+    parameters: {
+        msw: { handlers: { apps: [appsMocks.aiConnectionStringsList([]), appsMocks.suggestAgent()] } },
+    },
 };
 
 export const CreateAgent: Story = {

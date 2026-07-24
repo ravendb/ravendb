@@ -276,6 +276,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/apps/{slug}/connection-strings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["apps.aiConnectionStringsList"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/apps/{slug}/setup/channel": {
         parameters: {
             query?: never;
@@ -2221,6 +2237,37 @@ export interface operations {
             };
         };
     };
+    "apps.aiConnectionStringsList": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiConnectionString"][];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
     "channels.create": {
         parameters: {
             query?: never;
@@ -3852,6 +3899,7 @@ export const API_ENDPOINTS = {
         list: "/ai/models",
     },
     apps: {
+        aiConnectionStringsList: (slug: string) => `/apps/${encodeURIComponent(slug)}/connection-strings`,
         cdcErrors: (slug: string) => `/apps/${encodeURIComponent(slug)}/cdc/errors`,
         cdcGet: (slug: string) => `/apps/${encodeURIComponent(slug)}/cdc`,
         cdcPerformance: (slug: string) => `/apps/${encodeURIComponent(slug)}/cdc/performance`,
@@ -3942,6 +3990,7 @@ export function createServerApi(client: ApiClient) {
             list: (request: AiModelsRequest) => client.post<AiModelsResponse, ApiErrorResponse>(API_ENDPOINTS.aiModels.list, request),
         },
         apps: {
+            aiConnectionStringsList: (slug: string) => client.get<AiConnectionString[], ApiErrorResponse>(API_ENDPOINTS.apps.aiConnectionStringsList(slug)),
             cdcErrors: (slug: string) => client.get<CdcError[], ApiErrorResponse>(API_ENDPOINTS.apps.cdcErrors(slug)),
             cdcGet: (slug: string) => client.get<CdcSinkConfiguration, ApiErrorResponse>(API_ENDPOINTS.apps.cdcGet(slug)),
             cdcPerformance: (slug: string) => client.get<CdcPerformanceResponse, ApiErrorResponse>(API_ENDPOINTS.apps.cdcPerformance(slug)),

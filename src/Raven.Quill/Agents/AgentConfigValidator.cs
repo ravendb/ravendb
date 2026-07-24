@@ -4,7 +4,6 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Quill.Contracts;
 
 namespace Raven.Quill.Agents;
@@ -27,7 +26,7 @@ internal static class AgentConfigValidator
     /// otherwise the error <see cref="IResult"/> the caller should return.
     /// </summary>
     public static async Task<IResult?> ValidateAndPrepareAsync(
-        IDocumentStore store, AiAgentConfiguration? body, CancellationToken ct)
+        IDocumentStore store, string slug, AiAgentConfiguration? body, CancellationToken ct)
     {
         // STJ uses the param-less ctor, bypassing the 3-arg guards; validate here
         if (body is null)
@@ -53,16 +52,14 @@ internal static class AgentConfigValidator
             query.Query = EnforceLimit(query.Query);
         }
 
-        var result = await store.Maintenance.Server
-            .SendAsync(new GetServerWideConnectionStringsOperation(body.ConnectionStringName, ConnectionStringType.Ai), ct);
+        var result = await store.Maintenance.ForDatabase(slug).SendAsync(new GetConnectionStringsOperation(body.ConnectionStringName, ConnectionStringType.Ai), ct);
 
-        var cs = result.Results.SingleOrDefault()?.ConnectionString;
-
-        if (cs is null || cs is not AiConnectionString aiCs)
+        if (result.AiConnectionStrings is null ||
+            result.AiConnectionStrings.TryGetValue(body.ConnectionStringName, out var aiCs) == false)
         {
             return Results.BadRequest(new ApiErrorResponse(
-                $"connection string '{body.ConnectionStringName}' not found; create it via " +
-                $"POST /api/apps/{{slug}}/ai/connection-strings first"));
+                $"connection string '{body.ConnectionStringName}' not found in app '{slug}'; create it via " +
+                $"POST /api/ai/connection-strings first"));
         }
 
         if (aiCs.ModelType != AiModelType.Chat)
@@ -74,9 +71,6 @@ internal static class AgentConfigValidator
         if (provider != AiConnectorType.OpenAi && provider != AiConnectorType.Ollama)
             return Results.BadRequest(new ApiErrorResponse(
                 $"connection string '{aiCs.Name}' uses unsupported provider '{provider}' in demo; supported: OpenAi, Ollama"));
-
-        // agents resolve the CS (and server-wide UsedBy matches) by the propagated DB-record name, not the bare name
-        body.ConnectionStringName = ServerWideConnectionString.GetDatabaseRecordConnectionStringName(body.ConnectionStringName);
 
         body.Disabled = false;
         body.ChatTrimming = new AiAgentChatTrimmingConfiguration(new AiAgentSummarizationByTokens
