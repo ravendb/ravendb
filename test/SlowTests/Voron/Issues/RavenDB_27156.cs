@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -21,6 +22,101 @@ public class RavenDB_27156(ITestOutputHelper output) : RavenTestBase(output)
     [RavenFact(RavenTestCategory.Voron)]
     public void FailedSharedJournalWrite_WithoutPendingFlush_PoisonsBranchAndRecoversOnRestart()
         => RunScenario(flushPendingDuringDoomedCommit: false);
+
+    // Generic torn-tail recovery bug behind the wrong-page reads / AccessViolation seen after a failed
+    // shared-journal write (no shared journals needed): a journal that grew the data pager and then ends in
+    // a torn tail must still publish the grown pager state, else DataPagerState < NextPageNumber and reads fault.
+    [RavenFact(RavenTestCategory.Voron)]
+    public void TornJournalTail_AfterDataPagerGrowth_RecoversWithPagerCoveringNextPage()
+    {
+        var path = NewDataPath();
+        IOExtensions.DeleteDirectory(path);
+
+        var expected = new Dictionary<string, string>();
+
+        // phase 1: a big tx (grows the pager on replay) then a torn-tail tx, both in one journal. Manual
+        // flush/sync keeps everything in the journal so recovery has to rebuild and grow the data pager.
+        {
+            var options = StorageEnvironmentOptions.ForPathForTests(path);
+            options.ManualFlushing = true;
+            options.ManualSyncing = true;
+            options.InitialLogFileSize = 64 * 1024 * 1024; // one journal holds the big tx + the torn tail
+
+            var env = new StorageEnvironment(options);
+            try
+            {
+                using (var tx = env.WriteTransaction())
+                {
+                    var tree = tx.CreateTree("tree");
+                    for (int i = 0; i < 5000; i++)
+                    {
+                        var key = $"items/{i:D6}";
+                        var value = i + "-" + new string((char)('a' + i % 26), 300);
+                        tree.Add(key, value);
+                        expected[key] = value;
+                    }
+                    tx.Commit();
+                }
+
+                Output.WriteLine($"after big tx: NextPageNumber={env.NextPageNumber}");
+
+                var armed = 1;
+                env.Options.ForTestingPurposesOnly().SimulatePartialJournalWriteFailure = total =>
+                {
+                    if (Interlocked.Exchange(ref armed, 0) == 0)
+                        return null;
+                    return new StorageEnvironmentOptions.TestingStuff.PartialJournalWriteFailure
+                    {
+                        NumberOf4KbsToWrite = total / 2,
+                        Error = new IOException("RavenDB-27156 simulated torn journal write")
+                    };
+                };
+
+                // incompressible value: the write must span several 4KB blocks so writing half leaves a real
+                // torn tail (a compressible value collapses to one block and writing half writes nothing)
+                var tailBytes = new byte[32 * 1024];
+                new Random(1234).NextBytes(tailBytes);
+                using (var tx = env.WriteTransaction())
+                {
+                    tx.CreateTree("tree").Add("torn-tail", Convert.ToBase64String(tailBytes));
+                    Assert.ThrowsAny<Exception>(() => tx.Commit());
+                }
+            }
+            finally
+            {
+                Record.Exception(() => env.Dispose()); // env is catastrophically failed after the torn write
+            }
+        }
+
+        // phase 2: reopen and recover
+        {
+            var options = StorageEnvironmentOptions.ForPathForTests(path);
+            options.ManualFlushing = true;
+            options.ManualSyncing = true;
+            options.InitialLogFileSize = 64 * 1024 * 1024;
+            options.OnRecoveryError += (_, _) => { }; // continue past the torn tail (as a running server does) instead of throwing at it
+
+            using var env = new StorageEnvironment(options);
+
+            var state = env.CurrentStateRecord;
+            Output.WriteLine($"recovered: NextPageNumber={state.NextPageNumber} dataPagerAllocPages={state.DataPagerState.NumberOfAllocatedPages}");
+
+            // without the fix the pager stays at its pre-growth size (e.g. allocPages=8 vs NextPageNumber=212)
+            Assert.True(state.DataPagerState.NumberOfAllocatedPages >= state.NextPageNumber,
+                $"data pager undersized after torn-tail recovery: allocPages={state.DataPagerState.NumberOfAllocatedPages} < NextPageNumber={state.NextPageNumber} (RavenDB-27156)");
+
+            using var rtx = env.ReadTransaction();
+            var tree = rtx.ReadTree("tree");
+            Assert.NotNull(tree);
+            foreach (var (key, value) in expected)
+            {
+                var read = tree.Read(key);
+                Assert.True(read != null, $"value for '{key}' is gone after recovery");
+                Assert.Equal(value, read.Reader.ToStringValue());
+            }
+            Assert.Null(tree.Read("torn-tail"));
+        }
+    }
 
     private void RunScenario(bool flushPendingDuringDoomedCommit)
     {
