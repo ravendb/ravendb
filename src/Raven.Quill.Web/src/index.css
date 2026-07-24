@@ -261,6 +261,21 @@
         height: 100%;
     }
 
+    /* Scale the whole rem-based UI up on very wide screens so it doesn't feel undersized on
+       large monitors. Media queries resolve rem against the browser's initial font size, so
+       Tailwind breakpoints are unaffected by this. */
+    @media (min-width: 2000px) {
+        html {
+            font-size: 17px;
+        }
+    }
+
+    @media (min-width: 2560px) {
+        html {
+            font-size: 18px;
+        }
+    }
+
     body {
         background-color: var(--color-background);
         color: var(--color-foreground);
