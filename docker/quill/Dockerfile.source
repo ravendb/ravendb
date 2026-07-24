@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-ARG SDK_IMAGE=mcr.microsoft.com/dotnet/sdk:10.0.301
+ARG SDK_IMAGE=mcr.microsoft.com/dotnet/sdk:10.0.302
 ARG RUNTIME_IMAGE=mcr.microsoft.com/dotnet/aspnet:10.0.9
 ARG NODE_IMAGE=node:24-bookworm-slim
 ARG STUDIO_NODE_MAJOR=24
