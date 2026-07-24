@@ -30,13 +30,13 @@ public static class RavenStoreFactory
     public static IDocumentStore Create(IOptions<ApplianceOptions> options) =>
         Create(options.Value);
 
-    public static async Task<bool> EnsureDatabaseAsync(IDocumentStore store, string database, CancellationToken ct = default)
+    public static async Task<bool> EnsureDatabaseAsync(IDocumentStore store, string database, DatabaseLockMode lockMode = DatabaseLockMode.Unlock, CancellationToken ct = default)
     {
         var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database), ct);
         if (record is not null)
             return false;
 
-        await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(database)), ct);
+        await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(database) { LockMode = lockMode }), ct);
         return true;
     }
 

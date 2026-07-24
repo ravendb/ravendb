@@ -299,7 +299,7 @@ public static class WizardEndpoints
         try
         {
             // cluster-wide-atomic: this call IS the slug-uniqueness gate
-            created = await RavenStoreFactory.EnsureDatabaseAsync(store, slug, ct);
+            created = await RavenStoreFactory.EnsureDatabaseAsync(store, slug, ct: ct);
         }
         catch (ConcurrencyException)
         {
