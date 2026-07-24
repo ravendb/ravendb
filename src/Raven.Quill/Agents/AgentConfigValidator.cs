@@ -53,13 +53,11 @@ internal static class AgentConfigValidator
         }
 
         var result = await store.Maintenance.ForDatabase(slug).SendAsync(new GetConnectionStringsOperation(body.ConnectionStringName, ConnectionStringType.Ai), ct);
-
         if (result.AiConnectionStrings is null ||
             result.AiConnectionStrings.TryGetValue(body.ConnectionStringName, out var aiCs) == false)
         {
             return Results.BadRequest(new ApiErrorResponse(
-                $"connection string '{body.ConnectionStringName}' not found in app '{slug}'; create it via " +
-                $"POST /api/ai/connection-strings first"));
+                $"connection string '{body.ConnectionStringName}' not found in app '{slug}'."));
         }
 
         if (aiCs.ModelType != AiModelType.Chat)
