@@ -6,7 +6,7 @@ import React from "react";
 const { ServerWideCustomSortersStory } = composeStories(Stories);
 
 const selectors = {
-    licenseBadge: /Professional +/,
+    licenseBadgeTestId: "license-restricted-badge",
     saveButton: /Save changes/,
     emptyList: /No server-wide custom sorters have been defined/,
 };
@@ -16,7 +16,7 @@ describe("ServerWideCustomSorters", () => {
         const { screen, waitForLoad } = rtlRender(<ServerWideCustomSortersStory hasServerWideCustomSorters={false} />);
         await waitForLoad();
 
-        expect(screen.queryByText(selectors.licenseBadge)).toBeInTheDocument();
+        expect(screen.queryByTestId(selectors.licenseBadgeTestId)).toBeInTheDocument();
         expect(screen.queryByText(selectors.emptyList)).toBeInTheDocument();
     });
 
@@ -26,7 +26,7 @@ describe("ServerWideCustomSorters", () => {
         );
         await waitForLoad();
 
-        expect(screen.queryByText(selectors.licenseBadge)).not.toBeInTheDocument();
+        expect(screen.queryByTestId(selectors.licenseBadgeTestId)).not.toBeInTheDocument();
 
         await fireClick(screen.getAllByClassName("icon-edit")[0]);
         expect(screen.queryByText(selectors.saveButton)).toBeInTheDocument();

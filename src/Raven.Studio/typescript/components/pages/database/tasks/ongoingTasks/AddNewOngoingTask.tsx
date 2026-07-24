@@ -3,12 +3,10 @@ import "./AddNewOngoingTask.scss";
 import { AboutViewHeading } from "components/common/AboutView";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
-import Col from "react-bootstrap/Col";
 import Form from "react-bootstrap/Form";
-import Row from "react-bootstrap/Row";
-import React, { ReactNode } from "react";
+import React, { ReactNode, useEffect, useState } from "react";
+import studioSettings = require("common/settings/studioSettings");
 import { Icon } from "components/common/Icon";
-import { MultiCheckboxToggle } from "components/common/toggles/MultiCheckboxToggle";
 import IconName from "typings/server/icons";
 import classNames from "classnames";
 import { useAppUrls } from "hooks/useAppUrls";
@@ -18,35 +16,75 @@ import LicenseRestrictedBadge, { LicenseBadgeText } from "components/common/Lice
 import { useNewOngoingTasks } from "components/pages/database/tasks/shared/shared";
 import { EmptySet } from "components/common/EmptySet";
 import { AddNewOngoingTaskAboutView } from "components/pages/database/tasks/ongoingTasks/partials/AddNewOngoingTaskAboutView";
+import { RadioToggleWithIcon } from "components/common/toggles/RadioToggle";
+import { Checkbox } from "components/common/Checkbox";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { getDatabaseAccessRequiredMessage } from "components/utils/accessUtils";
 
-interface AddNewOngoingTaskProps {
+interface AddNewOngoingTaskQueryParams {
     isAiOnly: boolean;
+    noBack?: string;
 }
 
-export default function AddNewOngoingTask({ queryParams }: ReactQueryParamsProps<AddNewOngoingTaskProps>) {
+type DisplayMode = "expanded" | "compact";
+
+export default function AddNewOngoingTask({ queryParams }: ReactQueryParamsProps<AddNewOngoingTaskQueryParams>) {
     const isAiOnly = queryParams?.isAiOnly;
 
     const { forCurrentDatabase, appUrl } = useAppUrls();
-    const { filteredTasks, categoryList, searchText, selectedCategories, setSearchText, setSelectedCategories } =
-        useNewOngoingTasks({ isAiOnly });
+    const {
+        filteredTasks,
+        searchFilteredTasks,
+        allCategories,
+        searchText,
+        setSearchText,
+        selectedCategories,
+        toggleCategory,
+        resetCategories,
+    } = useNewOngoingTasks({ isAiOnly });
 
     const serverWideTasksUrl = appUrl.forServerWideTasks();
-    const ongoingTasksUrl = forCurrentDatabase.ongoingTasksUrl();
+    const ongoingTasksUrl = forCurrentDatabase.ongoingTasksUrl(true)();
     const aiTasksUrl = forCurrentDatabase.aiTasks();
+    const showBackUrl = !queryParams?.noBack;
+
+    const [displayMode, setDisplayModeState] = useState<DisplayMode>("expanded");
+
+    useEffect(() => {
+        let disposed = false;
+
+        studioSettings.default.globalSettings().done((settings) => {
+            if (!disposed) {
+                setDisplayModeState(settings.ongoingTaskDisplayMode.getValue());
+            }
+        });
+
+        return () => {
+            disposed = true;
+        };
+    }, []);
+
+    const setDisplayMode = (mode: DisplayMode) => {
+        setDisplayModeState(mode);
+        studioSettings.default.globalSettings().done((settings) => settings.ongoingTaskDisplayMode.setValue(mode));
+    };
 
     return (
-        <div className="content-margin add-new-ongoing-task">
-            <div className="d-flex justify-content-between">
-                <AboutViewHeading
-                    title={isAiOnly ? "Add AI task" : "Add a database task"}
-                    icon="tasks"
-                    iconAddon="plus"
-                    marginBottom={4}
-                />
+        <div className="add-new-ongoing-task d-flex flex-column">
+            <div className="d-flex justify-content-between align-items-start">
+                {showBackUrl ? (
+                    <AboutViewHeading
+                        title={isAiOnly ? "Add AI task" : "Add a database task"}
+                        icon="tasks"
+                        iconAddon="plus"
+                        backUrl={isAiOnly ? aiTasksUrl : ongoingTasksUrl}
+                        marginBottom={4}
+                    />
+                ) : (
+                    <AboutViewHeading title="Add a database task" icon="tasks" iconAddon="plus" marginBottom={4} />
+                )}
                 {!isAiOnly && (
                     <div className="d-flex align-items-start gap-3">
                         <Button
@@ -62,55 +100,167 @@ export default function AddNewOngoingTask({ queryParams }: ReactQueryParamsProps
                         <AddNewOngoingTaskAboutView />
                     </div>
                 )}
+                <div className="d-flex align-items-center gap-3">
+                    <RadioToggleWithIcon
+                        name="task-display-mode"
+                        leftItem={{ label: "", value: "expanded", iconName: "list" }}
+                        rightItem={{ label: "", value: "compact", iconName: "grid-3x2" }}
+                        selectedValue={displayMode}
+                        setSelectedValue={(val) => setDisplayMode(val)}
+                    />
+                    <AddNewOngoingTaskAboutView />
+                </div>
             </div>
-            <Button href={isAiOnly ? aiTasksUrl : ongoingTasksUrl} className="rounded-pill" variant="secondary">
-                <Icon icon="arrow-left" />
-                {isAiOnly ? "Back to AI Tasks" : "Back to ongoing tasks"}
-            </Button>
-            <Row className="d-flex row-gap-2 my-3">
-                <Col>
-                    <div className="flex-grow">
-                        <div className="small-label ms-1 mb-1">Search by name</div>
-                        <div className="clearable-input">
-                            <Form.Control
-                                type="text"
-                                accessKey="/"
-                                placeholder="e.g. Embeddings Generation"
-                                title="Filter tasks"
-                                className="filtering-input"
-                                value={searchText}
-                                onChange={(e) => setSearchText(e.target.value)}
-                            />
-                            {searchText && (
-                                <div className="clear-button">
-                                    <Button variant="secondary" size="sm" onClick={() => setSearchText("")}>
-                                        <Icon icon="clear" margin="m-0" />
-                                    </Button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </Col>
-                {!isAiOnly && (
-                    <Col xs="auto">
-                        <MultiCheckboxToggle
-                            inputItems={categoryList}
-                            label="Filter by category"
-                            selectedItems={selectedCategories}
-                            setSelectedItems={(x) => setSelectedCategories(x)}
-                            selectAll
-                            selectAllLabel="Select All"
-                        />
-                    </Col>
-                )}
-            </Row>
-            <OngoingTasksList filteredTasks={filteredTasks} isAiOnly={isAiOnly} />
+            <div className="add-new-ongoing-task-horizontal-nav gap-1">
+                <TaskSearchInput searchText={searchText} setSearchText={setSearchText} className="mb-2" />
+                <TaskCategoryFilter
+                    variant="chips"
+                    categories={allCategories}
+                    availableCategories={searchFilteredTasks}
+                    selectedCategories={selectedCategories}
+                    onToggle={toggleCategory}
+                    onReset={resetCategories}
+                />
+            </div>
+            <div className="add-new-ongoing-task-layout d-flex gap-4 mt-2">
+                <div className="add-new-ongoing-task-sidebar flex-shrink-0 p-3">
+                    <TaskSearchInput searchText={searchText} setSearchText={setSearchText} className="mb-3" />
+                    <TaskCategoryFilter
+                        variant="checkbox"
+                        categories={allCategories}
+                        availableCategories={searchFilteredTasks}
+                        selectedCategories={selectedCategories}
+                        onToggle={toggleCategory}
+                        onReset={resetCategories}
+                    />
+                    <hr className="my-3" />
+                    <div className="small ms-1 text-muted">Need a cluster-wide task? Check out:</div>
+                    <a
+                        href={serverWideTasksUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="add-new-ongoing-task-nav-item text-decoration-none"
+                    >
+                        <Icon icon="server-wide-tasks" margin="m-0" />
+                        <span>Server-Wide Tasks</span>
+                        <Icon icon="newtab" margin="ms-0 m-0" className="add-new-ongoing-task-nav-item__newtab" />
+                    </a>
+                </div>
+                <div className="add-new-ongoing-task-content pb-4">
+                    <OngoingTasksList filteredTasks={filteredTasks} displayMode={displayMode} />
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function TaskSearchInput({
+    searchText,
+    setSearchText,
+    className,
+}: {
+    searchText: string;
+    setSearchText: (value: string) => void;
+    className?: string;
+}) {
+    return (
+        <div className={className}>
+            <div className="small-label ms-1 mb-1">Search by name</div>
+            <Form.Control
+                type="search"
+                accessKey="/"
+                placeholder="e.g. External Replication"
+                title="Filter tasks"
+                className="filtering-input"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+            />
+        </div>
+    );
+}
+
+interface CategoryNavItem {
+    categoryName: string;
+    categoryIcon: IconName;
+}
+
+function TaskCategoryFilter({
+    variant,
+    categories,
+    availableCategories,
+    selectedCategories,
+    onToggle,
+    onReset,
+}: {
+    variant: "chips" | "checkbox";
+    categories: CategoryNavItem[];
+    availableCategories: TaskCategory[];
+    selectedCategories: string[];
+    onToggle: (categoryName: string) => void;
+    onReset: () => void;
+}) {
+    const isChips = variant === "chips";
+    const hasActiveFilter = selectedCategories.length > 0;
+
+    return (
+        <div>
+            <div className="d-flex justify-content-between align-items-center mb-1">
+                <div className="small-label">Filter by Category</div>
+                <Button
+                    variant="link"
+                    size="xs"
+                    className={classNames("p-0", { invisible: !hasActiveFilter })}
+                    onClick={onReset}
+                    disabled={!hasActiveFilter}
+                >
+                    Reset
+                    <Icon icon="reset" margin="ms-1" />
+                </Button>
+            </div>
+            {isChips ? (
+                <div className="add-new-ongoing-task-chips-row">
+                    {categories.map((category) => {
+                        const isAvailable = availableCategories.some((c) => c.categoryName === category.categoryName);
+                        return (
+                            <button
+                                key={category.categoryName}
+                                className={classNames("add-new-ongoing-task-chip", {
+                                    active: selectedCategories.includes(category.categoryName),
+                                })}
+                                onClick={() => onToggle(category.categoryName)}
+                                disabled={!isAvailable}
+                            >
+                                <Icon icon={category.categoryIcon} margin="m-0" />
+                                <span>{category.categoryName}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+            ) : (
+                <div className="d-flex flex-column">
+                    {categories.map((category) => {
+                        const isAvailable = availableCategories.some((c) => c.categoryName === category.categoryName);
+                        return (
+                            <Checkbox
+                                key={category.categoryName}
+                                selected={selectedCategories.includes(category.categoryName)}
+                                toggleSelection={() => onToggle(category.categoryName)}
+                                disabled={!isAvailable}
+                                className="add-new-ongoing-task-filter-item"
+                            >
+                                {category.categoryName}
+                            </Checkbox>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 }
 
 interface TaskCategory {
     categoryName: string;
+    categoryHeaderName?: string;
     categoryIcon: IconName;
     tasks: TaskItemProps[];
 }
@@ -118,26 +268,34 @@ interface TaskCategory {
 interface OngoingTasksListProps {
     filteredTasks: TaskCategory[];
     isAiOnly: boolean;
+    displayMode?: DisplayMode;
 }
 
-export function OngoingTasksList({ filteredTasks, isAiOnly }: OngoingTasksListProps) {
+export function OngoingTasksList({ filteredTasks, isAiOnly, displayMode = "expanded" }: OngoingTasksListProps) {
     if (filteredTasks.length === 0) {
         return <EmptySet>No tasks match your filter criteria</EmptySet>;
     }
 
+    const isCompact = displayMode === "compact";
+
     return (
         <>
-            {filteredTasks.map((category, index) => (
-                <div className="pb-2" key={index}>
+            {filteredTasks.map((category) => (
+                <div className="pb-2" key={category.categoryName}>
                     {!isAiOnly && (
                         <HrHeader>
                             <Icon icon={category.categoryIcon} />
-                            {category.categoryName}
+                            {category.categoryHeaderName ?? category.categoryName}
                         </HrHeader>
                     )}
-                    <div className="d-grid gap-3 ongoing-tasks-grid">
+                    <div
+                        className={classNames(
+                            "d-grid ongoing-tasks-grid",
+                            isCompact ? "gap-2 ongoing-tasks-grid--compact" : "gap-3"
+                        )}
+                    >
                         {category.tasks.map((task) => (
-                            <TaskItem key={task.title} {...task} />
+                            <TaskItem key={task.title} {...task} displayMode={displayMode} />
                         ))}
                     </div>
                 </div>
@@ -161,6 +319,7 @@ export interface TaskItemProps {
     isShardingSupported?: boolean;
     accessRequired: databaseAccessLevel;
     customDisabledReason?: ReactNode;
+    displayMode?: DisplayMode;
 }
 
 function TaskItem({
@@ -176,6 +335,7 @@ function TaskItem({
     isShardingSupported,
     accessRequired,
     customDisabledReason,
+    displayMode = "expanded",
 }: TaskItemProps) {
     const { reportEvent } = useEventsCollector();
     const isSharded = useAppSelector(databaseSelectors.activeDatabase)?.isSharded;
@@ -183,6 +343,8 @@ function TaskItem({
 
     const isShardingNotSupported = !isShardingSupported && isSharded;
     const isDisabled = isShardingNotSupported || !canHandleOperation || !!customDisabledReason;
+
+    const isCompact = displayMode === "compact";
 
     return (
         <ConditionalPopover
@@ -206,27 +368,24 @@ function TaskItem({
                 href={isDisabled ? undefined : link}
                 onClick={() => reportEvent(target, "new")}
                 className={classNames(
-                    "card no-decor w-100 ongoing-tasks-card h-100 add-new-ongoing-task__card",
+                    "card no-decor w-100 ongoing-tasks-card h-100 add-new-ongoing-task-card",
                     `variant-${variant}`,
                     {
                         "item-disabled": !!isDisabled,
+                        compact: isCompact,
                     }
                 )}
             >
-                <Card.Body className="d-flex align-items gap-3">
-                    <div className="align-self-center">
-                        <Icon icon={iconName} className="task-icon fs-2" />
+                <Card.Body className={isCompact ? "d-flex align-items-center" : "d-flex flex-column gap-1"}>
+                    <div className="d-flex align-items-center">
+                        <Icon icon={iconName} className="task-icon" margin="me-2" />
+                        <h4 className="mb-0">{title}</h4>
+                        {counterBadge}
                     </div>
-                    <div className="d-flex flex-column align-self-center gap-1">
-                        <div className="d-flex align-items-center gap-2">
-                            <h4 className="mb-0">{title}</h4>
-                            {counterBadge}
-                        </div>
-                        <div>{description}</div>
-                    </div>
+                    {!isCompact && <div className="small">{description}</div>}
                 </Card.Body>
 
-                {showLicenseBadge && (
+                {showLicenseBadge && licenseBadge && (
                     <LicenseRestrictedBadge
                         className="position-absolute top-0 end-0 m-2"
                         licenseRequired={licenseBadge}

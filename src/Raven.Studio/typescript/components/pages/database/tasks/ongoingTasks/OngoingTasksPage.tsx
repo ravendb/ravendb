@@ -1,4 +1,5 @@
-﻿import React, { useCallback, useEffect, useReducer, useState } from "react";
+﻿import React, { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import router from "plugins/router";
 import { useServices } from "hooks/useServices";
 import { OngoingTasksState, ongoingTasksReducer, ongoingTasksReducerInitializer } from "./partials/OngoingTasksReducer";
 import { ExternalReplicationPanel } from "./panels/ExternalReplicationPanel";
@@ -58,6 +59,7 @@ import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils"
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useRavenLink } from "components/hooks/useRavenLink";
+import { useAppUrls } from "components/hooks/useAppUrls";
 import { throttledUpdateLicenseLimitsUsage } from "components/common/shell/setup";
 import { AzureQueueStorageEtlPanel } from "components/pages/database/tasks/ongoingTasks/panels/AzureQueueStorageEtlPanel";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
@@ -67,6 +69,7 @@ import ReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.Replic
 import InternalReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.InternalReplicationTaskProgress;
 import { OngoingTasksHeader } from "components/pages/database/tasks/ongoingTasks/partials/OngoingTasksHeader";
 import { InternalReplicationPanel } from "./panels/InternalReplicationPanel";
+import { LoadingView } from "components/common/LoadingView";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import recentError from "common/notifications/models/recentError";
 import { SnowflakeEtlPanel } from "components/pages/database/tasks/ongoingTasks/panels/SnowflakeEtlPanel";
@@ -76,9 +79,10 @@ import { GenAiPanel } from "./panels/GenAiPanel";
 
 interface OngoingTasksPageProps {
     isAiOnly?: boolean;
+    queryParams: ReactQueryParamsProps<{allowEmpty?: string}>;
 }
 
-export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
+export function OngoingTasksPage({ isAiOnly = false, queryParams = {} }: OngoingTasksPageProps) {
     const db = useAppSelector(databaseSelectors.activeDatabase);
 
     const { tasksService } = useServices();
@@ -95,6 +99,8 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
     });
 
     const upgradeLicenseLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
+    const { forCurrentDatabase } = useAppUrls();
+    const [isInitialLoadDone, setIsInitialLoadDone] = useState(false);
 
     const fetchTasks = useCallback(
         async (location: databaseLocationSpecifier) => {
@@ -128,6 +134,8 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
 
         const loadTasks = tasks.locations.map(fetchTasks);
         await Promise.all(loadTasks);
+
+        setIsInitialLoadDone(true);
     }, [tasks, fetchTasks, db]);
 
     useInterval(reload, 10_000);
@@ -363,6 +371,24 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
     );
 
     const showInternalReplication = !isAiOnly && DatabaseUtils.hasInternalReplication(db);
+
+    // Once tasks have been seen, don't redirect away again if they're later deleted down to zero.
+    const hasSeenTasksRef = useRef(false);
+    if (allTasksCount > 0 || showInternalReplication) {
+        hasSeenTasksRef.current = true;
+    }
+
+    if (!isInitialLoadDone) {
+        return <LoadingView />;
+    }
+
+    const shouldRedirectToAddTask =
+        !queryParams?.allowEmpty && allTasksCount === 0 && !showInternalReplication && !hasSeenTasksRef.current;
+
+    if (shouldRedirectToAddTask) {
+        router.navigate(forCurrentDatabase.addNewOngoingTaskUrl(true)());
+        return null;
+    }
 
     return (
         <div className="content-margin ongoing-tasks-page">

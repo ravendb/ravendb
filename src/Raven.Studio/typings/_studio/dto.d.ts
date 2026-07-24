@@ -400,6 +400,7 @@ declare module studio.settings {
     type numberFormatting = "raw" | "formatted";
     type dontShowAgain = "UnsupportedBrowser";
     type saveLocation = "local" | "remote";
+    type ongoingTaskDisplayMode = "expanded" | "compact";
 }
 
 interface IndexingPerformanceStatsWithCache extends Raven.Client.Documents.Indexes.IndexingPerformanceStats {
