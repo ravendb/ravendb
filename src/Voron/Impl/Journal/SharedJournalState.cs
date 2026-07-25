@@ -47,14 +47,19 @@ public class SharedJournalState()
 
         while (_mergedCommitsQueue.TryDequeue(out var rec))
         {
-            rec.Transaction.Environment.Options.SetCatastrophicFailure(edi);
+            MarkCatastrophicFailure(rec.Transaction.Environment, edi);
             rec.Tcs.TrySetException(e);
         }
 
         foreach (var record in _mergedJournalJournalRecordsBuffer)
         {
-            record.Transaction.Environment.Options.SetCatastrophicFailure(edi);
+            MarkCatastrophicFailure(record.Transaction.Environment, edi);
             record.Tcs.TrySetException(e);
+        }
+
+        static void MarkCatastrophicFailure(StorageEnvironment env, ExceptionDispatchInfo edi)
+        {
+            try { env.Options.SetCatastrophicFailure(edi); } catch { /* best-effort */ }
         }
     }
 

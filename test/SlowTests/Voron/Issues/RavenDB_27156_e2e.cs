@@ -72,18 +72,17 @@ public class RavenDB_27156_e2e(ITestOutputHelper output) : RavenTestBase(output)
             };
         };
 
-        // trigger a branch commit -> root merge write -> torn failure
         try
         {
             await InsertItems(store, 500, 200);
         }
         catch
         {
-            // expected: the torn write faults the merged commit
+            // the async index failure may unload the database mid-insert
         }
 
-        // let the failure fault and unload the indexes before we force a reload
-        await Task.Delay(TimeSpan.FromSeconds(10));
+        Assert.True(await WaitForValueAsync(() => Volatile.Read(ref fired) == 1, true, timeout: 30_000),
+            "the torn shared-journal write never fired");
 
         shared.Env.Options.ForTestingPurposesOnly().SimulatePartialJournalWriteFailure = null;
         await Server.ServerStore.DatabasesLandlord.RestartDatabaseAsync(store.Database);
@@ -99,6 +98,7 @@ public class RavenDB_27156_e2e(ITestOutputHelper output) : RavenTestBase(output)
 
         // self-heal: no document loss, every index back to Normal and fully re-indexed
         Assert.Equal(750, docCount);
+        Assert.Equal(3, finalStats.Length);
         Assert.All(finalStats, s => Assert.Equal(IndexState.Normal, s.State));
         Assert.All(finalStats, s => Assert.Equal(docCount, s.EntriesCount));
     }

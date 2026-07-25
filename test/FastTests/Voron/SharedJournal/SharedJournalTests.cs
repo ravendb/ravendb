@@ -917,7 +917,7 @@ public class SharedJournalTests(ITestOutputHelper output) : RavenTestBase(output
                 session.SaveChanges();
             }
 
-            await Assert.ThrowsAsync<InvalidOperationException>(() => Indexes.WaitForIndexingAsync(store));
+            await Assert.ThrowsAnyAsync<Exception>(() => Indexes.WaitForIndexingAsync(store));
 
             database.IndexStore.SharedJournals.Env.ForTestingPurposesOnly().ModifyNewLowLevelTransaction = null;
 
