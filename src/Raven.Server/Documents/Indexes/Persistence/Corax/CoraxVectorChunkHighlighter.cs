@@ -101,6 +101,9 @@ internal static class CoraxVectorChunkHighlighter
             Enum.TryParse(quantizationValue, out VectorEmbeddingType parsedQuantization))
             quantization = parsedQuantization;
 
+        if (TryGetSimilarityMethod(quantization, out Hnsw.SimilarityMethod similarityMethod) == false)
+            return null; // not a quantization that vectors are stored in, so there is nothing to compare the chunks against
+
         AttachmentsStorage attachmentsStorage = database.DocumentsStorage.AttachmentsStorage;
 
         // Keep only the nearest FragmentCount chunks (all of them when FragmentCount <= 0). Priorities are the negated
@@ -124,15 +127,21 @@ internal static class CoraxVectorChunkHighlighter
             if (attachment == null)
                 continue; // vector attachment is gone
 
+            // A chunk is only comparable to a query vector of the same length (same dimensions and quantization), so an
+            // attachment that matches none of them cannot match at all - skip it before allocating and reading it.
+            if (HasQueryVectorOfSize(capture.QueryVectors, attachment.Size) == false)
+                continue;
+
             float distance;
             using (context.Allocator.Allocate((int)attachment.Size, out Span<byte> chunkVector))
             {
                 attachment.Stream.ReadExactly(chunkVector);
-                distance = BestDistance(capture.QueryVectors, chunkVector, quantization);
+                distance = BestDistance(capture.QueryVectors, chunkVector, similarityMethod);
 
                 // A document matches when any one of its chunks is near enough, so the rest of its chunks can be
                 // arbitrarily far from the query - without this the highlighter would return every stored chunk.
-                if (float.IsNaN(distance) || distance > MaximumDistance(quantization, capture.MinimumSimilarity, chunkVector.Length))
+                if (float.IsNaN(distance) ||
+                    distance > Hnsw.MinimumSimilarityToDistance(similarityMethod, chunkVector.Length, capture.MinimumSimilarity))
                     continue; // below the query's minimum similarity, or a degenerate vector
             }
 
@@ -159,12 +168,45 @@ internal static class CoraxVectorChunkHighlighter
         return result;
     }
 
-    private static float BestDistance(List<byte[]> queryVectors, ReadOnlySpan<byte> chunkVector, VectorEmbeddingType quantization)
+    // Bounds the attachment size by a query vector's length as a side effect, keeping the cast to int at the call site in range.
+    private static bool HasQueryVectorOfSize(List<byte[]> queryVectors, long size)
+    {
+        foreach (byte[] queryVector in queryVectors)
+        {
+            if (queryVector.Length == size)
+                return true;
+        }
+
+        return false;
+    }
+
+    // The quantization the chunks were stored with decides both the distance kernel and how a minimum similarity
+    // translates into a maximum distance, so it is mapped to Hnsw's own notion of that once, here.
+    private static bool TryGetSimilarityMethod(VectorEmbeddingType quantization, out Hnsw.SimilarityMethod similarityMethod)
+    {
+        switch (quantization)
+        {
+            case VectorEmbeddingType.Single:
+                similarityMethod = Hnsw.SimilarityMethod.CosineSimilaritySingles;
+                return true;
+            case VectorEmbeddingType.Int8:
+                similarityMethod = Hnsw.SimilarityMethod.CosineSimilarityI8;
+                return true;
+            case VectorEmbeddingType.Binary:
+                similarityMethod = Hnsw.SimilarityMethod.HammingDistance;
+                return true;
+            default:
+                similarityMethod = default; // Text is a source type only, vectors are never stored that way
+                return false;
+        }
+    }
+
+    private static float BestDistance(List<byte[]> queryVectors, ReadOnlySpan<byte> chunkVector, Hnsw.SimilarityMethod similarityMethod)
     {
         float best = float.PositiveInfinity;
         foreach (byte[] queryVector in queryVectors)
         {
-            float distance = Distance(quantization, queryVector, chunkVector);
+            float distance = Distance(similarityMethod, queryVector, chunkVector);
             if (distance < best)
                 best = distance;
         }
@@ -172,28 +214,18 @@ internal static class CoraxVectorChunkHighlighter
         return best;
     }
 
-    // Mirrors Hnsw.SearchState.MinimumSimilarityToDistance so a chunk that made the document match through the graph
-    // search is never rejected here. Kept inclusive (distance > max is rejected) to match Hnsw.VectorSearchRetriever.
-    private static float MaximumDistance(VectorEmbeddingType quantization, float minimumSimilarity, int vectorSizeInBytes)
-    {
-        return quantization switch
-        {
-            VectorEmbeddingType.Single or VectorEmbeddingType.Int8 => 2f * (1f - minimumSimilarity),
-            VectorEmbeddingType.Binary => vectorSizeInBytes * 8 * (1f - minimumSimilarity),
-            _ => float.PositiveInfinity
-        };
-    }
-
-    private static float Distance(VectorEmbeddingType quantization, ReadOnlySpan<byte> query, ReadOnlySpan<byte> chunk)
+    // These are the raw embedding blobs held in the attachments, not HNSW's on-disk vectors, so the version-dependent
+    // kernel selection in Hnsw.GetDistanceKernel (NormalizedTensor layout) does not apply to them.
+    private static float Distance(Hnsw.SimilarityMethod similarityMethod, ReadOnlySpan<byte> query, ReadOnlySpan<byte> chunk)
     {
         if (query.Length != chunk.Length)
             return float.PositiveInfinity; // mismatched dimensions/quantization; treat as no match
 
-        return quantization switch
+        return similarityMethod switch
         {
-            VectorEmbeddingType.Single => Hnsw.CosineDistanceSingles(query, chunk),
-            VectorEmbeddingType.Int8 => Hnsw.CosineDistanceI8(query, chunk),
-            VectorEmbeddingType.Binary => Hnsw.HammingDistance(query, chunk),
+            Hnsw.SimilarityMethod.CosineSimilaritySingles => Hnsw.CosineDistanceSingles(query, chunk),
+            Hnsw.SimilarityMethod.CosineSimilarityI8 => Hnsw.CosineDistanceI8(query, chunk),
+            Hnsw.SimilarityMethod.HammingDistance => Hnsw.HammingDistance(query, chunk),
             _ => float.PositiveInfinity
         };
     }
