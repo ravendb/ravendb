@@ -60,6 +60,26 @@ namespace Raven.Server.Documents.Queries.AST
                     QueryExpression inner = HandleMetadataNullComparison(ne.Expression);
                     return ReferenceEquals(inner, ne.Expression) ? ne : new NegatedExpression(inner);
 
+                case MethodExpression method when method.Name.Value.Equals("intersect", StringComparison.OrdinalIgnoreCase):
+                    // intersect(...) combines boolean statements as well, so the comparisons
+                    // can sit inside its arguments
+                    List<QueryExpression> arguments = null;
+                    for (int i = 0; i < method.Arguments.Count; i++)
+                    {
+                        QueryExpression argument = HandleMetadataNullComparison(method.Arguments[i]);
+                        if (arguments == null)
+                        {
+                            if (ReferenceEquals(argument, method.Arguments[i]))
+                                continue;
+
+                            arguments = new List<QueryExpression>(method.Arguments);
+                        }
+
+                        arguments[i] = argument;
+                    }
+
+                    return arguments == null ? method : new MethodExpression(method.Name, arguments);
+
                 case BinaryExpression { Operator: OperatorType.And or OperatorType.Or } logical:
                     QueryExpression left = HandleMetadataNullComparison(logical.Left);
                     QueryExpression right = HandleMetadataNullComparison(logical.Right);
