@@ -134,7 +134,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
                 Assert.True(pb.NextBackup == null, "PeriodicBackup should not have a scheduled next backup when task status is simulated as ActiveByOtherNode");
 
                 responsibleDatabase.ServerStore.BackupRunner._forTestingPurposes = null;
-                responsibleDatabase.ServerStore.BackupRunner.UpdateConfigurations(record1.PeriodicBackups, responsibleDatabase.Name);
+                responsibleDatabase.ServerStore.BackupRunner.HandleDatabaseRecordChange(record1);
                 var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(taskId);
 
                 var val = WaitForValue(() => store.Maintenance.Send(getPeriodicBackupStatus).Status?.LastFullBackup != null, true, timeout: 66666, interval: 444);
