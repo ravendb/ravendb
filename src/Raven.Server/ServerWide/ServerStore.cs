@@ -2832,6 +2832,8 @@ namespace Raven.Server.ServerWide
 
                     var exceptionAggregator = new ExceptionAggregator(Logger, $"Could not dispose {nameof(ServerStore)}.");
 
+                    exceptionAggregator.Execute(() => BackupRunner?.Dispose());
+
                     exceptionAggregator.Execute(() =>
                     {
                         try

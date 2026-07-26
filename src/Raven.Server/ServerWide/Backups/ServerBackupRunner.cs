@@ -1112,32 +1112,13 @@ public class ServerBackupRunner : IDisposable
 
     public void Dispose()
     {
-        _thread.Join(int.MaxValue);
+        var thread = _thread;
+        if (thread != null && thread != PoolOfThreads.LongRunningWork.Current)
+            thread.Join(int.MaxValue);
 
-        // collect in-flight backup tasks
-        var runningTasks = new List<Task>();
-        foreach (var backupsPerTask in BackupsPerDatabasePerTaskId.Values)
-        {
-            foreach (var kvp in backupsPerTask.ForceEnumerateInThreadSafeManner())
-            {
-                kvp.Value.Stale.Raise();
-                var runningTask = kvp.Value.RunningTask?.Task;
-                if (runningTask != null)
-                    runningTasks.Add(runningTask);
-            }
-
-            backupsPerTask.Clear();
-        }
-
-        BackupsPerDatabasePerTaskId.Clear();
-
-        if (runningTasks.Count > 0)
-        {
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Waiting for {runningTasks.Count} running backup(s) to complete.");
-
-            Task.WaitAll(runningTasks.ToArray(), TimeSpan.FromMinutes(5));
-        }
+        // In-flight backups are not awaited here. Each backup's token is linked to
+        // Database.DatabaseShutdown; DocumentDatabase.Dispose cancels it and waits for the
+        // operation to wind down when DatabasesLandlord is disposed later in ServerStore.Dispose.
     }
 
     /// <summary>
