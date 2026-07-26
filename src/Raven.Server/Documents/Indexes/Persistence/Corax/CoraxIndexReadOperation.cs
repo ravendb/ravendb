@@ -96,7 +96,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         private Dictionary<string, VectorChunkHighlightingCapture> _vectorChunkHighlightings;
 
-        internal void CaptureVectorChunkHighlighting(string fieldName, string taskId, List<byte[]> queryVectors)
+        internal void CaptureVectorChunkHighlighting(string fieldName, string taskId, float minimumSimilarity, List<byte[]> queryVectors)
         {
             _vectorChunkHighlightings ??= new Dictionary<string, VectorChunkHighlightingCapture>(StringComparer.OrdinalIgnoreCase);
 
@@ -106,10 +106,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             if (_vectorChunkHighlightings.TryGetValue(fieldName, out VectorChunkHighlightingCapture existing) && existing.TaskId == taskId)
             {
                 existing.QueryVectors.AddRange(queryVectors);
+                // The merged vectors are matched as a union (nearest of any of them), so keep the least restrictive
+                // threshold - a chunk that satisfied one of the clauses must not be dropped because another was stricter.
+                existing.RelaxMinimumSimilarity(minimumSimilarity);
                 return;
             }
 
-            _vectorChunkHighlightings[fieldName] = new VectorChunkHighlightingCapture(fieldName, taskId, queryVectors);
+            _vectorChunkHighlightings[fieldName] = new VectorChunkHighlightingCapture(fieldName, taskId, minimumSimilarity, queryVectors);
         }
         private readonly ByteStringContext _allocator;
 

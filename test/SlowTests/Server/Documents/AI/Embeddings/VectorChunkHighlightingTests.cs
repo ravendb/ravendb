@@ -1,7 +1,6 @@
-using System.Collections.Generic;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations.AI;
@@ -336,6 +335,72 @@ public class VectorChunkHighlightingTests(ITestOutputHelper output) : Embeddings
             // a raw vector chunk fragment (no markup) produced by the vector search
             Assert.Contains(fragments, f => f.Contains("</b>") == false);
         }
+    }
+
+    [RavenMultiplatformTheory(RavenTestCategory.Vector | RavenTestCategory.Querying | RavenTestCategory.Corax, RavenArchitecture.AllX64)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public async Task DoesNotReturnChunksBelowMinimumSimilarity(Options options)
+    {
+        // The document matches as soon as one of its chunks is near enough to the query, so the highlighter must apply
+        // the query's minimumSimilarity itself - otherwise it would surface the document's unrelated chunks as well.
+        // The threshold is derived from the model's own scores rather than hard-coded, so the test does not depend on
+        // absolute similarity values: it sits between the near ("apple banana fruit") and far ("computer ...") chunk.
+        float nearSimilarity = NormalizedSimilarity("fruit", "apple banana fruit");
+        float farSimilarity = NormalizedSimilarity("fruit", "computer technology machine");
+        Assert.True(farSimilarity < nearSimilarity, $"far ({farSimilarity}) < near ({nearSimilarity})");
+        float minimumSimilarity = (nearSimilarity + farSimilarity) / 2f;
+
+        using var store = GetDocumentStore(options);
+
+        using (var session = store.OpenSession())
+        {
+            session.Store(new Dto { TextualValue = MultiChunkText });
+            session.SaveChanges();
+        }
+
+        var aiTaskDone = Etl.WaitForEtlToComplete(store);
+        var configuration = CreateChunkingConfiguration(storeChunkText: true);
+        AddEmbeddingsGenerationTask(store, configuration);
+
+        Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+        var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
+        Assert.True(queriesWorkerRegistered);
+        Assert.True(indexingWorkerRegistered);
+
+        using (var session = store.OpenSession())
+        {
+            var results = session.Advanced.DocumentQuery<Dto>()
+                .WaitForNonStaleResults()
+                .VectorSearch(f => f.WithText(d => d.TextualValue).UsingTask(configuration.Identifier), v => v.ByText("fruit"), minimumSimilarity: minimumSimilarity)
+                .Highlight("TextualValue", 2048, 5, out Highlightings highlightings)
+                .ToList();
+
+            Assert.NotEmpty(results);
+
+            var fragments = highlightings.GetFragments(results[0].Id);
+            Assert.NotEmpty(fragments);
+            Assert.Contains(fragments, f => f.Contains("apple"));
+            Assert.DoesNotContain(fragments, f => f.Contains("computer"));
+        }
+    }
+
+    // RavenDB reports vector similarity on a [0, 1] scale where 0.5 is orthogonal, i.e. (cosine + 1) / 2.
+    private float NormalizedSimilarity(string queryText, string chunkText)
+    {
+        float[] query = GenerateEmbeddingForTextViaOnnx(queryText);
+        float[] chunk = GenerateEmbeddingForTextViaOnnx(chunkText);
+        Assert.Equal(query.Length, chunk.Length);
+
+        float dot = 0f, querySquared = 0f, chunkSquared = 0f;
+        for (int i = 0; i < query.Length; i++)
+        {
+            dot += query[i] * chunk[i];
+            querySquared += query[i] * query[i];
+            chunkSquared += chunk[i] * chunk[i];
+        }
+
+        float cosine = dot / (MathF.Sqrt(querySquared) * MathF.Sqrt(chunkSquared));
+        return (cosine + 1f) / 2f;
     }
 
     private static EmbeddingsGenerationConfiguration CreateMultiFieldChunkingConfiguration(bool storeChunkText)
