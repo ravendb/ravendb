@@ -35,32 +35,36 @@ namespace Raven.Server.Documents.Queries.AST
         }
 
         /// <summary>
-        /// Rewrites '@metadata'.'@refresh' = null into "not exists(@refresh)" and
-        /// '@metadata'.'@refresh' != null into "exists(@refresh)".
-        /// A document with no '@refresh' at all reads as undefined in JavaScript, and
-        /// 'undefined === null' is false, so the comparison has to be expressed as an
-        /// existence check instead. Callers apply this to a boolean clause (a subscription
-        /// where clause or a query filter clause) before visiting it.
+        /// Rewrites a null comparison against a metadata property into an existence check:
+        /// '@metadata'.'@refresh' = null becomes "not exists(...)" and
+        /// '@metadata'.'@refresh' != null becomes "exists(...)".
+        /// A document that carries no such metadata property at all reads as undefined in
+        /// JavaScript, and 'undefined === null' is false, so the comparison has to be
+        /// expressed as an existence check instead. This applies to any property under
+        /// '@metadata' - '@refresh', '@expires', '@archive-at', '@archived' and
+        /// user defined metadata alike - since they are all absent rather than null when
+        /// unset. Callers apply this to a boolean clause (a subscription where clause or a
+        /// query filter clause) before visiting it.
         /// </summary>
-        public static QueryExpression HandleMetadataRefresh(QueryExpression qe)
+        public static QueryExpression HandleMetadataNullComparison(QueryExpression qe)
         {
             // the comparison may sit anywhere in the clause, so we recurse through the
             // logical operators and negations to reach it
             switch (qe)
             {
                 case NegatedExpression ne:
-                    QueryExpression inner = HandleMetadataRefresh(ne.Expression);
+                    QueryExpression inner = HandleMetadataNullComparison(ne.Expression);
                     return ReferenceEquals(inner, ne.Expression) ? ne : new NegatedExpression(inner);
 
                 case BinaryExpression { Operator: OperatorType.And or OperatorType.Or } logical:
-                    QueryExpression left = HandleMetadataRefresh(logical.Left);
-                    QueryExpression right = HandleMetadataRefresh(logical.Right);
+                    QueryExpression left = HandleMetadataNullComparison(logical.Left);
+                    QueryExpression right = HandleMetadataNullComparison(logical.Right);
                     if (ReferenceEquals(left, logical.Left) && ReferenceEquals(right, logical.Right))
                         return logical;
                     return new BinaryExpression(left, right, logical.Operator) { Parenthesis = logical.Parenthesis };
 
                 case BinaryExpression { Operator: OperatorType.Equal or OperatorType.NotEqual } be:
-                    if (IsMetadataRefreshField(be.Left) == false ||
+                    if (IsMetadataProperty(be.Left) == false ||
                         be.Right is not ValueExpression { Value: ValueTokenType.Null })
                         return qe;
                     MethodExpression me = new MethodExpression("exists", [be.Left]);
@@ -73,15 +77,14 @@ namespace Raven.Server.Documents.Queries.AST
             }
         }
 
-        private static bool IsMetadataRefreshField(QueryExpression qe)
+        private static bool IsMetadataProperty(QueryExpression qe)
         {
-            // the field may be written with or without the from alias, so we match on the
-            // '@metadata'.'@refresh' suffix: both '@metadata'.'@refresh' and e.'@metadata'.'@refresh'
+            // a property directly under '@metadata', written with or without the from alias,
+            // so we match on the path shape: both '@metadata'.'X' and e.'@metadata'.'X'
             if (qe is not FieldExpression fe || fe.Compound.Count < 2)
                 return false;
 
-            return fe.Compound[^1] == Constants.Documents.Metadata.Refresh &&
-                   fe.Compound[^2] == Constants.Documents.Metadata.Key;
+            return fe.Compound[^2] == Constants.Documents.Metadata.Key;
         }
 
         public override void VisitInclude(List<QueryExpression> includes)
