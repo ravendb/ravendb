@@ -128,6 +128,8 @@ public class RavenDB_27174(ITestOutputHelper output) : SubscriptionTestBase(outp
 
             await CreateThingsWithOrigin(store);
 
+            await AssertOriginIsPresentAndNull(store);
+
             // the document with no origin and the one with an explicitly null origin
             Assert.Equal(2, await RunSubscriptionWorker(store, id));
         }
