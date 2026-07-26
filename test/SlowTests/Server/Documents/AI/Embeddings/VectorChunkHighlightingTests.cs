@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries.Highlighting;
 using Tests.Infrastructure;
 using Xunit;
@@ -271,6 +272,24 @@ public class VectorChunkHighlightingTests(ITestOutputHelper output) : Embeddings
         Assert.True(queriesWorkerRegistered);
         Assert.True(indexingWorkerRegistered);
 
+        using (var session = store.OpenSession())
+        {
+            // get the document into the index, with its chunk text, before taking that chunk text away
+            var results = session.Advanced.DocumentQuery<Dto>()
+                .WaitForNonStaleResults()
+                .VectorSearch(f => f.WithText(d => d.TextualValue).UsingTask(configuration.Identifier), v => v.ByText("fruit"), minimumSimilarity: 0.5f)
+                .Highlight("TextualValue", 2048, 5, out Highlightings highlightings)
+                .ToList();
+
+            Assert.NotEmpty(results);
+            Assert.NotEmpty(highlightings.GetFragments(results[0].Id));
+        }
+
+        // Deleting the embeddings document also drops the document from the vector index once indexing catches up, and a
+        // query that returns nothing would not exercise the highlighter at all. Stopping indexing first keeps the index
+        // entry in place while its chunk text source is gone - the state the highlighter has to survive.
+        store.Maintenance.Send(new StopIndexingOperation());
+
         // remove the per-document embeddings document that holds the chunk text
         using (var session = store.OpenSession())
         {
@@ -286,8 +305,9 @@ public class VectorChunkHighlightingTests(ITestOutputHelper output) : Embeddings
                 .Highlight("TextualValue", 2048, 5, out Highlightings highlightings)
                 .ToList();
 
-            foreach (var result in results)
-                Assert.Empty(highlightings.GetFragments(result.Id));
+            // the document is still indexed, so the highlighter does run - it just has no chunk text to report
+            Assert.NotEmpty(results);
+            Assert.Empty(highlightings.GetFragments(results[0].Id));
         }
     }
 
