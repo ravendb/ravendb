@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 public static partial class CoraxQueryBuilder
 {
     private static void CaptureVectorHighlighting(Parameters builderParameters, MethodExpression me, string fieldName, string embeddingsGenerationTaskIdentifier,
-        VectorValue? singleVector, VectorValue[] multiVector)
+        float minimumMatch, VectorValue? singleVector, VectorValue[] multiVector)
     {
         if (embeddingsGenerationTaskIdentifier is null)
             return; // chunk text is only stored for embeddings-generation tasks
@@ -54,7 +54,7 @@ public static partial class CoraxQueryBuilder
             return;
 
         string highlightFieldName = builderParameters.Metadata.GetVectorSourceFieldName(fieldName, me, builderParameters.QueryParameters);
-        readOperation.CaptureVectorChunkHighlighting(highlightFieldName, embeddingsGenerationTaskIdentifier, queryVectors);
+        readOperation.CaptureVectorChunkHighlighting(highlightFieldName, embeddingsGenerationTaskIdentifier, minimumMatch, queryVectors);
     }
 
     private static CoraxVectorItem HandleVector(Parameters builderParameters, MethodExpression me, bool exact)
@@ -150,7 +150,7 @@ public static partial class CoraxQueryBuilder
             
             var vector = VectorHelpers.GetEmbeddingsForQueryParameter(builderParameters, valueTokenType, methodParameter, embeddingsGenerationTaskIdentifier, vectorOptions, fieldName);
 
-            CaptureVectorHighlighting(builderParameters, me, fieldName, embeddingsGenerationTaskIdentifier, vector.SingleVector, vector.MultiVector);
+            CaptureVectorHighlighting(builderParameters, me, fieldName, embeddingsGenerationTaskIdentifier, minimumMatch, vector.SingleVector, vector.MultiVector);
 
             if (vector.SingleVector != null)
             {
@@ -170,7 +170,7 @@ public static partial class CoraxQueryBuilder
         {
             var vectorOptions = VectorHelpers.GetExplicitVectorOptions(builderParameters, fieldName, out indexField);
             transformedEmbeddings = VectorHelpers.GetEmbeddingsForQueryParameter(builderParameters, valueType, value, embeddingsGenerationTaskIdentifier, vectorOptions, fieldName);
-            CaptureVectorHighlighting(builderParameters, me, fieldName, embeddingsGenerationTaskIdentifier, transformedEmbeddings.SingleVector, transformedEmbeddings.MultiVector);
+            CaptureVectorHighlighting(builderParameters, me, fieldName, embeddingsGenerationTaskIdentifier, minimumMatch, transformedEmbeddings.SingleVector, transformedEmbeddings.MultiVector);
         }
         else
         {

@@ -18,11 +18,20 @@ internal sealed class VectorChunkHighlightingCapture
     public readonly string TaskId;
     public readonly List<byte[]> QueryVectors;
 
-    public VectorChunkHighlightingCapture(string fieldName, string taskId, List<byte[]> queryVectors)
+    public float MinimumSimilarity { get; private set; }
+
+    public VectorChunkHighlightingCapture(string fieldName, string taskId, float minimumSimilarity, List<byte[]> queryVectors)
     {
         FieldName = fieldName;
         TaskId = taskId;
+        MinimumSimilarity = minimumSimilarity;
         QueryVectors = queryVectors;
+    }
+
+    public void RelaxMinimumSimilarity(float minimumSimilarity)
+    {
+        if (minimumSimilarity < MinimumSimilarity)
+            MinimumSimilarity = minimumSimilarity;
     }
 }
 
@@ -120,6 +129,11 @@ internal static class CoraxVectorChunkHighlighter
             {
                 attachment.Stream.ReadExactly(chunkVector);
                 distance = BestDistance(capture.QueryVectors, chunkVector, quantization);
+
+                // A document matches when any one of its chunks is near enough, so the rest of its chunks can be
+                // arbitrarily far from the query - without this the highlighter would return every stored chunk.
+                if (float.IsNaN(distance) || distance > MaximumDistance(quantization, capture.MinimumSimilarity, chunkVector.Length))
+                    continue; // below the query's minimum similarity, or a degenerate vector
             }
 
             if (scored.Count < capacity)
@@ -156,6 +170,18 @@ internal static class CoraxVectorChunkHighlighter
         }
 
         return best;
+    }
+
+    // Mirrors Hnsw.SearchState.MinimumSimilarityToDistance so a chunk that made the document match through the graph
+    // search is never rejected here. Kept inclusive (distance > max is rejected) to match Hnsw.VectorSearchRetriever.
+    private static float MaximumDistance(VectorEmbeddingType quantization, float minimumSimilarity, int vectorSizeInBytes)
+    {
+        return quantization switch
+        {
+            VectorEmbeddingType.Single or VectorEmbeddingType.Int8 => 2f * (1f - minimumSimilarity),
+            VectorEmbeddingType.Binary => vectorSizeInBytes * 8 * (1f - minimumSimilarity),
+            _ => float.PositiveInfinity
+        };
     }
 
     private static float Distance(VectorEmbeddingType quantization, ReadOnlySpan<byte> query, ReadOnlySpan<byte> chunk)
