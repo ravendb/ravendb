@@ -52,6 +52,48 @@ public class RavenDB_27174(ITestOutputHelper output) : SubscriptionTestBase(outp
         }
     }
 
+    // a query 'filter' clause is evaluated as JavaScript through the same visitor as a
+    // subscription where clause, so it gets the same '@refresh' handling
+
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData("from Things as t filter t.'@metadata'.'@refresh' = null", DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData("from Things filter '@metadata'.'@refresh' = null", DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData("from Things as t filter t.'@metadata'.'@refresh' = null and t.Name != 'none'", DatabaseMode = RavenDatabaseMode.All)]
+    public async Task CanHandleMetadataRefreshInFilterClause(Options options, string query)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            Assert.Equal(2, await RunFilterQuery(store, query));
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData("from Things as t filter t.'@metadata'.'@refresh' != null", DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData("from Things filter '@metadata'.'@refresh' != null", DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData("from Things as t filter t.Name != 'none' and not (t.'@metadata'.'@refresh' = null)", DatabaseMode = RavenDatabaseMode.All)]
+    public async Task CanHandleNOTMetadataRefreshInFilterClause(Options options, string query)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            Assert.Equal(1, await RunFilterQuery(store, query));
+        }
+    }
+
+    private static async Task<int> RunFilterQuery(IDocumentStore store, string query)
+    {
+        await CreateThings(store);
+
+        using (var session = store.OpenAsyncSession())
+        {
+            var results = await session.Advanced
+                .AsyncRawQuery<Thing>(query)
+                .WaitForNonStaleResults()
+                .ToListAsync();
+
+            return results.Count;
+        }
+    }
+
     private static async Task CreateThings(IDocumentStore store)
     {
         using (var session = store.OpenAsyncSession())
