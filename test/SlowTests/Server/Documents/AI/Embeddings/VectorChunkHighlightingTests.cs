@@ -292,6 +292,52 @@ public class VectorChunkHighlightingTests(ITestOutputHelper output) : Embeddings
         }
     }
 
+    [RavenMultiplatformTheory(RavenTestCategory.Vector | RavenTestCategory.Querying | RavenTestCategory.Corax, RavenArchitecture.AllX64)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public async Task IncludeHighlightMergesWithTermHighlightingOnSameField(Options options)
+    {
+        using var store = GetDocumentStore(options);
+
+        using (var session = store.OpenSession())
+        {
+            session.Store(new Dto { TextualValue = MultiChunkText });
+            session.SaveChanges();
+        }
+
+        var aiTaskDone = Etl.WaitForEtlToComplete(store);
+        var configuration = CreateChunkingConfiguration(storeChunkText: true);
+        AddEmbeddingsGenerationTask(store, configuration);
+
+        Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+        var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
+        Assert.True(queriesWorkerRegistered);
+        Assert.True(indexingWorkerRegistered);
+
+        using (var session = store.OpenSession())
+        {
+            // The same source field is both full-text searched ("banana") and vector searched ("fruit") under a single
+            // highlight(). The term highlighter runs first and stores its tagged fragments; the vector chunk highlighter
+            // must append its raw chunk fragments rather than overwrite them - both must survive.
+            var results = session.Advanced.DocumentQuery<Dto>()
+                .WaitForNonStaleResults()
+                .Search("TextualValue", "banana")
+                .AndAlso()
+                .VectorSearch(f => f.WithText(d => d.TextualValue).UsingTask(configuration.Identifier), v => v.ByText("fruit"), minimumSimilarity: 0.5f)
+                .Highlight("TextualValue", 2048, 5, out Highlightings highlightings)
+                .ToList();
+
+            Assert.NotEmpty(results);
+
+            var fragments = highlightings.GetFragments(results[0].Id);
+            Assert.NotEmpty(fragments);
+
+            // a term-highlight fragment (carries the closing markup tag) produced by the search("banana") clause
+            Assert.Contains(fragments, f => f.Contains("</b>"));
+            // a raw vector chunk fragment (no markup) produced by the vector search
+            Assert.Contains(fragments, f => f.Contains("</b>") == false);
+        }
+    }
+
     private static EmbeddingsGenerationConfiguration CreateMultiFieldChunkingConfiguration(bool storeChunkText)
     {
         var chunking = new ChunkingOptions { ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 8 };

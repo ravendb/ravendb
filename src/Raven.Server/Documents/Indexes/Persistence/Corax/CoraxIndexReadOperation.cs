@@ -99,6 +99,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         internal void CaptureVectorChunkHighlighting(string fieldName, string taskId, List<byte[]> queryVectors)
         {
             _vectorChunkHighlightings ??= new Dictionary<string, VectorChunkHighlightingCapture>(StringComparer.OrdinalIgnoreCase);
+
+            // Multiple vector.search() calls can target the same field (e.g. searching for several query texts). They all
+            // resolve against the same embeddings, so merge their query vectors instead of letting the last call overwrite
+            // the earlier ones - otherwise only chunks near the last query text would be surfaced.
+            if (_vectorChunkHighlightings.TryGetValue(fieldName, out VectorChunkHighlightingCapture existing) && existing.TaskId == taskId)
+            {
+                existing.QueryVectors.AddRange(queryVectors);
+                return;
+            }
+
             _vectorChunkHighlightings[fieldName] = new VectorChunkHighlightingCapture(fieldName, taskId, queryVectors);
         }
         private readonly ByteStringContext _allocator;
