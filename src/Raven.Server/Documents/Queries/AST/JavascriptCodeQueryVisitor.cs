@@ -43,12 +43,12 @@ namespace Raven.Server.Documents.Queries.AST
         /// JavaScript, and 'undefined === null' is false, so the absent case has to be
         /// spelled out as an existence check. The original comparison is kept alongside it
         /// so a property that is present and explicitly null still matches. This applies to
-        /// the server owned metadata properties - the ones under '@metadata' whose name
-        /// starts with '@', such as '@refresh', '@expires', '@archive-at' and '@archived' -
-        /// since those are removed rather than set to null when they do not apply. User
-        /// defined metadata is left alone and compares exactly as written. Callers apply
-        /// this to a boolean clause (a subscription where clause or a query filter clause)
-        /// before visiting it.
+        /// properties under '@metadata' whose name starts with '@', the reserved namespace
+        /// RavenDB uses for '@refresh', '@expires', '@archive-at', '@archived' and the like,
+        /// because those are removed rather than set to null when they do not apply.
+        /// Metadata whose name does not start with '@' is left alone and compares exactly as
+        /// written. Callers apply this to a boolean clause (a subscription where clause or a
+        /// query filter clause) before visiting it.
         /// </summary>
         internal static QueryExpression HandleMetadataNullComparison(QueryExpression qe)
         {
@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.Queries.AST
             if (fe.Compound[^2] != Constants.Documents.Metadata.Key)
                 return false;
 
-            // only the server owned properties, which are removed rather than nulled out
+            // only the reserved '@' prefixed names, which are removed rather than nulled out
             StringSegment property = fe.Compound[^1];
 
             return property.Length > 0 && property[0] == '@';
