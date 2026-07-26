@@ -371,15 +371,17 @@ public class ServerBackupRunner : IDisposable
                 testingStuffInternal.HoldBackupFromFinishing?.WaitOne();
             }
 
-            // Skip the NextBackup recompute when the state is Stale (task disabled, task deleted, or DB
-            // deleted). GetNextBackupDetails reads task config and cluster status — pointless work for a
-            // task that won't run again, and for a deleted DB it can read a cluster record that no longer
-            // exists and throw inside this Task.ContinueWith continuation (an unobserved task fault). Just
-            // clear NextBackup; the rest of the cleanup below still runs.
-            if (databaseBackupState.Stale)
-                backupState.NextBackup = null;
-            else
-                backupState.NextBackup = backupState.GetNextBackupDetails(out string tag);
+            try
+            {
+                databaseBackupState.NextBackup = databaseBackupState.Stale ? null : databaseBackupState.GetNextBackupDetails(out _);
+            }
+            catch (Exception e)
+            {
+                databaseBackupState.NextBackup = null; // BackupTimePolicy will recompute on the next tick
+
+                if (_logger.IsWarnEnabled)
+                    _logger.Warn($"Failed to schedule the next backup for {databaseBackupState}.", e);
+            }
 
             databaseBackupState.RunningTask = null;
 
@@ -387,10 +389,6 @@ public class ServerBackupRunner : IDisposable
             _serverStore.ConcurrentBackupsCounter.FinishBackup(databaseBackupState.OriginalDatabaseName, databaseBackupState.Configuration.Name, databaseBackupState.RunningBackupStatus, null, _logger);
             databaseBackupState.RunningBackupStatus = null;
 
-            // Null the cancellation handle last — after Running.Lower() and RunningTask = null — so a
-            // trigger calling CancelRunningBackup that races FinishBackup sees either "still running, token
-            // live" or "stopped, token cleared", never a dangling reference to a token we just disposed in
-            // the operation continuation. Mirrors the OnGoingBackup snapshot-guard ordering.
             databaseBackupState.RunningCancel = null;
         }
     }
