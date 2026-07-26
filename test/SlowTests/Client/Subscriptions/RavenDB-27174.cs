@@ -13,13 +13,13 @@ public class RavenDB_27174(ITestOutputHelper output) : SubscriptionTestBase(outp
     // out of the three documents that are created, exactly one has an '@refresh' metadata entry
 
     [RavenTheory(RavenTestCategory.Subscriptions)]
-    [InlineData("from Things as t where t.'@metadata'.'@refresh' = null")]
-    [InlineData("from Things as t where t.'@metadata'.'@refresh' == null")]
-    [InlineData("from Things where '@metadata'.'@refresh' = null and Name != 'none'")]
-    [InlineData("from Things as t where t.'@metadata'.'@refresh' = null and t.Name != 'none'")]
-    public async Task CanHandleMetadataRefreshWithAliasOrCompoundWhere(string query)
+    [RavenData("from Things as t where t.'@metadata'.'@refresh' = null", DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData("from Things as t where t.'@metadata'.'@refresh' == null", DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData("from Things where '@metadata'.'@refresh' = null and Name != 'none'", DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData("from Things as t where t.'@metadata'.'@refresh' = null and t.Name != 'none'", DatabaseMode = RavenDatabaseMode.All)]
+    public async Task CanHandleMetadataRefreshWithAliasOrCompoundWhere(Options options, string query)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             int items = await RunSubscription(store, new SubscriptionCreationOptions { Query = query });
             Assert.Equal(2, items);
@@ -27,22 +27,23 @@ public class RavenDB_27174(ITestOutputHelper output) : SubscriptionTestBase(outp
     }
 
     [RavenTheory(RavenTestCategory.Subscriptions)]
-    [InlineData("from Things as t where t.'@metadata'.'@refresh' != null")]
-    [InlineData("from Things where '@metadata'.'@refresh' != null and Name != 'none'")]
-    [InlineData("from Things as t where t.'@metadata'.'@refresh' != null and t.Name != 'none'")]
-    public async Task CanHandleNOTMetadataRefreshWithAliasOrCompoundWhere(string query)
+    [RavenData("from Things as t where t.'@metadata'.'@refresh' != null", DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData("from Things where '@metadata'.'@refresh' != null and Name != 'none'", DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData("from Things as t where t.'@metadata'.'@refresh' != null and t.Name != 'none'", DatabaseMode = RavenDatabaseMode.All)]
+    public async Task CanHandleNOTMetadataRefreshWithAliasOrCompoundWhere(Options options, string query)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             int items = await RunSubscription(store, new SubscriptionCreationOptions { Query = query });
             Assert.Equal(1, items);
         }
     }
 
-    [RavenFact(RavenTestCategory.Subscriptions)]
-    public async Task CanHandleNegatedMetadataRefresh()
+    [RavenTheory(RavenTestCategory.Subscriptions)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public async Task CanHandleNegatedMetadataRefresh(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             // "not (@refresh = null)" is the same as "@refresh != null"
             var query = "from Things as t where t.Name != 'none' and not (t.'@metadata'.'@refresh' = null)";
