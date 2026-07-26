@@ -6,7 +6,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Acornima;
-using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
@@ -311,7 +310,7 @@ namespace Raven.Server.Documents.TcpHandlers
             if (q.Where != null)
             {
                 writer.Write("if (");
-                QueryExpression modified = HandleRefresh(q.Where);
+                QueryExpression modified = JavascriptCodeQueryVisitor.HandleMetadataRefresh(q.Where);
                 new JavascriptCodeQueryVisitor(writer.GetStringBuilder(), q).VisitExpression(modified);
                 writer.WriteLine(" )");
                 writer.WriteLine("{");
@@ -361,54 +360,6 @@ namespace Raven.Server.Documents.TcpHandlers
                 Includes = includes?.ToArray(),
                 CounterIncludes = counterIncludes?.ToArray()
             };
-        }
-
-        private static QueryExpression HandleRefresh(QueryExpression qe)
-        {
-            // handle '@metadata'.'@refresh' = null and '@metadata'.'@refresh' != null
-            // in a special manner, turning them into exists calls for better support
-
-            // @refresh = null is translated to "not exists(@refresh)"
-            // @refresh != null is translated to "exists(@refresh)"
-
-            // this is applied anywhere in the where clause, so we recurse through the
-            // logical operators and negations to reach the actual comparisons
-            switch (qe)
-            {
-                case NegatedExpression ne:
-                    QueryExpression inner = HandleRefresh(ne.Expression);
-                    return ReferenceEquals(inner, ne.Expression) ? ne : new NegatedExpression(inner);
-
-                case BinaryExpression { Operator: OperatorType.And or OperatorType.Or } logical:
-                    QueryExpression left = HandleRefresh(logical.Left);
-                    QueryExpression right = HandleRefresh(logical.Right);
-                    if (ReferenceEquals(left, logical.Left) && ReferenceEquals(right, logical.Right))
-                        return logical;
-                    return new BinaryExpression(left, right, logical.Operator) { Parenthesis = logical.Parenthesis };
-
-                case BinaryExpression { Operator: OperatorType.Equal or OperatorType.NotEqual } be:
-                    if (IsMetadataRefreshField(be.Left) == false ||
-                        be.Right is not ValueExpression { Value: ValueTokenType.Null })
-                        return qe;
-                    MethodExpression me = new MethodExpression("exists", [be.Left]);
-                    if (be.Operator is not OperatorType.NotEqual)
-                        return new NegatedExpression(me);
-                    return me;
-
-                default:
-                    return qe;
-            }
-        }
-
-        private static bool IsMetadataRefreshField(QueryExpression qe)
-        {
-            // the field may be written with or without the from alias, so we match on the
-            // '@metadata'.'@refresh' suffix: both '@metadata'.'@refresh' and e.'@metadata'.'@refresh'
-            if (qe is not FieldExpression fe || fe.Compound.Count < 2)
-                return false;
-
-            return fe.Compound[^1] == Constants.Documents.Metadata.Refresh &&
-                   fe.Compound[^2] == Constants.Documents.Metadata.Key;
         }
 
         protected override async Task OnClientAckAsync(string clientReplyChangeVector)

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Raven.Client;
 using Sparrow;
 
 namespace Raven.Server.Documents.Queries.AST
@@ -31,6 +32,56 @@ namespace Raven.Server.Documents.Queries.AST
                 }
             }
 
+        }
+
+        /// <summary>
+        /// Rewrites '@metadata'.'@refresh' = null into "not exists(@refresh)" and
+        /// '@metadata'.'@refresh' != null into "exists(@refresh)".
+        /// A document with no '@refresh' at all reads as undefined in JavaScript, and
+        /// 'undefined === null' is false, so the comparison has to be expressed as an
+        /// existence check instead. Callers apply this to a boolean clause (a subscription
+        /// where clause or a query filter clause) before visiting it.
+        /// </summary>
+        public static QueryExpression HandleMetadataRefresh(QueryExpression qe)
+        {
+            // the comparison may sit anywhere in the clause, so we recurse through the
+            // logical operators and negations to reach it
+            switch (qe)
+            {
+                case NegatedExpression ne:
+                    QueryExpression inner = HandleMetadataRefresh(ne.Expression);
+                    return ReferenceEquals(inner, ne.Expression) ? ne : new NegatedExpression(inner);
+
+                case BinaryExpression { Operator: OperatorType.And or OperatorType.Or } logical:
+                    QueryExpression left = HandleMetadataRefresh(logical.Left);
+                    QueryExpression right = HandleMetadataRefresh(logical.Right);
+                    if (ReferenceEquals(left, logical.Left) && ReferenceEquals(right, logical.Right))
+                        return logical;
+                    return new BinaryExpression(left, right, logical.Operator) { Parenthesis = logical.Parenthesis };
+
+                case BinaryExpression { Operator: OperatorType.Equal or OperatorType.NotEqual } be:
+                    if (IsMetadataRefreshField(be.Left) == false ||
+                        be.Right is not ValueExpression { Value: ValueTokenType.Null })
+                        return qe;
+                    MethodExpression me = new MethodExpression("exists", [be.Left]);
+                    if (be.Operator is not OperatorType.NotEqual)
+                        return new NegatedExpression(me);
+                    return me;
+
+                default:
+                    return qe;
+            }
+        }
+
+        private static bool IsMetadataRefreshField(QueryExpression qe)
+        {
+            // the field may be written with or without the from alias, so we match on the
+            // '@metadata'.'@refresh' suffix: both '@metadata'.'@refresh' and e.'@metadata'.'@refresh'
+            if (qe is not FieldExpression fe || fe.Compound.Count < 2)
+                return false;
+
+            return fe.Compound[^1] == Constants.Documents.Metadata.Refresh &&
+                   fe.Compound[^2] == Constants.Documents.Metadata.Key;
         }
 
         public override void VisitInclude(List<QueryExpression> includes)
