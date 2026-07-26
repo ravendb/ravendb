@@ -14,7 +14,7 @@ public class VertexBearerTokenProvider
     {
         BearerTokenProvider = async () =>
         {
-            var credential = GoogleCredential.FromJson(vertexSettings.GoogleCredentialsJson)
+            var credential = CredentialFactory.FromJson<ServiceAccountCredential>(vertexSettings.GoogleCredentialsJson).ToGoogleCredential()
                 .CreateScoped(GoogleCloudPlatformUrl);
             
             ITokenAccess tokenAccess = credential;
