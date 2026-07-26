@@ -53,8 +53,8 @@ interface computedAppUrls {
     migrateDatabaseUrl: KnockoutComputed<string>;
     sampleDataUrl: KnockoutComputed<string>;
     backupsUrl: KnockoutComputed<string>;
-    ongoingTasksUrl: KnockoutComputed<string>;
-    addNewOngoingTask: (isAiOnly: boolean) => KnockoutComputed<string>;
+    ongoingTasksUrl: (allowEmpty?: boolean) => KnockoutComputed<string>;
+    addNewOngoingTaskUrl: (isAiOnly: boolean, noBack?: boolean) => KnockoutComputed<string>;
     editExternalReplicationTaskUrl: KnockoutComputed<string>;
     editReplicationHubTaskUrl: KnockoutComputed<string>;
     editReplicationSinkTaskUrl: KnockoutComputed<string>;

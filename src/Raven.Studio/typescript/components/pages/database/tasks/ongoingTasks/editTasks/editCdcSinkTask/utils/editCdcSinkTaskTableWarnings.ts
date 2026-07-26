@@ -5,9 +5,23 @@ import {
 } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskTypes";
 
 export interface RootTablesAnalysis {
+    // Disabled roots are counted too: replay and the test endpoint resolve them, so a duplicate
+    // would shadow the other table's mapping even when disabled.
     sourceCountByKey: Map<string, number>;
-    collectionNameKeysBySourceKey: Map<string, Set<string>>;
+    // Only enabled roots satisfy linked-table references — a disabled root creates no documents.
+    enabledSourceKeys: Set<string>;
+    // Normalized collection name -> collection name as the user typed it, per source table key.
+    // Enabled roots only.
+    collectionNamesBySourceKey: Map<string, Map<string, string>>;
+    // Includes disabled roots' subtrees: the embedded/root conflict resurfaces on re-enable.
+    embeddedSourceKeys: Set<string>;
+    disabledSourceKeys: Set<string>;
 }
+
+type MissingRelatedCollectionIssue =
+    | { type: "missingRootTable" }
+    | { type: "disabledRootTable" }
+    | { type: "collectionNameMismatch"; configuredCollectionNames: string[] };
 
 interface SourceTableContext {
     sourceTableName?: string;
@@ -26,8 +40,14 @@ interface DuplicateRootTableError {
     message: string;
 }
 
+type EmbeddedTableAnalysisInput = SourceTableContext & {
+    embeddedTables?: ReadonlyArray<EmbeddedTableAnalysisInput>;
+};
+
 type RootTableAnalysisInput = SourceTableContext & {
     collectionName?: string;
+    disabled?: boolean;
+    embeddedTables?: ReadonlyArray<EmbeddedTableAnalysisInput>;
 };
 
 interface TableWarningContext {
@@ -71,17 +91,6 @@ export function getDuplicateRootTableErrors(
             },
         ];
     });
-}
-
-export function getEmbeddedRootTableConflictWarning(rootTables: FormRootTable[], embeddedTable: SourceTableContext) {
-    return getEmbeddedRootTableConflictWarningFromAnalysis(analyzeRootTables(rootTables), embeddedTable);
-}
-
-export function getMissingRelatedCollectionWarning(
-    rootTables: FormRootTable[],
-    linkedTable: LinkedTableWarningContext
-) {
-    return getMissingRelatedCollectionWarningFromAnalysis(analyzeRootTables(rootTables), linkedTable);
 }
 
 export function getRootTableWarningMessagesFromAnalysis(analysis: RootTablesAnalysis, table?: FormRootTable) {
@@ -137,38 +146,91 @@ export function getEmbeddedRootTableConflictWarningFromAnalysis(
 CDC Sink can process a source table only once, so embedded updates may be routed to the root table instead.`;
 }
 
+function getMissingRelatedCollectionIssue(
+    analysis: RootTablesAnalysis,
+    linkedTable: LinkedTableWarningContext
+): MissingRelatedCollectionIssue | null {
+    const linkedCollectionName = linkedTable.linkedCollectionName?.trim();
+    const propertyName = linkedTable.propertyName?.trim();
+    const sourceKey = getSourceTableKey(linkedTable.sourceTableSchema, linkedTable.sourceTableName);
+
+    if (!linkedCollectionName || !sourceKey || !propertyName) {
+        return null;
+    }
+
+    if (!analysis.enabledSourceKeys.has(sourceKey)) {
+        return analysis.disabledSourceKeys.has(sourceKey)
+            ? { type: "disabledRootTable" }
+            : { type: "missingRootTable" };
+    }
+
+    const configuredCollectionNames = analysis.collectionNamesBySourceKey.get(sourceKey);
+
+    if (configuredCollectionNames?.has(normalizeValue(linkedCollectionName))) {
+        return null;
+    }
+
+    return {
+        type: "collectionNameMismatch",
+        configuredCollectionNames: Array.from(configuredCollectionNames?.values() ?? []),
+    };
+}
+
 export function getMissingRelatedCollectionWarningFromAnalysis(
     analysis: RootTablesAnalysis,
     linkedTable: LinkedTableWarningContext
 ) {
-    const linkedCollectionName = linkedTable.linkedCollectionName?.trim();
-    const propertyName = linkedTable.propertyName?.trim();
-    const sourceTableName = linkedTable.sourceTableName?.trim();
-    const sourceTableSchema = linkedTable.sourceTableSchema?.trim();
+    const issue = getMissingRelatedCollectionIssue(analysis, linkedTable);
 
-    if (!linkedCollectionName || !sourceTableName || !sourceTableSchema || !propertyName) {
+    if (!issue) {
         return null;
     }
 
-    const sourceKey = getSourceTableKey(sourceTableSchema, sourceTableName);
-    const collectionNameKey = normalizeValue(linkedCollectionName);
-    const collectionNameKeys = analysis.collectionNameKeysBySourceKey.get(sourceKey);
-    const hasMatchingRootTable = collectionNameKeys?.has(collectionNameKey);
+    const linkedCollectionName = linkedTable.linkedCollectionName.trim();
+    const sourceTableLabel = getSourceTableLabel(linkedTable);
 
-    if (hasMatchingRootTable) {
-        return null;
+    if (issue.type === "missingRootTable") {
+        return `Related documents in the "${linkedCollectionName}" collection will not be created because ${sourceTableLabel} is not configured as a root table.`;
     }
 
-    return `No root table is configured for the related "${linkedCollectionName}" collection.
-The ${propertyName} property will contain related document IDs that reference documents in the "${linkedCollectionName}" collection.
-However, those documents will not be created unless "${sourceTableSchema}.${sourceTableName}" is also configured as a root table.`;
+    if (issue.type === "disabledRootTable") {
+        return `Related documents in the "${linkedCollectionName}" collection will not be created because the ${sourceTableLabel} root table is disabled.`;
+    }
+
+    const configuredCollectionsLabel =
+        issue.configuredCollectionNames.length > 0
+            ? `targets ${formatCollectionNames(issue.configuredCollectionNames)} instead`
+            : "targets a different collection";
+
+    return `Related documents in the "${linkedCollectionName}" collection will not be created because the ${sourceTableLabel} root table ${configuredCollectionsLabel}.`;
+}
+
+function formatCollectionNames(collectionNames: string[]) {
+    const quotedNames = collectionNames.map((name) => `"${name}"`).join(", ");
+    return collectionNames.length === 1 ? `the ${quotedNames} collection` : `the ${quotedNames} collections`;
 }
 
 export function analyzeRootTables(rootTables: ReadonlyArray<RootTableAnalysisInput>): RootTablesAnalysis {
     const sourceCountByKey = new Map<string, number>();
-    const collectionNameKeysBySourceKey = new Map<string, Set<string>>();
+    const enabledSourceKeys = new Set<string>();
+    const collectionNamesBySourceKey = new Map<string, Map<string, string>>();
+    const embeddedSourceKeys = new Set<string>();
+    const disabledSourceKeys = new Set<string>();
+
+    const collectEmbeddedSourceKeys = (embeddedTables?: ReadonlyArray<EmbeddedTableAnalysisInput>) => {
+        (embeddedTables ?? []).forEach((embeddedTable) => {
+            const key = getSourceTableKey(embeddedTable.sourceTableSchema, embeddedTable.sourceTableName);
+            if (key) {
+                embeddedSourceKeys.add(key);
+            }
+
+            collectEmbeddedSourceKeys(embeddedTable.embeddedTables);
+        });
+    };
 
     (rootTables ?? []).forEach((rootTable) => {
+        collectEmbeddedSourceKeys(rootTable.embeddedTables);
+
         const sourceKey = getSourceTableKey(rootTable.sourceTableSchema, rootTable.sourceTableName);
 
         if (!sourceKey) {
@@ -177,25 +239,41 @@ export function analyzeRootTables(rootTables: ReadonlyArray<RootTableAnalysisInp
 
         sourceCountByKey.set(sourceKey, (sourceCountByKey.get(sourceKey) ?? 0) + 1);
 
-        const collectionNameKey = normalizeValue(rootTable.collectionName);
+        if (rootTable.disabled) {
+            disabledSourceKeys.add(sourceKey);
+            return;
+        }
+
+        enabledSourceKeys.add(sourceKey);
+
+        const collectionName = rootTable.collectionName?.trim();
+        const collectionNameKey = normalizeValue(collectionName);
         if (!collectionNameKey) {
             return;
         }
 
-        if (!collectionNameKeysBySourceKey.has(sourceKey)) {
-            collectionNameKeysBySourceKey.set(sourceKey, new Set<string>());
+        if (!collectionNamesBySourceKey.has(sourceKey)) {
+            collectionNamesBySourceKey.set(sourceKey, new Map<string, string>());
         }
 
-        collectionNameKeysBySourceKey.get(sourceKey).add(collectionNameKey);
+        const collectionNames = collectionNamesBySourceKey.get(sourceKey);
+        if (!collectionNames.has(collectionNameKey)) {
+            collectionNames.set(collectionNameKey, collectionName);
+        }
     });
 
     return {
         sourceCountByKey,
-        collectionNameKeysBySourceKey,
+        enabledSourceKeys,
+        collectionNamesBySourceKey,
+        embeddedSourceKeys,
+        disabledSourceKeys,
     };
 }
 
-function getSourceTableKey(sourceTableSchema: string, sourceTableName: string) {
+// Case-insensitive identity of a source table; null when schema or table name is missing —
+// unresolved entries must stay out of any matching.
+export function getSourceTableKey(sourceTableSchema: string, sourceTableName: string) {
     const normalizedSchema = normalizeValue(sourceTableSchema);
     const normalizedTableName = normalizeValue(sourceTableName);
 
@@ -206,7 +284,7 @@ function getSourceTableKey(sourceTableSchema: string, sourceTableName: string) {
     return `${normalizedSchema}::${normalizedTableName}`;
 }
 
-function getSourceTableLabel(table: SourceTableContext) {
+export function getSourceTableLabel(table: SourceTableContext) {
     const sourceTableSchema = table.sourceTableSchema?.trim();
     const sourceTableName = table.sourceTableName?.trim();
 
@@ -217,7 +295,7 @@ function getSourceTableLabel(table: SourceTableContext) {
     return `"${sourceTableSchema}.${sourceTableName}"`;
 }
 
-function normalizeValue(value?: string) {
+export function normalizeValue(value?: string) {
     return value?.trim().toLowerCase() ?? "";
 }
 
