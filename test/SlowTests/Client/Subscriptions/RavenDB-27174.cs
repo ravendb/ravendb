@@ -150,6 +150,32 @@ public class RavenDB_27174(ITestOutputHelper output) : SubscriptionTestBase(outp
         }
     }
 
+    // intersect(...) combines boolean statements too, so a comparison can sit inside it
+
+    [RavenTheory(RavenTestCategory.Subscriptions)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public async Task CanHandleMetadataRefreshInsideIntersect(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            var query = "from Things as t where intersect(t.'@metadata'.'@refresh' = null, t.Name != 'none')";
+            Assert.Equal(2, await RunSubscription(store, new SubscriptionCreationOptions { Query = query }));
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public async Task CanHandleMetadataRefreshInsideIntersectInFilterClause(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            await CreateThings(store);
+
+            Assert.Equal(2, await RunQuery(store, "from Things as t filter intersect(t.'@metadata'.'@refresh' = null, t.Name != 'none')"));
+            Assert.Equal(1, await RunQuery(store, "from Things as t filter intersect(t.'@metadata'.'@refresh' != null, t.Name != 'none')"));
+        }
+    }
+
     // user defined metadata does not get the rewrite, so it compares exactly as written:
     // only the document whose 'Origin' is explicitly null is equal to null, and the one
     // that has no 'Origin' at all reads as undefined and is therefore not equal to null
