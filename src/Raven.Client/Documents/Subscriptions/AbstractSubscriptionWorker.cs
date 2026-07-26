@@ -53,7 +53,12 @@ namespace Raven.Client.Documents.Subscriptions
         /// </summary>
         public event AfterAcknowledgmentAction AfterAcknowledgment;
 
-        internal event Action OnEstablishedSubscriptionConnection;
+        /// <summary>
+        /// Raised whenever the worker has successfully connected to the server, both for the initial connection
+        /// and for every reconnection. Pair it with <see cref="OnSubscriptionConnectionRetry"/> to track whether
+        /// the worker is currently connected, instead of waiting for the next batch to arrive.
+        /// </summary>
+        public event Action OnEstablishedSubscriptionConnection;
 
         public event Action<Exception> OnSubscriptionConnectionRetry;
 
