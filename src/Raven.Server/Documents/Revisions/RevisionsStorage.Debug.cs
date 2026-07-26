@@ -41,6 +41,8 @@ namespace Raven.Server.Documents.Revisions
                     {
                         _storage.DeleteRevisionFromTable(context, collectionTable, new Dictionary<string, Table>(), doc, collectionName, context.GetChangeVector(doc.ChangeVector), _storage._database.Time.GetUtcNow().Ticks, doc.Flags);
                         IncrementCountOfRevisions(context, prefixSlice, -1);
+                        if (doc.Flags.Contain(DocumentFlags.Conflicted) || doc.Flags.Contain(DocumentFlags.Resolved))
+                            _storage.IncrementCountOfConflictRevisions(context, collectionTable, prefixSlice, -1);
                     }
                     
                     tx.Commit();
@@ -69,6 +71,8 @@ namespace Raven.Server.Documents.Revisions
                     var lastRevision = TableValueToRevision(context, ref holder.Reader, DocumentFields.ChangeVector | DocumentFields.LowerId);
                     _parent.DeleteRevisionFromTable(context, table, new Dictionary<string, Table>(), lastRevision, collectionName, context.GetChangeVector(lastRevision.ChangeVector), _parent._database.Time.GetUtcNow().Ticks, lastRevision.Flags);
                     IncrementCountOfRevisions(context, lowerIdPrefix, -1);
+                    if (lastRevision.Flags.Contain(DocumentFlags.Conflicted) || lastRevision.Flags.Contain(DocumentFlags.Resolved))
+                        _parent.IncrementCountOfConflictRevisions(context, table, lowerIdPrefix, -1);
                 }
             }
         }
