@@ -310,7 +310,7 @@ namespace Raven.Server.Documents.TcpHandlers
             if (q.Where != null)
             {
                 writer.Write("if (");
-                QueryExpression modified = JavascriptCodeQueryVisitor.HandleMetadataRefresh(q.Where);
+                QueryExpression modified = JavascriptCodeQueryVisitor.HandleMetadataNullComparison(q.Where);
                 new JavascriptCodeQueryVisitor(writer.GetStringBuilder(), q).VisitExpression(modified);
                 writer.WriteLine(" )");
                 writer.WriteLine("{");

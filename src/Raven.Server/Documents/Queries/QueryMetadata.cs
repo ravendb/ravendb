@@ -131,7 +131,7 @@ function __actual_func(args) {
             }
 
             stringBuilder.Append("  return ");
-            queryVisitor.VisitExpression(JavascriptCodeQueryVisitor.HandleMetadataRefresh(query.Filter));
+            queryVisitor.VisitExpression(JavascriptCodeQueryVisitor.HandleMetadataNullComparison(query.Filter));
 
             stringBuilder.Append(@";
 

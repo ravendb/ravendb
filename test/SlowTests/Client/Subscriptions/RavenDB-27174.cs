@@ -79,10 +79,49 @@ public class RavenDB_27174(ITestOutputHelper output) : SubscriptionTestBase(outp
         }
     }
 
+    // the rewrite is not '@refresh' specific - any property under '@metadata' is absent
+    // rather than null when unset, so all of them need the same treatment.
+    // none of the three documents carries '@expires', '@archived' or 'Origin'.
+
+    [RavenTheory(RavenTestCategory.Subscriptions)]
+    [RavenData("'@metadata'.'@expires'", DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData("'@metadata'.'@archive-at'", DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData("'@metadata'.'@archived'", DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData("'@metadata'.'Origin'", DatabaseMode = RavenDatabaseMode.All)]
+    public async Task CanHandleAnyMetadataPropertyInSubscription(Options options, string field)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            var query = $"from Things as t where t.{field} = null";
+            Assert.Equal(3, await RunSubscription(store, new SubscriptionCreationOptions { Query = query }));
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData("'@metadata'.'@expires'", DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData("'@metadata'.'@archive-at'", DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData("'@metadata'.'@archived'", DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData("'@metadata'.'Origin'", DatabaseMode = RavenDatabaseMode.All)]
+    public async Task CanHandleAnyMetadataPropertyInFilterClause(Options options, string field)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            await CreateThings(store);
+
+            Assert.Equal(3, await RunQuery(store, $"from Things as t filter t.{field} = null"));
+            Assert.Equal(0, await RunQuery(store, $"from Things as t filter t.{field} != null"));
+        }
+    }
+
     private static async Task<int> RunFilterQuery(IDocumentStore store, string query)
     {
         await CreateThings(store);
 
+        return await RunQuery(store, query);
+    }
+
+    private static async Task<int> RunQuery(IDocumentStore store, string query)
+    {
         using (var session = store.OpenAsyncSession())
         {
             var results = await session.Advanced
