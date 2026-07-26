@@ -240,15 +240,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             var db = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
             await StoreSomeDataAsync(store);
 
-            var taskId = await Backup.UpdateConfigAsync(server, Backup.CreateBackupConfiguration(backupPath), store);
-            var config = Backup.CreateBackupConfiguration(backupPath, taskId: taskId);
+            await Backup.UpdateConfigAsync(server, Backup.CreateBackupConfiguration(backupPath), store);
+            var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
 
             var runner = server.ServerStore.BackupRunner;
 
             runner.RemoveDatabase(db.Name);
 
-            var ex = Record.Exception(() => runner.UpdateConfigurations(new List<PeriodicBackupConfiguration> { config }, db.Name));
+            var ex = Record.Exception(() => runner.HandleDatabaseRecordChange(databaseRecord));
             Assert.Null(ex);
+            Assert.Empty(runner.GetDatabaseBackups(db.Name));
         }
 
         [RavenFact(RavenTestCategory.BackupExportImport)]

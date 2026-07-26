@@ -633,15 +633,6 @@ public class ServerBackupRunner : IDisposable
         }
     }
 
-    /// <summary>
-    /// Reacts to cluster value-change notifications for a database. Handles
-    /// <see cref="UpdateResponsibleNodeForTasksCommand"/> by refreshing configurations, and
-    /// <see cref="DelayBackupCommand"/> by writing the new <c>DelayUntil</c> /
-    /// <c>OriginalBackupTime</c> into the in-memory <see cref="DatabaseBackupState.BackupStatus"/>
-    /// so that consumers running with <c>BackupStatusFromMemoryOnly = true</c> (e.g.
-    /// <c>EveryNodeHasDelayInMemory</c>) see the delay on every peer. Cluster-persisted readers
-    /// pick up the same values from the durable rows written by <c>DelayBackupCommand.Execute</c>.
-    /// </summary>
     public void HandleDatabaseValueChanged(string type, object changeState, string databaseName)
     {
         switch (type)
@@ -651,7 +642,8 @@ public class ServerBackupRunner : IDisposable
                 using (context.OpenReadTransaction())
                 using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
                 {
-                    UpdateConfigurations(rawRecord.PeriodicBackups, databaseName);
+                    if (rawRecord != null)
+                        HandleDatabaseRecordChange(rawRecord);
                 }
                 break;
 
@@ -662,11 +654,6 @@ public class ServerBackupRunner : IDisposable
                 if (databaseBackupState == null)
                     throw new InvalidOperationException($"Backup task id: {state.TaskId} doesn't exist");
 
-                // In-memory propagation for BackupStatusFromMemoryOnly = true consumers
-                // (M9, reinstated in 5.11 — see docs/backup-refactor-fix-audit.md Round 2).
-                // The cluster-persisted path handles all other scenarios.
-                // Include TaskId so the synthesized fallback never produces a status with TaskId = 0
-                // that downstream readers (e.g. RunBackupThread line 431) would consume.
                 databaseBackupState.BackupStatus ??= new PeriodicBackupStatus { TaskId = state.TaskId };
                 databaseBackupState.BackupStatus.DelayUntil = state.DelayUntil;
                 databaseBackupState.BackupStatus.OriginalBackupTime = state.OriginalBackupTime;
@@ -676,84 +663,40 @@ public class ServerBackupRunner : IDisposable
 
     public void HandleDatabaseRecordChange(RawDatabaseRecord databaseRecord)
     {
-        if (databaseRecord.PeriodicBackups == null || databaseRecord.PeriodicBackups.Count == 0)
-        {
-            if (this.BackupsPerDatabasePerTaskId.TryGetValue(databaseRecord.DatabaseName, out var backupsPerDatabasePerTaskId))
-            {
-                foreach (var kvp in backupsPerDatabasePerTaskId.ForceEnumerateInThreadSafeManner())
-                {
-                    kvp.Value.Stale.Raise();
-                    // The record no longer has any backup tasks — every previously-registered task was
-                    // removed. Cancel any in-flight backup so it does not run to completion and write a
-                    // status row for a task that no longer exists.
-                    kvp.Value.CancelRunningBackup(CancelReasonTaskDeleted);
-                }
+        var databaseName = databaseRecord.DatabaseName;
 
-                // queue will clear itself
-                backupsPerDatabasePerTaskId.Clear();
-            }
-
-            return;
-        }
-
-        var backupsPerDatabase = BackupsPerDatabasePerTaskId.GetOrAdd(databaseRecord.DatabaseName, static _ => new ConcurrentDictionary<long, DatabaseBackupState>());
-
-        foreach (var periodicBackup in databaseRecord.PeriodicBackups)
-        {
-            if (backupsPerDatabase.TryGetValue(periodicBackup.TaskId, out _))
-                ApplyBackupConfiguration(databaseRecord.DatabaseName, periodicBackup);
-            else
-            {
-                var newBackupState = new DatabaseBackupState(databaseRecord.DatabaseName, periodicBackup, databaseRecord.Sharding != null, _serverStore);
-
-                RegisterNewBackup(newBackupState);
-            }
-        }
-
-        foreach (var removedTaskId in backupsPerDatabase.Keys.Except(databaseRecord.PeriodicBackupsTaskIds))
-        {
-            if (backupsPerDatabase.TryRemove(removedTaskId, out var backupState))
-            {
-                backupState.Stale.Raise();
-                backupState.CancelRunningBackup(CancelReasonTaskDeleted);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Applies a new list of backup configurations for a database, adding tasks that are new,
-    /// updating existing ones, and marking removed tasks as stale so the queue discards them.
-    /// </summary>
-    public void UpdateConfigurations(List<PeriodicBackupConfiguration> configurations, string databaseName)
-    {
         if (BackupsPerDatabasePerTaskId.TryGetValue(databaseName, out ConcurrentDictionary<long, DatabaseBackupState> backupStates) == false)
             return;
 
-        if (configurations == null)
+        var configurations = databaseRecord.PeriodicBackups;
+
+        if (configurations == null || configurations.Count == 0)
         {
             foreach (var kvp in backupStates.ForceEnumerateInThreadSafeManner())
             {
                 kvp.Value.Stale.Raise();
                 kvp.Value.CancelRunningBackup(CancelReasonTaskDeleted);
             }
+
             // queue will clear itself
             backupStates.Clear();
             return;
         }
 
-        var allBackupTaskIds = new List<long>();
-        foreach (var periodicBackupConfiguration in configurations)
+        var allBackupTaskIds = new List<long>(configurations.Count);
+        foreach (var configuration in configurations)
         {
-            allBackupTaskIds.Add(periodicBackupConfiguration.TaskId);
-            ApplyBackupConfiguration(databaseName, periodicBackupConfiguration);
+            allBackupTaskIds.Add(configuration.TaskId);
+            ApplyBackupConfiguration(databaseName, configuration);
         }
 
-        var deletedBackupTaskIds = backupStates.Keys.Except(allBackupTaskIds).ToList();
-
-        foreach (var deletedBackupId in deletedBackupTaskIds)
+        foreach (var deletedBackupTaskId in backupStates.Keys.Except(allBackupTaskIds))
         {
-            backupStates[deletedBackupId].Stale.Raise();
-            backupStates[deletedBackupId].CancelRunningBackup(CancelReasonTaskDeleted);
+            if (backupStates.TryRemove(deletedBackupTaskId, out var backupState) == false)
+                continue;
+
+            backupState.Stale.Raise();
+            backupState.CancelRunningBackup(CancelReasonTaskDeleted);
         }
     }
 

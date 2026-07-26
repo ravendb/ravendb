@@ -2880,7 +2880,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var testingStuff = new TestingStuffInternal() { SimulateActiveByOtherNodeStatus_UpdateConfigurations = true };
                     documentDatabase.ServerStore.BackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[documentDatabase.Name] = testingStuff;
 
-                    responsibleDatabase.ServerStore.BackupRunner.UpdateConfigurations(record1.PeriodicBackups, documentDatabase.Name);
+                    responsibleDatabase.ServerStore.BackupRunner.HandleDatabaseRecordChange(record1);
                     tcs.TrySetResult(null);
 
                     responsibleDatabase.ServerStore.BackupRunner._forTestingPurposes = null;
@@ -2936,7 +2936,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var testingStuff = new TestingStuffInternal() { SimulateDisableNodeStatus_UpdateConfigurations = true };
                     responsibleDatabase.ServerStore.BackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[responsibleDatabase.Name] = testingStuff;
 
-                    responsibleDatabase.ServerStore.BackupRunner.UpdateConfigurations(record1.PeriodicBackups, documentDatabase.Name);
+                    responsibleDatabase.ServerStore.BackupRunner.HandleDatabaseRecordChange(record1);
                     tcs.TrySetResult(null);
 
                     responsibleDatabase.ServerStore.BackupRunner._forTestingPurposes = null;
@@ -3763,10 +3763,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                     var dbTestingStuff = new TestingStuffInternal { SimulateActiveByOtherNodeStatus_UpdateConfigurations = true };
                     responsibleDatabase.ServerStore.BackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[documentDatabase.Name] = dbTestingStuff;
-                    responsibleDatabase.ServerStore.BackupRunner.UpdateConfigurations(record1.PeriodicBackups, documentDatabase.Name);
+                    responsibleDatabase.ServerStore.BackupRunner.HandleDatabaseRecordChange(record1);
                     dbTestingStuff.SimulateActiveByOtherNodeStatus_UpdateConfigurations = false;
                     dbTestingStuff.SimulateActiveByCurrentNode_UpdateConfigurations = true;
-                    responsibleDatabase.ServerStore.BackupRunner.UpdateConfigurations(record1.PeriodicBackups, documentDatabase.Name);
+                    responsibleDatabase.ServerStore.BackupRunner.HandleDatabaseRecordChange(record1);
                     tcs.TrySetResult(null);
 
                     responsibleDatabase.ServerStore.BackupRunner._forTestingPurposes = null;
