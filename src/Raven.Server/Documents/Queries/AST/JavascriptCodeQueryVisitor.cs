@@ -43,11 +43,14 @@ namespace Raven.Server.Documents.Queries.AST
         /// JavaScript, and 'undefined === null' is false, so the absent case has to be
         /// spelled out as an existence check. The original comparison is kept alongside it
         /// so a property that is present and explicitly null still matches. This applies to
-        /// any property under '@metadata' - '@refresh', '@expires', '@archive-at',
-        /// '@archived' and user defined metadata alike. Callers apply this to a boolean
-        /// clause (a subscription where clause or a query filter clause) before visiting it.
+        /// the server owned metadata properties - the ones under '@metadata' whose name
+        /// starts with '@', such as '@refresh', '@expires', '@archive-at' and '@archived' -
+        /// since those are removed rather than set to null when they do not apply. User
+        /// defined metadata is left alone and compares exactly as written. Callers apply
+        /// this to a boolean clause (a subscription where clause or a query filter clause)
+        /// before visiting it.
         /// </summary>
-        public static QueryExpression HandleMetadataNullComparison(QueryExpression qe)
+        internal static QueryExpression HandleMetadataNullComparison(QueryExpression qe)
         {
             // the comparison may sit anywhere in the clause, so we recurse through the
             // logical operators and negations to reach it
@@ -65,7 +68,7 @@ namespace Raven.Server.Documents.Queries.AST
                     return new BinaryExpression(left, right, logical.Operator) { Parenthesis = logical.Parenthesis };
 
                 case BinaryExpression { Operator: OperatorType.Equal or OperatorType.NotEqual } be:
-                    if (IsMetadataProperty(be.Left) == false ||
+                    if (IsSystemMetadataProperty(be.Left) == false ||
                         be.Right is not ValueExpression { Value: ValueTokenType.Null })
                         return qe;
 
@@ -87,14 +90,20 @@ namespace Raven.Server.Documents.Queries.AST
             }
         }
 
-        private static bool IsMetadataProperty(QueryExpression qe)
+        private static bool IsSystemMetadataProperty(QueryExpression qe)
         {
             // a property directly under '@metadata', written with or without the from alias,
             // so we match on the path shape: both '@metadata'.'X' and e.'@metadata'.'X'
             if (qe is not FieldExpression fe || fe.Compound.Count < 2)
                 return false;
 
-            return fe.Compound[^2] == Constants.Documents.Metadata.Key;
+            if (fe.Compound[^2] != Constants.Documents.Metadata.Key)
+                return false;
+
+            // only the server owned properties, which are removed rather than nulled out
+            StringSegment property = fe.Compound[^1];
+
+            return property.Length > 0 && property[0] == '@';
         }
 
         public override void VisitInclude(List<QueryExpression> includes)
