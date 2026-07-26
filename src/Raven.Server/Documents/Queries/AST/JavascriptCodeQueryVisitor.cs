@@ -35,16 +35,17 @@ namespace Raven.Server.Documents.Queries.AST
         }
 
         /// <summary>
-        /// Rewrites a null comparison against a metadata property into an existence check:
-        /// '@metadata'.'@refresh' = null becomes "not exists(...)" and
-        /// '@metadata'.'@refresh' != null becomes "exists(...)".
+        /// Widens a null comparison against a metadata property so that it also covers the
+        /// property being absent:
+        /// '@metadata'.'@refresh' = null becomes "not exists(...) or ... = null" and
+        /// '@metadata'.'@refresh' != null becomes "exists(...) and ... != null".
         /// A document that carries no such metadata property at all reads as undefined in
-        /// JavaScript, and 'undefined === null' is false, so the comparison has to be
-        /// expressed as an existence check instead. This applies to any property under
-        /// '@metadata' - '@refresh', '@expires', '@archive-at', '@archived' and
-        /// user defined metadata alike - since they are all absent rather than null when
-        /// unset. Callers apply this to a boolean clause (a subscription where clause or a
-        /// query filter clause) before visiting it.
+        /// JavaScript, and 'undefined === null' is false, so the absent case has to be
+        /// spelled out as an existence check. The original comparison is kept alongside it
+        /// so a property that is present and explicitly null still matches. This applies to
+        /// any property under '@metadata' - '@refresh', '@expires', '@archive-at',
+        /// '@archived' and user defined metadata alike. Callers apply this to a boolean
+        /// clause (a subscription where clause or a query filter clause) before visiting it.
         /// </summary>
         public static QueryExpression HandleMetadataNullComparison(QueryExpression qe)
         {
@@ -67,10 +68,19 @@ namespace Raven.Server.Documents.Queries.AST
                     if (IsMetadataProperty(be.Left) == false ||
                         be.Right is not ValueExpression { Value: ValueTokenType.Null })
                         return qe;
-                    MethodExpression me = new MethodExpression("exists", [be.Left]);
-                    if (be.Operator is not OperatorType.NotEqual)
-                        return new NegatedExpression(me);
-                    return me;
+
+                    // 'be' is reused as the explicit null half of the result, so the original
+                    // comparison keeps matching a property that is present and set to null
+                    MethodExpression exists = new MethodExpression("exists", [be.Left]);
+
+                    if (be.Operator is OperatorType.NotEqual)
+                    {
+                        // present, and holding something other than null
+                        return new BinaryExpression(exists, be, OperatorType.And) { Parenthesis = true };
+                    }
+
+                    // absent entirely, or present and explicitly null
+                    return new BinaryExpression(new NegatedExpression(exists), be, OperatorType.Or) { Parenthesis = true };
 
                 default:
                     return qe;

@@ -113,6 +113,78 @@ public class RavenDB_27174(ITestOutputHelper output) : SubscriptionTestBase(outp
         }
     }
 
+    // a metadata property that is present but explicitly null still counts as null, so the
+    // widened comparison has to match it as well as a property that is missing altogether
+
+    [RavenTheory(RavenTestCategory.Subscriptions)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public async Task ExplicitNullMetadataPropertyMatchesInSubscription(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            var id = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions
+            {
+                Query = "from Things as t where t.'@metadata'.'Origin' = null"
+            });
+
+            await CreateThingsWithOrigin(store);
+
+            // the document with no 'Origin' and the one with an explicitly null 'Origin'
+            Assert.Equal(2, await RunSubscriptionWorker(store, id));
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public async Task ExplicitNullMetadataPropertyMatchesInFilterClause(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            await CreateThingsWithOrigin(store);
+
+            await AssertOriginIsPresentAndNull(store);
+
+            Assert.Equal(2, await RunQuery(store, "from Things as t filter t.'@metadata'.'Origin' = null"));
+            Assert.Equal(1, await RunQuery(store, "from Things as t filter t.'@metadata'.'Origin' != null"));
+        }
+    }
+
+    // guards the two tests above: they only prove anything if the server really stored
+    // 'Origin' as a present-but-null property rather than dropping it
+    private static async Task AssertOriginIsPresentAndNull(IDocumentStore store)
+    {
+        using (var session = store.OpenAsyncSession())
+        {
+            var results = await session.Advanced
+                .AsyncRawQuery<Thing>("from Things as t where t.Name = 'explicit-null'")
+                .WaitForNonStaleResults()
+                .ToListAsync();
+
+            var metadata = session.Advanced.GetMetadataFor(Assert.Single(results));
+
+            Assert.True(metadata.ContainsKey("Origin"), "'Origin' was dropped instead of being stored as null");
+            Assert.Null(metadata["Origin"]);
+        }
+    }
+
+    private static async Task CreateThingsWithOrigin(IDocumentStore store)
+    {
+        using (var session = store.OpenAsyncSession())
+        {
+            var withOrigin = new Thing { Name = "with" };
+            await session.StoreAsync(withOrigin);
+            session.Advanced.GetMetadataFor(withOrigin)["Origin"] = "web";
+
+            var explicitNull = new Thing { Name = "explicit-null" };
+            await session.StoreAsync(explicitNull);
+            session.Advanced.GetMetadataFor(explicitNull)["Origin"] = null;
+
+            await session.StoreAsync(new Thing { Name = "missing" });
+
+            await session.SaveChangesAsync();
+        }
+    }
+
     private static async Task<int> RunFilterQuery(IDocumentStore store, string query)
     {
         await CreateThings(store);
@@ -154,6 +226,11 @@ public class RavenDB_27174(ITestOutputHelper output) : SubscriptionTestBase(outp
 
         await CreateThings(store);
 
+        return await RunSubscriptionWorker(store, id);
+    }
+
+    private static async Task<int> RunSubscriptionWorker(IDocumentStore store, string id)
+    {
         var worker = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
         {
             CloseWhenNoDocsLeft = true
