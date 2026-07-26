@@ -33,17 +33,17 @@ public static partial class CoraxQueryBuilder
         if (builderParameters.Metadata.HasHighlightings == false)
             return;
 
-        if (builderParameters.IndexReadOperation is not CoraxIndexReadOperation readOperation)
-            return;
+        // vector search runs on Corax only; a non-Corax read operation here would have failed far earlier.
+        Debug.Assert(builderParameters.IndexReadOperation is CoraxIndexReadOperation, "vector search is only supported on Corax indexes");
+        CoraxIndexReadOperation readOperation = (CoraxIndexReadOperation)builderParameters.IndexReadOperation;
 
-
-        var queryVectors = new List<byte[]>();
+        List<byte[]> queryVectors = new();
         if (singleVector is { IsNull: false } single)
             queryVectors.Add(single.GetEmbedding().ToArray());
 
         if (multiVector is not null)
         {
-            foreach (var vector in multiVector)
+            foreach (VectorValue vector in multiVector)
             {
                 if (vector.IsNull == false)
                     queryVectors.Add(vector.GetEmbedding().ToArray());
@@ -53,7 +53,7 @@ public static partial class CoraxQueryBuilder
         if (queryVectors.Count == 0)
             return;
 
-        var highlightFieldName = builderParameters.Metadata.GetVectorSourceFieldName(fieldName, me, builderParameters.QueryParameters);
+        string highlightFieldName = builderParameters.Metadata.GetVectorSourceFieldName(fieldName, me, builderParameters.QueryParameters);
         readOperation.CaptureVectorChunkHighlighting(highlightFieldName, embeddingsGenerationTaskIdentifier, queryVectors);
     }
 

@@ -41,31 +41,43 @@ internal static class CoraxVectorChunkHighlighter
 
         PriorityQueue<string, float> scored = new();
 
-        foreach (var highlighting in query.Metadata.Highlightings)
+        foreach (HighlightingField highlighting in query.Metadata.Highlightings)
         {
-            var fieldName = highlighting.Field.Value;
-            if (captures.TryGetValue(fieldName, out var capture) == false)
+            string fieldName = highlighting.Field.Value;
+            if (captures.TryGetValue(fieldName, out VectorChunkHighlightingCapture capture) == false)
                 continue; // this highlight field was not a vector search
 
             scored.Clear();
-            var fragments = ComputeForDocument(scored, capture, highlighting, document, context, database);
+            string[] fragments = ComputeForDocument(scored, capture, highlighting, document, context, database);
             if (fragments is not { Length: > 0 })
                 continue;
 
-            if (highlightings.TryGetValue(fieldName, out var perDocument) == false)
+            if (highlightings.TryGetValue(fieldName, out Dictionary<string, string[]> perDocument) == false)
                 highlightings[fieldName] = perDocument = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
 
-            // vector search never highlights the same field via the term path, so we do not expect an existing key here
-            perDocument[document.Id] = fragments;
+            // On a dynamic index the same source field can be both full-text searched and vector searched under a single
+            // highlight(), in which case the term highlighter has already stored its fragments here. Append the vector
+            // chunk fragments rather than overwriting so both survive.
+            if (perDocument.TryGetValue(document.Id, out string[] existing) && existing is { Length: > 0 })
+            {
+                int offset = existing.Length;
+                Array.Resize(ref existing, existing.Length + fragments.Length);
+                Array.Copy(fragments, 0, existing, offset, fragments.Length);
+                perDocument[document.Id] = existing;
+            }
+            else
+            {
+                perDocument[document.Id] = fragments;
+            }
         }
     }
 
     private static string[] ComputeForDocument(PriorityQueue<string, float> scored, VectorChunkHighlightingCapture capture, HighlightingField highlighting, Document document,
         DocumentsOperationContext context, DocumentDatabase database)
     {
-        var embeddingDocumentId = EmbeddingsHelper.GetEmbeddingDocumentId(document.Id);
+        string embeddingDocumentId = EmbeddingsHelper.GetEmbeddingDocumentId(document.Id);
 
-        using var embeddingDocument = database.DocumentsStorage.Get(context, embeddingDocumentId);
+        using Document embeddingDocument = database.DocumentsStorage.Get(context, embeddingDocumentId);
         if (embeddingDocument == null)
             return null; // no embeddings stored for this document (e.g. deleted, manual vector, etc)
 
@@ -75,31 +87,31 @@ internal static class CoraxVectorChunkHighlighter
         if (taskObject.TryGet(EmbeddingsHelper.ChunkTextPropertyName, out BlittableJsonReaderObject chunkTextByHash) == false || chunkTextByHash == null)
             return null; // chunk text was not stored (StoreChunkText disabled, or data predates the feature)
 
-        var quantization = VectorEmbeddingType.Single;
+        VectorEmbeddingType quantization = VectorEmbeddingType.Single;
         if (taskObject.TryGet(Constants.Documents.Metadata.Quantization, out string quantizationValue) &&
             Enum.TryParse(quantizationValue, out VectorEmbeddingType parsedQuantization))
             quantization = parsedQuantization;
 
-        var attachmentsStorage = database.DocumentsStorage.AttachmentsStorage;
+        AttachmentsStorage attachmentsStorage = database.DocumentsStorage.AttachmentsStorage;
 
         // Keep only the nearest FragmentCount chunks (all of them when FragmentCount <= 0). Priorities are the negated
         // distance, so the default min-heap keeps the farthest kept chunk at the head - the one EnqueueDequeue evicts.
-        var capacity = highlighting.FragmentCount > 0 ? highlighting.FragmentCount : int.MaxValue;
+        int capacity = highlighting.FragmentCount > 0 ? highlighting.FragmentCount : int.MaxValue;
 
         // Text field is a map of chunk hash -> chunk text, vector data stored as attachment
         BlittableJsonReaderObject.PropertyDetails property = default;
         for (int i = 0; i < chunkTextByHash.Count; i++)
         {
             chunkTextByHash.GetPropertyByIndex(i, ref property);
-            var hash = property.Name?.ToString();
+            string hash = property.Name?.ToString();
             if (hash == null)
                 continue;
 
-            var text = property.Value?.ToString();
+            string text = property.Value?.ToString();
             if (text == null)
                 continue; // no text stored for this chunk
 
-            var attachment = attachmentsStorage.GetAttachment(context, embeddingDocumentId, hash, AttachmentType.Document, changeVector: null);
+            Attachment attachment = attachmentsStorage.GetAttachment(context, embeddingDocumentId, hash, AttachmentType.Document, changeVector: null);
             if (attachment == null)
                 continue; // vector attachment is gone
 
@@ -116,15 +128,15 @@ internal static class CoraxVectorChunkHighlighter
                 scored.EnqueueDequeue(text, -distance); // full: adds this chunk and drops the current farthest
         }
 
-        var count = scored.Count;
+        int count = scored.Count;
         if (count == 0)
             return null;
 
         // The queue dequeues farthest-first, fill in reverse
-        var result = new string[count];
+        string[] result = new string[count];
         for (int i = count - 1; i >= 0; i--)
         {
-            var text = scored.Dequeue();
+            string text = scored.Dequeue();
             if (highlighting.FragmentLength > 0 && text.Length > highlighting.FragmentLength)
                 text = text.Substring(0, highlighting.FragmentLength);
             result[i] = text;
@@ -135,10 +147,10 @@ internal static class CoraxVectorChunkHighlighter
 
     private static float BestDistance(List<byte[]> queryVectors, ReadOnlySpan<byte> chunkVector, VectorEmbeddingType quantization)
     {
-        var best = float.PositiveInfinity;
-        foreach (var queryVector in queryVectors)
+        float best = float.PositiveInfinity;
+        foreach (byte[] queryVector in queryVectors)
         {
-            var distance = Distance(quantization, queryVector, chunkVector);
+            float distance = Distance(quantization, queryVector, chunkVector);
             if (distance < best)
                 best = distance;
         }
