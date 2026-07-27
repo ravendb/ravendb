@@ -40,6 +40,16 @@ public static class WizardEndpoints
             .Accepts<DiscoverRequest>("application/json")
             .Produces<DiscoverResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
+        group.MapPost("/verify-cdc", VerifyCdcAsync)
+            .WithName("setup.verifyCdc")
+            .WithDescription(
+                "Dry-runs CDC against the discovered source: provisions the capture infrastructure " +
+                "(PostgreSQL publication/replication slot, SQL Server sp_cdc_enable_*), reads one row per " +
+                "selected table, then removes whatever it created. Reports blockers the static schema " +
+                "verification cannot see, such as a missing CREATE or REPLICATION grant.")
+            .Accepts<VerifyCdcRequest>("application/json")
+            .Produces<VerifyCdcResponse>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
         group.MapPost("/map", MapAsync)
             .WithName("setup.map")
             .Accepts<MapRequest>("application/json")
@@ -161,6 +171,153 @@ public static class WizardEndpoints
         await session.SaveChangesAsync(ct);
 
         return Results.Ok(DiscoverResponse.From(schema));
+    }
+
+    private static async Task<IResult> VerifyCdcAsync(
+        VerifyCdcRequest body,
+        IDocumentStore store,
+        ILogger<WizardLogger> logger,
+        CancellationToken ct)
+    {
+        if (body.Tables.Length == 0)
+            return Results.BadRequest(new ApiErrorResponse("at least one table is required"));
+
+        WizardState? state;
+        using (var session = store.OpenAsyncSession())
+            state = await session.LoadAsync<WizardState>(WizardState.DocumentId, ct);
+
+        if (state?.LastDiscoveredSchema is null)
+            return Results.BadRequest(new ApiErrorResponse("no discovered schema found; call /api/setup/discover first"));
+
+        var probes = await store.Maintenance.ForDatabase(store.Database).SendAsync(
+            new GetConnectionStringsOperation(WizardSourceProbeName, ConnectionStringType.Sql), ct);
+
+        if (probes.SqlConnectionStrings is null ||
+            !probes.SqlConnectionStrings.TryGetValue(WizardSourceProbeName, out var probeCs))
+        {
+            return Results.BadRequest(new ApiErrorResponse(
+                $"probe connection string '{WizardSourceProbeName}' is not registered on the config DB; call /api/setup/connect first."));
+        }
+
+        var configuration = ScaffoldDryRunConfiguration(state.LastDiscoveredSchema, body.Tables, out var scaffoldErrors);
+        if (scaffoldErrors.Count > 0)
+        {
+            logger.LogInformation("VerifyCdc: {Count} selected table(s) cannot be captured", scaffoldErrors.Count);
+            return Results.Ok(VerifyCdcResponse.Failed([.. scaffoldErrors]));
+        }
+
+        CdcTestResult result;
+        try
+        {
+            result = await store.Maintenance.ForDatabase(store.Database).SendAsync(
+                new VerifyCdcSinkOperation(new CdcTestRequest
+                {
+                    Configuration = configuration,
+                    Connection = new SqlConnectionString
+                    {
+                        Name = WizardSourceProbeName,
+                        FactoryName = probeCs.FactoryName,
+                        ConnectionString = probeCs.ConnectionString,
+                    },
+                }), ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "VerifyCdc: dry run threw");
+            result = new CdcTestResult { Success = false, Error = ex.ToString() };
+        }
+
+        logger.LogInformation(
+            "VerifyCdc: success={Success} completedTables={CompletedTables}/{RequestedTables} warnings={Warnings}",
+            result.Success, result.CompletedTables.Count, configuration.Tables.Count, result.Warnings.Count);
+
+        return Results.Ok(VerifyCdcResponse.From(result));
+    }
+    
+    private static CdcSinkConfiguration ScaffoldDryRunConfiguration(
+        CdcSinkSourceSchema schema,
+        VerifyCdcTableRequest[] requested,
+        out List<string> errors)
+    {
+        errors = [];
+
+        var configuration = new CdcSinkConfiguration
+        {
+            Name = "wizard-cdc-dry-run",
+            ConnectionStringName = WizardSourceProbeName,
+        };
+
+        var collectionNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var table in requested.DistinctBy(
+                     t => $"{t.SourceTableSchema ?? string.Empty}.{t.SourceTableName}", StringComparer.OrdinalIgnoreCase))
+        {
+            var fullName = string.IsNullOrEmpty(table.SourceTableSchema)
+                ? table.SourceTableName
+                : $"{table.SourceTableSchema}.{table.SourceTableName}";
+
+            var discovered = schema.Tables.FirstOrDefault(t =>
+                string.Equals(t.SourceTableName, table.SourceTableName, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(t.SourceTableSchema ?? string.Empty, table.SourceTableSchema ?? string.Empty, StringComparison.OrdinalIgnoreCase));
+
+            if (discovered is null)
+            {
+                errors.Add($"Table '{fullName}' is not part of the discovered schema; re-run discovery and select it again.");
+                continue;
+            }
+
+            if (!string.IsNullOrWhiteSpace(discovered.UnsupportedReason))
+            {
+                errors.Add($"Table '{fullName}' cannot be captured: {discovered.UnsupportedReason}");
+                continue;
+            }
+
+            if (discovered.PrimaryKeyColumns.Count == 0)
+            {
+                errors.Add($"Table '{fullName}' has no primary key, so CDC cannot derive stable document ids for it.");
+                continue;
+            }
+            
+            var isPendingCdcSetup = schema.HasPermissionToSetup && discovered.IsCdcEnabled == false;
+
+            var columns = discovered.Columns
+                .Where(c => c.IsCdcCapturable || isPendingCdcSetup)
+                .Select(c => new CdcColumnMapping { Column = c.Name, Name = c.Name, Type = c.SuggestedType })
+                .ToList();
+
+            if (columns.Count == 0)
+            {
+                errors.Add($"Table '{fullName}' cannot be captured: none of its columns can be captured by CDC.");
+                continue;
+            }
+
+            var uncapturableKeyColumns = discovered.PrimaryKeyColumns
+                .Where(pk => !columns.Any(c => string.Equals(c.Column, pk, StringComparison.OrdinalIgnoreCase)))
+                .ToArray();
+
+            if (uncapturableKeyColumns.Length > 0)
+            {
+                errors.Add(
+                    $"Table '{fullName}' cannot be captured: primary key column(s) " +
+                    $"{string.Join(", ", uncapturableKeyColumns)} are not capturable.");
+                continue;
+            }
+
+            // schema-qualify only on a clash, i.e. same table name in two selected schemas
+            var collectionName = collectionNames.Add(discovered.SourceTableName) ? discovered.SourceTableName : fullName;
+            collectionNames.Add(collectionName);
+
+            configuration.Tables.Add(new CdcSinkTableConfig
+            {
+                CollectionName = collectionName,
+                SourceTableSchema = discovered.SourceTableSchema,
+                SourceTableName = discovered.SourceTableName,
+                Columns = columns,
+                PrimaryKeyColumns = [.. discovered.PrimaryKeyColumns],
+            });
+        }
+
+        return configuration;
     }
 
     private static async Task<IResult> MapAsync(
