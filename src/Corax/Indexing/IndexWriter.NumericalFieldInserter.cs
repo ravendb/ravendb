@@ -186,12 +186,23 @@ public partial class IndexWriter
                 _buffers.Keys[idX] = ilk;
 
                 ref var entries = ref _indexedField.Storage.GetAsRef(termsIndexes[idX]);
+                if (_writer._supportedFeatures.NumericTreesWithoutFrequencies)
+                    NormalizeFrequencies(ref entries);
                 entries.Prepare(_writer._entriesAllocator);
             }
 
             keys = _buffers.Keys.AsSpan(start: 0, length: max);
             postingListIds = _buffers.PostListIds.AsSpan(start: 0, length: max);
             pageOffsets = _buffers.PageOffsets.AsSpan(start: 0, length: max);
+        }
+
+        private static void NormalizeFrequencies(ref EntriesModifications entries)
+        {
+            for (int i = 0; i < entries.Additions.Count; i++)
+                entries.Additions[i].Frequency = 1;
+
+            for (int i = 0; i < entries.Removals.Count; i++)
+                entries.Removals[i].Frequency = 1;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
