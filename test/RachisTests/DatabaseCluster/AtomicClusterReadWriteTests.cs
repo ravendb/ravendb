@@ -361,9 +361,9 @@ namespace RachisTests.DatabaseCluster
                 var (taskId, _) = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(server, store, config, isFullBackup: true);
 
                 var backupShard0 = server.ServerStore.BackupRunner.GetDatabaseStateByTaskId(database.Name, taskId);
-                 
+
                 // wait for the backup to finish on 2 of the shards
-                var shardDatabases =  server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).ToList();
+                var shardDatabases = server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).ToList();
                 foreach (var shard in shardDatabases)
                 {
                     var s = await shard;
@@ -646,7 +646,6 @@ namespace RachisTests.DatabaseCluster
         public async Task ClusterWideTransaction_WhenRestoreFromIncrementalBackupAfterStoreAndUpdateWithoutLoad_ShouldFail(Options options)
         {
             const string docId = "TestObjs/1";
-
             using var source = InternalGetDocumentStore(options);
             using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {

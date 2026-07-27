@@ -92,7 +92,7 @@ namespace Raven.Server.Documents
         private readonly object _idleLocker = new object();
 
         private readonly SemaphoreSlim _updateValuesLocker = new(1, 1);
-
+        private BackupTombstoneCleanerInfo tombstoneCleanerInfo;
         public Action<LogLevel, string> AddToInitLog => _addToInitLog;
 
         /// <summary>
@@ -447,9 +447,11 @@ namespace Raven.Server.Documents
                 SupportedFeatures = new SupportedFeature(record);
 
                 ReplicationLoader = CreateReplicationLoader();
-                TombstoneCleaner.Subscribe(new BackupTombstoneCleanerInfo(_serverStore, this));
-                IOExtensions.DeleteDirectory(Utils.BackupUtils.GetBackupTempPath(Configuration, "PeriodicBackupTemp", out _).FullPath);
-                IOExtensions.CreateDirectory(Utils.BackupUtils.GetBackupTempPath(Configuration, "PeriodicBackupTemp", out _).FullPath);
+                tombstoneCleanerInfo = new BackupTombstoneCleanerInfo(_serverStore, this);
+                TombstoneCleaner.Subscribe(tombstoneCleanerInfo);
+                var tempPath = Utils.BackupUtils.GetBackupTempPath(Configuration, "PeriodicBackupTemp", out _);
+                IOExtensions.DeleteDirectory(tempPath.FullPath);
+                IOExtensions.CreateDirectory(tempPath.FullPath);
                 _serverStore.BackupRunner?.EnsureDatabaseRegistered(Name);
 
                 _addToInitLog(LogLevel.Debug, "Initializing IndexStore (async)");
@@ -954,6 +956,9 @@ namespace Raven.Server.Documents
 
             _databaseShutdown.Cancel();
 
+            TombstoneCleaner.Unsubscribe(tombstoneCleanerInfo);
+            IOExtensions.DeleteDirectory(Utils.BackupUtils.GetBackupTempPath(Configuration, "PeriodicBackupTemp", out _).FullPath);
+
             _serverStore.Server.ServerCertificateChanged -= OnCertificateChange;
 
             ForTestingPurposes?.ActionToCallDuringDocumentDatabaseInternalDispose?.Invoke();
@@ -1239,10 +1244,6 @@ namespace Raven.Server.Documents
             });
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed ExpiredDocumentsCleaner");
 
-            // Note: we do NOT call BackupRunner.RemoveDatabase here.
-            // The centralized ServerBackupRunner retains backup state across database unloads.
-            // Cleanup happens via HandleDatabaseRecordChange when a database is actually deleted.
-
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing SchemaValidatorCache");
             exceptionAggregator.Execute(() =>
             {
@@ -1282,7 +1283,7 @@ namespace Raven.Server.Documents
             var performanceHints = NotificationCenter.GetPerformanceHintCount();
 
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Generating offline database info: backupInfo.");
-            var backupInfo = _serverStore.BackupRunner?.GetBackupInfo(Name);
+            var backupInfo = _serverStore.BackupRunner.GetBackupInfo(Name);
 
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Generating offline database info: mountPointsUsage.");
             var mountPointsUsage = GetMountPointsUsage(includeTempBuffers: false)
@@ -1747,7 +1748,6 @@ namespace Raven.Server.Documents
 
             try
             {
-                
                 UpdateSchemaValidation(record.SchemaValidation);
                 _serverStore.BackupRunner.HandleDatabaseRecordChange(record);
                 EmbeddingsGeneratorQueries?.HandleDatabaseRecordChange(record);

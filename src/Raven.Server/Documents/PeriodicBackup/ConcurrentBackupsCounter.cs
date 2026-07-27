@@ -79,17 +79,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                     return;
                 }
 
-                if (MaxNumberOfConcurrentBackups - _runningBackupsPerDatabase.Count <= 0)
-                {
-                    throw new BackupDelayException(
-                        $"Failed to start Backup Task: '{backupName}'. " +
-                        $"The task exceeds the maximum number of concurrent backup tasks configured. " +
-                        $"Current maximum number of concurrent backups is: {MaxNumberOfConcurrentBackups:#,#;;0}")
-                    {
-                        DelayPeriod = _concurrentBackupsDelay
-                    };
-                }
-
                 _runningBackupsPerDatabase[databaseName] = 1;
             }
 

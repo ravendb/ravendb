@@ -89,7 +89,6 @@ namespace SlowTests.Issues
                 };
 
                 await store.Maintenance.Server.SendAsync(new PutServerWideExternalReplicationOperation(externalReplication));
-                WaitForUserToContinueTheTest(store);
                 var backupPath = NewDataPath(suffix: "SnapshotReplication");
                 var config = Backup.CreateBackupConfiguration(backupPath, BackupType.Snapshot);
                 config.SnapshotSettings = new SnapshotSettings

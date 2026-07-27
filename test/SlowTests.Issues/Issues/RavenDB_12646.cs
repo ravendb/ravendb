@@ -37,7 +37,7 @@ namespace SlowTests.Issues
                     session.Query<Employee>().ToList(); // this will generate performance hint
                 }
 
-                var database = await GetDatabase(store.Database, Server);
+                var database = await GetDatabase(store.Database);
                 var outcome = database.NotificationCenter.Paging.UpdatePagingInternal(null, out string reason);
                 Assert.True(outcome, reason);
 

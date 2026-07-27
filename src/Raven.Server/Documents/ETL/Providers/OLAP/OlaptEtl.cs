@@ -366,6 +366,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             BackupConfiguration.CanBackupUsing(_uploaderSettings.GoogleCloudSettings) || 
             BackupConfiguration.CanBackupUsing(_uploaderSettings.FtpSettings);
     }
+
     public sealed class OlapTimer : IDisposable
     {
         public Timer Timer { get; set; }

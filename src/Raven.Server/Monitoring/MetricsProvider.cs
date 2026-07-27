@@ -274,7 +274,7 @@ public sealed class MetricsProvider
 
         result.DatabaseId = database.DocumentsStorage.Environment.DbId.ToString();
         result.UptimeInSec = (int)(SystemTime.UtcNow - database.StartTime).TotalSeconds;
-        var lastBackup = database.ServerStore.BackupRunner?.GetBackupInfo(database.Name)?.LastBackup;
+        var lastBackup = database.ServerStore.BackupRunner.GetBackupInfo(database.Name)?.LastBackup;
         result.TimeSinceLastBackupInSec = lastBackup.HasValue
             ? (SystemTime.UtcNow - lastBackup.Value).TotalSeconds
             : (double?)null;

@@ -3,11 +3,6 @@ using Raven.Client.ServerWide;
 
 namespace Raven.Server.ServerWide.Backups.Policies.Server;
 
-/// <summary>
-/// Blocks all backups when this node is not in a stable cluster role (Leader or Follower).
-/// Prevents backup work during leadership elections, Candidate state, or other transient
-/// cluster topology changes where backup responsibility may be undetermined.
-/// </summary>
 public class ClusterHealthPolicy : IServerBackupPolicy
 {
     public static readonly ClusterHealthPolicy Instance = new();

@@ -95,6 +95,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Backup.MoveToNewResponsibleNodeGracePeriodInMin", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting MoveToNewResponsibleNodeGracePeriod { get; set; }
 
+        [Description("Interval at which the server backup runner evaluates all scheduled backup tasks.")]
         [DefaultValue(60)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Backup.BackupRunnerFrequencyInSec", ConfigurationEntryScope.ServerWideOnly)]

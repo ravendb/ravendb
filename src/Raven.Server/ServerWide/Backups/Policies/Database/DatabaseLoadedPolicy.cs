@@ -3,12 +3,6 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.ServerWide.Backups.Policies.Database;
 
-/// <summary>
-/// Suppresses backups during the grace period immediately after a database wakes from idle.
-/// When the database is not loaded at all, the policy returns true (with a null reason) so
-/// that the runner wakes it; once loaded, it enforces a configurable settling window before
-/// the first backup is allowed to run.
-/// </summary>
 public class DatabaseLoadedPolicy : IDatabaseBackupPolicy
 {
     public static readonly DatabaseLoadedPolicy Instance = new();

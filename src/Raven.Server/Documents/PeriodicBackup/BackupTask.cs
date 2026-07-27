@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             };
         }
 
-        public BackupResult RunBackupDatabaseOnce(Action<IOperationProgress> onProgress,  BackupType backupType, out PeriodicBackupStatus runningBackupStatus)
+        public BackupResult RunBackupDatabaseOnce(Action<IOperationProgress> onProgress, BackupType backupType, out PeriodicBackupStatus runningBackupStatus)
         {
             runningBackupStatus = new PeriodicBackupStatus { TaskId = 0, BackupType = backupType };
             return Run(onProgress, null, task: null, ref runningBackupStatus);
@@ -116,20 +116,12 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 runningBackupStatus.IsFull = _isFullBackup;
 
-                // The PeriodicBackupRunner.OnGoingBackup method checks that RunningTask is not null and then returns RunningBackup,
-                // which contains the backup process's start time and whether it's a full backup or not.
-                // Therefore, it's crucial to assign RunningTask only after those fields in runningBackupStatus have been populated.
                 if (backupState != null && task != null)
                 {
                     backupState.RunningTask = new ServerBackupRunner.RunningBackupTask { Id = backupState.OperationId, Task = task };
-                    // Store the live cancellation handle so the disable / delete-task triggers can stop this
-                    // in-flight backup (see DatabaseBackupState.CancelRunningBackup). Cleared in
-                    // ServerBackupRunner.FinishBackup with the same ordering as RunningTask. (db-delete stops
-                    // the backup through the DatabaseShutdown linkage on TaskCancelToken, not via this field.)
                     backupState.RunningCancel = TaskCancelToken;
                 }
 
-                TaskCompletionSource<object> value = null;
                 if (_forTestingPurposes != null &&
                     _forTestingPurposes.DatabaseTestingStuffInternals != null &&
                     _forTestingPurposes.DatabaseTestingStuffInternals.TryGetValue(Database.Name, out ServerBackupRunner.TestingStuffInternal testingStuffInternal))

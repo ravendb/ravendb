@@ -559,13 +559,17 @@ namespace SlowTests.Sharding.Backup
                 var dirs = Directory.GetDirectories(backupPath).ToList();
                 Assert.Equal(cluster.Nodes.Count, dirs.Count);
 
-                var status = store.Maintenance.Send(new GetShardedPeriodicBackupStatusOperation(backupTaskId));
+                GetShardedPeriodicBackupStatusOperationResult status = null;
+
+                // the status is read from the cluster storage of the node that serves the request, it may lag behind
+                var shardsWithStatus = await WaitForValueAsync(async () =>
+                {
+                    status = await store.Maintenance.SendAsync(new GetShardedPeriodicBackupStatusOperation(backupTaskId));
+                    return status.Statuses.Count(x => x.Value != null);
+                }, expectedVal: 3, timeout: 30_000, interval: 200);
 
                 Assert.Equal(3, status.Statuses.Count);
-                foreach (var (shardNumber, shardBackupStatus) in status.Statuses)
-                {
-                    Assert.NotNull(shardBackupStatus);
-                }
+                Assert.Equal(3, shardsWithStatus);
             }
         }
 

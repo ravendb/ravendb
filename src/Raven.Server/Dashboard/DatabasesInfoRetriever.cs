@@ -28,7 +28,6 @@ using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Backups;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Storage;
 using Raven.Server.Utils;
@@ -313,7 +312,7 @@ namespace Raven.Server.Dashboard
                             ReplicationFactor = replicationFactor,
                             ErroredIndexesCount = indexStorage.GetIndexes().Count(index => index.State == IndexState.Error),
                             IndexingErrorsCount = indexStorage.GetIndexes().Sum(index => index.GetErrorCount()),
-                            BackupInfo = database.ServerStore.BackupRunner?.GetBackupInfo(context, database.Name),
+                            BackupInfo = database.ServerStore.BackupRunner.GetBackupInfo(context, database.Name),
                             OngoingTasksCount = ongoingTasksCount,
                             Online = true
                         };

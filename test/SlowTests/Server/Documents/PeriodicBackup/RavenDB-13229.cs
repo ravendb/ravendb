@@ -28,14 +28,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.CompareExchange)]
         public async Task BackupWithIdentityAndCompareExchangeShouldHaveOnlyOwnValues()
         {
-            var server = Server;
             var backupPath = NewDataPath(suffix: "BackupFolder1");
             var cmpXchg1 = new User { Name = "👺" };
 
-            using (var store = GetDocumentStore(new Options { Server = server, ModifyDatabaseName = s => "a" }))
+            using (var store = GetDocumentStore(new Options { ModifyDatabaseName = s => "a" }))
             using (var store2 = GetDocumentStore(new Options
             {
-                Server = server,
                 ModifyDatabaseName = s => "aa"
             }))
             {
@@ -65,7 +63,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 await store2.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("emojis/clown", cmpXchg2, 0));
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store); // FULL BACKUP
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store); // FULL BACKUP
             }
 
             var backupDirectory = Directory.GetDirectories(backupPath).First();
@@ -85,7 +83,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             using (var store2 = GetDocumentStore(new Options
             {
-                Server = server,
                 CreateDatabase = false,
                 ModifyDatabaseName = s => databaseName
             }))

@@ -3,11 +3,6 @@ using Sparrow.LowMemory;
 
 namespace Raven.Server.ServerWide.Backups.Policies.Server;
 
-/// <summary>
-/// Blocks all backups when the server reports a low-memory condition.
-/// Avoids adding I/O and working-set pressure from backup work when the process is already
-/// memory-constrained. Set <see cref="Disabled"/> to true in tests to bypass the check.
-/// </summary>
 public class ServerLowMemoryPolicy : IServerBackupPolicy
 {
     public static readonly ServerLowMemoryPolicy Instance = new();

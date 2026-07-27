@@ -4,11 +4,6 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.ServerWide.Backups.Policies.Database;
 
-/// <summary>
-/// Blocks backups that are not yet due based on their full or incremental schedule.
-/// On the first evaluation for a task, reads the persisted status from the cluster store to
-/// initialize <see cref="DatabaseBackupState.NextBackup"/>; subsequent ticks use the cached value.
-/// </summary>
 public class BackupTimePolicy : IDatabaseBackupPolicy
 {
     public static readonly BackupTimePolicy Instance = new();

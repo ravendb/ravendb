@@ -59,7 +59,7 @@ namespace SlowTests.Issues
                 {
                     var afterRestoreStats = store.Maintenance.ForDatabase(restoredDatabaseName).Send(new GetStatisticsOperation());
 
-                    var restoredDatabase = await GetDatabase(restoredDatabaseName, Server);
+                    var restoredDatabase = await GetDatabase(restoredDatabaseName);
                     
                     var indexesPath = restoredDatabase.Configuration.Indexing.StoragePath;
                     var indexesDirectory = new DirectoryInfo(indexesPath.FullPath);

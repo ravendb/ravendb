@@ -4,12 +4,6 @@ using Raven.Server.Documents.PeriodicBackup;
 
 namespace Raven.Server.ServerWide.Backups.Policies.Server;
 
-/// <summary>
-/// Enforces the server-wide concurrent backup limit tracked by <see cref="ConcurrentBackupsCounter"/>.
-/// When the limit is reached, no new backup for the named database is started this cycle; the
-/// queue re-evaluates the task on the next tick. Set <see cref="Disabled"/> to true in tests
-/// to allow unlimited concurrent backups.
-/// </summary>
 public class ServerConcurrentBackupPolicy : IServerBackupPolicy
 {
     public static bool Disabled;

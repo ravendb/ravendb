@@ -4,11 +4,6 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.ServerWide.Backups.Policies.Database;
 
-/// <summary>
-/// Blocks backups for tasks whose responsible node is a different member of the cluster.
-/// Preserves the single-writer guarantee: only the node designated by the cluster observer
-/// runs a given backup task, preventing duplicate backups across nodes.
-/// </summary>
 public class BackupShouldRunOnThisNodePolicy : IDatabaseBackupPolicy
 {
     public static readonly BackupShouldRunOnThisNodePolicy Instance = new();

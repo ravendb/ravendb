@@ -59,7 +59,7 @@ namespace SlowTests.Issues
                         Assert.Equal(1, details.Counters[0].TotalValue);
                     }
 
-                    var db = await GetDatabase(databaseName, Server);
+                    var db = await GetDatabase(databaseName);
 
                     using (var tx = db.DocumentsStorage.Environment.ReadTransaction())
                     {

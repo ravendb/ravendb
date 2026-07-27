@@ -70,7 +70,7 @@ namespace SlowTests.Issues
 
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 var status = documentDatabase.ServerStore.BackupRunner.GetMostUpdatedClusterBackupStatus(store.Database, config.TaskId);
-                var nextBackupDetails = documentDatabase.ServerStore.BackupRunner.GetNextBackupDetails(record.PeriodicBackups.First().TaskId, documentDatabase.Name, out var responsibleNode);
+                var nextBackupDetails = documentDatabase.ServerStore.BackupRunner.GetNextBackupDetails(record.PeriodicBackups.First().TaskId, documentDatabase.Name, status, out var responsibleNode);
                 
                 Assert.True(nextBackupDetails.IsFull);
                 Assert.Equal("A", responsibleNode);

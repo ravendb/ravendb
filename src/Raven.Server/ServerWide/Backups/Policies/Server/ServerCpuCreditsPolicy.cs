@@ -2,12 +2,8 @@
 
 namespace Raven.Server.ServerWide.Backups.Policies.Server;
 
-/// <summary>
-/// Blocks all backups when the server's CPU credit balance is near exhaustion.
-/// Prevents backup work from starving foreground request processing on cloud instances
-/// with burstable CPU. Set <see cref="Disabled"/> to true in tests to bypass the check.
-/// </summary>
-public class ServerCpuCreditsPolicy : IServerBackupPolicy
+public class 
+    ServerCpuCreditsPolicy : IServerBackupPolicy
 {
     public static readonly ServerCpuCreditsPolicy Instance = new();
 

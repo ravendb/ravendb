@@ -104,7 +104,7 @@ public class GenAiBackupRestore(ITestOutputHelper output) : RavenTestBase(output
                 srcHash = hashes.Single().ToString();
             }
 
-            var srcDb = await GetDatabase(store.Database, Server);
+            var srcDb = await GetDatabase(store.Database);
 
             var srcState = EtlProcess.GetProcessState(srcDb, config.Name, config.Transforms[0].Name);
             var srcLastProcessedEtag = srcState.GetLastProcessedEtag(srcDb.DbBase64Id, Server.ServerStore.NodeTag);
@@ -148,7 +148,7 @@ public class GenAiBackupRestore(ITestOutputHelper output) : RavenTestBase(output
                 Assert.Equal(srcGenConfig.Collection, dstGenConfig.Collection);
                 Assert.Equal(srcGenConfig.GenAiTransformation.Script, dstGenConfig.GenAiTransformation.Script);
 
-                var dstDb = await GetDatabase(restoredDb, Server);
+                var dstDb = await GetDatabase(restoredDb);
 
                 var value = await WaitForValueAsync(() =>
                 {

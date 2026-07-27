@@ -24,7 +24,7 @@ namespace SlowTests.Issues
                 var documentDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 var status = documentDatabase.ServerStore.BackupRunner.GetMostUpdatedClusterBackupStatus(documentDatabase.Name, id);
                 config.TaskId = id;
-                var nextBackupDetails = documentDatabase.ServerStore.BackupRunner.GetNextBackupDetails(id, documentDatabase.Name, out string _);
+                var nextBackupDetails = documentDatabase.ServerStore.BackupRunner.GetNextBackupDetails(id, documentDatabase.Name, status, out string _);
                 var nextBackup = nextBackupDetails.DateTime.ToLocalTime();
 
                 Assert.Equal(1,nextBackup.Hour);

@@ -25,13 +25,11 @@ using Raven.Server.ServerWide.Backups;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using Voron;
-using static Raven.Server.ServerWide.Backups.ServerBackupRunner;
 using BackupConfiguration = Raven.Client.Documents.Operations.Backups.BackupConfiguration;
 
 namespace Raven.Server.Utils;
@@ -202,7 +200,7 @@ public static class BackupUtils
         }
     }
 
-    internal static string GetResponsibleNodeTag(ClusterOperationContext context,  string databaseName, long taskId)
+    internal static string GetResponsibleNodeTag(ClusterOperationContext context, string databaseName, long taskId)
     {
         var blittable = GetResponsibleNodeInfoFromCluster(context, databaseName, taskId);
         if (blittable == null)
@@ -217,7 +215,7 @@ public static class BackupUtils
         // task id == raft index
         // we must wait here to ensure that the task was actually created on this node
         await database.ServerStore.Cluster.WaitForIndexNotification(taskId);
-        
+
         var nodeTag = database.ServerStore.BackupRunner.WhoseTaskIsIt(database.Name, taskId);
         if (nodeTag == null)
         {
@@ -322,10 +320,6 @@ public static class BackupUtils
         {
             // overdue backup of current node or first backup
             if (parameters.BackupStatus.NodeTag == parameters.NodeTag ||
-                // First-time backup on the responsible node: the synthesized status legitimately
-                // has NodeTag = null and no LastFullBackup yet, so the old "run now" semantics
-                // is correct (F2 refinement, session 5.11). Mid-lifecycle peer reads with a
-                // non-null LastFullBackupInternal still fall through to the else-branch.
                 (parameters.BackupStatus.NodeTag == null && parameters.BackupStatus.LastFullBackupInternal == null))
             {
                 // the backup will run now
@@ -334,8 +328,6 @@ public static class BackupUtils
             }
             else
             {
-                // overdue backup from other node (or synthesized mid-lifecycle status produced by
-                // the new centralized runner on non-responsible peers — F2)
                 nextBackupTimeSpan = TimeSpan.FromMinutes(1);
                 nextBackupTimeUtc = nowUtc + nextBackupTimeSpan;
             }
