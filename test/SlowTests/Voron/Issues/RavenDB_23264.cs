@@ -125,5 +125,29 @@ public class RavenDB_23264 : StorageTest
 
         // Clean up
         Env.Journal.Applicator.ForTestingPurposesOnly().OnWaitForJournalStateToBeUpdated_AfterAssigning_updateJournalStateAfterFlush = null;
+
+        // Step 13 (RavenDB-27166): the retry did not double-free, but the environment is not healthy either.
+        // txBlocker's rollback restored its tx-start scratch snapshot, resurrecting the entries the flush action
+        // had already freed via tx.ForgetAboutScratchPage. The retry cannot repair that: the free buffer entries
+        // were nulled by the first (partial) execution, so ForgetAboutScratchPage never runs for them again.
+        // The scratch positions are back on the free list while the environment still maps p1/p2/p3 onto them,
+        // so reusing the scratch makes those pages resolve to whatever now occupies their old positions.
+        for (int c = 0; c < 10; c++)
+        {
+            using var txw = Env.WriteTransaction();
+            var tree = txw.CreateTree("churn");
+            for (int i = 0; i < 100; i++)
+                tree.Add($"churn-{c}-{i}", new string((char)('0' + i % 10), 512));
+            txw.Commit();
+        }
+
+        using (var rtx = Env.ReadTransaction())
+        {
+            foreach (var pageNumber in new[] { p1, p2, p3 })
+            {
+                var page = rtx.LowLevelTransaction.GetPage(pageNumber);
+                Assert.Equal(pageNumber, page.PageNumber);
+            }
+        }
     }
 }

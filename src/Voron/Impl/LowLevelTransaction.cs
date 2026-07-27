@@ -78,6 +78,7 @@ namespace Voron.Impl
         private readonly WriteAheadJournal _journal;
         public ImmutableDictionary<long, PageFromScratchBuffer> ModifiedPagesInTransaction;
         private ImmutableDictionary<long, PageFromScratchBuffer> _scratchBuffersSnapshotToRollbackTo;
+        private List<PageFromScratchBuffer> _scratchPagesForgottenDuringTx;
         internal sealed class WriteTransactionPool
         {
 #if DEBUG
@@ -1330,6 +1331,16 @@ namespace Voron.Impl
 
             // we need to roll back all the changes we made here
             _env.WriteTransactionPool.ScratchPagesInUse = _scratchPagesInUse = _scratchBuffersSnapshotToRollbackTo.ToBuilder();
+
+            // RavenDB-27166: scratch pages forgotten while this transaction was running (a piggybacked journal
+            // flush-state update frees the flushed pages) were really freed - that is not ours to roll back. The
+            // restored snapshot still maps them, so re-apply those removals.
+            if (_scratchPagesForgottenDuringTx != null)
+            {
+                foreach (var forgotten in _scratchPagesForgottenDuringTx)
+                    TryForgetAboutScratchPage(forgotten);
+            }
+
             foreach (var (k, maybeRollBack) in rollbackPages)
             {
                 if (maybeRollBack.AllocatedInTransaction != Id)
@@ -1630,17 +1641,32 @@ namespace Voron.Impl
 
         public void ForgetAboutScratchPage(PageFromScratchBuffer value)
         {
+            if (value.AllocatedInTransaction != Id)
+            {
+                // freed on behalf of an older committed transaction (a piggybacked journal flush-state update),
+                // so the free is not ours to roll back. Remember it and re-apply the removal after a rollback
+                // restores the tx-start snapshot - even when the map no longer points at this entry here (this
+                // transaction overwrote the page), the snapshot being restored still does (RavenDB-27166).
+                (_scratchPagesForgottenDuringTx ??= new List<PageFromScratchBuffer>()).Add(value);
+            }
+
+            TryForgetAboutScratchPage(value);
+        }
+
+        private bool TryForgetAboutScratchPage(PageFromScratchBuffer value)
+        {
             if (_scratchPagesInUse.TryGetValue(value.PageNumberInDataFile, out var existing) == false)
             {
                 // page may have been freed, that is expected
-                return;
+                return false;
             }
 
             Debug.Assert(value.PageNumberInDataFile == existing.PageNumberInDataFile);
             if (value.AllocatedInTransaction != existing.AllocatedInTransaction)
-                return; // transaction scratch page is different
+                return false; // transaction scratch page is different
 
             _scratchPagesInUse.Remove(value.PageNumberInDataFile);
+            return true;
         }
 
         public void RecordSparseRangeCandidate(long sectionPageNumber)
