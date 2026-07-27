@@ -180,11 +180,11 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         Assert.True(channelResp.IsSuccessStatusCode,
             $"channel returned {channelResp.StatusCode}: {await channelResp.Content.ReadAsStringAsync()}");
         var channelJson = await channelResp.Content.ReadFromJsonAsync<JsonElement>();
-        var widgetId = channelJson.GetProperty("widgetId").GetString();
-        Assert.False(string.IsNullOrEmpty(widgetId));
+        var channelId = channelJson.GetProperty("channelId").GetString();
+        Assert.False(string.IsNullOrEmpty(channelId));
 
         var linkResp = await client.PostAsJsonAsync($"/api/apps/{slug}/embed-links",
-            new { widgetId, ttlSeconds = 3600, maxInvocations = 10 });
+            new { channelId, ttlSeconds = 3600, maxInvocations = 10 });
         Assert.True(linkResp.IsSuccessStatusCode,
             $"mint embed-link returned {linkResp.StatusCode}: {await linkResp.Content.ReadAsStringAsync()}");
         var linkJson = await linkResp.Content.ReadFromJsonAsync<JsonElement>();

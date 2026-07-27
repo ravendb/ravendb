@@ -262,18 +262,18 @@ internal static class MetricsReadService
         await session.Advanced.Eagerly.ExecuteAllPendingLazyOperationsAsync(ct);
 
         var channels = (await lazyChannels.Value).Values;
-        var nameByWidget = channels
+        var nameByChannel = channels
             .Where(c => c.Id is not null)
             .ToDictionary(c => c.Id![Channel.IdPrefix.Length..],
                 c => string.IsNullOrWhiteSpace(c.DisplayName) ? c.Id![Channel.IdPrefix.Length..] : c.DisplayName,
                 StringComparer.OrdinalIgnoreCase);
-        if (nameByWidget.Count == 0)
+        if (nameByChannel.Count == 0)
             return new SeriesData([], []);
 
-        var keys = nameByWidget.Keys
-            .Where(k => k != TimeAxisKey)   // a WidgetId colliding with the reserved time axis can't be represented — drop it
+        var keys = nameByChannel.Keys
+            .Where(k => k != TimeAxisKey)   // a channel id colliding with the reserved time axis can't be represented — drop it
             .OrderBy(k => k, StringComparer.OrdinalIgnoreCase).ToArray();
-        var seriesKeys = keys.Select(k => new SeriesKey(k, nameByWidget[k])).ToArray();
+        var seriesKeys = keys.Select(k => new SeriesKey(k, nameByChannel[k])).ToArray();
 
         var points = new Dictionary<string, object>[buckets.Count];
         for (var b = 0; b < buckets.Count; b++)
@@ -282,11 +282,11 @@ internal static class MetricsReadService
         foreach (var link in (await lazyLinks.Value).Values)
         {
             if (link.CreatedAt < period.Start || link.CreatedAt >= period.End) continue;
-            if (link.WidgetId is null || nameByWidget.ContainsKey(link.WidgetId) == false) continue;
-            if (link.WidgetId == TimeAxisKey) continue;   // dropped from keys above
+            if (link.ChannelId is null || nameByChannel.ContainsKey(link.ChannelId) == false) continue;
+            if (link.ChannelId == TimeAxisKey) continue;   // dropped from keys above
             var i = period.IndexOf(link.CreatedAt);
             if (i < 0) continue;
-            points[i][link.WidgetId] = (long)points[i][link.WidgetId] + 1L;
+            points[i][link.ChannelId] = (long)points[i][link.ChannelId] + 1L;
         }
 
         return new SeriesData(points, seriesKeys);

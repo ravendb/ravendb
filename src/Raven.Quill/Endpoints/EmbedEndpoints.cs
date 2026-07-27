@@ -322,7 +322,7 @@ public static class EmbedEndpoints
             if (link is null)
                 return null;
 
-            channel = await session.LoadAsync<Channel>(Channel.IdPrefix + link.WidgetId, ct);
+            channel = await session.LoadAsync<Channel>(Channel.IdPrefix + link.ChannelId, ct);
 
             if (resolveStyle && channel is { Type: ChannelType.IFrame })
             {

@@ -4,7 +4,7 @@ namespace Raven.Quill.Contracts;
 
 // no secrets: never projects binding id / allowed-origins
 public sealed record ChannelSummaryResponse(
-    string WidgetId,
+    string ChannelId,
     ChannelType Type,
     string AgentId,
     string DisplayName,

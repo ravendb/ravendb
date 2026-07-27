@@ -15,13 +15,13 @@ public static class IFrameCustomizationEndpoints
     {
         var group = app.MapGroup("/api/apps/{slug}/iframe").WithTags("iframe").RequireAuthorization();
 
-        group.MapGet("/{widgetId}/customization", GetCustomizationAsync)
+        group.MapGet("/{channelId}/customization", GetCustomizationAsync)
             .WithName("iframe.getCustomization")
             .WithDescription("Returns a web-widget channel's own embed style plus the resolved app default, for the styling editor.")
             .Produces<IFrameCustomizationResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
-        group.MapPut("/{widgetId}/customization", UpdateCustomizationAsync)
+        group.MapPut("/{channelId}/customization", UpdateCustomizationAsync)
             .WithName("iframe.updateCustomization")
             .WithDescription("Saves a web-widget channel's embed style: a built-in preset, custom CSS, or (with a null style) follow the app default.")
             .Accepts<UpdateIFrameCustomizationRequest>("application/json")
@@ -58,7 +58,7 @@ public static class IFrameCustomizationEndpoints
 
     private static async Task<IResult> GetCustomizationAsync(
         string slug,
-        string widgetId,
+        string channelId,
         IDocumentStore store,
         CancellationToken ct)
     {
@@ -67,9 +67,9 @@ public static class IFrameCustomizationEndpoints
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
         using var session = store.OpenAsyncSession(app.Database);
-        var channel = await LoadIFrameChannelAsync(session, widgetId, ct);
+        var channel = await LoadIFrameChannelAsync(session, channelId, ct);
         if (channel is null)
-            return Results.NotFound(new ApiErrorResponse($"no iFrame channel '{widgetId}' in app '{slug}'"));
+            return Results.NotFound(new ApiErrorResponse($"no iFrame channel '{channelId}' in app '{slug}'"));
 
         var defaults = await session.LoadAsync<IFrameStyleDefaults>(IFrameStyleDefaults.DocumentId, ct);
         return Results.Ok(BuildCustomizationResponse(channel, defaults));
@@ -77,7 +77,7 @@ public static class IFrameCustomizationEndpoints
 
     private static async Task<IResult> UpdateCustomizationAsync(
         string slug,
-        string widgetId,
+        string channelId,
         UpdateIFrameCustomizationRequest body,
         IDocumentStore store,
         ILogger<IFrameCustomizationLogger> logger,
@@ -93,9 +93,9 @@ public static class IFrameCustomizationEndpoints
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
         using var session = store.OpenAsyncSession(app.Database);
-        var channel = await LoadIFrameChannelAsync(session, widgetId, ct);
+        var channel = await LoadIFrameChannelAsync(session, channelId, ct);
         if (channel is null)
-            return Results.NotFound(new ApiErrorResponse($"no iFrame channel '{widgetId}' in app '{slug}'"));
+            return Results.NotFound(new ApiErrorResponse($"no iFrame channel '{channelId}' in app '{slug}'"));
 
         channel.Style = body.Style;
         channel.CustomCss = body.Style == IFrameStyle.Custom ? body.Css : null;
@@ -103,8 +103,8 @@ public static class IFrameCustomizationEndpoints
 
         var defaults = await session.LoadAsync<IFrameStyleDefaults>(IFrameStyleDefaults.DocumentId, ct);
         logger.LogInformation(
-            "Updated iFrame customization slug={Slug} widgetId={WidgetId} style={Style}",
-            app.Slug, widgetId, channel.Style?.ToString() ?? "(app default)");
+            "Updated iFrame customization slug={Slug} channelId={ChannelId} style={Style}",
+            app.Slug, channelId, channel.Style?.ToString() ?? "(app default)");
         return Results.Ok(BuildCustomizationResponse(channel, defaults));
     }
 
@@ -214,9 +214,9 @@ public static class IFrameCustomizationEndpoints
     }
 
     private static async Task<Channel?> LoadIFrameChannelAsync(
-        IAsyncDocumentSession session, string widgetId, CancellationToken ct)
+        IAsyncDocumentSession session, string channelId, CancellationToken ct)
     {
-        var channel = await session.LoadAsync<Channel>(Channel.IdPrefix + widgetId, ct);
+        var channel = await session.LoadAsync<Channel>(Channel.IdPrefix + channelId, ct);
         return channel is { Type: ChannelType.IFrame } ? channel : null;
     }
 

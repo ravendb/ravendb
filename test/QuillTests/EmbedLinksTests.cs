@@ -18,7 +18,7 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
     {
         await using var h = await HarnessAsync();
 
-        var minted = await h.App.MintEmbedLinkAsync(new MintEmbedLinkRequest(h.WidgetId, new(), TtlSeconds: 3600, MaxInvocations: 50));
+        var minted = await h.App.MintEmbedLinkAsync(new MintEmbedLinkRequest(h.ChannelId, new(), TtlSeconds: 3600, MaxInvocations: 50));
 
         Assert.Matches("^[a-f0-9]{32}$", minted.Token);
         Assert.EndsWith($"/apps/{h.Slug}/embed/{minted.Token}", minted.Url);
@@ -35,7 +35,7 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
         var req = new HttpRequestMessage(HttpMethod.Post, QuillRoutes.EmbedLinks(h.Slug))
         {
             Content = JsonContent.Create(
-                new { widgetId = h.WidgetId, parameters = new Dictionary<string, string>(), ttlSeconds = 3600, maxInvocations = 50 }),
+                new { channelId = h.ChannelId, parameters = new Dictionary<string, string>(), ttlSeconds = 3600, maxInvocations = 50 }),
         };
         req.Headers.Host = "dashboard.egor-ai.example";
 
@@ -54,7 +54,7 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
     {
         await using var h = await HarnessAsync(provisionChannel: false);
 
-        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => h.App.MintEmbedLinkAsync(new MintEmbedLinkRequest("wgt_nope", null, 3600, 10)));
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => h.App.MintEmbedLinkAsync(new MintEmbedLinkRequest("nope", null, 3600, 10)));
 
         Assert.Equal(HttpStatusCode.NotFound, ex.StatusCode);
     }
@@ -64,9 +64,9 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
     {
         await using var h = await HarnessAsync();
 
-        await h.App.UpdateChannelAsync(h.WidgetId, new UpdateChannelRequest(null, null, Enabled: false));
+        await h.App.UpdateChannelAsync(h.ChannelId, new UpdateChannelRequest(null, null, Enabled: false));
 
-        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => h.App.MintEmbedLinkAsync(new MintEmbedLinkRequest(h.WidgetId, null, 3600, 10)));
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => h.App.MintEmbedLinkAsync(new MintEmbedLinkRequest(h.ChannelId, null, 3600, 10)));
 
         Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
         Assert.Contains("channel_disabled", ex.Body);
@@ -77,12 +77,12 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
     {
         await using var h = await HarnessAsync(provisionChannel: false);
 
-        const string widgetId = "wgt_ghost";
+        const string channelId = "ghost";
         using (var session = h.Store.OpenAsyncSession(h.Database))
         {
             await session.StoreAsync(new Channel
             {
-                Id = Channel.IdPrefix + widgetId,
+                Id = Channel.IdPrefix + channelId,
                 Type = ChannelType.IFrame,
                 AgentId = "deleted-agent",
                 AllowedOrigins = [],
@@ -92,7 +92,7 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
             await session.SaveChangesAsync();
         }
 
-        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => h.App.MintEmbedLinkAsync(new MintEmbedLinkRequest(widgetId, null, 3600, 10)));
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => h.App.MintEmbedLinkAsync(new MintEmbedLinkRequest(channelId, null, 3600, 10)));
 
         Assert.Equal(HttpStatusCode.NotFound, ex.StatusCode);
     }
@@ -106,7 +106,7 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
     {
         await using var h = await HarnessAsync();
 
-        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => h.App.MintEmbedLinkAsync(new MintEmbedLinkRequest(h.WidgetId, null, ttlSeconds, maxInvocations)));
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => h.App.MintEmbedLinkAsync(new MintEmbedLinkRequest(h.ChannelId, null, ttlSeconds, maxInvocations)));
 
         Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
     }
@@ -115,13 +115,13 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
     public async Task Mint_requires_the_agents_declared_parameters()
     {
         await using var h = await HarnessAsync(provisionChannel: false);
-        var widgetId = await ProvisionParamAgentChannelAsync(h.App);
+        var channelId = await ProvisionParamAgentChannelAsync(h.App);
 
-        var missing = await Assert.ThrowsAsync<QuillHttpException>(() => h.App.MintEmbedLinkAsync(new MintEmbedLinkRequest(widgetId, null, 3600, 10)));
+        var missing = await Assert.ThrowsAsync<QuillHttpException>(() => h.App.MintEmbedLinkAsync(new MintEmbedLinkRequest(channelId, null, 3600, 10)));
         Assert.Equal(HttpStatusCode.BadRequest, missing.StatusCode);
 
         var ok = await h.App.MintEmbedLinkAsync(new MintEmbedLinkRequest(
-            widgetId, new Dictionary<string, string> { ["customerId"] = "companies/1-A" }, 3600, 10));
+            channelId, new Dictionary<string, string> { ["customerId"] = "companies/1-A" }, 3600, 10));
         Assert.False(string.IsNullOrEmpty(ok.Token));
     }
 
@@ -129,15 +129,15 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
     public async Task List_returns_live_links_newest_first_and_excludes_revoked_and_expired()
     {
         await using var h = await HarnessAsync(provisionChannel: false);
-        var widgetId = await ProvisionParamAgentChannelAsync(h.App);
+        var channelId = await ProvisionParamAgentChannelAsync(h.App);
 
-        var older = await MintAsync(h.App, widgetId,
+        var older = await MintAsync(h.App, channelId,
             parameters: new Dictionary<string, string> { ["customerId"] = "companies/1-A" });
-        var newer = await MintAsync(h.App, widgetId,
+        var newer = await MintAsync(h.App, channelId,
             parameters: new Dictionary<string, string> { ["customerId"] = "companies/2-A" });
-        var expired = await MintAsync(h.App, widgetId,
+        var expired = await MintAsync(h.App, channelId,
             parameters: new Dictionary<string, string> { ["customerId"] = "companies/3-A" });
-        var revoked = await MintAsync(h.App, widgetId,
+        var revoked = await MintAsync(h.App, channelId,
             parameters: new Dictionary<string, string> { ["customerId"] = "companies/4-A" });
 
         // Pin distinct CreatedAt so the newest-first ordering doesn't ride on clock resolution.
@@ -161,7 +161,7 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
         Assert.Equal("companies/2-A", first.Parameters["customerId"]);
         Assert.Equal(0, first.InvocationCount);
         Assert.Equal(50, first.MaxInvocations);
-        Assert.False(string.IsNullOrEmpty(first.WidgetId));
+        Assert.False(string.IsNullOrEmpty(first.ChannelId));
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -177,7 +177,7 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
     public async Task Minted_link_serves_the_page_and_opens_a_chat_stream()
     {
         await using var h = await HarnessAsync();
-        var token = await MintAsync(h.App, h.WidgetId);
+        var token = await MintAsync(h.App, h.ChannelId);
 
         // raw: asserts the RESPONSE Content-Type header (page → text/html, chat → NDJSON), which the string-body wrappers can't expose.
         var page = await Host.Client.GetAsync(QuillRoutes.EmbedPage(h.Slug, token));
@@ -211,7 +211,7 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
     {
         await using var h = await HarnessAsync();
 
-        var token = await MintAsync(h.App, h.WidgetId);
+        var token = await MintAsync(h.App, h.ChannelId);
 
         using (var cfg = Host.Config.OpenAsyncSession())
         {
@@ -227,7 +227,7 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
     public async Task Embed_unknown_slug_returns_404()
     {
         await using var h = await HarnessAsync();
-        var token = await MintAsync(h.App, h.WidgetId);
+        var token = await MintAsync(h.App, h.ChannelId);
 
         var pageEx = await Assert.ThrowsAsync<QuillHttpException>(() => Host.GetEmbedPageAsync("other-app", token));
         Assert.Equal(HttpStatusCode.NotFound, pageEx.StatusCode);
@@ -244,7 +244,7 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
     public async Task Embed_malformed_slug_segment_returns_404(string slug)
     {
         await using var h = await HarnessAsync();
-        var token = await MintAsync(h.App, h.WidgetId);
+        var token = await MintAsync(h.App, h.ChannelId);
 
         var pageEx = await Assert.ThrowsAsync<QuillHttpException>(() => Host.GetEmbedPageAsync(slug, token));
         Assert.Equal(HttpStatusCode.NotFound, pageEx.StatusCode);
@@ -257,7 +257,7 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
     public async Task Old_style_embed_url_returns_404()
     {
         await using var h = await HarnessAsync();
-        var token = await MintAsync(h.App, h.WidgetId);
+        var token = await MintAsync(h.App, h.ChannelId);
 
         var oldPage = await h.Client.GetAsync($"/embed/{token}");
         Assert.Equal(HttpStatusCode.NotFound, oldPage.StatusCode);
@@ -276,7 +276,7 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
     public async Task Chat_enforces_the_invocation_cap()
     {
         await using var h = await HarnessAsync();
-        var token = await MintAsync(h.App, h.WidgetId, maxInvocations: 1);
+        var token = await MintAsync(h.App, h.ChannelId, maxInvocations: 1);
 
         // Set the cap directly: no LLM in a unit run, and a failed turn would be refunded.
         using (var session = h.Store.OpenAsyncSession(h.Database))
@@ -295,7 +295,7 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
     {
         // This test REQUIRES the turn to fail; the shared demo CS points at a closed port, so it always does.
         await using var h = await HarnessAsync();
-        var token = await MintAsync(h.App, h.WidgetId, maxInvocations: 1);
+        var token = await MintAsync(h.App, h.ChannelId, maxInvocations: 1);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
 
@@ -313,7 +313,7 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
     public async Task Expired_link_returns_410()
     {
         await using var h = await HarnessAsync();
-        var token = await MintAsync(h.App, h.WidgetId);
+        var token = await MintAsync(h.App, h.ChannelId);
 
         using (var session = h.Store.OpenAsyncSession(h.Database))
         {
@@ -333,7 +333,7 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
     public async Task Revoked_link_returns_410()
     {
         await using var h = await HarnessAsync();
-        var token = await MintAsync(h.App, h.WidgetId);
+        var token = await MintAsync(h.App, h.ChannelId);
 
         await h.App.RevokeEmbedLinkAsync(token);
 
@@ -346,7 +346,7 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
     {
         // Allowed list excludes localhost on purpose, so the self-origin rule is what passes it.
         await using var h = await HarnessAsync(origins: new[] { "http://customer.example" });
-        var token = await MintAsync(h.App, h.WidgetId);
+        var token = await MintAsync(h.App, h.ChannelId);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
 
@@ -366,7 +366,7 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
     public async Task Empty_allowed_origins_skips_the_origin_check()
     {
         await using var h = await HarnessAsync(origins: Array.Empty<string>());
-        var token = await MintAsync(h.App, h.WidgetId);
+        var token = await MintAsync(h.App, h.ChannelId);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         var resp = await h.App.SendEmbedChatAsync(token, "hi", origin: "http://anywhere.example", ct: cts.Token);
@@ -377,9 +377,9 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
     public async Task Disabled_channel_makes_minted_links_return_410()
     {
         await using var h = await HarnessAsync();
-        var token = await MintAsync(h.App, h.WidgetId);
+        var token = await MintAsync(h.App, h.ChannelId);
 
-        await h.App.UpdateChannelAsync(h.WidgetId, new UpdateChannelRequest(null, null, Enabled: false));
+        await h.App.UpdateChannelAsync(h.ChannelId, new UpdateChannelRequest(null, null, Enabled: false));
 
         var pageEx = await Assert.ThrowsAsync<QuillHttpException>(() => h.App.GetEmbedPageAsync(token));
         Assert.Equal(HttpStatusCode.Gone, pageEx.StatusCode);
@@ -392,7 +392,7 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
     public async Task Conversation_is_bound_to_the_link_across_turns()
     {
         await using var h = await HarnessAsync();
-        var token = await MintAsync(h.App, h.WidgetId, maxInvocations: 5);
+        var token = await MintAsync(h.App, h.ChannelId, maxInvocations: 5);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         await h.App.SendEmbedChatAsync(token, "one", ct: cts.Token);
@@ -407,8 +407,8 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
     public async Task Chat_body_cannot_inject_parameters_they_come_from_the_link()
     {
         await using var h = await HarnessAsync(provisionChannel: false);
-        var widgetId = await ProvisionParamAgentChannelAsync(h.App);
-        var token = await MintAsync(h.App, widgetId,
+        var channelId = await ProvisionParamAgentChannelAsync(h.App);
+        var token = await MintAsync(h.App, channelId,
             parameters: new Dictionary<string, string> { ["customerId"] = "companies/1-A" });
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
@@ -421,7 +421,7 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
     {
         var app = await NewAppAsync();
 
-        var widgetId = "";
+        var channelId = "";
         if (provisionChannel)
         {
             await app.ProvisionAgentAsync(new AiAgentConfiguration
@@ -433,18 +433,18 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
             });
             var channel = await app.ProvisionChannelAsync(
                 new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", origins ?? Array.Empty<string>()));
-            widgetId = channel.WidgetId;
+            channelId = channel.ChannelId;
         }
 
-        return new Harness(app, widgetId);
+        return new Harness(app, channelId);
     }
 
     private static async Task<string> MintAsync(
-        QuillApp app, string widgetId,
+        QuillApp app, string channelId,
         int ttlSeconds = 3600, int maxInvocations = 50, Dictionary<string, string>? parameters = null)
     {
         var minted = await app.MintEmbedLinkAsync(
-            new MintEmbedLinkRequest(widgetId, parameters ?? new Dictionary<string, string>(), ttlSeconds, maxInvocations));
+            new MintEmbedLinkRequest(channelId, parameters ?? new Dictionary<string, string>(), ttlSeconds, maxInvocations));
         return minted.Token;
     }
 
@@ -474,10 +474,10 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
 
         var channel = await app.ProvisionChannelAsync(
             new ProvisionChannelRequest(ChannelType.IFrame, "param-agent", Array.Empty<string>()));
-        return channel.WidgetId;
+        return channel.ChannelId;
     }
 
-    private sealed record Harness(QuillApp App, string WidgetId) : IAsyncDisposable
+    private sealed record Harness(QuillApp App, string ChannelId) : IAsyncDisposable
     {
         public HttpClient Client => App.Host.Client;
         public string Slug => App.Slug;

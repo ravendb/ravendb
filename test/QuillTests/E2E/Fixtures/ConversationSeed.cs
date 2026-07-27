@@ -23,18 +23,18 @@ public static class ConversationSeed
     /// Writes the <c>ConversationPreview</c> read-model doc; production co-writes it on every turn.
     private static Task SeedPreviewAsync(
         IDocumentStore store, string database, string conversationId, string agent, DateTime lastMessageAt,
-        string? channelWidgetId = null, string lastUserPrompt = "", string lastAgentReply = "",
+        string? channelId = null, string lastUserPrompt = "", string lastAgentReply = "",
         IReadOnlyDictionary<string, string>? parameters = null) =>
         AgentRouter.UpsertPreviewAsync(store,
             new AgentRequest(database, AgentId: agent, ConversationId: conversationId, Prompt: lastUserPrompt,
-                ChannelId: channelWidgetId is null ? "" : Channel.IdPrefix + channelWidgetId, Parameters: parameters ?? new Dictionary<string, string>()),
+                ChannelId: channelId is null ? "" : Channel.IdPrefix + channelId, Parameters: parameters ?? new Dictionary<string, string>()),
             agent, conversationId, reply: lastAgentReply, nowUtc: lastMessageAt, CancellationToken.None);
 
     /// Seeds a <c>@conversations</c> doc so the metric index can aggregate it without running a live turn.
     public static async Task SeedConversationAsync(
         IDocumentStore store, string database, string id, string agent, DateTime createdAt,
         int messages = 1, long tokens = 0, (string Role, string Text)[]? turns = null,
-        IReadOnlyDictionary<string, object>? parameters = null, string? channelWidgetId = null,
+        IReadOnlyDictionary<string, object>? parameters = null, string? channelId = null,
         IReadOnlyList<(string Role, object? Content)>? richMessages = null)
     {
         var conversation = new SeedConversation
@@ -62,7 +62,7 @@ public static class ConversationSeed
         // production co-writes the preview on every turn, so a seeded conversation must too
         var lastUser = turns is null ? "" : (turns.LastOrDefault(t => t.Role == "user").Text ?? "");
         var lastAgent = turns is null ? "" : (turns.LastOrDefault(t => t.Role is "assistant" or "agent").Text ?? "");
-        await SeedPreviewAsync(store, database, id, agent, createdAt, channelWidgetId,
+        await SeedPreviewAsync(store, database, id, agent, createdAt, channelId,
             lastUserPrompt: lastUser, lastAgentReply: lastAgent,
             parameters: parameters?.ToDictionary(kv => kv.Key, kv => kv.Value?.ToString() ?? ""));
     }

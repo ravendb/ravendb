@@ -29,7 +29,7 @@ export function DeleteChannelDialog({ slug, channel, trigger }: DeleteChannelDia
     const queryClient = useQueryClient();
 
     const deleteMutation = useMutation({
-        mutationFn: () => api.services.channels.delete(slug, channel.widgetId),
+        mutationFn: () => api.services.channels.delete(slug, channel.channelId),
         onSuccess: async () => {
             await Promise.all([
                 invalidateChannelQueries(queryClient, slug),

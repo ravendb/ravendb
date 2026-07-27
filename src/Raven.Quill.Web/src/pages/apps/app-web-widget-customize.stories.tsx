@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { SAMPLE_WEB_WIDGET_ID } from "@/mocks/channels-mocks";
+import { SAMPLE_CHANNEL_ID } from "@/mocks/channels-mocks";
 import { iframeHandlers, iframeMocks, SAMPLE_DEFAULT_CSS } from "@/mocks/iframe-mocks";
 import { AppWebWidgetCustomize } from "./app-web-widget-customize";
 
@@ -9,8 +9,8 @@ const meta = {
     parameters: {
         page: { title: "Web widget appearance" },
         router: {
-            initialPath: `/apps/demo/web-widget/${SAMPLE_WEB_WIDGET_ID}/customize`,
-            path: "/apps/:slug/web-widget/:widgetId/customize",
+            initialPath: `/apps/demo/web-widget/${SAMPLE_CHANNEL_ID}/customize`,
+            path: "/apps/:slug/web-widget/:channelId/customize",
         },
     },
 } satisfies Meta<typeof AppWebWidgetCustomize>;
@@ -61,12 +61,12 @@ export const DarkPreset: Story = {
     },
 };
 
-// The widgetId in the URL isn't a web widget in this app — the page shows a not-found alert.
+// The channelId in the URL isn't a web widget in this app — the page shows a not-found alert.
 export const UnknownWidget: Story = {
     parameters: {
         router: {
-            initialPath: "/apps/demo/web-widget/wgt_unknown/customize",
-            path: "/apps/:slug/web-widget/:widgetId/customize",
+            initialPath: "/apps/demo/web-widget/unknown/customize",
+            path: "/apps/:slug/web-widget/:channelId/customize",
         },
     },
 };

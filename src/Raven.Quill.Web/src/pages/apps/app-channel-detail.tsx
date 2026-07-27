@@ -14,11 +14,11 @@ import { GenerateEmbedLinkDialog } from "@/pages/apps/channels/generate-embed-li
 import { SectionCard } from "@/pages/apps/section-card";
 
 export function AppChannelDetail() {
-    const { slug = "", widgetId = "" } = useParams();
+    const { slug = "", channelId = "" } = useParams();
     const channelsQuery = useQuery(api.queries.channels.list(slug));
     const agentsQuery = useQuery(api.queries.agents.list(slug));
 
-    const channel = channelsQuery.data?.find((candidate) => candidate.widgetId === widgetId);
+    const channel = channelsQuery.data?.find((candidate) => candidate.channelId === channelId);
     const agent = agentsQuery.data?.find((candidate) => candidate.agentId === channel?.agentId);
 
     const onRetry = async () => {
@@ -64,7 +64,7 @@ export function AppChannelDetail() {
                                     <p className="text-sm text-muted-foreground">
                                         {channel.type ? CHANNEL_TYPE_LABELS[channel.type] : "—"}
                                         {agent?.name ? ` · ${agent.name}` : ""}
-                                        <span className="font-mono"> · {channel.widgetId}</span>
+                                        <span className="font-mono"> · {channel.channelId}</span>
                                     </p>
                                 </div>
                                 {isIFrame && (
@@ -72,7 +72,7 @@ export function AppChannelDetail() {
                                         <Link
                                             to={appRoutes.app(
                                                 slug,
-                                                `web-widget/${encodeURIComponent(channel.widgetId)}/customize`,
+                                                `web-widget/${encodeURIComponent(channel.channelId)}/customize`,
                                             )}
                                         >
                                             <Palette aria-hidden="true" />
@@ -86,7 +86,7 @@ export function AppChannelDetail() {
                                 <>
                                     <EmbedLinkApiDocs
                                         slug={slug}
-                                        widgetId={channel.widgetId}
+                                        channelId={channel.channelId}
                                         parameterNames={agent?.parameters ?? []}
                                     />
                                     <SectionCard
@@ -94,7 +94,7 @@ export function AppChannelDetail() {
                                         action={
                                             <GenerateEmbedLinkDialog
                                                 slug={slug}
-                                                widgetId={channel.widgetId}
+                                                channelId={channel.channelId}
                                                 displayName={channel.displayName}
                                                 parameterNames={agent?.parameters ?? []}
                                                 trigger={
@@ -105,7 +105,7 @@ export function AppChannelDetail() {
                                             />
                                         }
                                     >
-                                        <ChannelActiveLinks slug={slug} widgetId={channel.widgetId} />
+                                        <ChannelActiveLinks slug={slug} channelId={channel.channelId} />
                                     </SectionCard>
                                 </>
                             ) : (
@@ -113,7 +113,7 @@ export function AppChannelDetail() {
                             )}
                         </div>
                     ) : (
-                        <Alert variant="destructive">No channel “{widgetId}” in this app.</Alert>
+                        <Alert variant="destructive">No channel “{channelId}” in this app.</Alert>
                     ))}
             </ApiState>
         </div>

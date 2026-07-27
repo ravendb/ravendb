@@ -32,7 +32,7 @@ import {
 
 type GenerateEmbedLinkDialogProps = {
     slug: string;
-    widgetId: string;
+    channelId: string;
     displayName: string;
     /** The agent's declared parameter names — one value is bound per name at mint time. */
     parameterNames: string[];
@@ -85,7 +85,7 @@ type GenerateEmbedLinkFormData = z.infer<typeof generateEmbedLinkSchema>;
 
 export function GenerateEmbedLinkDialog({
     slug,
-    widgetId,
+    channelId,
     displayName,
     parameterNames,
     trigger,
@@ -122,7 +122,7 @@ export function GenerateEmbedLinkDialog({
         const parameters = Object.fromEntries(values.parameters.map(({ name, value }) => [name, value.trim()]));
 
         mintMutation.mutate({
-            widgetId,
+            channelId,
             parameters: values.parameters.length > 0 ? parameters : undefined,
             ttlSeconds,
             maxInvocations: values.maxInvocations,

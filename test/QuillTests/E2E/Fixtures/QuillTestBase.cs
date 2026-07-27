@@ -64,6 +64,7 @@ public abstract class QuillTestBase : RavenTestBase
         {
             Server = server,
             ModifyDatabaseName = _ => "quill-config",
+            ModifyDocumentStore = s => s.Conventions.FindCollectionName = QuillConventions.FindCollectionName,
         });
 
         if (longLived)
@@ -85,6 +86,7 @@ public abstract class QuillTestBase : RavenTestBase
             Server = host.Server,
             // the delete endpoint hard-deletes the database, so teardown must not race it
             DeleteDatabaseOnDispose = false,
+            ModifyDocumentStore = s => s.Conventions.FindCollectionName = QuillConventions.FindCollectionName,
         });
 
         await AppProvisioner.CreateAppAsync(host.Config, slug, appName: slug, cdcTaskName: $"{slug}-cdc", CancellationToken.None);

@@ -4,7 +4,7 @@ namespace Raven.Quill.Contracts;
 
 public sealed record EmbedLinkSummaryResponse(
     string Token,
-    string WidgetId,
+    string ChannelId,
     string AgentId,
     Dictionary<string, string> Parameters,
     DateTime CreatedAt,
@@ -14,7 +14,7 @@ public sealed record EmbedLinkSummaryResponse(
 {
     internal static EmbedLinkSummaryResponse From(EmbedLink link) => new(
         StripPrefix(link.Id),
-        link.WidgetId,
+        link.ChannelId,
         link.AgentId,
         link.Parameters,
         link.CreatedAt,

@@ -13,7 +13,10 @@ public class AppDatabaseFeaturesTests(ITestOutputHelper output) : RavenTestBase(
     [RavenFact(RavenTestCategory.Quill)]
     public async Task ConfigureAsync_enables_expiration_and_embedlinks_revisions()
     {
-        var store = GetDocumentStore();
+        var store = GetDocumentStore(new Options
+        {
+            ModifyDocumentStore = s => s.Conventions.FindCollectionName = QuillConventions.FindCollectionName,
+        });
 
         await AppDatabaseFeatures.ConfigureAsync(store, store.Database, CancellationToken.None);
 
@@ -23,9 +26,9 @@ public class AppDatabaseFeaturesTests(ITestOutputHelper output) : RavenTestBase(
         Assert.False(record.Expiration.Disabled);
 
         Assert.NotNull(record.Revisions);
-        // collection key is "EmbedLinks" (CLR type pluralized), NOT the "embed-links/" id prefix
+        // collection key is the @-prefixed system collection from QuillConventions, NOT the "embed-links/" id prefix
         var collectionName = store.Conventions.GetCollectionName(typeof(EmbedLink));
-        Assert.Equal("EmbedLinks", collectionName);
+        Assert.Equal("@embed-links", collectionName);
         var coll = record.Revisions.Collections[collectionName];
         Assert.False(coll.Disabled);
         Assert.False(coll.PurgeOnDelete);
@@ -37,7 +40,10 @@ public class AppDatabaseFeaturesTests(ITestOutputHelper output) : RavenTestBase(
     [RavenFact(RavenTestCategory.Quill)]
     public async Task ConfigureAsync_deploys_conversation_metrics_index()
     {
-        var store = GetDocumentStore();
+        var store = GetDocumentStore(new Options
+        {
+            ModifyDocumentStore = s => s.Conventions.FindCollectionName = QuillConventions.FindCollectionName,
+        });
 
         await AppDatabaseFeatures.ConfigureAsync(store, store.Database, CancellationToken.None);
 
@@ -48,7 +54,10 @@ public class AppDatabaseFeaturesTests(ITestOutputHelper output) : RavenTestBase(
     [RavenFact(RavenTestCategory.Quill)]
     public async Task EmbedLink_updates_produce_revisions()
     {
-        var store = GetDocumentStore();
+        var store = GetDocumentStore(new Options
+        {
+            ModifyDocumentStore = s => s.Conventions.FindCollectionName = QuillConventions.FindCollectionName,
+        });
         await AppDatabaseFeatures.ConfigureAsync(store, store.Database, CancellationToken.None);
 
         var id = EmbedLink.IdPrefix + Guid.NewGuid().ToString("N");
@@ -57,7 +66,7 @@ public class AppDatabaseFeaturesTests(ITestOutputHelper output) : RavenTestBase(
             await session.StoreAsync(new EmbedLink
             {
                 Id = id,
-                WidgetId = "wgt_x",
+                ChannelId = "x",
                 AgentId = "a",
                 ExpiresAt = DateTime.UtcNow.AddHours(1),
                 MaxInvocations = 5,

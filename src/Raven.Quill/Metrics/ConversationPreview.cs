@@ -9,7 +9,7 @@ internal sealed class ConversationPreview
     internal const string IdPrefix = "conversation-previews/";
 
     // System (@) collection: keeps this internal read-model out of the tables/collections views by the
-    // same @-filter that hides @conversations. Forced via metadata at the write site (no naming convention).
+    // same @-filter that hides @conversations. Mapped via QuillConventions.FindCollectionName.
     // No hyphen, so the raw index map can reference it as docs.@ConversationPreviews.
     internal const string Collection = "@ConversationPreviews";
 
@@ -21,7 +21,7 @@ internal sealed class ConversationPreview
 
     public string Agent { get; set; } = "";
 
-    // full channel document id (channels/<widgetId>) of the serving channel; empty for a direct chat
+    // full channel document id (channels/<guid>) of the serving channel; empty for a direct chat
     public string ChannelId { get; set; } = "";
 
     // the conversation's bound (agent-declared) parameters, shown in the list

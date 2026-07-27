@@ -105,7 +105,7 @@ export const iframeMocks = {
             defaultCss: SAMPLE_DEFAULT_CSS,
         },
     ) =>
-        apiHttp.get("/api/apps/{slug}/iframe/{widgetId}/customization", ({ response }) =>
+        apiHttp.get("/api/apps/{slug}/iframe/{channelId}/customization", ({ response }) =>
             response(200).json(customization),
         ),
     updateCustomization: (
@@ -114,7 +114,7 @@ export const iframeMocks = {
             defaultCss: SAMPLE_DEFAULT_CSS,
         },
     ) =>
-        apiHttp.put("/api/apps/{slug}/iframe/{widgetId}/customization", async ({ request, response }) => {
+        apiHttp.put("/api/apps/{slug}/iframe/{channelId}/customization", async ({ request, response }) => {
             const body = await request.json();
             return response(200).json({ style: body.style, css: body.css, ...appDefault });
         }),

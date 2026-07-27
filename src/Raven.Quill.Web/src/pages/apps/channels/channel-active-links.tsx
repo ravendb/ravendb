@@ -9,14 +9,14 @@ import { ApiState } from "@/components/data/api-state";
 import { VirtualDataTable } from "@/components/table/virtual-data-table";
 import { createActiveLinkColumns } from "@/pages/apps/channels/channel-active-links-columns";
 
-export function ChannelActiveLinks({ slug, widgetId }: { slug: string; widgetId: string }) {
+export function ChannelActiveLinks({ slug, channelId }: { slug: string; channelId: string }) {
     const linksQuery = useQuery(api.queries.embedLinks.list(slug));
 
     // react-table (and its row models) want stable references across renders; "use no memo" opts this
     // file out of the React Compiler, so the data and columns are memoized explicitly.
     const links = useMemo(
-        () => (linksQuery.data ?? []).filter((link) => link.widgetId === widgetId),
-        [linksQuery.data, widgetId],
+        () => (linksQuery.data ?? []).filter((link) => link.channelId === channelId),
+        [linksQuery.data, channelId],
     );
     const columns = useMemo(() => createActiveLinkColumns(slug), [slug]);
 

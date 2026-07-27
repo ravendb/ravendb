@@ -1,4 +1,3 @@
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -82,8 +81,6 @@ internal sealed class AgentRouter(IDocumentStore store) : IAgentRouter
         preview.LastAgentReply = reply;
 
         await session.StoreAsync(preview, id, ct);
-        session.Advanced.GetMetadataFor(preview)[Constants.Documents.Metadata.Collection] = ConversationPreview.Collection;
-
         await session.SaveChangesAsync(ct);
         return;
     }

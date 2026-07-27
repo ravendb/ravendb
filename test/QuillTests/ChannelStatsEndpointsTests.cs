@@ -22,7 +22,7 @@ public class ChannelStatsEndpointsTests(ITestOutputHelper output) : QuillTestBas
         await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "agent", Array.Empty<string>()));
         await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "agent", Array.Empty<string>()));
         var gamma = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "agent", Array.Empty<string>()));
-        await app.UpdateChannelAsync(gamma.WidgetId, new UpdateChannelRequest(null, null, Enabled: false));
+        await app.UpdateChannelAsync(gamma.ChannelId, new UpdateChannelRequest(null, null, Enabled: false));
 
         var stats = await app.GetChannelStatsAsync();
         Assert.Equal(3, stats.Total);

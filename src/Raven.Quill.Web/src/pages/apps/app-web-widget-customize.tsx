@@ -9,17 +9,17 @@ import { useWebWidgetStyleSave } from "@/pages/apps/channels/use-web-widget-styl
 import { WebWidgetStyleEditor } from "@/pages/apps/channels/web-widget-style-editor";
 
 export function AppWebWidgetCustomize() {
-    const { slug = "", widgetId = "" } = useParams();
+    const { slug = "", channelId = "" } = useParams();
 
     const channelsQuery = useQuery(api.queries.channels.list(slug));
-    const channel = channelsQuery.data?.find((candidate) => candidate.widgetId === widgetId);
+    const channel = channelsQuery.data?.find((candidate) => candidate.channelId === channelId);
     // Customization is web-widget-only, and the widget-scoped endpoints 404 for anything else. Gate the
-    // widget-scoped queries on the channel being an iFrame so an unknown or non-iFrame widgetId resolves
+    // widget-scoped queries on the channel being an iFrame so an unknown or non-iFrame channelId resolves
     // to the not-found alert below instead of a generic "could not load" error from a request bound to fail.
     const isWebWidget = channel?.type === "IFrame";
 
     const customizationQuery = useQuery({
-        ...api.queries.webWidget.customization(slug, widgetId),
+        ...api.queries.webWidget.customization(slug, channelId),
         enabled: isWebWidget,
     });
     const styleGuideQuery = useQuery({ ...api.queries.webWidget.styleGuide(slug), enabled: isWebWidget });
@@ -30,8 +30,8 @@ export function AppWebWidgetCustomize() {
     });
 
     const saveMutation = useWebWidgetStyleSave({
-        save: (update) => api.services.iframe.updateCustomization(slug, widgetId, update),
-        invalidateKeys: [api.queries.webWidget.customization(slug, widgetId).queryKey],
+        save: (update) => api.services.iframe.updateCustomization(slug, channelId, update),
+        invalidateKeys: [api.queries.webWidget.customization(slug, channelId).queryKey],
         successMessage: "Customization saved",
     });
 
@@ -45,7 +45,7 @@ export function AppWebWidgetCustomize() {
     return (
         <div className="grid gap-5">
             <Link
-                to={appRoutes.app(slug, `channels/${encodeURIComponent(widgetId)}`)}
+                to={appRoutes.app(slug, `channels/${encodeURIComponent(channelId)}`)}
                 className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
                 <ArrowLeft className="size-3.5" aria-hidden="true" />
@@ -69,7 +69,7 @@ export function AppWebWidgetCustomize() {
                 loadingLabel="Loading customization..."
             >
                 {!isWebWidget ? (
-                    <Alert variant="destructive">No web widget “{widgetId}” in this app.</Alert>
+                    <Alert variant="destructive">No web widget “{channelId}” in this app.</Alert>
                 ) : (
                     <>
                         <div className="grid gap-1">

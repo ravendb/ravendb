@@ -104,11 +104,11 @@ public static class ChannelsEndpoints
 
         using var session = store.OpenAsyncSession(app.Database);
 
-        var widgetId = "wgt_" + Guid.NewGuid().ToString("N");
+        var channelId = Guid.NewGuid().ToString("N");
 
         await session.StoreAsync(new Channel
         {
-            Id = Channel.IdPrefix + widgetId,
+            Id = Channel.IdPrefix + channelId,
             Type = ChannelType.IFrame,
             DisplayName = body.DisplayName ?? ChannelType.IFrame.ToString(),
             AgentId = config.Identifier,
@@ -120,10 +120,10 @@ public static class ChannelsEndpoints
         await session.SaveChangesAsync(ct);
 
         logger.LogInformation(
-            "Provisioned iFrame channel slug={Slug} widgetId={WidgetId} agentId={AgentId}",
-            app.Slug, widgetId, config.Identifier);
+            "Provisioned iFrame channel slug={Slug} channelId={ChannelId} agentId={AgentId}",
+            app.Slug, channelId, config.Identifier);
 
-        return Results.Ok(new ProvisionChannelResponse(widgetId));
+        return Results.Ok(new ProvisionChannelResponse(channelId));
     }
 
     private static IResult ProvisionTelegramAsync() => NotImplementedChannel(ChannelType.Telegram);

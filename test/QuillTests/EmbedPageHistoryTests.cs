@@ -25,7 +25,7 @@ public class EmbedPageHistoryTests(ITestOutputHelper output) : QuillTestBase(out
         var channel = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "demo", Array.Empty<string>()));
 
         // ConversationId is set directly: the mint EP doesn't expose it (the server binds it on the first live-LLM turn).
-        var token = (await app.MintEmbedLinkAsync(new MintEmbedLinkRequest(channel.WidgetId))).Token;
+        var token = (await app.MintEmbedLinkAsync(new MintEmbedLinkRequest(channel.ChannelId))).Token;
         using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
             var link = await session.LoadAsync<EmbedLink>(EmbedLink.IdPrefix + token);
@@ -51,7 +51,7 @@ public class EmbedPageHistoryTests(ITestOutputHelper output) : QuillTestBase(out
         });
         var channel = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "demo", Array.Empty<string>()));
 
-        var token = (await app.MintEmbedLinkAsync(new MintEmbedLinkRequest(channel.WidgetId))).Token;
+        var token = (await app.MintEmbedLinkAsync(new MintEmbedLinkRequest(channel.ChannelId))).Token;
 
         var html = await app.GetEmbedPageAsync(token);
 

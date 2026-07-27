@@ -26,7 +26,7 @@ public class AppOverviewEndpointTests(ITestOutputHelper output) : QuillTestBase(
         await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "support", Array.Empty<string>()));
         await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "support", Array.Empty<string>()));
         var gamma = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "support", Array.Empty<string>()));
-        await app.UpdateChannelAsync(gamma.WidgetId, new UpdateChannelRequest(null, null, Enabled: false));
+        await app.UpdateChannelAsync(gamma.ChannelId, new UpdateChannelRequest(null, null, Enabled: false));
 
         var overview = await app.GetOverviewAsync();
         Assert.Equal(app.Slug, overview.Slug);

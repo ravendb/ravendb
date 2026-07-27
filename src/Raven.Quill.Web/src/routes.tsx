@@ -233,13 +233,13 @@ const appPages: AppRouteDefinition[] = [
     {
         // Channel detail — active embed links for one channel. No navigation entry:
         // reached by opening a channel from the Channels list.
-        path: "channels/:widgetId",
+        path: "channels/:channelId",
         title: "Channel",
         element: <AppChannelDetail />,
     },
     {
         // Per-widget embed styling editor + live preview. Reached from channel detail.
-        path: "web-widget/:widgetId/customize",
+        path: "web-widget/:channelId/customize",
         title: "Web widget appearance",
         element: <AppWebWidgetCustomize />,
     },

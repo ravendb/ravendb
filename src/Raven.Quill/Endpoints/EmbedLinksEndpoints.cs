@@ -28,7 +28,7 @@ public static class EmbedLinksEndpoints
         group.MapPost("/embed-links", MintAsync)
             .WithName("embedLinks.mint")
             .WithDescription(
-                "Mints a per-user embed link for an iFrame channel (by widgetId). Parameters are " +
+                "Mints a per-user embed link for an iFrame channel (by channelId). Parameters are " +
                 "validated against the channel's agent and bound into the link server-side (never " +
                 "client-supplied). ttlSeconds and maxInvocations are bounded; both default " +
                 "when omitted. Returns the opaque token + an absolute, paste-ready embed URL.")
@@ -84,8 +84,8 @@ public static class EmbedLinksEndpoints
         HttpContext ctx,
         CancellationToken ct)
     {
-        if (body is null || string.IsNullOrWhiteSpace(body.WidgetId))
-            return Results.BadRequest(new ApiErrorResponse("widgetId is required"));
+        if (body is null || string.IsNullOrWhiteSpace(body.ChannelId))
+            return Results.BadRequest(new ApiErrorResponse("channelId is required"));
 
         var app = await AppLookup.LoadAppAsync(store, slug, ct);
         if (app is null)
@@ -93,15 +93,15 @@ public static class EmbedLinksEndpoints
 
         Channel? channel;
         using (var session = store.OpenAsyncSession(app.Database))
-            channel = await session.LoadAsync<Channel>(Channel.IdPrefix + body.WidgetId, ct);
+            channel = await session.LoadAsync<Channel>(Channel.IdPrefix + body.ChannelId, ct);
 
         if (channel is null || channel.Type != ChannelType.IFrame)
             return Results.NotFound(new ApiErrorResponse(
-                $"no iframe channel '{body.WidgetId}' in app '{slug}'"));
+                $"no iframe channel '{body.ChannelId}' in app '{slug}'"));
 
         if (channel.Enabled == false)
             return Results.BadRequest(new ApiErrorResponse(
-                $"the iframe channel '{body.WidgetId}' is disabled", Code: "channel_disabled"));
+                $"the iframe channel '{body.ChannelId}' is disabled", Code: "channel_disabled"));
 
         var config = await AgentLookup.FindAsync(store, app.Database, channel.AgentId, ct);
         if (config is null)
@@ -131,7 +131,7 @@ public static class EmbedLinksEndpoints
             var link = new EmbedLink
             {
                 Id = EmbedLink.IdPrefix + token,
-                WidgetId = channel.Id!.Substring(Channel.IdPrefix.Length),
+                ChannelId = channel.Id!.Substring(Channel.IdPrefix.Length),
                 AgentId = config.Identifier,
                 Parameters = parameters,
                 ExpiresAt = expiresAt,
@@ -149,8 +149,8 @@ public static class EmbedLinksEndpoints
         var publicHost = ApplianceHost.WithSubdomain(ctx.Request.Host, "public");
         var url = $"{ctx.Request.Scheme}://{publicHost.ToUriComponent()}{ctx.Request.PathBase}/apps/{app.Slug}/embed/{token}";
         logger.LogInformation(
-            "Minted embed link slug={Slug} widgetId={WidgetId} agentId={AgentId} ttlSeconds={Ttl} maxInvocations={Max}",
-            app.Slug, body.WidgetId, config.Identifier, ttlSeconds, maxInvocations);
+            "Minted embed link slug={Slug} channelId={ChannelId} agentId={AgentId} ttlSeconds={Ttl} maxInvocations={Max}",
+            app.Slug, body.ChannelId, config.Identifier, ttlSeconds, maxInvocations);
 
         return Results.Ok(new MintEmbedLinkResponse(token, url, expiresAt, maxInvocations));
     }

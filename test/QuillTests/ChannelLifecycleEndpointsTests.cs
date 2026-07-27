@@ -19,7 +19,7 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
     public async Task Channels_list_returns_the_created_channel()
     {
         await using var app = await NewAppAsync();
-        var widgetId = await ProvisionIFrameChannelAsync(app);
+        var channelId = await ProvisionIFrameChannelAsync(app);
 
         var resp = await Host.Client.GetAsync(QuillRoutes.Channels(app.Slug));
         Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
@@ -27,7 +27,7 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
         var items = await resp.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal(1, items.GetArrayLength());
         var item = items[0];
-        Assert.Equal(widgetId, item.GetProperty("widgetId").GetString());
+        Assert.Equal(channelId, item.GetProperty("channelId").GetString());
         Assert.Equal("IFrame", item.GetProperty("type").GetString());
         Assert.Equal("demo-agent", item.GetProperty("agentId").GetString());
         Assert.True(item.GetProperty("enabled").GetBoolean());
@@ -55,14 +55,14 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
     public async Task Channel_edit_toggles_enabled_and_updates_display_name()
     {
         await using var app = await NewAppAsync();
-        var widgetId = await ProvisionIFrameChannelAsync(app);
+        var channelId = await ProvisionIFrameChannelAsync(app);
 
-        var summary = await app.UpdateChannelAsync(widgetId, new UpdateChannelRequest("Storefront bot", null, Enabled: false));
+        var summary = await app.UpdateChannelAsync(channelId, new UpdateChannelRequest("Storefront bot", null, Enabled: false));
         Assert.Equal("Storefront bot", summary.DisplayName);
         Assert.False(summary.Enabled);
 
         using var session = app.Store.OpenAsyncSession(app.Slug);
-        var channel = await session.LoadAsync<Channel>($"channels/{widgetId}");
+        var channel = await session.LoadAsync<Channel>($"channels/{channelId}");
         Assert.Equal("Storefront bot", channel.DisplayName);
         Assert.False(channel.Enabled);
     }
@@ -71,9 +71,9 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
     public async Task Channel_edit_rejects_invalid_origin()
     {
         await using var app = await NewAppAsync();
-        var widgetId = await ProvisionIFrameChannelAsync(app);
+        var channelId = await ProvisionIFrameChannelAsync(app);
 
-        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.UpdateChannelAsync(widgetId, new UpdateChannelRequest(null, new[] { "not-a-url" }, null)));
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.UpdateChannelAsync(channelId, new UpdateChannelRequest(null, new[] { "not-a-url" }, null)));
         Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
     }
 
@@ -82,7 +82,7 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
     {
         await using var app = await NewAppAsync();
 
-        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.UpdateChannelAsync("wgt_nope", new UpdateChannelRequest(null, null, false)));
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.UpdateChannelAsync("nope", new UpdateChannelRequest(null, null, false)));
         Assert.Equal(HttpStatusCode.NotFound, ex.StatusCode);
     }
 
@@ -90,7 +90,7 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
     public async Task Channel_delete_removes_channel_and_allows_reprovision()
     {
         await using var app = await NewAppAsync();
-        var widgetId = await ProvisionIFrameChannelAsync(app);
+        var channelId = await ProvisionIFrameChannelAsync(app);
 
         using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
@@ -98,15 +98,15 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
             Assert.Empty(bindings);
         }
 
-        await app.DeleteChannelAsync(widgetId);
+        await app.DeleteChannelAsync(channelId);
 
         using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
-            Assert.Null(await session.LoadAsync<Channel>($"channels/{widgetId}"));
+            Assert.Null(await session.LoadAsync<Channel>($"channels/{channelId}"));
         }
 
         var reChannel = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", new[] { "http://localhost" }));
-        Assert.False(string.IsNullOrEmpty(reChannel.WidgetId));
+        Assert.False(string.IsNullOrEmpty(reChannel.ChannelId));
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -114,7 +114,7 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
     {
         await using var app = await NewAppAsync();
 
-        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.DeleteChannelAsync("wgt_nope"));
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.DeleteChannelAsync("nope"));
         Assert.Equal(HttpStatusCode.NotFound, ex.StatusCode);
     }
 
@@ -124,8 +124,8 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
         await using var appA = await NewAppAsync();
         await using var appB = await NewAppAsync();
 
-        var restrictedWidgetId = await ProvisionIFrameChannelAsync(appA);
-        var restrictedToken = await MintLinkAsync(appA, restrictedWidgetId);
+        var restrictedChannelId = await ProvisionIFrameChannelAsync(appA);
+        var restrictedToken = await MintLinkAsync(appA, restrictedChannelId);
         // raw: asserts the CSP response header, which the string-body wrapper can't expose.
         var restricted = await Host.Client.GetAsync(QuillRoutes.EmbedPage(appA.Slug, restrictedToken));
         Assert.Equal(HttpStatusCode.OK, restricted.StatusCode);
@@ -134,7 +134,7 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
 
         await SeedDemoAgentAsync(appB);
         var openChannel = await appB.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", Array.Empty<string>()));
-        var openToken = await MintLinkAsync(appB, openChannel.WidgetId);
+        var openToken = await MintLinkAsync(appB, openChannel.ChannelId);
         var open = await Host.Client.GetAsync(QuillRoutes.EmbedPage(appB.Slug, openToken));
         Assert.Equal(HttpStatusCode.OK, open.StatusCode);
         var openCsp = Assert.Single(open.Headers.GetValues("Content-Security-Policy"));
@@ -149,12 +149,12 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
         await using var app = await NewAppAsync();
 
         var token = Guid.NewGuid().ToString("N");
-        const string widgetId = "wgt_telegram_x";
+        const string channelId = "telegram-x";
         using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
             await session.StoreAsync(new Channel
             {
-                Id = $"channels/{widgetId}",
+                Id = $"channels/{channelId}",
                 Type = ChannelType.Telegram,
                 AgentId = "demo-agent",
                 Enabled = true,
@@ -162,7 +162,7 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
             await session.StoreAsync(new EmbedLink
             {
                 Id = $"embed-links/{token}",
-                WidgetId = widgetId,
+                ChannelId = channelId,
                 AgentId = "demo-agent",
                 ExpiresAt = DateTime.UtcNow.AddHours(1),
                 MaxInvocations = 10,
@@ -185,12 +185,12 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
         await using var app = await NewAppAsync();
 
         var token = Guid.NewGuid().ToString("N");
-        const string widgetId = "wgt_ghost_agent";
+        const string channelId = "ghost-agent";
         using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
             await session.StoreAsync(new Channel
             {
-                Id = $"channels/{widgetId}",
+                Id = $"channels/{channelId}",
                 Type = ChannelType.IFrame,
                 AgentId = "ghost-agent",
                 Enabled = true,
@@ -198,7 +198,7 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
             await session.StoreAsync(new EmbedLink
             {
                 Id = $"embed-links/{token}",
-                WidgetId = widgetId,
+                ChannelId = channelId,
                 AgentId = "ghost-agent",
                 ExpiresAt = DateTime.UtcNow.AddHours(1),
                 MaxInvocations = 10,
@@ -221,14 +221,14 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
     public async Task Channel_lifecycle_provision_update_delete_reprovision()
     {
         await using var app = await NewAppAsync();
-        var widgetId = await ProvisionIFrameChannelAsync(app);
+        var channelId = await ProvisionIFrameChannelAsync(app);
 
-        await app.UpdateChannelAsync(widgetId, new UpdateChannelRequest(null, null, Enabled: false));
+        await app.UpdateChannelAsync(channelId, new UpdateChannelRequest(null, null, Enabled: false));
 
-        await app.DeleteChannelAsync(widgetId);
+        await app.DeleteChannelAsync(channelId);
 
         var reChannel = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", new[] { "http://localhost" }));
-        Assert.NotEqual(widgetId, reChannel.WidgetId);
+        Assert.NotEqual(channelId, reChannel.ChannelId);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -324,7 +324,7 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
     {
         await SeedDemoAgentAsync(app, agentId);
         var channel = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, agentId, new[] { "http://localhost" }));
-        return channel.WidgetId;
+        return channel.ChannelId;
     }
 
     private static async Task<string> SeedDemoAgentAsync(QuillApp app, string agentId = "demo-agent")
@@ -339,9 +339,9 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
         return app.Host.ConnectionStringName;
     }
 
-    private static async Task<string> MintLinkAsync(QuillApp app, string widgetId)
+    private static async Task<string> MintLinkAsync(QuillApp app, string channelId)
     {
-        var minted = await app.MintEmbedLinkAsync(new MintEmbedLinkRequest(widgetId, new Dictionary<string, string>(), 3600, 50));
+        var minted = await app.MintEmbedLinkAsync(new MintEmbedLinkRequest(channelId, new Dictionary<string, string>(), 3600, 50));
         return minted.Token;
     }
 

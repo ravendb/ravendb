@@ -225,18 +225,17 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : QuillTestBase
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Channel_endpoint_returns_widgetId_for_known_app()
+    public async Task Channel_endpoint_returns_channelId_for_known_app()
     {
         await using var app = await NewAppAsync();
         await SeedDemoAgentAsync(app);
 
         var provisioned = await app.ProvisionChannelAsync(
             new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", new[] { "http://localhost" }));
-        var widgetId = provisioned.WidgetId;
-        Assert.False(string.IsNullOrEmpty(widgetId), "widgetId was empty");
-        Assert.StartsWith("wgt_", widgetId);
-        Assert.True(widgetId.Length >= 26,
-            $"widgetId length {widgetId.Length} is below the 128-bit-entropy floor (expected ≥26 incl. 'wgt_' prefix): '{widgetId}'");
+        var channelId = provisioned.ChannelId;
+        Assert.False(string.IsNullOrEmpty(channelId), "channelId was empty");
+        // Guid "N": 32 hex chars, 128 bits of entropy, no prefix
+        Assert.Equal(32, channelId.Length);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -293,23 +292,23 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : QuillTestBase
         await using var app = await NewAppAsync();
         await SeedDemoAgentAsync(app);
 
-        var widgetId1 = (await app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", new[] { "http://site-a.example" }, "Site A"))).WidgetId;
+        var channelId1 = (await app.ProvisionChannelAsync(
+            new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", new[] { "http://site-a.example" }, "Site A"))).ChannelId;
 
-        var widgetId2 = (await app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", new[] { "http://site-b.example" }, "Site B"))).WidgetId;
+        var channelId2 = (await app.ProvisionChannelAsync(
+            new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", new[] { "http://site-b.example" }, "Site B"))).ChannelId;
 
-        Assert.NotEqual(widgetId1, widgetId2);
+        Assert.NotEqual(channelId1, channelId2);
 
         using var session = app.Store.OpenAsyncSession(app.Slug);
         var channels = await session.Advanced.LoadStartingWithAsync<Channel>("channels/");
         Assert.Equal(2, channels.Count());
 
-        var channelA = await session.LoadAsync<Channel>($"channels/{widgetId1}");
+        var channelA = await session.LoadAsync<Channel>($"channels/{channelId1}");
         Assert.Equal("Site A", channelA.DisplayName);
         Assert.Equal(new[] { "http://site-a.example" }, channelA.AllowedOrigins);
 
-        var channelB = await session.LoadAsync<Channel>($"channels/{widgetId2}");
+        var channelB = await session.LoadAsync<Channel>($"channels/{channelId2}");
         Assert.Equal("Site B", channelB.DisplayName);
         Assert.Equal(new[] { "http://site-b.example" }, channelB.AllowedOrigins);
     }
@@ -419,7 +418,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : QuillTestBase
         using var session = app.Store.OpenAsyncSession(app.Slug);
         var ch = await session.Query<Channel>().FirstAsync();
         var collection = session.Advanced.GetMetadataFor(ch)["@collection"]!.ToString();
-        Assert.Equal("Channels", collection);
+        Assert.Equal("@channels", collection);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
