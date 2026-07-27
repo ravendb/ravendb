@@ -248,7 +248,7 @@ namespace FastTests
 
                 var errors = database.TaskErrorsStorage.ReadItemErrorsOfTask(TaskTypeExtensions.GetTaskCategoryFromEtlType(config.EtlType), $"{config.Name}/{config.Transforms.First().Name}");
 
-                return errors.Where(error => error.Step == (int)TaskErrorStep.Load);
+                return errors.Where(error => IsLoadPhaseStep(error.Step));
             }
 
             public async Task<IEnumerable<TaskProcessErrorTableValue>> GetProcessLoadErrorsAsync<T>(string databaseName, EtlConfiguration<T> config) where T : ConnectionString
@@ -257,7 +257,12 @@ namespace FastTests
 
                 var errors = database.TaskErrorsStorage.ReadProcessErrorsOfTask(TaskTypeExtensions.GetTaskCategoryFromEtlType(config.EtlType), $"{config.Name}/{config.Transforms.First().Name}");
 
-                return errors.Where(error => error.Step == (int)TaskErrorStep.Load);
+                return errors.Where(error => IsLoadPhaseStep(error.Step));
+            }
+            
+            private static bool IsLoadPhaseStep(long step)
+            {
+                return (TaskErrorStep)step is TaskErrorStep.Load or TaskErrorStep.ModelInference or TaskErrorStep.Persistence;
             }
 
             public async Task<IEnumerable<TaskItemErrorTableValue>> GetItemTransformationErrorsAsync<T>(string databaseName, EtlConfiguration<T> config) where T : ConnectionString
