@@ -22,6 +22,9 @@ namespace Corax.Querying.Matches.TermProviders
 
         private CompactTree.Iterator<TLookupIterator> _iterator;
 
+        private bool _nullsReturned;
+        private bool _nonExistingReturned;
+
 
         public NotStartsWithTermProvider(Querying.IndexSearcher searcher, CompactTree tree, in FieldMetadata field, CompactKey startWith, bool validatePostfixLen, CancellationToken token)
         {
@@ -45,10 +48,32 @@ namespace Corax.Querying.Matches.TermProviders
         public void Reset()
         {
             _iterator.Reset();
+            _nullsReturned = false;
+            _nonExistingReturned = false;
         }
 
         public bool Next(out TermMatch term)
         {
+            if (_nullsReturned == false)
+            {
+                _nullsReturned = true;
+                if (_searcher.TryGetPostingListForNull(_field, out var nullPostingListId))
+                {
+                    term = _searcher.TermQuery(_field, nullPostingListId, 1D);
+                    return true;
+                }
+            }
+
+            if (_nonExistingReturned == false)
+            {
+                _nonExistingReturned = true;
+                if (_searcher.TryGetPostingListForNonExisting(_field, out var nonExistingPostingListId))
+                {
+                    term = _searcher.TermQuery(_field, nonExistingPostingListId, 1D);
+                    return true;
+                }
+            }
+
             var startWith = _startWith.Decoded();
             while (_iterator.MoveNext(out var key, out _, out _))
             {
