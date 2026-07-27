@@ -72,7 +72,7 @@ export const Completed: StoryObj = {
 
         tasksService.withGetTasksPerLocation(applyShardResponsibleNodes);
         mockEtlProgress(tasksService, true, false, false);
-        tasksService.withEtlErrors();
+        tasksService.withTaskErrors();
         tasksService.withEtlStats();
         mockExternalReplicationProgress(tasksService, true);
         tasksService.withGetInternalReplicationProgress();
@@ -95,7 +95,7 @@ export const Disabled: StoryObj = {
             });
         });
         mockEtlProgress(tasksService, false, true, false);
-        tasksService.withEtlErrors([]);
+        tasksService.withTaskErrors([]);
         tasksService.withEtlStats();
         tasksService.withGetExternalReplicationProgress();
         tasksService.withGetInternalReplicationProgress();
@@ -117,7 +117,7 @@ export const WithRuntimeError: StoryObj = {
             });
         });
         tasksService.withGetEtlProgress();
-        tasksService.withEtlErrors();
+        tasksService.withTaskErrors();
         tasksService.withEtlStats();
         tasksService.withGetExternalReplicationProgress();
         tasksService.withGetInternalReplicationProgress();
@@ -138,7 +138,7 @@ export const WithLoadError: StoryObj = {
             (location) => location.shardNumber === 1 && location.nodeTag === "B"
         );
         tasksService.withGetEtlProgress();
-        tasksService.withEtlErrors();
+        tasksService.withTaskErrors();
         tasksService.withEtlStats();
         tasksService.withGetExternalReplicationProgress();
         tasksService.withGetInternalReplicationProgress();
