@@ -13,13 +13,22 @@ import { Spinner } from "@/components/shadcn/ui/spinner";
 import { WizardErrorAlert } from "@/components/form/wizard/wizard-error-alert";
 import { cn } from "@/lib/utils";
 
-export type WizardAction = () => void | Promise<void>;
+export type WizardProgress = {
+    /**
+     * Replaces the footer button label for the rest of the action, e.g. "Testing connection...".
+     * Steps that run several calls in a row should report each one so the operator sees what the
+     * wizard is waiting on instead of an unexplained spinner.
+     */
+    report: (label: string) => void;
+};
+
+export type WizardAction = (progress: WizardProgress) => void | Promise<void>;
 export type WizardStepPosition = "first" | "middle" | "last";
 export type WizardValidationTarget<Values extends FieldValues> = Path<Values> | readonly Path<Values>[] | false;
 
 export type WizardCompletion =
-    | { type: "submit"; label?: ReactNode }
-    | { type: "action"; label?: ReactNode; onComplete: WizardAction };
+    | { type: "submit"; label?: ReactNode; busyLabel?: ReactNode }
+    | { type: "action"; label?: ReactNode; busyLabel?: ReactNode; onComplete: WizardAction };
 
 export type WizardBodyComponentProps<StepId extends string = string> = {
     currentStepId: StepId;
@@ -93,6 +102,7 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
     const [currentStepId, setCurrentStepId] = useState<StepId>(initialStepId);
     const [lastKnownIndex, setLastKnownIndex] = useState(() => Math.max(flow.indexOf(initialStepId), 0));
     const [isAdvancing, setIsAdvancing] = useState(false);
+    const [progressLabel, setProgressLabel] = useState<string | null>(null);
     const [advanceError, setAdvanceError] = useState<Error | null>(null);
     const isAdvancingRef = useRef(false);
 
@@ -119,7 +129,7 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
         setActiveStepIndex(currentIndex - 1);
     };
 
-    const validateCurrentStep = async () => {
+    const validateCurrentStep = async (progress: WizardProgress) => {
         if (currentStep.validate !== false) {
             // The trigger only works correctly when passing an array
             const isValid = await trigger(
@@ -127,7 +137,7 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
             );
 
             if (!isValid) {
-                await currentStep.onValidationFailed?.();
+                await currentStep.onValidationFailed?.(progress);
                 return false;
             }
         }
@@ -135,7 +145,7 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
         return true;
     };
 
-    const runAction = async (action: () => Promise<void>) => {
+    const runAction = async (action: (progress: WizardProgress) => Promise<void>) => {
         // A ref closes the gap before React commits the disabled state, including the time spent
         // in async RHF validation.
         if (isAdvancingRef.current) {
@@ -144,15 +154,17 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
 
         isAdvancingRef.current = true;
         setIsAdvancing(true);
+        setProgressLabel(null);
         setAdvanceError(null);
 
         try {
-            await action();
+            await action({ report: setProgressLabel });
         } catch (error) {
             setAdvanceError(error instanceof Error ? error : new Error(String(error)));
         } finally {
             isAdvancingRef.current = false;
             setIsAdvancing(false);
+            setProgressLabel(null);
         }
     };
 
@@ -161,12 +173,12 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
             return;
         }
 
-        await runAction(async () => {
-            if (!(await validateCurrentStep())) {
+        await runAction(async (progress) => {
+            if (!(await validateCurrentStep(progress))) {
                 return;
             }
 
-            await currentStep.beforeNext?.();
+            await currentStep.beforeNext?.(progress);
             setActiveStepIndex(currentIndex + 1);
         });
     };
@@ -176,13 +188,13 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
             return;
         }
 
-        await runAction(async () => {
-            if (!(await validateCurrentStep())) {
+        await runAction(async (progress) => {
+            if (!(await validateCurrentStep(progress))) {
                 return;
             }
 
-            await currentStep.beforeNext?.();
-            await completion.onComplete();
+            await currentStep.beforeNext?.(progress);
+            await completion.onComplete(progress);
         });
     };
 
@@ -223,6 +235,7 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
                         handleNext={handleNext}
                         handleComplete={handleComplete}
                         isBusy={isBusy}
+                        progressLabel={progressLabel}
                         isNextDisabled={currentStep.isNextDisabled === true}
                         currentStepId={currentStepIdInFlow}
                         nextLabel={currentStep.nextLabel}
@@ -355,6 +368,7 @@ type WizardFooterProps<StepId extends string> = {
     handleNext: () => Promise<void>;
     handleComplete: () => Promise<void>;
     isBusy: boolean;
+    progressLabel: string | null;
     isNextDisabled: boolean;
     nextLabel?: ReactNode;
     canCancel: boolean;
@@ -371,6 +385,7 @@ function WizardFooter<StepId extends string>({
     handleNext,
     handleComplete,
     isBusy,
+    progressLabel,
     isNextDisabled,
     nextLabel,
     canCancel,
@@ -380,6 +395,10 @@ function WizardFooter<StepId extends string>({
 }: WizardFooterProps<StepId>) {
     const isLast = stepPosition === "last";
     const isCompletionDisabled = isBusy || isNextDisabled;
+
+    // A phase reported by the running step wins over the button's static busy label.
+    const resolveLabel = (idleLabel: ReactNode, busyLabel?: ReactNode) =>
+        progressLabel ?? (isBusy ? busyLabel : null) ?? idleLabel;
 
     return (
         <div className="border-t px-5 py-3 sm:px-8 lg:px-24">
@@ -409,12 +428,16 @@ function WizardFooter<StepId extends string>({
                             key={`${currentStepId}:complete`}
                         >
                             {isBusy ? <Spinner /> : <Check aria-hidden="true" />}
-                            {completion.label ?? "Finish"}
+                            <span aria-live="polite">
+                                {resolveLabel(completion.label ?? "Finish", completion.busyLabel)}
+                            </span>
                         </Button>
                     ) : isLast ? (
                         <Button type="submit" size="lg" disabled={isCompletionDisabled} key={`${currentStepId}:submit`}>
                             {isBusy ? <Spinner /> : <Check aria-hidden="true" />}
-                            {completion.label ?? "Submit"}
+                            <span aria-live="polite">
+                                {resolveLabel(completion.label ?? "Submit", completion.busyLabel)}
+                            </span>
                         </Button>
                     ) : (
                         <Button
@@ -424,8 +447,8 @@ function WizardFooter<StepId extends string>({
                             key={`${currentStepId}:next`}
                         >
                             {isBusy && <Spinner />}
-                            {nextLabel ?? "Next"}
-                            <ArrowRight aria-hidden="true" />
+                            <span aria-live="polite">{resolveLabel(nextLabel ?? "Next")}</span>
+                            {progressLabel === null && <ArrowRight aria-hidden="true" />}
                         </Button>
                     )}
                 </div>

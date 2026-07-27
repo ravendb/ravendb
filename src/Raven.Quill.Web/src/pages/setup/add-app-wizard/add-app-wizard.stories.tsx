@@ -122,7 +122,7 @@ function AppWizardStepBody({ initialStep }: { initialStep: AppStepId }) {
             flow={getAppFlow({ dataSource: "external" })}
             initialStep={initialStep}
             cancel={() => {}}
-            completion={{ type: "submit", label: "Create app & continue" }}
+            completion={{ type: "submit", label: "Create app & continue", busyLabel: "Creating app..." }}
         />
     );
 }

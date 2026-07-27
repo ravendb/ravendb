@@ -1,6 +1,7 @@
 import { useFormContext } from "react-hook-form";
 import { useParams } from "react-router";
 import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
+import type { WizardProgress } from "@/components/form/wizard/form-wizard";
 import { suggestionToAgentConfiguration } from "@/pages/setup/add-capability-wizard/agent-config-form";
 import { generateAgentFromPrompt } from "@/pages/setup/add-capability-wizard/agent-from-prompt";
 import { useCapabilityWizardStore } from "@/pages/setup/add-capability-wizard/capability-wizard-store";
@@ -14,7 +15,7 @@ export function useCreateAgentStep() {
     const { getValues, setValue } = useFormContext<AgentFormData>();
     const setPromptResult = useCapabilityWizardStore((state) => state.setPromptResult);
 
-    return async () => {
+    return async (progress: WizardProgress) => {
         if (getValues("create.mode") !== "prompt") {
             return;
         }
@@ -29,6 +30,7 @@ export function useCreateAgentStep() {
             return;
         }
 
+        progress.report("Generating your agent...");
         const config = await generateAgentFromPrompt(slug, prompt);
         setPromptResult({ prompt, config });
         setValue("review", suggestionToAgentConfiguration(config), { shouldValidate: true });

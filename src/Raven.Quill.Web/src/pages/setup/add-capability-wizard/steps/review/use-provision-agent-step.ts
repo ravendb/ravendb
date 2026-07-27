@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { api } from "@/api/api";
 import type { AiAgentConfiguration } from "@/api/generated/server-api";
 import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
+import type { WizardProgress } from "@/components/form/wizard/form-wizard";
 import { buildAgentConfigurationPayload } from "@/pages/setup/add-capability-wizard/agent-config-form";
 import { useCapabilityWizardStore } from "@/pages/setup/add-capability-wizard/capability-wizard-store";
 import { invalidateAgentQueries } from "@/lib/query-invalidation";
@@ -19,7 +20,7 @@ export function useProvisionAgentStep() {
     const queryClient = useQueryClient();
     const setCreatedAgent = useCapabilityWizardStore((state) => state.setCreatedAgent);
 
-    return async () => {
+    return async (progress: WizardProgress) => {
         // Provisioning is create-only. The channels step has no Back, so this guards only the
         // defensive case — never create a second agent for the same wizard run.
         if (useCapabilityWizardStore.getState().createdAgent) {
@@ -33,6 +34,8 @@ export function useProvisionAgentStep() {
             ...buildAgentConfigurationPayload(values),
         };
         const name = values.review.name.trim();
+
+        progress.report("Creating agent...");
 
         let agentId: string;
         try {

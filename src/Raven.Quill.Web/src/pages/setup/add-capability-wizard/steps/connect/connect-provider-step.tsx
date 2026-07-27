@@ -17,8 +17,6 @@ export function ConnectProviderStep({ isBusy }: WizardBodyComponentProps) {
     const { slug = "" } = useParams();
     const { control } = useFormContext<AgentFormData>();
 
-    // The AI suggestion shown on the next step is slow, so start it in the background while
-    // the operator picks a connection string; the step's beforeNext awaits the same query.
     usePrefetchQuery(api.queries.apps.suggestAgentFromData(slug));
 
     const connectionStringsQuery = useQuery(api.queries.apps.aiConnectionStringsList(slug));

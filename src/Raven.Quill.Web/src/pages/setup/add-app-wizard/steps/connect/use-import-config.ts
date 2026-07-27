@@ -1,4 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
+import { useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { toast } from "sonner";
 import type { DiscoverResponse } from "@/api/generated/server-api";
@@ -22,6 +23,13 @@ import { computeConnectKey } from "@/pages/setup/add-app-wizard/steps/connect/us
 import { toWizardStepError } from "@/components/form/wizard/wizard-step-error";
 import { computeMapKey } from "@/pages/setup/add-app-wizard/steps/map/use-map-schema-step";
 
+const IMPORT_PHASES = {
+    reading: "Reading the configuration...",
+    connecting: "Testing the connection...",
+    discovering: "Discovering tables...",
+    verifying: "Verifying mapped tables...",
+} as const;
+
 type ImportResult = {
     config: WizardConfig;
     formTables: AppFormData["mapTables"]["tables"];
@@ -31,12 +39,15 @@ type ImportResult = {
 
 export function useImportConfig() {
     const { setValue, getValues } = useFormContext<AppFormData>();
+    const [progressLabel, setProgressLabel] = useState<string>(IMPORT_PHASES.reading);
 
-    return useMutation<ImportResult, Error, File>({
+    const importMutation = useMutation<ImportResult, Error, File>({
         mutationFn: async (file) => {
+            setProgressLabel(IMPORT_PHASES.reading);
             const config = await parseConfigFile(file);
             const slug = getValues("externalConnection").slug;
 
+            setProgressLabel(IMPORT_PHASES.connecting);
             const connectResult = await api.services.setup.connect({
                 connectionString: config.connectionString,
                 provider: config.provider,
@@ -49,6 +60,7 @@ export function useImportConfig() {
 
             // Discover every schema the configuration touches, not just the default one, so tables
             // in custom schemas can still be verified.
+            setProgressLabel(IMPORT_PHASES.discovering);
             const schemas = collectConfigSchemas(config.tables);
             const discoverResult = await discoverTables(
                 { provider: config.provider, connectionString: config.connectionString },
@@ -60,6 +72,7 @@ export function useImportConfig() {
                 throw toWizardStepError(discoverResult.errors, "Could not discover tables.");
             }
 
+            setProgressLabel(IMPORT_PHASES.verifying);
             const unavailable = collectSourceTableRefs(config.tables).filter((ref) => {
                 const discovered = findDiscoveredTable(discoverResult, ref.sourceTableSchema, ref.sourceTableName);
                 return !discovered || !isTableSupported(discoverResult, discovered);
@@ -115,4 +128,6 @@ export function useImportConfig() {
             store.lockImportedConfig();
         },
     });
+
+    return { importMutation, progressLabel };
 }

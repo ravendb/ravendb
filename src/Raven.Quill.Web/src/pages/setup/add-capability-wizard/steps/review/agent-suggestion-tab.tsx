@@ -7,6 +7,7 @@ import { Spinner } from "@/components/shadcn/ui/spinner";
 import { ExpandableText } from "@/components/data/expandable-text";
 import { FormTextarea } from "@/components/form/form-textarea";
 import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
+import { AgentPromptProgress } from "@/pages/setup/add-capability-wizard/agent-prompt-progress";
 import { SuggestionPicker } from "@/pages/setup/add-capability-wizard/suggestion-picker";
 import { useRegenerateAgentFromPromptMutation } from "@/pages/setup/add-capability-wizard/steps/review/use-regenerate-agent-from-prompt";
 
@@ -83,6 +84,7 @@ function PromptEditor() {
                 rows={4}
                 disabled={regenerate.isPending}
             />
+            {regenerate.isPending && <AgentPromptProgress />}
             <Button
                 type="button"
                 variant="secondary"
@@ -91,7 +93,7 @@ function PromptEditor() {
                 disabled={!trimmedPrompt || regenerate.isPending}
             >
                 {regenerate.isPending ? <Spinner /> : <Sparkles className="size-4" />}
-                Regenerate
+                {regenerate.isPending ? "Regenerating..." : "Regenerate"}
             </Button>
         </div>
     );

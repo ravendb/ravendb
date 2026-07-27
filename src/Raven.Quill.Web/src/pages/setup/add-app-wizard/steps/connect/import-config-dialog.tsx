@@ -20,7 +20,7 @@ type ImportConfigDialogProps = {
 
 export function ImportConfigDialog({ disabled }: ImportConfigDialogProps) {
     const [isOpen, setIsOpen] = useState(false);
-    const importMutation = useImportConfig();
+    const { importMutation, progressLabel } = useImportConfig();
 
     const handleOpenChange = (open: boolean) => {
         if (importMutation.isPending) {
@@ -58,7 +58,9 @@ export function ImportConfigDialog({ disabled }: ImportConfigDialogProps) {
                 {importMutation.isPending ? (
                     <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed px-6 py-8 text-center">
                         <Spinner className="size-6" />
-                        <p className="text-sm text-muted-foreground">Validating the connection and verifying tables…</p>
+                        <p className="text-sm text-muted-foreground" aria-live="polite">
+                            {progressLabel}
+                        </p>
                     </div>
                 ) : (
                     <FileDropzone
