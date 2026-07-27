@@ -1320,6 +1320,17 @@ namespace Voron.Impl
             if (Committed || RolledBack || Flags != (TransactionFlags.ReadWrite))
                 return;
 
+            if (AppliedJournalStateAfterFlush)
+            {
+                // RavenDB-27166: this transaction applied a piggybacked journal flush-state update in CommitStage1,
+                // freeing the flushed scratch pages, and then failed to commit. The rollback below restores the
+                // tx-start scratch snapshot, which still maps those freed entries - state that cannot be trusted -
+                // so mark the environment as catastrophically failed to force an unload and a clean recovery
+                // instead of serving stale scratch mappings.
+                _env.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(
+                    new InvalidOperationException("Transaction rolled back after applying a piggybacked journal flush-state update; the in-memory scratch state cannot be safely restored (RavenDB-27166)")));
+            }
+
             OnRollBack?.Invoke(this);
 
             _freeSpaceHandling.OnRollback();

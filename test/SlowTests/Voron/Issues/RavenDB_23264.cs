@@ -28,6 +28,10 @@ public class RavenDB_23264 : StorageTest
         // is invoked by a piggybacking write tx that then fails to commit, the flush thread's
         // retry succeeds because the free loop is idempotent (entries are nulled after freeing).
 
+        // file-based so RestartDatabase builds fresh options, the way a real database reload does - the
+        // catastrophic-failure mark set by the RavenDB-27166 fix lives on the options instance
+        RequireFileBasedPager();
+
         long p1, p2, p3;
 
         // Step 1: Create initial pages and commit
@@ -120,10 +124,55 @@ public class RavenDB_23264 : StorageTest
         // Without the fix: double-free → crash.
         flushThread.Join(TimeSpan.FromSeconds(30));
 
+        // Clean up
+        Env.Journal.Applicator.ForTestingPurposesOnly().OnWaitForJournalStateToBeUpdated_AfterAssigning_updateJournalStateAfterFlush = null;
+
+        // Step 12 (RavenDB-27166): the rollback of a transaction that applied the flush action marks the
+        // environment as catastrophically failed - the retry is refused by design and recovery happens on
+        // restart, with no committed data lost (the failed transaction never reached the journal).
+        if (Env.Options.IsCatastrophicFailureSet)
+        {
+            Assert.NotNull(flushException);
+
+            RestartDatabase();
+
+            using (var rtx = Env.ReadTransaction())
+            {
+                foreach (var pageNumber in new[] { p1, p2, p3 })
+                {
+                    var page = rtx.LowLevelTransaction.GetPage(pageNumber);
+                    Assert.Equal(pageNumber, page.PageNumber);
+                }
+            }
+
+            return;
+        }
+
         // Step 12: Verify no exception from flush thread
         Assert.Null(flushException);
 
-        // Clean up
-        Env.Journal.Applicator.ForTestingPurposesOnly().OnWaitForJournalStateToBeUpdated_AfterAssigning_updateJournalStateAfterFlush = null;
+        // Step 13 (RavenDB-27166): the retry did not double-free, but the environment is not healthy either.
+        // txBlocker's rollback restored its tx-start scratch snapshot, resurrecting the entries the flush action
+        // had already freed via tx.ForgetAboutScratchPage. The retry cannot repair that: the free buffer entries
+        // were nulled by the first (partial) execution, so ForgetAboutScratchPage never runs for them again.
+        // The scratch positions are back on the free list while the environment still maps p1/p2/p3 onto them,
+        // so reusing the scratch makes those pages resolve to whatever now occupies their old positions.
+        for (int c = 0; c < 10; c++)
+        {
+            using var txw = Env.WriteTransaction();
+            var tree = txw.CreateTree("churn");
+            for (int i = 0; i < 100; i++)
+                tree.Add($"churn-{c}-{i}", new string((char)('0' + i % 10), 512));
+            txw.Commit();
+        }
+
+        using (var rtx = Env.ReadTransaction())
+        {
+            foreach (var pageNumber in new[] { p1, p2, p3 })
+            {
+                var page = rtx.LowLevelTransaction.GetPage(pageNumber);
+                Assert.Equal(pageNumber, page.PageNumber);
+            }
+        }
     }
 }
