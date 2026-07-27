@@ -55,6 +55,8 @@ export type WizardStep<StepId extends string, Values extends FieldValues = Field
     validate: WizardValidationTarget<Values>;
     onValidationFailed?: WizardAction;
     beforeNext?: WizardAction;
+    /** Blocks the step from being completed while it is still preparing its own data. */
+    isNextDisabled?: boolean;
     nextLabel?: ReactNode;
     canCancel?: boolean;
     canGoBack?: boolean;
@@ -221,6 +223,7 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
                         handleNext={handleNext}
                         handleComplete={handleComplete}
                         isBusy={isBusy}
+                        isNextDisabled={currentStep.isNextDisabled === true}
                         currentStepId={currentStepIdInFlow}
                         nextLabel={currentStep.nextLabel}
                         canCancel={currentStep.canCancel !== false}
@@ -352,6 +355,7 @@ type WizardFooterProps<StepId extends string> = {
     handleNext: () => Promise<void>;
     handleComplete: () => Promise<void>;
     isBusy: boolean;
+    isNextDisabled: boolean;
     nextLabel?: ReactNode;
     canCancel: boolean;
     canGoBack: boolean;
@@ -367,6 +371,7 @@ function WizardFooter<StepId extends string>({
     handleNext,
     handleComplete,
     isBusy,
+    isNextDisabled,
     nextLabel,
     canCancel,
     canGoBack,
@@ -374,6 +379,7 @@ function WizardFooter<StepId extends string>({
     footerComponent: FooterComponent,
 }: WizardFooterProps<StepId>) {
     const isLast = stepPosition === "last";
+    const isCompletionDisabled = isBusy || isNextDisabled;
 
     return (
         <div className="border-t px-5 py-3 sm:px-8 lg:px-24">
@@ -399,19 +405,24 @@ function WizardFooter<StepId extends string>({
                             type="button"
                             onClick={handleComplete}
                             size="lg"
-                            disabled={isBusy}
+                            disabled={isCompletionDisabled}
                             key={`${currentStepId}:complete`}
                         >
                             {isBusy ? <Spinner /> : <Check aria-hidden="true" />}
                             {completion.label ?? "Finish"}
                         </Button>
                     ) : isLast ? (
-                        <Button type="submit" size="lg" disabled={isBusy} key={`${currentStepId}:submit`}>
+                        <Button type="submit" size="lg" disabled={isCompletionDisabled} key={`${currentStepId}:submit`}>
                             {isBusy ? <Spinner /> : <Check aria-hidden="true" />}
                             {completion.label ?? "Submit"}
                         </Button>
                     ) : (
-                        <Button onClick={handleNext} size="lg" disabled={isBusy} key={`${currentStepId}:next`}>
+                        <Button
+                            onClick={handleNext}
+                            size="lg"
+                            disabled={isCompletionDisabled}
+                            key={`${currentStepId}:next`}
+                        >
                             {isBusy && <Spinner />}
                             {nextLabel ?? "Next"}
                             <ArrowRight aria-hidden="true" />

@@ -15,12 +15,16 @@ import { useConnectSourceStep } from "@/pages/setup/add-app-wizard/steps/connect
 import { useMapSchemaStep } from "@/pages/setup/add-app-wizard/steps/map/use-map-schema-step";
 import { useFocusMapTablesError } from "@/pages/setup/add-app-wizard/steps/map-tables/use-focus-map-tables-error";
 import { useMapTablesStep } from "@/pages/setup/add-app-wizard/steps/map-tables/use-map-tables-step";
+import { useIsSuggestingMapTables } from "@/pages/setup/add-app-wizard/steps/map-tables/use-suggested-map-tables";
+import { useVerifySchemaStep } from "@/pages/setup/add-app-wizard/steps/verify/use-verify-schema-step";
 
 export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
     const connectSourceBeforeNext = useConnectSourceStep();
+    const verifySchemaBeforeNext = useVerifySchemaStep();
     const mapSchemaBeforeNext = useMapSchemaStep();
     const mapTablesBeforeNext = useMapTablesStep();
     const focusMapTablesError = useFocusMapTablesError();
+    const isSuggestingMapTables = useIsSuggestingMapTables();
 
     return {
         dataSource: {
@@ -55,6 +59,7 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
             bodyComponent: VerifySchemaStep,
             isFullHeight: true,
             validate: "verifySchema",
+            beforeNext: verifySchemaBeforeNext,
         },
         map: {
             title: "How would you like to map your schema?",
@@ -78,6 +83,7 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
             validate: "mapTables",
             onValidationFailed: focusMapTablesError,
             beforeNext: mapTablesBeforeNext,
+            isNextDisabled: isSuggestingMapTables,
         },
         preview: {
             title: "Preview before full ingest",

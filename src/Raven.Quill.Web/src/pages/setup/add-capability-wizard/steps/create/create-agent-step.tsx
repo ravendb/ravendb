@@ -6,12 +6,15 @@ import { Alert } from "@/components/shadcn/ui/alert";
 import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
 import { emptyAgentConfiguration } from "@/pages/setup/add-capability-wizard/agent-config-form";
 import { useCapabilityWizardStore } from "@/pages/setup/add-capability-wizard/capability-wizard-store";
+import { SuggestedAgentsProgress } from "@/pages/setup/add-capability-wizard/steps/create/suggested-agents-progress";
+import { useSuggestedAgents } from "@/pages/setup/add-capability-wizard/steps/create/use-suggested-agents";
 import { SuggestionPicker } from "@/pages/setup/add-capability-wizard/suggestion-picker";
 
 export function CreateAgentStep() {
     const { control, setValue } = useFormContext<AgentFormData>();
     const suggestions = useCapabilityWizardStore((state) => state.suggestions);
     const mode = useWatch({ control, name: "create.mode" });
+    const { isSuggesting } = useSuggestedAgents();
 
     const choosePromptMode = () => {
         if (mode !== "prompt") {
@@ -33,8 +36,12 @@ export function CreateAgentStep() {
         <div className="grid gap-6">
             <div className="grid gap-3">
                 <h3 className="text-sm font-semibold">AI-suggested agents based on your data</h3>
-                {suggestions.length === 0 ? (
-                    <Alert>Go back to the previous step to let AI analyze your data and suggest agents.</Alert>
+                {isSuggesting ? (
+                    <SuggestedAgentsProgress />
+                ) : suggestions.length === 0 ? (
+                    <Alert>
+                        AI could not suggest agents from your data. Describe your own below, or set one up manually.
+                    </Alert>
                 ) : (
                     <SuggestionPicker />
                 )}

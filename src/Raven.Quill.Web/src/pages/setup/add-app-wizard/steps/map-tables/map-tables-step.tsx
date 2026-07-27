@@ -1,12 +1,16 @@
 import { useFormContext, useFormState } from "react-hook-form";
+import { RefreshCwIcon } from "lucide-react";
 import { toast } from "sonner";
 import AceEditor from "@/components/ace-editor/ace-editor";
+import { WizardErrorAlert } from "@/components/form/wizard/wizard-error-alert";
 import { Alert } from "@/components/shadcn/ui/alert";
+import { Button } from "@/components/shadcn/ui/button";
 import { Field, FieldLabel } from "@/components/shadcn/ui/field";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/shadcn/ui/resizable";
 import { Switch } from "@/components/shadcn/ui/switch";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
+import { MapTablesSuggestionProgress } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-suggestion-progress";
 import {
     parseRawTablesToForm,
     serializeFormTablesToRaw,
@@ -16,11 +20,13 @@ import { TableEditor } from "@/pages/setup/add-app-wizard/steps/map-tables/table
 import { TablesExplorer } from "@/pages/setup/add-app-wizard/steps/map-tables/tables-explorer";
 import { UnmappedTablesAlert } from "@/pages/setup/add-app-wizard/steps/map-tables/unmapped-tables-alert";
 import { useApplyMapTables } from "@/pages/setup/add-app-wizard/steps/map-tables/use-apply-map-tables";
+import { useSuggestedMapTables } from "@/pages/setup/add-app-wizard/steps/map-tables/use-suggested-map-tables";
 
 export function MapTablesStep() {
     const { control, getValues, setValue } = useFormContext<AppFormData>();
     const { errors } = useFormState({ control, name: "mapTables.tables" });
     const applyMapTables = useApplyMapTables();
+    const { isSuggesting, error: suggestionError, retry: retrySuggestion } = useSuggestedMapTables();
 
     const isRawView = useSetupWizardStore((state) => state.isMapTablesRawView);
     const rawContent = useSetupWizardStore((state) => state.mapTablesRawContent);
@@ -56,6 +62,22 @@ export function MapTablesStep() {
             setValue("mapTables.tables", tables);
         }
     };
+
+    if (isSuggesting) {
+        return <MapTablesSuggestionProgress />;
+    }
+
+    if (suggestionError) {
+        return (
+            <div className="grid gap-3">
+                <WizardErrorAlert error={suggestionError} />
+                <Button type="button" variant="outline" className="justify-self-start" onClick={retrySuggestion}>
+                    <RefreshCwIcon aria-hidden="true" />
+                    Try again
+                </Button>
+            </div>
+        );
+    }
 
     return (
         <div className="flex min-h-0 flex-1 flex-col gap-3">
