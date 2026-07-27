@@ -16,7 +16,6 @@ using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Indexes.Static.Extensions;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Logging;
@@ -37,24 +36,11 @@ using Exception = System.Exception;
 
 namespace Raven.Server.ServerWide.Backups;
 
-/// <summary>
-/// Server-level orchestrator that schedules and executes periodic backups for all databases hosted
-/// on this node. A single instance lives on <see cref="ServerStore"/>, replacing the old per-database
-/// <c>PeriodicBackupRunner</c>. On each polling tick the runner evaluates server-wide gate policies,
-/// then iterates a shared queue of registered backup tasks and evaluates per-database policies before
-/// launching each due backup on its own thread pool task. Lifecycle is tied to <see cref="ServerStore"/>.
-/// </summary>
 public class ServerBackupRunner : IDisposable
 {
 
-    public const int MaxDecisionLogSize = 1024; // was 32; raised for richer history during diagnostics
+    public const int MaxDecisionLogSize = 1024;
 
-    // Reason strings recorded as [CANCELLED:<reason>] in the per-task decision log when an in-flight
-    // backup is cancelled by a trigger. These sit alongside the inline [STARTED]/[COMPLETED]/[FAILED]
-    // markers written at the RunBackup call sites below. (db-delete is intentionally absent: that path is
-    // cancelled+awaited by DocumentDatabase.Dispose before RemoveDatabase runs — see RemoveDatabase.)
-    // TODO (future): replace these string markers with a typed decision-log entry shape
-    // (see handoff "what's next" #5 — typed decision log).
     internal const string CancelReasonDisabled = "disabled";
     internal const string CancelReasonTaskDeleted = "task-deleted";
 
@@ -136,10 +122,6 @@ public class ServerBackupRunner : IDisposable
         return null;
     }
 
-    /// <summary>
-    /// Registers a new backup task state in the in-memory dictionary and enqueues it for polling.
-    /// If a state for the same database already exists, uses the existing inner dictionary.
-    /// </summary>
     public void EnsureDatabaseRegistered(string databaseName)
     {
         BackupsPerDatabasePerTaskId.GetOrAdd(databaseName, static _ => new ConcurrentDictionary<long, DatabaseBackupState>());
@@ -213,12 +195,6 @@ public class ServerBackupRunner : IDisposable
         }
     }
 
-    /// <summary>
-    /// Launches a backup for the given state on a fire-and-forget task. Increments the concurrent
-    /// backup counter before starting and releases it (via <c>FinishBackup</c>) when the backup
-    /// completes or fails. A local <c>FinishBackup</c> closure resets the running flag, clears
-    /// the running task, and recomputes the next scheduled time.
-    /// </summary>
     private void RunBackup(DatabaseBackupState backupState, DateTime startTimeInUtc, bool isFullBackup = false, long? operationId = null)
     {
         if (_forTestingPurposes != null &&
@@ -230,31 +206,7 @@ public class ServerBackupRunner : IDisposable
         if (backupState.Running.Raise() == false)
             return;
 
-        try
-        {
-            _serverStore.ConcurrentBackupsCounter.StartBackup(backupState.OriginalDatabaseName, backupState.Configuration.Name, _logger);
-        }
-        catch (BackupDelayException e)
-        {
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Backup task will be retried in {(int)e.DelayPeriod.TotalSeconds} seconds, Reason: {e.Message}");
-
-            // RavenDB-24994 (Root Cause 2): a manual "Backup Now" caller (StartBackupTask) was handed this
-            // operationId and will poll /operations/state for it. Before this fix the cap-hit returned without
-            // registering the operation, so the poll got 404 forever. Register the operation as Faulted with the
-            // BackupDelayException payload so the poll returns a real Faulted operation carrying the rejection
-            // reason. The polling loop never reaches here when capped (ServerConcurrentBackupPolicy gates it
-            // first), so operationId is always supplied on this path and the database is already loaded.
-            if (operationId.HasValue &&
-                _serverStore.DatabasesLandlord.TryGetDatabaseIfLoaded(backupState.DatabaseName, out var database))
-            {
-                backupState.OperationId = operationId.Value;
-                RegisterFaultedBackupOperation(database, backupState, operationId.Value, e);
-            }
-
-            backupState.Running.Lower();
-            return;
-        }
+        _serverStore.ConcurrentBackupsCounter.StartBackup(backupState.OriginalDatabaseName, backupState.Configuration.Name, _logger);
 
         backupState.AddToDecisionLog($"[STARTED] Backup task {backupState.Configuration.TaskId}", startTimeInUtc);
 
@@ -295,7 +247,7 @@ public class ServerBackupRunner : IDisposable
                 if (localBackupStatus.LastFullBackup == null || // no full backup was previously performed
                     localBackupStatus.BackupType != backupState.Configuration.BackupType || // the backup type has changed
                     localBackupStatus.LastEtag == null || // last document etag wasn't updated
-                    backupToLocalFolder && Documents.PeriodicBackup.BackupTask.DirectoryContainsBackupFiles(localBackupStatus.LocalBackup.BackupDirectory, IsFullBackupOrSnapshot) == false)
+                    backupToLocalFolder && BackupTask.DirectoryContainsBackupFiles(localBackupStatus.LocalBackup.BackupDirectory, IsFullBackupOrSnapshot) == false)
                 // the local folder already includes a full backup or snapshot
                 {
                     isFullBackup = true;
@@ -358,6 +310,29 @@ public class ServerBackupRunner : IDisposable
                 if (_logger.IsErrorEnabled)
                     _logger.Error($"Could not start backup for {backupState}.", e);
 
+                try
+                {
+                    backupState.BackupStatus.Version++;
+                    backupState.BackupStatus.Error = new Error { Exception = e.ToString(), At = DateTime.UtcNow };
+                    if (isFullBackup)
+                        backupState.BackupStatus.LastFullBackupInternal = startTimeInUtc;
+                    else
+                        backupState.BackupStatus.LastIncrementalBackupInternal = startTimeInUtc;
+
+                    BackupUtils.SaveBackupStatus(backupState.BackupStatus, backupState.DatabaseName, _serverStore, _logger);
+
+                    _serverStore.NotificationCenter.Add(AlertRaised.Create(
+                        backupState.DatabaseName,
+                        $"Periodic Backup task: '{backupState.Configuration.Name}'",
+                        $"Failed to start the backup task '{backupState.Configuration.Name}'. The next backup will be rescheduled.",
+                        AlertReason.PeriodicBackup, NotificationSeverity.Error, details: new ExceptionDetails(e)));
+                }
+                catch (Exception reportError)
+                {
+                    if (_logger.IsErrorEnabled)
+                        _logger.Error($"Failed to report backup start-failure for {backupState}.", reportError);
+                }
+
                 FinishBackup(backupState, backupState.DatabaseName);
             }
         });
@@ -366,14 +341,14 @@ public class ServerBackupRunner : IDisposable
         {
             if (_forTestingPurposes != null &&
                 _forTestingPurposes.DatabaseTestingStuffInternals != null &&
-                _forTestingPurposes.DatabaseTestingStuffInternals.TryGetValue(databaseName, out TestingStuffInternal testingStuffInternal))
+                _forTestingPurposes.DatabaseTestingStuffInternals.TryGetValue(databaseName, out TestingStuffInternal value))
             {
-                testingStuffInternal.HoldBackupFromFinishing?.WaitOne();
+                value.HoldBackupFromFinishing?.WaitOne();
             }
 
             try
             {
-                databaseBackupState.NextBackup = databaseBackupState.Stale ? null : databaseBackupState.GetNextBackupDetails(out _);
+                databaseBackupState.NextBackup = databaseBackupState.Stale ? null : databaseBackupState.GetNextBackupDetails(databaseBackupState.BackupStatus, out _);
             }
             catch (Exception e)
             {
@@ -393,30 +368,6 @@ public class ServerBackupRunner : IDisposable
         }
     }
 
-    /// <summary>
-    /// Registers <paramref name="operationId"/> in the database's operations registry as an already-Faulted
-    /// operation carrying <paramref name="exception"/>. Used when the concurrent-backup cap rejects a manual
-    /// backup so that the caller polling /operations/state sees a real Faulted operation with the rejection
-    /// reason instead of a 404 (RavenDB-24994, Root Cause 2). The faulted task factory makes the operation
-    /// settle straight to Faulted via the standard operations completion path (no concurrent-backup slot is
-    /// taken, so no matching FinishBackup is required).
-    /// </summary>
-    private static void RegisterFaultedBackupOperation(DocumentDatabase database, DatabaseBackupState backupState, long operationId, BackupDelayException exception)
-    {
-        _ = database.Operations.AddLocalOperation(
-            operationId,
-            OperationType.DatabaseBackup,
-            $"Periodic Backup '{backupState.Configuration.Name} ({backupState.Configuration.TaskId})' for database '{backupState.DatabaseName}'.",
-            detailedDescription: null,
-            taskFactory: _ => Task.FromException<IOperationResult>(exception),
-            token: null);
-    }
-
-    /// <summary>
-    /// Triggers an immediate (manual) backup for the given task, using a pre-allocated
-    /// <paramref name="operationId"/>. Throws if the task doesn't exist or is already running.
-    /// Used by the "backup now" API endpoint.
-    /// </summary>
     public long StartBackupTask(string databaseName, long taskId, bool isFullBackup, long operationId, DateTime? startTimeUtc = null)
     {
         DatabaseBackupState databaseBackupState = GetDatabaseStateByTaskId(databaseName, taskId);
@@ -438,26 +389,16 @@ public class ServerBackupRunner : IDisposable
         return operationId;
     }
 
-    /// <summary>
-    /// Spawns a dedicated thread for the backup work and wires up the completion source so the
-    /// operation-tracking infrastructure gets notified when the thread finishes.
-    /// </summary>
-    private Task<IOperationResult> StartBackupThread(DocumentDatabase database, DatabaseBackupState backupState, Documents.PeriodicBackup.BackupTask backupTask, TaskCompletionSource<IOperationResult> tcs, Action<IOperationProgress> onProgress)
+    private Task<IOperationResult> StartBackupThread(DocumentDatabase database, DatabaseBackupState backupState, BackupTask backupTask, TaskCompletionSource<IOperationResult> tcs, Action<IOperationProgress> onProgress)
     {
         var threadName = $"Backup task {backupState.Configuration.Name} for database '{database.Name}'";
-        PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => RunBackupThread(database, backupState, backupTask, threadName, tcs, onProgress), null, ThreadNames.ForBackupTask(threadName,
+        PoolOfThreads.GlobalRavenThreadPool.LongRunning(_ => RunBackupThread(database, backupState, backupTask, threadName, tcs, onProgress), null, ThreadNames.ForBackupTask(threadName,
             database.Name, backupState.Configuration.Name));
         return tcs.Task;
     }
 
-    /// <summary>
-    /// Executes the backup on the current thread, populates <c>runningBackupStatus</c> from the
-    /// prior status, then calls <see cref="BackupTask.RunPeriodicBackup"/>. Handles cancellation
-    /// (delayed backups) and unexpected exceptions, propagating the outcome through the TCS.
-    /// </summary>
-    private void RunBackupThread(DocumentDatabase database, DatabaseBackupState backupState, Documents.PeriodicBackup.BackupTask backupTask, string threadName, TaskCompletionSource<IOperationResult> tcs, Action<IOperationProgress> onProgress)
+    private void RunBackupThread(DocumentDatabase database, DatabaseBackupState backupState, BackupTask backupTask, string threadName, TaskCompletionSource<IOperationResult> tcs, Action<IOperationProgress> onProgress)
     {
-        BackupResult backupResult = null;
         var runningBackupStatus = new PeriodicBackupStatus
         {
             TaskId = backupState.Configuration.TaskId,
@@ -484,7 +425,7 @@ public class ServerBackupRunner : IDisposable
 
             using (database.PreventFromUnloadingByIdleOperations())
             {
-                backupResult = backupTask.RunPeriodicBackup(onProgress, backupState, tcs.Task, ref runningBackupStatus);
+                BackupResult backupResult = backupTask.RunPeriodicBackup(onProgress, backupState, tcs.Task, ref runningBackupStatus);
 
                 backupState.BackupStatus = runningBackupStatus;
 
@@ -528,11 +469,6 @@ public class ServerBackupRunner : IDisposable
         }
     }
 
-    /// <summary>
-    /// Delays an in-progress backup by sending a cluster-wide <see cref="DelayBackupCommand"/> and
-    /// then killing the running operation so the backup thread exits cleanly. Updates in-memory state
-    /// after the cluster command commits so that the next polling cycle sees the correct next-run time.
-    /// </summary>
     public async Task DelayAsync(string databaseName, long operationId, DateTime delayUntil, X509Certificate2 clientCert, CancellationToken token)
     {
         if (BackupsPerDatabasePerTaskId.TryGetValue(databaseName, out var backupsPerDatabasePerTaskId) == false)
@@ -544,7 +480,7 @@ public class ServerBackupRunner : IDisposable
             if (runningTask == null || runningTask.Id != operationId)
                 continue;
 
-            var nextBackup = databaseBackupState.Value.GetNextBackupDetails(out string tag);
+            var nextBackup = databaseBackupState.Value.GetNextBackupDetails(databaseBackupState.Value.BackupStatus, out string _);
 
             var originalBackupTime = delayUntil > nextBackup.DateTime ? nextBackup.DateTime : databaseBackupState.Value.StartTimeInUtc;
 
@@ -572,11 +508,11 @@ public class ServerBackupRunner : IDisposable
             }
             databaseBackupState.Value.BackupStatus.DelayUntil = delayUntil;
             databaseBackupState.Value.BackupStatus.OriginalBackupTime = originalBackupTime;
-            databaseBackupState.Value.NextBackup = databaseBackupState.Value.GetNextBackupDetails(out string nodeTag);
+            databaseBackupState.Value.NextBackup = databaseBackupState.Value.GetNextBackupDetails(databaseBackupState.Value.BackupStatus, out string _);
 
             if (_forTestingPurposes != null &&
                 _forTestingPurposes.DatabaseTestingStuffInternals != null &&
-                _forTestingPurposes.DatabaseTestingStuffInternals.TryGetValue(databaseName, out ServerBackupRunner.TestingStuffInternal testingStuffInternal))
+                _forTestingPurposes.DatabaseTestingStuffInternals.TryGetValue(databaseName, out TestingStuffInternal testingStuffInternal))
             {
                 testingStuffInternal.OnBackupTaskRunHoldBackupExecution?.SetResult(null);
             }
@@ -587,8 +523,6 @@ public class ServerBackupRunner : IDisposable
 
             try
             {
-                // use the local `runningTask` captured before KillOperationAsync — `databaseBackupState.Value.RunningTask`
-                // is cleared by FinishBackup as soon as KillOperationAsync returns, so reading it here would NRE
                 await runningTask.Task;
             }
             catch
@@ -603,11 +537,6 @@ public class ServerBackupRunner : IDisposable
         throw new InvalidOperationException($"Fail to delay backup task with task id '{operationId}', the operation with that number isn't registered");
     }
 
-    /// <summary>
-    /// Returns the most current <see cref="PeriodicBackupStatus"/> for a task by merging the in-memory
-    /// state with the cluster value store, preferring whichever is more recent. Used by ongoing-task
-    /// read paths (Studio, API) that need a consistent view across nodes.
-    /// </summary>
     public PeriodicBackupStatus GetMostUpdatedClusterBackupStatus(string databaseName, long taskId)
     {
         PeriodicBackupStatus inMemoryBackupStatus = null;
@@ -619,7 +548,7 @@ public class ServerBackupRunner : IDisposable
 
         if (_forTestingPurposes != null &&
             _forTestingPurposes.DatabaseTestingStuffInternals != null &&
-            _forTestingPurposes.DatabaseTestingStuffInternals.TryGetValue(databaseName, out ServerBackupRunner.TestingStuffInternal testingStuffInternal))
+            _forTestingPurposes.DatabaseTestingStuffInternals.TryGetValue(databaseName, out TestingStuffInternal testingStuffInternal))
         {
             if (testingStuffInternal.BackupStatusFromMemoryOnly)
                 return inMemoryBackupStatus;
@@ -678,7 +607,6 @@ public class ServerBackupRunner : IDisposable
                 kvp.Value.CancelRunningBackup(CancelReasonTaskDeleted);
             }
 
-            // queue will clear itself
             backupStates.Clear();
             return;
         }
@@ -705,7 +633,7 @@ public class ServerBackupRunner : IDisposable
         var taskState = GetTaskStatus(configuration, databaseName, out _);
         if (_forTestingPurposes != null &&
             _forTestingPurposes.DatabaseTestingStuffInternals != null &&
-            _forTestingPurposes.DatabaseTestingStuffInternals.TryGetValue(databaseName, out ServerBackupRunner.TestingStuffInternal testingStuffInternal))
+            _forTestingPurposes.DatabaseTestingStuffInternals.TryGetValue(databaseName, out TestingStuffInternal testingStuffInternal))
         {
             if (testingStuffInternal.SimulateActiveByOtherNodeStatus_UpdateConfigurations)
             {
@@ -724,11 +652,6 @@ public class ServerBackupRunner : IDisposable
         UpdatePeriodicBackup(databaseName, configuration.TaskId, configuration, taskState);
     }
 
-    /// <summary>
-    /// Updates a single backup task's in-memory state when its configuration or responsible-node
-    /// assignment changes. Marks the task stale when it becomes disabled or moves to another node;
-    /// re-enqueues it and refreshes the next-run time when it stays active on this node.
-    /// </summary>
     private void UpdatePeriodicBackup(string databaseName, long taskId,
         PeriodicBackupConfiguration newConfiguration,
         TaskStatus taskState)
@@ -738,7 +661,6 @@ public class ServerBackupRunner : IDisposable
         var name = databaseName;
         var existingBackupState = GetDatabaseStateByTaskId(name, taskId);
 
-        // Creating a new backup state
         if (existingBackupState == null)
         {
             var backupState = new DatabaseBackupState(databaseName, newConfiguration, ShardHelper.IsShardName(databaseName), _serverStore);
@@ -751,10 +673,6 @@ public class ServerBackupRunner : IDisposable
 
         if (BackupHelper.BackupTypeChanged(previousConfiguration, newConfiguration))
         {
-            // BackupTypeChanged forces the next backup to be full — the BackupType mismatch
-            // at the IsFullBackup-decision read (RunBackup line 262-268) handles that.
-            // Reset rather than null so concurrent readers (HandleDatabaseValueChanged,
-            // DelayAsync, RunBackupThread cancel path) never see a null BackupStatus.
             existingBackupState.BackupStatus = new PeriodicBackupStatus
             {
                 TaskId = newConfiguration.TaskId,
@@ -779,7 +697,6 @@ public class ServerBackupRunner : IDisposable
                 return;
 
             case TaskStatus.MissingResponsibleNode:
-                // the responsible node wasn't determined yet
                 return;
 
             case TaskStatus.ActiveByCurrentNode:
@@ -789,7 +706,6 @@ public class ServerBackupRunner : IDisposable
                     _backupQueue.Enqueue(existingBackupState);
                 }
 
-                // a backup is already running, the next one will be re-scheduled by the backup task if needed
                 if (existingBackupState.RunningTask != null)
                 {
                     if (_logger.IsDebugEnabled)
@@ -797,7 +713,6 @@ public class ServerBackupRunner : IDisposable
                     return;
                 }
 
-                // backup frequency hasn't changed, and we have a scheduled backup
                 if (previousConfiguration.HasBackupFrequencyChanged(newConfiguration) == false)
                 {
                     if (_logger.IsDebugEnabled)
@@ -810,7 +725,8 @@ public class ServerBackupRunner : IDisposable
                     _logger.Debug($"Backup task '{taskId}' state is '{taskState}', the task has frequency changes or doesn't have scheduled backup, the timer will be rearranged and the task will be executed by current node '{_serverStore.NodeTag}'.");
 
 
-                existingBackupState.NextBackup = existingBackupState.GetNextBackupDetails(out string tag);
+                var localBackupStatus = existingBackupState.GetMostUpdatedLocalBackupStatus(taskId, inMemoryBackupStatus: null, name);
+                existingBackupState.NextBackup = existingBackupState.GetNextBackupDetails(localBackupStatus, out string _);
 
                 return;
 
@@ -819,11 +735,6 @@ public class ServerBackupRunner : IDisposable
         }
     }
 
-    /// <summary>
-    /// Determines the scheduling status of a backup task for the given database: disabled, active on
-    /// this node, active on another node, or missing a responsible-node assignment. Also returns the
-    /// responsible node tag when one is assigned.
-    /// </summary>
     public TaskStatus GetTaskStatus(PeriodicBackupConfiguration configuration, string databaseName, out string responsibleNodeTag, bool disableLog = false)
     {
         if (configuration.Disabled)
@@ -852,10 +763,9 @@ public class ServerBackupRunner : IDisposable
         responsibleNodeTag = BackupUtils.GetResponsibleNodeTag(_serverStore, databaseName, configuration.TaskId);
         if (responsibleNodeTag == null)
         {
-            // the responsible node wasn't set by the cluster observer yet
             if (_forTestingPurposes != null &&
                 _forTestingPurposes.DatabaseTestingStuffInternals != null &&
-                _forTestingPurposes.DatabaseTestingStuffInternals.TryGetValue(databaseName, out ServerBackupRunner.TestingStuffInternal testingStuffInternal))
+                _forTestingPurposes.DatabaseTestingStuffInternals.TryGetValue(databaseName, out TestingStuffInternal testingStuffInternal))
             {
                 testingStuffInternal.OnMissingResponsibleNode?.Invoke();
             }
@@ -892,10 +802,6 @@ public class ServerBackupRunner : IDisposable
                Constants.Documents.PeriodicBackup.EncryptedSnapshotExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
     }
 
-    /// <summary>
-    /// Returns the node tag of the cluster member responsible for executing the given backup task.
-    /// Throws when the task doesn't exist, is disabled, or has all destinations turned off.
-    /// </summary>
     public string WhoseTaskIsIt(string databaseName, long taskId)
     {
         DatabaseBackupState databaseBackupState = GetDatabaseStateByTaskId(databaseName, taskId);
@@ -917,7 +823,6 @@ public class ServerBackupRunner : IDisposable
         return BackupUtils.GetResponsibleNodeTag(_serverStore, databaseBackupState.DatabaseName, databaseBackupState.Configuration.TaskId);
     }
 
-    /// <summary>Returns the in-memory backup state for a specific (database, task-id) pair, or null if not registered.</summary>
     public DatabaseBackupState GetDatabaseStateByTaskId(string databaseName, long taskId)
     {
         if (BackupsPerDatabasePerTaskId.TryGetValue(databaseName, out var backupsPerDatabasePerTaskId) &&
@@ -929,29 +834,20 @@ public class ServerBackupRunner : IDisposable
         return null;
     }
 
-    /// <summary>Returns all registered backup states for a database, or an empty list if the database has none.</summary>
     public List<DatabaseBackupState> GetDatabaseBackups(string databaseName)
     {
         return BackupsPerDatabasePerTaskId.TryGetValue(databaseName, out var backupsPerDatabasePerTaskId) ?
             backupsPerDatabasePerTaskId.Values.ToList() : [];
     }
 
-    /// <summary>
-    /// Returns the next scheduled backup time for the given task by delegating to the task's
-    /// <see cref="DatabaseBackupState"/>. Also returns the responsible node tag via <paramref name="tag"/>.
-    /// </summary>
-    public NextBackup GetNextBackupDetails(long taskId, string databaseName, out string tag)
+    public NextBackup GetNextBackupDetails(long taskId, string databaseName, PeriodicBackupStatus backupStatus, out string tag)
     {
+        tag = null;
+
         var state = GetDatabaseStateByTaskId(databaseName, taskId);
-        var next = state.GetNextBackupDetails(out tag);
-        return next;
+        return state == null ? null : state.GetNextBackupDetails(backupStatus, out tag);
     }
 
-    /// <summary>
-    /// Describes the scheduling role of this node for a particular backup task.
-    /// Used by <see cref="GetTaskStatus"/> and policy evaluators to decide whether to run,
-    /// skip, or remove the task from the queue.
-    /// </summary>
     public enum TaskStatus
     {
         Disabled,
@@ -960,7 +856,6 @@ public class ServerBackupRunner : IDisposable
         MissingResponsibleNode
     }
 
-    /// <summary>Returns aggregated backup information for a database, opening a read transaction internally.</summary>
     public BackupInfo GetBackupInfo(string databaseName)
     {
         using (_serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
@@ -970,7 +865,6 @@ public class ServerBackupRunner : IDisposable
         }
     }
 
-    /// <summary>Returns aggregated backup information for a database using the supplied read transaction.</summary>
     public BackupInfo GetBackupInfo(ClusterOperationContext context, string databaseName)
     {
         List<DatabaseBackupState> BackupStates = null;
@@ -1038,6 +932,7 @@ public class ServerBackupRunner : IDisposable
                     backupState.AddToDecisionLog(reason, now);
 
                     if (_forTestingPurposes != null &&
+                        _forTestingPurposes.DatabaseTestingStuffInternals != null &&
                         _forTestingPurposes.DatabaseTestingStuffInternals.TryGetValue(backupState.DatabaseName, out var dbViolationTestingStuff))
                     {
                         dbViolationTestingStuff.OnDatabasePolicyViolation?.Invoke(backupPolicy, reason, backupState);
@@ -1057,15 +952,8 @@ public class ServerBackupRunner : IDisposable
         if (thread != null && thread != PoolOfThreads.LongRunningWork.Current)
             thread.Join(int.MaxValue);
 
-        // In-flight backups are not awaited here. Each backup's token is linked to
-        // Database.DatabaseShutdown; DocumentDatabase.Dispose cancels it and waits for the
-        // operation to wind down when DatabasesLandlord is disposed later in ServerStore.Dispose.
     }
 
-    /// <summary>
-    /// Deregisters all backup tasks for a database being unloaded or deleted, marking each state
-    /// stale so the polling loop discards it without attempting to start any more backups.
-    /// </summary>
     public void RemoveDatabase(string databaseName)
     {
         if (BackupsPerDatabasePerTaskId.TryRemove(databaseName, out var backupsPerTaskId))
@@ -1078,34 +966,15 @@ public class ServerBackupRunner : IDisposable
             backupsPerTaskId.Clear();
         }
 
-        // Note: no explicit CancelRunningBackup here. On db-delete the in-flight backup is already
-        // cancelled AND awaited to completion by DocumentDatabase.Dispose before this runs: the backup
-        // token is linked to Database.DatabaseShutdown (BackupTask.cs), and DisposeInternal cancels it
-        // (_databaseShutdown.Cancel()) then disposes the operations registry — Operations.Dispose calls
-        // KillAsync(waitForCompletion: true) on the killable backup operation, which runs BEFORE
-        // DocumentsStorage is disposed. So the backup observes cancellation while storage is still alive
-        // (clean OperationCanceledException, no status row) and has finished by the time RemoveDatabase is
-        // invoked (DatabasesLandlord.DeleteDatabase disposes the database first, then calls this). An
-        // explicit cancel here would be a no-op: RunningCancel is already null (cleared in FinishBackup).
-
-        // A5b: drop any test-hook entry tied to this database, so a callback held by a
-        // disposed test resource cannot fire if another test re-uses this server. Safe
-        // no-op in production (the field is null) and when no hook was installed.
         _forTestingPurposes?.DatabaseTestingStuffInternals?.TryRemove(databaseName, out _);
     }
 
-    /// <summary>
-    /// Returns a snapshot of the currently running backup for the given task, or null if no backup
-    /// is in progress. Used by the ongoing-tasks endpoint to populate the "running" indicator in Studio.
-    /// </summary>
     public RunningBackup OnGoingBackup(string databaseName, long taskId)
     {
         var state = GetDatabaseStateByTaskId(databaseName, taskId);
         if (state == null)
             return null;
 
-        // Snapshot RunningTask once: FinishBackup clears RunningTask before lowering Running,
-        // so a reader could otherwise see Running == true with RunningTask == null and NRE.
         var runningTask = state.RunningTask;
         if (state.Running == false || runningTask == null)
             return null;
@@ -1129,10 +998,6 @@ public class ServerBackupRunner : IDisposable
         }
     }
 
-    /// <summary>
-    /// Returns a projection of all registered backup tasks for a database, used by the
-    /// backup timers debug endpoint to display scheduling information.
-    /// </summary>
     internal List<PeriodicBackupInfo> GetPeriodicBackupsInformation(string databaseName)
     {
         if (BackupsPerDatabasePerTaskId.TryGetValue(databaseName, out var backupsPerDatabase) == false)
@@ -1152,10 +1017,6 @@ public class ServerBackupRunner : IDisposable
             .ToList();
     }
 
-    /// <summary>
-    /// Pairs the operation ID with the underlying <see cref="Task"/> for a currently executing backup.
-    /// Stored on <see cref="DatabaseBackupState.RunningTask"/> and cleared by the finish callback.
-    /// </summary>
     public sealed class RunningBackupTask
     {
         public Task Task { get; set; }
@@ -1174,11 +1035,7 @@ public class ServerBackupRunner : IDisposable
         return _forTestingPurposes = new TestingStuff();
     }
 
-    /// <summary>
-    /// Test-only hook container attached to <see cref="ServerBackupRunner"/> when a test calls
-    /// <see cref="ForTestingPurposesOnly"/>. All members on this class are for test control only;
-    /// none are read in production (the field is null in production code).
-    /// </summary>
+
     public class TestingStuff
     {
         public TestingStuff()
@@ -1186,8 +1043,6 @@ public class ServerBackupRunner : IDisposable
             DatabaseTestingStuffInternals = new ConcurrentDictionary<string, TestingStuffInternal>();
         }
 
-        // A5a: ConcurrentDictionary so the polling thread (reads in GetTaskStatus, AreAllDatabasePoliciesCompliant,
-        // FinishBackup, DelayAsync, etc.) does not race with test-thread writes from RavenTestBase.Backup helpers.
         internal ConcurrentDictionary<string, TestingStuffInternal> DatabaseTestingStuffInternals { get; set; }
     }
 
@@ -1206,11 +1061,6 @@ public class ServerBackupRunner : IDisposable
         internal Action AfterBackupBatchCompleted;
 
         internal ManualResetEvent HoldBackupFromFinishing;
-
-        // A5d: per-database test hooks. Previously these were server-wide properties on TestingStuff
-        // (one delegate fired for every backup on every database on the server). Moved here so tests
-        // can attach hooks scoped to a single database and other databases sharing the server are
-        // unaffected.
         internal Action<IDatabaseBackupPolicy, string, DatabaseBackupState> OnDatabasePolicyViolation;
         internal Action<IServerBackupPolicy, string> OnServerPolicyViolation;
         internal Action<DatabaseBackupState> OnBeforeBackupStarted;

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -11,7 +10,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web.Http;
 using Sparrow.Json;
-using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {

@@ -206,7 +206,6 @@ namespace FastTests
                 AllocationsLoggingCount = configuration.DebugConfiguration.AllocationsLoggingCount
             });
 
-            ServerConcurrentBackupPolicy.Disabled = true;
             ServerHighDirtyMemoryPolicy.Disabled = true;
             ServerLowMemoryPolicy.Disabled = true;
             ServerCpuCreditsPolicy.Disabled = true;

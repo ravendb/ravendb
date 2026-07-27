@@ -96,7 +96,6 @@ namespace SlowTests.Issues
 
             using (var store2 = GetDocumentStore(new Options()
             {
-                Server = Server,
                 CreateDatabase = false,
                 ModifyDatabaseName = s => restoredDbMane
             }))

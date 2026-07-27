@@ -28,6 +28,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task ResponsibleNodeForBackup_MentorNode()
         {
+            DoNotReuseServer();
             const int clusterSize = 3;
 
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -86,6 +87,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task ResponsibleNodeForBackup_CurrentResponsibleNodeNotResponding()
         {
+            DoNotReuseServer();
             const int clusterSize = 3;
             string tag2 = "";
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -106,7 +108,7 @@ namespace SlowTests.Issues
             {
                 Urls = new[] { leaderServer.WebUrl },
                 Conventions = new DocumentConventions { DisableTopologyUpdates = true },
-                Database = databaseName,
+                Database = databaseName
             })
             {
                 var mentorNode = nodes.First(s => s.ServerStore.NodeTag != leaderServer.ServerStore.NodeTag);
@@ -168,6 +170,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task ResponsibleNodeForBackup_PinnedMentorNode()
         {
+            DoNotReuseServer();
             const int clusterSize = 3;
 
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -247,6 +250,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task ResponsibleNodeForBackup_CurrentResponsibleNodeRemovedFromTopology()
         {
+            DoNotReuseServer();
             const int clusterSize = 3;
 
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -302,6 +306,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task ResponsibleNodeForBackup_NonExistingResponsibleNode()
         {
+            DoNotReuseServer();
             const int clusterSize = 3;
 
             var backupPath = NewDataPath(suffix: "BackupFolder");

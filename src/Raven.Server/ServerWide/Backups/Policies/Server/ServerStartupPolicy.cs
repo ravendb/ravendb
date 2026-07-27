@@ -2,11 +2,6 @@
 
 namespace Raven.Server.ServerWide.Backups.Policies.Server;
 
-/// <summary>
-/// Blocks all backups for five minutes after the server starts, giving the system time to
-/// establish cluster topology and finish loading databases before scheduling work.
-/// Set <see cref="Disabled"/> to true in tests to skip the grace period.
-/// </summary>
 public class ServerStartupPolicy : IServerBackupPolicy
 {
     public static readonly ServerStartupPolicy Instance = new();
