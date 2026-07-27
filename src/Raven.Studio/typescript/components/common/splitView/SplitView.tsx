@@ -7,6 +7,7 @@ import {
     useCallback,
     useContext,
     useEffect,
+    useMemo,
     useRef,
     useState,
 } from "react";
@@ -55,10 +56,13 @@ function SplitViewWithSize(props: Required<PropsWithChildren> & { viewWidthInPx:
         dispatch(splitViewActions.viewWidthInPxSet(props.viewWidthInPx));
     }, [props.viewWidthInPx]);
 
+    const contextValue = useMemo(
+        () => ({ sheetComponent, setSheetComponent, registerSheetClose, activeSheetOwnerId, setActiveSheetOwnerId }),
+        [sheetComponent, setSheetComponent, registerSheetClose, activeSheetOwnerId, setActiveSheetOwnerId]
+    );
+
     return (
-        <SplitViewContext.Provider
-            value={{ sheetComponent, setSheetComponent, registerSheetClose, activeSheetOwnerId, setActiveSheetOwnerId }}
-        >
+        <SplitViewContext.Provider value={contextValue}>
             <div className="split-view">
                 <BodyWrapper>{props.children}</BodyWrapper>
                 <SheetWrapper>{sheetComponent}</SheetWrapper>

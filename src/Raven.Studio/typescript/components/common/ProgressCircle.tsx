@@ -19,15 +19,25 @@ export interface ProgressCircleProps {
 }
 
 export function ProgressCircle(props: ProgressCircleProps) {
-    const { state, children, inline, icon, progress, onClick = () => {}, descClassName, className } = props;
+    const { state, children, inline, icon, progress, onClick, descClassName, className } = props;
 
     const showProgress = progress != null;
-    const isClickable = props.onClick != null;
+    const isClickable = onClick != null;
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onClick();
+        }
+    };
 
     return (
         <div
             className={classNames("progress-circle", state, { inline }, { "cursor-pointer": isClickable }, className)}
             onClick={onClick}
+            role={isClickable ? "button" : undefined}
+            tabIndex={isClickable ? 0 : undefined}
+            onKeyDown={isClickable ? handleKeyDown : undefined}
         >
             <div className={classNames("state-desc", descClassName)}>
                 {showProgress && <strong>{(100 * progress).toFixed(0)}%</strong>}

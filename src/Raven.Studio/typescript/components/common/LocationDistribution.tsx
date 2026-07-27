@@ -41,13 +41,15 @@ interface ClickableProgressProps {
 }
 
 export function ClickableProgress({ onClick, children }: ClickableProgressProps) {
-    if (!onClick) {
-        return children;
-    }
     return (
         <div className="clickable-progress">
             {children}
-            <div className="clickable-progress-hint cursor-pointer" onClick={onClick}>
+            {/* decorative only - the progress indicator above carries the same onClick and is keyboard/AT accessible */}
+            <div
+                className={classNames("clickable-progress-hint", onClick ? "cursor-pointer" : "invisible")}
+                onClick={onClick}
+                aria-hidden
+            >
                 <Icon icon="preview" margin="me-1" />
                 See details
             </div>

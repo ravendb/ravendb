@@ -13,7 +13,7 @@ import {
     LocationDistribution,
 } from "components/common/LocationDistribution";
 import { Icon } from "components/common/Icon";
-import { useId, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import classNames from "classnames";
 import { ProgressCircle } from "components/common/ProgressCircle";
 import { ReplicationProgressDetailsSheet } from "components/pages/database/tasks/ongoingTasks/partials/ReplicationProgressDetailsSheet";
@@ -25,7 +25,7 @@ interface ExternalReplicationTaskDistributionProps {
     task: OngoingTaskExternalReplicationInfo | OngoingTaskReplicationHubInfo | OngoingTaskReplicationSinkInfo;
 }
 
-interface ItemWithTooltipProps {
+interface TaskDistributionRowProps {
     nodeInfo: OngoingReplicationProgressAwareTaskNodeInfo<OngoingTaskAbstractReplicationNodeInfoDetails>;
     allNodes: OngoingReplicationProgressAwareTaskNodeInfo<OngoingTaskAbstractReplicationNodeInfoDetails>[];
     sharded: boolean;
@@ -35,8 +35,8 @@ interface ItemWithTooltipProps {
     ownerId: string;
 }
 
-function getTaskTypeLabel(taskType: string): string {
-    const labels: Record<string, string> = {
+function getTaskTypeLabel(taskType: StudioTaskType): string {
+    const labels: Partial<Record<StudioTaskType, string>> = {
         Replication: "External Replication",
         PullReplicationAsHub: "Replication Hub",
         PullReplicationAsSink: "Replication Sink",
@@ -44,7 +44,7 @@ function getTaskTypeLabel(taskType: string): string {
     return labels[taskType] ?? taskType;
 }
 
-function ItemWithTooltip(props: ItemWithTooltipProps) {
+function TaskDistributionRow(props: TaskDistributionRowProps) {
     const { nodeInfo, allNodes, sharded, task, isActive, setActiveNodeIndex, ownerId } = props;
 
     const shard = (
@@ -67,7 +67,7 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
     const key = taskNodeInfoKey(task, nodeInfo);
     const hasError = !!nodeInfo.details?.error;
 
-    const { open } = useViewSheet();
+    const { open, update } = useViewSheet();
 
     const nodeIndex = allNodes.indexOf(nodeInfo);
 
@@ -91,6 +91,22 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
             onClose: () => setActiveNodeIndex(null),
         });
     };
+
+    useEffect(() => {
+        if (isActive) {
+            update(
+                ownerId,
+                <ReplicationProgressDetailsSheet
+                    key={ownerId}
+                    taskType={getTaskTypeLabel(task.shared.taskType)}
+                    taskName={task.shared.taskName}
+                    allNodes={allNodes}
+                    initialNodeIndex={nodeIndex}
+                    onNodeChange={setActiveNodeIndex}
+                />
+            );
+        }
+    }, [isActive, task, allNodes, nodeIndex]);
 
     const canOpenSheet = nodeInfo.status !== "loading" && nodeInfo.status !== "idle";
 
@@ -139,16 +155,21 @@ export function ExternalReplicationTaskDistribution(props: ExternalReplicationTa
     const ownerId = useId();
     const { activeSheetOwnerId } = useViewSheet();
 
-    const visibleNodes = task.nodesInfo.filter(
-        (nodeInfo) =>
-            nodeInfo.details && task.responsibleLocations.find((l) => databaseLocationComparator(l, nodeInfo.location))
+    const visibleNodes = useMemo(
+        () =>
+            task.nodesInfo.filter(
+                (nodeInfo) =>
+                    nodeInfo.details &&
+                    task.responsibleLocations.find((l) => databaseLocationComparator(l, nodeInfo.location))
+            ),
+        [task]
     );
 
     const items = visibleNodes.map((nodeInfo, index) => {
         const key = taskNodeInfoKey(task, nodeInfo);
 
         return (
-            <ItemWithTooltip
+            <TaskDistributionRow
                 key={key}
                 nodeInfo={nodeInfo}
                 allNodes={visibleNodes}

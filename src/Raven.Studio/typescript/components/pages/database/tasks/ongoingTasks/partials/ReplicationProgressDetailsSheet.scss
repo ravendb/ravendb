@@ -11,20 +11,34 @@
         border-radius: sizes.$border-radius;
         padding: sizes.$gutter-xs sizes.$gutter-sm;
 
-        .progress-percentage {
-            font-size: 11px;
-        }
+        .progress-item {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
 
-        .progress {
-            margin-top: 4px;
-            height: 3px;
-            margin-bottom: 0;
+            .progress-label {
+                order: 1;
+                flex: 1;
+            }
 
-            .progress-bar {
-                background-color: colors.$progress-color;
+            .progress-percentage {
+                order: 2;
+                font-size: 11px;
+            }
 
-                &.completed {
-                    background-color: colors.$success;
+            .progress {
+                order: 3;
+                flex-basis: 100%;
+                margin-top: 4px;
+                height: 3px;
+                margin-bottom: 0;
+
+                .progress-bar {
+                    background-color: colors.$progress-color;
+
+                    &.completed {
+                        background-color: colors.$success;
+                    }
                 }
             }
         }
