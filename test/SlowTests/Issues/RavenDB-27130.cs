@@ -15,7 +15,7 @@ using Xunit;
 using Xunit.Abstractions;
 using SchemaRevisions = Raven.Server.Documents.Schemas.Revisions;
 
-namespace FastTests.Issues
+namespace SlowTests.Issues
 {
     // RavenDB-27130
     // Verifies the per-document counters that back the revisions counts, read directly from the Voron trees:
