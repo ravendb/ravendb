@@ -6,6 +6,7 @@ import type {
     SuggestCdcResponse,
     TestMappingResponse,
 } from "@/api/generated/server-api";
+import { delay } from "msw";
 import { apiHttp } from "./api-http";
 
 export const setupMocks = {
@@ -17,6 +18,12 @@ export const setupMocks = {
         apiHttp.post("/api/setup/map", ({ response }) => response(200).json(configuration)),
     suggestCdc: (suggestion: SuggestCdcResponse = sampleCdcSuggestion) =>
         apiHttp.post("/api/setup/suggest/cdc", ({ response }) => response(200).json(suggestion)),
+    /** Never answers, so the map-tables step stays in its "suggesting" state. */
+    suggestCdcPending: () =>
+        apiHttp.post("/api/setup/suggest/cdc", async ({ response }) => {
+            await delay("infinite");
+            return response(200).json(sampleCdcSuggestion);
+        }),
     testMapping: (result: TestMappingResponse = sampleMappingTest) =>
         apiHttp.post("/api/setup/test-mapping", ({ response }) => response(200).json(result)),
     provision: (result: ProvisionResponse = { id: "apps/1", slug: "demo" }) =>

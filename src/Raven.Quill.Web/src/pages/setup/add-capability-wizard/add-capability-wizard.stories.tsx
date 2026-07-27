@@ -8,6 +8,7 @@ import { api } from "@/api/api";
 import { FormWizard } from "@/components/form/wizard/form-wizard";
 import { preventEnterKeySubmission } from "@/lib/form-utils";
 import { appsMocks, sampleAgentSuggestion } from "@/mocks/apps-mocks";
+import { defaultApiMocks } from "@/mocks/default-mocks";
 import { channelsMocks } from "@/mocks/channels-mocks";
 import { AddCapabilityWizard } from "./add-capability-wizard";
 import { suggestionToAgentConfiguration } from "./agent-config-form";
@@ -48,13 +49,20 @@ const SEED: AgentFormData = {
 // Renders the real wizard jumped to a single step. The create/review steps read the AI
 // suggestions from the store, so seed them before those steps first render (Default's
 // AddCapabilityWizard resets the store on mount, so this never leaks).
-function CapabilityWizardAtStep({ initialStep }: { initialStep: AgentStepId }) {
+function CapabilityWizardAtStep({
+    initialStep,
+    hasSuggestions = true,
+}: {
+    initialStep: AgentStepId;
+    /** When false, the create step waits on the AI instead of showing seeded candidates. */
+    hasSuggestions?: boolean;
+}) {
     // Seed the store so any step renders with realistic data. The channels step is entered
     // directly (no provisioning runs first), so seed its created agent; other steps provision
     // on the way in and must start without one so "Save agent" actually creates the agent.
     useState(() =>
         useCapabilityWizardStore.setState({
-            suggestions: sampleAgentSuggestion.configurations,
+            suggestions: hasSuggestions ? sampleAgentSuggestion.configurations : [],
             createdAgent: initialStep === "channels" ? { agentId: "agents/sales", name: "Sales assistant" } : null,
         }),
     );
@@ -120,6 +128,13 @@ export const ConnectProviderEmpty: Story = {
 
 export const CreateAgent: Story = {
     render: () => <CapabilityWizardAtStep initialStep="create" />,
+};
+
+// The suggestion call routinely runs for more than a minute, so it is parked here to keep the
+// progress skeleton and its stage labels on screen. The prompt and manual options stay usable.
+export const CreateAgentSuggesting: Story = {
+    render: () => <CapabilityWizardAtStep initialStep="create" hasSuggestions={false} />,
+    parameters: { msw: { handlers: { apps: [appsMocks.suggestAgentPending(), ...defaultApiMocks.apps] } } },
 };
 
 export const ReviewAgent: Story = {

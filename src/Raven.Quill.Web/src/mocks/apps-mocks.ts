@@ -53,6 +53,12 @@ export const appsMocks = {
         }),
     suggestAgent: (suggestion: SuggestAgentResponse = sampleAgentSuggestion) =>
         apiHttp.post("/api/apps/{slug}/suggest/agent", ({ response }) => response(200).json(suggestion)),
+    /** Never answers, so the create step stays in its "suggesting" state. */
+    suggestAgentPending: () =>
+        apiHttp.post("/api/apps/{slug}/suggest/agent", async ({ response }) => {
+            await delay("infinite");
+            return response(200).json(sampleAgentSuggestion);
+        }),
     aiConnectionStringsList: (connectionStrings: AiConnectionString[] = samplePropagatedConnectionStrings) =>
         apiHttp.get("/api/apps/{slug}/connection-strings", ({ response }) => response(200).json(connectionStrings)),
 };

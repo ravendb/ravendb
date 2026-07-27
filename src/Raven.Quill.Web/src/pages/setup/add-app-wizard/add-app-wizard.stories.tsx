@@ -12,6 +12,7 @@ import { getAppFlow, useAppSteps } from "./app-wizard-flow";
 import { useSetupWizardStore } from "./app-wizard-store";
 import { isTableSupported } from "./discover-utils";
 import { appSchema, type AppFormData, type AppStepId } from "./app-wizard-validation";
+import { computeMapKey } from "./steps/map/use-map-schema-step";
 import { scaffoldRootTable } from "./steps/map-tables/map-tables-utils";
 
 const meta = {
@@ -68,17 +69,28 @@ function discoverHandlers(discovery: DiscoverResponse) {
 function AppWizardAtStep({
     initialStep,
     discovery = sampleDiscovery,
+    isMappingApplied = true,
 }: {
     initialStep: AppStepId;
     discovery?: DiscoverResponse;
+    /** When false, the map-tables step treats its seeded tables as stale and asks the AI again. */
+    isMappingApplied?: boolean;
 }) {
+    const [seed] = useState(() => buildSeed(discovery));
+
     useState(() =>
         useSetupWizardStore.setState({
             discoverResult: discovery,
             discoverSchemas: [],
             importState: "none",
             connectKey: null,
-            appliedMapKey: null,
+            appliedMapKey: isMappingApplied
+                ? computeMapKey({
+                      source: seed.map.source,
+                      aiPrompt: seed.map.aiPrompt,
+                      selectedTables: seed.verifySchema.tables,
+                  })
+                : null,
             mapTablesKey: null,
             mapActiveTable: { type: "root", path: "mapTables.tables.0" },
             mapExpandedPaths: {},
@@ -87,7 +99,7 @@ function AppWizardAtStep({
 
     const form = useForm<AppFormData>({
         mode: "onChange",
-        defaultValues: buildSeed(discovery),
+        defaultValues: seed,
         resolver: zodResolver(appSchema),
     });
 
@@ -169,6 +181,13 @@ export const MapSchema: Story = {
 
 export const MapTables: Story = {
     render: () => <AppWizardAtStep initialStep="mapTables" />,
+};
+
+// The suggestion call routinely runs for more than a minute, so it is parked here to keep the
+// progress skeleton and its stage labels on screen.
+export const MapTablesSuggesting: Story = {
+    parameters: { msw: { handlers: { setup: [setupMocks.suggestCdcPending(), ...defaultApiMocks.setup] } } },
+    render: () => <AppWizardAtStep initialStep="mapTables" isMappingApplied={false} />,
 };
 
 export const Preview: Story = {

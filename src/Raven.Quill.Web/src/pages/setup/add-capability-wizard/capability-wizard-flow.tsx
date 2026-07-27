@@ -2,9 +2,9 @@ import type { WizardBadgeContext, WizardSteps } from "@/components/form/wizard/f
 import type { AgentFormData, AgentStepId } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
 import { ChooseCapabilityStep } from "@/pages/setup/add-capability-wizard/steps/capability/choose-capability-step";
 import { ConnectProviderStep } from "@/pages/setup/add-capability-wizard/steps/connect/connect-provider-step";
-import { useConnectProviderStep } from "@/pages/setup/add-capability-wizard/steps/connect/use-connect-provider-step";
 import { CreateAgentStep } from "@/pages/setup/add-capability-wizard/steps/create/create-agent-step";
 import { useCreateAgentStep } from "@/pages/setup/add-capability-wizard/steps/create/use-create-agent-step";
+import { useIsSuggestingAgents } from "@/pages/setup/add-capability-wizard/steps/create/use-suggested-agents";
 import { ReviewAgentStep } from "@/pages/setup/add-capability-wizard/steps/review/review-agent-step";
 import { ReviewTestAgentButton } from "@/pages/setup/add-capability-wizard/steps/review/test-agent-sheet";
 import { useProvisionAgentStep } from "@/pages/setup/add-capability-wizard/steps/review/use-provision-agent-step";
@@ -16,9 +16,9 @@ import { getOptionLabel } from "@/lib/form-utils";
 export const CAPABILITY_FLOW: AgentStepId[] = ["capability", "connection", "create", "review", "channels"];
 
 export const useCapabilitySteps = (): WizardSteps<AgentStepId, AgentFormData> => {
-    const connectProviderBeforeNext = useConnectProviderStep();
     const createAgentBeforeNext = useCreateAgentStep();
     const provisionAgentBeforeNext = useProvisionAgentStep();
+    const isSuggestingAgents = useIsSuggestingAgents();
 
     return {
         capability: {
@@ -38,7 +38,6 @@ export const useCapabilitySteps = (): WizardSteps<AgentStepId, AgentFormData> =>
             description: "Choose the AI provider connection string your agent will use.",
             bodyComponent: ConnectProviderStep,
             validate: "connection",
-            beforeNext: connectProviderBeforeNext,
             badge: ({ isComplete }: WizardBadgeContext<AgentFormData>) => {
                 if (!isComplete) {
                     return null;
@@ -53,6 +52,7 @@ export const useCapabilitySteps = (): WizardSteps<AgentStepId, AgentFormData> =>
             bodyComponent: CreateAgentStep,
             validate: "create",
             beforeNext: createAgentBeforeNext,
+            isNextDisabled: isSuggestingAgents,
         },
         review: {
             title: "Review & edit your agent",

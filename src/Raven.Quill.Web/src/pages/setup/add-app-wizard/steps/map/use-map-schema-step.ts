@@ -1,8 +1,6 @@
-import { api } from "@/api/api";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
-import { type AppFormData, tablesSchema } from "@/pages/setup/add-app-wizard/app-wizard-validation";
+import { type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { getTableKey } from "@/pages/setup/add-app-wizard/discover-utils";
-import { wrapDtoTablesToFormShape } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-dto";
 import { scaffoldTables } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
 import { useFormContext } from "react-hook-form";
 
@@ -21,8 +19,15 @@ export function computeMapKey(map: {
 export function useMapSchemaStep() {
     const { getValues, setValue } = useFormContext<AppFormData>();
 
-    return async () => {
+    return () => {
         const { source, aiPrompt } = getValues("map");
+
+        // The AI suggestion is fetched by the map-tables step itself, so it can render its own
+        // progress for the minute or more the call takes instead of freezing "Next" here.
+        if (source === "ai-suggested") {
+            return;
+        }
+
         const selectedTables = getValues("verifySchema.tables");
         const store = useSetupWizardStore.getState();
 
@@ -33,26 +38,8 @@ export function useMapSchemaStep() {
             return;
         }
 
-        const tables =
-            source === "ai-suggested"
-                ? await suggestTables(aiPrompt, getValues("externalConnection").slug)
-                : scaffoldTables(selectedTables, store.discoverResult);
-
-        setValue("mapTables.tables", tables);
+        setValue("mapTables.tables", scaffoldTables(selectedTables, store.discoverResult));
         store.setAppliedMapKey(appliedMapKey);
         store.resetMapTablesUiState();
     };
-}
-
-async function suggestTables(aiPrompt: string, slug: string): Promise<AppFormData["mapTables"]["tables"]> {
-    const result = await api.services.setup.suggestCdc({
-        intentPrompt: aiPrompt.trim(),
-        slug,
-    });
-
-    if (result.status !== "Success" || !result.configuration) {
-        throw new Error(result.rationale.filter(Boolean).join("\n") || `AI suggestion failed (${result.status}).`);
-    }
-
-    return tablesSchema.parse(wrapDtoTablesToFormShape(result.configuration.tables ?? []));
 }
