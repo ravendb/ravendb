@@ -6,11 +6,11 @@ public sealed class VerifyCdcResponse
 {
     public required bool Success { get; set; }
 
-    public required WizardError[] Errors { get; set; } = [];
+    public required WizardError[] Errors { get; set; }
 
-    public required string[] Warnings { get; set; } = [];
-    
-    public required string[] CompletedTables { get; set; } = [];
+    public required string[] Warnings { get; set; }
+
+    public required string[] CompletedTables { get; set; }
 
     internal static VerifyCdcResponse From(CdcTestResult result) => new()
     {

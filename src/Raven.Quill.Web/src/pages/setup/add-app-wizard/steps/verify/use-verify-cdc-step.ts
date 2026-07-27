@@ -36,7 +36,11 @@ export function useVerifyCdcStep() {
         });
 
         if (!result.success) {
-            throw toWizardStepError(result.errors, "CDC verification failed for the selected tables.");
+            const warningErrors = result.warnings.map((warning) => ({ message: warning }));
+            throw toWizardStepError(
+                [...result.errors, ...warningErrors],
+                "CDC verification failed for the selected tables.",
+            );
         }
 
         if (result.warnings.length > 0) {

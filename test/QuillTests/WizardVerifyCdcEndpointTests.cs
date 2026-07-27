@@ -25,6 +25,16 @@ public class WizardVerifyCdcEndpointTests(ITestOutputHelper output) : QuillTestB
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Requires_a_tables_array()
+    {
+        await using var host = await NewHostAsync();
+
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(
+            () => QuillHttp.PostAsync<VerifyCdcResponse>(host.Client, QuillRoutes.SetupVerifyCdc, new { }));
+        Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Requires_a_discovered_schema()
     {
         await using var host = await NewHostAsync();
@@ -40,7 +50,7 @@ public class WizardVerifyCdcEndpointTests(ITestOutputHelper output) : QuillTestB
     public async Task Requires_the_probe_connection_string()
     {
         await using var host = await NewHostAsync();
-        
+
         await host.SetupDiscoverAsync(new DiscoverRequest("SqlClient", "invalid"));
 
         var ex = await Assert.ThrowsAsync<QuillHttpException>(
@@ -54,7 +64,7 @@ public class WizardVerifyCdcEndpointTests(ITestOutputHelper output) : QuillTestB
     public async Task Rejects_a_table_that_is_not_in_the_discovered_schema()
     {
         await using var host = await NewHostAsync();
-        
+
         await host.SetupConnectAsync(new ConnectRequest("Npgsql", "invalid"));
         await host.SetupDiscoverAsync(new DiscoverRequest("Npgsql", "invalid"));
 
@@ -121,7 +131,7 @@ public class WizardVerifyCdcEndpointTests(ITestOutputHelper output) : QuillTestB
     public async Task Folds_an_unreachable_source_into_errors_without_failing_the_request()
     {
         await using var host = await NewHostAsync();
-        
+
         await SeedDiscoveredSchemaAsync(host.Config, Table("orders"));
         await RegisterProbeAsync(host.Config);
 
@@ -130,7 +140,7 @@ public class WizardVerifyCdcEndpointTests(ITestOutputHelper output) : QuillTestB
         Assert.False(result.Success);
         Assert.NotEmpty(result.Errors);
         Assert.Empty(result.CompletedTables);
-        
+
         var error = Assert.Single(result.Errors);
         Assert.DoesNotContain("Exception", error.Message);
     }
@@ -144,7 +154,7 @@ public class WizardVerifyCdcEndpointTests(ITestOutputHelper output) : QuillTestB
         await RegisterProbeAsync(host.Config);
 
         await host.VerifyCdcAsync(new VerifyCdcRequest([new VerifyCdcTableRequest("orders", "public")]));
-        
+
         using var session = host.Config.OpenAsyncSession();
         var state = await session.LoadAsync<WizardState>(WizardState.DocumentId);
         Assert.Null(state!.LastMapConfiguration);
@@ -184,7 +194,7 @@ public class WizardVerifyCdcEndpointTests(ITestOutputHelper output) : QuillTestB
             {
                 Name = WizardSourceProbeName,
                 FactoryName = "Npgsql",
-                ConnectionString = "Host=localhost;Port=1;Database=src;Username=u;Password=p",
+                ConnectionString = "Host=localhost;Port=1;Database=src;Username=u;Password=p;Timeout=1",
             }));
     }
 }
