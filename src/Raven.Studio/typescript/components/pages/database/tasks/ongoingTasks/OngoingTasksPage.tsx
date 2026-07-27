@@ -1,5 +1,4 @@
-﻿import React, { useCallback, useEffect, useReducer, useRef, useState } from "react";
-import router from "plugins/router";
+﻿import React, { useCallback, useEffect, useReducer, useState } from "react";
 import { useServices } from "hooks/useServices";
 import { ongoingTasksReducer, ongoingTasksReducerInitializer, OngoingTasksState } from "./partials/OngoingTasksReducer";
 import { ExternalReplicationPanel } from "./panels/ExternalReplicationPanel";
@@ -83,11 +82,7 @@ import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
 import genUtils from "common/generalUtils";
 import { TaskErrorsWithLocation } from "components/pages/database/tasks/tasksErrors/utils/tasksErrorsUtils";
 
-interface OngoingTasksPageQueryParams {
-    allowEmpty?: string;
-}
-
-interface OngoingTasksPageProps extends ReactQueryParamsProps<OngoingTasksPageQueryParams> {
+interface OngoingTasksPageProps {
     isAiOnly?: boolean;
 }
 
@@ -114,7 +109,7 @@ const etlAndAiTaskTypes = genUtils.exhaustiveStringTuple<EtlOrAiOngoingTaskType>
     "GenAi"
 );
 
-export function OngoingTasksPage({ isAiOnly = false, queryParams }: OngoingTasksPageProps = {}) {
+export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps = {}) {
     const db = useAppSelector(databaseSelectors.activeDatabase);
 
     const { tasksService } = useServices();
@@ -432,22 +427,8 @@ export function OngoingTasksPage({ isAiOnly = false, queryParams }: OngoingTasks
 
     const showInternalReplication = !isAiOnly && DatabaseUtils.hasInternalReplication(db);
 
-    // Once tasks have been seen, don't redirect away again if they're later deleted down to zero.
-    const hasSeenTasksRef = useRef(false);
-    if (relevantTasksCount > 0 || showInternalReplication) {
-        hasSeenTasksRef.current = true;
-    }
-
     if (!isInitialLoadDone) {
         return <LoadingView />;
-    }
-
-    const shouldRedirectToAddTask =
-        !queryParams?.allowEmpty && relevantTasksCount === 0 && !showInternalReplication && !hasSeenTasksRef.current;
-
-    if (shouldRedirectToAddTask) {
-        router.navigate(forCurrentDatabase.addNewOngoingTaskUrl(isAiOnly, true)());
-        return null;
     }
 
     return (

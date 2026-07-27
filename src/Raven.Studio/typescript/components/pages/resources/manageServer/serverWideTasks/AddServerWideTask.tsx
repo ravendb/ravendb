@@ -1,14 +1,15 @@
-import React from "react";
-import Button from "react-bootstrap/Button";
+import "components/pages/database/tasks/ongoingTasks/AddNewOngoingTask.scss";
+import React, { useState } from "react";
 import appUrl from "common/appUrl";
 import { AboutViewHeading } from "components/common/AboutView";
-import { Icon } from "components/common/Icon";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { AddTaskCardList, TaskCardCategory } from "components/pages/database/tasks/shared/AddTaskCardList";
+import { TaskCategoryFilter, TaskSearchInput } from "components/pages/database/tasks/ongoingTasks/AddNewOngoingTask";
+import { RadioToggleWithIcon } from "components/common/toggles/RadioToggle";
+import { useTaskCardDisplayMode } from "components/pages/database/tasks/shared/useTaskCardDisplayMode";
 import { PerDatabaseOngoingTasksLink } from "./partials/PerDatabaseOngoingTasksLink";
 import { ServerWideTasksInfoHub } from "./partials/ServerWideTasksInfoHub";
-import { useServerWideTasks } from "./useServerWideTasks";
 
 export default function AddServerWideTask() {
     const hasServerWideBackups = useAppSelector(licenseSelectors.statusValue("HasServerWideBackups"));
@@ -16,12 +17,20 @@ export default function AddServerWideTask() {
         licenseSelectors.statusValue("HasServerWideExternalReplications")
     );
 
-    // Show the back button only when there are existing tasks to go back to —
-    // otherwise the list view would just redirect here again
-    const { tasks } = useServerWideTasks();
-    const hasExistingTasks = tasks.length > 0;
+    const { displayMode, setDisplayMode } = useTaskCardDisplayMode();
 
-    const categories: TaskCardCategory[] = [
+    const [searchText, setSearchText] = useState("");
+    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+
+    const toggleCategory = (categoryName: string) => {
+        setSelectedCategories((prev) =>
+            prev.includes(categoryName) ? prev.filter((c) => c !== categoryName) : [...prev, categoryName]
+        );
+    };
+
+    const resetCategories = () => setSelectedCategories([]);
+
+    const serverWideTasks: TaskCardCategory[] = [
         {
             categoryName: "External replication",
             categoryIcon: "external-replication",
@@ -58,27 +67,73 @@ export default function AddServerWideTask() {
         },
     ];
 
+    const searchLower = searchText.trim().toLowerCase();
+
+    const searchFilteredTasks = serverWideTasks
+        .map((category) => ({
+            ...category,
+            tasks: category.tasks.filter(
+                (task) =>
+                    !searchLower ||
+                    task.title.toLowerCase().includes(searchLower) ||
+                    task.description.toLowerCase().includes(searchLower)
+            ),
+        }))
+        .filter((category) => category.tasks.length > 0);
+
+    const filteredTasks = searchFilteredTasks.filter(
+        (category) => selectedCategories.length === 0 || selectedCategories.includes(category.categoryName)
+    );
+
+    const allCategories = serverWideTasks.map((c) => ({
+        categoryName: c.categoryName,
+        categoryIcon: c.categoryIcon,
+    }));
+
     return (
-        <div className="content-margin">
-            <div className="d-flex justify-content-between align-items-center mb-4">
+        <div className="content-margin add-new-ongoing-task d-flex flex-column">
+            <div className="d-flex justify-content-between align-items-start">
                 <AboutViewHeading
                     title="Add a Server-Wide Task"
                     icon="server-wide-tasks"
-                    iconAddon="plus"
-                    marginBottom={0}
+                    backUrl={appUrl.forServerWideTasks()}
+                    marginBottom={4}
                 />
                 <div className="d-flex align-items-center gap-3">
-                    <PerDatabaseOngoingTasksLink />
+                    <RadioToggleWithIcon
+                        name="task-display-mode"
+                        leftItem={{ label: "", value: "expanded", iconName: "list" }}
+                        rightItem={{ label: "", value: "compact", iconName: "grid-3x2" }}
+                        selectedValue={displayMode}
+                        setSelectedValue={(val) => setDisplayMode(val)}
+                    />
                     <ServerWideTasksInfoHub />
                 </div>
             </div>
-            {hasExistingTasks && (
-                <Button href={appUrl.forServerWideTasks()} className="rounded-pill mb-3" variant="secondary">
-                    <Icon icon="arrow-left" />
-                    Back to server-wide tasks
-                </Button>
-            )}
-            <AddTaskCardList categories={categories} />
+            <div className="add-new-ongoing-task-layout d-flex gap-4 mt-2">
+                <div className="add-new-ongoing-task-sidebar flex-shrink-0 p-3">
+                    <TaskSearchInput
+                        searchText={searchText}
+                        setSearchText={setSearchText}
+                        placeholder="e.g. Server-wide Backup"
+                        className="mb-3"
+                    />
+                    <TaskCategoryFilter
+                        variant="checkbox"
+                        categories={allCategories}
+                        availableCategories={searchFilteredTasks}
+                        selectedCategories={selectedCategories}
+                        onToggle={toggleCategory}
+                        onReset={resetCategories}
+                    />
+                    <hr className="my-3" />
+                    <div className="small ms-1 text-muted">Need a per-database task? Check out:</div>
+                    <PerDatabaseOngoingTasksLink text="Ongoing Tasks" />
+                </div>
+                <div className="add-new-ongoing-task-content pb-4">
+                    <AddTaskCardList categories={filteredTasks} displayMode={displayMode} />
+                </div>
+            </div>
         </div>
     );
 }

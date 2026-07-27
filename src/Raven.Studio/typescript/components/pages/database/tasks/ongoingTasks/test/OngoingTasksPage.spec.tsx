@@ -14,7 +14,7 @@ describe("OngoingTasksPage", function () {
         expect(await screen.findByText(/RavenDB ETL/)).toBeInTheDocument();
     });
 
-    it("shows empty state when allowEmpty is set and no tasks exist", async () => {
+    it("shows empty state when no tasks exist", async () => {
         const { screen } = rtlRender(<EmptyView />);
 
         expect(await screen.findByText(/No tasks have been created/)).toBeInTheDocument();

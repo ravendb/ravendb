@@ -64,7 +64,7 @@ class appUrl {
         editCdcSink: (taskId?: number) => ko.pureComputed(() => appUrl.forEditCdcSink(appUrl.currentDatabase(), taskId)),
         query: (indexName?: string) => ko.pureComputed(() => appUrl.forQuery(appUrl.currentDatabase(), indexName)),
         terms: (indexName?: string) => ko.pureComputed(() => appUrl.forTerms(indexName, appUrl.currentDatabase())),
-        addNewOngoingTaskUrl: (isAiOnly: boolean, noBack?: boolean) => ko.pureComputed(() => appUrl.forAddNewOngoingTasks(appUrl.currentDatabase(), isAiOnly, noBack)),
+        addNewOngoingTaskUrl: (isAiOnly: boolean) => ko.pureComputed(() => appUrl.forAddNewOngoingTasks(appUrl.currentDatabase(), isAiOnly)),
         importDatabaseFromFileUrl: ko.pureComputed(() => appUrl.forImportDatabaseFromFile(appUrl.currentDatabase())),
         importCollectionFromCsv: ko.pureComputed(() => appUrl.forImportCollectionFromCsv(appUrl.currentDatabase())),
         importDatabaseFromSql: ko.pureComputed(() => appUrl.forImportFromSql(appUrl.currentDatabase())),
@@ -73,7 +73,7 @@ class appUrl {
         migrateDatabaseUrl: ko.pureComputed(() => appUrl.forMigrateDatabase(appUrl.currentDatabase())),
         sampleDataUrl: ko.pureComputed(() => appUrl.forSampleData(appUrl.currentDatabase())),
         backupsUrl: ko.pureComputed(() => appUrl.forBackups(appUrl.currentDatabase())),
-        ongoingTasksUrl: (allowEmpty?: boolean) => ko.pureComputed(() => appUrl.forOngoingTasks(appUrl.currentDatabase(), allowEmpty)),
+        ongoingTasksUrl: () => ko.pureComputed(() => appUrl.forOngoingTasks(appUrl.currentDatabase())),
         editExternalReplicationTaskUrl: ko.pureComputed(() => appUrl.forEditExternalReplication(appUrl.currentDatabase())),
         editReplicationHubTaskUrl: ko.pureComputed(() => appUrl.forEditReplicationHub(appUrl.currentDatabase())),
         editReplicationSinkTaskUrl: ko.pureComputed(() => appUrl.forEditReplicationSink(appUrl.currentDatabase())),
@@ -664,17 +664,15 @@ class appUrl {
         return "#databases/tasks/backups?" + databasePart;
     }
     
-    static forOngoingTasks(db: database | string, allowEmpty?: boolean): string {
+    static forOngoingTasks(db: database | string): string {
         const databasePart = appUrl.getEncodedDbPart(db);
-        const allowEmptyPart = allowEmpty ? "&allowEmpty=1" : "";
-        return "#databases/tasks/ongoingTasks?" + databasePart + allowEmptyPart;
+        return "#databases/tasks/ongoingTasks?" + databasePart;
     }
     
-    static forAddNewOngoingTasks(db: database | string, isAiOnly: boolean, noBack?: boolean): string {
+    static forAddNewOngoingTasks(db: database | string, isAiOnly: boolean): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const isAiOnlyPart = isAiOnly ? "&isAiOnly=true" : "";
-        const noBackPart = noBack ? "&noBack=1" : "";
-        return "#databases/tasks/addNewOngoingTasks?" + databasePart + isAiOnlyPart + noBackPart;
+        return "#databases/tasks/addNewOngoingTasks?" + databasePart + isAiOnlyPart;
     }
 
     static forEditExternalReplication(db: database | string, taskId?: number): string {
