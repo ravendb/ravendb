@@ -435,13 +435,13 @@ namespace Voron.Impl.Journal
                     // DataPagerState smaller than NextPageNumber
                     _env.UpdateDataPagerState(dataPagerState);
 
+                    addToInitLog?.Invoke(LogLevel.Debug, $"Journal {journalNumber:#,#;;0} Recovered (requireHeaderUpdate: {journalReader.RequireHeaderUpdate})");
+
                     if (journalReader.RequireHeaderUpdate) //this should prevent further load of transactions
                     {
                         requireHeaderUpdate = true;
                         break;
                     }
-
-                    addToInitLog?.Invoke(LogLevel.Debug, $"Journal {journalNumber:#,#;;0} Recovered");
                 }
                 catch (InvalidJournalException)
                 {
@@ -464,6 +464,9 @@ namespace Voron.Impl.Journal
                     throw;
                 }
             }
+
+            Debug.Assert(skippedInvalidJournals || _env.CurrentStateRecord.DataPagerState.NumberOfAllocatedPages >= dataPagerState.NumberOfAllocatedPages,
+                $"Published data pager state ({_env.CurrentStateRecord.DataPagerState.NumberOfAllocatedPages} pages) is behind the state recovery produced ({dataPagerState.NumberOfAllocatedPages} pages)");
 
             if (_env.Options.Encryption.IsEnabled == false) // for encryption, we already use AEAD, so no need
             {
