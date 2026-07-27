@@ -420,25 +420,11 @@ public static class QueryBuilderHelper
         }
     }
 
-    // Time values are indexed in the canonical Raven date format (see the document converters, e.g. '2009-06-16T07:28:42.7700000'),
-    // and `in` matches those terms as strings - unlike `==`/`between`, which line up on ticks via TryGetTime. A literal written with
-    // fewer fractional-second digits ('.770') therefore never matched. Rendering the parsed literal the way the converters write it
-    // closes that gap.
-    //
-    // The same instant can have more than one indexed spelling, so a second candidate is reported through alternateTerm:
-    //  - a DateTime is written with a trailing 'Z' only when its Kind is Utc, while ticks - and therefore `==` - ignore Kind, so the
-    //    opposite spelling has to be considered as well.
-    //  - a TimeOnly literal ('07:28:42') is indistinguishable from a TimeSpan term, and TimeSpan values mark the field as having time
-    //    values too (see the Corax converter), so the literal stays the primary term and the canonical TimeOnly form is offered as the
-    //    alternate. Canonicalizing it outright would stop `in` from matching TimeSpan fields, which server-side TypeConverter produces
-    //    for any '07:28:42'-shaped string.
-    // Only `in` may use alternateTerm: being a disjunction, matching either spelling is correct there and cannot produce a hit that
-    // `==` would not produce, since both spellings decode to the very ticks `==` compares. `all in` is a conjunction and must stick to
-    // term - a Kind-mismatched literal therefore still misses on that path.
-    //
-    // DateOnly needs neither: the parser accepts 'yyyy-MM-dd' only, which is exactly what the converters write.
-    // Returns true for every value TryGetTime recognizes as a time, so the `in` paths take the isTime flag from this same parse.
-    // term is null when the literal is already the indexed spelling, and for non-time values.
+    // `in` matches terms as strings while `==`/`between` compare ticks, so the literal has to be rendered the way the converters
+    // wrote it ('.770' -> '.7700000'). One instant can have two spellings: a DateTime carries a trailing 'Z' only when its Kind is
+    // Utc, and a TimeOnly ('07:28:42') is also a valid TimeSpan term, which is written verbatim - hence alternateTerm. Only `in` may
+    // use it, being a disjunction; `all in` is a conjunction and must stick to term. Returns true for every value TryGetTime accepts,
+    // so callers take isTime from this same parse; term is null when the literal already is the indexed spelling.
     internal static bool TryGetTimeTermsForInQuery(Index index, object value, out string term, out string alternateTerm)
     {
         term = null;
