@@ -37,7 +37,7 @@ export function ChannelGroups({ slug }: { slug: string }) {
 
     const activeLinkCounts = new Map<string, number>();
     for (const link of embedLinksQuery.data ?? []) {
-        activeLinkCounts.set(link.widgetId, (activeLinkCounts.get(link.widgetId) ?? 0) + 1);
+        activeLinkCounts.set(link.channelId, (activeLinkCounts.get(link.channelId) ?? 0) + 1);
     }
 
     const onRetry = async () => {
@@ -100,11 +100,11 @@ export function ChannelGroups({ slug }: { slug: string }) {
                                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                                     {group.channels.map((channel) => (
                                         <ChannelCard
-                                            key={channel.widgetId}
+                                            key={channel.channelId}
                                             slug={slug}
                                             channel={channel}
                                             agent={agentsQuery.data?.find((x) => x.agentId === channel.agentId)}
-                                            activeLinkCount={activeLinkCounts.get(channel.widgetId) ?? 0}
+                                            activeLinkCount={activeLinkCounts.get(channel.channelId) ?? 0}
                                             isLinkCountLoading={embedLinksQuery.isPending}
                                         />
                                     ))}
@@ -142,7 +142,7 @@ function ChannelCard({
             <CardHeader>
                 <CardTitle className="min-w-0 truncate">
                     <Link
-                        to={appRoutes.app(slug, `channels/${channel.widgetId}`)}
+                        to={appRoutes.app(slug, `channels/${channel.channelId}`)}
                         className="after:absolute after:inset-0 after:content-[''] hover:underline"
                         title="Open details"
                     >
@@ -185,7 +185,7 @@ function ChannelCard({
                 {isIFrame && (
                     <GenerateEmbedLinkDialog
                         slug={slug}
-                        widgetId={channel.widgetId}
+                        channelId={channel.channelId}
                         displayName={channel.displayName}
                         parameterNames={agent?.parameters ?? []}
                         trigger={

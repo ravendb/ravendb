@@ -1,0 +1,17 @@
+using Raven.Client.Documents.Conventions;
+using Raven.Quill.Channels;
+using Raven.Quill.Metrics;
+
+namespace Raven.Quill.Infrastructure;
+
+// Maps Quill's own documents to @-prefixed system collections so they group under Studio's
+// system folder, out of the default collections view. Single source of truth: applied to the
+// production stores in RavenStoreFactory and mirrored onto QuillTests' stores.
+public static class QuillConventions
+{
+    public static string FindCollectionName(Type type) =>
+        type == typeof(Channel) ? "@channels"
+        : type == typeof(EmbedLink) ? "@embed-links"
+        : type == typeof(ConversationPreview) ? ConversationPreview.Collection // "@ConversationPreviews"
+        : DocumentConventions.DefaultGetCollectionName(type);
+}

@@ -217,13 +217,13 @@ curl -sk -X POST https://dashboard.<your-slug>.myquill.ai/api/apps/$SLUG/setup/c
   -H "X-Api-Key: $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"type":"iframe","agentId":"product-catalog","allowedOrigins":[]}'
-#   -> {"widgetId":"wgt_..."}
+#   -> {"channelId":"..."}
 
 # (e) mint a per-user embed link for the channel (short-lived, invocation-capped)
 curl -sk -X POST https://dashboard.<your-slug>.myquill.ai/api/apps/$SLUG/embed-links \
   -H "X-Api-Key: $API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"widgetId":"wgt_...","ttlSeconds":3600,"maxInvocations":100}'
+  -d '{"channelId":"...","ttlSeconds":3600,"maxInvocations":100}'
 #   -> {"token":"...","url":"https://public.<your-slug>.myquill.ai/apps/'$SLUG'/embed/<token>", ...}
 ```
 
@@ -251,7 +251,7 @@ curl -sk -N -X POST https://public.<your-slug>.myquill.ai/apps/<app-slug>/embed/
 ```bash
 cd docker/quill/compose
 docker compose down                 # stop + remove the container; keep the volume
-docker compose down -v              # also drop quill-data (wipes @quill-config + per-app DBs)
+docker compose down -v              # also drop quill-data (wipes quill-config + per-app DBs)
 ```
 ```bash
 docker rm -f nw-postgres            # if you used the throwaway Postgres

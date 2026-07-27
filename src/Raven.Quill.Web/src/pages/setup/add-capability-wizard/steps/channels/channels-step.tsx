@@ -62,7 +62,7 @@ export function ChannelsStep() {
                             emptyMessage="No channels yet."
                         >
                             {channels.map((channel) => (
-                                <TableRow key={channel.widgetId}>
+                                <TableRow key={channel.channelId}>
                                     <TableCell className="font-medium">{channel.displayName}</TableCell>
                                     <TableCell>
                                         <StatusIndicator

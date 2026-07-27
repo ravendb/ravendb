@@ -22,6 +22,7 @@ public static class RavenStoreFactory
         {
             Urls = [options.RavenUrl],
             Database = options.ConfigDatabase,
+            Conventions = { FindCollectionName = QuillConventions.FindCollectionName },
         };
         store.Initialize();
         return store;
@@ -106,7 +107,7 @@ public static class RavenStoreFactory
             Urls = [connectUrl],
             Database = options.ConfigDatabase,
             Certificate = adminCert,
-            Conventions = { DisableTopologyUpdates = true },
+            Conventions = { DisableTopologyUpdates = true, FindCollectionName = QuillConventions.FindCollectionName },
         };
         secured.Initialize();
         store = secured;

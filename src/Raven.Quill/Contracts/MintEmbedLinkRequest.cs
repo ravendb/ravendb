@@ -1,7 +1,7 @@
 namespace Raven.Quill.Contracts;
 
 public sealed record MintEmbedLinkRequest(
-    string WidgetId,
+    string ChannelId,
     Dictionary<string, string>? Parameters = null,
     int? TtlSeconds = null,
     int? MaxInvocations = null);

@@ -23,7 +23,7 @@ public class ConversationsEndpointTests(ITestOutputHelper output) : QuillTestBas
         });
         var channel = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "demo", Array.Empty<string>(), "Support Widget"));
         await SeedConversationAsync(app.Store, app.Slug, "chats/recent", "order-support", now.AddMinutes(-10),
-            turns: [("user", "hello"), ("assistant", "hi there")], channelWidgetId: channel.WidgetId);
+            turns: [("user", "hello"), ("assistant", "hi there")], channelId: channel.ChannelId);
         await SeedConversationAsync(app.Store, app.Slug, "chats/old", "billing", now.AddDays(-3));
 
         var list = (await app.GetConversationsAsync(year: now.Year)).Conversations;
@@ -68,7 +68,7 @@ public class ConversationsEndpointTests(ITestOutputHelper output) : QuillTestBas
         for (var i = 0; i < 3; i++)
         {
             var channel = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "demo", Array.Empty<string>(), $"Widget {i}"));
-            await SeedConversationAsync(app.Store, app.Slug, $"chats/c{i}", "demo", now.AddMinutes(-(i + 1)), channelWidgetId: channel.WidgetId);
+            await SeedConversationAsync(app.Store, app.Slug, $"chats/c{i}", "demo", now.AddMinutes(-(i + 1)), channelId: channel.ChannelId);
         }
         // Calls MetricsReadService directly to count round-trips, so it waits for indexing explicitly.
         await app.WaitForIndexingAsync();
@@ -127,7 +127,7 @@ public class ConversationsEndpointTests(ITestOutputHelper output) : QuillTestBas
         });
         var channel = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "demo", Array.Empty<string>()));
 
-        var nonConversation = await Assert.ThrowsAsync<QuillHttpException>(() => app.GetConversationAsync($"channels/{channel.WidgetId}"));
+        var nonConversation = await Assert.ThrowsAsync<QuillHttpException>(() => app.GetConversationAsync($"channels/{channel.ChannelId}"));
         Assert.Equal(HttpStatusCode.NotFound, nonConversation.StatusCode);
 
         var unknown = await Assert.ThrowsAsync<QuillHttpException>(() => app.GetConversationAsync("chats/does-not-exist"));

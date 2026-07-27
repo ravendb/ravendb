@@ -26,7 +26,7 @@ internal sealed class EmbedLink
 
     public string? Id { get; set; }
 
-    public string WidgetId { get; set; } = "";
+    public string ChannelId { get; set; } = "";
 
     public string AgentId { get; set; } = "";
 

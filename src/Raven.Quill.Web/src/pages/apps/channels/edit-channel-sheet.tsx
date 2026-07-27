@@ -84,7 +84,7 @@ function EditChannelForm({
     const updateMutation = useMutation({
         mutationFn: (values: EditChannelFormData) =>
             // Update is a partial edit: null fields are left unchanged on the server.
-            api.services.channels.update(slug, channel.widgetId, {
+            api.services.channels.update(slug, channel.channelId, {
                 displayName: values.displayName.trim(),
                 allowedOrigins: values.shouldReplaceAllowedOrigins
                     ? values.allowedOrigins.map((origin) => origin.value.trim()).filter(Boolean)

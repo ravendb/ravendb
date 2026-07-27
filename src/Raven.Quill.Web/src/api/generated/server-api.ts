@@ -341,7 +341,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/apps/{slug}/iframe/{widgetId}/customization": {
+    "/api/apps/{slug}/iframe/{channelId}/customization": {
         parameters: {
             query?: never;
             header?: never;
@@ -421,7 +421,7 @@ export interface paths {
         /** @description Lists the app's active embed links (non-expired, non-revoked), most recent first. Each item carries its token, the channel + agent it targets, the bound parameters, the TTL/cap, and how many turns it has consumed — so the operator can audit and revoke links. */
         get: operations["embedLinks.list"];
         put?: never;
-        /** @description Mints a per-user embed link for an iFrame channel (by widgetId). Parameters are validated against the channel's agent and bound into the link server-side (never client-supplied). ttlSeconds and maxInvocations are bounded; both default when omitted. Returns the opaque token + an absolute, paste-ready embed URL. */
+        /** @description Mints a per-user embed link for an iFrame channel (by channelId). Parameters are validated against the channel's agent and bound into the link server-side (never client-supplied). ttlSeconds and maxInvocations are bounded; both default when omitted. Returns the opaque token + an absolute, paste-ready embed URL. */
         post: operations["embedLinks.mint"];
         delete?: never;
         options?: never;
@@ -1241,7 +1241,7 @@ export interface components {
             active: number;
         };
         ChannelSummaryResponse: {
-            widgetId: string;
+            channelId: string;
             type: components["schemas"]["ChannelType"];
             agentId: string;
             displayName: string;
@@ -1360,7 +1360,7 @@ export interface components {
         };
         EmbedLinkSummaryResponse: {
             token: string;
-            widgetId: string;
+            channelId: string;
             agentId: string;
             parameters: {
                 [key: string]: string;
@@ -1455,7 +1455,7 @@ export interface components {
             sparkline: number[];
         };
         MintEmbedLinkRequest: {
-            widgetId: string;
+            channelId: string;
             parameters?: null | {
                 [key: string]: string;
             };
@@ -1525,7 +1525,7 @@ export interface components {
             displayName?: null | string;
         };
         ProvisionChannelResponse: {
-            widgetId: string;
+            channelId: string;
         };
         ProvisionRequest: {
             appName: string;
@@ -2460,7 +2460,7 @@ export interface operations {
             header?: never;
             path: {
                 slug: string;
-                widgetId: string;
+                channelId: string;
             };
             cookie?: never;
         };
@@ -2492,7 +2492,7 @@ export interface operations {
             header?: never;
             path: {
                 slug: string;
-                widgetId: string;
+                channelId: string;
             };
             cookie?: never;
         };
@@ -3942,11 +3942,11 @@ export const API_ENDPOINTS = {
         revoke: (slug: string, token: string) => `/apps/${encodeURIComponent(slug)}/embed-links/${encodeURIComponent(token)}`,
     },
     iframe: {
-        getCustomization: (slug: string, widgetId: string) => `/apps/${encodeURIComponent(slug)}/iframe/${encodeURIComponent(widgetId)}/customization`,
+        getCustomization: (slug: string, channelId: string) => `/apps/${encodeURIComponent(slug)}/iframe/${encodeURIComponent(channelId)}/customization`,
         getDefaultCustomization: (slug: string) => `/apps/${encodeURIComponent(slug)}/iframe/default-customization`,
         getStyleGuide: (slug: string) => `/apps/${encodeURIComponent(slug)}/iframe/style-guide`,
         preview: (slug: string) => `/apps/${encodeURIComponent(slug)}/iframe/preview`,
-        updateCustomization: (slug: string, widgetId: string) => `/apps/${encodeURIComponent(slug)}/iframe/${encodeURIComponent(widgetId)}/customization`,
+        updateCustomization: (slug: string, channelId: string) => `/apps/${encodeURIComponent(slug)}/iframe/${encodeURIComponent(channelId)}/customization`,
         updateDefaultCustomization: (slug: string) => `/apps/${encodeURIComponent(slug)}/iframe/default-customization`,
     },
     settings: {
@@ -4033,11 +4033,11 @@ export function createServerApi(client: ApiClient) {
             revoke: (slug: string, token: string) => client.delete<void, ApiErrorResponse>(API_ENDPOINTS.embedLinks.revoke(slug, token)),
         },
         iframe: {
-            getCustomization: (slug: string, widgetId: string) => client.get<IFrameCustomizationResponse, ApiErrorResponse>(API_ENDPOINTS.iframe.getCustomization(slug, widgetId)),
+            getCustomization: (slug: string, channelId: string) => client.get<IFrameCustomizationResponse, ApiErrorResponse>(API_ENDPOINTS.iframe.getCustomization(slug, channelId)),
             getDefaultCustomization: (slug: string) => client.get<IFrameDefaultCustomizationResponse, ApiErrorResponse>(API_ENDPOINTS.iframe.getDefaultCustomization(slug)),
             getStyleGuide: (slug: string) => client.get<IFrameStyleGuideResponse, ApiErrorResponse>(API_ENDPOINTS.iframe.getStyleGuide(slug)),
             preview: (slug: string, searchParams?: { title?: string; }) => client.get<IFramePreviewResponse, ApiErrorResponse>(API_ENDPOINTS.iframe.preview(slug), { searchParams }),
-            updateCustomization: (slug: string, widgetId: string, request: UpdateIFrameCustomizationRequest) => client.put<IFrameCustomizationResponse, ApiErrorResponse>(API_ENDPOINTS.iframe.updateCustomization(slug, widgetId), request),
+            updateCustomization: (slug: string, channelId: string, request: UpdateIFrameCustomizationRequest) => client.put<IFrameCustomizationResponse, ApiErrorResponse>(API_ENDPOINTS.iframe.updateCustomization(slug, channelId), request),
             updateDefaultCustomization: (slug: string, request: UpdateIFrameCustomizationRequest) => client.put<IFrameDefaultCustomizationResponse, ApiErrorResponse>(API_ENDPOINTS.iframe.updateDefaultCustomization(slug), request),
         },
         settings: {

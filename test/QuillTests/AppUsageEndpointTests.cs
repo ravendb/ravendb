@@ -68,7 +68,7 @@ public class AppUsageEndpointTests(ITestOutputHelper output) : QuillTestBase(out
             {
                 await session.StoreAsync(new EmbedLink
                 {
-                    WidgetId = channel.WidgetId,
+                    ChannelId = channel.ChannelId,
                     AgentId = agentId,
                     ExpiresAt = now.AddHours(1),
                     MaxInvocations = 5,
@@ -87,11 +87,11 @@ public class AppUsageEndpointTests(ITestOutputHelper output) : QuillTestBase(out
 
         var channelData = usage.ConversationsByChannel;
         var channelKey = Assert.Single(channelData.Keys);
-        Assert.Equal(channel.WidgetId, channelKey.Key);
+        Assert.Equal(channel.ChannelId, channelKey.Key);
         Assert.Equal("Support Widget", channelKey.Label);
         long channelTotal = 0;
         foreach (var point in channelData.Points)
-            channelTotal += ((JsonElement)point[channel.WidgetId]).GetInt64();
+            channelTotal += ((JsonElement)point[channel.ChannelId]).GetInt64();
         Assert.Equal(2, channelTotal);
 
         var products = usage.TopTables.Single(t => t.Name == "Products");
@@ -160,15 +160,15 @@ public class AppUsageEndpointTests(ITestOutputHelper output) : QuillTestBase(out
         await using var app = await NewAppAsync();
 
         var now = DateTime.UtcNow;
-        // EP mints random wgt_ ids; literal "t"/"alpha" ids must be seeded directly
+        // EP mints random guid ids; literal "t"/"alpha" ids must be seeded directly
         using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
             foreach (var id in new[] { "t", "alpha" })
                 await session.StoreAsync(
                     new Channel { Type = ChannelType.IFrame, DisplayName = id, AgentId = "demo", Enabled = true, CreatedAt = now },
                     $"{Channel.IdPrefix}{id}");
-            await session.StoreAsync(new EmbedLink { WidgetId = "t", AgentId = "demo", ExpiresAt = now.AddHours(1), MaxInvocations = 5, ConversationId = "chats/x", CreatedAt = now }, $"{EmbedLink.IdPrefix}{Guid.NewGuid():N}");
-            await session.StoreAsync(new EmbedLink { WidgetId = "alpha", AgentId = "demo", ExpiresAt = now.AddHours(1), MaxInvocations = 5, ConversationId = "chats/y", CreatedAt = now }, $"{EmbedLink.IdPrefix}{Guid.NewGuid():N}");
+            await session.StoreAsync(new EmbedLink { ChannelId = "t", AgentId = "demo", ExpiresAt = now.AddHours(1), MaxInvocations = 5, ConversationId = "chats/x", CreatedAt = now }, $"{EmbedLink.IdPrefix}{Guid.NewGuid():N}");
+            await session.StoreAsync(new EmbedLink { ChannelId = "alpha", AgentId = "demo", ExpiresAt = now.AddHours(1), MaxInvocations = 5, ConversationId = "chats/y", CreatedAt = now }, $"{EmbedLink.IdPrefix}{Guid.NewGuid():N}");
             await session.SaveChangesAsync();
         }
 

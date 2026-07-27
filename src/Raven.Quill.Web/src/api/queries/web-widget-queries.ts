@@ -10,10 +10,10 @@ const customizationsKey = (slug: string) => [baseKey, "customization", slug];
 export function createWebWidgetQueries(api: ServerApi["iframe"]) {
     return {
         customizationsKey,
-        customization: (slug: string, widgetId: string) =>
+        customization: (slug: string, channelId: string) =>
             queryOptions({
-                queryKey: [...customizationsKey(slug), widgetId],
-                queryFn: () => api.getCustomization(slug, widgetId),
+                queryKey: [...customizationsKey(slug), channelId],
+                queryFn: () => api.getCustomization(slug, channelId),
             }),
         defaultCustomization: (slug: string) =>
             queryOptions({

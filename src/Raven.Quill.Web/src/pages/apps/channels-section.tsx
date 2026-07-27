@@ -25,7 +25,7 @@ export function ChannelsSection({ slug }: { slug: string }) {
 
     const activeLinkCounts = new Map<string, number>();
     for (const link of embedLinksQuery.data ?? []) {
-        activeLinkCounts.set(link.widgetId, (activeLinkCounts.get(link.widgetId) ?? 0) + 1);
+        activeLinkCounts.set(link.channelId, (activeLinkCounts.get(link.channelId) ?? 0) + 1);
     }
 
     const onRetry = async () => {
@@ -55,10 +55,10 @@ export function ChannelsSection({ slug }: { slug: string }) {
                         {channelsQuery.data.map((channel) => {
                             const agent = agentsQuery.data?.find((x) => x.agentId === channel.agentId);
                             return (
-                                <TableRow key={channel.widgetId}>
+                                <TableRow key={channel.channelId}>
                                     <TableCell className="font-medium">
                                         <Link
-                                            to={appRoutes.app(slug, `channels/${channel.widgetId}`)}
+                                            to={appRoutes.app(slug, `channels/${channel.channelId}`)}
                                             className="hover:underline"
                                             title="Open details"
                                         >
@@ -79,7 +79,7 @@ export function ChannelsSection({ slug }: { slug: string }) {
                                         ) : embedLinksQuery.isPending ? (
                                             <Skeleton className="h-4 w-6" />
                                         ) : (
-                                            (activeLinkCounts.get(channel.widgetId) ?? 0).toLocaleString()
+                                            (activeLinkCounts.get(channel.channelId) ?? 0).toLocaleString()
                                         )}
                                     </TableCell>
                                     <TableCell className="text-muted-foreground">
@@ -88,7 +88,7 @@ export function ChannelsSection({ slug }: { slug: string }) {
                                     <TableCell className="text-right">
                                         <div className="flex items-center justify-end gap-1">
                                             <Link
-                                                to={appRoutes.app(slug, `channels/${channel.widgetId}`)}
+                                                to={appRoutes.app(slug, `channels/${channel.channelId}`)}
                                                 title="Open details"
                                                 className="mx-1"
                                             >
@@ -97,7 +97,7 @@ export function ChannelsSection({ slug }: { slug: string }) {
                                             {channel.type === "IFrame" && (
                                                 <GenerateEmbedLinkDialog
                                                     slug={slug}
-                                                    widgetId={channel.widgetId}
+                                                    channelId={channel.channelId}
                                                     displayName={channel.displayName}
                                                     parameterNames={agent?.parameters ?? []}
                                                     trigger={

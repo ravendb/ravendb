@@ -1,5 +1,5 @@
 import type { ApiErrorResponse, EmbedLinkSummaryResponse, MintEmbedLinkResponse } from "@/api/generated/server-api";
-import { SAMPLE_WEB_WIDGET_ID } from "./channels-mocks";
+import { SAMPLE_CHANNEL_ID } from "./channels-mocks";
 import { apiHttp } from "./api-http";
 
 export const embedLinksMocks = {
@@ -22,7 +22,7 @@ const fromNow = (offsetMs: number) => new Date(Date.now() + offsetMs).toISOStrin
 export const sampleEmbedLinks: EmbedLinkSummaryResponse[] = [
     {
         token: "3f2a9c1b4d5e6f708192a3b4c5d6e7f8",
-        widgetId: SAMPLE_WEB_WIDGET_ID,
+        channelId: SAMPLE_CHANNEL_ID,
         agentId: "agents/sales",
         parameters: { customerId: "users/1" },
         createdAt: fromNow(-3 * DAY_MS),
@@ -32,7 +32,7 @@ export const sampleEmbedLinks: EmbedLinkSummaryResponse[] = [
     },
     {
         token: "9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d",
-        widgetId: SAMPLE_WEB_WIDGET_ID,
+        channelId: SAMPLE_CHANNEL_ID,
         agentId: "agents/sales",
         parameters: { customerId: "users/42" },
         createdAt: fromNow(-2 * DAY_MS),
@@ -42,7 +42,7 @@ export const sampleEmbedLinks: EmbedLinkSummaryResponse[] = [
     },
     {
         token: "1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f",
-        widgetId: SAMPLE_WEB_WIDGET_ID,
+        channelId: SAMPLE_CHANNEL_ID,
         agentId: "agents/sales",
         parameters: { customerId: "users/108" },
         createdAt: fromNow(-10 * DAY_MS),
