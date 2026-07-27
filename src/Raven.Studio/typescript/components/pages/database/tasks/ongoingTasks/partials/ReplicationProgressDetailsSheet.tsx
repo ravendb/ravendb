@@ -14,6 +14,7 @@ import { NodeLocationTabs } from "components/pages/database/tasks/ongoingTasks/p
 import classNames from "classnames";
 import { AnimatePresence, motion } from "motion/react";
 import { getErrorHeadline } from "components/utils/common";
+import useBoolean from "components/hooks/useBoolean";
 import "./ReplicationProgressDetailsSheet.scss";
 
 type Direction = 1 | -1;
@@ -178,7 +179,7 @@ export function ReplicationProgressDetailsSheet(props: ReplicationProgressDetail
         setSelectedIndex(index);
         onNodeChange?.(index);
     };
-    const [isDebugInfoExpanded, setIsDebugInfoExpanded] = useState(false);
+    const { value: isDebugInfoExpanded, toggle: toggleDebugInfoExpanded } = useBoolean(false);
     const nodeInfo = allNodes[selectedIndex];
 
     return (
@@ -219,7 +220,7 @@ export function ReplicationProgressDetailsSheet(props: ReplicationProgressDetail
                             <ReplicationProgressBody
                                 nodeInfo={nodeInfo}
                                 isDebugInfoExpanded={isDebugInfoExpanded}
-                                onToggleDebugInfo={() => setIsDebugInfoExpanded((prev) => !prev)}
+                                onToggleDebugInfo={toggleDebugInfoExpanded}
                             />
                         </motion.div>
                     </AnimatePresence>

@@ -14,10 +14,6 @@
     flex-wrap: wrap;
     gap: sizes.$gutter-xs;
 
-    &--vertical {
-        flex-direction: column;
-    }
-
     .progress-item {
         flex-grow: 1;
         font-size: 9px;
