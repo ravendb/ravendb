@@ -782,6 +782,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/setup/verify-cdc": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["setup.verifyCdc"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/setup/map": {
         parameters: {
             query?: never;
@@ -1686,6 +1702,19 @@ export interface components {
             tokens: number;
             /** Format: int64 */
             writes: number;
+        };
+        VerifyCdcRequest: {
+            tables: components["schemas"]["VerifyCdcTableRequest"][];
+        };
+        VerifyCdcResponse: {
+            success: boolean;
+            errors: components["schemas"]["WizardError"][];
+            warnings: string[];
+            completedTables: string[];
+        };
+        VerifyCdcTableRequest: {
+            sourceTableName: string;
+            sourceTableSchema?: null | string;
         };
         /** @enum {unknown} */
         VertexAIVersion: "V1" | "V1_Beta" | null;
@@ -3590,6 +3619,39 @@ export interface operations {
             };
         };
     };
+    "setup.verifyCdc": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyCdcRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerifyCdcResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
     "setup.map": {
         parameters: {
             query?: never;
@@ -3893,6 +3955,9 @@ export type TopTable = components["schemas"]["TopTable"];
 export type UpdateChannelRequest = components["schemas"]["UpdateChannelRequest"];
 export type UpdateIFrameCustomizationRequest = components["schemas"]["UpdateIFrameCustomizationRequest"];
 export type UsagePoint = components["schemas"]["UsagePoint"];
+export type VerifyCdcRequest = components["schemas"]["VerifyCdcRequest"];
+export type VerifyCdcResponse = components["schemas"]["VerifyCdcResponse"];
+export type VerifyCdcTableRequest = components["schemas"]["VerifyCdcTableRequest"];
 export type VertexAIVersion = components["schemas"]["VertexAIVersion"];
 export type VertexSettings = components["schemas"]["VertexSettings"];
 export type WizardError = components["schemas"]["WizardError"];
@@ -3970,6 +4035,7 @@ export const API_ENDPOINTS = {
         provision: "/setup/provision",
         suggestCdc: "/setup/suggest/cdc",
         testMapping: "/setup/test-mapping",
+        verifyCdc: "/setup/verify-cdc",
     },
     stats: {
         activity: (slug: string) => `/apps/${encodeURIComponent(slug)}/activity`,
@@ -4061,6 +4127,7 @@ export function createServerApi(client: ApiClient) {
             provision: (request: ProvisionRequest) => client.post<ProvisionResponse, ApiErrorResponse>(API_ENDPOINTS.setup.provision, request),
             suggestCdc: (request: SuggestCdcRequest) => client.post<SuggestCdcResponse, ApiErrorResponse>(API_ENDPOINTS.setup.suggestCdc, request),
             testMapping: (request: TestMappingRequest) => client.post<TestMappingResponse, ApiErrorResponse>(API_ENDPOINTS.setup.testMapping, request),
+            verifyCdc: (request: VerifyCdcRequest) => client.post<VerifyCdcResponse, ApiErrorResponse>(API_ENDPOINTS.setup.verifyCdc, request),
         },
         stats: {
             activity: (slug: string) => client.get<ActivityEventDto[], ApiErrorResponse>(API_ENDPOINTS.stats.activity(slug)),

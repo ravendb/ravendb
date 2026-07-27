@@ -21,11 +21,13 @@ import { useMapSchemaStep } from "@/pages/setup/add-app-wizard/steps/map/use-map
 import { useFocusMapTablesError } from "@/pages/setup/add-app-wizard/steps/map-tables/use-focus-map-tables-error";
 import { useMapTablesStep } from "@/pages/setup/add-app-wizard/steps/map-tables/use-map-tables-step";
 import { useIsMapTablesNextDisabled } from "@/pages/setup/add-app-wizard/steps/map-tables/use-suggested-map-tables";
+import { useVerifyCdcStep } from "@/pages/setup/add-app-wizard/steps/verify/use-verify-cdc-step";
 import { useVerifySchemaStep } from "@/pages/setup/add-app-wizard/steps/verify/use-verify-schema-step";
 
 export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
     const connectSourceBeforeNext = useConnectSourceStep();
     const verifySchemaBeforeNext = useVerifySchemaStep();
+    const verifyCdcBeforeNext = useVerifyCdcStep();
     const mapSchemaBeforeNext = useMapSchemaStep();
     const mapTablesBeforeNext = useMapTablesStep();
     const focusMapTablesError = useFocusMapTablesError();
@@ -64,7 +66,11 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
             bodyComponent: VerifySchemaStep,
             isFullHeight: true,
             validate: "verifySchema",
-            beforeNext: verifySchemaBeforeNext,
+            // the CDC dry run gates Next, so only warm the AI suggestion once it passes
+            beforeNext: async () => {
+                await verifyCdcBeforeNext();
+                verifySchemaBeforeNext();
+            },
         },
         map: {
             title: "How would you like to map your schema?",

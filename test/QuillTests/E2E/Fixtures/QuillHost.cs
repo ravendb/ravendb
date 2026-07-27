@@ -124,6 +124,9 @@ public sealed class QuillHost : IAsyncDisposable
     public Task<CdcSinkConfiguration> SetupMapAsync(MapRequest body) =>
         QuillHttp.PostAsync<CdcSinkConfiguration>(Client, QuillRoutes.SetupMap, body);
 
+    public Task<VerifyCdcResponse> VerifyCdcAsync(VerifyCdcRequest body) =>
+        QuillHttp.PostAsync<VerifyCdcResponse>(Client, QuillRoutes.SetupVerifyCdc, body);
+
     /// A non-success AI status still returns HTTP 200 with the status on the payload.
     public Task<SuggestCdcResponse> SuggestCdcAsync(SuggestCdcRequest body, string slug = DefaultWizardSlug) =>
         QuillHttp.PostAsync<SuggestCdcResponse>(Client, QuillRoutes.SuggestCdc, body with { Slug = slug });

@@ -5,6 +5,7 @@ import type {
     ProvisionResponse,
     SuggestCdcResponse,
     TestMappingResponse,
+    VerifyCdcResponse,
 } from "@/api/generated/server-api";
 import { delay } from "msw";
 import { apiHttp } from "./api-http";
@@ -14,6 +15,8 @@ export const setupMocks = {
         apiHttp.post("/api/setup/connect", ({ response }) => response(200).json(result)),
     discover: (discovery: DiscoverResponse = sampleDiscovery) =>
         apiHttp.post("/api/setup/discover", ({ response }) => response(200).json(discovery)),
+    verifyCdc: (result: VerifyCdcResponse = sampleCdcVerification) =>
+        apiHttp.post("/api/setup/verify-cdc", ({ response }) => response(200).json(result)),
     map: (configuration: CdcSinkConfiguration = sampleCdcConfiguration) =>
         apiHttp.post("/api/setup/map", ({ response }) => response(200).json(configuration)),
     suggestCdc: (suggestion: SuggestCdcResponse = sampleCdcSuggestion) =>
@@ -282,6 +285,27 @@ export const failedDiscovery: DiscoverResponse = {
     ],
     warnings: [],
     tables: [],
+};
+
+export const sampleCdcVerification: VerifyCdcResponse = {
+    success: true,
+    errors: [],
+    warnings: [],
+    completedTables: ["dbo.Customers", "dbo.Orders"],
+};
+
+export const failedCdcVerification: VerifyCdcResponse = {
+    success: false,
+    errors: [
+        {
+            message: "The database user must have the REPLICATION role attribute to create a replication slot.",
+            details:
+                "Npgsql.PostgresException (0x80004005): 42501: permission denied to create replication slot\n" +
+                "   at Npgsql.Internal.NpgsqlConnector.<ReadMessage>d__0.MoveNext()",
+        },
+    ],
+    warnings: ["source cleanup failed: publication rvn_cdc_p_8f3a was left in place"],
+    completedTables: [],
 };
 
 export const sampleCdcConfiguration: CdcSinkConfiguration = {

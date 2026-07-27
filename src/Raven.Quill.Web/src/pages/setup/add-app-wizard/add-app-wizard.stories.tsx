@@ -6,7 +6,13 @@ import type { DiscoverResponse } from "@/api/generated/server-api";
 import { FormWizard } from "@/components/form/wizard/form-wizard";
 import { preventEnterKeySubmission } from "@/lib/form-utils";
 import { defaultApiMocks } from "@/mocks/default-mocks";
-import { discoveryWithAllStates, failedDiscovery, sampleDiscovery, setupMocks } from "@/mocks/setup-mocks";
+import {
+    discoveryWithAllStates,
+    failedCdcVerification,
+    failedDiscovery,
+    sampleDiscovery,
+    setupMocks,
+} from "@/mocks/setup-mocks";
 import { AddAppWizard } from "./add-app-wizard";
 import { getAppFlow, useAppSteps } from "./app-wizard-flow";
 import { useSetupWizardStore } from "./app-wizard-store";
@@ -173,6 +179,13 @@ export const VerifySchema: Story = {
 export const VerifySchemaDiscoveryFailed: Story = {
     parameters: { msw: { handlers: discoverHandlers(failedDiscovery) } },
     render: () => <AppWizardAtStep initialStep="verifySchema" discovery={failedDiscovery} />,
+};
+
+export const VerifySchemaCdcVerificationFailed: Story = {
+    parameters: {
+        msw: { handlers: { setup: [setupMocks.verifyCdc(failedCdcVerification), ...defaultApiMocks.setup] } },
+    },
+    render: () => <AppWizardAtStep initialStep="verifySchema" />,
 };
 
 export const MapSchema: Story = {
