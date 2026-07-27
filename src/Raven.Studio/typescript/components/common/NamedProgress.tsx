@@ -13,7 +13,7 @@ export function NamedProgress(props: {
     return (
         <div className="named-progress-container">
             <small className="m-auto w-100 text-center small-label">{name}</small>
-            <div className={classNames("named-progress", { "named-progress--vertical": vertical })}>{children}</div>
+            <div className={classNames("named-progress", { "flex-column": vertical })}>{children}</div>
         </div>
     );
 }

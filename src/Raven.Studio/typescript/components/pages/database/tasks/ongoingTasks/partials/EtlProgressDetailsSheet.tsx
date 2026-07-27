@@ -42,6 +42,72 @@ interface EtlProgressDetailsSheetProps {
     onNodeChange?: (index: number) => void;
 }
 
+export function EtlProgressDetailsSheet(props: EtlProgressDetailsSheetProps) {
+    const { task, allNodes, initialNodeIndex, onNodeChange } = props;
+
+    const [selectedIndex, setSelectedIndex] = useState(initialNodeIndex);
+    const [direction, setDirection] = useState<Direction>(1);
+    const [prevInitialNodeIndex, setPrevInitialNodeIndex] = useState(initialNodeIndex);
+
+    if (initialNodeIndex !== prevInitialNodeIndex) {
+        setPrevInitialNodeIndex(initialNodeIndex);
+        setDirection(initialNodeIndex > selectedIndex ? 1 : -1);
+        setSelectedIndex(initialNodeIndex);
+    }
+
+    const handleNodeChange = (index: number) => {
+        setDirection(index > selectedIndex ? 1 : -1);
+        setSelectedIndex(index);
+        onNodeChange?.(index);
+    };
+    const nodeInfo = allNodes[selectedIndex];
+
+    return (
+        <ViewSheet className="etl-progress-details-sheet">
+            <ViewSheet.Header isPinHidden isCloseHidden className="pb-0">
+                <div className="vstack gap-2 w-100">
+                    <div className="d-flex justify-content-between align-items-center">
+                        <div className="d-flex align-items-center gap-1">
+                            <Icon icon="ongoing-tasks" margin="me-0" color="primary" />
+                            <h4 className="mb-0">
+                                {task.shared.taskName ?? getEtlTaskTypeLabel(task.shared.taskType)} details
+                            </h4>
+                        </div>
+                        <div className="d-flex align-items-center">
+                            <ViewSheet.PinButton />
+                            <ViewSheet.CloseButton />
+                        </div>
+                    </div>
+                    <div className="d-flex align-items-center">
+                        <NodeLocationTabs
+                            locations={allNodes.map((n) => n.location)}
+                            selectedIndex={selectedIndex}
+                            onChange={handleNodeChange}
+                        />
+                    </div>
+                </div>
+            </ViewSheet.Header>
+            <ViewSheet.Body className="p-3">
+                <div style={{ overflow: "hidden", position: "relative" }}>
+                    <AnimatePresence mode="popLayout" custom={direction} initial={false}>
+                        <motion.div
+                            key={selectedIndex}
+                            custom={direction}
+                            variants={slideVariants}
+                            initial="enter"
+                            animate="center"
+                            exit="exit"
+                            transition={{ duration: 0.3, ease: "easeInOut" }}
+                        >
+                            <EtlProgressBody task={task} nodeInfo={nodeInfo} />
+                        </motion.div>
+                    </AnimatePresence>
+                </div>
+            </ViewSheet.Body>
+        </ViewSheet>
+    );
+}
+
 function useEtlScriptDefinition(task: AnyEtlOngoingTaskInfo, enabled: boolean) {
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -148,14 +214,11 @@ interface ScriptSectionProps {
 }
 
 function ScriptSection({ task, scriptProgress, isInitiallyExpanded }: ScriptSectionProps) {
-    const [isExpanded, setIsExpanded] = useState(isInitiallyExpanded);
+    const { value: isExpanded, toggle: toggleExpanded } = useBoolean(isInitiallyExpanded);
 
     return (
         <div className="well rounded mb-2 p-3">
-            <div
-                className="d-flex justify-content-between align-items-center cursor-pointer"
-                onClick={() => setIsExpanded((v) => !v)}
-            >
+            <div className="d-flex justify-content-between align-items-center cursor-pointer" onClick={toggleExpanded}>
                 <h4 className="mb-0">{scriptProgress.transformationName}</h4>
                 <Icon icon={isExpanded ? "collapse-vertical" : "expand-vertical"} margin="m-0" />
             </div>
@@ -313,71 +376,5 @@ function EtlProgressBody({ task, nodeInfo }: EtlProgressBodyProps) {
                 </div>
             )}
         </div>
-    );
-}
-
-export function EtlProgressDetailsSheet(props: EtlProgressDetailsSheetProps) {
-    const { task, allNodes, initialNodeIndex, onNodeChange } = props;
-
-    const [selectedIndex, setSelectedIndex] = useState(initialNodeIndex);
-    const [direction, setDirection] = useState<Direction>(1);
-    const [prevInitialNodeIndex, setPrevInitialNodeIndex] = useState(initialNodeIndex);
-
-    if (initialNodeIndex !== prevInitialNodeIndex) {
-        setPrevInitialNodeIndex(initialNodeIndex);
-        setDirection(initialNodeIndex > selectedIndex ? 1 : -1);
-        setSelectedIndex(initialNodeIndex);
-    }
-
-    const handleNodeChange = (index: number) => {
-        setDirection(index > selectedIndex ? 1 : -1);
-        setSelectedIndex(index);
-        onNodeChange?.(index);
-    };
-    const nodeInfo = allNodes[selectedIndex];
-
-    return (
-        <ViewSheet className="etl-progress-details-sheet">
-            <ViewSheet.Header isPinHidden isCloseHidden className="pb-0">
-                <div className="vstack gap-2 w-100">
-                    <div className="d-flex justify-content-between align-items-center">
-                        <div className="d-flex align-items-center gap-1">
-                            <Icon icon="ongoing-tasks" margin="me-0" color="primary" />
-                            <h4 className="mb-0">
-                                {task.shared.taskName ?? getEtlTaskTypeLabel(task.shared.taskType)} details
-                            </h4>
-                        </div>
-                        <div className="d-flex align-items-center">
-                            <ViewSheet.PinButton />
-                            <ViewSheet.CloseButton />
-                        </div>
-                    </div>
-                    <div className="d-flex align-items-center">
-                        <NodeLocationTabs
-                            locations={allNodes.map((n) => n.location)}
-                            selectedIndex={selectedIndex}
-                            onChange={handleNodeChange}
-                        />
-                    </div>
-                </div>
-            </ViewSheet.Header>
-            <ViewSheet.Body className="p-3">
-                <div style={{ overflow: "hidden", position: "relative" }}>
-                    <AnimatePresence mode="popLayout" custom={direction} initial={false}>
-                        <motion.div
-                            key={selectedIndex}
-                            custom={direction}
-                            variants={slideVariants}
-                            initial="enter"
-                            animate="center"
-                            exit="exit"
-                            transition={{ duration: 0.3, ease: "easeInOut" }}
-                        >
-                            <EtlProgressBody task={task} nodeInfo={nodeInfo} />
-                        </motion.div>
-                    </AnimatePresence>
-                </div>
-            </ViewSheet.Body>
-        </ViewSheet>
     );
 }
