@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -276,6 +277,115 @@ public class RavenDB_27156(ITestOutputHelper output) : RavenTestBase(output)
             _stop = true;
             _thread.Join();
             _mergeSubmitted.Dispose();
+        }
+    }
+
+    // A journal skipped via IgnoreInvalidJournalErrors may have grown the data pager (and the data file) for
+    // transactions applied before the corruption point. The published pager state must reflect that growth -
+    // otherwise the environment state claims a smaller mapping than the file recovery actually produced.
+    [RavenFact(RavenTestCategory.Voron)]
+    public void SkippedInvalidJournal_AfterDataPagerGrowth_PublishesGrownDataPagerState()
+    {
+        var path = NewDataPath();
+        IOExtensions.DeleteDirectory(path);
+
+        long tx2Start4Kb, tx3Start4Kb;
+
+        // phase 1: synced baseline, then - in one journal - a big tx (grows the pager on replay) followed by
+        // two small txs. tx2 gets corrupted on disk; tx3 stays valid so the journal reader classifies the
+        // journal as invalid (invalid tx followed by a valid one) instead of as a torn tail.
+        {
+            var options = StorageEnvironmentOptions.ForPathForTests(path);
+            options.ManualFlushing = true;
+            options.ManualSyncing = true;
+            options.InitialLogFileSize = 64 * 1024 * 1024;
+
+            using var env = new StorageEnvironment(options);
+
+            using (var tx = env.WriteTransaction())
+            {
+                tx.CreateTree("tree").Add("baseline", "baseline-value");
+                tx.Commit();
+            }
+            env.FlushLogToDataFile();
+            Assert.True(env.SyncDataFileImmediately(), "failed to sync the baseline");
+
+            using (var tx = env.WriteTransaction())
+            {
+                var tree = tx.CreateTree("tree");
+                for (int i = 0; i < 5000; i++)
+                    tree.Add($"items/{i:D6}", i + "-" + new string((char)('a' + i % 26), 300));
+                tx.Commit();
+            }
+            tx2Start4Kb = env.CurrentStateRecord.Journal.Last4KWritePosition;
+
+            using (var tx = env.WriteTransaction())
+            {
+                tx.CreateTree("tree").Add("second", "second-value");
+                tx.Commit();
+            }
+            tx3Start4Kb = env.CurrentStateRecord.Journal.Last4KWritePosition;
+            Assert.True(tx3Start4Kb > tx2Start4Kb);
+
+            using (var tx = env.WriteTransaction())
+            {
+                tx.CreateTree("tree").Add("third", "third-value");
+                tx.Commit();
+            }
+            Assert.Equal(0, env.CurrentStateRecord.Journal.Number); // everything must be in a single journal
+        }
+
+        // corrupt tx2's transaction header on disk
+        var journalFile = Directory.GetFiles(Path.Combine(path, "Journals"), "*.journal").Single();
+        using (var file = new FileStream(journalFile, FileMode.Open, FileAccess.ReadWrite))
+        {
+            file.Position = tx2Start4Kb * 4096;
+            var garbage = new byte[512];
+            Array.Fill(garbage, (byte)0xDE);
+            file.Write(garbage);
+        }
+
+        // phase 2: reopen with the dangerous flag - recovery replays the big tx (growing the data pager and
+        // the file), hits the corrupted tx, finds the valid tx after it and skips the whole journal
+        {
+            var options = StorageEnvironmentOptions.ForPathForTests(path);
+            options.ManualFlushing = true;
+            options.ManualSyncing = true;
+            options.InitialLogFileSize = 64 * 1024 * 1024;
+            options.IgnoreInvalidJournalErrors = true;
+            options.OnRecoveryError += (_, _) => { };
+            var initLog = new List<string>();
+            options.AddToInitLog = (_, msg) => { lock (initLog) initLog.Add(msg); };
+
+            using var env = new StorageEnvironment(options);
+
+            // guard the scenario: the skip path must have been taken (not the torn-tail / clean-end paths)
+            Assert.Contains(initLog, m => m.Contains("Encountered invalid journal"));
+
+            // the pin: the published pager state must cover the data file recovery produced
+            var dataFileLength = new FileInfo(Path.Combine(path, "Raven.voron")).Length;
+            var state = env.CurrentStateRecord;
+            Assert.True(state.DataPagerState.TotalAllocatedSize >= dataFileLength,
+                $"published data pager state ({state.DataPagerState.TotalAllocatedSize} bytes) does not cover the data file recovery produced ({dataFileLength} bytes)");
+
+            // the synced baseline must survive; what remains visible of the skipped journal's transactions is
+            // indeterminate under the dangerous flag (applied-then-discarded pages can stay reachable), so no
+            // assertion is made on it
+            using (var rtx = env.ReadTransaction())
+            {
+                var tree = rtx.ReadTree("tree");
+                Assert.NotNull(tree);
+                Assert.Equal("baseline-value", tree.Read("baseline").Reader.ToStringValue());
+            }
+
+            // and the environment must remain fully usable
+            using (var tx = env.WriteTransaction())
+            {
+                tx.CreateTree("tree").Add("after-recovery", "after-recovery-value");
+                tx.Commit();
+            }
+            using (var rtx = env.ReadTransaction())
+                Assert.Equal("after-recovery-value", rtx.ReadTree("tree").Read("after-recovery").Reader.ToStringValue());
         }
     }
 }

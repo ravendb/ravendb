@@ -445,12 +445,17 @@ namespace Voron.Impl.Journal
                 }
                 catch (InvalidJournalException)
                 {
+                    // the journal may have grown the data pager (and the file) for transactions applied before
+                    // the error - the published state must reflect that even when we skip the journal
+                    _env.UpdateDataPagerState(dataPagerState);
+
                     if (_env.Options.IgnoreInvalidJournalErrors == true)
                     {
                         skippedInvalidJournals = true;
 
                         addToInitLog?.Invoke(LogLevel.Warn,
-                            $"Encountered invalid journal {journalNumber} @ {_env.Options}. Skipping this journal and keep going the recovery operation because '{nameof(_env.Options.IgnoreInvalidJournalErrors)}' options is set");
+                            $"Encountered invalid journal {journalNumber} @ {_env.Options}. Skipping this journal and keep going the recovery operation because '{nameof(_env.Options.IgnoreInvalidJournalErrors)}' options is set. " +
+                            $"Any transactions applied from it before the error remain in the data file (data pager: {dataPagerState.NumberOfAllocatedPages:#,#;;0} pages)");
                         continue;
                     }
 
@@ -465,7 +470,7 @@ namespace Voron.Impl.Journal
                 }
             }
 
-            Debug.Assert(skippedInvalidJournals || _env.CurrentStateRecord.DataPagerState.NumberOfAllocatedPages >= dataPagerState.NumberOfAllocatedPages,
+            Debug.Assert(_env.CurrentStateRecord.DataPagerState.NumberOfAllocatedPages >= dataPagerState.NumberOfAllocatedPages,
                 $"Published data pager state ({_env.CurrentStateRecord.DataPagerState.NumberOfAllocatedPages} pages) is behind the state recovery produced ({dataPagerState.NumberOfAllocatedPages} pages)");
 
             if (_env.Options.Encryption.IsEnabled == false) // for encryption, we already use AEAD, so no need
