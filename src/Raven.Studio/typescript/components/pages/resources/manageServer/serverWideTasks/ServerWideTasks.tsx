@@ -1,7 +1,6 @@
 import React, { ReactNode, useEffect, useState } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
-import router from "plugins/router";
 import appUrl from "common/appUrl";
 import { compareSets } from "common/typeUtils";
 import IconName from "typings/server/icons";
@@ -59,13 +58,6 @@ export default function ServerWideTasks() {
         }
     }, [filteredTaskIds, selectedTaskIds]);
 
-    // No tasks yet — send the user straight to the add view instead of showing an empty state.
-    useEffect(() => {
-        if (fetchStatus === "success" && tasks.length === 0) {
-            router.navigate(appUrl.forAddServerWideTask(), { replace: true, trigger: true });
-        }
-    }, [fetchStatus, tasks.length]);
-
     const isSelected = (taskId: number) => selectedTaskIds.includes(taskId);
 
     const toggleSelection = (checked: boolean, task: ServerWideTaskSharedInfo) => {
@@ -108,6 +100,17 @@ export default function ServerWideTasks() {
             {fetchStatus === "loading" && <LoadingView />}
 
             {fetchStatus === "error" && <LoadError error="Unable to load server-wide tasks" refresh={reload} />}
+
+            {fetchStatus === "success" && tasks.length === 0 && (
+                <div className="text-center mt-5">
+                    <EmptySet>No server-wide tasks configured yet</EmptySet>
+                    <div className="text-muted mb-3">Automate backups and replication across your entire cluster</div>
+                    <Button variant="primary" className="rounded-pill" href={appUrl.forAddServerWideTask()}>
+                        <Icon icon="plus" />
+                        Create Server-Wide Task
+                    </Button>
+                </div>
+            )}
 
             {fetchStatus === "success" && tasks.length > 0 && (
                 <>

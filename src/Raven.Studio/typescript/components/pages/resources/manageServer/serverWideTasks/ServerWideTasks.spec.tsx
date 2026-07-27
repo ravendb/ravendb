@@ -1,14 +1,13 @@
-import { rtlRender_WithWaitForLoad, waitFor } from "test/rtlTestUtils";
+import { rtlRender_WithWaitForLoad } from "test/rtlTestUtils";
 import * as Stories from "./ServerWideTasks.stories";
 import { composeStories } from "@storybook/react-webpack5";
 import React from "react";
-import router from "plugins/router";
-import appUrl from "common/appUrl";
-import { mockServices } from "test/mocks/services/MockServices";
 
 const { ServerWideTasksStory } = composeStories(Stories);
 
 const selectors = {
+    emptyState: /No server-wide tasks configured yet/,
+    createButton: /Create Server-Wide Task/,
     addButton: /Add a Server-Wide Task/,
     backupTaskName: /BackupTask/,
     replicationTaskName: /ExternalReplicationTask/,
@@ -18,12 +17,12 @@ const selectors = {
 };
 
 describe("ServerWideTasks", () => {
-    it("redirects to the add view when there are no tasks", async () => {
+    it("can render empty state", async () => {
         const { screen } = await rtlRender_WithWaitForLoad(<ServerWideTasksStory isEmpty />);
 
-        // With no tasks the page redirects to the add view instead of rendering the list
+        expect(screen.queryByText(selectors.emptyState)).toBeInTheDocument();
+        expect(screen.queryByText(selectors.createButton)).toBeInTheDocument();
         expect(screen.queryByText(selectors.addButton)).not.toBeInTheDocument();
-        expect(screen.queryByText(selectors.backupTaskName)).not.toBeInTheDocument();
     });
 
     it("can render tasks grouped by type", async () => {
@@ -44,29 +43,6 @@ describe("ServerWideTasks", () => {
         await fireClick(screen.getByText("Delete"));
 
         expect(await screen.findByText(/You're about to/)).toBeInTheDocument();
-    });
-
-    it("redirects to the add view after deleting the last tasks", async () => {
-        const { screen, fireClick } = await rtlRender_WithWaitForLoad(<ServerWideTasksStory />);
-
-        const backupPanel = screen.getByText(selectors.backupTaskName).closest(".rich-panel-item");
-        await fireClick(backupPanel.querySelector<HTMLInputElement>("input[type=checkbox]"));
-
-        await fireClick(screen.getByText("Delete"));
-        expect(await screen.findByText(/You're about to/)).toBeInTheDocument();
-
-        // After the deletion the server returns an empty task list
-        mockServices.manageServerService.withServerWideTasks({ Tasks: [] });
-
-        const deleteButtons = screen.getAllByText("Delete");
-        await fireClick(deleteButtons[deleteButtons.length - 1]);
-
-        await waitFor(() => {
-            expect(router.navigate).toHaveBeenCalledWith(appUrl.forAddServerWideTask(), {
-                replace: true,
-                trigger: true,
-            });
-        });
     });
 
     it("can filter tasks by name", async () => {

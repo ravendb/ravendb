@@ -36,6 +36,7 @@ import {
     TaskCardInfo,
 } from "components/pages/database/tasks/shared/AddTaskCardList";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
+import { getAccessRequiredMessage } from "components/utils/accessUtils";
 import { StudioConnectionType } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
 import {
     getServerWideShortName,
@@ -438,13 +439,6 @@ export function useOngoingTasksOperations(reload: () => void) {
         isDeletingAny: deletingTaskIds.length > 0,
         isTogglingStateAny: togglingTaskIds.length > 0,
     };
-}
-
-interface OngoingTasksCategory {
-    categoryName: string;
-    categoryHeaderName?: string;
-    categoryIcon: IconName;
-    tasks: TaskItemProps[];
 }
 
 export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean }) {
