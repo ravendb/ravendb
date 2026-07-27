@@ -654,12 +654,13 @@ public static partial class CoraxQueryBuilder
 
         switch (methodType)
         {
+            // Do NOT use the internally negated primitive here: NotStartsWith / NotEndsWith enumerate only the
+            // terms that exist in the field, so documents that are missing that field are excluded. That is wrong
+            // for `A and not (startsWith(field, x))` - the negation must apply to the whole left-hand set, which
+            // includes documents missing the field. Falling through to NoOpt makes HandleNegatedAnd use
+            // AndNot(left, <positive match>), which keeps those documents (matching Lucene and Corax 2.0).
             case MethodType.StartsWith:
-                match = HandleStartsWith(builderParameters, inner, exact, ref builderParameters.StreamingDisabled, negated: true);
-                return true;
             case MethodType.EndsWith:
-                match = HandleEndsWith(builderParameters, inner, exact, ref builderParameters.StreamingDisabled, negated: true);
-                return true;
             default:
                 goto NoOpt;
         }
