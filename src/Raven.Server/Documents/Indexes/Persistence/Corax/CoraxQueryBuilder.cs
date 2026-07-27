@@ -624,9 +624,10 @@ public static partial class CoraxQueryBuilder
                 if (exact && builderParameters.Metadata.IsDynamic)
                     fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
 
-                string canonical = null;
-                bool isTime = hasTime && QueryBuilderHelper.TryGetTimeForInQuery(builderParameters.Index, tuple.Value, out canonical);
-                uniqueMatches.Add((canonical ?? QueryBuilderHelper.CoraxGetValueAsString(tuple.Value), isTime));
+                // `all in` is a conjunction, so only the primary spelling can be used here - see TryGetTimeTermsForInQuery.
+                string term = null;
+                bool isTime = hasTime && QueryBuilderHelper.TryGetTimeTermsForInQuery(builderParameters.Index, tuple.Value, out term, out _);
+                uniqueMatches.Add((term ?? QueryBuilderHelper.CoraxGetValueAsString(tuple.Value), isTime));
             }
 
             return builderParameters.IndexSearcher.AllInQuery(fieldMetadata, uniqueMatches);
@@ -635,9 +636,14 @@ public static partial class CoraxQueryBuilder
         var matches = new List<(string Term, bool Exact)>();
         foreach (var tuple in QueryBuilderHelper.GetValuesForIn(metadata.Query, ie, metadata, queryParameters))
         {
-            string canonical = null;
-            bool isTime = hasTime && QueryBuilderHelper.TryGetTimeForInQuery(builderParameters.Index, tuple.Value, out canonical);
-            matches.Add((canonical ?? QueryBuilderHelper.CoraxGetValueAsString(tuple.Value), isTime));
+            string term = null, alternateTerm = null;
+            bool isTime = hasTime && QueryBuilderHelper.TryGetTimeTermsForInQuery(builderParameters.Index, tuple.Value, out term, out alternateTerm);
+
+            var termValue = term ?? QueryBuilderHelper.CoraxGetValueAsString(tuple.Value);
+            matches.Add((termValue, isTime));
+
+            if (alternateTerm != null && alternateTerm.Equals(termValue, StringComparison.Ordinal) == false)
+                matches.Add((alternateTerm, isTime));
         }
 
         if (highlightingTerm != null)
