@@ -78,6 +78,11 @@ function PreviewResult() {
         name: "preview.maxRows",
     });
 
+    const slug = useWatch({
+        control,
+        name: "externalConnection.slug",
+    });
+
     const selectedTable = tables?.find((t) => getTableLabel(t) === selectedTableLabel);
 
     const testMappingQuery = useQuery({
@@ -85,6 +90,7 @@ function PreviewResult() {
             sourceTableName: selectedTable?.sourceTableName ?? "",
             sourceTableSchema: selectedTable?.sourceTableSchema,
             maxRows,
+            slug,
         }),
         enabled: !!selectedTable && Boolean(maxRows),
     });

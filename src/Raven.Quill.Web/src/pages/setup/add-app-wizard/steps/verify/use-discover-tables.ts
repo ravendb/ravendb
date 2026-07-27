@@ -14,11 +14,13 @@ export function normalizeDiscoverSchemas(schemas: string[] | undefined): string[
 export function discoverTables(
     connection: Pick<AppFormData["externalConnection"], "provider" | "connectionString">,
     schemas: string[],
+    slug: string,
 ) {
     return api.services.setup.discover({
         provider: connection.provider,
         connectionString: connection.connectionString,
         schemas: schemas.length > 0 ? schemas : null,
+        slug,
     });
 }
 
@@ -28,7 +30,10 @@ export function useDiscoverTablesMutation() {
     const setDiscoverResult = useSetupWizardStore((state) => state.setDiscoverResult);
 
     return useMutation({
-        mutationFn: (schemas: string[]) => discoverTables(getValues("externalConnection"), schemas),
+        mutationFn: (schemas: string[]) => {
+            const connection = getValues("externalConnection");
+            return discoverTables(connection, schemas, connection.slug);
+        },
         onSuccess: (result, schemas) => setDiscoverResult(result, schemas),
         onError: (error) => {
             toast.error(error instanceof Error ? error.message : "Could not discover tables.");

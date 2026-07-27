@@ -1,7 +1,7 @@
 {
   "_comment": "Northwind CdcSinkConfiguration for the W3 Map step of the E2E test. Targets the full canonical Northwind dump shipped under the 'northwind-full' dataset (test/SlowTests/Data/npgsql.northwind-full.{create,insert}.sql) -- 830 orders / 91 customers / 77 products. All Postgres tables are lowercase plural; column names use snake_case lowercase since the dump declares everything unquoted.",
   "Name": "wizard-cdc",
-  "ConnectionStringName": "_wizard-source-probe",
+  "ConnectionStringName": "wizard-source",
   "Tables": [
     {
       "CollectionName": "Customers",

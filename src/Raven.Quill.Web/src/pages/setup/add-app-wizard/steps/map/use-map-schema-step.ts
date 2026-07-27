@@ -35,7 +35,7 @@ export function useMapSchemaStep() {
 
         const tables =
             source === "ai-suggested"
-                ? await suggestTables(aiPrompt)
+                ? await suggestTables(aiPrompt, getValues("externalConnection").slug)
                 : scaffoldTables(selectedTables, store.discoverResult);
 
         setValue("mapTables.tables", tables);
@@ -44,9 +44,10 @@ export function useMapSchemaStep() {
     };
 }
 
-async function suggestTables(aiPrompt: string): Promise<AppFormData["mapTables"]["tables"]> {
+async function suggestTables(aiPrompt: string, slug: string): Promise<AppFormData["mapTables"]["tables"]> {
     const result = await api.services.setup.suggestCdc({
         intentPrompt: aiPrompt.trim(),
+        slug,
     });
 
     if (result.status !== "Success" || !result.configuration) {

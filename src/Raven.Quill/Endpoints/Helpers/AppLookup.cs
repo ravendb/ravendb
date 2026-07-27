@@ -17,6 +17,7 @@ internal static class AppLookup
     {
         using var session = store.OpenAsyncSession();
         session.Delete($"apps/{slug}");
+        session.Delete(WizardState.DocumentIdFor(slug));   // the app's in-progress wizard doc, if any
         await session.SaveChangesAsync(ct);
     }
 

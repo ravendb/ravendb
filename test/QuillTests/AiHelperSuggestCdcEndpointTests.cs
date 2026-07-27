@@ -199,6 +199,7 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHe
 
     private static async Task SeedDiscoveredSchemaAsync(QuillHost host)
     {
+        await host.SetupConnectAsync(new ConnectRequest("SqlClient", "invalid"));
         await host.SetupDiscoverAsync(new DiscoverRequest("SqlClient", "invalid"));
     }
 

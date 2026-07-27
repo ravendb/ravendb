@@ -7,7 +7,6 @@ using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.CdcSink.Schema;
 using Raven.Client.Documents.Operations.CdcSink.Test;
 using Raven.Client.Documents.Operations.ETL.SQL;
-using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Quill.AiHelper;
 using Raven.Quill.Contracts;
@@ -18,7 +17,8 @@ namespace Raven.Quill.Endpoints;
 
 public static class WizardEndpoints
 {
-    private const string WizardSourceProbeName = "_wizard-source-probe";
+    // the source connection string's name on the app DB once provisioned (used when the map didn't set one)
+    private const string SourceConnectionStringName = "wizard-source";
 
     private const string DefaultIntentPrompt =
         "Propose a sensible RavenDB CDC document model from the discovered relational schema: " +
@@ -73,23 +73,16 @@ public static class WizardEndpoints
         ILogger<WizardLogger> logger,
         CancellationToken ct)
     {
-        if (TryRejectInvalidRequest(body?.Provider, body?.ConnectionString, out var factoryName, out var error))
+        if (TryRejectInvalidRequest(body?.Provider, body?.ConnectionString, body?.Slug, out var factoryName, out var error))
             return error;
 
-        var sqlConnectionString = new SqlConnectionString
-        {
-            Name = WizardSourceProbeName,
-            FactoryName = factoryName,
-            ConnectionString = body!.ConnectionString,
-        };
-        await store.Maintenance.ForDatabase(store.Database).SendAsync(
-            new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString), ct);
+        var connectionString = body!.ConnectionString;
 
         ConnectResult result;
         try
         {
             result = await store.Maintenance.ForDatabase(store.Database).SendAsync(
-                new TestSqlConnectionOperation(factoryName, body.ConnectionString), ct);
+                new TestSqlConnectionOperation(factoryName, connectionString), ct);
         }
         catch (Exception ex)
         {
@@ -101,12 +94,19 @@ public static class WizardEndpoints
         for (var i = 0; i < result.Errors.Count; i++)
             result.Errors[i] = WizardErrorFormatter.FormatConnectionError(result.Errors[i].Message);
 
-        await PersistAsync(store, state =>
+        var wizardId = WizardState.DocumentIdFor(body.Slug);
+        using (var session = store.OpenAsyncSession())
         {
-            state.Provider = factoryName;
-            state.LastVerifyResult = result;
-            state.LastVerifyAt = DateTime.UtcNow;
-        }, ct);
+            var state = new WizardState
+            {
+                Provider = factoryName,
+                SourceConnectionString = connectionString,
+                LastVerifyResult = result,
+                LastVerifyAt = DateTime.UtcNow,
+            };
+            await session.StoreAsync(state, wizardId, ct);
+            await session.SaveChangesAsync(ct);
+        }
 
         return Results.Ok(result);
     }
@@ -117,12 +117,12 @@ public static class WizardEndpoints
         ILogger<WizardLogger> logger,
         CancellationToken ct)
     {
-        if (TryRejectInvalidRequest(body?.Provider, body?.ConnectionString, out var factoryName, out var error))
+        if (TryRejectInvalidRequest(body?.Provider, body?.ConnectionString, body?.Slug, out var factoryName, out var error))
             return error;
 
         var sqlConnectionString = new SqlConnectionString
         {
-            Name = WizardSourceProbeName,
+            Name = SourceConnectionStringName,
             FactoryName = factoryName,
             ConnectionString = body!.ConnectionString,
         };
@@ -132,6 +132,14 @@ public static class WizardEndpoints
             .Select(s => s.Trim())
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
+
+        var wizardId = WizardState.DocumentIdFor(body.Slug);
+        using var session = store.OpenAsyncSession();
+
+        // fail fast before the live schema enumeration if the wizard was never started for this app
+        var state = await session.LoadAsync<WizardState>(wizardId, ct);
+        if (state is null)
+            return Results.BadRequest(new ApiErrorResponse($"no slug {body.Slug} found"));
 
         CdcSinkSourceSchema schema;
         try
@@ -146,12 +154,11 @@ public static class WizardEndpoints
             schema.Errors.Add(ex.ToString());
         }
 
-        await PersistAsync(store, state =>
-        {
-            state.Provider = factoryName;
-            state.LastDiscoveredSchema = schema;
-            state.LastDiscoverAt = DateTime.UtcNow;
-        }, ct);
+        state.Provider = factoryName;
+        state.LastDiscoveredSchema = schema;
+        state.LastDiscoverAt = DateTime.UtcNow;
+        await session.StoreAsync(state, wizardId, ct);
+        await session.SaveChangesAsync(ct);
 
         return Results.Ok(DiscoverResponse.From(schema));
     }
@@ -164,13 +171,15 @@ public static class WizardEndpoints
     {
         if (body is null)
             return Results.BadRequest(new ApiErrorResponse("request body required"));
+        if (string.IsNullOrWhiteSpace(body.Slug))
+            return Results.BadRequest(new ApiErrorResponse("slug is required"));
 
         var cdcConfig = body.ToClientConfiguration();
 
         if (string.IsNullOrWhiteSpace(cdcConfig.Name))
             cdcConfig.Name = "wizard-cdc";
         if (string.IsNullOrWhiteSpace(cdcConfig.ConnectionStringName))
-            cdcConfig.ConnectionStringName = WizardSourceProbeName;
+            cdcConfig.ConnectionStringName = SourceConnectionStringName;
 
         if (!cdcConfig.Validate(out var errors, validateName: true, validateConnection: false))
         {
@@ -178,11 +187,17 @@ public static class WizardEndpoints
             return Results.BadRequest(new ApiErrorResponse(Errors: errors.ToArray()));
         }
 
-        await PersistAsync(store, state =>
+        var wizardId = WizardState.DocumentIdFor(body.Slug);
+        using (var session = store.OpenAsyncSession())
         {
+            var state = await session.LoadAsync<WizardState>(wizardId, ct);
+            if (state is null)
+                return Results.BadRequest(new ApiErrorResponse($"no slug {body.Slug} found"));
             state.LastMapConfiguration = cdcConfig;
             state.LastMapAt = DateTime.UtcNow;
-        }, ct);
+            await session.StoreAsync(state, wizardId, ct);
+            await session.SaveChangesAsync(ct);
+        }
 
         return Results.Ok(cdcConfig);
     }
@@ -196,12 +211,14 @@ public static class WizardEndpoints
     {
         if (body is null)
             return Results.BadRequest(new ApiErrorResponse("request body is required"));
+        if (string.IsNullOrWhiteSpace(body.Slug))
+            return Results.BadRequest(new ApiErrorResponse("slug is required"));
 
         var intentPrompt = string.IsNullOrWhiteSpace(body.IntentPrompt) ? DefaultIntentPrompt : body.IntentPrompt!;
 
         WizardState? state;
         using (var session = store.OpenAsyncSession())
-            state = await session.LoadAsync<WizardState>(WizardState.DocumentId, ct);
+            state = await session.LoadAsync<WizardState>(WizardState.DocumentIdFor(body.Slug), ct);
 
         if (state?.LastDiscoveredSchema is null)
             return Results.BadRequest(new ApiErrorResponse("no discovered schema found; call /api/setup/discover first"));
@@ -231,10 +248,12 @@ public static class WizardEndpoints
     {
         if (body is null || string.IsNullOrWhiteSpace(body.SourceTableName))
             return Results.BadRequest(new ApiErrorResponse("sourceTableName is required"));
+        if (string.IsNullOrWhiteSpace(body.Slug))
+            return Results.BadRequest(new ApiErrorResponse("slug is required"));
 
         WizardState? state;
         using (var session = store.OpenAsyncSession())
-            state = await session.LoadAsync<WizardState>(WizardState.DocumentId, ct);
+            state = await session.LoadAsync<WizardState>(WizardState.DocumentIdFor(body.Slug), ct);
 
         if (state?.LastMapConfiguration is null)
             return Results.BadRequest(new ApiErrorResponse("no map configuration found; call /api/setup/map first"));
@@ -242,6 +261,13 @@ public static class WizardEndpoints
         var request = new TestCdcSinkMappingRequest
         {
             Configuration = state.LastMapConfiguration,
+            // inline source creds off the wizard doc — no probe connection string exists on the config DB
+            Connection = new SqlConnectionString
+            {
+                Name = SourceConnectionStringName,
+                FactoryName = state.Provider,
+                ConnectionString = state.SourceConnectionString,
+            },
             SourceTableSchema = body.SourceTableSchema,
             SourceTableName = body.SourceTableName,
             RowSelector = TestCdcSinkRowSelector.First,
@@ -289,13 +315,19 @@ public static class WizardEndpoints
             return Results.BadRequest(new ApiErrorResponse($"slug '{slug}' is reserved"));
 
         CdcSinkConfiguration cdcConfig;
+        string sourceConnectionString;
+        string? sourceProvider;
         using (var session = store.OpenAsyncSession(new Client.Documents.Session.SessionOptions { NoTracking = true }))
         {
-            var state = await session.LoadAsync<WizardState>(WizardState.DocumentId, ct);
+            var state = await session.LoadAsync<WizardState>(WizardState.DocumentIdFor(slug), ct);
             if (state?.LastMapConfiguration is null)
                 return Results.BadRequest(new ApiErrorResponse("no map configuration found; call /api/setup/map first"));
+            if (string.IsNullOrEmpty(state.SourceConnectionString))
+                return Results.BadRequest(new ApiErrorResponse("no source connection found; call /api/setup/connect first"));
 
             cdcConfig = state.LastMapConfiguration;
+            sourceConnectionString = state.SourceConnectionString;
+            sourceProvider = state.Provider;
         }
 
         bool created;
@@ -312,21 +344,12 @@ public static class WizardEndpoints
         if (!created)
             return Results.Conflict(new ApiErrorResponse(DatabaseExistsMessage(slug)));
 
-        var probes = await store.Maintenance.ForDatabase(store.Database).SendAsync(
-            new GetConnectionStringsOperation(WizardSourceProbeName, ConnectionStringType.Sql), ct);
-
-        if (probes.SqlConnectionStrings is null ||
-            !probes.SqlConnectionStrings.TryGetValue(WizardSourceProbeName, out var probeCs))
-        {
-            return Results.BadRequest(new ApiErrorResponse(
-                $"probe connection string '{WizardSourceProbeName}' is not registered on the config DB; call /api/setup/connect first."));
-        }
-
+        // transplant the source creds captured at connect (held on the wizard doc) onto the app DB
         var transplantedCs = new SqlConnectionString
         {
             Name = cdcConfig.ConnectionStringName,
-            FactoryName = probeCs.FactoryName,
-            ConnectionString = probeCs.ConnectionString,
+            FactoryName = sourceProvider,
+            ConnectionString = sourceConnectionString,
         };
         await store.Maintenance.ForDatabase(slug).SendAsync(
             new PutConnectionStringOperation<SqlConnectionString>(transplantedCs), ct);
@@ -337,10 +360,6 @@ public static class WizardEndpoints
         // Shared app-creation: read-model indexes + expiration/revisions + the apps/{slug} doc.
         var app = await AppProvisioner.CreateAppAsync(store, slug, body.AppName, cdcConfig.Name, ct);
 
-        // the wizard is done with the source credentials; the probe CS must not outlive it
-        await store.Maintenance.ForDatabase(store.Database).SendAsync(
-            new RemoveConnectionStringOperation<SqlConnectionString>(new SqlConnectionString { Name = WizardSourceProbeName }), ct);
-
         logger.LogInformation("Provisioned app slug={Slug} id={Id} cdcTask={CdcTaskName}",
             app.Slug, app.Id, app.CdcTaskName);
 
@@ -350,13 +369,19 @@ public static class WizardEndpoints
     private static string DatabaseExistsMessage(string slug) =>
         $"database '{slug}' already exists; delete it in RavenDB Studio (or choose another name) and run the setup wizard again";
 
-    private static bool TryRejectInvalidRequest(string? provider, string? connectionString, out string factoryName, out IResult error)
+    private static bool TryRejectInvalidRequest(string? provider, string? connectionString, string? slug, out string factoryName, out IResult error)
     {
         factoryName = string.Empty;
 
         if (string.IsNullOrWhiteSpace(provider) || string.IsNullOrWhiteSpace(connectionString))
         {
             error = Results.BadRequest(new ApiErrorResponse("provider and connectionString are required"));
+            return true;
+        }
+
+        if (string.IsNullOrWhiteSpace(slug))
+        {
+            error = Results.BadRequest(new ApiErrorResponse("slug is required"));
             return true;
         }
 
@@ -368,34 +393,6 @@ public static class WizardEndpoints
 
         error = default!;
         return false;
-    }
-
-    // one retry on OCC clash: absorbs a wizard-step double-click without livelocking
-    private static async Task PersistAsync(
-        IDocumentStore store,
-        Action<WizardState> mutate,
-        CancellationToken ct)
-    {
-        const int MaxAttempts = 2;
-        for (var attempt = 1;; attempt++)
-        {
-            using var session = store.OpenAsyncSession();
-            session.Advanced.OptimisticConcurrencyMode = OptimisticConcurrencyMode.Writes;
-
-            var state = await session.LoadAsync<WizardState>(WizardState.DocumentId, ct)
-                        ?? new WizardState();
-            mutate(state);
-            await session.StoreAsync(state, WizardState.DocumentId, ct);
-
-            try
-            {
-                await session.SaveChangesAsync(ct);
-                return;
-            }
-            catch (ConcurrencyException) when (attempt < MaxAttempts)
-            {
-            }
-        }
     }
 
     internal sealed class WizardLogger;

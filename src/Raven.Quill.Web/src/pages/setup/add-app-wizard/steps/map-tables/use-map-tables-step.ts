@@ -35,6 +35,7 @@ export function useMapTablesStep() {
 
         await api.services.setup.map({
             tables: mapFormTablesToDto(formTables),
+            slug: getValues("externalConnection").slug,
         });
 
         const firstTable = formTables[0];
