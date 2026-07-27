@@ -120,6 +120,8 @@
     <EmbeddedResource Include="Data\RavenDB_22703\RavenDB_22703.ravendb-snapshot" />
     <None Remove="Data\RavenDB_22937\RavenDB_22937.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_22937\RavenDB_22937.ravendb-snapshot" />
+    <None Remove="Data\RavenDB_27171\RavenDB_27171.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_27171\RavenDB_27171.ravendb-snapshot" />
     <None Remove="Data\RavenDB-23409.rec" />
     <EmbeddedResource Include="Data\RavenDB-23409.rec" />
     <None Remove="Data\RavenDB_24281\RavenDB-24281.ravendb-snapshot" />
