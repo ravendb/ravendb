@@ -3,18 +3,24 @@ import { cn } from "@/lib/utils";
 import { SELECTED_CARD_CLASSES } from "@/components/form/form-radio-cards";
 import { FormTextarea } from "@/components/form/form-textarea";
 import { Alert } from "@/components/shadcn/ui/alert";
+import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
 import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
+import { AgentPromptProgress } from "@/pages/setup/add-capability-wizard/agent-prompt-progress";
 import { emptyAgentConfiguration } from "@/pages/setup/add-capability-wizard/agent-config-form";
 import { useCapabilityWizardStore } from "@/pages/setup/add-capability-wizard/capability-wizard-store";
 import { SuggestedAgentsProgress } from "@/pages/setup/add-capability-wizard/steps/create/suggested-agents-progress";
 import { useSuggestedAgents } from "@/pages/setup/add-capability-wizard/steps/create/use-suggested-agents";
 import { SuggestionPicker } from "@/pages/setup/add-capability-wizard/suggestion-picker";
 
-export function CreateAgentStep() {
+export function CreateAgentStep({ isBusy }: WizardBodyComponentProps) {
     const { control, setValue } = useFormContext<AgentFormData>();
     const suggestions = useCapabilityWizardStore((state) => state.suggestions);
     const mode = useWatch({ control, name: "create.mode" });
     const { isSuggesting } = useSuggestedAgents();
+
+    // "Next" in prompt mode is the generation call itself, so the wizard is only ever busy here
+    // while the agent is being generated.
+    const isGenerating = isBusy && mode === "prompt";
 
     const choosePromptMode = () => {
         if (mode !== "prompt") {
@@ -60,8 +66,10 @@ export function CreateAgentStep() {
                     description="When you click Next, AI generates an agent configuration from your description that you can review and edit."
                     placeholder="e.g. Help customers track their orders and answer questions about products."
                     rows={4}
+                    disabled={isGenerating}
                     onFocus={choosePromptMode}
                 />
+                {isGenerating && <AgentPromptProgress />}
             </div>
 
             <div className="grid gap-3">

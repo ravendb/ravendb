@@ -132,7 +132,7 @@ function AddAppWizardBody() {
             cancel={() => {
                 navigate(appRoutes.dashboard());
             }}
-            completion={{ type: "submit", label: "Create app & continue" }}
+            completion={{ type: "submit", label: "Create app & continue", busyLabel: "Creating app..." }}
         />
     );
 }

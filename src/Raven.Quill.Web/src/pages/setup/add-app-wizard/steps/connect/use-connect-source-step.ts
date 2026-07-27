@@ -1,5 +1,6 @@
 import { api } from "@/api/api";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
+import type { WizardProgress } from "@/components/form/wizard/form-wizard";
 import { toWizardStepError } from "@/components/form/wizard/wizard-step-error";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import { getTableKey, isTableSupported } from "@/pages/setup/add-app-wizard/discover-utils";
@@ -20,7 +21,7 @@ export function useConnectSourceStep() {
     const { getValues, setValue } = useFormContext<AppFormData>();
     const setDiscoverResult = useSetupWizardStore((state) => state.setDiscoverResult);
 
-    return async () => {
+    return async (progress: WizardProgress) => {
         const store = useSetupWizardStore.getState();
         const formValues = getValues("externalConnection");
         const connectKey = computeConnectKey(formValues);
@@ -28,6 +29,8 @@ export function useConnectSourceStep() {
         if (connectKey === store.connectKey) {
             return;
         }
+
+        progress.report("Testing connection...");
 
         const slug = formValues.slug;
         const connectResult = await api.services.setup.connect({
@@ -40,6 +43,7 @@ export function useConnectSourceStep() {
             throw toWizardStepError(connectResult.errors, "Connection failed.");
         }
 
+        progress.report("Discovering tables...");
         const schemas = store.discoverSchemas;
         const discoverResult = await discoverTables(formValues, schemas, slug);
 

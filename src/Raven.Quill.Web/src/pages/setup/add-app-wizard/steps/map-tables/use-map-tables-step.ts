@@ -4,6 +4,7 @@ import { mapFormTablesToDto } from "@/pages/setup/add-app-wizard/steps/map-table
 import { parseRawTablesToForm } from "@/pages/setup/add-app-wizard/steps/map-tables/raw-tables";
 import { useApplyMapTables } from "@/pages/setup/add-app-wizard/steps/map-tables/use-apply-map-tables";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
+import type { WizardProgress } from "@/components/form/wizard/form-wizard";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import { useFormContext } from "react-hook-form";
 
@@ -15,7 +16,7 @@ export function useMapTablesStep() {
     const { getValues, setValue } = useFormContext<AppFormData>();
     const applyMapTables = useApplyMapTables();
 
-    return async () => {
+    return async (progress: WizardProgress) => {
         const store = useSetupWizardStore.getState();
 
         // If the raw JSON editor is still open, apply its edits before mapping. A parse/validation
@@ -33,6 +34,7 @@ export function useMapTablesStep() {
             return;
         }
 
+        progress.report("Applying mapping...");
         await api.services.setup.map({
             tables: mapFormTablesToDto(formTables),
             slug: getValues("externalConnection").slug,
