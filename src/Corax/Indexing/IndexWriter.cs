@@ -644,7 +644,7 @@ namespace Corax.Indexing
                 }
 
                 term = ref field.Storage.GetAsRef(longTermLocation);
-                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, freq: 1, InserterMode.Numerical);
+                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, reader.Frequency, InserterMode.Numerical);
 
                 // RavenDB-25907: Sentinel value pattern for atomic Dictionary+Storage update.
                 ref var doubleTermLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Doubles, reader.CurrentDouble, out exists);
@@ -657,7 +657,7 @@ namespace Corax.Indexing
                 }
 
                 term = ref field.Storage.GetAsRef(doubleTermLocation);
-                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, freq: 1, InserterMode.Numerical);
+                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, reader.Frequency, InserterMode.Numerical);
             }
         }
 
