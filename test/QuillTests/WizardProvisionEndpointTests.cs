@@ -1,8 +1,6 @@
 using System.Net;
 using QuillTests.E2E.Fixtures;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Quill.Wizard;
 using Tests.Infrastructure;
 using Xunit;
@@ -13,8 +11,6 @@ namespace QuillTests;
 public class WizardProvisionEndpointTests(ITestOutputHelper output, QuillCollectionHost collection)
     : QuillTestBase(output, collection)
 {
-    private const string WizardSourceProbeName = "_wizard-source-probe";
-
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Provision_with_invalid_explicit_slug_returns_400()
     {
@@ -46,10 +42,9 @@ public class WizardProvisionEndpointTests(ITestOutputHelper output, QuillCollect
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Provision_with_duplicate_slug_returns_409()
     {
-        await SeedWizardMapAsync(Host.Config);
-        await RegisterProbeAsync(Host.Config);
-
         var taken = "taken-" + Guid.NewGuid().ToString("N");
+        await SeedWizardMapAsync(Host.Config, taken);
+
         await Host.ProvisionAsync(new ProvisionRequest("First App", taken));
 
         var ex = await Assert.ThrowsAsync<QuillHttpException>(() => Host.ProvisionAsync(new ProvisionRequest(UniqueAppName(), taken)));
@@ -61,11 +56,10 @@ public class WizardProvisionEndpointTests(ITestOutputHelper output, QuillCollect
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Provision_normalizes_explicit_slug_before_uniqueness_gate()
     {
-        await SeedWizardMapAsync(Host.Config);
-        await RegisterProbeAsync(Host.Config);
-
         var suffix = Guid.NewGuid().ToString("N");
         var normalized = $"my-custom-app-{suffix}";
+        await SeedWizardMapAsync(Host.Config, normalized);
+
         await Host.ProvisionAsync(new ProvisionRequest("First App", normalized));
 
         // messy slug normalizes to the already-provisioned one
@@ -78,10 +72,8 @@ public class WizardProvisionEndpointTests(ITestOutputHelper output, QuillCollect
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Provision_returns_409_when_slug_is_already_provisioned()
     {
-        await SeedWizardMapAsync(Host.Config);
-        await RegisterProbeAsync(Host.Config);
-
         var slug = "twice-" + Guid.NewGuid().ToString("N");
+        await SeedWizardMapAsync(Host.Config, slug);
         await Host.ProvisionAsync(new ProvisionRequest("First App", slug));
 
         var second = await Assert.ThrowsAsync<QuillHttpException>(() => Host.ProvisionAsync(new ProvisionRequest("Second App", slug)));
@@ -93,10 +85,8 @@ public class WizardProvisionEndpointTests(ITestOutputHelper output, QuillCollect
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Provision_uses_explicit_slug_override()
     {
-        await SeedWizardMapAsync(Host.Config);
-        await RegisterProbeAsync(Host.Config);
-
         var slug = "override-" + Guid.NewGuid().ToString("N");
+        await SeedWizardMapAsync(Host.Config, slug);
         var response = await Host.ProvisionAsync(new ProvisionRequest("Pretty Display Name", slug));
 
         Assert.Equal(slug, response.Slug);
@@ -111,26 +101,11 @@ public class WizardProvisionEndpointTests(ITestOutputHelper output, QuillCollect
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Provision_removes_the_probe_connection_string()
-    {
-        await SeedWizardMapAsync(Host.Config);
-        await RegisterProbeAsync(Host.Config);
-
-        var slug = "probe-clean-" + Guid.NewGuid().ToString("N");
-        await Host.ProvisionAsync(new ProvisionRequest("Probe Clean", slug));
-
-        var result = await Host.Config.Maintenance.ForDatabase(Host.Config.Database)
-            .SendAsync(new GetConnectionStringsOperation(WizardSourceProbeName, ConnectionStringType.Sql));
-        Assert.True(result.SqlConnectionStrings is null || result.SqlConnectionStrings.ContainsKey(WizardSourceProbeName) == false);
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
     public async Task Provision_derives_slug_from_app_name_when_no_override()
     {
-        await SeedWizardMapAsync(Host.Config);
-        await RegisterProbeAsync(Host.Config);
-
         var suffix = Guid.NewGuid().ToString("N");
+        await SeedWizardMapAsync(Host.Config, $"derive-me-{suffix}");
+
         var response = await Host.ProvisionAsync(new ProvisionRequest($"Derive Me {suffix}"));
 
         Assert.Equal($"derive-me-{suffix}", response.Slug);
@@ -138,25 +113,21 @@ public class WizardProvisionEndpointTests(ITestOutputHelper output, QuillCollect
 
     private static string UniqueAppName() => "App " + Guid.NewGuid().ToString("N");
 
-    private static async Task SeedWizardMapAsync(IDocumentStore store)
+    private static async Task SeedWizardMapAsync(IDocumentStore store, string slug)
     {
         var cdc = AiHelperSamples.BuildCdcConfig();
         cdc.Disabled = true;
         cdc.SkipInitialLoad = true;
 
         using var session = store.OpenAsyncSession();
-        await session.StoreAsync(new WizardState { Provider = "Npgsql", LastMapConfiguration = cdc }, WizardState.DocumentId);
-        await session.SaveChangesAsync();
-    }
-
-    private static async Task RegisterProbeAsync(IDocumentStore store)
-    {
-        await store.Maintenance.ForDatabase(store.Database).SendAsync(
-            new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString
+        await session.StoreAsync(
+            new WizardState
             {
-                Name = WizardSourceProbeName,
-                FactoryName = "Npgsql",
-                ConnectionString = "Host=localhost;Database=src",
-            }));
+                Provider = "Npgsql",
+                SourceConnectionString = "Host=localhost;Database=src",
+                LastMapConfiguration = cdc,
+            },
+            WizardState.DocumentIdFor(slug));
+        await session.SaveChangesAsync();
     }
 }

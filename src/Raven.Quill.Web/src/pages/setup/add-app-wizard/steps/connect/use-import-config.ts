@@ -30,15 +30,17 @@ type ImportResult = {
 };
 
 export function useImportConfig() {
-    const { setValue } = useFormContext<AppFormData>();
+    const { setValue, getValues } = useFormContext<AppFormData>();
 
     return useMutation<ImportResult, Error, File>({
         mutationFn: async (file) => {
             const config = await parseConfigFile(file);
+            const slug = getValues("externalConnection").slug;
 
             const connectResult = await api.services.setup.connect({
                 connectionString: config.connectionString,
                 provider: config.provider,
+                slug,
             });
 
             if (!connectResult.success) {
@@ -51,6 +53,7 @@ export function useImportConfig() {
             const discoverResult = await discoverTables(
                 { provider: config.provider, connectionString: config.connectionString },
                 schemas,
+                slug,
             );
 
             if (!discoverResult.success) {
@@ -99,7 +102,13 @@ export function useImportConfig() {
             store.setDiscoverResult(discoverResult, schemas);
             store.resetMapTablesUiState();
 
-            store.setConnectKey(computeConnectKey(config));
+            store.setConnectKey(
+                computeConnectKey({
+                    provider: config.provider,
+                    connectionString: config.connectionString,
+                    slug: getValues("externalConnection").slug,
+                }),
+            );
             store.setAppliedMapKey(
                 computeMapKey({ source: "manual", aiPrompt: "", selectedTables: verifySchemaTables }),
             );

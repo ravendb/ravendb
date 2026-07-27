@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using QuillTests.E2E.Fixtures;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.CdcSink.Test;
@@ -56,10 +57,14 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         using var sqlTeardown = WithSqlDatabase(MigrationProvider.NpgSQL,
             out var pgConnStr, out _, dataSet: "northwind-full", includeData: true);
 
+        // the app id the FE supplies from the first wizard step; every step carries it so the per-app wizard doc lines up
+        const string appSlug = "northwind-demo";
+
         var connectResp = await client.PostAsJsonAsync("/api/setup/connect", new
         {
             provider         = "Npgsql",
             connectionString = pgConnStr,
+            slug             = appSlug,
         });
         Assert.True(connectResp.IsSuccessStatusCode,
             $"connect returned {connectResp.StatusCode}: {await connectResp.Content.ReadAsStringAsync()}");
@@ -68,7 +73,7 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
             $"connect (reachability) should succeed against a live Postgres; payload: {connect}");
 
         var discoverResp = await client.PostAsJsonAsync("/api/setup/discover",
-            new { provider = "Npgsql", connectionString = pgConnStr });
+            new { provider = "Npgsql", connectionString = pgConnStr, slug = appSlug });
         Assert.True(discoverResp.IsSuccessStatusCode,
             $"discover returned {discoverResp.StatusCode}: {await discoverResp.Content.ReadAsStringAsync()}");
         var schema = await discoverResp.Content.ReadFromJsonAsync<JsonElement>();
@@ -89,15 +94,16 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         var configFixturePath = Path.Combine(AppContext.BaseDirectory, "E2E", "Fixtures", "northwind-cdc-config.json");
         Assert.True(File.Exists(configFixturePath),
             $"Pre-built CDC config fixture missing at {configFixturePath}. Populated by the W3 Map slice.");
-        var configJson = await File.ReadAllTextAsync(configFixturePath);
+        var configNode = JsonNode.Parse(await File.ReadAllTextAsync(configFixturePath))!;
+        configNode["slug"] = appSlug;   // the FE-supplied app id keys the wizard doc; the fixture is otherwise app-agnostic
 
         var mapResp = await client.PostAsync("/api/setup/map",
-            new StringContent(configJson, Encoding.UTF8, "application/json"));
+            new StringContent(configNode.ToJsonString(), Encoding.UTF8, "application/json"));
         Assert.True(mapResp.IsSuccessStatusCode,
             $"map returned {mapResp.StatusCode}: {await mapResp.Content.ReadAsStringAsync()}");
 
         var testResp = await client.PostAsJsonAsync("/api/setup/test-mapping",
-            new { sourceTableName = "customers", maxRows = 50 });
+            new { sourceTableName = "customers", maxRows = 50, slug = appSlug });
         Assert.True(testResp.IsSuccessStatusCode,
             $"test-mapping returned {testResp.StatusCode}: {await testResp.Content.ReadAsStringAsync()}");
         var testResult = await testResp.Content.ReadFromJsonAsync<TestCdcSinkMappingResult>();
@@ -106,7 +112,7 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
             $"expected non-empty test-mapping result; errors=[{string.Join("; ", testResult.Errors)}]");
 
         var provisionResp = await client.PostAsJsonAsync("/api/setup/provision",
-            new { appName = "Northwind Demo", slug = "northwind-demo" });
+            new { appName = "Northwind Demo", slug = appSlug });
         Assert.True(provisionResp.IsSuccessStatusCode,
             $"provision returned {provisionResp.StatusCode}: {await provisionResp.Content.ReadAsStringAsync()}");
         var provisionJson = await provisionResp.Content.ReadFromJsonAsync<JsonElement>();

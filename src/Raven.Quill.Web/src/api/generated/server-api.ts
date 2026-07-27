@@ -1266,6 +1266,8 @@ export interface components {
         ConnectRequest: {
             provider: string;
             connectionString: string;
+            /** @default  */
+            slug: string;
         };
         ConnectResult: {
             success: boolean;
@@ -1331,6 +1333,8 @@ export interface components {
             provider: string;
             connectionString: string;
             schemas?: null | string[];
+            /** @default  */
+            slug: string;
         };
         DiscoverResponse: {
             catalogName?: null | string;
@@ -1431,6 +1435,7 @@ export interface components {
             apiKey: string;
         };
         MapRequest: {
+            slug?: string;
             /** Format: int64 */
             taskId?: null | number;
             disabled?: null | boolean;
@@ -1604,6 +1609,8 @@ export interface components {
         };
         SuggestCdcRequest: {
             intentPrompt: null | string;
+            /** @default  */
+            slug: string;
         };
         SuggestCdcResponse: {
             configuration: null | components["schemas"]["CdcSinkConfiguration"];
@@ -1615,6 +1622,8 @@ export interface components {
             /** Format: int32 */
             maxRows?: null | number;
             sourceTableSchema?: null | string;
+            /** @default  */
+            slug: string;
         };
         TestMappingResponse: {
             results: components["schemas"]["TestMappingRowResponse"][];

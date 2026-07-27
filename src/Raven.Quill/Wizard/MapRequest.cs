@@ -4,6 +4,8 @@ namespace Raven.Quill.Wizard;
 
 public sealed class MapRequest
 {
+    public string Slug { get; init; } = string.Empty;
+
     public long? TaskId { get; init; }
 
     public bool? Disabled { get; set; }

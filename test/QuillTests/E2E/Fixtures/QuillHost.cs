@@ -16,6 +16,10 @@ public sealed class QuillHost : IAsyncDisposable
 {
     private const string SeededConnectionStringBaseName = "quill-seeded-llm";
 
+    /// The app id the wizard wrappers send when a test doesn't care which app it is. Per-app-isolation tests
+    /// pass explicit slugs instead. Matches the id the AI-helper base resets between tests.
+    public const string DefaultWizardSlug = "wizard-test-app";
+
     private readonly ApplianceWebApplicationFactory _factory;
     private readonly ConcurrentDictionary<string, QuillApp> _apps = new();
 
@@ -111,15 +115,21 @@ public sealed class QuillHost : IAsyncDisposable
     public Task<QuillUsageResponse> GetSettingsUsageAsync(int year, int? month = null, int? day = null) =>
         QuillHttp.GetAsync<QuillUsageResponse>(Client, $"{QuillRoutes.SettingsUsage}?{Periods.Query(year, month, day)}");
 
-    public Task<ConnectResult> SetupConnectAsync(ConnectRequest body) =>
-        QuillHttp.PostAsync<ConnectResult>(Client, QuillRoutes.SetupConnect, body);
+    public Task<ConnectResult> SetupConnectAsync(ConnectRequest body, string slug = DefaultWizardSlug) =>
+        QuillHttp.PostAsync<ConnectResult>(Client, QuillRoutes.SetupConnect, body with { Slug = slug });
 
-    public Task<DiscoverResponse> SetupDiscoverAsync(DiscoverRequest body) =>
-        QuillHttp.PostAsync<DiscoverResponse>(Client, QuillRoutes.SetupDiscover, body);
+    public Task<DiscoverResponse> SetupDiscoverAsync(DiscoverRequest body, string slug = DefaultWizardSlug) =>
+        QuillHttp.PostAsync<DiscoverResponse>(Client, QuillRoutes.SetupDiscover, body with { Slug = slug });
+
+    public Task<CdcSinkConfiguration> SetupMapAsync(MapRequest body) =>
+        QuillHttp.PostAsync<CdcSinkConfiguration>(Client, QuillRoutes.SetupMap, body);
 
     /// A non-success AI status still returns HTTP 200 with the status on the payload.
-    public Task<SuggestCdcResponse> SuggestCdcAsync(SuggestCdcRequest body) =>
-        QuillHttp.PostAsync<SuggestCdcResponse>(Client, QuillRoutes.SuggestCdc, body);
+    public Task<SuggestCdcResponse> SuggestCdcAsync(SuggestCdcRequest body, string slug = DefaultWizardSlug) =>
+        QuillHttp.PostAsync<SuggestCdcResponse>(Client, QuillRoutes.SuggestCdc, body with { Slug = slug });
+
+    public Task<TestMappingResponse> TestMappingAsync(TestMappingRequest body, string slug = DefaultWizardSlug) =>
+        QuillHttp.PostAsync<TestMappingResponse>(Client, QuillRoutes.SetupTestMapping, body with { Slug = slug });
 
     /// Creates the app the real way (DB named for the slug). The DB is not tracked as a <see cref="QuillApp"/>,
     /// so it is not deleted per-call; it is reclaimed when this host's server is disposed (own-server / collection host).

@@ -63,10 +63,10 @@ public abstract class QuillAiHelperTestBase(ITestOutputHelper output, QuillAiHel
         await base.InitializeAsync();   // Host is the shared AI host, built via the override above
         Mock.Reset();
 
-        // wizard-state is a config-DB singleton shared across the collection; clear it so a test starts clean
-        // (no-op for the agent class, which never writes one)
+        // the wizard doc is keyed per app; the suggest wrappers use DefaultWizardSlug, so clear that one so a
+        // test starts clean (no-op for the agent class, which never writes one)
         using var session = Host.Config.OpenAsyncSession();
-        session.Delete(WizardState.DocumentId);
+        session.Delete(WizardState.DocumentIdFor(QuillHost.DefaultWizardSlug));
         await session.SaveChangesAsync();
     }
 }

@@ -7,9 +7,13 @@ import { discoverTables } from "@/pages/setup/add-app-wizard/steps/verify/use-di
 import { useFormContext } from "react-hook-form";
 
 export function computeConnectKey(
-    connection: Pick<AppFormData["externalConnection"], "provider" | "connectionString">,
+    connection: Pick<AppFormData["externalConnection"], "provider" | "connectionString" | "slug">,
 ): string {
-    return JSON.stringify({ provider: connection.provider, connectionString: connection.connectionString });
+    return JSON.stringify({
+        provider: connection.provider,
+        connectionString: connection.connectionString,
+        slug: connection.slug,
+    });
 }
 
 export function useConnectSourceStep() {
@@ -25,9 +29,11 @@ export function useConnectSourceStep() {
             return;
         }
 
+        const slug = formValues.slug;
         const connectResult = await api.services.setup.connect({
             connectionString: formValues.connectionString,
             provider: formValues.provider,
+            slug,
         });
 
         if (!connectResult.success) {
@@ -35,7 +41,7 @@ export function useConnectSourceStep() {
         }
 
         const schemas = store.discoverSchemas;
-        const discoverResult = await discoverTables(formValues, schemas);
+        const discoverResult = await discoverTables(formValues, schemas, slug);
 
         setDiscoverResult(discoverResult, schemas);
 

@@ -84,7 +84,7 @@ export const useSetupWizardStore = create<SetupWizardState>((set) => ({
     setConnectKey: (key) => set({ connectKey: key }),
     setAppliedMapKey: (key) => set({ appliedMapKey: key }),
     setMapTablesKey: (key) => set({ mapTablesKey: key }),
-    invalidateMapping: () => set({ appliedMapKey: null }),
+    invalidateMapping: () => set({ appliedMapKey: null, mapTablesKey: null }),
     setMapActiveTable: (table) => set({ mapActiveTable: table }),
     focusMapTable: (table) =>
         set((state) => ({
