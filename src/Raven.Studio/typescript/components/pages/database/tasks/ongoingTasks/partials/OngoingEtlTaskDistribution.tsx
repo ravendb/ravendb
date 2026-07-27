@@ -1,4 +1,4 @@
-﻿import { useId, useState } from "react";
+﻿import { useEffect, useId, useMemo, useState } from "react";
 import {
     ClickableProgress,
     DistributionItem,
@@ -47,7 +47,7 @@ interface TxIdLayout {
     isSingleScript: boolean;
 }
 
-interface ItemWithTooltipProps {
+interface TaskDistributionRowProps {
     nodeInfo: OngoingEtlTaskNodeInfo;
     allNodes: OngoingEtlTaskNodeInfo[];
     sharded: boolean;
@@ -251,7 +251,7 @@ function ConnectionStatusCell({
     );
 }
 
-function ItemWithTooltip(props: ItemWithTooltipProps) {
+function TaskDistributionRow(props: TaskDistributionRowProps) {
     const { nodeInfo, allNodes, sharded, task, etlStats, txIdLayout, isActive, setActiveNodeIndex, ownerId } = props;
 
     const shard = (
@@ -265,7 +265,7 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
         </div>
     );
 
-    const { open } = useViewSheet();
+    const { open, update } = useViewSheet();
 
     const key = taskNodeInfoKey(nodeInfo);
     const hasError = !!nodeInfo.details?.error;
@@ -350,6 +350,21 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
             onClose: () => setActiveNodeIndex(null),
         });
     };
+
+    useEffect(() => {
+        if (isActive) {
+            update(
+                ownerId,
+                <EtlProgressDetailsSheet
+                    key={ownerId}
+                    task={task}
+                    allNodes={allNodes}
+                    initialNodeIndex={nodeIndex}
+                    onNodeChange={setActiveNodeIndex}
+                />
+            );
+        }
+    }, [isActive, task, allNodes, nodeIndex]);
 
     const canOpenSheet = nodeInfo.status !== "loading" && nodeInfo.status !== "idle";
 
@@ -472,9 +487,14 @@ export function OngoingEtlTaskDistribution(props: OngoingEtlTaskDistributionProp
     const ownerId = useId();
     const { activeSheetOwnerId } = useViewSheet();
 
-    const visibleNodes = task.nodesInfo.filter(
-        (nodeInfo) =>
-            nodeInfo.details && task.responsibleLocations.find((l) => databaseLocationComparator(l, nodeInfo.location))
+    const visibleNodes = useMemo(
+        () =>
+            task.nodesInfo.filter(
+                (nodeInfo) =>
+                    nodeInfo.details &&
+                    task.responsibleLocations.find((l) => databaseLocationComparator(l, nodeInfo.location))
+            ),
+        [task]
     );
 
     const txIdLayout = getTxIdLayout(task, visibleNodes);
@@ -483,7 +503,7 @@ export function OngoingEtlTaskDistribution(props: OngoingEtlTaskDistributionProp
         const key = taskNodeInfoKey(nodeInfo);
 
         return (
-            <ItemWithTooltip
+            <TaskDistributionRow
                 key={key}
                 nodeInfo={nodeInfo}
                 allNodes={visibleNodes}

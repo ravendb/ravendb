@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { ViewSheet } from "components/common/splitView/ViewSheet";
 import {
     AnyEtlOngoingTaskInfo,
     OngoingEtlTaskNodeInfo,
@@ -11,12 +10,7 @@ import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
 import copyToClipboard from "common/copyToClipboard";
 import Code from "components/common/Code";
-import { NodeLocationTabs } from "components/pages/database/tasks/ongoingTasks/partials/NodeLocationSelect";
 import { AnimatePresence, motion } from "motion/react";
-import {
-    getEtlTaskTypeIcon,
-    getEtlTaskTypeLabel,
-} from "components/pages/database/tasks/ongoingTasks/panels/etlPanelUtils";
 import AceEditor from "components/common/ace/AceEditor";
 import useBoolean from "hooks/useBoolean";
 import { useServices } from "hooks/useServices";
@@ -25,15 +19,12 @@ import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import TaskUtils from "components/utils/TaskUtils";
 import { getErrorHeadline } from "components/utils/common";
+import recentError from "common/notifications/models/recentError";
+import {
+    ProgressDetailsSheetShell,
+    useNodeSlider,
+} from "components/pages/database/tasks/ongoingTasks/partials/ProgressDetailsSheetShell";
 import "./EtlProgressDetailsSheet.scss";
-
-type Direction = 1 | -1;
-
-const slideVariants = {
-    enter: (d: Direction) => ({ x: `${d * 100}%` }),
-    center: { x: 0 },
-    exit: (d: Direction) => ({ x: `${d * -100}%` }),
-};
 
 interface EtlProgressDetailsSheetProps {
     task: AnyEtlOngoingTaskInfo;
@@ -45,66 +36,29 @@ interface EtlProgressDetailsSheetProps {
 export function EtlProgressDetailsSheet(props: EtlProgressDetailsSheetProps) {
     const { task, allNodes, initialNodeIndex, onNodeChange } = props;
 
-    const [selectedIndex, setSelectedIndex] = useState(initialNodeIndex);
-    const [direction, setDirection] = useState<Direction>(1);
-    const [prevInitialNodeIndex, setPrevInitialNodeIndex] = useState(initialNodeIndex);
-
-    if (initialNodeIndex !== prevInitialNodeIndex) {
-        setPrevInitialNodeIndex(initialNodeIndex);
-        setDirection(initialNodeIndex > selectedIndex ? 1 : -1);
-        setSelectedIndex(initialNodeIndex);
-    }
-
-    const handleNodeChange = (index: number) => {
-        setDirection(index > selectedIndex ? 1 : -1);
-        setSelectedIndex(index);
-        onNodeChange?.(index);
-    };
+    const { selectedIndex, direction, handleNodeChange } = useNodeSlider(initialNodeIndex, onNodeChange);
     const nodeInfo = allNodes[selectedIndex];
 
+    const [scriptDefinitionRequested, setScriptDefinitionRequested] = useState(false);
+    const asyncTaskDefinition = useEtlScriptDefinition(task, scriptDefinitionRequested);
+    const requestScriptDefinitionLoad = () => setScriptDefinitionRequested(true);
+
     return (
-        <ViewSheet className="etl-progress-details-sheet">
-            <ViewSheet.Header isPinHidden isCloseHidden className="pb-0">
-                <div className="vstack gap-2 w-100">
-                    <div className="d-flex justify-content-between align-items-center">
-                        <div className="d-flex align-items-center gap-1">
-                            <Icon icon="ongoing-tasks" margin="me-0" color="primary" />
-                            <h4 className="mb-0">
-                                {task.shared.taskName ?? getEtlTaskTypeLabel(task.shared.taskType)} details
-                            </h4>
-                        </div>
-                        <div className="d-flex align-items-center">
-                            <ViewSheet.PinButton />
-                            <ViewSheet.CloseButton />
-                        </div>
-                    </div>
-                    <div className="d-flex align-items-center">
-                        <NodeLocationTabs
-                            locations={allNodes.map((n) => n.location)}
-                            selectedIndex={selectedIndex}
-                            onChange={handleNodeChange}
-                        />
-                    </div>
-                </div>
-            </ViewSheet.Header>
-            <ViewSheet.Body className="p-3">
-                <div style={{ overflow: "hidden", position: "relative" }}>
-                    <AnimatePresence mode="popLayout" custom={direction} initial={false}>
-                        <motion.div
-                            key={selectedIndex}
-                            custom={direction}
-                            variants={slideVariants}
-                            initial="enter"
-                            animate="center"
-                            exit="exit"
-                            transition={{ duration: 0.3, ease: "easeInOut" }}
-                        >
-                            <EtlProgressBody task={task} nodeInfo={nodeInfo} />
-                        </motion.div>
-                    </AnimatePresence>
-                </div>
-            </ViewSheet.Body>
-        </ViewSheet>
+        <ProgressDetailsSheetShell
+            className="etl-progress-details-sheet"
+            title={task.shared.taskName ?? TaskUtils.studioTaskTypeToDisplay(task.shared.taskType).label}
+            locations={allNodes.map((n) => n.location)}
+            selectedIndex={selectedIndex}
+            direction={direction}
+            onNodeChange={handleNodeChange}
+        >
+            <EtlProgressBody
+                task={task}
+                nodeInfo={nodeInfo}
+                asyncTaskDefinition={asyncTaskDefinition}
+                onRequestScriptDefinitionLoad={requestScriptDefinitionLoad}
+            />
+        </ProgressDetailsSheetShell>
     );
 }
 
@@ -123,10 +77,20 @@ function useEtlScriptDefinition(task: AnyEtlOngoingTaskInfo, enabled: boolean) {
     }, [enabled, databaseName, task.shared.taskId, task.shared.taskType]);
 }
 
+function extractErrorMessage(error: Error): string {
+    const responseText = (error as { responseText?: string }).responseText;
+    if (!responseText) {
+        return error.message;
+    }
+
+    const errorAndMessage = recentError.tryExtractMessageAndException(responseText);
+    return errorAndMessage.message + (errorAndMessage.error ? ": " + errorAndMessage.error : "");
+}
+
 function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
     return (
         <div className="detail-row">
-            <span className="small">{label}</span>
+            <span className="small detail-label">{label}</span>
             <span className="text-truncate">{children}</span>
         </div>
     );
@@ -135,11 +99,17 @@ function DetailRow({ label, children }: { label: string; children: React.ReactNo
 interface ScriptPreviewProps {
     task: AnyEtlOngoingTaskInfo;
     transformationName: string;
+    asyncTaskDefinition: ReturnType<typeof useEtlScriptDefinition>;
+    onRequestLoad: () => void;
 }
 
-function ScriptPreview({ task, transformationName }: ScriptPreviewProps) {
+function ScriptPreview({ task, transformationName, asyncTaskDefinition, onRequestLoad }: ScriptPreviewProps) {
     const { value: isOpen, toggle } = useBoolean(false);
-    const asyncTaskDefinition = useEtlScriptDefinition(task, isOpen);
+
+    const handleToggle = () => {
+        toggle();
+        onRequestLoad();
+    };
 
     const transform = asyncTaskDefinition.result?.Configuration?.Transforms?.find((x) => x.Name === transformationName);
 
@@ -147,7 +117,7 @@ function ScriptPreview({ task, transformationName }: ScriptPreviewProps) {
         <div>
             <div className="d-flex justify-content-between align-items-center">
                 <h5 className="mb-0">Script preview</h5>
-                <Button variant="link" size="xs" className="p-0" onClick={toggle}>
+                <Button variant="link" size="xs" className="p-0" onClick={handleToggle}>
                     <Icon icon={isOpen ? "collapse-vertical" : "expand-vertical"} margin="me-1" />
                     {isOpen ? "Collapse" : "Expand"}
                 </Button>
@@ -166,12 +136,17 @@ function ScriptPreview({ task, transformationName }: ScriptPreviewProps) {
                             <div className="d-flex justify-content-center py-3">
                                 <Spinner animation="border" size="sm" />
                             </div>
+                        ) : asyncTaskDefinition.error ? (
+                            <EtlError error={extractErrorMessage(asyncTaskDefinition.error)} />
                         ) : (
                             <>
                                 <DetailRow label="Task type">
                                     <span className="d-flex align-items-center gap-1">
-                                        <Icon icon={getEtlTaskTypeIcon(task.shared.taskType)} margin="m-0" />
-                                        {getEtlTaskTypeLabel(task.shared.taskType)}
+                                        <Icon
+                                            icon={TaskUtils.studioTaskTypeToDisplay(task.shared.taskType).icon}
+                                            margin="m-0"
+                                        />
+                                        {TaskUtils.studioTaskTypeToDisplay(task.shared.taskType).label}
                                     </span>
                                 </DetailRow>
                                 <DetailRow label="Task name">{task.shared.taskName}</DetailRow>
@@ -182,7 +157,7 @@ function ScriptPreview({ task, transformationName }: ScriptPreviewProps) {
                                         : (transform?.Collections ?? []).join(", ") || "-"}
                                 </DetailRow>
                                 <div className="pt-2">
-                                    <div className=" small">Transform script</div>
+                                    <div className="small detail-label">Transform script</div>
                                     {transform?.Script ? (
                                         <AceEditor
                                             mode="javascript"
@@ -207,14 +182,68 @@ function ScriptPreview({ task, transformationName }: ScriptPreviewProps) {
     );
 }
 
+interface ScriptBodyProps {
+    task: AnyEtlOngoingTaskInfo;
+    scriptProgress: OngoingTaskNodeEtlProgressDetails;
+    asyncTaskDefinition: ReturnType<typeof useEtlScriptDefinition>;
+    onRequestLoad: () => void;
+}
+
+function ScriptBody({ task, scriptProgress, asyncTaskDefinition, onRequestLoad }: ScriptBodyProps) {
+    return (
+        <>
+            {scriptProgress.transactionalId && (
+                <div className="d-flex align-items-center gap-1 mb-2">
+                    <Icon icon="identities" margin="m-0" />
+                    <small className="small">Transactional ID</small>
+                    <div className="d-flex align-items-center gap-1 small">
+                        <span className="text-truncate" title={scriptProgress.transactionalId}>
+                            {scriptProgress.transactionalId}
+                        </span>
+                        <Button
+                            variant="link"
+                            size="xs"
+                            className="p-0 flex-shrink-0"
+                            title="Copy to clipboard"
+                            onClick={() =>
+                                copyToClipboard.copy(
+                                    scriptProgress.transactionalId,
+                                    "Transactional Id was copied to clipboard."
+                                )
+                            }
+                        >
+                            <Icon icon="copy" margin="m-0" />
+                        </Button>
+                    </div>
+                </div>
+            )}
+            <NamedProgress name={null} vertical>
+                <NamedProgressItem progress={scriptProgress.documents}>documents</NamedProgressItem>
+                <NamedProgressItem progress={scriptProgress.documentTombstones}>tombstones</NamedProgressItem>
+                {scriptProgress.counterGroups.total > 0 && (
+                    <NamedProgressItem progress={scriptProgress.counterGroups}>counters</NamedProgressItem>
+                )}
+            </NamedProgress>
+            <hr className="script-separator" />
+            <ScriptPreview
+                task={task}
+                transformationName={scriptProgress.transformationName}
+                asyncTaskDefinition={asyncTaskDefinition}
+                onRequestLoad={onRequestLoad}
+            />
+        </>
+    );
+}
+
 interface ScriptSectionProps {
     task: AnyEtlOngoingTaskInfo;
     scriptProgress: OngoingTaskNodeEtlProgressDetails;
-    isInitiallyExpanded: boolean;
+    asyncTaskDefinition: ReturnType<typeof useEtlScriptDefinition>;
+    onRequestLoad: () => void;
 }
 
-function ScriptSection({ task, scriptProgress, isInitiallyExpanded }: ScriptSectionProps) {
-    const { value: isExpanded, toggle: toggleExpanded } = useBoolean(isInitiallyExpanded);
+function ScriptSection({ task, scriptProgress, asyncTaskDefinition, onRequestLoad }: ScriptSectionProps) {
+    const { value: isExpanded, toggle: toggleExpanded } = useBoolean(true);
 
     return (
         <div className="well rounded mb-2 p-3">
@@ -232,42 +261,12 @@ function ScriptSection({ task, scriptProgress, isInitiallyExpanded }: ScriptSect
                         style={{ overflow: "hidden" }}
                         className="pt-2"
                     >
-                        {scriptProgress.transactionalId && (
-                            <div className="d-flex align-items-center gap-1 mb-2">
-                                <Icon icon="identities" margin="m-0" />
-                                <small className="small">Transactional ID</small>
-                                <div className="d-flex align-items-center gap-1 small">
-                                    <span className="text-truncate" title={scriptProgress.transactionalId}>
-                                        {scriptProgress.transactionalId}
-                                    </span>
-                                    <Button
-                                        variant="link"
-                                        size="xs"
-                                        className="p-0 flex-shrink-0"
-                                        title="Copy to clipboard"
-                                        onClick={() =>
-                                            copyToClipboard.copy(
-                                                scriptProgress.transactionalId!,
-                                                "Transactional Id was copied to clipboard."
-                                            )
-                                        }
-                                    >
-                                        <Icon icon="copy" margin="m-0" />
-                                    </Button>
-                                </div>
-                            </div>
-                        )}
-                        <NamedProgress name={null} vertical>
-                            <NamedProgressItem progress={scriptProgress.documents}>documents</NamedProgressItem>
-                            <NamedProgressItem progress={scriptProgress.documentTombstones}>
-                                tombstones
-                            </NamedProgressItem>
-                            {scriptProgress.counterGroups.total > 0 && (
-                                <NamedProgressItem progress={scriptProgress.counterGroups}>counters</NamedProgressItem>
-                            )}
-                        </NamedProgress>
-                        <hr className="script-separator" />
-                        <ScriptPreview task={task} transformationName={scriptProgress.transformationName} />
+                        <ScriptBody
+                            task={task}
+                            scriptProgress={scriptProgress}
+                            asyncTaskDefinition={asyncTaskDefinition}
+                            onRequestLoad={onRequestLoad}
+                        />
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -276,12 +275,13 @@ function ScriptSection({ task, scriptProgress, isInitiallyExpanded }: ScriptSect
 }
 
 function EtlError({ error }: { error: string }) {
+    const headline = getErrorHeadline(error);
     return (
         <div className="vstack gap-1">
             <div className="text-danger fw-bold">
-                <Icon icon="warning" color="danger" /> {getErrorHeadline(error)}
+                <Icon icon="warning" color="danger" /> {headline}
             </div>
-            <Code code={error} language="plaintext" />
+            {headline !== error && <Code code={error} language="plaintext" />}
         </div>
     );
 }
@@ -289,18 +289,20 @@ function EtlError({ error }: { error: string }) {
 interface EtlProgressBodyProps {
     task: AnyEtlOngoingTaskInfo;
     nodeInfo: OngoingEtlTaskNodeInfo;
+    asyncTaskDefinition: ReturnType<typeof useEtlScriptDefinition>;
+    onRequestScriptDefinitionLoad: () => void;
 }
 
-function EtlProgressBody({ task, nodeInfo }: EtlProgressBodyProps) {
+function EtlProgressBody({ task, nodeInfo, asyncTaskDefinition, onRequestScriptDefinitionLoad }: EtlProgressBodyProps) {
     if (nodeInfo.status === "failure") {
         const error = nodeInfo.details?.error;
+        const headline = error ? getErrorHeadline(error) : "Unable to load task status";
         return (
             <div className="vstack gap-2 py-2">
                 <div className="text-danger fw-bold">
-                    <Icon icon="warning" color="danger" />{" "}
-                    {error ? getErrorHeadline(error) : "Unable to load task status"}
+                    <Icon icon="warning" color="danger" /> {headline}
                 </div>
-                {error && <Code code={error} language="plaintext" />}
+                {error && headline !== error && <Code code={error} language="plaintext" />}
             </div>
         );
     }
@@ -328,40 +330,12 @@ function EtlProgressBody({ task, nodeInfo }: EtlProgressBodyProps) {
             {isSingleScript ? (
                 <div>
                     <h4 className="mb-2">{progress[0].transformationName}</h4>
-                    {progress[0].transactionalId && (
-                        <div className="d-flex align-items-center gap-1 mb-2">
-                            <Icon icon="identities" margin="m-0" />
-                            <small className="small">Transactional ID</small>
-                            <div className="d-flex align-items-center gap-1 small">
-                                <span className="text-truncate" title={progress[0].transactionalId}>
-                                    {progress[0].transactionalId}
-                                </span>
-                                <Button
-                                    variant="link"
-                                    size="xs"
-                                    className="p-0 flex-shrink-0"
-                                    title="Copy to clipboard"
-                                    onClick={() =>
-                                        copyToClipboard.copy(
-                                            progress[0].transactionalId,
-                                            "Transactional Id was copied to clipboard."
-                                        )
-                                    }
-                                >
-                                    <Icon icon="copy" margin="m-0" />
-                                </Button>
-                            </div>
-                        </div>
-                    )}
-                    <NamedProgress name={null} vertical>
-                        <NamedProgressItem progress={progress[0].documents}>documents</NamedProgressItem>
-                        <NamedProgressItem progress={progress[0].documentTombstones}>tombstones</NamedProgressItem>
-                        {progress[0].counterGroups.total > 0 && (
-                            <NamedProgressItem progress={progress[0].counterGroups}>counters</NamedProgressItem>
-                        )}
-                    </NamedProgress>
-                    <hr className="script-separator" />
-                    <ScriptPreview task={task} transformationName={progress[0].transformationName} />
+                    <ScriptBody
+                        task={task}
+                        scriptProgress={progress[0]}
+                        asyncTaskDefinition={asyncTaskDefinition}
+                        onRequestLoad={onRequestScriptDefinitionLoad}
+                    />
                 </div>
             ) : (
                 <div>
@@ -370,7 +344,8 @@ function EtlProgressBody({ task, nodeInfo }: EtlProgressBodyProps) {
                             key={scriptProgress.transformationName}
                             task={task}
                             scriptProgress={scriptProgress}
-                            isInitiallyExpanded
+                            asyncTaskDefinition={asyncTaskDefinition}
+                            onRequestLoad={onRequestScriptDefinitionLoad}
                         />
                     ))}
                 </div>

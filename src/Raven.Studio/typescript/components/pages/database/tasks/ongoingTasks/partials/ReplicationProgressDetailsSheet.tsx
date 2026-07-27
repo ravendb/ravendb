@@ -1,78 +1,63 @@
-import { useState } from "react";
-import { ViewSheet } from "components/common/splitView/ViewSheet";
-import {
-    OngoingTaskAbstractReplicationNodeInfoDetails,
-    OngoingReplicationProgressAwareTaskNodeInfo,
-    OngoingTaskNodeReplicationProgressDetails,
-} from "components/models/tasks";
+import { OngoingTaskNodeReplicationProgressDetails } from "components/models/tasks";
+import { loadStatus } from "components/models/common";
 import { ChangeVectorDetails } from "components/pages/database/tasks/ongoingTasks/partials/ChangeVectorDetails";
 import { Icon } from "components/common/Icon";
+import { EmptySet } from "components/common/EmptySet";
+import { NamedProgressItem } from "components/common/NamedProgress";
 import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
 import Code from "components/common/Code";
-import { NodeLocationTabs } from "components/pages/database/tasks/ongoingTasks/partials/NodeLocationSelect";
-import classNames from "classnames";
-import { AnimatePresence, motion } from "motion/react";
 import { getErrorHeadline } from "components/utils/common";
 import useBoolean from "components/hooks/useBoolean";
+import {
+    ProgressDetailsSheetShell,
+    useNodeSlider,
+} from "components/pages/database/tasks/ongoingTasks/partials/ProgressDetailsSheetShell";
 import "./ReplicationProgressDetailsSheet.scss";
 
-type Direction = 1 | -1;
+export interface ReplicationProgressSheetNodeDetails {
+    error: string;
+    sourceDatabaseChangeVector: string;
+    lastAcceptedChangeVectorFromDestination: string;
+}
 
-const slideVariants = {
-    enter: (d: Direction) => ({ x: `${d * 100}%` }),
-    center: { x: 0 },
-    exit: (d: Direction) => ({ x: `${d * -100}%` }),
-};
+export interface ReplicationProgressSheetNodeInfo {
+    location: databaseLocationSpecifier;
+    status: loadStatus;
+    details: ReplicationProgressSheetNodeDetails;
+    progress: OngoingTaskNodeReplicationProgressDetails[];
+}
 
 interface ReplicationProgressDetailsSheetProps {
     taskType: string;
     taskName?: string;
-    allNodes: OngoingReplicationProgressAwareTaskNodeInfo<OngoingTaskAbstractReplicationNodeInfoDetails>[];
+    allNodes: ReplicationProgressSheetNodeInfo[];
     initialNodeIndex: number;
     onNodeChange?: (index: number) => void;
 }
 
-interface ProgressValue {
-    total: number;
-    processed: number;
-}
-
-function ReplicationProgressCard({ label, progress }: { label: string; progress: ProgressValue }) {
-    const { total, processed } = progress;
-    const percentage = total === 0 ? 100 : Math.floor((processed * 100.0) / total);
-    const completed = total === processed;
-    const remaining = total - processed;
-    const title = completed
-        ? `Processed all items (${processed.toLocaleString()})`
-        : `Processed ${processed.toLocaleString()} out of ${total.toLocaleString()} (${remaining.toLocaleString()} left)`;
-
+function ReplicationProgressCard({ label, progress }: { label: string; progress: Progress }) {
     return (
-        <div className="replication-progress-card" title={title}>
-            <div className="d-flex justify-content-between align-items-center">
-                <div className="small-label">{label}</div>
-                <strong className="progress-percentage">{percentage}%</strong>
-            </div>
-            <div className="progress">
-                <div className={classNames("progress-bar", { completed })} style={{ width: percentage + "%" }} />
-            </div>
+        <div className="replication-progress-card">
+            <NamedProgressItem progress={progress}>{label}</NamedProgressItem>
         </div>
     );
 }
 
 function ReplicationError({ error }: { error: string }) {
+    const headline = getErrorHeadline(error);
     return (
         <div className="vstack gap-1">
             <div className="text-danger fw-bold">
-                <Icon icon="warning" color="danger" /> {getErrorHeadline(error)}
+                <Icon icon="warning" color="danger" /> {headline}
             </div>
-            <Code code={error} language="plaintext" />
+            {headline !== error && <Code code={error} language="plaintext" />}
         </div>
     );
 }
 
 interface ReplicationProgressBodyProps {
-    nodeInfo: OngoingReplicationProgressAwareTaskNodeInfo<OngoingTaskAbstractReplicationNodeInfoDetails>;
+    nodeInfo: ReplicationProgressSheetNodeInfo;
     isDebugInfoExpanded: boolean;
     onToggleDebugInfo: () => void;
 }
@@ -80,13 +65,13 @@ interface ReplicationProgressBodyProps {
 function ReplicationProgressBody({ nodeInfo, isDebugInfoExpanded, onToggleDebugInfo }: ReplicationProgressBodyProps) {
     if (nodeInfo.status === "failure") {
         const error = nodeInfo.details?.error;
+        const headline = error ? getErrorHeadline(error) : "Unable to load task status";
         return (
             <div className="vstack gap-2 py-2">
                 <div className="text-danger fw-bold">
-                    <Icon icon="warning" color="danger" />{" "}
-                    {error ? getErrorHeadline(error) : "Unable to load task status"}
+                    <Icon icon="warning" color="danger" /> {headline}
                 </div>
-                {error && <Code code={error} language="plaintext" />}
+                {error && headline !== error && <Code code={error} language="plaintext" />}
             </div>
         );
     }
@@ -102,13 +87,13 @@ function ReplicationProgressBody({ nodeInfo, isDebugInfoExpanded, onToggleDebugI
     const hasError = !!nodeInfo.details?.error;
     const progress: OngoingTaskNodeReplicationProgressDetails[] = nodeInfo.progress ?? [];
 
-    if (progress.length === 0 && !hasError) {
-        return <div className="text-muted text-center py-3">No progress data available.</div>;
-    }
-
     const sourceDatabaseCV = nodeInfo.details?.sourceDatabaseChangeVector;
     const lastAcceptedCV = nodeInfo.details?.lastAcceptedChangeVectorFromDestination;
     const hasDebugInfo = !!sourceDatabaseCV || !!lastAcceptedCV;
+
+    if (progress.length === 0 && !hasError && !hasDebugInfo) {
+        return <EmptySet compact>No progress data available.</EmptySet>;
+    }
 
     return (
         <div className="vstack gap-3">
@@ -164,68 +149,23 @@ function ReplicationProgressBody({ nodeInfo, isDebugInfoExpanded, onToggleDebugI
 export function ReplicationProgressDetailsSheet(props: ReplicationProgressDetailsSheetProps) {
     const { taskType, taskName, allNodes, initialNodeIndex, onNodeChange } = props;
 
-    const [selectedIndex, setSelectedIndex] = useState(initialNodeIndex);
-    const [direction, setDirection] = useState<Direction>(1);
-    const [prevInitialNodeIndex, setPrevInitialNodeIndex] = useState(initialNodeIndex);
-
-    if (initialNodeIndex !== prevInitialNodeIndex) {
-        setPrevInitialNodeIndex(initialNodeIndex);
-        setDirection(initialNodeIndex > selectedIndex ? 1 : -1);
-        setSelectedIndex(initialNodeIndex);
-    }
-
-    const handleNodeChange = (index: number) => {
-        setDirection(index > selectedIndex ? 1 : -1);
-        setSelectedIndex(index);
-        onNodeChange?.(index);
-    };
+    const { selectedIndex, direction, handleNodeChange } = useNodeSlider(initialNodeIndex, onNodeChange);
     const { value: isDebugInfoExpanded, toggle: toggleDebugInfoExpanded } = useBoolean(false);
     const nodeInfo = allNodes[selectedIndex];
 
     return (
-        <ViewSheet>
-            <ViewSheet.Header isPinHidden isCloseHidden className="pb-0">
-                <div className="vstack gap-2 w-100">
-                    <div className="d-flex justify-content-between align-items-center">
-                        <div className="d-flex align-items-center gap-1">
-                            <Icon icon="ongoing-tasks" margin="me-0" color="primary" />
-                            <h4 className="mb-0">{taskName ?? taskType} details</h4>
-                        </div>
-                        <div className="d-flex align-items-center">
-                            <ViewSheet.PinButton />
-                            <ViewSheet.CloseButton />
-                        </div>
-                    </div>
-                    <div className="d-flex align-items-center">
-                        <NodeLocationTabs
-                            locations={allNodes.map((n) => n.location)}
-                            selectedIndex={selectedIndex}
-                            onChange={handleNodeChange}
-                        />
-                    </div>
-                </div>
-            </ViewSheet.Header>
-            <ViewSheet.Body className="p-3">
-                <div style={{ overflow: "hidden", position: "relative" }}>
-                    <AnimatePresence mode="popLayout" custom={direction} initial={false}>
-                        <motion.div
-                            key={selectedIndex}
-                            custom={direction}
-                            variants={slideVariants}
-                            initial="enter"
-                            animate="center"
-                            exit="exit"
-                            transition={{ duration: 0.3, ease: "easeInOut" }}
-                        >
-                            <ReplicationProgressBody
-                                nodeInfo={nodeInfo}
-                                isDebugInfoExpanded={isDebugInfoExpanded}
-                                onToggleDebugInfo={toggleDebugInfoExpanded}
-                            />
-                        </motion.div>
-                    </AnimatePresence>
-                </div>
-            </ViewSheet.Body>
-        </ViewSheet>
+        <ProgressDetailsSheetShell
+            title={taskName ? `${taskType} · ${taskName}` : taskType}
+            locations={allNodes.map((n) => n.location)}
+            selectedIndex={selectedIndex}
+            direction={direction}
+            onNodeChange={handleNodeChange}
+        >
+            <ReplicationProgressBody
+                nodeInfo={nodeInfo}
+                isDebugInfoExpanded={isDebugInfoExpanded}
+                onToggleDebugInfo={toggleDebugInfoExpanded}
+            />
+        </ProgressDetailsSheetShell>
     );
 }

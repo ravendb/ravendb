@@ -124,8 +124,15 @@ export function useViewSheet() {
         dispatch(splitViewActions.maxPanelWidthInPxSet(getWidthInPx(options.maxWidth ?? "75%")));
     };
 
+    const update = (ownerId: string, component: ReactNode) => {
+        if (activeSheetOwnerId === ownerId) {
+            setSheetComponent(component);
+        }
+    };
+
     return {
         open,
+        update,
         close: () => setSheetComponent(null),
         isOpen: !!sheetComponent,
         activeSheetOwnerId,
