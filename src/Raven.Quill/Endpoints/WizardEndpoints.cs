@@ -179,7 +179,7 @@ public static class WizardEndpoints
         ILogger<WizardLogger> logger,
         CancellationToken ct)
     {
-        if (body.Tables.Length == 0)
+        if (body.Tables is not { Length: > 0 })
             return Results.BadRequest(new ApiErrorResponse("at least one table is required"));
 
         WizardState? state;
@@ -233,7 +233,7 @@ public static class WizardEndpoints
 
         return Results.Ok(VerifyCdcResponse.From(result));
     }
-    
+
     private static CdcSinkConfiguration ScaffoldDryRunConfiguration(
         CdcSinkSourceSchema schema,
         VerifyCdcTableRequest[] requested,
@@ -277,7 +277,7 @@ public static class WizardEndpoints
                 errors.Add($"Table '{fullName}' has no primary key, so CDC cannot derive stable document ids for it.");
                 continue;
             }
-            
+
             var isPendingCdcSetup = schema.HasPermissionToSetup && discovered.IsCdcEnabled == false;
 
             var columns = discovered.Columns
