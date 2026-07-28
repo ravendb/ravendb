@@ -8,7 +8,7 @@ const RELATION_TYPES = ["Array", "Map", "Value"] as const satisfies readonly Cdc
 
 // Optional override; when empty the server derives the slug from the app name. Mirrors the
 // server's normalization checks so obvious problems surface before provisioning (reserved
-// names and duplicates are only known server-side and come back as 400/409).
+// names are only known server-side and come back as a 400).
 const slugSchema = z
     .string()
     .trim()
@@ -156,16 +156,38 @@ export const tablesSchema = z
         });
     });
 
+/** `takenSlugs` are the slugs of the already existing apps; the new app must not reuse one. */
+export const createExternalConnectionSchema = (takenSlugs: string[] = []) => {
+    const normalizedTakenSlugs = new Set(takenSlugs.map((slug) => toSlug(slug)));
+
+    return z
+        .object({
+            appName: z.string().trim().min(1, "Application name is required"),
+            slug: slugSchema,
+            provider: providerSchema,
+            connectionString: z.string().trim().min(1, "Connection string is required."),
+        })
+        .superRefine((values, ctx) => {
+            const overrideSlug = values.slug.trim();
+            // With an empty override the server derives the slug from the app name, so the name is
+            // what has to be changed to free up the conflict.
+            const slug = toSlug(overrideSlug || values.appName);
+
+            if (slug !== "" && normalizedTakenSlugs.has(slug)) {
+                ctx.addIssue({
+                    code: "custom",
+                    path: [overrideSlug === "" ? "appName" : "slug"],
+                    message: `Slug "${slug}" is already used by another app`,
+                });
+            }
+        });
+};
+
 export const appSchema = z.object({
     dataSource: z.object({
         source: z.union([z.literal("external"), z.literal("ravendb")]),
     }),
-    externalConnection: z.object({
-        appName: z.string().trim().min(1, "Application name is required"),
-        slug: slugSchema,
-        provider: providerSchema,
-        connectionString: z.string().trim().min(1, "Connection string is required."),
-    }),
+    externalConnection: createExternalConnectionSchema(),
     verifySchema: z.object({
         tables: z
             .array(
