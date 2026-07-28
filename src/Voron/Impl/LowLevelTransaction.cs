@@ -273,6 +273,11 @@ namespace Voron.Impl
 
             Flags = TransactionFlags.ReadWrite;
 
+            // the previous transaction just ran CommitStage1, so its ImmutableExternalState already holds
+            // the state computed by LastChanceToReadFromWriteTransactionBeforeCommit, which is more up to date
+            // than what the environment published (that happens only when the async commit completes)
+            ImmutableExternalState = previous.ImmutableExternalState;
+
             _pagerStates = new HashSet<PagerState>(ReferenceEqualityComparer<PagerState>.Default);
 
             JournalFiles = previous.JournalFiles;
