@@ -41,52 +41,6 @@ public static class AiConnectionStringsEndpoints
             .Produces<AiConnectionStringDeleteConflictResponse>(StatusCodes.Status409Conflict);
     }
 
-    public sealed class AiModelsRequest
-    {
-        public static AiModelsRequest From(AiConnectionString connection)
-        {
-            switch (connection.GetActiveProvider())
-            {
-                case AiConnectorType.OpenAi:
-                    return new AiModelsRequest
-                    {
-                        ConnectorType = AiConnectorType.OpenAi,
-                        OpenAiSettings = connection.OpenAiSettings
-                    };
-                case AiConnectorType.AzureOpenAi:
-                    return new AiModelsRequest
-                    {
-                        ConnectorType = AiConnectorType.AzureOpenAi,
-                        AzureOpenAiSettings = connection.AzureOpenAiSettings
-                    };
-                case AiConnectorType.Ollama:
-                    return new AiModelsRequest
-                    {
-                        ConnectorType = AiConnectorType.Ollama,
-                        OllamaSettings = connection.OllamaSettings
-                    };
-                case AiConnectorType.Google:
-                    return new AiModelsRequest
-                    {
-                        ConnectorType = AiConnectorType.Google,
-                        GoogleSettings = connection.GoogleSettings
-                    };
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-        }
-
-        public AiConnectorType ConnectorType { get; set; }
-
-        public OllamaSettings? OllamaSettings { get; set; }
-
-        public OpenAiSettings? OpenAiSettings { get; set; }
-
-        public AzureOpenAiSettings? AzureOpenAiSettings { get; set; }
-
-        public GoogleSettings? GoogleSettings { get; set; }
-    }
-
     private static async Task<IResult> DeleteAsync(
         string name,
         IDocumentStore store,
