@@ -72,6 +72,23 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHe
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Matches_selected_table_identifiers_case_sensitively()
+    {
+        Mock.CdcResponse = (200, AiHelperSamples.CdcEnvelope(AiHelperSamples.BuildCdcConfig()));
+        await SeedDiscoveredSchemaAsync(
+            Host,
+            SourceTable("orders", foreignKeysTo: ["Orders"]),
+            SourceTable("Orders"));
+
+        await Host.SuggestCdcAsync(Request("x", "orders"));
+
+        var sentTables = JsonNode.Parse(Mock.LastCdcRequestBody!)!["Schema"]!["Tables"]!.AsArray();
+        var sentTable = Assert.Single(sentTables);
+        Assert.Equal("orders", (string?)sentTable!["SourceTableName"]);
+        Assert.Empty(sentTable["ForeignKeys"]!.AsArray());
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Requires_at_least_one_selected_table()
     {
         await SeedDiscoveredSchemaAsync(Host);
@@ -240,8 +257,16 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHe
 
     /// The three-table schema every test's wizard state carries. Discovery can't reach a real source here,
     /// so the state document is written directly.
-    private static async Task SeedDiscoveredSchemaAsync(QuillHost host)
+    private static async Task SeedDiscoveredSchemaAsync(QuillHost host, params CdcSinkSourceTable[] tables)
     {
+        CdcSinkSourceTable[] discoveredTables = tables.Length > 0
+            ? tables
+            : [
+                SourceTable("orders", foreignKeysTo: ["customers", "audit_log"]),
+                SourceTable("customers"),
+                SourceTable("audit_log"),
+            ];
+
         using var session = host.Config.OpenAsyncSession();
         await session.StoreAsync(new WizardState
         {
@@ -250,12 +275,7 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHe
             {
                 CatalogName = "shop",
                 HasPermissionToSetup = true,
-                Tables =
-                [
-                    SourceTable("orders", foreignKeysTo: ["customers", "audit_log"]),
-                    SourceTable("customers"),
-                    SourceTable("audit_log"),
-                ],
+                Tables = [.. discoveredTables],
             },
             LastDiscoverAt = DateTime.UtcNow,
         }, WizardState.DocumentIdFor(QuillHost.DefaultWizardSlug));

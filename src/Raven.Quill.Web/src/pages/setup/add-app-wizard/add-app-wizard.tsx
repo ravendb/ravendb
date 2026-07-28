@@ -23,6 +23,7 @@ import {
     DialogTitle,
 } from "@/components/shadcn/ui/dialog";
 import { CdcPerformanceSection } from "@/pages/apps/cdc-performance-section";
+import { cancelAbandonedSuggestions } from "@/pages/setup/add-app-wizard/steps/map-tables/suggest-map-tables-query";
 
 type CreatedApp = { slug: string; name: string };
 
@@ -46,8 +47,12 @@ export function AddAppWizard() {
 
     useEffect(() => {
         resetStore();
-        return resetStore;
-    }, [resetStore]);
+
+        return () => {
+            cancelAbandonedSuggestions(queryClient);
+            resetStore();
+        };
+    }, [queryClient, resetStore]);
 
     const provisionMutation = useMutation({
         mutationFn: async (formValues: AppFormData) => {
