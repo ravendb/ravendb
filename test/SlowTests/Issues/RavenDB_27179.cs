@@ -1,6 +1,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -34,7 +35,7 @@ namespace SlowTests.Issues
 
         [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
-        public void NegatedStartsWithInAndMustKeepDocumentsMissingTheField(Options options)
+        public void NegatedStartsWithAndEndsWithInAndMustKeepDocumentsMissingTheField(Options options)
         {
             using var store = GetDocumentStore(options);
 
@@ -52,16 +53,24 @@ namespace SlowTests.Issues
 
             using (var session = store.OpenSession())
             {
-                // No tagline starts with "zzz", so `not startsWith(Tagline, "zzz")` must keep every document,
-                // including the two that have no Tagline field at all.
-                // The `exists(Title) and ...` form is what triggers the negated-AND code path in Corax.
-                var results = session.Advanced
-                    .RawQuery<Movie>("from index \"Movies/ByTagline\" where exists(Title) and not (startsWith(Tagline, $p))")
-                    .AddParameter("p", "zzz")
-                    .ToList();
+                // Nothing matches "zzz", so the negation has to keep every document - including the two that have no
+                // Tagline field at all, which is what was being dropped. The `exists(Title) and ...` form is what
+                // routes the query through the negated-AND code path in Corax.
+                Assert.Equal(4, Count(session, "not (startsWith(Tagline, $p))", "zzz"));
+                Assert.Equal(4, Count(session, "not (endsWith(Tagline, $p))", "zzz"));
 
-                Assert.Equal(4, results.Count);
+                // ...and it still has to drop what it does match, otherwise a negation that silently degraded into
+                // 'match all' would satisfy the two assertions above.
+                Assert.Equal(3, Count(session, "not (startsWith(Tagline, $p))", "hello")); // drops 'hello world'
+                Assert.Equal(3, Count(session, "not (endsWith(Tagline, $p))", "one"));     // drops 'another one'
             }
+
+            static int Count(IDocumentSession session, string negatedClause, string pattern) =>
+                session.Advanced
+                    .RawQuery<Movie>($"from index \"Movies/ByTagline\" where exists(Title) and {negatedClause}")
+                    .AddParameter("p", pattern)
+                    .ToList()
+                    .Count;
         }
     }
 }
