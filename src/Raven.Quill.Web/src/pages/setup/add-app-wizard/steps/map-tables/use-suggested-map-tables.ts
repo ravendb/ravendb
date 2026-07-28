@@ -1,21 +1,35 @@
 import { useLayoutEffect } from "react";
-import { useIsFetching, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useFormContext, useWatch } from "react-hook-form";
+import { getFetchStartedAt } from "@/lib/query-fetch-start";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { computeMapKey } from "@/pages/setup/add-app-wizard/steps/map/use-map-schema-step";
 import {
     computeDiscoveredSchemaKey,
-    SUGGEST_MAP_TABLES_QUERY_KEY,
     suggestMapTablesQuery,
 } from "@/pages/setup/add-app-wizard/steps/map-tables/suggest-map-tables-query";
 import { useApplyMapTables } from "@/pages/setup/add-app-wizard/steps/map-tables/use-apply-map-tables";
 
 type SuggestedMapTables = {
     isSuggesting: boolean;
+    startedAt: number | undefined;
     error: Error | null;
     retry: () => void;
 };
+
+/** The suggestion query for the mapping inputs currently held by the form. */
+function useCurrentSuggestQuery() {
+    const { getValues } = useFormContext<AppFormData>();
+    const discoverResult = useSetupWizardStore((state) => state.discoverResult);
+
+    return suggestMapTablesQuery({
+        slug: getValues("externalConnection").slug,
+        discoveredSchemaKey: computeDiscoveredSchemaKey(discoverResult),
+        intentPrompt: getValues("map.aiPrompt").trim(),
+        selectedTables: getValues("verifySchema.tables"),
+    });
+}
 
 /**
  * Loads the AI mapping suggestion into the form when the operator asked for one. Usually resolves
@@ -25,7 +39,7 @@ export function useSuggestedMapTables(): SuggestedMapTables {
     const { getValues } = useFormContext<AppFormData>();
     const applyMapTables = useApplyMapTables();
     const appliedMapKey = useSetupWizardStore((state) => state.appliedMapKey);
-    const discoverResult = useSetupWizardStore((state) => state.discoverResult);
+    const currentSuggestQuery = useCurrentSuggestQuery();
 
     const { source, aiPrompt } = getValues("map");
     const selectedTables = getValues("verifySchema.tables");
@@ -34,12 +48,7 @@ export function useSuggestedMapTables(): SuggestedMapTables {
     const isSuggestionNeeded = source === "ai-suggested" && !isApplied;
 
     const query = useQuery({
-        ...suggestMapTablesQuery({
-            slug: getValues("externalConnection").slug,
-            discoveredSchemaKey: computeDiscoveredSchemaKey(discoverResult),
-            intentPrompt: aiPrompt.trim(),
-            selectedTables,
-        }),
+        ...currentSuggestQuery,
         enabled: isSuggestionNeeded,
     });
 
@@ -61,21 +70,27 @@ export function useSuggestedMapTables(): SuggestedMapTables {
         store.setAppliedMapKey(mapKey);
     }, [applyMapTables, isApplied, mapKey, suggestedTables]);
 
+    // A retry in flight reads as progress, not as the failure it is retrying.
+    const error = isSuggestionNeeded && !query.isFetching ? query.error : null;
+
     return {
-        isSuggesting: isSuggestionNeeded && (query.isFetching || !query.isError),
-        error: isSuggestionNeeded ? query.error : null,
+        isSuggesting: isSuggestionNeeded && !error,
+        startedAt: getFetchStartedAt(currentSuggestQuery.queryKey),
+        error,
         retry: () => void query.refetch(),
     };
 }
 
 /**
- * Whether the wizard should hold "Next" back: with no tables in the form yet, advancing could only
- * fail validation. Observes the cache instead of the query so the step definitions never start a
- * fetch of their own.
+ * Whether the wizard should hold "Next" back: while the suggestion for the current inputs is in
+ * flight there are no tables to advance with, and after it failed advancing would silently submit
+ * whatever mapping the form held before. Matches the exact query key so abandoned requests for
+ * other inputs never block the step, and never starts a fetch of its own.
  */
-export function useIsSuggestingMapTables(): boolean {
+export function useIsMapTablesNextDisabled(): boolean {
     const source = useWatch<AppFormData, "map.source">({ name: "map.source" });
-    const isFetching = useIsFetching({ queryKey: SUGGEST_MAP_TABLES_QUERY_KEY }) > 0;
+    const currentSuggestQuery = useCurrentSuggestQuery();
+    const query = useQuery({ ...currentSuggestQuery, enabled: false });
 
-    return source === "ai-suggested" && isFetching;
+    return source === "ai-suggested" && (query.isFetching || query.isError);
 }

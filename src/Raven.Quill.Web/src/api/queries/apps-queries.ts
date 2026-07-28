@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import type { ServerApi } from "@/api/generated/server-api";
+import { recordFetchStartedAt } from "@/lib/query-fetch-start";
 
 const baseKey = "apps";
 
@@ -30,7 +31,9 @@ export function createAppsQueries(api: ServerApi["apps"]) {
         suggestAgentFromData: (slug: string) =>
             queryOptions({
                 queryKey: [baseKey, "suggestAgentFromData", slug],
-                queryFn: async () => {
+                queryFn: async ({ queryKey }) => {
+                    recordFetchStartedAt(queryKey);
+
                     // Suggestions are an optional aid — the wizard works without them — so
                     // failures degrade to an empty list instead of blocking navigation.
                     const result = await api

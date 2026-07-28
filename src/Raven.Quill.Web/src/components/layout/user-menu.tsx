@@ -13,7 +13,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/shadcn/ui/dropdown-menu";
 import { Spinner } from "@/components/shadcn/ui/spinner";
-import { ContactSheet } from "@/pages/dashboard/contact-sheet";
+import { ContactSheet } from "@/components/layout/contact-sheet";
 
 export function UserMenu() {
     const { logout } = useAuth();

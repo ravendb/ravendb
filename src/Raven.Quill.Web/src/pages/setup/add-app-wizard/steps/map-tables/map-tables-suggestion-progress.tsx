@@ -14,10 +14,10 @@ const SUGGESTION_STAGES: AiProgressStage[] = [
 
 const EXPLORER_ROW_WIDTHS = ["w-full", "w-11/12", "w-10/12", "w-full", "w-9/12", "w-11/12", "w-8/12"];
 
-export function MapTablesSuggestionProgress() {
+export function MapTablesSuggestionProgress({ startedAt }: { startedAt: number | undefined }) {
     return (
         <div className="flex min-h-80 flex-1 flex-col gap-6 rounded-lg border bg-background p-6">
-            <AiProgressStatus stages={SUGGESTION_STAGES}>
+            <AiProgressStatus stages={SUGGESTION_STAGES} startedAt={startedAt}>
                 We&apos;re proposing a mapping for the tables you verified. This usually takes a minute or two.
             </AiProgressStatus>
 

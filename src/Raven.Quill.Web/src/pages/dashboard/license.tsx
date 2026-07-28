@@ -9,7 +9,7 @@ import { Button } from "@/components/shadcn/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/shadcn/ui/card";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { ContactSheet } from "./contact-sheet";
+import { ContactSheet } from "@/components/layout/contact-sheet";
 
 // Subtle brand wash used to make the featured plan stand out.
 // Defined as a CSS class (see index.css) so it layers over the card's bg-color.

@@ -20,7 +20,7 @@ import { useConnectSourceStep } from "@/pages/setup/add-app-wizard/steps/connect
 import { useMapSchemaStep } from "@/pages/setup/add-app-wizard/steps/map/use-map-schema-step";
 import { useFocusMapTablesError } from "@/pages/setup/add-app-wizard/steps/map-tables/use-focus-map-tables-error";
 import { useMapTablesStep } from "@/pages/setup/add-app-wizard/steps/map-tables/use-map-tables-step";
-import { useIsSuggestingMapTables } from "@/pages/setup/add-app-wizard/steps/map-tables/use-suggested-map-tables";
+import { useIsMapTablesNextDisabled } from "@/pages/setup/add-app-wizard/steps/map-tables/use-suggested-map-tables";
 import { useVerifySchemaStep } from "@/pages/setup/add-app-wizard/steps/verify/use-verify-schema-step";
 
 export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
@@ -29,7 +29,7 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
     const mapSchemaBeforeNext = useMapSchemaStep();
     const mapTablesBeforeNext = useMapTablesStep();
     const focusMapTablesError = useFocusMapTablesError();
-    const isSuggestingMapTables = useIsSuggestingMapTables();
+    const isMapTablesNextDisabled = useIsMapTablesNextDisabled();
 
     return {
         dataSource: {
@@ -88,7 +88,7 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
             validate: "mapTables",
             onValidationFailed: focusMapTablesError,
             beforeNext: mapTablesBeforeNext,
-            isNextDisabled: isSuggestingMapTables,
+            isNextDisabled: isMapTablesNextDisabled,
         },
         preview: {
             title: "Preview before full ingest",
