@@ -5,10 +5,7 @@ import { getFetchStartedAt } from "@/lib/query-fetch-start";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { computeMapKey } from "@/pages/setup/add-app-wizard/steps/map/use-map-schema-step";
-import {
-    computeDiscoveredSchemaKey,
-    suggestMapTablesQuery,
-} from "@/pages/setup/add-app-wizard/steps/map-tables/suggest-map-tables-query";
+import { suggestMapTablesQueryForValues } from "@/pages/setup/add-app-wizard/steps/map-tables/suggest-map-tables-query";
 import { useApplyMapTables } from "@/pages/setup/add-app-wizard/steps/map-tables/use-apply-map-tables";
 
 type SuggestedMapTables = {
@@ -23,12 +20,7 @@ function useCurrentSuggestQuery() {
     const { getValues } = useFormContext<AppFormData>();
     const discoverResult = useSetupWizardStore((state) => state.discoverResult);
 
-    return suggestMapTablesQuery({
-        slug: getValues("externalConnection").slug,
-        discoveredSchemaKey: computeDiscoveredSchemaKey(discoverResult),
-        intentPrompt: getValues("map.aiPrompt").trim(),
-        selectedTables: getValues("verifySchema.tables"),
-    });
+    return suggestMapTablesQueryForValues(getValues(), discoverResult);
 }
 
 /**

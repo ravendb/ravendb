@@ -2,6 +2,7 @@ import { createApiClient, type ApiClient, type ApiClientOptions } from "@/api/ht
 import { createServerApi, type ServerApi } from "@/api/generated/server-api";
 import { createAgentTestService } from "@/api/custom-services/agent-test-service";
 import { createCertificatesService } from "@/api/custom-services/certificates-service";
+import { createSetupSuggestionsService } from "@/api/custom-services/setup-suggestions-service";
 import { createCertificatesQueries } from "@/api/queries/certificates-queries";
 import { createAppsQueries } from "@/api/queries/apps-queries";
 import { createAgentsQueries } from "@/api/queries/agents-queries";
@@ -18,6 +19,7 @@ import { createSettingsQueries } from "@/api/queries/settings-queries";
 export type ApiServices = ServerApi & {
     agentTest: ReturnType<typeof createAgentTestService>;
     certificates: ReturnType<typeof createCertificatesService>;
+    setupSuggestions: ReturnType<typeof createSetupSuggestionsService>;
 };
 
 export type ApiQueries = {
@@ -48,6 +50,7 @@ export function createApi(options?: ApiClientOptions): Api {
         ...generatedServices,
         agentTest: createAgentTestService(client),
         certificates: createCertificatesService(client),
+        setupSuggestions: createSetupSuggestionsService(client),
     };
 
     return {

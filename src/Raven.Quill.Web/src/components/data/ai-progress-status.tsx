@@ -1,19 +1,11 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { SparklesIcon } from "lucide-react";
 
-/** A label to show once the call has been running for `fromSeconds`. */
 export type AiProgressStage = {
     fromSeconds: number;
     label: string;
 };
 
-/**
- * Status line for a long-running AI call: the current stage plus how long it has been going.
- * The endpoints report no progress of their own, so stages are purely time-based - they tell the
- * operator the wizard is still working and roughly how far into a typical run they are.
- * Prefetched calls are already well underway when this mounts, so pass `startedAt` (epoch ms)
- * whenever the caller knows when the request actually began.
- */
 export function AiProgressStatus({
     stages,
     startedAt,
@@ -42,8 +34,6 @@ export function AiProgressStatus({
     );
 }
 
-// Derived from Date.now() rather than counted per tick, so a backgrounded tab (where interval
-// ticks are throttled) still shows the true elapsed time when the operator comes back.
 function useElapsedSeconds(startedAt?: number) {
     const [mountedAt] = useState(() => Date.now());
     const [now, setNow] = useState(mountedAt);

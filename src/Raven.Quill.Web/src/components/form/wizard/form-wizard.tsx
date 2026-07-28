@@ -59,12 +59,10 @@ export type WizardStep<StepId extends string, Values extends FieldValues = Field
     title: ReactNode;
     description?: ReactNode;
     bodyComponent: (props: WizardBodyComponentProps<StepId>) => ReactNode;
-    /** Makes the step body fill the visible area so it can manage its own scrolling. */
     isFullHeight?: boolean;
     validate: WizardValidationTarget<Values>;
     onValidationFailed?: WizardAction;
     beforeNext?: WizardAction;
-    /** Blocks the step from being completed while it is still preparing its own data. */
     isNextDisabled?: boolean;
     nextLabel?: ReactNode;
     canCancel?: boolean;

@@ -3,8 +3,8 @@ import { useFormContext } from "react-hook-form";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import {
-    computeDiscoveredSchemaKey,
-    suggestMapTablesQuery,
+    cancelAbandonedSuggestions,
+    suggestMapTablesQueryForValues,
 } from "@/pages/setup/add-app-wizard/steps/map-tables/suggest-map-tables-query";
 
 /**
@@ -22,18 +22,17 @@ export function useVerifySchemaStep() {
         // After an import or a manual mapping choice the suggestion could never be consumed, so the
         // (expensive) call must not be warmed up.
         if (getValues("map.source") !== "ai-suggested") {
+            cancelAbandonedSuggestions(queryClient);
             return;
         }
 
         const { discoverResult } = useSetupWizardStore.getState();
+        const query = suggestMapTablesQueryForValues(getValues(), discoverResult);
 
-        void queryClient.prefetchQuery(
-            suggestMapTablesQuery({
-                slug: getValues("externalConnection").slug,
-                discoveredSchemaKey: computeDiscoveredSchemaKey(discoverResult),
-                intentPrompt: getValues("map.aiPrompt").trim(),
-                selectedTables: getValues("verifySchema.tables"),
-            }),
-        );
+        // Re-entering this step with different tables or a different prompt leaves the previous pass
+        // still running.
+        cancelAbandonedSuggestions(queryClient, query.queryKey);
+
+        void queryClient.prefetchQuery(query);
     };
 }
