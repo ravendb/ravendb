@@ -3,8 +3,6 @@ using QuillTests.E2E.Fixtures;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.CdcSink.Schema;
-using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Quill.Wizard;
 using Tests.Infrastructure;
 using Xunit;
@@ -13,8 +11,6 @@ namespace QuillTests;
 
 public class WizardVerifyCdcEndpointTests(ITestOutputHelper output) : QuillTestBase(output)
 {
-    private const string WizardSourceProbeName = "_wizard-source-probe";
-
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Requires_at_least_one_table()
     {
@@ -47,17 +43,40 @@ public class WizardVerifyCdcEndpointTests(ITestOutputHelper output) : QuillTestB
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Requires_the_probe_connection_string()
+    public async Task Requires_a_source_connection()
     {
         await using var host = await NewHostAsync();
 
-        await host.SetupDiscoverAsync(new DiscoverRequest("SqlClient", "invalid"));
+        // a wizard doc that reached discover without source creds on it
+        using (var session = host.Config.OpenAsyncSession())
+        {
+            await session.StoreAsync(
+                new WizardState
+                {
+                    Provider = "Npgsql",
+                    LastDiscoveredSchema = new CdcSinkSourceSchema { CatalogName = "src", Tables = [Table("orders")] },
+                },
+                WizardState.DocumentIdFor(QuillHost.DefaultWizardSlug));
+            await session.SaveChangesAsync();
+        }
 
         var ex = await Assert.ThrowsAsync<QuillHttpException>(
             () => host.VerifyCdcAsync(new VerifyCdcRequest([new VerifyCdcTableRequest("orders")])));
 
         Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
         Assert.Contains("connect", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Requires_a_slug()
+    {
+        await using var host = await NewHostAsync();
+
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(
+            () => host.VerifyCdcAsync(new VerifyCdcRequest([new VerifyCdcTableRequest("orders")]), slug: ""));
+
+        Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
+        Assert.Contains("slug", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -83,7 +102,6 @@ public class WizardVerifyCdcEndpointTests(ITestOutputHelper output) : QuillTestB
         await using var host = await NewHostAsync();
 
         await SeedDiscoveredSchemaAsync(host.Config, Table("audit_log", primaryKeyColumns: []));
-        await RegisterProbeAsync(host.Config);
 
         var result = await host.VerifyCdcAsync(new VerifyCdcRequest([new VerifyCdcTableRequest("audit_log", "public")]));
 
@@ -100,7 +118,6 @@ public class WizardVerifyCdcEndpointTests(ITestOutputHelper output) : QuillTestB
         var view = Table("daily_sales_view");
         view.UnsupportedReason = "Views cannot be captured by CDC.";
         await SeedDiscoveredSchemaAsync(host.Config, view);
-        await RegisterProbeAsync(host.Config);
 
         var result = await host.VerifyCdcAsync(
             new VerifyCdcRequest([new VerifyCdcTableRequest("daily_sales_view", "public")]));
@@ -116,7 +133,6 @@ public class WizardVerifyCdcEndpointTests(ITestOutputHelper output) : QuillTestB
         await using var host = await NewHostAsync();
 
         await SeedDiscoveredSchemaAsync(host.Config, Table("audit_log", primaryKeyColumns: []));
-        await RegisterProbeAsync(host.Config);
 
         var result = await host.VerifyCdcAsync(new VerifyCdcRequest([
             new VerifyCdcTableRequest("audit_log", "public"),
@@ -133,7 +149,6 @@ public class WizardVerifyCdcEndpointTests(ITestOutputHelper output) : QuillTestB
         await using var host = await NewHostAsync();
 
         await SeedDiscoveredSchemaAsync(host.Config, Table("orders"));
-        await RegisterProbeAsync(host.Config);
 
         var result = await host.VerifyCdcAsync(new VerifyCdcRequest([new VerifyCdcTableRequest("orders", "public")]));
 
@@ -151,12 +166,11 @@ public class WizardVerifyCdcEndpointTests(ITestOutputHelper output) : QuillTestB
         await using var host = await NewHostAsync();
 
         await SeedDiscoveredSchemaAsync(host.Config, Table("orders"));
-        await RegisterProbeAsync(host.Config);
 
         await host.VerifyCdcAsync(new VerifyCdcRequest([new VerifyCdcTableRequest("orders", "public")]));
 
         using var session = host.Config.OpenAsyncSession();
-        var state = await session.LoadAsync<WizardState>(WizardState.DocumentId);
+        var state = await session.LoadAsync<WizardState>(WizardState.DocumentIdFor(QuillHost.DefaultWizardSlug));
         Assert.Null(state!.LastMapConfiguration);
     }
 
@@ -172,6 +186,7 @@ public class WizardVerifyCdcEndpointTests(ITestOutputHelper output) : QuillTestB
         ],
     };
 
+    // the wizard doc carries the source creds captured at connect; no probe connection string is involved
     private static async Task SeedDiscoveredSchemaAsync(IDocumentStore store, params CdcSinkSourceTable[] tables)
     {
         var schema = new CdcSinkSourceSchema
@@ -183,18 +198,13 @@ public class WizardVerifyCdcEndpointTests(ITestOutputHelper output) : QuillTestB
 
         using var session = store.OpenAsyncSession();
         await session.StoreAsync(
-            new WizardState { Provider = "Npgsql", LastDiscoveredSchema = schema }, WizardState.DocumentId);
-        await session.SaveChangesAsync();
-    }
-
-    private static async Task RegisterProbeAsync(IDocumentStore store)
-    {
-        await store.Maintenance.ForDatabase(store.Database).SendAsync(
-            new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString
+            new WizardState
             {
-                Name = WizardSourceProbeName,
-                FactoryName = "Npgsql",
-                ConnectionString = "Host=localhost;Port=1;Database=src;Username=u;Password=p;Timeout=1",
-            }));
+                Provider = "Npgsql",
+                SourceConnectionString = "Host=localhost;Port=1;Database=src;Username=u;Password=p;Timeout=1",
+                LastDiscoveredSchema = schema,
+            },
+            WizardState.DocumentIdFor(QuillHost.DefaultWizardSlug));
+        await session.SaveChangesAsync();
     }
 }

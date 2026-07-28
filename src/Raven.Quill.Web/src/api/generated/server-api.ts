@@ -791,6 +791,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Dry-runs CDC against the discovered source: provisions the capture infrastructure (PostgreSQL publication/replication slot, SQL Server sp_cdc_enable_*), reads one row per selected table, then removes whatever it created. Reports blockers the static schema verification cannot see, such as a missing CREATE or REPLICATION grant. */
         post: operations["setup.verifyCdc"];
         delete?: never;
         options?: never;
@@ -1705,6 +1706,8 @@ export interface components {
         };
         VerifyCdcRequest: {
             tables: components["schemas"]["VerifyCdcTableRequest"][];
+            /** @default  */
+            slug: string;
         };
         VerifyCdcResponse: {
             success: boolean;
