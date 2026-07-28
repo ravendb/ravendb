@@ -374,6 +374,8 @@ namespace Raven.Server.Documents
                 }
 
                 UpdateCollectionCachesForModifiedCollections(tx, currentCache);
+
+                AssertIncrementalCacheMatchesFullScan(tx, currentCache);
             }
             else
             {
@@ -394,6 +396,32 @@ namespace Raven.Server.Documents
                 {
                     ComputeCollectionCache(tx, new CollectionName(collection), cache, ref holder);
                 }
+            }
+        }
+
+        [Conditional("DEBUG")]
+        private void AssertIncrementalCacheMatchesFullScan(Transaction tx, DocumentTransactionCache incremental)
+        {
+            var full = new DocumentTransactionCache { FullyComputed = true };
+            ComputeCollectionCaches(tx, full);
+
+            if (incremental.LastEtagsByCollection.Count != full.LastEtagsByCollection.Count)
+                throw new InvalidOperationException(
+                    $"Incremental documents transaction cache has {incremental.LastEtagsByCollection.Count} collection(s), a full scan has {full.LastEtagsByCollection.Count}.");
+
+            foreach (var kvp in full.LastEtagsByCollection)
+            {
+                if (incremental.LastEtagsByCollection.TryGetValue(kvp.Key, out var incrementalEntry) == false)
+                    throw new InvalidOperationException(
+                        $"Incremental documents transaction cache is missing collection '{kvp.Key}' that a full scan produced.");
+
+                if (incrementalEntry.LastDocumentEtag != kvp.Value.LastDocumentEtag ||
+                    incrementalEntry.LastTombstoneEtag != kvp.Value.LastTombstoneEtag ||
+                    incrementalEntry.LastChangeVector != kvp.Value.LastChangeVector)
+                    throw new InvalidOperationException(
+                        $"Incremental documents transaction cache diverged from a full scan for collection '{kvp.Key}': " +
+                        $"incremental (doc={incrementalEntry.LastDocumentEtag}, tombstone={incrementalEntry.LastTombstoneEtag}, cv={incrementalEntry.LastChangeVector}) " +
+                        $"vs full (doc={kvp.Value.LastDocumentEtag}, tombstone={kvp.Value.LastTombstoneEtag}, cv={kvp.Value.LastChangeVector}).");
             }
         }
 
