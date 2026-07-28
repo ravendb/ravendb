@@ -317,9 +317,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 var dateTimeOffset = (DateTimeOffset)value;
 
                 // Legacy exact/non-analyzed indexes stored the round-trip ("o") form (offset preserved, no _Time field),
-                // which made exact() queries match by literal string and diverge from Corax. From ExactDatesUseTimeTicks_62
+                // which made exact() queries match by literal string and diverge from Corax. From LuceneExactDatesUseTimeTicks_62
                 // onwards DateTimeOffset is always normalized to UTC and gets the numeric _Time field so exact() matches by instant.
-                var useLegacyExactDateTimeOffsetFormat = _index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.ExactDatesUseTimeTicks_62;
+                var useLegacyExactDateTimeOffsetFormat = _index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.LuceneExactDatesUseTimeTicks_62;
 
                 string dateAsString;
                 if (useLegacyExactDateTimeOffsetFormat && field.Indexing != FieldIndexing.Default && (indexing == Field.Index.NOT_ANALYZED || indexing == Field.Index.NOT_ANALYZED_NO_NORMS))
