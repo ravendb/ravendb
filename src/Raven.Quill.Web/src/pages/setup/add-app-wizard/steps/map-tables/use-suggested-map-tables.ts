@@ -28,14 +28,17 @@ export function useSuggestedMapTables(): SuggestedMapTables {
     const discoverResult = useSetupWizardStore((state) => state.discoverResult);
 
     const { source, aiPrompt } = getValues("map");
-    const mapKey = computeMapKey({ source, aiPrompt, selectedTables: getValues("verifySchema.tables") });
+    const selectedTables = getValues("verifySchema.tables");
+    const mapKey = computeMapKey({ source, aiPrompt, selectedTables });
     const isApplied = appliedMapKey === mapKey && getValues("mapTables.tables").length > 0;
     const isSuggestionNeeded = source === "ai-suggested" && !isApplied;
 
     const query = useQuery({
         ...suggestMapTablesQuery({
+            slug: getValues("externalConnection").slug,
             discoveredSchemaKey: computeDiscoveredSchemaKey(discoverResult),
             intentPrompt: aiPrompt.trim(),
+            selectedTables,
         }),
         enabled: isSuggestionNeeded,
     });

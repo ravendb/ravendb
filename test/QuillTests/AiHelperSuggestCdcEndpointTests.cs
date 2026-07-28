@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json.Nodes;
 using QuillTests.E2E.Fixtures;
 using Raven.Client.Documents.Operations.CdcSink;
+using Raven.Client.Documents.Operations.CdcSink.Schema;
 using Raven.Quill.Contracts;
 using Raven.Quill.Wizard;
 using Tests.Infrastructure;
@@ -20,7 +21,7 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHe
         Mock.CdcResponse = (200, AiHelperSamples.CdcEnvelope(AiHelperSamples.BuildCdcConfig()));
         await SeedDiscoveredSchemaAsync(Host);
 
-        var resp = await Host.SuggestCdcAsync(new SuggestCdcRequest("shopping cart assistant"));
+        var resp = await Host.SuggestCdcAsync(Request("shopping cart assistant", "orders"));
         Assert.Equal("Success", resp.Status);
         Assert.True(resp.Rationale.Count > 0);
 
@@ -45,9 +46,49 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHe
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Requires_a_discovered_schema()
     {
-        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => Host.SuggestCdcAsync(new SuggestCdcRequest("x")));
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => Host.SuggestCdcAsync(Request("x", "orders")));
         Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
         Assert.Null(Mock.LastCdcRequestBody); // internal service not called
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Sends_only_the_selected_tables_and_the_foreign_keys_between_them()
+    {
+        Mock.CdcResponse = (200, AiHelperSamples.CdcEnvelope(AiHelperSamples.BuildCdcConfig()));
+        await SeedDiscoveredSchemaAsync(Host);
+
+        await Host.SuggestCdcAsync(Request("x", "orders", "customers"));
+
+        var sentTables = JsonNode.Parse(Mock.LastCdcRequestBody!)!["Schema"]!["Tables"]!.AsArray();
+        Assert.Equal(
+            new string?[] { "orders", "customers" },
+            sentTables.Select(table => (string?)table!["SourceTableName"]).ToArray());
+
+        // audit_log was left out, so the orders -> audit_log foreign key must not travel with orders
+        var orders = sentTables.First(table => (string?)table!["SourceTableName"] == "orders")!;
+        Assert.Equal(
+            new string?[] { "customers" },
+            orders["ForeignKeys"]!.AsArray().Select(key => (string?)key!["ReferencedTable"]).ToArray());
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Requires_at_least_one_selected_table()
+    {
+        await SeedDiscoveredSchemaAsync(Host);
+
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => Host.SuggestCdcAsync(Request("x")));
+        Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
+        Assert.Null(Mock.LastCdcRequestBody);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Rejects_a_selection_the_discovered_schema_does_not_contain()
+    {
+        await SeedDiscoveredSchemaAsync(Host);
+
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => Host.SuggestCdcAsync(Request("x", "dropped_table")));
+        Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
+        Assert.Null(Mock.LastCdcRequestBody);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -56,7 +97,7 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHe
         Mock.CdcResponse = (200, AiHelperSamples.CdcEnvelope(AiHelperSamples.BuildCdcConfig()));
         await SeedDiscoveredSchemaAsync(Host);
 
-        var resp = await Host.SuggestCdcAsync(new SuggestCdcRequest("  "));
+        var resp = await Host.SuggestCdcAsync(Request("  ", "orders"));
         Assert.Equal("Success", resp.Status);
 
         var sent = JsonNode.Parse(Mock.LastCdcRequestBody!)!;
@@ -69,7 +110,7 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHe
         Mock.CdcResponse = (429, "{}");
         await SeedDiscoveredSchemaAsync(Host);
 
-        var resp = await Host.SuggestCdcAsync(new SuggestCdcRequest("x"));
+        var resp = await Host.SuggestCdcAsync(Request("x", "orders"));
         Assert.Equal("OutOfTokens", resp.Status);
         Assert.Null(resp.Configuration);
     }
@@ -82,7 +123,7 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHe
         Mock.CdcResponse = (200, AiHelperSamples.CdcEnvelope(invalid));
         await SeedDiscoveredSchemaAsync(Host);
 
-        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => Host.SuggestCdcAsync(new SuggestCdcRequest("x")));
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => Host.SuggestCdcAsync(Request("x", "orders")));
         Assert.Equal(HttpStatusCode.UnprocessableEntity, ex.StatusCode);
     }
 
@@ -92,7 +133,7 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHe
         Mock.CdcResponse = (401, "{}");
         await SeedDiscoveredSchemaAsync(Host);
 
-        var resp = await Host.SuggestCdcAsync(new SuggestCdcRequest("x"));
+        var resp = await Host.SuggestCdcAsync(Request("x", "orders"));
         Assert.Equal("InvalidCredentials", resp.Status);
     }
 
@@ -103,7 +144,7 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHe
         await using var host = await NewMockAiHostAsync("http://nonexistent.invalid");
         await SeedDiscoveredSchemaAsync(host);
 
-        var resp = await host.SuggestCdcAsync(new SuggestCdcRequest("x"));
+        var resp = await host.SuggestCdcAsync(Request("x", "orders"));
         Assert.Equal("InternalError", resp.Status);
     }
 
@@ -114,7 +155,7 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHe
         Mock.CdcResponse = (200, AiHelperSamples.CdcEnvelope(AiHelperSamples.BuildCdcConfig(), status: "ConsentRequired"));
         await SeedDiscoveredSchemaAsync(Host);
 
-        var resp = await Host.SuggestCdcAsync(new SuggestCdcRequest("x"));
+        var resp = await Host.SuggestCdcAsync(Request("x", "orders"));
         Assert.Equal("ConsentRequired", resp.Status);
         Assert.Null(resp.Configuration);
     }
@@ -125,7 +166,7 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHe
         Mock.CdcResponse = (200, "not json");
         await SeedDiscoveredSchemaAsync(Host);
 
-        var resp = await Host.SuggestCdcAsync(new SuggestCdcRequest("x"));
+        var resp = await Host.SuggestCdcAsync(Request("x", "orders"));
         Assert.Equal("InternalError", resp.Status);
     }
 
@@ -137,7 +178,7 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHe
         Mock.CdcResponse = (200, AiHelperSamples.CdcEnvelope(AiHelperSamples.BuildCdcConfig()));
         await SeedDiscoveredSchemaAsync(Host);
 
-        var resp = await Host.SuggestCdcAsync(new SuggestCdcRequest("shopping cart assistant"));
+        var resp = await Host.SuggestCdcAsync(Request("shopping cart assistant", "orders"));
         Assert.Equal("Success", resp.Status);
         Assert.Equal("shop-cdc", resp.Configuration!.Name);
 
@@ -151,7 +192,7 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHe
         Mock.GiveConsentResponse = (401, "{\"Status\":\"InvalidCredentials\"}");
         await SeedDiscoveredSchemaAsync(Host);
 
-        var resp = await Host.SuggestCdcAsync(new SuggestCdcRequest("x"));
+        var resp = await Host.SuggestCdcAsync(Request("x", "orders"));
         Assert.Equal("InvalidCredentials", resp.Status);
         Assert.Equal(1, Mock.GiveConsentCallCount);
     }
@@ -164,7 +205,7 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHe
         Mock.ConsentGrantHasNoEffect = true;
         await SeedDiscoveredSchemaAsync(Host);
 
-        var resp = await Host.SuggestCdcAsync(new SuggestCdcRequest("x"));
+        var resp = await Host.SuggestCdcAsync(Request("x", "orders"));
         Assert.Equal("ConsentRequired", resp.Status);
         Assert.Null(resp.Configuration);
         Assert.Equal(1, Mock.GiveConsentCallCount);
@@ -177,7 +218,7 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHe
         Mock.AssistDelay = TimeSpan.FromSeconds(2);   // well within the shared host's 30s assist timeout
         await SeedDiscoveredSchemaAsync(Host);
 
-        var resp = await Host.SuggestCdcAsync(new SuggestCdcRequest("shopping cart assistant"));
+        var resp = await Host.SuggestCdcAsync(Request("shopping cart assistant", "orders"));
         Assert.Equal("Success", resp.Status);
         Assert.Equal("shop-cdc", resp.Configuration!.Name);
     }
@@ -193,15 +234,52 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHe
         await using var host = await NewMockAiHostAsync(mockAi.BaseAddress, TimeSpan.FromSeconds(1));
         await SeedDiscoveredSchemaAsync(host);
 
-        var resp = await host.SuggestCdcAsync(new SuggestCdcRequest("x"));
+        var resp = await host.SuggestCdcAsync(Request("x", "orders"));
         Assert.Equal("InternalError", resp.Status);
     }
 
+    /// The three-table schema every test's wizard state carries. Discovery can't reach a real source here,
+    /// so the state document is written directly.
     private static async Task SeedDiscoveredSchemaAsync(QuillHost host)
     {
-        await host.SetupConnectAsync(new ConnectRequest("SqlClient", "invalid"));
-        await host.SetupDiscoverAsync(new DiscoverRequest("SqlClient", "invalid"));
+        using var session = host.Config.OpenAsyncSession();
+        await session.StoreAsync(new WizardState
+        {
+            Provider = "SqlClient",
+            LastDiscoveredSchema = new CdcSinkSourceSchema
+            {
+                CatalogName = "shop",
+                HasPermissionToSetup = true,
+                Tables =
+                [
+                    SourceTable("orders", foreignKeysTo: ["customers", "audit_log"]),
+                    SourceTable("customers"),
+                    SourceTable("audit_log"),
+                ],
+            },
+            LastDiscoverAt = DateTime.UtcNow,
+        }, WizardState.DocumentIdFor(QuillHost.DefaultWizardSlug));
+        await session.SaveChangesAsync();
     }
+
+    private static CdcSinkSourceTable SourceTable(string name, string[]? foreignKeysTo = null) => new()
+    {
+        SourceTableSchema = "public",
+        SourceTableName = name,
+        IsCdcEnabled = true,
+        PrimaryKeyColumns = ["id"],
+        Columns = [new CdcSinkSourceColumn { Name = "id", NativeType = "int", IsPrimaryKey = true, IsCdcCapturable = true }],
+        ForeignKeys = [.. (foreignKeysTo ?? []).Select(referenced => new CdcSinkSourceForeignKey
+        {
+            Columns = [$"{referenced}_id"],
+            ReferencedSchema = "public",
+            ReferencedTable = referenced,
+            ReferencedColumns = ["id"],
+        })],
+    };
+
+    private static SuggestCdcRequest Request(string intentPrompt, params string[] selectedTables) =>
+        new(intentPrompt, [.. selectedTables.Select(table => new SelectedSourceTable(table, "public"))]);
 
     private Task<QuillHost> NewMockAiHostAsync(string aiApiUrl, TimeSpan? aiAssistTimeout = null) =>
         NewHostAsync(
