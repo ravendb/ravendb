@@ -10,6 +10,7 @@ import { type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-valida
 import { ImportedConfigAlert } from "@/pages/setup/add-app-wizard/imported-config-alert";
 import { PROVIDER_OPTIONS } from "@/pages/setup/add-app-wizard/steps/connect/connect-source-options";
 import { ImportConfigDialog } from "@/pages/setup/add-app-wizard/steps/connect/import-config-dialog";
+import { TestConnectionButton } from "@/pages/setup/add-app-wizard/steps/connect/test-connection-button";
 import { toSlug } from "@/pages/setup/add-app-wizard/slugify";
 import { InputGroupAddon } from "@/components/shadcn/ui/input-group";
 import { Button } from "@/components/shadcn/ui/button";
@@ -118,6 +119,7 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
                 textareaClassName="font-mono text-xs"
                 disabled={isConnectionDisabled}
             />
+            <TestConnectionButton disabled={isConnectionDisabled} />
         </div>
     );
 }

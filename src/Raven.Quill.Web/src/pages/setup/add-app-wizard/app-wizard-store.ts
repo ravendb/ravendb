@@ -17,6 +17,9 @@ export type SetupWizardState = {
     unlockImportedConfig: () => void;
     connectKey: string | null;
     setConnectKey: (key: string) => void;
+    /** Connection already verified via "Test connection" (or a previous Next), so Next can skip the connect call. */
+    testedConnectKey: string | null;
+    setTestedConnectKey: (key: string) => void;
     appliedMapKey: string | null;
     setAppliedMapKey: (key: string) => void;
     mapTablesKey: string | null;
@@ -48,6 +51,7 @@ const initialState: Pick<
     | "discoverSchemas"
     | "importState"
     | "connectKey"
+    | "testedConnectKey"
     | "appliedMapKey"
     | "mapTablesKey"
     | "mapActiveTable"
@@ -61,6 +65,7 @@ const initialState: Pick<
     discoverSchemas: [],
     importState: "none",
     connectKey: null,
+    testedConnectKey: null,
     appliedMapKey: null,
     mapTablesKey: null,
     mapActiveTable: null,
@@ -82,6 +87,7 @@ export const useSetupWizardStore = create<SetupWizardState>((set) => ({
     lockImportedConfig: () => set({ importState: "locked" }),
     unlockImportedConfig: () => set({ importState: "unlocked" }),
     setConnectKey: (key) => set({ connectKey: key }),
+    setTestedConnectKey: (key) => set({ testedConnectKey: key }),
     setAppliedMapKey: (key) => set({ appliedMapKey: key }),
     setMapTablesKey: (key) => set({ mapTablesKey: key }),
     invalidateMapping: () => set({ appliedMapKey: null, mapTablesKey: null }),
