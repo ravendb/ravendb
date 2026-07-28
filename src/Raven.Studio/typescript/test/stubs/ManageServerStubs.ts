@@ -762,12 +762,9 @@ export class ManageServerStubs {
                     Thumbprint: "DD44904E1926ED2EDD5BB4BA8BC34742960BDDD4",
                     SecurityClearance: "Operator",
                     Permissions: {},
-                    NotAfter: moment()
-                        .add(2 as const, "years")
-                        .format(),
-                    NotBefore: moment()
-                        .add(-10 as const, "days")
-                        .format(),
+                    NotAfter: null,
+                    NotBefore: null,
+                    Disabled: true,
                     CollectionSecondaryKeys: [],
                     CollectionPrimaryKey: "",
                     PublicKeyPinningHash: "DDZWHsvbycEsXVNFnj7a3Ou6r1B2xVmPQMhlmgw/DD4=",
