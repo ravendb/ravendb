@@ -13,6 +13,7 @@ import { useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
 import { RavenLogo } from "@/components/brand/raven-logo";
 import { ContactSheet } from "@/components/layout/contact-sheet";
+import { Button } from "@/components/shadcn/ui/button";
 
 const compactSidebarMediaQuery = "(max-width: 63.999rem)";
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "sidebar-collapsed";
@@ -116,13 +117,10 @@ function App() {
                     </a>
                     <ContactSheet
                         trigger={
-                            <button
-                                type="button"
-                                className="flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
-                            >
-                                <MessageCircle className="size-4" aria-hidden="true" />
+                            <Button variant="outline" size="sm">
+                                <MessageCircle aria-hidden="true" />
                                 Feedback
-                            </button>
+                            </Button>
                         }
                     />
                     <Link
