@@ -10,7 +10,7 @@ export default class testServerWideAiConnectionStringCommand extends commandBase
         super();
     }
 
-    execute(): JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {
+    execute(): JQueryPromise<Raven.Server.Documents.AI.AiConnectionTestResult> {
         const args = {
             type: this.type,
             modelType: this.modelType,
@@ -23,7 +23,7 @@ export default class testServerWideAiConnectionStringCommand extends commandBase
             .fail((response: JQueryXHR) =>
                 this.reportError(`Failed to test AI connection`, response.responseText, response.statusText)
             )
-            .done((result: Raven.Server.Web.System.NodeConnectionTestResult) => {
+            .done((result: Raven.Server.Documents.AI.AiConnectionTestResult) => {
                 if (!result.Success) {
                     this.reportError(`Failed to test AI connection`, result.Error);
                 }

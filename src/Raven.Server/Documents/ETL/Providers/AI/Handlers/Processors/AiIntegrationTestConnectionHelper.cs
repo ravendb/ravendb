@@ -7,9 +7,7 @@ using Raven.Server.Documents.AI;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Json;
 using Raven.Server.Web;
-using Raven.Server.Web.System;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 #pragma warning disable SKEXP0001
 
@@ -107,37 +105,34 @@ internal static class AiIntegrationTestConnectionHelper
                         throw new ArgumentOutOfRangeException("Invalid model type: " + aiConnectionString.ModelType);
                 }
 
-                var result = new DynamicJsonValue
+                var result = new AiConnectionTestResult
                 {
-                    [nameof(NodeConnectionTestResult.Success)] = true,
-                    [nameof(NodeConnectionTestResult.AcceptsImageInput)] = acceptsImageInput,
-                    [nameof(NodeConnectionTestResult.SupportsTools)] = supportsTools
+                    Success = true,
+                    AcceptsImageInput = acceptsImageInput,
+                    SupportsTools = supportsTools
                 };
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, requestHandler.ResponseBodyStream()))
                 {
-                    context.Write(writer, result);
+                    context.Write(writer, result.ToJson());
                 }
             }
         }
         catch (Exception e)
         {
-            var result = new DynamicJsonValue
+            var result = new AiConnectionTestResult
             {
-                [nameof(NodeConnectionTestResult.Success)] = false,
-                [nameof(NodeConnectionTestResult.Error)] = e.ToString()
+                Success = false,
+                Error = e.ToString()
             };
 
             if (logger != null)
-            {
-                var logsArray = new DynamicJsonArray(collection: logger.GetLogs());
-                result[nameof(NodeConnectionTestResult.Log)] = logsArray;
-            }
+                result.Log = [..logger.GetLogs()];
 
             using (requestHandler.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, requestHandler.ResponseBodyStream()))
             {
-                context.Write(writer, result);
+                context.Write(writer, result.ToJson());
             }
         }
         finally

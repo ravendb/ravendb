@@ -135,10 +135,6 @@ namespace Raven.Server.Web.System
         public string Error;
         public List<string> Log;
 
-        public bool AcceptsImageInput;
-
-        public bool SupportsTools;
-
         public DynamicJsonValue ToJson()
         {
             var djv = new DynamicJsonValue
