@@ -15,20 +15,17 @@ public sealed class ApplianceWebApplicationFactory : WebApplicationFactory<Progr
 {
     public const string TestApiKey = "test-api-key";
 
-    private readonly string _licenseApiUrl;
     private readonly string _setupPackagePath;
     private readonly IDocumentStore _applianceStore;
     private readonly Action<ApplianceOptions>? _configureOptions;
     private readonly Action<IServiceCollection>? _configureServices;
 
     public ApplianceWebApplicationFactory(
-        string licenseApiUrl,
         string setupPackagePath,
         IDocumentStore applianceStore,
         Action<ApplianceOptions>? configureOptions = null,
         Action<IServiceCollection>? configureServices = null)
     {
-        _licenseApiUrl = licenseApiUrl;
         _setupPackagePath = setupPackagePath;
         _applianceStore = applianceStore;
         _configureOptions = configureOptions;
@@ -41,7 +38,6 @@ public sealed class ApplianceWebApplicationFactory : WebApplicationFactory<Progr
         {
             services.PostConfigure<ApplianceOptions>(opts =>
             {
-                opts.LicenseApiUrl = _licenseApiUrl;
                 opts.SetupPackagePath = _setupPackagePath;
                 opts.ApiKey = TestApiKey;
                 _configureOptions?.Invoke(opts);

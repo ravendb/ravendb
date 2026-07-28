@@ -23,10 +23,6 @@ public sealed class ApplianceOptions
 
     public string? RavenDbS6Service { get; set; }
 
-    public const string DefaultLicenseApiUrl = "https://api.ravendb.net";
-
-    public string LicenseApiUrl { get; set; } = DefaultLicenseApiUrl;
-
     [Url]
     public string? AiApiUrl { get; set; }
 

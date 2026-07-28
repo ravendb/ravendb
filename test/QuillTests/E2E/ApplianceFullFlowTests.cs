@@ -6,7 +6,10 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using QuillTests.E2E.Fixtures;
 using Raven.Client.Documents;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Raven.Client.Documents.Operations.CdcSink.Test;
+using Raven.Quill.AiHelper;
 using Raven.Server.SqlMigration;
 using SlowTests.Server.Documents.CdcSink;
 using Tests.Infrastructure;
@@ -38,15 +41,18 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
                 "connection string and T14 asserts a real streamed reply through it.");
         }
 
-        await using var licenseApi = await MockLicenseApi.StartAsync(HardcodedLicenseKey, zipBytes);
         var setupRoot = NewDataPath(forceCreateDir: true, prefix: "egor-ai-setup");
 
         var store = GetDocumentStore();
         using var factory = new ApplianceWebApplicationFactory(
-            licenseApiUrl: licenseApi.BaseAddress,
             setupPackagePath: setupRoot,
             applianceStore: store,
-            configureOptions: opts => opts.LicenseKey = HardcodedLicenseKey);
+            configureOptions: opts => opts.LicenseKey = HardcodedLicenseKey,
+            configureServices: services =>
+            {
+                services.RemoveAll<ILicenseClient>();
+                services.AddSingleton<ILicenseClient>(new FakeLicenseClient(HardcodedLicenseKey, zipBytes));
+            });
         var client = factory.CreateClient();
 
         await WaitForBootstrapStateAsync(client, expected: "Ready", timeoutMs: 60_000);
