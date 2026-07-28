@@ -17,6 +17,20 @@ export function computeConnectKey(
     });
 }
 
+export async function connectToSource(
+    connection: Pick<AppFormData["externalConnection"], "provider" | "connectionString" | "slug">,
+): Promise<void> {
+    const connectResult = await api.services.setup.connect({
+        connectionString: connection.connectionString,
+        provider: connection.provider,
+        slug: connection.slug,
+    });
+
+    if (!connectResult.success) {
+        throw toWizardStepError(connectResult.errors, "Connection failed.");
+    }
+}
+
 export function useConnectSourceStep() {
     const { getValues, setValue } = useFormContext<AppFormData>();
     const setDiscoverResult = useSetupWizardStore((state) => state.setDiscoverResult);
@@ -30,22 +44,15 @@ export function useConnectSourceStep() {
             return;
         }
 
-        progress.report("Testing connection...");
-
-        const slug = formValues.slug;
-        const connectResult = await api.services.setup.connect({
-            connectionString: formValues.connectionString,
-            provider: formValues.provider,
-            slug,
-        });
-
-        if (!connectResult.success) {
-            throw toWizardStepError(connectResult.errors, "Connection failed.");
+        if (connectKey !== store.testedConnectKey) {
+            progress.report("Testing connection...");
+            await connectToSource(formValues);
+            store.setTestedConnectKey(connectKey);
         }
 
         progress.report("Discovering tables...");
         const schemas = store.discoverSchemas;
-        const discoverResult = await discoverTables(formValues, schemas, slug);
+        const discoverResult = await discoverTables(formValues, schemas, formValues.slug);
 
         setDiscoverResult(discoverResult, schemas);
 

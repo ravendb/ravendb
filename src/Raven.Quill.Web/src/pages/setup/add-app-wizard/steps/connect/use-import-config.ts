@@ -115,13 +115,13 @@ export function useImportConfig() {
             store.setDiscoverResult(discoverResult, schemas);
             store.resetMapTablesUiState();
 
-            store.setConnectKey(
-                computeConnectKey({
-                    provider: config.provider,
-                    connectionString: config.connectionString,
-                    slug: getValues("externalConnection").slug,
-                }),
-            );
+            const connectKey = computeConnectKey({
+                provider: config.provider,
+                connectionString: config.connectionString,
+                slug: getValues("externalConnection").slug,
+            });
+            store.setConnectKey(connectKey);
+            store.setTestedConnectKey(connectKey);
             store.setAppliedMapKey(
                 computeMapKey({ source: "manual", aiPrompt: "", selectedTables: verifySchemaTables }),
             );
