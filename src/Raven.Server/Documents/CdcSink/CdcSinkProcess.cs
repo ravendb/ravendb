@@ -991,7 +991,18 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler, IAsyncDis
                     var columnNames = new string[reader.FieldCount];
                     for (int i = 0; i < reader.FieldCount; i++)
                         columnNames[i] = reader.GetName(i);
-                    processor.SetSourceColumnNames(columnNames);
+
+                    try
+                    {
+                        processor.SetSourceColumnNames(columnNames);
+                    }
+                    catch (InvalidOperationException e)
+                    {
+                        throw new CdcSinkFaultedException(
+                            $"Initial load cannot start for table '{tableInfo.FullName}': {e.Message} " +
+                            "Fix the table configuration; the task will restart.", e);
+                    }
+
                     columnNamesSet = true;
                 }
                 else

@@ -398,6 +398,13 @@ public static class WizardEndpoints
             return Results.UnprocessableEntity(new ApiErrorResponse(Errors: errors.ToArray()));
         }
 
+        ValidateJoinColumnsAgainstSchema(result.Configuration, state.LastDiscoveredSchema, errors);
+        if (errors.Count > 0)
+        {
+            logger.LogInformation("SuggestCdc: returned configuration has {Count} join column(s) the source schema does not have", errors.Count);
+            return Results.UnprocessableEntity(new ApiErrorResponse(Errors: errors.ToArray()));
+        }
+
         return Results.Ok(new SuggestCdcResponse(result.Configuration, result.Rationale, result.Status.ToString()));
     }
 
@@ -532,6 +539,55 @@ public static class WizardEndpoints
     /// Discovery enumerates whole schemas, so handing the AI everything it found would map tables the
     /// operator deliberately left out.
     /// </summary>
+    private static void ValidateJoinColumnsAgainstSchema(CdcSinkConfiguration configuration, CdcSinkSourceSchema schema, List<string> errors)
+    {
+        foreach (var table in configuration.Tables)
+            ValidateScope(table.SourceTableSchema, table.SourceTableName, table.CollectionName, table.EmbeddedTables, table.LinkedTables);
+
+        void ValidateScope(
+            string? tableSchema,
+            string tableName,
+            string description,
+            List<CdcSinkEmbeddedTableConfig>? embeddedTables,
+            List<CdcSinkLinkedTableConfig>? linkedTables)
+        {
+            var columns = SourceColumnsOf(tableSchema, tableName);
+
+            foreach (var linked in linkedTables ?? [])
+                CheckJoinColumns(linked.JoinColumns, columns, $"Linked table '{linked.SourceTableName}' under '{description}'");
+
+            foreach (var embedded in embeddedTables ?? [])
+            {
+                ValidateScope(embedded.SourceTableSchema, embedded.SourceTableName,
+                    $"{description}.{embedded.PropertyName}", embedded.EmbeddedTables, embedded.LinkedTables);
+
+                CheckJoinColumns(embedded.JoinColumns, SourceColumnsOf(embedded.SourceTableSchema, embedded.SourceTableName),
+                    $"Embedded table '{embedded.SourceTableName}' under '{description}'");
+            }
+        }
+
+        HashSet<string>? SourceColumnsOf(string? tableSchema, string tableName) => schema.Tables
+            .FirstOrDefault(table =>
+                string.Equals(table.SourceTableName, tableName, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(table.SourceTableSchema ?? string.Empty, tableSchema ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+            ?.Columns.Select(column => column.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        void CheckJoinColumns(List<string>? joinColumns, HashSet<string>? sourceColumns, string description)
+        {
+            if (sourceColumns is null)
+                return;
+
+            foreach (var joinColumn in joinColumns ?? [])
+            {
+                if (string.IsNullOrWhiteSpace(joinColumn) || sourceColumns.Contains(joinColumn))
+                    continue;
+
+                errors.Add($"{description}: join column '{joinColumn}' is not a column of the source table. " +
+                    $"Its columns are: {string.Join(", ", sourceColumns)}.");
+            }
+        }
+    }
+
     private static CdcSinkSourceSchema SelectTables(CdcSinkSourceSchema schema, SelectedSourceTable[] selectedTables)
     {
         var selectedKeys = selectedTables

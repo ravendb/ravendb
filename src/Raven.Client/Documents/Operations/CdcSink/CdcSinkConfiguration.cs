@@ -95,7 +95,7 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
             ValidatePrimaryKeyColumnsExist(table.CollectionName, table.PrimaryKeyColumns, table.Columns, errors);
             ValidateColumnsAndPropertyNames(table.CollectionName, table.Columns, table.EmbeddedTables, table.LinkedTables, errors);
             ValidateEmbeddedTables(table.EmbeddedTables, table.CollectionName, errors);
-            ValidateLinkedTables(table.LinkedTables, table.CollectionName, errors);
+            ValidateLinkedTables(table.LinkedTables, table.CollectionName, table.Columns, errors);
         }
 
         return errors.Count == 0;
@@ -209,15 +209,18 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
             if (embedded.Columns == null || embedded.Columns.Count == 0)
                 errors.Add($"Embedded table '{embedded.SourceTableName}' under '{parentName}' must have at least one column mapping");
 
+            ValidateJoinColumnsAreSourceColumns($"Embedded table '{embedded.SourceTableName}' under '{parentName}'",
+                embedded.JoinColumns, embedded.Columns, errors);
+
             ValidatePrimaryKeyColumnsExist(embedded.SourceTableName, embedded.PrimaryKeyColumns, embedded.Columns, errors);
             ValidateColumnsAndPropertyNames(embedded.SourceTableName, embedded.Columns, embedded.EmbeddedTables, embedded.LinkedTables, errors);
 
             ValidateEmbeddedTables(embedded.EmbeddedTables, embedded.SourceTableName, errors);
-            ValidateLinkedTables(embedded.LinkedTables, embedded.SourceTableName, errors);
+            ValidateLinkedTables(embedded.LinkedTables, embedded.SourceTableName, embedded.Columns, errors);
         }
     }
 
-    private static void ValidateLinkedTables(List<CdcSinkLinkedTableConfig> linkedTables, string parentName, List<string> errors)
+    private static void ValidateLinkedTables(List<CdcSinkLinkedTableConfig> linkedTables, string parentName, List<CdcColumnMapping> parentColumns, List<string> errors)
     {
         if (linkedTables == null)
             return;
@@ -240,6 +243,40 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
             if (linked.JoinColumns == null || linked.JoinColumns.Count == 0)
                 errors.Add($"Linked table '{linked.SourceTableName}' under '{parentName}' must have join columns");
 
+            ValidateJoinColumnsAreSourceColumns($"Linked table '{linked.SourceTableName}' under '{parentName}'",
+                linked.JoinColumns, parentColumns, errors);
+        }
+    }
+    
+    private static void ValidateJoinColumnsAreSourceColumns(string description, List<string> joinColumns, List<CdcColumnMapping> columns, List<string> errors)
+    {
+        if (joinColumns == null || columns == null)
+            return;
+
+        foreach (var joinColumn in joinColumns)
+        {
+            if (string.IsNullOrWhiteSpace(joinColumn))
+            {
+                errors.Add($"{description}: join column names cannot be empty");
+                continue;
+            }
+
+            string renamedFrom = null;
+            foreach (var col in columns)
+            {
+                if (string.Equals(col.Column, joinColumn, StringComparison.OrdinalIgnoreCase))
+                {
+                    renamedFrom = null;
+                    break;
+                }
+
+                if (renamedFrom == null && string.Equals(col.Name, joinColumn, StringComparison.OrdinalIgnoreCase))
+                    renamedFrom = col.Column;
+            }
+
+            if (renamedFrom != null)
+                errors.Add($"{description}: join column '{joinColumn}' is a mapped property name, not a source column. " +
+                    $"Join columns must name source columns - use '{renamedFrom}' instead.");
         }
     }
 
