@@ -172,6 +172,11 @@ internal static partial class QueryPlanBuilder
         PlanOptimizationFlags flags = PlanOptimizationFlags.None;
         List<ClauseInfo> clauses = walkerCtx.Clauses;
 
+        // `where a OR b` cannot drive a sorted scan from one of its branches: the scan would only emit that
+        // branch's documents, and the residual predicate can only filter what it walks - never re-admit the rest.
+        if (walkerCtx.IsOr)
+            return flags;
+
         // Collect non-negated, non-boosted Equals clause indices for compound lookups.
         const int maxStackAllocSize = 128;
         Span<int> eqBuf = clauses.Count <= maxStackAllocSize ? stackalloc int[maxStackAllocSize] : new int[clauses.Count];
@@ -225,8 +230,7 @@ internal static partial class QueryPlanBuilder
             }
         }
 
-        if (walkerCtx.IsOr || // cannot optimize: `where a OR b`
-            p.Index is not { HasCompoundFields: true } ||
+        if (p.Index is not { HasCompoundFields: true } ||
             eqCount is 0)
         {
             return flags;
