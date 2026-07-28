@@ -33,6 +33,7 @@ export function useVerifyCdcStep() {
                 sourceTableSchema: table.sourceTableSchema,
                 sourceTableName: table.sourceTableName,
             })),
+            slug: getValues("externalConnection").slug,
         });
 
         if (!result.success) {

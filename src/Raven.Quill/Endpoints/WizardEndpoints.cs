@@ -181,23 +181,18 @@ public static class WizardEndpoints
     {
         if (body.Tables is not { Length: > 0 })
             return Results.BadRequest(new ApiErrorResponse("at least one table is required"));
+        if (string.IsNullOrWhiteSpace(body.Slug))
+            return Results.BadRequest(new ApiErrorResponse("slug is required"));
 
         WizardState? state;
         using (var session = store.OpenAsyncSession())
-            state = await session.LoadAsync<WizardState>(WizardState.DocumentId, ct);
+            state = await session.LoadAsync<WizardState>(WizardState.DocumentIdFor(body.Slug), ct);
 
         if (state?.LastDiscoveredSchema is null)
             return Results.BadRequest(new ApiErrorResponse("no discovered schema found; call /api/setup/discover first"));
 
-        var probes = await store.Maintenance.ForDatabase(store.Database).SendAsync(
-            new GetConnectionStringsOperation(WizardSourceProbeName, ConnectionStringType.Sql), ct);
-
-        if (probes.SqlConnectionStrings is null ||
-            !probes.SqlConnectionStrings.TryGetValue(WizardSourceProbeName, out var probeCs))
-        {
-            return Results.BadRequest(new ApiErrorResponse(
-                $"probe connection string '{WizardSourceProbeName}' is not registered on the config DB; call /api/setup/connect first."));
-        }
+        if (string.IsNullOrEmpty(state.SourceConnectionString))
+            return Results.BadRequest(new ApiErrorResponse("no source connection found; call /api/setup/connect first"));
 
         var configuration = ScaffoldDryRunConfiguration(state.LastDiscoveredSchema, body.Tables, out var scaffoldErrors);
         if (scaffoldErrors.Count > 0)
@@ -213,11 +208,12 @@ public static class WizardEndpoints
                 new VerifyCdcSinkOperation(new CdcTestRequest
                 {
                     Configuration = configuration,
+                    // inline source creds off the wizard doc - no probe connection string exists on the config DB
                     Connection = new SqlConnectionString
                     {
-                        Name = WizardSourceProbeName,
-                        FactoryName = probeCs.FactoryName,
-                        ConnectionString = probeCs.ConnectionString,
+                        Name = SourceConnectionStringName,
+                        FactoryName = state.Provider,
+                        ConnectionString = state.SourceConnectionString,
                     },
                 }), ct);
         }
@@ -244,7 +240,7 @@ public static class WizardEndpoints
         var configuration = new CdcSinkConfiguration
         {
             Name = "wizard-cdc-dry-run",
-            ConnectionStringName = WizardSourceProbeName,
+            ConnectionStringName = SourceConnectionStringName,
         };
 
         var collectionNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
