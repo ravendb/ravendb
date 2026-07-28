@@ -5,7 +5,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
@@ -21,7 +20,6 @@ using Raven.Server.Documents.Refresh;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Revisions;
-using Raven.Server.Documents.Schemas;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
@@ -34,6 +32,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
+using Sparrow.Threading;
 using Voron;
 using Voron.Data;
 using Voron.Data.Fixed;
@@ -78,6 +77,14 @@ namespace Raven.Server.Documents
         public Action<Transaction> OnBeforeCommit { get; protected set; }
 
         protected Dictionary<string, CollectionName> _collectionsCache;
+
+        // maps each collection's Documents and Tombstones table-name slices to its CollectionName, so the
+        // transaction-cache compute resolves a modified table to its collection with a single slice lookup
+        // (no table-name string parsing). grown copy-on-write alongside _collectionsCache; the key slices are
+        // allocated from _collectionTablesContext, which outlives the transactions that read the map.
+        private ByteStringContext _collectionTablesContext;
+        private Dictionary<Slice, CollectionName> _collectionTablesReverse;
+
         private static readonly Slice LastReplicatedEtagsSlice;
         private static readonly Slice EtagsSlice;
         private static readonly Slice LastEtagSlice;
@@ -159,6 +166,11 @@ namespace Raven.Server.Documents
             exceptionAggregator.Execute(() =>
             {
                 Environment?.Dispose();
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                _collectionTablesContext?.Dispose();
             });
 
             exceptionAggregator.ThrowIfNeeded();
@@ -284,6 +296,8 @@ namespace Raven.Server.Documents
 
                     InitializeLastEtag(tx);
                     _collectionsCache = ReadCollections(tx);
+                    _collectionTablesContext = new ByteStringContext(SharedMultipleUseFlag.None);
+                    _collectionTablesReverse = BuildCollectionTablesReverseMap(_collectionsCache.Values);
 
                     var cv = GetDatabaseChangeVector(tx);
                     var lastEtagInChangeVector = ChangeVectorUtils.GetEtagById(cv, DocumentDatabase.DbBase64Id);
@@ -318,10 +332,15 @@ namespace Raven.Server.Documents
 
         private void SetTransactionCache(LowLevelTransaction tx)
         {
-            tx.ImmutableExternalState = _documentsMetadataCache;
-
             if (tx.Flags != TransactionFlags.ReadWrite)
+            {
+                tx.ImmutableExternalState = _documentsMetadataCache;
                 return;
+            }
+
+            // a write transaction created by an async commit already inherited the cache computed by
+            // the committing transaction, which is ahead of the published one until that commit completes
+            tx.ImmutableExternalState ??= _documentsMetadataCache;
 
             tx.LastChanceToReadFromWriteTransactionBeforeCommit += ComputeTransactionCache_BeforeCommit;
         }
@@ -334,6 +353,7 @@ namespace Raven.Server.Documents
 
             var currentCache = new DocumentTransactionCache
             {
+                FullyComputed = true,
                 LastDocumentEtag = ReadLastDocumentEtag(tx),
                 LastAttachmentsEtag = ReadLastAttachmentsEtag(tx),
                 LastConflictEtag = ReadLastConflictsEtag(tx),
@@ -344,31 +364,113 @@ namespace Raven.Server.Documents
                 LastTombstoneEtag = ReadLastTombstoneEtag(tx),
             };
 
+            if (llt.ImmutableExternalState is DocumentTransactionCache { FullyComputed: true } previousCache)
+            {
+                // the entries are immutable, a stale one is always replaced by a new instance,
+                // so they can be shared between the previous cache and the current one
+                foreach (var kvp in previousCache.LastEtagsByCollection)
+                {
+                    currentCache.LastEtagsByCollection[kvp.Key] = kvp.Value;
+                }
+
+                UpdateCollectionCachesForModifiedCollections(tx, currentCache);
+            }
+            else
+            {
+                ComputeCollectionCaches(tx, currentCache);
+            }
+
+            // we set it on the current transaction because we aren't committed yet
+            // we'll publish this after the commit finalization
+            tx.LowLevelTransaction.ImmutableExternalState = currentCache;
+        }
+
+        private void ComputeCollectionCaches(Transaction tx, DocumentTransactionCache cache)
+        {
             using (ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
             {
                 Table.TableValueHolder holder = default;
                 foreach (var collection in IterateCollectionNames(tx, ctx))
                 {
-                    var collectionName = new CollectionName(collection);
-                    if (ReadLastDocument(tx, collectionName, CollectionTableType.Documents, ref holder) == false)
-                        continue;
-
-                    var colCache = new DocumentTransactionCache.CollectionCache
-                    {
-                        LastDocumentEtag = TableValueToEtag((int)DocumentsTable.Etag, ref holder.Reader),
-                        LastChangeVector = TableValueToChangeVector(ctx, (int)DocumentsTable.ChangeVector, ref holder.Reader),
-                    };
-
-                    if (ReadLastDocument(tx, collectionName, CollectionTableType.Tombstones, ref holder))
-                    {
-                        colCache.LastTombstoneEtag = TableValueToEtag((int)DocumentsTable.Etag, ref holder.Reader);
-                    }
-                    currentCache.LastEtagsByCollection[collection] = colCache;
+                    ComputeCollectionCache(tx, ctx, new CollectionName(collection), cache, ref holder);
                 }
             }
-            // we set it on the current transaction because we aren't committed yet
-            // we'll publish this after the commit finalization
-            tx.LowLevelTransaction.ImmutableExternalState = currentCache;
+        }
+
+        private void UpdateCollectionCachesForModifiedCollections(Transaction tx, DocumentTransactionCache cache)
+        {
+            // recompute only the collections this tx touched: existing ones via the reverse map (a miss is a
+            // non-collection table), plus any it created. collect first, then compute - recompute mutates tx.Tables.
+            HashSet<CollectionName> modifiedCollections = null;
+
+            foreach (var table in tx.Tables)
+            {
+                if (_collectionTablesReverse.TryGetValue(table.Name, out var collectionName))
+                {
+                    modifiedCollections ??= new HashSet<CollectionName>(CollectionNameComparer.Instance);
+                    modifiedCollections.Add(collectionName);
+                }
+            }
+
+            if (tx.Owner is DocumentsOperationContext { Transaction: { } documentsTransaction })
+            {
+                var createdCollections = documentsTransaction.CollectionsCreatedInTransaction;
+                if (createdCollections != null)
+                {
+                    foreach (var collectionName in createdCollections)
+                    {
+                        modifiedCollections ??= new HashSet<CollectionName>(CollectionNameComparer.Instance);
+                        modifiedCollections.Add(collectionName);
+                    }
+                }
+            }
+
+            if (modifiedCollections == null)
+                return;
+
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
+            {
+                Table.TableValueHolder holder = default;
+                foreach (var collectionName in modifiedCollections)
+                    ComputeCollectionCache(tx, ctx, collectionName, cache, ref holder);
+            }
+        }
+
+        private Dictionary<Slice, CollectionName> BuildCollectionTablesReverseMap(IEnumerable<CollectionName> collections)
+        {
+            var map = new Dictionary<Slice, CollectionName>(SliceComparer.Instance);
+            foreach (var collection in collections)
+                AddToCollectionTablesReverseMap(map, collection);
+            return map;
+        }
+
+        private void AddToCollectionTablesReverseMap(Dictionary<Slice, CollectionName> map, CollectionName collection)
+        {
+            Slice.From(_collectionTablesContext, collection.GetTableName(CollectionTableType.Documents), ByteStringType.Immutable, out var documentsTableName);
+            Slice.From(_collectionTablesContext, collection.GetTableName(CollectionTableType.Tombstones), ByteStringType.Immutable, out var tombstonesTableName);
+            map[documentsTableName] = collection;
+            map[tombstonesTableName] = collection;
+        }
+
+        private void ComputeCollectionCache(Transaction tx, JsonOperationContext ctx, CollectionName collectionName, DocumentTransactionCache cache, ref Table.TableValueHolder holder)
+        {
+            if (ReadLastDocument(tx, collectionName, CollectionTableType.Documents, ref holder) == false)
+            {
+                cache.LastEtagsByCollection.Remove(collectionName.Name);
+                return;
+            }
+
+            var colCache = new DocumentTransactionCache.CollectionCache
+            {
+                LastDocumentEtag = TableValueToEtag((int)DocumentsTable.Etag, ref holder.Reader),
+                LastChangeVector = TableValueToChangeVector(ctx, (int)DocumentsTable.ChangeVector, ref holder.Reader),
+            };
+
+            if (ReadLastDocument(tx, collectionName, CollectionTableType.Tombstones, ref holder))
+            {
+                colCache.LastTombstoneEtag = TableValueToEtag((int)DocumentsTable.Etag, ref holder.Reader);
+            }
+            cache.LastEtagsByCollection[collectionName.Name] = colCache;
         }
 
         private void UpdateDocumentTransactionCache(LowLevelTransaction obj)
@@ -2687,6 +2789,10 @@ namespace Raven.Server.Documents
                         [name.Name] = name
                     };
                     _collectionsCache = collectionNames;
+
+                    var collectionTables = new Dictionary<Slice, CollectionName>(_collectionTablesReverse, SliceComparer.Instance);
+                    AddToCollectionTablesReverseMap(collectionTables, name);
+                    _collectionTablesReverse = collectionTables;
                 };
             }
             return name;

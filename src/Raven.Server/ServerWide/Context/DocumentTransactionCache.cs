@@ -5,6 +5,11 @@ namespace Raven.Server.ServerWide.Context
 {
     public sealed class DocumentTransactionCache
     {
+        // set once the per-collection entries were populated by a full scan (or built incrementally
+        // on top of a fully computed cache), allowing the next commit to reuse them instead of
+        // reading the last document of every collection again
+        public bool FullyComputed;
+
         public long LastDocumentEtag;
         public long LastTombstoneEtag;
         public long LastCounterEtag;
