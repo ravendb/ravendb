@@ -29,6 +29,7 @@ export const defaultApiMocks = {
         aiConnectionStringsMocks.list(),
         aiConnectionStringsMocks.detail(),
         aiConnectionStringsMocks.create(),
+        aiConnectionStringsMocks.test(),
         aiConnectionStringsMocks.delete(),
     ],
     aiModels: [aiModelsMocks.list()],

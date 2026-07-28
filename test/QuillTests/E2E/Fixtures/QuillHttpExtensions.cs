@@ -105,6 +105,7 @@ internal static class QuillRoutes
     public const string AuthLogin = "/api/auth/login";
     public const string AuthStatus = "/api/auth/status";
     public const string ConnectionStrings = "/api/ai/connection-strings";
+    public const string ConnectionStringsTest = $"{ConnectionStrings}/test";
     public static string ConnectionString(string name) => $"{ConnectionStrings}/{name}";
     public const string AiModels = "/api/ai/models";
     public const string SettingsLicense = "/api/settings/license";

@@ -82,6 +82,10 @@ export function AiConnectionStringForm({
     const saveMutation = useMutation({
         mutationFn: async (values: ConnectionStringFormData) => {
             const dto = mapFormDataToDto(values, modelType);
+            const test = await api.services.aiConnectionStrings.test(dto);
+            if (!test.success) {
+                throw new Error(test.error ?? "The selected model can't be used by an agent.");
+            }
             const result = await api.services.aiConnectionStrings.create(
                 existingIdentifier ? { ...dto, identifier: existingIdentifier } : dto,
             );

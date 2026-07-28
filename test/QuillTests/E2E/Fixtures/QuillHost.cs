@@ -95,6 +95,9 @@ public sealed class QuillHost : IAsyncDisposable
     public Task<IReadOnlyList<AiConnectionString>> GetConnectionStringsAsync() =>
         QuillHttp.GetAsync<IReadOnlyList<AiConnectionString>>(Client, QuillRoutes.ConnectionStrings);
 
+    public Task<AiConnectionStringTestResponse> TestConnectionStringAsync(AiConnectionString body) =>
+        QuillHttp.PostAsync<AiConnectionStringTestResponse>(Client, QuillRoutes.ConnectionStringsTest, body);
+
     public Task<AiConnectionString> GetConnectionStringAsync(string name) =>
         QuillHttp.GetAsync<AiConnectionString>(Client, QuillRoutes.ConnectionString(name));
 
