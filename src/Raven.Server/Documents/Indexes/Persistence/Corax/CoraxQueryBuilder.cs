@@ -714,6 +714,12 @@ public static class CoraxQueryBuilder
             // for `A and not (startsWith(field, x))` - the negation must apply to the whole left-hand set, which
             // includes documents missing the field. Falling through to NoOpt makes HandleNegatedAnd use
             // AndNot(left, <positive match>), which keeps those documents (matching Lucene and Corax 2.0).
+            //
+            // Those providers now emit the null and non-existing posting lists themselves, but that is not enough to
+            // route AND through them again: the non-existing list only exists from UseNonExistingPostingList_60 /_61
+            // on (see IndexVersion.IsNonExistingPostingListSupported), so on an older index the provider still cannot
+            // enumerate the field-missing documents at all. AndNot has no such dependency - it excludes from `left`
+            // instead of enumerating the complement - and it is the same path standalone `not (...)` already uses.
             case MethodType.StartsWith:
             case MethodType.EndsWith:
             default:
