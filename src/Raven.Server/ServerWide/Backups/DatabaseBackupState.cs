@@ -90,7 +90,7 @@ namespace Raven.Server.ServerWide.Backups
                 message += $", backup name: {configuration.Name}";
 
             _serverStore.NotificationCenter.Add(AlertRaised.Create(
-                _serverStore.NodeTag,
+                DatabaseName,
                 "Couldn't schedule next backup, this shouldn't happen",
                 message,
                 AlertReason.PeriodicBackup,
@@ -107,7 +107,7 @@ namespace Raven.Server.ServerWide.Backups
             message += $", error: {parameters.Exception.Message}";
 
             _serverStore.NotificationCenter.Add(AlertRaised.Create(
-                _serverStore.NodeTag,
+                DatabaseName,
                 "Backup frequency parsing error",
                 message,
                 AlertReason.PeriodicBackup,
