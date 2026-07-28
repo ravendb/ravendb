@@ -154,6 +154,59 @@ public class AiConnectionStringsEndpointsTests(ITestOutputHelper output, QuillCo
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Test_reports_failure_when_the_provider_is_unreachable()
+    {
+        var result = await Host.TestConnectionStringAsync(new AiConnectionString
+        {
+            Name = "probe-ollama-cs",
+            ModelType = AiModelType.Chat,
+            OllamaSettings = new OllamaSettings { Uri = "http://localhost:11434/", Model = "llama3.1" },
+        });
+
+        Assert.False(result.Success);
+        Assert.False(string.IsNullOrWhiteSpace(result.Error));
+
+        Assert.DoesNotContain("Could not reach the provider", result.Error);
+        Assert.DoesNotContain("Could not read the model test result", result.Error);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Test_rejects_provider_outside_the_supported_set()
+    {
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => Host.TestConnectionStringAsync(new AiConnectionString
+        {
+            Name = "probe-google-cs",
+            ModelType = AiModelType.Chat,
+            GoogleSettings = new GoogleSettings { ApiKey = "g-key", Endpoint = "https://generativelanguage.googleapis.com/v1/", Model = "gemini-1.5-flash" },
+        }));
+
+        Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
+        Assert.Contains("unsupported provider", ex.Body);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Test_rejects_non_chat_model_type()
+    {
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => Host.TestConnectionStringAsync(new AiConnectionString
+        {
+            Name = "probe-embed-cs",
+            ModelType = AiModelType.TextEmbeddings,
+            OpenAiSettings = new OpenAiSettings { ApiKey = "sk-test", Endpoint = "https://api.openai.com/v1/", Model = "text-embedding-3-small" },
+        }));
+
+        Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Test_returns_400_for_null_body()
+    {
+        var resp = await Host.Client.PostAsync(
+            QuillRoutes.ConnectionStringsTest, new StringContent("null", Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task List_returns_created_connection_strings()
     {
         await Host.PostConnectionStringAsync(OpenAiCs("list-demo-llm"));

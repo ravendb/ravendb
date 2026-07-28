@@ -352,6 +352,31 @@ public class ChatCompletionClient : IDisposable
         return (r.Result.ToString(), r.Message.ToString());
     }
 
+    public async Task<bool> TestSupportsToolsAsync(CancellationToken token)
+    {
+        try
+        {
+            using var _ = _contextPool.AllocateOperationContext(out JsonOperationContext context);
+
+            var userMessage = context.ReadObject(new DynamicJsonValue
+            {
+                [Constants.RequestFields.Role] = Constants.RequestFields.RoleUserValue,
+                [Constants.RequestFields.Content] = "hi"
+            }, "probe/user");
+
+            var paramsSchema = GetSchemaForTool(schema: null, sampleObject: "{\"reason\":\"why the tool is being called\"}");
+            var tool = GetTool(context, "connection_test_probe", "A probe so the request matches an agent call. Do not call it.", paramsSchema);
+
+            var request = CreateCompletionRequest(context, messages: [userMessage], attachments: null, tools: [context.ReadObject(tool, "probe/tool")], useTools: true, streaming: false, EmptySchema);
+            await CompleteAsync(context, request, new AiUsage(), schema: null, trace: null, token);
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
     private const string AcceptsImageInputProbePngBase64 =
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
 

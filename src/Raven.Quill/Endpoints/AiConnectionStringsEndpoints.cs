@@ -21,6 +21,11 @@ public static class AiConnectionStringsEndpoints
             .Produces<AiConnectionStringCreatedResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
+        group.MapPost("/test", TestAsync)
+            .WithName("aiConnectionStrings.test")
+            .Accepts<AiConnectionString>("application/json")
+            .Produces<AiConnectionStringTestResponse>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
         group.MapGet("/", ListAsync)
             .WithName("aiConnectionStrings.list")
             .Produces<List<AiConnectionString>>()
@@ -164,16 +169,8 @@ public static class AiConnectionStringsEndpoints
             return Results.BadRequest(new ApiErrorResponse($"AI agent connection strings require ModelType=Chat; got '{connectionString.ModelType}'"));
 
         var provider = connectionString.GetActiveProvider();
-        switch (provider)
-        {
-            case AiConnectorType.OpenAi:
-            case AiConnectorType.AzureOpenAi:
-            case AiConnectorType.Ollama:
-                // supported providers
-                break;
-            default:
-                return Results.BadRequest(new ApiErrorResponse($"unsupported provider '{provider}'"));
-        }
+        if (IsSupportedProvider(provider) == false)
+            return Results.BadRequest(new ApiErrorResponse($"unsupported provider '{provider}'"));
 
         var serverWideConnection = new ServerWideConnectionString
         {
@@ -190,5 +187,76 @@ public static class AiConnectionStringsEndpoints
         return Results.Ok(new AiConnectionStringCreatedResponse(connectionString.Name));
     }
 
-    internal sealed class AiConnectionStringsLogger;
+    private static async Task<IResult> TestAsync(
+        AiConnectionString body,
+        IAiHelperClient aiClient,
+        ILogger<AiConnectionStringsLogger> logger,
+        CancellationToken ct)
+    {
+        var errors = new List<string>();
+        if (body.Validate(errors) == false)
+            return Results.BadRequest(new ApiErrorResponse(string.Join("; ", errors)));
+
+        if (body.ModelType != AiModelType.Chat)
+            return Results.BadRequest(new ApiErrorResponse($"AI agent connection strings require ModelType=Chat; got '{body.ModelType}'"));
+
+        var provider = body.GetActiveProvider();
+        if (IsSupportedProvider(provider) == false)
+            return Results.BadRequest(new ApiErrorResponse($"unsupported provider '{provider}'"));
+
+        var path = $"{TestConnectionPath}?type={provider}&modelType={AiModelType.Chat}";
+        var (transport, content) = await aiClient.SendAsync(path, "POST", GetProviderSettings(body, provider), ct);
+        if (transport != AiHelperStatus.Success)
+        {
+            logger.LogWarning(
+                "Could not run the AI model test for connection string name={Name}: transport {Transport}.",
+                body.Name, transport);
+            return Results.Ok(new AiConnectionStringTestResponse(Success: false, Error: "Could not reach the provider to verify the model."));
+        }
+
+        var result = await aiClient.DeserializeAsync<AiTestConnectionResult>(content, ct);
+        if (result is null)
+            return Results.Ok(new AiConnectionStringTestResponse(Success: false, Error: "Could not read the model test result."));
+
+        if (result.Success == false)
+            return Results.Ok(new AiConnectionStringTestResponse(Success: false, Error: result.Error));
+
+        return result.SupportsTools
+            ? Results.Ok(new AiConnectionStringTestResponse(Success: true))
+            : Results.Ok(new AiConnectionStringTestResponse(
+                Success: false,
+                Error: $"Model '{GetModelName(body, provider)}' does not support function tools, so it can't be used by an agent. Pick a different model."));
+    }
+
+    private static object GetProviderSettings(AiConnectionString connection, AiConnectorType provider) =>
+        provider switch
+        {
+            AiConnectorType.OpenAi => connection.OpenAiSettings,
+            AiConnectorType.AzureOpenAi => connection.AzureOpenAiSettings,
+            AiConnectorType.Ollama => connection.OllamaSettings,
+            _ => throw new ArgumentOutOfRangeException(nameof(provider), provider, "unsupported provider"),
+        };
+
+    private static string? GetModelName(AiConnectionString connection, AiConnectorType provider) =>
+        provider switch
+        {
+            AiConnectorType.OpenAi => connection.OpenAiSettings?.Model,
+            AiConnectorType.AzureOpenAi => connection.AzureOpenAiSettings?.DeploymentName,
+            AiConnectorType.Ollama => connection.OllamaSettings?.Model,
+            _ => null,
+        };
+
+    private static bool IsSupportedProvider(AiConnectorType provider) =>
+        provider is AiConnectorType.OpenAi or AiConnectorType.AzureOpenAi or AiConnectorType.Ollama;
+
+    private const string TestConnectionPath = "/admin/ai/test-connection";
+
+    private sealed class AiTestConnectionResult
+    {
+        public bool Success { get; set; }
+        public string? Error { get; set; }
+        public bool SupportsTools { get; set; }
+    }
+
+    private sealed class AiConnectionStringsLogger;
 }

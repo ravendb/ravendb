@@ -27,6 +27,7 @@ internal static class AiIntegrationTestConnectionHelper
 
         InMemoryLoggerProvider logger = null;
         var acceptsImageInput = false;
+        var supportsTools = false;
         try
         {
             using (requestHandler.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -98,6 +99,7 @@ internal static class AiIntegrationTestConnectionHelper
                             var schema = ChatCompletionClient.GetSchemaFromSampleObject("{\"answer\":\"the answer to the user's prompt\"}");
                             await client.TestCompleteAsync("Reply with exact word only: raven", "hi", schema, cancellationToken);
                             acceptsImageInput = await client.TestAcceptsImageInputAsync(cancellationToken);
+                            supportsTools = await client.TestSupportsToolsAsync(cancellationToken);
                         }
 
                         break;
@@ -108,7 +110,8 @@ internal static class AiIntegrationTestConnectionHelper
                 var result = new DynamicJsonValue
                 {
                     [nameof(NodeConnectionTestResult.Success)] = true,
-                    [nameof(NodeConnectionTestResult.AcceptsImageInput)] = acceptsImageInput
+                    [nameof(NodeConnectionTestResult.AcceptsImageInput)] = acceptsImageInput,
+                    [nameof(NodeConnectionTestResult.SupportsTools)] = supportsTools
                 };
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, requestHandler.ResponseBodyStream()))

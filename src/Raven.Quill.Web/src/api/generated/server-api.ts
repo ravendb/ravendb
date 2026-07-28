@@ -462,6 +462,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/ai/connection-strings/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["aiConnectionStrings.test"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/ai/connection-strings/{name}": {
         parameters: {
             query?: never;
@@ -988,6 +1004,10 @@ export interface components {
         AiConnectionStringDeleteConflictResponse: {
             error: string;
             referencingAgentIds: string[];
+        };
+        AiConnectionStringTestResponse: {
+            success: boolean;
+            error?: null | string;
         };
         /** @enum {unknown} */
         AiConnectorType: "None" | "OpenAi" | "AzureOpenAi" | "Ollama" | "Embedded" | "Google" | "HuggingFace" | "MistralAi" | "Vertex";
@@ -2883,6 +2903,39 @@ export interface operations {
             };
         };
     };
+    "aiConnectionStrings.test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiConnectionString"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiConnectionStringTestResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
     "aiConnectionStrings.detail": {
         parameters: {
             query?: never;
@@ -3854,6 +3907,7 @@ export type AiAgentToolSubAgent = components["schemas"]["AiAgentToolSubAgent"];
 export type AiConnectionString = components["schemas"]["AiConnectionString"];
 export type AiConnectionStringCreatedResponse = components["schemas"]["AiConnectionStringCreatedResponse"];
 export type AiConnectionStringDeleteConflictResponse = components["schemas"]["AiConnectionStringDeleteConflictResponse"];
+export type AiConnectionStringTestResponse = components["schemas"]["AiConnectionStringTestResponse"];
 export type AiConnectorType = components["schemas"]["AiConnectorType"];
 export type AiConversationMessage = components["schemas"]["AiConversationMessage"];
 export type AiMessageRole = components["schemas"]["AiMessageRole"];
@@ -3977,6 +4031,7 @@ export const API_ENDPOINTS = {
         delete: (name: string) => `/ai/connection-strings/${encodeURIComponent(name)}`,
         detail: (name: string) => `/ai/connection-strings/${encodeURIComponent(name)}`,
         list: "/ai/connection-strings",
+        test: "/ai/connection-strings/test",
     },
     aiModels: {
         list: "/ai/models",
@@ -4069,6 +4124,7 @@ export function createServerApi(client: ApiClient) {
             delete: (name: string) => client.delete<void, ApiErrorResponse | AiConnectionStringDeleteConflictResponse>(API_ENDPOINTS.aiConnectionStrings.delete(name)),
             detail: (name: string) => client.get<AiConnectionString, ApiErrorResponse>(API_ENDPOINTS.aiConnectionStrings.detail(name)),
             list: () => client.get<AiConnectionString[], ApiErrorResponse>(API_ENDPOINTS.aiConnectionStrings.list),
+            test: (request: AiConnectionString) => client.post<AiConnectionStringTestResponse, ApiErrorResponse>(API_ENDPOINTS.aiConnectionStrings.test, request),
         },
         aiModels: {
             list: (request: AiModelsRequest) => client.post<AiModelsResponse, ApiErrorResponse>(API_ENDPOINTS.aiModels.list, request),

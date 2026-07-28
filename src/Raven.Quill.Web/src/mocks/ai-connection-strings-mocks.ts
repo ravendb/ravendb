@@ -1,4 +1,4 @@
-import type { AiConnectionString } from "@/api/generated/server-api";
+import type { AiConnectionString, AiConnectionStringTestResponse } from "@/api/generated/server-api";
 import { getServerConnectionStringName } from "@/components/ai-connection-string/ai-connection-string-utils";
 import { apiHttp } from "./api-http";
 
@@ -14,6 +14,8 @@ export const aiConnectionStringsMocks = {
             const connectionString = await request.json();
             return response(200).json({ name: connectionString.name ?? "connection-string" });
         }),
+    test: (result: AiConnectionStringTestResponse = { success: true }) =>
+        apiHttp.post("/api/ai/connection-strings/test", ({ response }) => response(200).json(result)),
     delete: () => apiHttp.delete("/api/ai/connection-strings/{name}", ({ response }) => response(204).empty()),
 };
 
