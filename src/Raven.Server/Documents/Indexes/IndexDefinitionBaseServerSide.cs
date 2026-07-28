@@ -195,12 +195,12 @@ namespace Raven.Server.Documents.Indexes
             public const long CoraxPagingBasedOnEntriesId_62 = 62_006; // RavenDB-23100
             public const long CoraxUnicodeLengthAnalyzers_62 = 62_007; // RavenDB-24423
             public const long CoraxNumericTreesWithoutFrequencies_62 = 62_008; // RavenDB-27171
-            public const long ExactDatesUseTimeTicks_62 = 62_009; // RavenDB-27052
+            public const long LuceneExactDatesUseTimeTicks_62 = 62_009; // RavenDB-27052
 
             /// <summary>
             /// Remember to bump this
             /// </summary>
-            public const long CurrentVersion = ExactDatesUseTimeTicks_62;
+            public const long CurrentVersion = LuceneExactDatesUseTimeTicks_62;
 
             public static bool IsLowerCasedReferencesSupported(long indexVersion)
             {
