@@ -214,6 +214,9 @@ public static class WizardEndpoints
         if (string.IsNullOrWhiteSpace(body.Slug))
             return Results.BadRequest(new ApiErrorResponse("slug is required"));
 
+        if (body.SelectedTables is not { Length: > 0 })
+            return Results.BadRequest(new ApiErrorResponse("selectedTables must list at least one table"));
+
         var intentPrompt = string.IsNullOrWhiteSpace(body.IntentPrompt) ? DefaultIntentPrompt : body.IntentPrompt!;
 
         WizardState? state;
@@ -223,7 +226,12 @@ public static class WizardEndpoints
         if (state?.LastDiscoveredSchema is null)
             return Results.BadRequest(new ApiErrorResponse("no discovered schema found; call /api/setup/discover first"));
 
-        var result = await aiClient.SuggestCdcAsync(state.LastDiscoveredSchema, samples: null, intentPrompt, ct);
+        var selectedSchema = SelectTables(state.LastDiscoveredSchema, body.SelectedTables);
+        if (selectedSchema.Tables.Count == 0)
+            return Results.BadRequest(new ApiErrorResponse(
+                "none of the selected tables are part of the discovered schema; call /api/setup/discover first"));
+
+        var result = await aiClient.SuggestCdcAsync(selectedSchema, samples: null, intentPrompt, ct);
 
         if (result.Status != AiHelperStatus.Success)
             return Results.Ok(new SuggestCdcResponse(Configuration: null, result.Rationale, result.Status.ToString()));
@@ -365,6 +373,47 @@ public static class WizardEndpoints
 
         return Results.Ok(new ProvisionResponse(app.Id!, app.Slug));
     }
+
+    /// <summary>
+    /// Narrows the persisted discovery result to the tables the operator selected on the verify step.
+    /// Discovery enumerates whole schemas, so handing the AI everything it found would map tables the
+    /// operator deliberately left out.
+    /// </summary>
+    private static CdcSinkSourceSchema SelectTables(CdcSinkSourceSchema schema, SelectedSourceTable[] selectedTables)
+    {
+        var selectedKeys = selectedTables
+            .Select(table => TableKey(table.SourceTableSchema, table.SourceTableName))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return new CdcSinkSourceSchema
+        {
+            CatalogName = schema.CatalogName,
+            Tables = schema.Tables
+                .Where(table => selectedKeys.Contains(TableKey(table.SourceTableSchema, table.SourceTableName)))
+                .Select(table => WithForeignKeysWithin(table, selectedKeys))
+                .ToList(),
+            Errors = [.. schema.Errors],
+            HasPermissionToSetup = schema.HasPermissionToSetup,
+            Warnings = [.. schema.Warnings],
+        };
+    }
+
+    // A foreign key pointing at a left-out table would still invite a linked/embedded mapping onto it.
+    private static CdcSinkSourceTable WithForeignKeysWithin(CdcSinkSourceTable table, HashSet<string> selectedKeys) => new()
+    {
+        SourceTableSchema = table.SourceTableSchema,
+        SourceTableName = table.SourceTableName,
+        Columns = table.Columns,
+        PrimaryKeyColumns = table.PrimaryKeyColumns,
+        ForeignKeys = table.ForeignKeys
+            .Where(foreignKey => selectedKeys.Contains(TableKey(foreignKey.ReferencedSchema, foreignKey.ReferencedTable)))
+            .ToList(),
+        IsCdcEnabled = table.IsCdcEnabled,
+        UnsupportedReason = table.UnsupportedReason,
+        Warnings = table.Warnings,
+    };
+
+    private static string TableKey(string? schemaName, string tableName) => $"{schemaName}.{tableName}";
 
     private static string DatabaseExistsMessage(string slug) =>
         $"database '{slug}' already exists; delete it in RavenDB Studio (or choose another name) and run the setup wizard again";

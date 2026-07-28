@@ -1559,6 +1559,10 @@ export interface components {
         };
         /** @enum {unknown} */
         SecurityClearance: "UnauthenticatedClients" | "ClusterAdmin" | "ClusterNode" | "Operator" | "ValidUser";
+        SelectedSourceTable: {
+            sourceTableName: string;
+            sourceTableSchema?: null | string;
+        };
         SendFeedbackRequest: {
             name: string;
             email: string;
@@ -1609,6 +1613,7 @@ export interface components {
         };
         SuggestCdcRequest: {
             intentPrompt: null | string;
+            selectedTables: components["schemas"]["SelectedSourceTable"][];
             /** @default  */
             slug: string;
         };
@@ -3868,6 +3873,7 @@ export type QuillApplicationUsage = components["schemas"]["QuillApplicationUsage
 export type QuillPeriodUsage = components["schemas"]["QuillPeriodUsage"];
 export type QuillUsageResponse = components["schemas"]["QuillUsageResponse"];
 export type SecurityClearance = components["schemas"]["SecurityClearance"];
+export type SelectedSourceTable = components["schemas"]["SelectedSourceTable"];
 export type SendFeedbackRequest = components["schemas"]["SendFeedbackRequest"];
 export type SeriesData = components["schemas"]["SeriesData"];
 export type SeriesKey = components["schemas"]["SeriesKey"];

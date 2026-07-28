@@ -1,5 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { useFormContext } from "react-hook-form";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
+import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import {
     computeDiscoveredSchemaKey,
     suggestMapTablesQuery,
@@ -13,14 +15,17 @@ import {
  */
 export function useVerifySchemaStep() {
     const queryClient = useQueryClient();
+    const { getValues } = useFormContext<AppFormData>();
 
     return () => {
         const { discoverResult } = useSetupWizardStore.getState();
 
         void queryClient.prefetchQuery(
             suggestMapTablesQuery({
+                slug: getValues("externalConnection").slug,
                 discoveredSchemaKey: computeDiscoveredSchemaKey(discoverResult),
                 intentPrompt: "",
+                selectedTables: getValues("verifySchema.tables"),
             }),
         );
     };
