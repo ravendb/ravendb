@@ -2,7 +2,12 @@ import z from "zod";
 import type { WizardSteps } from "@/components/form/wizard/form-wizard";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { getOptionLabel } from "@/lib/form-utils";
-import { appSchema, type AppFormData, type AppStepId } from "@/pages/setup/add-app-wizard/app-wizard-validation";
+import {
+    appSchema,
+    createExternalConnectionSchema,
+    type AppFormData,
+    type AppStepId,
+} from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { ChooseDataSourceStep } from "@/pages/setup/add-app-wizard/steps/data-source/choose-data-source-step";
 import { DATA_SOURCE_OPTIONS } from "@/pages/setup/add-app-wizard/steps/data-source/data-source-options";
 import { MAP_SOURCE_OPTIONS } from "@/pages/setup/add-app-wizard/steps/map/map-source-options";
@@ -105,15 +110,21 @@ export const getAppFlow = ({ dataSource }: { dataSource: string }): AppStepId[] 
     return [/* "dataSource", */ "externalConnection", "verifySchema", "map", "mapTables", "preview"];
 };
 
-export const buildAppSchemaForFlow = (flow: AppStepId[]) => {
+export const buildAppSchemaForFlow = (flow: AppStepId[], takenSlugs: string[] = []) => {
     const schemaStepIds = Object.keys(appSchema.shape) as AppStepId[];
     const skippedSchemaSteps = schemaStepIds.filter((stepId) => !flow.includes(stepId));
 
-    if (skippedSchemaSteps.length === 0) {
+    const overrides: Record<string, z.ZodTypeAny> = Object.fromEntries(
+        skippedSchemaSteps.map((stepId) => [stepId, z.any()]),
+    );
+
+    if (takenSlugs.length > 0 && !skippedSchemaSteps.includes("externalConnection")) {
+        overrides.externalConnection = createExternalConnectionSchema(takenSlugs);
+    }
+
+    if (Object.keys(overrides).length === 0) {
         return appSchema;
     }
 
-    return appSchema.extend(
-        Object.fromEntries(skippedSchemaSteps.map((stepId) => [stepId, z.any()])) as Record<string, z.ZodTypeAny>,
-    ) as typeof appSchema;
+    return appSchema.extend(overrides) as typeof appSchema;
 };

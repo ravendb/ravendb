@@ -9,7 +9,7 @@ import { useNavigate } from "react-router";
 import { appRoutes } from "@/lib/app-routes";
 import { api } from "@/api/api";
 import { isApiError } from "@/api/http-client";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { preventEnterKeySubmission } from "@/lib/form-utils";
 import { invalidateAppQueries } from "@/lib/query-invalidation";
 import { toast } from "sonner";
@@ -32,12 +32,15 @@ export function AddAppWizard() {
     const queryClient = useQueryClient();
     const [createdApp, setCreatedApp] = useState<CreatedApp | null>(null);
 
+    const appsQuery = useQuery(api.queries.apps.list());
+    const takenSlugs = appsQuery.data?.map((app) => app.slug) ?? [];
+
     const form = useForm<AppFormData>({
         mode: "onChange",
         defaultValues: getDefaultValues(),
         resolver: async (values, context, options) => {
             const flow = getAppFlow({ dataSource: values.dataSource?.source });
-            return zodResolver(buildAppSchemaForFlow(flow))(values, context, options);
+            return zodResolver(buildAppSchemaForFlow(flow, takenSlugs))(values, context, options);
         },
     });
 
