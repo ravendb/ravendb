@@ -26,7 +26,12 @@ export function MapTablesStep() {
     const { control, getValues, setValue } = useFormContext<AppFormData>();
     const { errors } = useFormState({ control, name: "mapTables.tables" });
     const applyMapTables = useApplyMapTables();
-    const { isSuggesting, error: suggestionError, retry: retrySuggestion } = useSuggestedMapTables();
+    const {
+        isSuggesting,
+        startedAt: suggestionStartedAt,
+        error: suggestionError,
+        retry: retrySuggestion,
+    } = useSuggestedMapTables();
 
     const isRawView = useSetupWizardStore((state) => state.isMapTablesRawView);
     const rawContent = useSetupWizardStore((state) => state.mapTablesRawContent);
@@ -64,7 +69,7 @@ export function MapTablesStep() {
     };
 
     if (isSuggesting) {
-        return <MapTablesSuggestionProgress />;
+        return <MapTablesSuggestionProgress startedAt={suggestionStartedAt} />;
     }
 
     if (suggestionError) {

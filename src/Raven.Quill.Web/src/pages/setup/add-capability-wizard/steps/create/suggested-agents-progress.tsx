@@ -11,10 +11,10 @@ const SUGGESTION_STAGES: AiProgressStage[] = [
     { fromSeconds: 120, label: "Still working on it" },
 ];
 
-export function SuggestedAgentsProgress() {
+export function SuggestedAgentsProgress({ startedAt }: { startedAt: number | undefined }) {
     return (
         <div className="grid gap-4 rounded-lg border bg-background p-4">
-            <AiProgressStatus stages={SUGGESTION_STAGES}>
+            <AiProgressStatus stages={SUGGESTION_STAGES} startedAt={startedAt}>
                 We&apos;re analyzing your collections to propose agents. This usually takes a minute or two - you can
                 describe your own agent below in the meantime.
             </AiProgressStatus>

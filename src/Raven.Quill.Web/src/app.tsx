@@ -12,7 +12,7 @@ import { appRoutes } from "@/lib/app-routes";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
 import { RavenLogo } from "@/components/brand/raven-logo";
-import { ContactSheet } from "@/pages/dashboard/contact-sheet";
+import { ContactSheet } from "@/components/layout/contact-sheet";
 
 const compactSidebarMediaQuery = "(max-width: 63.999rem)";
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "sidebar-collapsed";

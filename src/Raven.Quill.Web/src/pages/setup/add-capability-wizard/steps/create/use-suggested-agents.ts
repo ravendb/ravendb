@@ -3,6 +3,7 @@ import { useIsFetching, useQuery } from "@tanstack/react-query";
 import { useFormContext, useWatch } from "react-hook-form";
 import { useParams } from "react-router";
 import { api } from "@/api/api";
+import { getFetchStartedAt } from "@/lib/query-fetch-start";
 import { applySuggestionToForm } from "@/pages/setup/add-capability-wizard/agent-config-form";
 import { useCapabilityWizardStore } from "@/pages/setup/add-capability-wizard/capability-wizard-store";
 import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
@@ -12,13 +13,14 @@ import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capabili
  * same query, so this usually joins a call that is already in flight - and the caller renders
  * progress for however much of it is left.
  */
-export function useSuggestedAgents(): { isSuggesting: boolean } {
+export function useSuggestedAgents(): { isSuggesting: boolean; startedAt: number | undefined } {
     const { slug = "" } = useParams();
     const { getValues, setValue } = useFormContext<AgentFormData>();
     const suggestions = useCapabilityWizardStore((state) => state.suggestions);
     const setSuggestions = useCapabilityWizardStore((state) => state.setSuggestions);
 
-    const query = useQuery(api.queries.apps.suggestAgentFromData(slug));
+    const suggestQuery = api.queries.apps.suggestAgentFromData(slug);
+    const query = useQuery(suggestQuery);
     const suggestedAgents = query.data;
 
     // The candidates arrive after this step is already on screen, so handing them to the store is a
@@ -40,8 +42,13 @@ export function useSuggestedAgents(): { isSuggesting: boolean } {
     }, [getValues, setSuggestions, setValue, suggestedAgents, suggestions]);
 
     // The store keeps the answer for the rest of the wizard, so the step never falls back to the
-    // skeleton if the cache entry is evicted while the operator is on a later step.
-    return { isSuggesting: !suggestedAgents && suggestions.length === 0 };
+    // skeleton if the cache entry is evicted while the operator is on a later step. An empty result
+    // stays stale and refetches on remount, so the fetch state must count as suggesting too - the
+    // footer already blocks "Next" for it, and the body must not declare failure meanwhile.
+    return {
+        isSuggesting: (query.isFetching || !suggestedAgents) && suggestions.length === 0,
+        startedAt: getFetchStartedAt(suggestQuery.queryKey),
+    };
 }
 
 /**

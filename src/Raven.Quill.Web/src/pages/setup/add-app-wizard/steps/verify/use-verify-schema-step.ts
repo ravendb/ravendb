@@ -9,22 +9,29 @@ import {
 
 /**
  * Warms the AI mapping suggestion while the operator is still choosing a mapping source. The call
- * takes over a minute, and the empty (default) prompt is what most operators end up sending, so the
- * map-tables step usually finds the answer already waiting. Deliberately not awaited - the wizard
- * must advance immediately.
+ * takes over a minute, and most operators keep the AI default, so the map-tables step usually finds
+ * the answer already waiting. Prefetching with the current prompt makes a re-pass through this step
+ * a cache no-op instead of a second paid call. Deliberately not awaited - the wizard must advance
+ * immediately.
  */
 export function useVerifySchemaStep() {
     const queryClient = useQueryClient();
     const { getValues } = useFormContext<AppFormData>();
 
     return () => {
+        // After an import or a manual mapping choice the suggestion could never be consumed, so the
+        // (expensive) call must not be warmed up.
+        if (getValues("map.source") !== "ai-suggested") {
+            return;
+        }
+
         const { discoverResult } = useSetupWizardStore.getState();
 
         void queryClient.prefetchQuery(
             suggestMapTablesQuery({
                 slug: getValues("externalConnection").slug,
                 discoveredSchemaKey: computeDiscoveredSchemaKey(discoverResult),
-                intentPrompt: "",
+                intentPrompt: getValues("map.aiPrompt").trim(),
                 selectedTables: getValues("verifySchema.tables"),
             }),
         );

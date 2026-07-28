@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { api } from "@/api/api";
 import type { DiscoverResponse } from "@/api/generated/server-api";
+import { recordFetchStartedAt } from "@/lib/query-fetch-start";
 import { tablesSchema, type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { getTableKey } from "@/pages/setup/add-app-wizard/discover-utils";
 import { wrapDtoTablesToFormShape } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-dto";
@@ -11,8 +12,9 @@ type SelectedTables = AppFormData["verifySchema"]["tables"];
 
 /**
  * The endpoint narrows the schema the server discovered last down to the tables sent with the
- * request, so a suggestion stays valid exactly as long as that schema does. The discovered table
- * list stands in for its identity.
+ * request, so the discovered table list stands in for that snapshot's identity. It is a deliberately
+ * coarse key: re-discovering invalidates suggestions the extra tables never touched, and column
+ * changes within a table are not detected at all.
  */
 export function computeDiscoveredSchemaKey(discoverResult: DiscoverResponse | null): string {
     return (discoverResult?.tables ?? []).map(getTableKey).sort().join("|");
@@ -37,7 +39,10 @@ export function suggestMapTablesQuery({
             intentPrompt,
             selectedTables.map(getTableKey).sort().join("|"),
         ],
-        queryFn: () => suggestMapTables(slug, intentPrompt, selectedTables),
+        queryFn: ({ queryKey }) => {
+            recordFetchStartedAt(queryKey);
+            return suggestMapTables(slug, intentPrompt, selectedTables);
+        },
         // The call routinely runs for more than a minute, so the verify step prefetches it and every
         // later read serves that same entry instead of paying for it again. A retry would double the
         // wait, and the cache key already covers every input the answer depends on.
@@ -60,7 +65,10 @@ async function suggestMapTables(
 
     try {
         return tablesSchema.parse(wrapDtoTablesToFormShape(result.configuration.tables ?? []));
-    } catch {
-        throw new Error("The suggested mapping is invalid and could not be loaded into the editor.");
+    } catch (error) {
+        console.error("The AI-suggested mapping failed validation.", error);
+        throw new Error("The suggested mapping is invalid and could not be loaded into the editor.", {
+            cause: error,
+        });
     }
 }

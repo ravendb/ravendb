@@ -16,7 +16,7 @@ export function CreateAgentStep({ isBusy }: WizardBodyComponentProps) {
     const { control, setValue } = useFormContext<AgentFormData>();
     const suggestions = useCapabilityWizardStore((state) => state.suggestions);
     const mode = useWatch({ control, name: "create.mode" });
-    const { isSuggesting } = useSuggestedAgents();
+    const { isSuggesting, startedAt: suggestionStartedAt } = useSuggestedAgents();
 
     // "Next" in prompt mode is the generation call itself, so the wizard is only ever busy here
     // while the agent is being generated.
@@ -43,7 +43,7 @@ export function CreateAgentStep({ isBusy }: WizardBodyComponentProps) {
             <div className="grid gap-3">
                 <h3 className="text-sm font-semibold">AI-suggested agents based on your data</h3>
                 {isSuggesting ? (
-                    <SuggestedAgentsProgress />
+                    <SuggestedAgentsProgress startedAt={suggestionStartedAt} />
                 ) : suggestions.length === 0 ? (
                     <Alert>
                         AI could not suggest agents from your data. Describe your own below, or set one up manually.

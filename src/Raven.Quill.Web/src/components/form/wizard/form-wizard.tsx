@@ -416,8 +416,7 @@ function WizardFooter<StepId extends string>({
                         </Button>
                     )}
                 </div>
-
-                <div className="ml-auto flex items-center gap-2">
+                <div className="ml-auto flex items-center gap-2" aria-live="polite">
                     {FooterComponent && <FooterComponent isBusy={isBusy} />}
                     {isLast && completion.type === "action" ? (
                         <Button
@@ -428,16 +427,12 @@ function WizardFooter<StepId extends string>({
                             key={`${currentStepId}:complete`}
                         >
                             {isBusy ? <Spinner /> : <Check aria-hidden="true" />}
-                            <span aria-live="polite">
-                                {resolveLabel(completion.label ?? "Finish", completion.busyLabel)}
-                            </span>
+                            <span>{resolveLabel(completion.label ?? "Finish", completion.busyLabel)}</span>
                         </Button>
                     ) : isLast ? (
                         <Button type="submit" size="lg" disabled={isCompletionDisabled} key={`${currentStepId}:submit`}>
                             {isBusy ? <Spinner /> : <Check aria-hidden="true" />}
-                            <span aria-live="polite">
-                                {resolveLabel(completion.label ?? "Submit", completion.busyLabel)}
-                            </span>
+                            <span>{resolveLabel(completion.label ?? "Submit", completion.busyLabel)}</span>
                         </Button>
                     ) : (
                         <Button
@@ -447,8 +442,8 @@ function WizardFooter<StepId extends string>({
                             key={`${currentStepId}:next`}
                         >
                             {isBusy && <Spinner />}
-                            <span aria-live="polite">{resolveLabel(nextLabel ?? "Next")}</span>
-                            {progressLabel === null && <ArrowRight aria-hidden="true" />}
+                            <span>{resolveLabel(nextLabel ?? "Next")}</span>
+                            {!isBusy && <ArrowRight aria-hidden="true" />}
                         </Button>
                     )}
                 </div>

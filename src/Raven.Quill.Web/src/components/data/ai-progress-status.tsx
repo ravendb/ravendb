@@ -11,9 +11,19 @@ export type AiProgressStage = {
  * Status line for a long-running AI call: the current stage plus how long it has been going.
  * The endpoints report no progress of their own, so stages are purely time-based - they tell the
  * operator the wizard is still working and roughly how far into a typical run they are.
+ * Prefetched calls are already well underway when this mounts, so pass `startedAt` (epoch ms)
+ * whenever the caller knows when the request actually began.
  */
-export function AiProgressStatus({ stages, children }: { stages: AiProgressStage[]; children: ReactNode }) {
-    const elapsedSeconds = useElapsedSeconds();
+export function AiProgressStatus({
+    stages,
+    startedAt,
+    children,
+}: {
+    stages: AiProgressStage[];
+    startedAt?: number;
+    children: ReactNode;
+}) {
+    const elapsedSeconds = useElapsedSeconds(startedAt);
     const stage = stages.findLast((candidate) => elapsedSeconds >= candidate.fromSeconds);
 
     return (
@@ -32,16 +42,19 @@ export function AiProgressStatus({ stages, children }: { stages: AiProgressStage
     );
 }
 
-function useElapsedSeconds() {
-    const [elapsedSeconds, setElapsedSeconds] = useState(0);
+// Derived from Date.now() rather than counted per tick, so a backgrounded tab (where interval
+// ticks are throttled) still shows the true elapsed time when the operator comes back.
+function useElapsedSeconds(startedAt?: number) {
+    const [mountedAt] = useState(() => Date.now());
+    const [now, setNow] = useState(mountedAt);
 
     useEffect(() => {
-        const interval = setInterval(() => setElapsedSeconds((seconds) => seconds + 1), 1_000);
+        const interval = setInterval(() => setNow(Date.now()), 1_000);
 
         return () => clearInterval(interval);
     }, []);
 
-    return elapsedSeconds;
+    return Math.max(0, Math.round((now - (startedAt ?? mountedAt)) / 1_000));
 }
 
 function formatElapsed(totalSeconds: number): string {
