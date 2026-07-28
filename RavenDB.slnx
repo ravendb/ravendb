@@ -11,6 +11,9 @@
     <Project Path="bench/BulkInsert.Benchmark/BulkInsert.Benchmark.csproj">
       <BuildType Solution="Validate|*" Project="Release" />
     </Project>
+    <Project Path="bench/DocumentsTxCache.Benchmark/DocumentsTxCache.Benchmark.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
     <Project Path="bench/Indexing.Benchmark/Indexing.Benchmark.csproj">
       <BuildType Solution="Validate|*" Project="Release" />
     </Project>
