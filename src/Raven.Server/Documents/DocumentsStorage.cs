@@ -392,7 +392,7 @@ namespace Raven.Server.Documents
                 Table.TableValueHolder holder = default;
                 foreach (var collection in IterateCollectionNames(tx, ctx))
                 {
-                    ComputeCollectionCache(tx, ctx, new CollectionName(collection), cache, ref holder);
+                    ComputeCollectionCache(tx, new CollectionName(collection), cache, ref holder);
                 }
             }
         }
@@ -428,12 +428,9 @@ namespace Raven.Server.Documents
             if (modifiedCollections == null)
                 return;
 
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
-            {
-                Table.TableValueHolder holder = default;
-                foreach (var collectionName in modifiedCollections)
-                    ComputeCollectionCache(tx, ctx, collectionName, cache, ref holder);
-            }
+            Table.TableValueHolder holder = default;
+            foreach (var collectionName in modifiedCollections)
+                ComputeCollectionCache(tx, collectionName, cache, ref holder);
         }
 
         private Dictionary<Slice, CollectionName> BuildCollectionTablesReverseMap(IEnumerable<CollectionName> collections)
@@ -452,7 +449,7 @@ namespace Raven.Server.Documents
             map[tombstonesTableName] = collection;
         }
 
-        private void ComputeCollectionCache(Transaction tx, JsonOperationContext ctx, CollectionName collectionName, DocumentTransactionCache cache, ref Table.TableValueHolder holder)
+        private void ComputeCollectionCache(Transaction tx, CollectionName collectionName, DocumentTransactionCache cache, ref Table.TableValueHolder holder)
         {
             if (ReadLastDocument(tx, collectionName, CollectionTableType.Documents, ref holder) == false)
             {
@@ -463,7 +460,7 @@ namespace Raven.Server.Documents
             var colCache = new DocumentTransactionCache.CollectionCache
             {
                 LastDocumentEtag = TableValueToEtag((int)DocumentsTable.Etag, ref holder.Reader),
-                LastChangeVector = TableValueToChangeVector(ctx, (int)DocumentsTable.ChangeVector, ref holder.Reader),
+                LastChangeVector = TableValueToChangeVector((int)DocumentsTable.ChangeVector, ref holder.Reader),
             };
 
             if (ReadLastDocument(tx, collectionName, CollectionTableType.Tombstones, ref holder))
@@ -1535,7 +1532,7 @@ namespace Raven.Server.Documents
             return TableValueToEtag((int)DocumentsTable.Etag, ref result.Reader);
         }
 
-        public string GetLastDocumentChangeVector(Transaction tx, JsonOperationContext ctx, string collection)
+        public string GetLastDocumentChangeVector(Transaction tx, string collection)
         {
             if (tx.IsWriteTransaction == false)
             {
@@ -1549,7 +1546,7 @@ namespace Raven.Server.Documents
             if (LastDocument(tx, collection, ref result) == false)
                 return null;
 
-            return TableValueToChangeVector(ctx, (int)DocumentsTable.ChangeVector, ref result.Reader);
+            return TableValueToChangeVector((int)DocumentsTable.ChangeVector, ref result.Reader);
         }
 
         private bool LastDocument(Transaction transaction, string collection, ref Table.TableValueHolder result)
@@ -1686,7 +1683,7 @@ namespace Raven.Server.Documents
             document.Id = TableValueToId(context, (int)DocumentsTable.Id, ref tvr);
             document.Etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr);
             document.Data = new BlittableJsonReaderObject(tvr.Read((int)DocumentsTable.Data, out int size), size, context);
-            document.ChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref tvr);
+            document.ChangeVector = TableValueToChangeVector((int)DocumentsTable.ChangeVector, ref tvr);
             document.LastModified = TableValueToDateTime((int)DocumentsTable.LastModified, ref tvr);
             document.Flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr);
             document.TransactionMarker = TableValueToShort((int)DocumentsTable.TransactionMarker, nameof(DocumentsTable.TransactionMarker), ref tvr);
@@ -1744,7 +1741,7 @@ namespace Raven.Server.Documents
                 DeletedEtag = TableValueToEtag((int)TombstoneTable.DeletedEtag, ref tvr),
                 Type = *(Tombstone.TombstoneType*)tvr.Read((int)TombstoneTable.Type, out int _),
                 TransactionMarker = *(short*)tvr.Read((int)TombstoneTable.TransactionMarker, out int _),
-                ChangeVector = TableValueToChangeVector(context, (int)TombstoneTable.ChangeVector, ref tvr),
+                ChangeVector = TableValueToChangeVector((int)TombstoneTable.ChangeVector, ref tvr),
                 LastModified = TableValueToDateTime((int)TombstoneTable.LastModified, ref tvr),
                 Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr)
             };
@@ -3051,7 +3048,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static string TableValueToChangeVector(JsonOperationContext context, int index, ref TableValueReader tvr)
+        public static string TableValueToChangeVector(int index, ref TableValueReader tvr)
         {
             var ptr = tvr.Read(index, out int size);
             return Encodings.Utf8.GetString(ptr, size);
