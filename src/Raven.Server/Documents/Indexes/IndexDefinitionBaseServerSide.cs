@@ -247,6 +247,11 @@ namespace Raven.Server.Documents.Indexes
             {
                 return indexVersion >= CoraxNumericTreesWithoutFrequencies_62;
             }
+
+            public static bool IsLuceneExactDatesUseTimeTicksSupported(long indexVersion)
+            {
+                return indexVersion >= LuceneExactDatesUseTimeTicks_62;
+            }
         }
     }
 
