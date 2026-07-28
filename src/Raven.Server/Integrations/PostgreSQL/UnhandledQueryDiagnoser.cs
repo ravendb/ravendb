@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using PgSqlParser;
+using Raven.Server.Integrations.PostgreSQL.VirtualCatalog;
 
 namespace Raven.Server.Integrations.PostgreSQL
 {
@@ -49,7 +51,13 @@ namespace Raven.Server.Integrations.PostgreSQL
 
             if (HasJoinExpr(outer))
             {
-                message = "SQL JOIN over RavenDB collections is not supported. RavenDB models cross-document relationships via document IDs rather than relational joins — express the relationship in RQL using `load` / `include`, or denormalize the data into the parent document.";
+                // A JOIN whose relations are all pg_catalog / information_schema tables is a
+                // system-catalog probe from a BI/SQL client (e.g. SQLAlchemy's hstore lookup),
+                // NOT a user query over RavenDB collections. Labeling it as the latter is
+                // misleading and sends people chasing an RQL rewrite for a query they never wrote.
+                message = AllJoinRelationsAreCatalogTables(outer)
+                    ? "This system-catalog JOIN shape is not yet supported by the PostgreSQL-bridge virtual catalog. The query targets pg_catalog / information_schema tables (not RavenDB collections) and is typically emitted by a BI/SQL client during connection setup. Please report the exact query so the shape can be added."
+                    : "SQL JOIN over RavenDB collections is not supported. RavenDB models cross-document relationships via document IDs rather than relational joins — express the relationship in RQL using `load` / `include`, or denormalize the data into the parent document.";
                 return true;
             }
 
@@ -194,6 +202,62 @@ namespace Raven.Server.Integrations.PostgreSQL
                     return true;
             }
             return false;
+        }
+
+        // True when every base relation reachable in the query's FROM / JOIN tree resolves to a
+        // known virtual-catalog table (pg_catalog / information_schema). Any unresolved relation -
+        // i.e. a real RavenDB collection - makes this false, preserving the RavenDB-collections
+        // message for genuine user JOINs. Depth-bounded and descends into sub-SELECTs, mirroring
+        // HasJoinExpr's traversal.
+        private static bool AllJoinRelationsAreCatalogTables(SelectStmt selectStmt)
+        {
+            var relations = new List<RangeVar>();
+            CollectRangeVars(selectStmt, relations, depth: 0);
+            if (relations.Count == 0)
+                return false;
+
+            foreach (var rv in relations)
+            {
+                if (PgVirtualDatabase.TryGetTable(rv.Schemaname, rv.Relname, out _) == false)
+                    return false;
+            }
+            return true;
+        }
+
+        private static void CollectRangeVars(SelectStmt selectStmt, List<RangeVar> acc, int depth)
+        {
+            if (selectStmt == null || depth >= MaxJoinSearchDepth)
+                return;
+
+            if (selectStmt.Op != SetOperation.SetopNone)
+            {
+                CollectRangeVars(selectStmt.Larg, acc, depth + 1);
+                CollectRangeVars(selectStmt.Rarg, acc, depth + 1);
+            }
+
+            if (selectStmt.FromClause == null)
+                return;
+
+            foreach (var item in selectStmt.FromClause)
+                CollectRangeVarsFromNode(item, acc, depth);
+        }
+
+        private static void CollectRangeVarsFromNode(Node node, List<RangeVar> acc, int depth)
+        {
+            if (node == null || depth >= MaxJoinSearchDepth)
+                return;
+
+            if (node.RangeVar != null)
+                acc.Add(node.RangeVar);
+
+            if (node.JoinExpr != null)
+            {
+                CollectRangeVarsFromNode(node.JoinExpr.Larg, acc, depth + 1);
+                CollectRangeVarsFromNode(node.JoinExpr.Rarg, acc, depth + 1);
+            }
+
+            if (node.RangeSubselect?.Subquery?.SelectStmt is { } inner)
+                CollectRangeVars(inner, acc, depth + 1);
         }
 
         // True iff any projection is a min()/max() FuncCall. Surfaced before the generic scalar-aggregate

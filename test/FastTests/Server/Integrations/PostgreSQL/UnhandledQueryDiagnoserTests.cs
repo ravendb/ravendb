@@ -23,6 +23,42 @@ namespace FastTests.Server.Integrations.PostgreSQL
             Assert.Contains("include", message);
         }
 
+        // A JOIN whose relations are all system-catalog tables (pg_catalog / information_schema)
+        // is a client bootstrap probe, NOT a user query over RavenDB collections. The diagnoser
+        // must not label it as the latter (which would send the user chasing a load/include rewrite
+        // for a query they never wrote — the exact confusion in Zoho Desk #7031, the SQLAlchemy
+        // hstore probe).
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Join_OverCatalogTables_NotLabeledAsRavenCollectionJoin()
+        {
+            var sql = """
+                SELECT t.oid FROM pg_type t
+                JOIN pg_namespace ns ON ns.oid = t.typnamespace
+                """;
+
+            Assert.True(UnhandledQueryDiagnoser.TryDiagnose(sql, out var message));
+            Assert.Contains("catalog", message);
+            // Must not claim it's an unsupported collection JOIN, nor push the RQL load/include
+            // rewrite — that guidance is nonsensical for a client's system-catalog probe.
+            Assert.DoesNotContain("JOIN over RavenDB collections is not supported", message);
+            Assert.DoesNotContain("load", message);
+            Assert.DoesNotContain("include", message);
+        }
+
+        // A JOIN that mixes a catalog table with a real user collection must keep the
+        // RavenDB-collections message — the user IS joining a collection.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Join_MixingCatalogAndUserCollection_KeepsRavenCollectionMessage()
+        {
+            var sql = """
+                SELECT o."Company" FROM "public"."Orders" o
+                JOIN pg_namespace ns ON 1=1
+                """;
+
+            Assert.True(UnhandledQueryDiagnoser.TryDiagnose(sql, out var message));
+            Assert.Contains("RavenDB collections", message);
+        }
+
         [RavenFact(RavenTestCategory.PostgreSql)]
         public void Join_LeftOuter_AlsoDetected()
         {
