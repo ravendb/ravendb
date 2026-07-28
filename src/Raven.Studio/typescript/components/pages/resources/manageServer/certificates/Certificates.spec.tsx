@@ -20,12 +20,17 @@ const selectors = {
     wellKnownIssuerCerts: /Well known issuer certificates/,
     stateFilterLabel: "Filter by state",
     expiredStateOption: "Expired",
+    disabledStateOption: "Disabled",
 };
 
 const stubCertificates = ManageServerStubs.certificates().Certificates;
 const clientCertName = stubCertificates[1].Name;
 const aboutToExpireCertName = stubCertificates[2].Name;
 const expiredCertName = stubCertificates[3].Name;
+
+const stubSsoCertificates = ManageServerStubs.certificatesWithSso().Certificates;
+const ssoUserCertName = stubSsoCertificates.find((x) => x.Usage === "SsoClient" && !x.Disabled).Name;
+const disabledSsoUserCertName = stubSsoCertificates.find((x) => x.Usage === "SsoClient" && x.Disabled).Name;
 
 describe("Certificates", () => {
     it("can render when server is not secure", () => {
@@ -188,6 +193,35 @@ describe("Certificates", () => {
         });
     });
 
+    describe("sso user entry", () => {
+        it("shows the Disabled status for a disabled SSO user which has no expiration date", async () => {
+            const { screen, user } = await rtlRender_WithWaitForLoad(<CertificatesStory />);
+
+            await selectStateFilterOption(screen, user, selectors.disabledStateOption);
+
+            expect(getItemStatus(screen, disabledSsoUserCertName)).toHaveTextContent("Disabled");
+        });
+
+        it("shows the Valid status for an enabled SSO user which has no expiration date", async () => {
+            const { screen } = await rtlRender_WithWaitForLoad(
+                <CertificatesStory
+                    certificates={certificatesWithSso((x) => {
+                        x.Certificates.find((cert) => cert.Name === ssoUserCertName).NotAfter = null;
+                    })}
+                />
+            );
+
+            expect(getItemStatus(screen, ssoUserCertName)).toHaveTextContent("Valid");
+        });
+
+        it("hides a disabled SSO user when only the Valid state is selected", async () => {
+            const { screen } = await rtlRender_WithWaitForLoad(<CertificatesStory />);
+
+            expect(screen.getByText(ssoUserCertName)).toBeInTheDocument();
+            expect(screen.queryByText(disabledSsoUserCertName)).not.toBeInTheDocument();
+        });
+    });
+
     describe("state filter", () => {
         it("shows only valid and about to expire certificates by default", async () => {
             const { screen } = await rtlRender_WithWaitForLoad(<CertificatesStory />);
@@ -210,6 +244,16 @@ describe("Certificates", () => {
         });
     });
 });
+
+function certificatesWithSso(mutate: (dto: CertificatesResponseDto) => void): CertificatesResponseDto {
+    const dto = ManageServerStubs.certificatesWithSso();
+    mutate(dto);
+    return dto;
+}
+
+function getItemStatus(screen: ReturnType<typeof rtlRender>["screen"], certName: string) {
+    return screen.getByText(certName).closest(".rich-panel-item").querySelector(".rich-panel-status");
+}
 
 async function selectStateFilterOption(
     screen: ReturnType<typeof rtlRender>["screen"],
