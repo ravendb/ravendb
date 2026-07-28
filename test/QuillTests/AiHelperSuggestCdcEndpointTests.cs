@@ -145,6 +145,34 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHe
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Returns_422_when_a_join_column_names_a_mapped_property_instead_of_a_source_column()
+    {
+        var renamed = AiHelperSamples.BuildCdcConfig();
+        renamed.Tables[0].Columns.Add(new CdcColumnMapping { Column = "customer_id", Name = "CustomerId" });
+        renamed.Tables[0].LinkedTables[0].JoinColumns = ["CustomerId"];
+        Mock.CdcResponse = (200, AiHelperSamples.CdcEnvelope(renamed));
+        await SeedDiscoveredSchemaAsync(Host);
+
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => Host.SuggestCdcAsync(Request("x", "orders")));
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, ex.StatusCode);
+        Assert.Contains("is a mapped property name", ex.Message);
+        Assert.Contains("customer_id", ex.Message);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Returns_422_when_a_join_column_is_not_a_column_of_the_source_table()
+    {
+        var hallucinated = AiHelperSamples.BuildCdcConfig();
+        hallucinated.Tables[0].LinkedTables[0].JoinColumns = ["buyer_ref"];
+        Mock.CdcResponse = (200, AiHelperSamples.CdcEnvelope(hallucinated));
+        await SeedDiscoveredSchemaAsync(Host);
+
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => Host.SuggestCdcAsync(Request("x", "orders")));
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, ex.StatusCode);
+        Assert.Contains("buyer_ref", ex.Message);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Maps_401_to_invalid_credentials()
     {
         Mock.CdcResponse = (401, "{}");
@@ -288,7 +316,11 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHe
         SourceTableName = name,
         IsCdcEnabled = true,
         PrimaryKeyColumns = ["id"],
-        Columns = [new CdcSinkSourceColumn { Name = "id", NativeType = "int", IsPrimaryKey = true, IsCdcCapturable = true }],
+        Columns =
+        [
+            new CdcSinkSourceColumn { Name = "id", NativeType = "int", IsPrimaryKey = true, IsCdcCapturable = true },
+            new CdcSinkSourceColumn { Name = "customer_id", NativeType = "int", IsCdcCapturable = true },
+        ],
         ForeignKeys = [.. (foreignKeysTo ?? []).Select(referenced => new CdcSinkSourceForeignKey
         {
             Columns = [$"{referenced}_id"],
