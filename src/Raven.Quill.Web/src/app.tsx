@@ -1,7 +1,7 @@
 import { Link, Outlet, useLocation, useMatches, useParams } from "react-router";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Sparkles } from "lucide-react";
+import { MessageCircle, Sparkles } from "lucide-react";
 import { isAppRouteHandle } from "@/routes";
 import { api } from "@/api/api";
 import { AppBreadcrumbSwitcher } from "@/components/layout/app-breadcrumb-switcher";
@@ -12,6 +12,7 @@ import { appRoutes } from "@/lib/app-routes";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
 import { RavenLogo } from "@/components/brand/raven-logo";
+import { ContactSheet } from "@/pages/dashboard/contact-sheet";
 
 const compactSidebarMediaQuery = "(max-width: 63.999rem)";
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "sidebar-collapsed";
@@ -113,6 +114,17 @@ function App() {
                     >
                         Docs
                     </a>
+                    <ContactSheet
+                        trigger={
+                            <button
+                                type="button"
+                                className="flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
+                            >
+                                <MessageCircle className="size-4" aria-hidden="true" />
+                                Feedback
+                            </button>
+                        }
+                    />
                     <Link
                         to="/ai"
                         className="text-primary [filter:drop-shadow(0_0_6px_var(--brand-400))] transition-colors hover:text-primary/80"
