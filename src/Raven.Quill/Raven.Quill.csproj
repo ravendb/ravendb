@@ -31,6 +31,10 @@
     <ProjectReference Include="..\Raven.Client\Raven.Client.csproj" />
     <!-- Required for InternalsVisibleTo from Raven.Client: internal API references JsonOperationContext (Sparrow). -->
     <ProjectReference Include="..\Sparrow\Sparrow.csproj" />
+    <Compile Include="..\..\src\Raven.Server\Commercial\ApiHttpClient.cs" Link="Raven\Linked\ApiHttpClient.cs" />
+    <Compile Include="..\..\src\Raven.Server\Utils\RavenHttpClient.cs" Link="Raven\Linked\RavenHttpClient.cs" />
+    <Compile Include="..\..\src\Raven.Server\ServerWide\ServerVersion.cs" Link="Raven\Linked\ServerVersion.cs" />
+    <Compile Include="..\..\src\Raven.Server\Smuggler\Documents\Processors\BuildVersion.cs" Link="Raven\Linked\BuildVersion.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -40,6 +44,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Resilience" />
+    <PackageReference Include="Polly" />
   </ItemGroup>
 
 </Project>

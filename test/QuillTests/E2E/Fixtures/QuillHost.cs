@@ -32,12 +32,11 @@ public sealed class QuillHost : IAsyncDisposable
     }
 
     internal static async Task<QuillHost> CreateAsync(RavenServer? server, IDocumentStore config,
-        string setupPackagePath = "", string licenseApiUrl = "http://unused-in-unit-tests",
+        string setupPackagePath = "",
         Action<ApplianceOptions>? configure = null, Action<IServiceCollection>? configureServices = null,
         bool seedChatConnectionString = true)
     {
         var factory = new ApplianceWebApplicationFactory(
-            licenseApiUrl: licenseApiUrl,
             setupPackagePath: setupPackagePath,
             applianceStore: config,
             configureOptions: opts =>

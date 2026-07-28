@@ -89,9 +89,17 @@ namespace Raven.Server.Commercial
         public static Task<HttpResponseMessage> GetAsync(string relativeUri, bool shouldRetry = true, CancellationToken token = default)
         {
             if (shouldRetry == false)
-                return Instance.GetAsync(relativeUri, token); 
-            
+                return Instance.GetAsync(relativeUri, token);
+
             return RetryPolicy.ExecuteAsync(t => Instance.GetAsync(relativeUri, t), token, continueOnCapturedContext: false);
+        }
+
+        public static Task<HttpResponseMessage> GetAsync(string relativeUri, HttpCompletionOption completionOption, bool shouldRetry = true, CancellationToken token = default)
+        {
+            if (shouldRetry == false)
+                return Instance.GetAsync(relativeUri, completionOption, token);
+
+            return RetryPolicy.ExecuteAsync(t => Instance.GetAsync(relativeUri, completionOption, t), token, continueOnCapturedContext: false);
         }
 
         static ApiHttpClient()

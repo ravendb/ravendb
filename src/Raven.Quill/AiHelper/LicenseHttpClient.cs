@@ -1,6 +1,8 @@
+using Raven.Server.Commercial;
+
 namespace Raven.Quill.AiHelper;
 
-public sealed class LicenseHttpClient(HttpClient httpClient) : ILicenseClient
+public sealed class LicenseHttpClient : ILicenseClient
 {
     private const string LicensePathPrefix = "/api/v1/quill/licenses";
 
@@ -11,7 +13,7 @@ public sealed class LicenseHttpClient(HttpClient httpClient) : ILicenseClient
         HttpResponseMessage response;
         try
         {
-            response = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
+            response = await ApiHttpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, shouldRetry: false, ct);
         }
         catch (HttpRequestException e)
         {

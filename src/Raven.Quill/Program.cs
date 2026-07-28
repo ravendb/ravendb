@@ -1,13 +1,11 @@
 using System.Reflection;
 using System.Text.Json;
 using System.Threading.RateLimiting;
-using System.Text.Json.Serialization.Metadata;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
-using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Polly;
@@ -74,7 +72,6 @@ builder.Services.AddOptions<ApplianceOptions>()
         ReadEnv("RAVEN_QUILL_CONFIG_DB", v => options.ConfigDatabase = v);
         ReadEnv("RAVEN_QUILL_SETUP_PACKAGE_PATH", v => options.SetupPackagePath = v);
         ReadEnv("RAVEN_QUILL_RAVENDB_S6_SERVICE", v => options.RavenDbS6Service = v);
-        ReadEnv("RAVEN_QUILL_LICENSE_API_URL", v => options.LicenseApiUrl = v);
         ReadEnv("RAVEN_QUILL_API_URL", v => options.AiApiUrl = v);
         ReadEnv("QUILL_LICENSE_KEY", v => options.LicenseKey = v);
         ReadEnv("QUILL_API_KEY", v => options.ApiKey = v);
@@ -110,7 +107,6 @@ if (!isOpenApiDocumentGeneration)
     builder.Services.AddHostedService<RavenReadinessService>();
     builder.Services.AddHostedService<ApplianceActivationService>();
 }
-
 builder.Services.AddHttpClient();
 
 builder.Services.AddHttpClient<IAiHelperClient, AiHelperInternalClient>(static (sp, http) =>
@@ -129,11 +125,7 @@ builder.Services.AddHttpClient<IAiHelperClient, AiHelperInternalClient>(static (
         return handler;
     });
 
-builder.Services.AddHttpClient<ILicenseClient, LicenseHttpClient>(static (sp, http) =>
-{
-    var opts = sp.GetRequiredService<IOptions<ApplianceOptions>>().Value;
-    http.BaseAddress = new Uri(opts.LicenseApiUrl);
-});
+builder.Services.AddSingleton<ILicenseClient, LicenseHttpClient>();
 
 builder.Services.ConfigureHttpJsonOptions(opts =>
 {
@@ -224,17 +216,6 @@ var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
     app.MapOpenApi();
-
-{
-    var opts = app.Services.GetRequiredService<IOptions<ApplianceOptions>>().Value;
-    if (app.Environment.IsDevelopment() &&
-        string.Equals(opts.LicenseApiUrl, ApplianceOptions.DefaultLicenseApiUrl, StringComparison.OrdinalIgnoreCase))
-    {
-        app.Logger.LogWarning(
-            "LicenseApiUrl is set to the production default ({Default}); set RAVEN_QUILL_LICENSE_API_URL to a mock or staging endpoint for local development.",
-            ApplianceOptions.DefaultLicenseApiUrl);
-    }
-}
 
 app.UseForwardedHeaders();
 
