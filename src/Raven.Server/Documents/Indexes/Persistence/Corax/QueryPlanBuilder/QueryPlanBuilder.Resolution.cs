@@ -650,6 +650,24 @@ internal static partial class QueryPlanBuilder
             return false;
         }
 
+        // The driving clause picks which terms tree we walk, and with the sort elided that walk order is the
+        // final order - so the ordering type has to match the clause's term type.
+        var sortFieldType = ctx.OrderByFields[0].FieldType;
+        var drivingTermType = ctx.Exec.SortDrivingClause.TermValueType;
+        var orderMatchesScanOrder = drivingTermType switch
+        {
+            ParamValueType.Long => sortFieldType is MatchCompareFieldType.Integer,
+            ParamValueType.Double => sortFieldType is MatchCompareFieldType.Floating,
+            ParamValueType.String => sortFieldType is MatchCompareFieldType.Sequence,
+            _ => false
+        };
+
+        if (orderMatchesScanOrder == false)
+        {
+            rejectReason = $"the ORDER BY type ({sortFieldType}) doesn't match the term type of the filter driving the scan ({drivingTermType})";
+            return false;
+        }
+
         if (ctx.PlanParams.IndexSearcher.HasMultipleTermsInField(ctx.OrderByFields[0].Field))
         {
             rejectReason = "the sort field holds multiple values per document, so its filter can't be safely skipped during the walk";
