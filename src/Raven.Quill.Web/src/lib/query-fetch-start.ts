@@ -15,3 +15,7 @@ export function recordFetchStartedAt(queryKey: readonly unknown[]): void {
 export function getFetchStartedAt(queryKey: readonly unknown[]): number | undefined {
     return startedAtByHashedKey.get(hashKey(queryKey));
 }
+
+export function clearFetchStartedAt(queryKey: readonly unknown[]): void {
+    startedAtByHashedKey.delete(hashKey(queryKey));
+}

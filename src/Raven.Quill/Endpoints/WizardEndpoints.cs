@@ -383,7 +383,7 @@ public static class WizardEndpoints
     {
         var selectedKeys = selectedTables
             .Select(table => TableKey(table.SourceTableSchema, table.SourceTableName))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            .ToHashSet();
 
         return new CdcSinkSourceSchema
         {
@@ -399,7 +399,9 @@ public static class WizardEndpoints
     }
 
     // A foreign key pointing at a left-out table would still invite a linked/embedded mapping onto it.
-    private static CdcSinkSourceTable WithForeignKeysWithin(CdcSinkSourceTable table, HashSet<string> selectedKeys) => new()
+    private static CdcSinkSourceTable WithForeignKeysWithin(
+        CdcSinkSourceTable table,
+        HashSet<SourceTableKey> selectedKeys) => new()
     {
         SourceTableSchema = table.SourceTableSchema,
         SourceTableName = table.SourceTableName,
@@ -413,7 +415,9 @@ public static class WizardEndpoints
         Warnings = table.Warnings,
     };
 
-    private static string TableKey(string? schemaName, string tableName) => $"{schemaName}.{tableName}";
+    private static SourceTableKey TableKey(string? schemaName, string tableName) => new(schemaName, tableName);
+
+    private readonly record struct SourceTableKey(string? SchemaName, string TableName);
 
     private static string DatabaseExistsMessage(string slug) =>
         $"database '{slug}' already exists; delete it in RavenDB Studio (or choose another name) and run the setup wizard again";
