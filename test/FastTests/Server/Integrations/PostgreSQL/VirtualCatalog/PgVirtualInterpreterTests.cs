@@ -1394,6 +1394,42 @@ ORDER BY ord";
             Assert.NotEqual(Regex.InfiniteMatchTimeout, regex.MatchTimeout);
         }
 
+        // SQLAlchemy's psycopg2 dialect runs this hstore probe on EVERY connect (Apache Superset,
+        // among others). Real PG returns 0 rows (no hstore type) and the client disables native
+        // hstore and proceeds. RavenDB must do the same. The JOIN over pg_type/pg_namespace is
+        // handled by JoinExecutor; the only thing that used to break it was pg_type missing the
+        // projected `typarray` column, which made the interpreter bail and the query get mislabeled
+        // as an unsupported "JOIN over RavenDB collections" (Zoho Desk #7031).
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Sqlalchemy_hstore_probe_returns_empty_rowset_with_2_columns()
+        {
+            const string sql =
+                "SELECT t.oid, typarray FROM pg_type t JOIN pg_namespace ns " +
+                "ON typnamespace = ns.oid WHERE typname = 'hstore'";
+
+            Assert.True(PgVirtualInterpreter.TryExecute(sql, EmptyCtx(), out var table));
+            Assert.Equal(2, table.Columns.Count);
+            Assert.Equal("oid", table.Columns[0].Name);
+            Assert.Equal("typarray", table.Columns[1].Name);
+            Assert.Empty(table.Data);
+        }
+
+        // Locks in the typarray catalog data: a base type's typarray must resolve to its array
+        // type's oid (int4 oid 23 -> _int4 oid 1007), and an array type's typarray is 0.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Typarray_resolves_to_array_type_oid_for_base_type()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute(
+                "SELECT typarray FROM pg_type WHERE typname = 'int4'", EmptyCtx(), out var table));
+            Assert.Single(table.Data);
+            Assert.Equal("1007", DecodeCell(table, row: 0, column: 0));
+
+            Assert.True(PgVirtualInterpreter.TryExecute(
+                "SELECT typarray FROM pg_type WHERE typname = '_int4'", EmptyCtx(), out var arrayTable));
+            Assert.Single(arrayTable.Data);
+            Assert.Equal("0", DecodeCell(arrayTable, row: 0, column: 0));
+        }
+
         private static VirtualQueryContext EmptyCtx() => new();
 
         private static string DecodeCell(Raven.Server.Integrations.PostgreSQL.Messages.PgTable table, int row, int column)

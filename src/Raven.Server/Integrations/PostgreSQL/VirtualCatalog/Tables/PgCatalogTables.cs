@@ -48,6 +48,7 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
             new("typelem",     PgOid.Default,  PgFormat.Text),
             new("typreceive",  PgOid.Default,  PgFormat.Text),
             new("typcategory", PgChar.Default, PgFormat.Text),
+            new("typarray",    PgOid.Default,  PgFormat.Text),
         };
     }
 
