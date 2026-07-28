@@ -31,7 +31,7 @@ export function SuggestionPicker() {
                             }
                         }}
                         className={cn(
-                            "min-h-28 rounded-lg border bg-background p-4 text-left transition-colors",
+                            "flex min-h-28 flex-col items-start rounded-lg border bg-background p-4 text-left transition-colors",
                             !isSelected && "hover:bg-accent hover:text-accent-foreground",
                             isSelected && SELECTED_CARD_CLASSES,
                         )}
