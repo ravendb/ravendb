@@ -54,32 +54,18 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
             if (args[0] is not string setting)
                 return false;
 
-            // The settings pgAdmin probes for during connection / property inspection. Real PG
-            // would read these from postgresql.conf; we hand back static defaults that match
-            // what RavenDB's PG endpoint behaves like (UTF-8 everywhere, single namespace).
-            result = setting.ToLowerInvariant() switch
-            {
-                "max_index_keys"     => "32",
-                "lc_collate"         => "C",
-                "lc_ctype"           => "C",
-                "lc_monetary"        => "C",
-                "lc_numeric"         => "C",
-                "lc_time"            => "C",
-                "server_encoding"    => "UTF8",
-                "client_encoding"    => "UTF8",
-                "default_tablespace" => "",            // empty string ⇒ pg_default
-                "search_path"        => "\"$user\", public",
-                "timezone"           => "UTC",
-                // Version probes. Many drivers / BI tools call current_setting('server_version')
-                // (and the *_num form) right after connecting to decide which SQL dialect features
-                // to use. Mirror the 13.3 banner reported by version() (see VersionFunction).
-                "server_version"     => "13.3",
-                "server_version_num" => "130003",
-                "standard_conforming_strings" => "on",
-                "integer_datetimes"  => "on",
-                _ => null,
-            };
-            return result != null;
+            // Values come from PgSettings so `current_setting('x')` and `SHOW x` can never
+            // disagree - see the remarks on that class.
+            //
+            // An unknown setting returns false (fall through to the next dispatch arm) rather than
+            // the 42704 error `SHOW` raises. That asymmetry is deliberate: current_setting can
+            // appear anywhere in a larger expression that a later arm may still handle, whereas a
+            // bare SHOW is unambiguously a settings lookup with nothing left to try.
+            if (PgSettings.TryGetValue(setting, out var value) == false)
+                return false;
+
+            result = value;
+            return true;
         }
     }
 

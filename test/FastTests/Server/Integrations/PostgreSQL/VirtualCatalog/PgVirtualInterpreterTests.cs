@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using Raven.Server.Integrations.PostgreSQL;
+using Raven.Server.Integrations.PostgreSQL.Exceptions;
 using Raven.Server.Integrations.PostgreSQL.VirtualCatalog;
 using Tests.Infrastructure;
 using Xunit;
@@ -1453,6 +1455,122 @@ ORDER BY ord";
         {
             Assert.False(PgVirtualInterpreter.TryExecute("select current_schema('public')", EmptyCtx(), out var table));
             Assert.Null(table);
+        }
+
+        // SQLAlchemy's PGDialect.get_isolation_level() runs `show transaction isolation level` on
+        // every connect and READS the value, so this can't be a no-op like BEGIN / SET - it has to
+        // return a real rowset. Verified identical on SQLAlchemy 1.4.54 and 2.0.51.
+        // The parser normalises the statement to the GUC name `transaction_isolation`, which is the
+        // column name PG reports. "read committed" is the value PgSettings serves - see the note
+        // there; it is a chosen answer, not a measured property of this bridge.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Show_transaction_isolation_level_returns_read_committed()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute("show transaction isolation level", EmptyCtx(), out var table));
+            Assert.NotNull(table);
+            Assert.Single(table.Columns);
+            Assert.Equal("transaction_isolation", table.Columns[0].Name);
+            Assert.Single(table.Data);
+            Assert.Equal("read committed", DecodeCell(table, row: 0, column: 0));
+        }
+
+        // Case is the parser's job (it lowercases the GUC name), and `show transaction_isolation`
+        // is the same statement spelled with the setting name directly. All three must agree.
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("SHOW TRANSACTION ISOLATION LEVEL")]
+        [InlineData("Show Transaction Isolation Level")]
+        [InlineData("show transaction_isolation")]
+        [InlineData("SHOW TRANSACTION_ISOLATION")]
+        public void Show_transaction_isolation_is_case_insensitive(string sql)
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute(sql, EmptyCtx(), out var table));
+            Assert.Single(table.Columns);
+            Assert.Equal("transaction_isolation", table.Columns[0].Name);
+            Assert.Single(table.Data);
+            Assert.Equal("read committed", DecodeCell(table, row: 0, column: 0));
+        }
+
+        // Any setting PgSettings knows resolves through the same path - SHOW isn't special-cased
+        // per statement. The expected values are whatever the shared table says.
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("show standard_conforming_strings", "standard_conforming_strings", "on")]
+        [InlineData("show server_version", "server_version", "13.3")]
+        [InlineData("show client_encoding", "client_encoding", "UTF8")]
+        [InlineData("SHOW TIME ZONE", "timezone", "UTC")]
+        public void Show_resolves_known_settings_from_shared_table(string sql, string expectedColumn, string expectedValue)
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute(sql, EmptyCtx(), out var table));
+            Assert.Single(table.Columns);
+            Assert.Equal(expectedColumn, table.Columns[0].Name);
+            Assert.Single(table.Data);
+            Assert.Equal(expectedValue, DecodeCell(table, row: 0, column: 0));
+        }
+
+        // PG raises ERROR 42704 `unrecognized configuration parameter "x"`. We must not return an
+        // empty rowset or a NULL value instead - either would tell the client the setting exists
+        // with no value, and it would act on that.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Show_unrecognized_setting_raises_undefined_object()
+        {
+            var ex = Assert.Throws<PgErrorException>(
+                () => PgVirtualInterpreter.TryExecute("show not_a_real_setting", EmptyCtx(), out _));
+
+            Assert.Equal(PgErrorCodes.UndefinedObject, ex.ErrorCode);
+            Assert.Equal("unrecognized configuration parameter \"not_a_real_setting\"", ex.Message);
+        }
+
+        // The whole point of routing SHOW through PgSettings: the two ways a client can read a
+        // setting must never disagree, because drivers mix both across one session.
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("transaction_isolation")]
+        [InlineData("standard_conforming_strings")]
+        [InlineData("server_version")]
+        [InlineData("search_path")]
+        public void Show_and_current_setting_return_the_same_value(string setting)
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute($"show {setting}", EmptyCtx(), out var showTable));
+            Assert.True(PgVirtualInterpreter.TryExecute($"select current_setting('{setting}')", EmptyCtx(), out var currentSettingTable));
+
+            Assert.Single(showTable.Data);
+            Assert.Single(currentSettingTable.Data);
+            Assert.Equal(DecodeCell(currentSettingTable, row: 0, column: 0), DecodeCell(showTable, row: 0, column: 0));
+        }
+
+        // `SHOW ALL` is a settings listing, not a lookup of a parameter literally named "all" - it
+        // must not raise 42704. PG's shape is (name, setting, description); we have no descriptions
+        // so that column is NULL rather than invented text.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Show_all_lists_the_known_settings()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute("show all", EmptyCtx(), out var table));
+            Assert.Equal(3, table.Columns.Count);
+            Assert.Equal("name", table.Columns[0].Name);
+            Assert.Equal("setting", table.Columns[1].Name);
+            Assert.Equal("description", table.Columns[2].Name);
+            Assert.NotEmpty(table.Data);
+
+            var settings = new Dictionary<string, string>();
+            for (var row = 0; row < table.Data.Count; row++)
+            {
+                Assert.False(table.Data[row].ColumnData.Span[2].HasValue); // description is NULL
+                settings[DecodeCell(table, row, column: 0)] = DecodeCell(table, row, column: 1);
+            }
+
+            Assert.Equal("read committed", settings["transaction_isolation"]);
+            Assert.Equal("on", settings["standard_conforming_strings"]);
+        }
+
+        // PG tags a SHOW result "SHOW", not "SELECT <n>". Drivers that assert on the
+        // CommandComplete tag would trip on the default the interpreter uses for real queries.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Show_result_carries_the_show_command_tag()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute("show transaction isolation level", EmptyCtx(), out var table));
+            Assert.Equal("SHOW", table.CommandTag);
+
+            // A normal virtual-catalog query keeps the default (null ⇒ "SELECT <rowcount>").
+            Assert.True(PgVirtualInterpreter.TryExecute("select version()", EmptyCtx(), out var selectTable));
+            Assert.Null(selectTable.CommandTag);
         }
 
         private static VirtualQueryContext EmptyCtx() => new();
