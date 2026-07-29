@@ -297,7 +297,7 @@ namespace Raven.Server.Documents
                     InitializeLastEtag(tx);
                     _collectionsCache = ReadCollections(tx);
                     _collectionTablesContext = new ByteStringContext(SharedMultipleUseFlag.None);
-                    _collectionTablesReverse = BuildCollectionTablesReverseMap(_collectionsCache.Values);
+                    _collectionTablesReverse = BuildCollectionTablesReverseMap(tx, _collectionsCache.Values);
 
                     var cv = GetDatabaseChangeVector(tx);
                     var lastEtagInChangeVector = ChangeVectorUtils.GetEtagById(cv, DocumentDatabase.DbBase64Id);
@@ -461,16 +461,20 @@ namespace Raven.Server.Documents
                 ComputeCollectionCache(tx, collectionName, cache, ref holder);
         }
 
-        private Dictionary<Slice, CollectionName> BuildCollectionTablesReverseMap(IEnumerable<CollectionName> collections)
+        private Dictionary<Slice, CollectionName> BuildCollectionTablesReverseMap(Transaction tx, IEnumerable<CollectionName> collections)
         {
             var map = new Dictionary<Slice, CollectionName>(SliceComparer.Instance);
             foreach (var collection in collections)
-                AddToCollectionTablesReverseMap(map, collection);
+                AddToCollectionTablesReverseMap(tx, map, collection);
             return map;
         }
 
-        private void AddToCollectionTablesReverseMap(Dictionary<Slice, CollectionName> map, CollectionName collection)
+        private void AddToCollectionTablesReverseMap(Transaction tx, Dictionary<Slice, CollectionName> map, CollectionName collection)
         {
+            // the map and its slice context are grown copy-on-write and only under the write-transaction lock,
+            // so concurrent commits can't race on the shared ByteStringContext / dictionary. assert we hold it.
+            Debug.Assert(tx.IsWriteTransaction, "The collection tables reverse map must only be modified under a write transaction");
+
             Slice.From(_collectionTablesContext, collection.GetTableName(CollectionTableType.Documents), ByteStringType.Immutable, out var documentsTableName);
             Slice.From(_collectionTablesContext, collection.GetTableName(CollectionTableType.Tombstones), ByteStringType.Immutable, out var tombstonesTableName);
             map[documentsTableName] = collection;
@@ -2816,7 +2820,7 @@ namespace Raven.Server.Documents
                     _collectionsCache = collectionNames;
 
                     var collectionTables = new Dictionary<Slice, CollectionName>(_collectionTablesReverse, SliceComparer.Instance);
-                    AddToCollectionTablesReverseMap(collectionTables, name);
+                    AddToCollectionTablesReverseMap(context.Transaction.InnerTransaction, collectionTables, name);
                     _collectionTablesReverse = collectionTables;
                 };
             }
