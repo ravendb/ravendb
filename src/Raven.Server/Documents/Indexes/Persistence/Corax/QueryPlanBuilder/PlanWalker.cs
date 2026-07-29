@@ -110,11 +110,29 @@ internal static class PlanWalker
         {
             foreach (var t in pending.InnerClauses)
             {
-                if (t.ClauseType == ClauseType.Vector)
-                    throw new NotSupportedException("Boosting the VectorSearchMatch is not supported yet.");
-                t.Bindings = [..t.Bindings ?? [], pending.Factor];
-                t.HasBoost = true;
+                Apply(t, pending.Factor);
             }
+        }
+
+        // a group has no Bindings of its own - carry the factor down to the leaves
+        static void Apply(ClauseInfo clause, ParameterBinding factor)
+        {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
+            if (clause.ClauseType == ClauseType.Vector)
+                throw new NotSupportedException("Boosting the VectorSearchMatch is not supported yet.");
+
+            if (clause.SubClauses is { Count: > 0 } subClauses)
+            {
+                foreach (var sub in subClauses)
+                {
+                    Apply(sub, factor);
+                }
+
+                return;
+            }
+
+            clause.Bindings = [..clause.Bindings ?? [], factor];
+            clause.HasBoost = true;
         }
     }
 
