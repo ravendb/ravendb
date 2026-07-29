@@ -168,7 +168,6 @@ internal static class CoraxVectorChunkHighlighter
         return result;
     }
 
-    // Bounds the attachment size by a query vector's length as a side effect, keeping the cast to int at the call site in range.
     private static bool HasQueryVectorOfSize(List<byte[]> queryVectors, long size)
     {
         foreach (byte[] queryVector in queryVectors)
