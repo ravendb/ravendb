@@ -158,9 +158,9 @@ ref struct BuildResolver(PlanTemplate template, PlanParameters planParams, Query
             if (exec.IsSentinel == false)
             {
                 QueryPlanBuilder.PopulateClauseValues(exec, planParams.SlotBindings, planParams.QueryParameters, _writer, builderParameters, SentinelBits());
-                QueryPlanBuilder.PropagateBetweenContradiction(exec, _writer); // a contradictory BETWEEN collapses to MatchNothing
+                QueryPlanBuilder.PropagateBetweenContradiction(exec, _writer, _indexSearcher.NumberOfEntries); // a contradictory BETWEEN collapses to MatchNothing
                 if (IsEmptyIn(exec))
-                    exec.MarkAsSentinel(ClauseType.MatchNothing, 0); // an empty IN matches nothing
+                    exec.MarkAsResolvedSentinel(ClauseType.MatchNothing, _indexSearcher.NumberOfEntries); // an empty IN matches nothing
 
                 if (exec.Cardinality < 0)
                     exec.Cardinality = CardinalityEstimator.Estimate(exec, _indexSearcher, _writer, walkerCtx);

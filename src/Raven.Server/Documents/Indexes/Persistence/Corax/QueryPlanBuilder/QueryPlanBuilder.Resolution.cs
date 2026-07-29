@@ -286,7 +286,7 @@ internal static partial class QueryPlanBuilder
     }
 
     /// <summary> Foo BETWEEN $x AND $y - where $x > $y - returns nothing</summary>
-    internal static void PropagateBetweenContradiction(ClauseExecution exec, ValueWriter writer)
+    internal static void PropagateBetweenContradiction(ClauseExecution exec, ValueWriter writer, long numberOfEntries)
     {
         var p = exec.PackedParamValue;
         if (exec.Clause.ClauseType != ClauseType.Between || p.Param2 is PackedParam.NoParamValue)
@@ -301,7 +301,7 @@ internal static partial class QueryPlanBuilder
         if (!contradictory)
             return;
 
-        exec.MarkAsSentinel(ClauseType.MatchNothing, 0);
+        exec.MarkAsResolvedSentinel(ClauseType.MatchNothing, numberOfEntries);
     }
 
     private static IQueryMatch InstantiateBitmapPipeline(

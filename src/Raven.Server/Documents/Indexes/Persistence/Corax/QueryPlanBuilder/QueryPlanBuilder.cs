@@ -69,10 +69,13 @@ internal static partial class QueryPlanBuilder
         BooleanOp rootOp = ParseExpression(where, walkerCtx);
         PlanWalker.ThrowIfErrors(walkerCtx);
 
+        // A statically false WHERE matches nothing, so it needs a clause to say so - an empty clause list means
+        // "no filter", i.e. match everything, which is the opposite answer.
+        if (rootOp == BooleanOp.False)
+            return new PlanTemplate { Clauses = [new ClauseInfo { ClauseType = ClauseType.MatchNothing }], ValueOrdinalCount = walkerCtx.SlotBindings.Count };
+
         if (rootOp == BooleanOp.True || walkerCtx.Clauses.Count == 0)
             return new PlanTemplate { Clauses = [], ValueOrdinalCount = walkerCtx.SlotBindings.Count };
-
-        Debug.Assert(rootOp != BooleanOp.False, "No RQL expression currently reduces to BooleanOp.False at template time. ");
 
         walkerCtx.IsOr = rootOp == BooleanOp.Or;
 
@@ -373,7 +376,7 @@ internal static partial class QueryPlanBuilder
                 {
                     (BooleanOp.True, _) => right,
                     (_, BooleanOp.True) => left,
-                    (BooleanOp.False, BooleanOp.False) => BooleanOp.False,
+                    (BooleanOp.False, _) or (_, BooleanOp.False) => BooleanOp.False, // false annihilates an AND
                     _ => BooleanOp.And
                 };
             }
@@ -574,7 +577,7 @@ internal static partial class QueryPlanBuilder
     {
         List<ClauseInfo> saved = walkerCtx.Clauses;
         walkerCtx.Clauses = [];
-        ParseExpression(inner, walkerCtx);
+        BooleanOp innerOp = ParseExpression(inner, walkerCtx);
         List<ClauseInfo> innerClauses = walkerCtx.Clauses;
         walkerCtx.Clauses = saved;
         foreach (ClauseInfo clause in innerClauses)
@@ -582,6 +585,19 @@ internal static partial class QueryPlanBuilder
             clause.IsNegated = !clause.IsNegated;
             walkerCtx.Clauses.Add(clause);
         }
+
+        // A constant operand leaves no clauses to flip, so the negation has to be carried by the result itself -
+        // otherwise the `not` is silently dropped and the operand's own answer is returned.
+        if (innerClauses.Count == 0)
+        {
+            return innerOp switch
+            {
+                BooleanOp.True => BooleanOp.False,
+                BooleanOp.False => BooleanOp.True,
+                _ => BooleanOp.Leaf
+            };
+        }
+
         return BooleanOp.Leaf;
     }
 

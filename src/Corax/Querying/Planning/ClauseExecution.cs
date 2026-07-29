@@ -56,6 +56,16 @@ public sealed class ClauseExecution : IComparable<ClauseExecution>
         Cardinality = cardinality;
     }
 
+    // Unlike a false WHEN(), which removes the clause along with its negation, this one *resolved* the operand -
+    // so the negation still has to apply, and we fold it into the sentinel: not(nothing) is everything.
+    public void MarkAsResolvedSentinel(ClauseType sentinel, long numberOfEntries)
+    {
+        if (IsNegated)
+            sentinel = sentinel is ClauseType.MatchNothing ? ClauseType.MatchAll : ClauseType.MatchNothing;
+
+        MarkAsSentinel(sentinel, sentinel is ClauseType.MatchAll ? numberOfEntries : 0);
+    }
+
     /// <summary>Negated clauses sort last; ties broken by ascending cardinality.</summary>
     public int CompareTo(ClauseExecution other)
     {
