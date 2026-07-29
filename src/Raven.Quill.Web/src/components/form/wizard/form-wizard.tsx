@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
     useFormContext,
     useWatch,
@@ -11,6 +11,7 @@ import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { Button } from "@/components/shadcn/ui/button";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { WizardErrorAlert } from "@/components/form/wizard/wizard-error-alert";
+import { toError, WizardHandledError } from "@/components/form/wizard/wizard-step-error";
 import { cn } from "@/lib/utils";
 
 export type WizardProgress = {
@@ -90,7 +91,7 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
     cancel,
     completion = { type: "submit" },
 }: FormWizardProps<StepId, Values>) {
-    const { trigger, control, getValues, formState } = useFormContext<Values>();
+    const { trigger, control, getValues, formState, subscribe } = useFormContext<Values>();
 
     if (flow.length === 0) {
         throw new Error("FormWizard requires at least one step in the flow.");
@@ -103,6 +104,10 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
     const [progressLabel, setProgressLabel] = useState<string | null>(null);
     const [advanceError, setAdvanceError] = useState<Error | null>(null);
     const isAdvancingRef = useRef(false);
+
+    // A failure describes the values it ran against, so any edit makes it stale. Steps that edit values
+    // while advancing are unaffected: runAction sets the error after its action returned.
+    useEffect(() => subscribe({ formState: { values: true }, callback: () => setAdvanceError(null) }), [subscribe]);
 
     const currentIndexInFlow = flow.indexOf(currentStepId);
     const currentIndex = currentIndexInFlow >= 0 ? currentIndexInFlow : Math.min(lastKnownIndex, flow.length - 1);
@@ -158,7 +163,9 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
         try {
             await action({ report: setProgressLabel });
         } catch (error) {
-            setAdvanceError(error instanceof Error ? error : new Error(String(error)));
+            if (!(error instanceof WizardHandledError)) {
+                setAdvanceError(toError(error));
+            }
         } finally {
             isAdvancingRef.current = false;
             setIsAdvancing(false);

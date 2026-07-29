@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import { type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { getTableKey } from "@/pages/setup/add-app-wizard/discover-utils";
+import { computeSourceKey } from "@/pages/setup/add-app-wizard/steps/connect/use-connect-source-step";
 import { scaffoldTables } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
 import {
     cancelAbandonedSuggestions,
@@ -10,11 +11,13 @@ import {
 import { useFormContext } from "react-hook-form";
 
 export function computeMapKey(map: {
+    sourceKey: string;
     source: AppFormData["map"]["source"];
     aiPrompt: string;
     selectedTables: AppFormData["verifySchema"]["tables"];
 }): string {
     return JSON.stringify({
+        sourceKey: map.sourceKey,
         source: map.source,
         aiPrompt: map.source === "ai-suggested" ? map.aiPrompt.trim() : "",
         selectedTables: map.selectedTables.map(getTableKey).sort(),
@@ -46,7 +49,12 @@ export function useMapSchemaStep() {
         }
 
         const selectedTables = values.verifySchema.tables;
-        const appliedMapKey = computeMapKey({ source, aiPrompt, selectedTables });
+        const appliedMapKey = computeMapKey({
+            sourceKey: computeSourceKey(values.externalConnection),
+            source,
+            aiPrompt,
+            selectedTables,
+        });
 
         // Same inputs as the last generation - keep the (possibly edited) tables.
         if (appliedMapKey === store.appliedMapKey && getValues("mapTables.tables").length > 0) {

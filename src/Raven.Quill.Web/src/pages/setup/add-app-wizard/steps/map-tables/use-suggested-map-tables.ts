@@ -4,6 +4,7 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { getFetchStartedAt } from "@/lib/query-fetch-start";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
+import { computeSourceKey } from "@/pages/setup/add-app-wizard/steps/connect/use-connect-source-step";
 import { computeMapKey } from "@/pages/setup/add-app-wizard/steps/map/use-map-schema-step";
 import { suggestMapTablesQueryForValues } from "@/pages/setup/add-app-wizard/steps/map-tables/suggest-map-tables-query";
 import { useApplyMapTables } from "@/pages/setup/add-app-wizard/steps/map-tables/use-apply-map-tables";
@@ -35,7 +36,12 @@ export function useSuggestedMapTables(): SuggestedMapTables {
 
     const { source, aiPrompt } = getValues("map");
     const selectedTables = getValues("verifySchema.tables");
-    const mapKey = computeMapKey({ source, aiPrompt, selectedTables });
+    const mapKey = computeMapKey({
+        sourceKey: computeSourceKey(getValues("externalConnection")),
+        source,
+        aiPrompt,
+        selectedTables,
+    });
     const isApplied = appliedMapKey === mapKey && getValues("mapTables.tables").length > 0;
     const isSuggestionNeeded = source === "ai-suggested" && !isApplied;
 
