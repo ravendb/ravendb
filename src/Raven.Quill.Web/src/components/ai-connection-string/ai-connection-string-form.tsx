@@ -17,6 +17,11 @@ import {
     getProviderOptions,
     mapFormDataToDto,
 } from "@/components/ai-connection-string/ai-connection-string-utils";
+import { TestAiConnectionStringButton } from "@/components/ai-connection-string/test-ai-connection-string-button";
+import {
+    ConnectionTestFailedError,
+    useAiConnectionTest,
+} from "@/components/ai-connection-string/use-ai-connection-test";
 import { AzureOpenAiFields } from "@/components/ai-connection-string/provider-fields/azure-open-ai-fields";
 import { EmbeddedFields } from "@/components/ai-connection-string/provider-fields/embedded-fields";
 import { GoogleFields } from "@/components/ai-connection-string/provider-fields/google-fields";
@@ -79,13 +84,13 @@ export function AiConnectionStringForm({
 
     const provider = useWatch({ control: form.control, name: "provider" });
 
+    const connectionTest = useAiConnectionTest(modelType, form);
+
     const saveMutation = useMutation({
         mutationFn: async (values: ConnectionStringFormData) => {
+            await connectionTest.ensureVerified(values);
+
             const dto = mapFormDataToDto(values, modelType);
-            const test = await api.services.aiConnectionStrings.test(dto);
-            if (!test.success) {
-                throw new Error(test.error ?? "The selected model can't be used by an agent.");
-            }
             const result = await api.services.aiConnectionStrings.create(
                 existingIdentifier ? { ...dto, identifier: existingIdentifier } : dto,
             );
@@ -128,7 +133,15 @@ export function AiConnectionStringForm({
                     />
                     <ProviderFields provider={provider} modelType={modelType} />
 
-                    {saveMutation.isError && (
+                    <TestAiConnectionStringButton
+                        isVerified={connectionTest.isVerified}
+                        isPending={connectionTest.isPending}
+                        error={connectionTest.error}
+                        disabled={saveMutation.isPending}
+                        onTest={connectionTest.test}
+                    />
+
+                    {saveMutation.error && !(saveMutation.error instanceof ConnectionTestFailedError) && (
                         <Alert variant="destructive">
                             {saveMutation.error instanceof Error
                                 ? saveMutation.error.message

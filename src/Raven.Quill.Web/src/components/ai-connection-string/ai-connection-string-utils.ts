@@ -121,6 +121,13 @@ const connectionStringObject = z.object({
 
 export type ConnectionStringFormData = z.infer<typeof connectionStringObject>;
 
+export type ProviderSettings = ConnectionStringFormData[ProviderKey];
+
+/** Identifies what the test endpoint verifies: the provider and its settings, never the name. */
+export function computeConnectionTestKey(provider: ProviderKey, settings: ProviderSettings): string {
+    return JSON.stringify({ provider, settings });
+}
+
 // Required text fields per provider (validated only for the active provider).
 const REQUIRED_FIELDS: Record<ProviderKey, { field: string; message: string }[]> = {
     openAiSettings: [
