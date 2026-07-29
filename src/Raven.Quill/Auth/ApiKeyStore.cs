@@ -27,8 +27,12 @@ public sealed class ApiKeyStore(
         if (string.IsNullOrEmpty(presentedKey))
             return false;
 
+        var secret = StripKeyIdPrefix(presentedKey);
+        if (secret.Length == 0)
+            return false;
+
         var keys = _keys ?? await EnsureSeededAsync(ct);
-        var presented = Encoding.UTF8.GetBytes(presentedKey);
+        var presented = Encoding.UTF8.GetBytes(secret);
 
         var match = false;
         // no early return on match: keep timing uniform
@@ -54,7 +58,7 @@ public sealed class ApiKeyStore(
             if (_keys is not null)
                 return _keys;
 
-            var envKey = options.Value.ApiKey;
+            var envKey = options.Value.ApiKey is { } configured ? StripKeyIdPrefix(configured) : null;
             Record[] records;
             if (string.IsNullOrWhiteSpace(envKey))
             {
@@ -105,6 +109,13 @@ public sealed class ApiKeyStore(
         {
             logger.LogWarning(ex, "Failed to persist the API key hash to the config database.");
         }
+    }
+
+    // keys may be minted as "<key-id>/<secret>" (e.g. "primary/..."); only the secret part is compared
+    private static string StripKeyIdPrefix(string key)
+    {
+        var separator = key.IndexOf('/');
+        return separator < 0 ? key : key[(separator + 1)..];
     }
 
     private static byte[] Combine(byte[] a, byte[] b)

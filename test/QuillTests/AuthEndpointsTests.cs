@@ -79,6 +79,46 @@ public class AuthEndpointsTests(ITestOutputHelper output) : QuillTestBase(output
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Key_id_prefix_on_the_presented_key_is_ignored()
+    {
+        await using var host = await NewHostAsync();
+        host.Client.DefaultRequestHeaders.Remove(ApiKeyAuthenticationHandler.HeaderName);
+
+        var resp = await host.Client.PostAsJsonAsync(QuillRoutes.AuthLogin,
+            new { apiKey = "primary/" + ApplianceWebApplicationFactory.TestApiKey });
+        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Key_id_prefix_on_the_configured_key_is_ignored()
+    {
+        await using var host = await NewHostAsync(configure: opts =>
+            opts.ApiKey = "primary/" + ApplianceWebApplicationFactory.TestApiKey);
+        host.Client.DefaultRequestHeaders.Remove(ApiKeyAuthenticationHandler.HeaderName);
+
+        var bare = await host.Client.PostAsJsonAsync(QuillRoutes.AuthLogin,
+            new { apiKey = ApplianceWebApplicationFactory.TestApiKey });
+        Assert.True(bare.IsSuccessStatusCode, await bare.Content.ReadAsStringAsync());
+
+        var prefixed = await host.Client.PostAsJsonAsync(QuillRoutes.AuthLogin,
+            new { apiKey = "primary/" + ApplianceWebApplicationFactory.TestApiKey });
+        Assert.True(prefixed.IsSuccessStatusCode, await prefixed.Content.ReadAsStringAsync());
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Key_id_prefix_with_wrong_secret_is_401()
+    {
+        await using var host = await NewHostAsync();
+        host.Client.DefaultRequestHeaders.Remove(ApiKeyAuthenticationHandler.HeaderName);
+
+        var wrongSecret = await host.Client.PostAsJsonAsync(QuillRoutes.AuthLogin, new { apiKey = "primary/wrong-key" });
+        Assert.Equal(HttpStatusCode.Unauthorized, wrongSecret.StatusCode);
+
+        var emptySecret = await host.Client.PostAsJsonAsync(QuillRoutes.AuthLogin, new { apiKey = "primary/" });
+        Assert.Equal(HttpStatusCode.Unauthorized, emptySecret.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Login_is_rate_limited_after_repeated_attempts()
     {
         await using var host = await NewHostAsync();
