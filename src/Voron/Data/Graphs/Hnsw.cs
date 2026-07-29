@@ -77,7 +77,8 @@ public unsafe partial class Hnsw
     /// <summary>
     /// Translates a minimum similarity on the [0, 1] scale into the maximum distance the similarity method reports for
     /// it. Cosine distance is <c>1 - cos</c> over [0, 2] and similarity is <c>(cos + 1) / 2</c>, so the bound is
-    /// <c>2 * (1 - minimumSimilarity)</c>; Hamming distance counts differing bits, so its bound scales with the vector.
+    /// <c>2 * (1 - minimumSimilarity)</c>. Hamming distance counts differing bits and similarity is the fraction of
+    /// matching bits, so the bound is the number of bits that may differ: <c>numberOfBits * (1 - minimumSimilarity)</c>.
     /// </summary>
     internal static float MinimumSimilarityToDistance(SimilarityMethod similarityMethod, int vectorSizeBytes, float minimumSimilarity)
     {
@@ -87,7 +88,7 @@ public unsafe partial class Hnsw
             case SimilarityMethod.CosineSimilarityI8:
                 return 2f * (1.0f - minimumSimilarity);
             case SimilarityMethod.HammingDistance:
-                return vectorSizeBytes * 8 * (1f - minimumSimilarity); // number_of_bits * minimum_similarity
+                return vectorSizeBytes * 8 * (1f - minimumSimilarity); // number_of_bits * (1 - minimum_similarity) = allowed differing bits
             default:
                 throw new InvalidDataException($"Unknown similarity method {similarityMethod}");
         }
