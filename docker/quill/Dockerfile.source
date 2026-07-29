@@ -115,7 +115,7 @@ ARG S6_OVERLAY_VERSION
 ARG TARGETARCH
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends xz-utils curl ca-certificates nginx-full openssl \
+    && apt-get install -y --no-install-recommends xz-utils curl ca-certificates nginx-full openssl jq \
     && rm -rf /var/lib/apt/lists/*
 
 RUN <<EOF
@@ -149,9 +149,11 @@ COPY docker/quill/ravendb-settings.json /app/ravendb/settings.json
 COPY docker/quill/nginx.conf /etc/nginx/nginx.conf
 
 COPY docker/quill/s6-rc.d/ /etc/s6-overlay/s6-rc.d/
+COPY docker/quill/scripts/update-dns.sh /usr/local/bin/update-dns
 RUN chmod +x /etc/s6-overlay/s6-rc.d/01-ravendb/run \
              /etc/s6-overlay/s6-rc.d/02-web/run \
-             /etc/s6-overlay/s6-rc.d/03-proxy/run
+             /etc/s6-overlay/s6-rc.d/03-proxy/run \
+             /usr/local/bin/update-dns
 
 EXPOSE 443
 
