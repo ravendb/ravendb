@@ -283,6 +283,9 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
             [1083] = "time without time zone",
             [1114] = "timestamp without time zone",
             [1184] = "timestamp with time zone",
+            // A TimeSpan-shaped document field reflects as interval (see CollectionCatalog), so
+            // pg_attribute can hand this oid to format_type and it must resolve to a name.
+            [1186] = "interval",
             [1700] = "numeric",
             [2950] = "uuid",
             [3802] = "jsonb",

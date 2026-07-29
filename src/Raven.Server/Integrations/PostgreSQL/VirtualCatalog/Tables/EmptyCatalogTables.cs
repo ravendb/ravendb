@@ -61,14 +61,6 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
             new("enumlabel",     PgName.Default,   PgFormat.Text),
             new("enumsortorder", PgFloat4.Default, PgFormat.Text));
 
-        public static EmptyCatalogTable PgAttribute => new("pg_catalog", "pg_attribute",
-            new("oid",          PgOid.Default,  PgFormat.Text),
-            new("attname",      PgName.Default, PgFormat.Text),
-            new("atttypid",     PgOid.Default,  PgFormat.Text),
-            new("attrelid",     PgOid.Default,  PgFormat.Text),
-            new("attnum",       PgInt2.Default, PgFormat.Text),
-            new("attisdropped", PgBool.Default, PgFormat.Text));
-
         // RavenDB has no PG extensions; an empty table lets pgAdmin's `count(extname)` probe return 0.
         public static EmptyCatalogTable PgExtension => new("pg_catalog", "pg_extension",
             new("oid",        PgOid.Default,  PgFormat.Text),
