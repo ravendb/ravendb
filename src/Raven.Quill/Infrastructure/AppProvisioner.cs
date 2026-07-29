@@ -1,5 +1,6 @@
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
+using Raven.Client.ServerWide.Operations;
 using Raven.Quill.Wizard;
 
 namespace Raven.Quill.Infrastructure;
@@ -9,11 +10,14 @@ internal static class AppProvisioner
     public static async Task<App> CreateAppAsync(
         IDocumentStore store, string slug, string appName, string cdcTaskName, CancellationToken ct)
     {
+        var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(slug), ct);
+
         await AppDatabaseFeatures.ConfigureAsync(store, slug, ct);
 
         var app = new App
         {
             Slug = slug,
+            TopologyId = record.Topology.DatabaseTopologyIdBase64,
             AppName = appName,
             Database = slug,
             CdcTaskName = cdcTaskName,

@@ -2,13 +2,11 @@ using System.Text.Json;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide.Operations;
-using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Quill.Agents;
 using Raven.Quill.Cdc;
 using Raven.Quill.Channels;
@@ -40,30 +38,42 @@ internal static class MetricsReadService
     {
         var period = new UsagePeriod(year, month, day);
 
-        var results = await Task.WhenAll(apps.Select(app => GetAppUsageAsync(store, app, period, ct)));
+        var results = await Task.WhenAll(apps.Select(async app =>
+        {
+            var usage = await GetAppUsageAsync(store, app, period, ct);
+            return (Usage: usage, TopologyId: app.TopologyId);
+        }));
         
         var buckets = period.Buckets();
         var conversations = new long[buckets.Count];
         var messages = new long[buckets.Count];
         var tokens = new long[buckets.Count];
+        var writes = new long[buckets.Count];
+        
+        var stats = await provider.GetUsageAsync(year, month, day, ct);
+        var statsPerApp = stats.PerApplication.GroupBy(p => p.TopologyId)
+            .ToDictionary(g => g.Key, g => g.ToList());
 
         foreach (var result in results)
         {
+            var usage = result.Usage;
             for (int i = 0; i < buckets.Count; i++)
             {
-                conversations[i] += result.Conversations[i];
-                messages[i] += result.Messages[i];
-                tokens[i] += result.Tokens[i];
+                conversations[i] += usage.Conversations[i];
+                messages[i] += usage.Messages[i];
+                tokens[i] += usage.Tokens[i];
             }
-        }
 
-        var writes = new long[buckets.Count];
-        var stats = await provider.GetUsageAsync(year, month, day, ct);
-        foreach (var p in stats?.ByPeriod ?? [])
-        {
-            var i = period.IndexOf(Utc(p.From));
-            if (i < 0) continue;
-            writes[i] += p.Usage;
+            if (statsPerApp.TryGetValue(result.TopologyId, out var appWriteUsage) == false)
+                continue;
+
+            foreach (var p in appWriteUsage ?? [])
+            {
+                var i = period.IndexOf(Utc(p.From));
+                if (i < 0)
+                    continue;
+                writes[i] += p.Usage;
+            }
         }
 
         var points = new List<UsagePoint>(buckets.Count);
