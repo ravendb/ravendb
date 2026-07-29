@@ -11,5 +11,3 @@ DOMAIN=$(openssl pkcs12 -in "$SETUP"/A/cluster.server.certificate.*.pfx -nokeys 
 exec /app/ravendb/rvn dns update -l "$SETUP/license.json" -d "$DOMAIN" \
     -n "$IP=dashboard,db,public,api"
 
-
-
