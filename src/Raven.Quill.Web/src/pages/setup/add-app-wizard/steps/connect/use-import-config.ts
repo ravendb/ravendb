@@ -35,6 +35,7 @@ const IMPORT_PHASES = {
 
 type ImportResult = {
     config: WizardConfig;
+    slug: string;
     formTables: AppFormData["mapTables"]["tables"];
     discoverResult: DiscoverResponse;
     schemas: string[];
@@ -48,7 +49,8 @@ export function useImportConfig() {
         mutationFn: async (file) => {
             setProgressLabel(IMPORT_PHASES.reading);
             const config = await parseConfigFile(file);
-            const slug = getValues("externalConnection").slug;
+            // An older configuration carries no slug; keep whatever the operator already typed.
+            const slug = config.slug || getValues("externalConnection").slug;
 
             setProgressLabel(IMPORT_PHASES.connecting);
             const connectResult = await api.services.setup.connect({
@@ -91,14 +93,14 @@ export function useImportConfig() {
 
             try {
                 const formTables = tablesSchema.parse(wrapDtoTablesToFormShape(config.tables));
-                return { config, formTables, discoverResult, schemas };
+                return { config, slug, formTables, discoverResult, schemas };
             } catch {
                 throw new Error(
                     "The configuration's table mapping is invalid or was exported from an incompatible version.",
                 );
             }
         },
-        onSuccess: ({ config, formTables, discoverResult, schemas }) => {
+        onSuccess: ({ config, slug, formTables, discoverResult, schemas }) => {
             toast.success("Configuration imported");
 
             const verifySchemaTables = config.tables.map((table) => ({
@@ -108,6 +110,7 @@ export function useImportConfig() {
 
             setValue("externalConnection.provider", config.provider);
             setValue("externalConnection.connectionString", config.connectionString);
+            setValue("externalConnection.slug", slug, { shouldValidate: true, shouldTouch: true });
             setValue("verifySchema.tables", verifySchemaTables);
             setValue("map.source", "manual");
             setValue("map.aiPrompt", "");
@@ -121,7 +124,7 @@ export function useImportConfig() {
             const connectKey = computeConnectKey({
                 provider: config.provider,
                 connectionString: config.connectionString,
-                slug: getValues("externalConnection").slug,
+                slug,
             });
             store.setConnectKey(connectKey);
             store.setConnectionAttempt({ key: connectKey, error: null });
