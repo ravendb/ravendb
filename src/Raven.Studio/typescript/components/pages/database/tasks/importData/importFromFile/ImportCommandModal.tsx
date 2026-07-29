@@ -32,9 +32,9 @@ export default function ImportCommandModal({ onClose }: ImportCommandModalProps)
     return (
         <Modal size="lg" show onHide={onClose} className="modal-border bulge-primary">
             <Modal.Header closeButton onCloseClick={onClose}>
-                <h4 className="mb-0">
-                    <Icon icon="code" /> Import command
-                </h4>
+                <h3 className="mb-0">
+                    <Icon icon="console" color="primary" /> Import command
+                </h3>
             </Modal.Header>
             <Modal.Body>
                 <p className="text-muted">Select your shell and copy the command to import the database dump.</p>
