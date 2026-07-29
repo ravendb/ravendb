@@ -63,7 +63,9 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
         verifySchema: {
             title: "Verify your schema",
             description:
-                "Choose which of the discovered tables to capture. Continuing checks that CDC works for that selection.",
+                "Choose the tables this application will work with. Only the selected tables are carried into the " +
+                "mapping and the task configuration - unselected tables, and relationships pointing to them, are " +
+                "ignored. Continuing runs a configuration validation dry run against the source database.",
             bodyComponent: VerifySchemaStep,
             isFullHeight: true,
             validate: "verifySchema",
