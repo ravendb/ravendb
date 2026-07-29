@@ -78,13 +78,13 @@ public class RavenDB_17604 : ReplicationTestBase
 
             Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
 
-            Assert.Equal(1, await WaitForValueAsync(() => Server.ServerStore.BackupRunner.GetDatabaseBackups(store.Database).Count, 1));
+            Assert.Equal(1, await WaitForValueAsync(() => Server.ServerStore.ServerBackupRunner.GetDatabaseBackups(store.Database).Count, 1));
             await Backup.RunBackupAsync(Server, result.TaskId, store);
 
             Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
             File.Create(Path.Combine(path, "disable.tasks.marker"));
 
-            Assert.Equal(1, await WaitForValueAsync(() => Server.ServerStore.BackupRunner.GetDatabaseBackups(store.Database).Count, 1));
+            Assert.Equal(1, await WaitForValueAsync(() => Server.ServerStore.ServerBackupRunner.GetDatabaseBackups(store.Database).Count, 1));
 
             var e = await Assert.ThrowsAsync<InvalidOperationException>(() => Backup.RunBackupAsync(Server, result.TaskId, store));
             Assert.Contains("Backup task is disabled via marker file", e.Message);

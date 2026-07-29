@@ -1000,7 +1000,7 @@ public class ServerBackupRunner : IDisposable
         }
     }
 
-    internal List<PeriodicBackupInfo> GetPeriodicBackupsInformation(string databaseName)
+    internal List<PeriodicBackupInfo> GetPeriodicBackupsInformationFor(string databaseName)
     {
         if (BackupsPerDatabasePerTaskId.TryGetValue(databaseName, out var backupsPerDatabase) == false)
             return new List<PeriodicBackupInfo>();

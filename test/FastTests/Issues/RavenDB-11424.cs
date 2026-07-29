@@ -26,7 +26,7 @@ namespace FastTests.Issues
                 var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                 Backup.WaitForResponsibleNodeUpdate(Server.ServerStore, store.Database, result.TaskId);
 
-                var backupRunner = Server.ServerStore.BackupRunner;
+                var backupRunner = Server.ServerStore.ServerBackupRunner;
                 var backups = backupRunner.GetDatabaseBackups(store.Database);
                 var periodicBackup = backups.First();
                 var oldTimer = periodicBackup.NextBackup;
@@ -54,7 +54,7 @@ namespace FastTests.Issues
                 List<string> shardNames = ShardHelper.GetShardNames(store.Database, Sharding.GetShardingConfiguration(store, store.Database).Shards.Keys).ToList();
                 foreach (var shard in shardNames)
                 {
-                    var backups = Server.ServerStore.BackupRunner.GetDatabaseBackups(shard);
+                    var backups = Server.ServerStore.ServerBackupRunner.GetDatabaseBackups(shard);
                     var periodicBackup = backups.First();
                     var oldTimer = periodicBackup.NextBackup;
                     timers.Add(shard, oldTimer);
@@ -66,7 +66,7 @@ namespace FastTests.Issues
 
                 foreach (var shard in shardNames)
                 {
-                    var backups = Server.ServerStore.BackupRunner.GetDatabaseBackups(shard);
+                    var backups = Server.ServerStore.ServerBackupRunner.GetDatabaseBackups(shard);
                     var periodicBackup = backups.First();
                     var timer = periodicBackup.NextBackup;
                     Assert.NotEqual(timers[shard], timer);

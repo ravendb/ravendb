@@ -300,7 +300,7 @@ namespace SlowTests.Smuggler
                     operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
-                    var BackupRunner = Server.ServerStore.BackupRunner;
+                    var BackupRunner = Server.ServerStore.ServerBackupRunner;
                     var backups = BackupRunner.GetDatabaseBackups(store2.Database);
 
                     Assert.Equal("Backup", backups.First().Configuration.Name);
@@ -1070,7 +1070,7 @@ namespace SlowTests.Smuggler
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                     int disabled = 0;
-                    var backups = Server.ServerStore.BackupRunner.GetDatabaseBackups(store2.Database);
+                    var backups = Server.ServerStore.ServerBackupRunner.GetDatabaseBackups(store2.Database);
 
                     disabled = 0;
                     Assert.Equal(3, backups.Count);
@@ -1455,7 +1455,7 @@ namespace SlowTests.Smuggler
                     DatabaseName = databaseName,
                 }))
                 {
-                    var restoredBackups = Server.ServerStore.BackupRunner.GetDatabaseBackups(databaseName);
+                    var restoredBackups = Server.ServerStore.ServerBackupRunner.GetDatabaseBackups(databaseName);
 
                     Assert.Equal(2, restoredBackups.Count);
                     Assert.Equal(true, restoredBackups.Any(x => x.Configuration.Name.Equals("Backup")));

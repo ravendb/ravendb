@@ -432,7 +432,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 var now = DateTime.UtcNow;
 
-                var nextBackupDetails = Server.ServerStore.BackupRunner.GetNextBackupDetails(backup.TaskId, store.Database, new PeriodicBackupStatus
+                var nextBackupDetails = Server.ServerStore.ServerBackupRunner.GetNextBackupDetails(backup.TaskId, store.Database, new PeriodicBackupStatus
                 {
                     TaskId = backup.TaskId,
                     BackupType = config.BackupType,
@@ -2120,7 +2120,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
                 var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-                await Backup.HoldBackupExecutionIfNeededAndInvoke(database.Name, database.ServerStore.BackupRunner.ForTestingPurposesOnly(), async () =>
+                await Backup.HoldBackupExecutionIfNeededAndInvoke(database.Name, database.ServerStore.ServerBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
                     var backupOperationId = await store.Maintenance.SendAsync(new BackupOperation(config));
                     var operationId = backupOperationId.Id;
@@ -2859,7 +2859,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.NotNull(documentDatabase);
 
                 var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-                await Backup.HoldBackupExecutionIfNeededAndInvoke(documentDatabase.Name, documentDatabase.ServerStore.BackupRunner.ForTestingPurposesOnly(), async () =>
+                await Backup.HoldBackupExecutionIfNeededAndInvoke(documentDatabase.Name, documentDatabase.ServerStore.ServerBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
                     var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store, opStatus: OperationStatus.InProgress);
                     var record1 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
@@ -2869,16 +2869,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var taskId = backups1.First().TaskId;
                     var responsibleDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                     Assert.NotNull(responsibleDatabase);
-                    var tag = responsibleDatabase.ServerStore.BackupRunner.WhoseTaskIsIt(responsibleDatabase.Name, taskId);
+                    var tag = responsibleDatabase.ServerStore.ServerBackupRunner.WhoseTaskIsIt(responsibleDatabase.Name, taskId);
                     Assert.Equal(server.ServerStore.NodeTag, tag);
 
                     var testingStuff = new TestingStuffInternal() { SimulateActiveByOtherNodeStatus_UpdateConfigurations = true };
-                    documentDatabase.ServerStore.BackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[documentDatabase.Name] = testingStuff;
+                    documentDatabase.ServerStore.ServerBackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[documentDatabase.Name] = testingStuff;
 
-                    responsibleDatabase.ServerStore.BackupRunner.HandleDatabaseRecordChange(record1);
+                    responsibleDatabase.ServerStore.ServerBackupRunner.HandleDatabaseRecordChange(record1);
                     tcs.TrySetResult(null);
 
-                    responsibleDatabase.ServerStore.BackupRunner._forTestingPurposes = null;
+                    responsibleDatabase.ServerStore.ServerBackupRunner._forTestingPurposes = null;
                     var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(taskId);
                     PeriodicBackupStatus status = null;
                     var val = WaitForValue(() =>
@@ -2915,7 +2915,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 Assert.NotNull(documentDatabase);
                 var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-                await Backup.HoldBackupExecutionIfNeededAndInvoke(documentDatabase.Name, documentDatabase.ServerStore.BackupRunner.ForTestingPurposesOnly(), async () =>
+                await Backup.HoldBackupExecutionIfNeededAndInvoke(documentDatabase.Name, documentDatabase.ServerStore.ServerBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
                     var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store, opStatus: OperationStatus.InProgress);
                     var record1 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
@@ -2925,16 +2925,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var taskId = backups1.First().TaskId;
                     var responsibleDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                     Assert.NotNull(responsibleDatabase);
-                    var tag = responsibleDatabase.ServerStore.BackupRunner.WhoseTaskIsIt(responsibleDatabase.Name, taskId);
+                    var tag = responsibleDatabase.ServerStore.ServerBackupRunner.WhoseTaskIsIt(responsibleDatabase.Name, taskId);
                     Assert.Equal(server.ServerStore.NodeTag, tag);
 
                     var testingStuff = new TestingStuffInternal() { SimulateDisableNodeStatus_UpdateConfigurations = true };
-                    responsibleDatabase.ServerStore.BackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[responsibleDatabase.Name] = testingStuff;
+                    responsibleDatabase.ServerStore.ServerBackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[responsibleDatabase.Name] = testingStuff;
 
-                    responsibleDatabase.ServerStore.BackupRunner.HandleDatabaseRecordChange(record1);
+                    responsibleDatabase.ServerStore.ServerBackupRunner.HandleDatabaseRecordChange(record1);
                     tcs.TrySetResult(null);
 
-                    responsibleDatabase.ServerStore.BackupRunner._forTestingPurposes = null;
+                    responsibleDatabase.ServerStore.ServerBackupRunner._forTestingPurposes = null;
                     var val = WaitForValue(() =>
                     {
                         var ongoingTaskBackup = store.Maintenance.Send(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
@@ -2967,7 +2967,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.NotNull(database);
 
                 var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-                await Backup.HoldBackupExecutionIfNeededAndInvoke(database.Name, database.ServerStore.BackupRunner.ForTestingPurposesOnly(), async () =>
+                await Backup.HoldBackupExecutionIfNeededAndInvoke(database.Name, database.ServerStore.ServerBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
                     var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *");
                     var updatePeriodicBackupOperation = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
@@ -3015,7 +3015,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 Assert.NotNull(database);
 
-                await Backup.HoldBackupExecutionIfNeededAndInvoke(database.Name, database.ServerStore.BackupRunner.ForTestingPurposesOnly(), async () =>
+                await Backup.HoldBackupExecutionIfNeededAndInvoke(database.Name, database.ServerStore.ServerBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
                     var config = Backup.CreateBackupConfiguration(backupPath);
                     var taskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store, opStatus: OperationStatus.InProgress);
@@ -3087,7 +3087,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var responsibleDatabase = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(leaderStore.Database);
                 Assert.NotNull(responsibleDatabase);
-                await Backup.HoldBackupExecutionIfNeededAndInvoke(responsibleDatabase.Name, responsibleDatabase.ServerStore.BackupRunner.ForTestingPurposesOnly(), async () =>
+                await Backup.HoldBackupExecutionIfNeededAndInvoke(responsibleDatabase.Name, responsibleDatabase.ServerStore.ServerBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
                     var now = DateTime.UtcNow;
                     var expectedNextBackupDateTime = now.Date
@@ -3136,7 +3136,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                     WaitForValue(() =>
                     {
-                        periodicBackup = responsibleDatabase.ServerStore.BackupRunner.GetDatabaseStateByTaskId(databaseName, taskId);
+                        periodicBackup = responsibleDatabase.ServerStore.ServerBackupRunner.GetDatabaseStateByTaskId(databaseName, taskId);
 
                         nextBackup = periodicBackup?.NextBackup;
 
@@ -3280,7 +3280,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var database = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(leaderStore.Database);
                 Assert.NotNull(database);
 
-                await Backup.HoldBackupExecutionIfNeededAndInvoke(database.Name, database.ServerStore.BackupRunner.ForTestingPurposesOnly(), async () =>
+                await Backup.HoldBackupExecutionIfNeededAndInvoke(database.Name, database.ServerStore.ServerBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
                     await Backup.RunBackupAsync(leaderServer, taskId, leaderStore, opStatus: OperationStatus.InProgress);
 
@@ -3378,7 +3378,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var responsibleDatabase = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(leaderStore.Database);
                 Assert.NotNull(responsibleDatabase);
 
-                await Backup.HoldBackupExecutionIfNeededAndInvoke(responsibleDatabase.Name, responsibleDatabase.ServerStore.BackupRunner.ForTestingPurposesOnly(), async () =>
+                await Backup.HoldBackupExecutionIfNeededAndInvoke(responsibleDatabase.Name, responsibleDatabase.ServerStore.ServerBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
                     await Backup.RunBackupInClusterAsync(leaderStore, taskId, opStatus: OperationStatus.InProgress);
 
@@ -3404,12 +3404,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                             var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
                             var testingStuff = new TestingStuffInternal(){ BackupStatusFromMemoryOnly = true};
-                            documentDatabase.ServerStore.BackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[documentDatabase.Name] = testingStuff;
+                            documentDatabase.ServerStore.ServerBackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[documentDatabase.Name] = testingStuff;
 
                             PeriodicBackupStatus inMemoryStatus = null;
                             WaitForValue(() =>
                             {
-                                inMemoryStatus = documentDatabase.ServerStore.BackupRunner.GetMostUpdatedClusterBackupStatus(documentDatabase.Name, taskId);
+                                inMemoryStatus = documentDatabase.ServerStore.ServerBackupRunner.GetMostUpdatedClusterBackupStatus(documentDatabase.Name, taskId);
                                 return inMemoryStatus != null;
                             }, true);
 
@@ -3449,7 +3449,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var responsibleDatabase = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(leaderStore.Database);
                 Assert.NotNull(responsibleDatabase);
 
-                await Backup.HoldBackupExecutionIfNeededAndInvoke(responsibleDatabase.Name, responsibleDatabase.ServerStore.BackupRunner.ForTestingPurposesOnly(), async () =>
+                await Backup.HoldBackupExecutionIfNeededAndInvoke(responsibleDatabase.Name, responsibleDatabase.ServerStore.ServerBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
                     var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *", mentorNode: leaderServer.ServerStore.NodeTag);
                     var taskId = await Backup.UpdateConfigAndRunBackupAsync(leaderServer, config, leaderStore, opStatus: OperationStatus.InProgress);
@@ -3504,7 +3504,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 Assert.NotNull(database);
 
-                await Backup.HoldBackupExecutionIfNeededAndInvoke(database.Name, database.ServerStore.BackupRunner.ForTestingPurposesOnly(), async () =>
+                await Backup.HoldBackupExecutionIfNeededAndInvoke(database.Name, database.ServerStore.ServerBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
                     var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *");
                     var taskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store, opStatus: OperationStatus.InProgress);
@@ -3568,13 +3568,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.NotNull(documentDatabase);
 
                 var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-                await Backup.HoldBackupExecutionIfNeededAndInvoke(documentDatabase.Name, documentDatabase.ServerStore.BackupRunner.ForTestingPurposesOnly(), async () =>
+                await Backup.HoldBackupExecutionIfNeededAndInvoke(documentDatabase.Name, documentDatabase.ServerStore.ServerBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
                     var responsibleDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
                     Assert.NotNull(responsibleDatabase);
 
                     var backupTaskId = await Backup.UpdateConfigAsync(server, config, store);
-                    var pb = responsibleDatabase.ServerStore.BackupRunner.GetDatabaseBackups(responsibleDatabase.Name).FirstOrDefault();
+                    var pb = responsibleDatabase.ServerStore.ServerBackupRunner.GetDatabaseBackups(responsibleDatabase.Name).FirstOrDefault();
                     Assert.NotNull(pb);
 
                     await Backup.RunBackupAsync(server, backupTaskId, store, opStatus: OperationStatus.InProgress);
@@ -3584,18 +3584,18 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.Equal(1, backups1.Count);
                     Assert.Equal(backupTaskId, backups1.First().TaskId);
 
-                    var tag = responsibleDatabase.ServerStore.BackupRunner.WhoseTaskIsIt(responsibleDatabase.Name, backupTaskId);
+                    var tag = responsibleDatabase.ServerStore.ServerBackupRunner.WhoseTaskIsIt(responsibleDatabase.Name, backupTaskId);
                     Assert.Equal(server.ServerStore.NodeTag, tag);
 
                     var dbTestingStuff = new TestingStuffInternal { SimulateActiveByOtherNodeStatus_UpdateConfigurations = true };
-                    responsibleDatabase.ServerStore.BackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[documentDatabase.Name] = dbTestingStuff;
-                    responsibleDatabase.ServerStore.BackupRunner.HandleDatabaseRecordChange(record1);
+                    responsibleDatabase.ServerStore.ServerBackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[documentDatabase.Name] = dbTestingStuff;
+                    responsibleDatabase.ServerStore.ServerBackupRunner.HandleDatabaseRecordChange(record1);
                     dbTestingStuff.SimulateActiveByOtherNodeStatus_UpdateConfigurations = false;
                     dbTestingStuff.SimulateActiveByCurrentNode_UpdateConfigurations = true;
-                    responsibleDatabase.ServerStore.BackupRunner.HandleDatabaseRecordChange(record1);
+                    responsibleDatabase.ServerStore.ServerBackupRunner.HandleDatabaseRecordChange(record1);
                     tcs.TrySetResult(null);
 
-                    responsibleDatabase.ServerStore.BackupRunner._forTestingPurposes = null;
+                    responsibleDatabase.ServerStore.ServerBackupRunner._forTestingPurposes = null;
                     var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(backupTaskId);
                     PeriodicBackupStatus status = null;
                     var val = WaitForValue(() =>
@@ -3607,7 +3607,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.Null(status.Error);
                     Assert.True(val, "Failed to complete the backup in time");
 
-                    pb = responsibleDatabase.ServerStore.BackupRunner.GetDatabaseBackups(responsibleDatabase.Name).FirstOrDefault();
+                    pb = responsibleDatabase.ServerStore.ServerBackupRunner.GetDatabaseBackups(responsibleDatabase.Name).FirstOrDefault();
                     Assert.NotNull(pb);
                     Assert.True(pb?.NextBackup != null, "Completed backup didn't schedule next one.");
                 }, tcs);

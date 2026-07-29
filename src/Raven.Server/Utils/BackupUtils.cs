@@ -216,7 +216,7 @@ public static class BackupUtils
         // we must wait here to ensure that the task was actually created on this node
         await database.ServerStore.Cluster.WaitForIndexNotification(taskId);
 
-        var nodeTag = database.ServerStore.BackupRunner.WhoseTaskIsIt(database.Name, taskId);
+        var nodeTag = database.ServerStore.ServerBackupRunner.WhoseTaskIsIt(database.Name, taskId);
         if (nodeTag == null)
         {
             // this can happen if the database was just created or if a new task that was just created
@@ -232,7 +232,7 @@ public static class BackupUtils
                     throw new InvalidOperationException($"Couldn't find a node which is responsible for backup task id: {taskId}");
                 }
 
-                nodeTag = database.ServerStore.BackupRunner.WhoseTaskIsIt(database.Name, taskId);
+                nodeTag = database.ServerStore.ServerBackupRunner.WhoseTaskIsIt(database.Name, taskId);
                 if (nodeTag != null)
                     break;
             }

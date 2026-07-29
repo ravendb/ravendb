@@ -29,7 +29,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             Assert.NotNull(documentDatabase);
 
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-            var ts = documentDatabase.ServerStore.BackupRunner.ForTestingPurposesOnly();
+            var ts = documentDatabase.ServerStore.ServerBackupRunner.ForTestingPurposesOnly();
             ts.DatabaseTestingStuffInternals[documentDatabase.Name] = new Raven.Server.ServerWide.Backups.ServerBackupRunner.TestingStuffInternal();
             await Backup.HoldBackupExecutionIfNeededAndInvoke(documentDatabase.Name, ts, async () =>
             {

@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
             if (responsibleNode == ServerStore.NodeTag)
             {
-                var backup = ServerStore.BackupRunner.GetDatabaseStateByTaskId(RequestHandler.Database.Name, taskId);
+                var backup = ServerStore.ServerBackupRunner.GetDatabaseStateByTaskId(RequestHandler.Database.Name, taskId);
                 if (backup == null)
                 {
                     throw new InvalidOperationException($"Backup task id: {taskId} doesn't exist");

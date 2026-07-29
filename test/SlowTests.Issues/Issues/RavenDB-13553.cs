@@ -52,11 +52,11 @@ namespace SlowTests.Issues
 
                 var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 var testingStuff = new ServerBackupRunner.TestingStuffInternal() { SimulateFailedBackup = true };
-                documentDatabase.ServerStore.BackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[documentDatabase.Name] = testingStuff;
+                documentDatabase.ServerStore.ServerBackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[documentDatabase.Name] = testingStuff;
 
                 await Backup.RunBackupAsync(server, result.TaskId, store, opStatus: OperationStatus.Faulted);
 
-                documentDatabase.ServerStore.BackupRunner._forTestingPurposes = null;
+                documentDatabase.ServerStore.ServerBackupRunner._forTestingPurposes = null;
 
                 using (var session = store.OpenSession())
                 {
@@ -69,8 +69,8 @@ namespace SlowTests.Issues
                 }
 
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                var status = documentDatabase.ServerStore.BackupRunner.GetMostUpdatedClusterBackupStatus(store.Database, config.TaskId);
-                var nextBackupDetails = documentDatabase.ServerStore.BackupRunner.GetNextBackupDetails(record.PeriodicBackups.First().TaskId, documentDatabase.Name, status, out var responsibleNode);
+                var status = documentDatabase.ServerStore.ServerBackupRunner.GetMostUpdatedClusterBackupStatus(store.Database, config.TaskId);
+                var nextBackupDetails = documentDatabase.ServerStore.ServerBackupRunner.GetNextBackupDetails(record.PeriodicBackups.First().TaskId, documentDatabase.Name, status, out var responsibleNode);
                 
                 Assert.True(nextBackupDetails.IsFull);
                 Assert.Equal("A", responsibleNode);

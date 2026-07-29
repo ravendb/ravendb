@@ -92,7 +92,7 @@ namespace Raven.Server.Documents
         private readonly object _idleLocker = new object();
 
         private readonly SemaphoreSlim _updateValuesLocker = new(1, 1);
-        private BackupTombstoneCleanerInfo tombstoneCleanerInfo;
+        private DatabaseBackupTombstoneCleanerInfo _tombstoneCleanerInfo;
         public Action<LogLevel, string> AddToInitLog => _addToInitLog;
 
         /// <summary>
@@ -447,12 +447,8 @@ namespace Raven.Server.Documents
                 SupportedFeatures = new SupportedFeature(record);
 
                 ReplicationLoader = CreateReplicationLoader();
-                tombstoneCleanerInfo = new BackupTombstoneCleanerInfo(_serverStore, this);
-                TombstoneCleaner.Subscribe(tombstoneCleanerInfo);
-                var tempPath = Utils.BackupUtils.GetBackupTempPath(Configuration, "PeriodicBackupTemp", out _);
-                IOExtensions.DeleteDirectory(tempPath.FullPath);
-                IOExtensions.CreateDirectory(tempPath.FullPath);
-                _serverStore.BackupRunner?.EnsureDatabaseRegistered(Name);
+
+                InitializeBackup();
 
                 _addToInitLog(LogLevel.Debug, "Initializing IndexStore (async)");
                 _indexStoreTask = IndexStore.InitializeAsync(record, index, _addToInitLog);
@@ -550,6 +546,15 @@ namespace Raven.Server.Documents
                 Dispose();
                 throw;
             }
+        }
+
+        private void InitializeBackup()
+        {
+            _tombstoneCleanerInfo = new DatabaseBackupTombstoneCleanerInfo(_serverStore, this);
+            var tempPath = Utils.BackupUtils.GetBackupTempPath(Configuration, "PeriodicBackupTemp", out _);
+            IOExtensions.DeleteDirectory(tempPath.FullPath);
+            IOExtensions.CreateDirectory(tempPath.FullPath);
+            _serverStore.ServerBackupRunner?.EnsureDatabaseRegistered(Name);
         }
 
         public IDisposable PreventFromUnloadingByIdleOperations()
@@ -956,9 +961,6 @@ namespace Raven.Server.Documents
 
             _databaseShutdown.Cancel();
 
-            TombstoneCleaner.Unsubscribe(tombstoneCleanerInfo);
-            IOExtensions.DeleteDirectory(Utils.BackupUtils.GetBackupTempPath(Configuration, "PeriodicBackupTemp", out _).FullPath);
-
             _serverStore.Server.ServerCertificateChanged -= OnCertificateChange;
 
             ForTestingPurposes?.ActionToCallDuringDocumentDatabaseInternalDispose?.Invoke();
@@ -1132,6 +1134,14 @@ namespace Raven.Server.Documents
             });
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed Operations");
 
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing Backup");
+            exceptionAggregator.Execute(() =>
+            {
+                TombstoneCleaner?.Unsubscribe(_tombstoneCleanerInfo);
+                IOExtensions.DeleteDirectory(Utils.BackupUtils.GetBackupTempPath(Configuration, "PeriodicBackupTemp", out _).FullPath);
+            });
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed Backup");
+
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing HugeDocuments");
             exceptionAggregator.Execute(() =>
             {
@@ -1283,7 +1293,7 @@ namespace Raven.Server.Documents
             var performanceHints = NotificationCenter.GetPerformanceHintCount();
 
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Generating offline database info: backupInfo.");
-            var backupInfo = _serverStore.BackupRunner.GetBackupInfo(Name);
+            var backupInfo = _serverStore.ServerBackupRunner.GetBackupInfo(Name);
 
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Generating offline database info: mountPointsUsage.");
             var mountPointsUsage = GetMountPointsUsage(includeTempBuffers: false)
@@ -1749,7 +1759,7 @@ namespace Raven.Server.Documents
             try
             {
                 UpdateSchemaValidation(record.SchemaValidation);
-                _serverStore.BackupRunner.HandleDatabaseRecordChange(record);
+                _serverStore.ServerBackupRunner.HandleDatabaseRecordChange(record);
                 EmbeddingsGeneratorQueries?.HandleDatabaseRecordChange(record);
                 EmbeddingsGeneratorEtl?.HandleDatabaseRecordChange(record);
                 EtlLoader?.HandleDatabaseRecordChange(record);
@@ -1848,7 +1858,7 @@ namespace Raven.Server.Documents
 
                     SubscriptionStorage?.HandleDatabaseRecordChange();
                     EtlLoader?.HandleDatabaseValueChanged();
-                    _serverStore.BackupRunner.HandleDatabaseValueChanged(type, changeState, Name);
+                    _serverStore.ServerBackupRunner.HandleDatabaseValueChanged(type, changeState, Name);
                     LastValueChangeIndex = index;
                 }
                 finally

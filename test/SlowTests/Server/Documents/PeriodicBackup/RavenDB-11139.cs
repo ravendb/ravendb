@@ -1584,7 +1584,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Expect(backupKind);
 
                 var database = await _parent.GetDatabase(_store.Database, _runningOnServer);
-                var testingStuffInternals = database.ServerStore.BackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals;
+                var testingStuffInternals = database.ServerStore.ServerBackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals;
                 if (testingStuffInternals.TryGetValue(database.Name, out var testingStuff) == false)
                     testingStuff = new TestingStuffInternal();
                 testingStuff.SimulateFailedBackup = true;
@@ -1601,7 +1601,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 finally
                 {
                     testingStuff.SimulateFailedBackup = false;
-                    database.ServerStore.BackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[database.Name] = testingStuff;
+                    database.ServerStore.ServerBackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[database.Name] = testingStuff;
                 }
             }
 
@@ -1652,7 +1652,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var database = await _parent.GetDatabase(_databaseName, _runningOnServer);
                 Assert.NotNull(database);
 
-                var ts = database.ServerStore.BackupRunner.ForTestingPurposesOnly();
+                var ts = database.ServerStore.ServerBackupRunner.ForTestingPurposesOnly();
                 if (ts.DatabaseTestingStuffInternals.ContainsKey(database.Name) == false)
                     ts.DatabaseTestingStuffInternals[database.Name] = new ServerBackupRunner.TestingStuffInternal();
 

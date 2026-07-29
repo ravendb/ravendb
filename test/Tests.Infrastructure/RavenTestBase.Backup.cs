@@ -60,7 +60,7 @@ namespace FastTests
             public async Task<long> RunBackupAsync(RavenServer server, long taskId, IDocumentStore store, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed, int? timeout = default)
             {
                 var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                var serverBackupRunner = documentDatabase.ServerStore.BackupRunner;
+                var serverBackupRunner = documentDatabase.ServerStore.ServerBackupRunner;
 
                 if (documentDatabase.DisableOngoingTasks)
                     throw new InvalidOperationException($"Backup task is disabled via marker file for database '{documentDatabase.Name}'.");
@@ -68,7 +68,7 @@ namespace FastTests
                 long opId;
                 try
                 {
-                    opId = server.ServerStore.BackupRunner.StartBackupTask(documentDatabase.Name, taskId, isFullBackup, documentDatabase.Operations.GetNextOperationId());
+                    opId = server.ServerStore.ServerBackupRunner.StartBackupTask(documentDatabase.Name, taskId, isFullBackup, documentDatabase.Operations.GetNextOperationId());
                 }
                 catch (BackupAlreadyRunningException alreadyRunningException)
                 {
@@ -203,7 +203,7 @@ namespace FastTests
                 {
                     var backupResult = backupOperation.Result as BackupResult;
 
-                    TryGetBackupStatusFromPeriodicBackupAndPrint(OperationStatus.Completed, OperationStatus.Completed, opId, ravenServer.ServerStore.BackupRunner, status, store.Database, backupResult);
+                    TryGetBackupStatusFromPeriodicBackupAndPrint(OperationStatus.Completed, OperationStatus.Completed, opId, ravenServer.ServerStore.ServerBackupRunner, status, store.Database, backupResult);
                 }
             }
             public static string GetCronForFarFuture() => $"* {DateTime.Now.AddHours(12).Hour} * * *"; 
@@ -662,11 +662,11 @@ namespace FastTests
                 var mre = new ManualResetEventSlim();
                 waitHandles.Add(mre.WaitHandle);
 
-                database.ServerStore.BackupRunner._forTestingPurposes ??= new ServerBackupRunner.TestingStuff();
+                database.ServerStore.ServerBackupRunner._forTestingPurposes ??= new ServerBackupRunner.TestingStuff();
 
                 var testingStuffInternal = new ServerBackupRunner.TestingStuffInternal { AfterBackupBatchCompleted = () => mre.Set() };
 
-                database.ServerStore.BackupRunner._forTestingPurposes.DatabaseTestingStuffInternals[database.Name] = testingStuffInternal;
+                database.ServerStore.ServerBackupRunner._forTestingPurposes.DatabaseTestingStuffInternals[database.Name] = testingStuffInternal;
             }
 
             public async Task FillDatabaseWithRandomDataAsync(int databaseSizeInMb, IAsyncDocumentSession session, int? timeout = default)

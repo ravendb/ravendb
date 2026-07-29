@@ -22,9 +22,9 @@ namespace SlowTests.Issues
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 1 * * *", backupType: BackupType.Backup, disabled: false);
                 var id = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
                 var documentDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                var status = documentDatabase.ServerStore.BackupRunner.GetMostUpdatedClusterBackupStatus(documentDatabase.Name, id);
+                var status = documentDatabase.ServerStore.ServerBackupRunner.GetMostUpdatedClusterBackupStatus(documentDatabase.Name, id);
                 config.TaskId = id;
-                var nextBackupDetails = documentDatabase.ServerStore.BackupRunner.GetNextBackupDetails(id, documentDatabase.Name, status, out string _);
+                var nextBackupDetails = documentDatabase.ServerStore.ServerBackupRunner.GetNextBackupDetails(id, documentDatabase.Name, status, out string _);
                 var nextBackup = nextBackupDetails.DateTime.ToLocalTime();
 
                 Assert.Equal(1,nextBackup.Hour);

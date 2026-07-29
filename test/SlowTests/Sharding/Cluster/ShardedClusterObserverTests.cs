@@ -589,12 +589,12 @@ namespace SlowTests.Sharding.Cluster
                         new List<RavenServer>() { nodes[1] });
 
                     var testingStuff = new TestingStuffInternal() { OnBackupTaskRunHoldBackupExecution = tcs };
-                    server1Database.ServerStore.BackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[server1Database.Name] = testingStuff;
+                    server1Database.ServerStore.ServerBackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[server1Database.Name] = testingStuff;
 
                     var server2Database = await Sharding.GetAnyShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(database, serverToShard[nodes[2]]),
                         new List<RavenServer>() { nodes[2] });
                     testingStuff = new TestingStuffInternal() { OnBackupTaskRunHoldBackupExecution = tcs };
-                    server2Database.ServerStore.BackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[server2Database.Name] = testingStuff;
+                    server2Database.ServerStore.ServerBackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[server2Database.Name] = testingStuff;
 
 
                     var timeBeforeCxDeletion = DateTime.UtcNow;
@@ -778,13 +778,13 @@ namespace SlowTests.Sharding.Cluster
                 var tcs = new TaskCompletionSource<object>();
                 var server1Database = await Sharding.GetAnyShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(database, serverToShard[nodes[1]]), new List<RavenServer>() { nodes[1] });
 
-                var ts1 = server1Database.ServerStore.BackupRunner.ForTestingPurposesOnly();
+                var ts1 = server1Database.ServerStore.ServerBackupRunner.ForTestingPurposesOnly();
                 if (ts1.DatabaseTestingStuffInternals.TryGetValue(server1Database.Name, out ServerBackupRunner.TestingStuffInternal value) == false)
                     ts1.DatabaseTestingStuffInternals[server1Database.Name] = value = new TestingStuffInternal();
                 value.OnBackupTaskRunHoldBackupExecution = tcs;
 
                 var server2Database = await Sharding.GetAnyShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(database, serverToShard[nodes[2]]), new List<RavenServer>() { nodes[2] });
-                var ts2 = server2Database.ServerStore.BackupRunner.ForTestingPurposesOnly();
+                var ts2 = server2Database.ServerStore.ServerBackupRunner.ForTestingPurposesOnly();
                 if (ts2.DatabaseTestingStuffInternals.TryGetValue(server2Database.Name, out ServerBackupRunner.TestingStuffInternal value2) == false)
                     ts2.DatabaseTestingStuffInternals[server2Database.Name] = value2 = new TestingStuffInternal();
                 value2.OnBackupTaskRunHoldBackupExecution = tcs;
@@ -798,7 +798,7 @@ namespace SlowTests.Sharding.Cluster
                 
                 //trigger periodic backup again on leader
                 var documentDatabase = await Cluster.GetAnyDocumentDatabaseInstanceFor(store, new List<RavenServer>() {leader}, ShardHelper.ToShardName(database, shardOnLeader));
-                leader.ServerStore.BackupRunner.StartBackupTask(documentDatabase.Name, backupTaskId, isFullBackup: false, documentDatabase.Operations.GetNextOperationId());
+                leader.ServerStore.ServerBackupRunner.StartBackupTask(documentDatabase.Name, backupTaskId, isFullBackup: false, documentDatabase.Operations.GetNextOperationId());
 
                 PeriodicBackupStatus backupStatus = null;
 

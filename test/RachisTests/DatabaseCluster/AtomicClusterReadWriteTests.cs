@@ -304,16 +304,16 @@ namespace RachisTests.DatabaseCluster
 
                 // hold backup from finishing
                 var mre = new ManualResetEvent(false);
-                database.ServerStore.BackupRunner._forTestingPurposes ??= new ServerBackupRunner.TestingStuff();
+                database.ServerStore.ServerBackupRunner._forTestingPurposes ??= new ServerBackupRunner.TestingStuff();
                 var testingStuffInternal = new ServerBackupRunner.TestingStuffInternal { HoldBackupFromFinishing = mre };
-                database.ServerStore.BackupRunner._forTestingPurposes.DatabaseTestingStuffInternals[database.Name] = testingStuffInternal;
+                database.ServerStore.ServerBackupRunner._forTestingPurposes.DatabaseTestingStuffInternals[database.Name] = testingStuffInternal;
 
                 // start backup
                 var backupPath = NewDataPath(suffix: "BackupFolder");
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 0 1 1 *");
                 long taskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store, opStatus: OperationStatus.InProgress);
 
-                database.ServerStore.BackupRunner.BackupsPerDatabasePerTaskId.TryGetValue(database.Name, out ConcurrentDictionary<long, DatabaseBackupState> value);
+                database.ServerStore.ServerBackupRunner.BackupsPerDatabasePerTaskId.TryGetValue(database.Name, out ConcurrentDictionary<long, DatabaseBackupState> value);
                 var res = value.FirstOrDefault(x => x.Key == taskId);
                 Assert.NotNull(res);
 
@@ -353,14 +353,14 @@ namespace RachisTests.DatabaseCluster
                 // hold backup from finishing
                 var mreShard0 = new ManualResetEvent(false);
                 var testingStuff = new TestingStuffInternal() { HoldBackupFromFinishing = mreShard0 };
-                database.ServerStore.BackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[database.Name] = testingStuff;
+                database.ServerStore.ServerBackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[database.Name] = testingStuff;
 
                 // start backup
                 var backupPath = NewDataPath(suffix: "BackupFolder");
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 0 1 1 *");
                 var (taskId, _) = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(server, store, config, isFullBackup: true);
 
-                var backupShard0 = server.ServerStore.BackupRunner.GetDatabaseStateByTaskId(database.Name, taskId);
+                var backupShard0 = server.ServerStore.ServerBackupRunner.GetDatabaseStateByTaskId(database.Name, taskId);
 
                 // wait for the backup to finish on 2 of the shards
                 var shardDatabases = server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).ToList();
