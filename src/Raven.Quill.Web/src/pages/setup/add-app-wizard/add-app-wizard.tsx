@@ -24,6 +24,7 @@ import {
 } from "@/components/shadcn/ui/dialog";
 import { CdcPerformanceSection } from "@/pages/apps/cdc-performance-section";
 import { cancelAbandonedSuggestions } from "@/pages/setup/add-app-wizard/steps/map-tables/suggest-map-tables-query";
+import { VERIFY_CDC_QUERY_KEY } from "@/pages/setup/add-app-wizard/steps/verify/verify-cdc-query";
 
 type CreatedApp = { slug: string; name: string };
 
@@ -46,10 +47,14 @@ export function AddAppWizard() {
     });
 
     useEffect(() => {
+        // The dry run is cached for as long as its inputs hold, which must not outlive the session:
+        // a reopened wizard would light up "Schema verified" for a run the operator never saw.
+        queryClient.removeQueries({ queryKey: VERIFY_CDC_QUERY_KEY });
         resetStore();
 
         return () => {
             cancelAbandonedSuggestions(queryClient);
+            queryClient.removeQueries({ queryKey: VERIFY_CDC_QUERY_KEY });
             resetStore();
         };
     }, [queryClient, resetStore]);
