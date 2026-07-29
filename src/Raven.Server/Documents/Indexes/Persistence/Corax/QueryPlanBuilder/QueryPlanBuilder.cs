@@ -373,8 +373,11 @@ internal static partial class QueryPlanBuilder
         {
             case OperatorType.And:
             {
+                bool? savedEnclosing = walkerCtx.EnclosingIsOr;
+                walkerCtx.EnclosingIsOr = false;
                 BooleanOp left = be.Left is BinaryExpression { Operator: OperatorType.Or } ? HandleGroup(be.Left, ClauseType.OrGroup) : ParseExpression(be.Left, walkerCtx);
                 BooleanOp right = be.Right is BinaryExpression { Operator: OperatorType.Or } ? HandleGroup(be.Right, ClauseType.OrGroup) : ParseExpression(be.Right, walkerCtx);
+                walkerCtx.EnclosingIsOr = savedEnclosing;
 
                 return (left, right) switch
                 {
@@ -387,8 +390,11 @@ internal static partial class QueryPlanBuilder
 
             case OperatorType.Or:
             {
+                bool? savedEnclosing = walkerCtx.EnclosingIsOr;
+                walkerCtx.EnclosingIsOr = true;
                 BooleanOp left = be.Left is BinaryExpression { Operator: OperatorType.And } ? HandleGroup(be.Left, ClauseType.AndGroup) : ParseExpression(be.Left, walkerCtx);
                 BooleanOp right = be.Right is BinaryExpression { Operator: OperatorType.And } ? HandleGroup(be.Right, ClauseType.AndGroup) : ParseExpression(be.Right, walkerCtx);
+                walkerCtx.EnclosingIsOr = savedEnclosing;
 
                 return (left, right) switch
                 {
@@ -725,6 +731,34 @@ internal static partial class QueryPlanBuilder
         return BooleanOp.Leaf;
     }
 
+    // Group a wrapper's operands like HandleGroup groups a parenthesised sub-expression - only when their
+    // connective disagrees with the enclosing one, so a same-connective operand stays visible to
+    // ComputeTemplateOptimizations.
+    private static void GroupWrapperOperands(ResolutionContext walkerCtx, int beforeCount, BooleanOp innerOp)
+    {
+        if (innerOp is not (BooleanOp.And or BooleanOp.Or))
+            return;
+
+        // null enclosing = wrapper is the whole WHERE, so it can't disagree with itself
+        if (walkerCtx.EnclosingIsOr is not { } enclosingIsOr || enclosingIsOr == (innerOp is BooleanOp.Or))
+            return;
+
+        int count = walkerCtx.Clauses.Count - beforeCount;
+        if (count < 2)
+            return;
+
+        List<ClauseInfo> inner = walkerCtx.Clauses.GetRange(beforeCount, count);
+        walkerCtx.Clauses.RemoveRange(beforeCount, count);
+
+        // sub-clause OriginalIndex stays parent-relative, not 0-based like HandleGroup's - unread today
+        walkerCtx.Clauses.Add(new ClauseInfo
+        {
+            ClauseType = innerOp is BooleanOp.Or ? ClauseType.OrGroup : ClauseType.AndGroup,
+            OriginalIndex = beforeCount,
+            SubClauses = inner
+        });
+    }
+
     private static BooleanOp ParseExact(MethodExpression method, ResolutionContext walkerCtx)
     {
         // exact(expr) → recurse, then mark all new clauses as exact.
@@ -735,12 +769,24 @@ internal static partial class QueryPlanBuilder
             innerOp = ParseExpression(method.Arguments[0], walkerCtx);
         }
 
+        // descend - an operand may already be a group, and only leaves carry a field name
         for (int c = beforeCount; c < walkerCtx.Clauses.Count; c++)
         {
-            walkerCtx.Clauses[c].IsExact = true;
+            MarkExact(walkerCtx.Clauses[c]);
         }
 
+        GroupWrapperOperands(walkerCtx, beforeCount, innerOp);
         return innerOp;
+
+        static void MarkExact(ClauseInfo clause)
+        {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
+            clause.IsExact = true;
+            foreach (ClauseInfo sub in clause.SubClauses ?? [])
+            {
+                MarkExact(sub);
+            }
+        }
     }
 
     private static BooleanOp ParseBoost(MethodExpression method, ResolutionContext walkerCtx)
@@ -753,15 +799,16 @@ internal static partial class QueryPlanBuilder
         }
 
         BooleanOp innerOp = ParseExpression(method.Arguments[0], walkerCtx);
-        if (method.Arguments.Count is 1 ||
-            walkerCtx.Clauses.Count == beforeCount ||
-            CreateBinding(method.Arguments[1], walkerCtx) is not { } boostBinding)
+        if (method.Arguments.Count > 1 &&
+            walkerCtx.Clauses.Count > beforeCount &&
+            CreateBinding(method.Arguments[1], walkerCtx) is { } boostBinding)
         {
-            return innerOp;
+            // copy - survives the regrouping below
+            List<ClauseInfo> inner = walkerCtx.Clauses.GetRange(beforeCount, walkerCtx.Clauses.Count - beforeCount);
+            walkerCtx.RecordPendingBoost(inner, boostBinding);
         }
 
-        List<ClauseInfo> inner = walkerCtx.Clauses.Slice(beforeCount, walkerCtx.Clauses.Count - beforeCount);
-        walkerCtx.RecordPendingBoost(inner, boostBinding);
+        GroupWrapperOperands(walkerCtx, beforeCount, innerOp);
         return innerOp;
     }
 
@@ -770,6 +817,10 @@ internal static partial class QueryPlanBuilder
         QueryExpression conditionExpr = method.Arguments[0];
         int beforeCount = walkerCtx.Clauses.Count;
         BooleanOp innerOp = ParseExpression(method.Arguments[1], walkerCtx);
+
+        // group first - the guard must land on what the parent combines, not the ungrouped operands
+        GroupWrapperOperands(walkerCtx, beforeCount, innerOp);
+
         var whenCondition = new WhenConditionEvaluator(conditionExpr, walkerCtx.Metadata).Evaluate;
         for (int wi = beforeCount; wi < walkerCtx.Clauses.Count; wi++)
         {

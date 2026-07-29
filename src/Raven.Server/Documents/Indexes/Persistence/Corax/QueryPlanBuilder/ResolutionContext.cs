@@ -18,6 +18,8 @@ internal sealed class ResolutionContext
     public readonly QueryBuilderParameters BuilderParams;
     public int WhenCount;
     public bool IsOr;
+    // connective of the expression being parsed; null at the root
+    public bool? EnclosingIsOr;
     public List<ClauseInfo> SpatialClauses;
     public List<ClauseInfo> VectorClauses;
     public List<ClauseInfo> Clauses;
