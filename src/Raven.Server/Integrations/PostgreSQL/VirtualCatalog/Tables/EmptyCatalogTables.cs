@@ -61,6 +61,24 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
             new("enumlabel",     PgName.Default,   PgFormat.Text),
             new("enumsortorder", PgFloat4.Default, PgFormat.Text));
 
+        // Column defaults. RavenDB has none - a document either carries a field or it doesn't - so
+        // an empty table is the correct answer here, not a missing one.
+        //
+        // SQLAlchemy's get_columns() reads the default of every column through a correlated subquery
+        // over this table: `SELECT pg_get_expr(d.adbin, d.adrelid) FROM pg_attrdef d WHERE
+        // d.adrelid = a.attrelid AND d.adnum = a.attnum AND a.atthasdef`. Registering the table is
+        // all that takes - with no rows, the projection is never evaluated, so the subquery yields
+        // SQL NULL and pg_get_expr is never called. We deliberately don't implement it: rendering a
+        // stored expression tree back to source text is not something we could do honestly.
+        //
+        // adbin is really pg_node_tree, an internal type we don't model; it's declared as text so a
+        // reference to it resolves.
+        public static EmptyCatalogTable PgAttrdef => new("pg_catalog", "pg_attrdef",
+            new("oid",     PgOid.Default,  PgFormat.Text),
+            new("adrelid", PgOid.Default,  PgFormat.Text),
+            new("adnum",   PgInt2.Default, PgFormat.Text),
+            new("adbin",   PgText.Default, PgFormat.Text));
+
         // RavenDB has no PG extensions; an empty table lets pgAdmin's `count(extname)` probe return 0.
         public static EmptyCatalogTable PgExtension => new("pg_catalog", "pg_extension",
             new("oid",        PgOid.Default,  PgFormat.Text),
