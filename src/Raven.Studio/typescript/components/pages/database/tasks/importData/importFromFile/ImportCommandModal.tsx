@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import Button from "react-bootstrap/Button";
-import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Modal from "components/common/Modal";
 import { Icon } from "components/common/Icon";
 import Code from "components/common/Code";
@@ -39,18 +38,18 @@ export default function ImportCommandModal({ onClose }: ImportCommandModalProps)
             </Modal.Header>
             <Modal.Body>
                 <p className="text-muted">Select your shell and copy the command to import the database dump.</p>
-                <ButtonGroup size="sm" className="mb-3">
+                <div className="d-flex gap-2 mb-3">
                     {commandTypes.map((type) => (
                         <Button
                             key={type}
-                            variant="secondary"
-                            active={commandType === type}
+                            size="sm"
+                            variant={commandType === type ? "secondary" : "outline-secondary"}
                             onClick={() => setCommandType(type)}
                         >
                             {type}
                         </Button>
                     ))}
-                </ButtonGroup>
+                </div>
                 <Code code={curlCommand} language="plaintext" wrappable isTitleHidden />
             </Modal.Body>
             <Modal.Footer>
