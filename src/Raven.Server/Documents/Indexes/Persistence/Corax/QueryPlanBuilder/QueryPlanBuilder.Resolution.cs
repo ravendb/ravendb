@@ -472,10 +472,15 @@ internal static partial class QueryPlanBuilder
     }
 
     
+    // the compound writer stores null and "" alike, as an empty component, so neither can be matched there
+    private static bool IsNullOrMissingValue(QueryExecution exec, PackedParam packed) =>
+        packed.IsNone || (packed.ValueType == PackedParam.TypeString && exec.StringValues[packed.Param1] is null or "");
+
     private static bool TryCreateCompoundExactMatch(ref InstantiateContext ctx, out string rejectReason)
     {
-        // The only thing still unknown is value-dependent — a bound parameter can resolve to "none" (null/missing), which has no composite-key encoding.
-        if (ctx.Exec.CompoundExactFirst.PackedParamValue.IsNone || ctx.Exec.CompoundExactSecond.PackedParamValue.IsNone)
+        // The only thing still unknown is value-dependent — a value can resolve to "none" (missing) or to null, neither of which has a composite-key encoding.
+        if (IsNullOrMissingValue(ctx.Exec, ctx.Exec.CompoundExactFirst.PackedParamValue) ||
+            IsNullOrMissingValue(ctx.Exec, ctx.Exec.CompoundExactSecond.PackedParamValue))
         {
             rejectReason = "the combined-key lookup needs both values, but one is null or missing";
             return false;
@@ -520,6 +525,14 @@ internal static partial class QueryPlanBuilder
         if (ctx.Exec.CompoundFieldDrivingClause is null || ctx.Exec.Plan.Template.CompoundFieldSortName is null)
         {
             rejectReason = "no compound field matches this query's filter-and-sort shape";
+            return false;
+        }
+
+        // Value-dependent, so it can only be checked here: the filter's value is encoded into the compound-field
+        // prefix we seek with, and null has no such encoding.
+        if (IsNullOrMissingValue(ctx.Exec, ctx.Exec.CompoundFieldDrivingClause.PackedParamValue))
+        {
+            rejectReason = "the compound-field scan needs the filter's value, but it is null or missing";
             return false;
         }
 
