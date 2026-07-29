@@ -11,12 +11,15 @@ import { appRoutes } from "@/lib/app-routes";
 import { CHANNEL_TYPE_LABELS } from "@/lib/channel-type-labels";
 import { formatDateTime } from "@/lib/utils";
 import { AddChannelMenu } from "@/pages/apps/channels/add-channel-menu";
+import type { FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
 import { GenerateEmbedLinkDialog } from "@/pages/apps/channels/generate-embed-link-dialog";
 import { DeleteChannelDialog } from "@/pages/apps/channels/delete-channel-dialog";
 import { EditChannelSheet } from "@/pages/apps/channels/edit-channel-sheet";
 import { SectionCard, SectionTable } from "@/pages/apps/section-card";
 
-export function ChannelsSection({ slug }: { slug: string }) {
+// When `agent` is set the section is scoped to that single agent: only its channels are listed,
+// the agent name column is dropped, and new channels are routed to it (e.g. the capability wizard).
+export function ChannelsSection({ slug, agent: fixedAgent }: { slug: string; agent?: FixedAgent }) {
     const agentsQuery = useQuery(api.queries.agents.list(slug));
     const channelsQuery = useQuery(api.queries.channels.list(slug));
     // Active-link counts are supplementary — kept out of the ApiState gate so a
@@ -37,8 +40,15 @@ export function ChannelsSection({ slug }: { slug: string }) {
         }
     };
 
+    const channels = fixedAgent
+        ? (channelsQuery.data ?? []).filter((channel) => channel.agentId === fixedAgent.agentId)
+        : channelsQuery.data;
+
     return (
-        <SectionCard title="Channels" action={<AddChannelMenu slug={slug} />}>
+        <SectionCard
+            title={fixedAgent ? `Channels for “${fixedAgent.name}”` : "Channels"}
+            action={<AddChannelMenu slug={slug} agent={fixedAgent} />}
+        >
             <ApiState
                 isLoading={channelsQuery.isPending || agentsQuery.isPending}
                 isError={channelsQuery.isError || agentsQuery.isError}
@@ -46,13 +56,21 @@ export function ChannelsSection({ slug }: { slug: string }) {
                 onRetry={onRetry}
                 loadingLabel="Loading channels..."
             >
-                {channelsQuery.data && (
+                {channels && (
                     <SectionTable
-                        headers={["Channel name", "Agent name", "Status", "Type", "Active links", "Created", ""]}
-                        isEmpty={channelsQuery.data.length === 0}
+                        headers={[
+                            "Channel name",
+                            ...(fixedAgent ? [] : ["Agent name"]),
+                            "Status",
+                            "Type",
+                            "Active links",
+                            "Created",
+                            "",
+                        ]}
+                        isEmpty={channels.length === 0}
                         emptyMessage="No channels yet."
                     >
-                        {channelsQuery.data.map((channel) => {
+                        {channels.map((channel) => {
                             const agent = agentsQuery.data?.find((x) => x.agentId === channel.agentId);
                             return (
                                 <TableRow key={channel.channelId}>
@@ -65,7 +83,7 @@ export function ChannelsSection({ slug }: { slug: string }) {
                                             {channel.displayName}
                                         </Link>
                                     </TableCell>
-                                    <TableCell className="font-medium">{agent?.name}</TableCell>
+                                    {!fixedAgent && <TableCell className="font-medium">{agent?.name}</TableCell>}
                                     <TableCell>
                                         <StatusIndicator
                                             tone={channel.enabled ? "positive" : "muted"}
@@ -87,13 +105,15 @@ export function ChannelsSection({ slug }: { slug: string }) {
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex items-center justify-end gap-1">
-                                            <Link
-                                                to={appRoutes.app(slug, `channels/${channel.channelId}`)}
-                                                title="Open details"
-                                                className="mx-1"
-                                            >
-                                                <Eye className="size-3.5" aria-hidden="true" />
-                                            </Link>
+                                            {!fixedAgent && (
+                                                <Link
+                                                    to={appRoutes.app(slug, `channels/${channel.channelId}`)}
+                                                    title="Open details"
+                                                    className="mx-1"
+                                                >
+                                                    <Eye className="size-3.5" aria-hidden="true" />
+                                                </Link>
+                                            )}
                                             {channel.type === "IFrame" && (
                                                 <GenerateEmbedLinkDialog
                                                     slug={slug}
