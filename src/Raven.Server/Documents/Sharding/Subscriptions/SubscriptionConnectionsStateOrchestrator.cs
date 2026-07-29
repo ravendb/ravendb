@@ -229,6 +229,6 @@ public sealed class SubscriptionConnectionsStateOrchestrator : AbstractSubscript
         if (_recentShardedWorkers.Count > 10)
             _recentShardedWorkers.TryDequeue(out _);
 
-        _recentShardedWorkers.Enqueue(ShardedSubscriptionWorkerInfo.Create(w.Key, w.Value));
+        _recentShardedWorkers.Enqueue(ShardedSubscriptionWorkerInfo.Create(w.Key, w.Value, disposeTimeUtc: DateTime.UtcNow));
     }
 }
