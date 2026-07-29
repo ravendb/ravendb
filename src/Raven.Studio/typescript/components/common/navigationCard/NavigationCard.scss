@@ -3,12 +3,17 @@
 // Variant styles (colors, gradients) are registered per page via the
 // navigation-card-variant mixin from navigationCardVariants.scss.
 
-// Extra class beats the min-height set per variant by navigation-card-base.
-.card.navigation-card.compact {
-    min-height: 0;
+.navigation-card {
+    .task-icon {
+        font-size: 1.25rem;
+    }
 
-    .card-body {
+    &.compact .card-body {
         padding: sizes.$gutter-sm;
+    }
+
+    .license-restricted-badge {
+        z-index: 4;
     }
 }
 
