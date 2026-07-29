@@ -8,6 +8,7 @@ import {
     verifyCdcQuery,
     type VerifyCdcInput,
 } from "@/pages/setup/add-app-wizard/steps/verify/verify-cdc-query";
+import type { WizardProgress } from "@/components/form/wizard/form-wizard";
 
 /** The dry-run inputs the form and the store currently hold. */
 function useVerifyCdcInput(): VerifyCdcInput {
@@ -56,11 +57,12 @@ export function useVerifyCdcStep() {
     const queryClient = useQueryClient();
     const { getValues } = useFormContext<AppFormData>();
 
-    return async () => {
+    return async (progress: WizardProgress) => {
         const { connectKey } = useSetupWizardStore.getState();
         const { slug } = getValues("externalConnection");
 
         try {
+            progress.report("Verifying schema...");
             // Serves the cached pass when this selection was already verified, here or from the button.
             await queryClient.fetchQuery(
                 verifyCdcQuery({ connectKey, slug, selectedTables: getValues("verifySchema.tables") }),
