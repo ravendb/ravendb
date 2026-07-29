@@ -249,11 +249,7 @@ export default function ImportDatabaseFromFile() {
                     >
                         <Icon icon="import-database" /> Import database
                     </Button>
-                    <Button
-                        variant="secondary"
-                        className="rounded-pill"
-                        onClick={() => setIsCommandModalOpen(true)}
-                    >
+                    <Button variant="secondary" className="rounded-pill" onClick={() => setIsCommandModalOpen(true)}>
                         <Icon icon="code" /> Use import command
                     </Button>
                     {uploadPercent != null && (
