@@ -14,6 +14,7 @@ import { useImportLicenseRestrictions } from "../useImportLicenseRestrictions";
 import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
 import Card from "react-bootstrap/Card";
 import SelectCreatable from "components/common/select/SelectCreatable";
+import classNames from "classnames";
 
 interface CollectionOption {
     label: string;
@@ -121,21 +122,23 @@ export default function DataToImportSection() {
                 Choose collections to import
             </div>
             <Card className="mb-4 p-4">
-                <div className="d-flex gap-3">
-                    <Button
-                        variant={isImportAll ? "primary" : "outline-secondary"}
-                        className="flex-grow-1 py-3"
+                <div className="d-flex gap-2">
+                    <button
+                        type="button"
+                        className={classNames("import-scope-btn", { active: isImportAll })}
                         onClick={() => setValue("collections.isImportAllCollections", true, { shouldDirty: true })}
                     >
-                        <Icon icon="documents" /> Import all collections
-                    </Button>
-                    <Button
-                        variant={!isImportAll ? "primary" : "outline-secondary"}
-                        className="flex-grow-1 py-3"
+                        <Icon icon="documents" margin="m-0" />
+                        Import all collections
+                    </button>
+                    <button
+                        type="button"
+                        className={classNames("import-scope-btn", { active: !isImportAll })}
                         onClick={() => setValue("collections.isImportAllCollections", false, { shouldDirty: true })}
                     >
-                        <Icon icon="document-group" addon="edit" /> Customize imported collections
-                    </Button>
+                        <Icon icon="document-group" addon="edit" margin="m-0" />
+                        Customize imported collections
+                    </button>
                 </div>
                 {!isImportAll && (
                     <div className="mt-4">
