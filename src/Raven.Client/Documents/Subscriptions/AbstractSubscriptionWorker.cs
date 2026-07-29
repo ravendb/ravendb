@@ -64,6 +64,53 @@ namespace Raven.Client.Documents.Subscriptions
 
         public event Action<Exception> OnUnexpectedSubscriptionError;
 
+        private SubscriptionWorkerStatus _status = new SubscriptionWorkerStatus(SubscriptionWorkerState.NotStarted, exception: null, DateTime.UtcNow);
+
+        /// <summary>
+        /// What the worker is doing right now - connecting, waiting for the server to send documents, processing a
+        /// batch, retrying after a failure, or stopped. The returned snapshot is immutable, so the state and the
+        /// exception that produced it always belong together.
+        /// </summary>
+        public SubscriptionWorkerStatus Status => Volatile.Read(ref _status);
+
+        /// <summary>
+        /// Raised on every change to <see cref="Status"/>, for callers that would rather be told than poll. The
+        /// worker that changed state is passed along with the snapshot that was just installed, so that a single
+        /// handler can serve several workers. Exceptions thrown by a handler are logged and swallowed, so that
+        /// watching the worker cannot break it.
+        /// </summary>
+        public event Action<AbstractSubscriptionWorker<TBatch, TType>, SubscriptionWorkerStatus> OnStateChanged;
+
+        /// <remarks>
+        /// Called only from the task running the subscription, so the read of the current status below does not
+        /// need to be synchronized with another writer.
+        /// </remarks>
+        private void SetState(SubscriptionWorkerState state, Exception exception = null)
+        {
+            SubscriptionWorkerStatus current = _status;
+            if (current.State == state && ReferenceEquals(current.Exception, exception))
+                return; // same state, keep SinceUtc pointing at when we actually entered it
+
+            SubscriptionWorkerStatus status = new SubscriptionWorkerStatus(state, exception, DateTime.UtcNow);
+            Volatile.Write(ref _status, status);
+
+            Action<AbstractSubscriptionWorker<TBatch, TType>, SubscriptionWorkerStatus> onStateChanged = OnStateChanged;
+            if (onStateChanged == null)
+                return;
+
+            try
+            {
+                onStateChanged(this, status);
+            }
+            catch (Exception e)
+            {
+                // a failing handler must not take the subscription down with it, and must not replace the
+                // exception we are in the middle of reporting
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Subscription '{_options.SubscriptionName}'. {nameof(OnStateChanged)} handler threw while reporting '{status}'.", e);
+            }
+        }
+
         internal AbstractSubscriptionWorker(SubscriptionWorkerOptions options, string dbName, IRavenLogger logger)
         {
             if (string.IsNullOrEmpty(options.SubscriptionName))
@@ -125,6 +172,13 @@ namespace Raven.Client.Documents.Subscriptions
             }
             finally
             {
+                if (_subscriptionTask == null)
+                {
+                    // a worker that was never run has no task to report Stopped for itself, and cannot be racing
+                    // with one either
+                    SetState(SubscriptionWorkerState.Stopped);
+                }
+
                 OnDisposed(this);
             }
         }
@@ -507,6 +561,9 @@ namespace Raven.Client.Documents.Subscriptions
                     if (_processingCts.IsCancellationRequested)
                         return;
 
+                    // set before raising the event, so that a handler reading Status sees that we are connected
+                    SetState(SubscriptionWorkerState.WaitingForDocuments);
+
                     OnEstablishedSubscriptionConnection?.Invoke();
 
                     await ProcessSubscriptionInternalAsync(contextPool, tcpStreamCopy, buffer, context).ConfigureAwait(false);
@@ -533,6 +590,8 @@ namespace Raven.Client.Documents.Subscriptions
                 while (_processingCts.IsCancellationRequested == false)
                 {
                     var incomingBatch = await PrepareBatchAsync(contextPool, tcpStreamCopy, buffer, batch, notifiedSubscriber).ConfigureAwait(false);
+
+                    SetState(SubscriptionWorkerState.Processing);
 
                     notifiedSubscriber = Task.Run(async () => // the 2'nd thread
                     {
@@ -612,6 +671,13 @@ namespace Raven.Client.Documents.Subscriptions
 
                 throw;
             }
+
+            // The read above was started before the subscriber ran, on purpose, so we stay Processing for as long as it
+            // is in flight. Now that the subscriber is done, the server is the only thing left to wait for - unless its
+            // batch already arrived while we were processing, in which case we go straight on to processing that one and
+            // never waited at all.
+            if (readFromServer.IsCompleted == false)
+                SetState(SubscriptionWorkerState.WaitingForDocuments);
 
             BatchFromServer incomingBatch = await readFromServer.ConfigureAwait(false); // wait for batch reading to end
 
@@ -792,6 +858,26 @@ namespace Raven.Client.Documents.Subscriptions
 
         internal async Task RunSubscriptionAsync()
         {
+            try
+            {
+                await RunSubscriptionInternalAsync().ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                SetState(SubscriptionWorkerState.Faulted, e);
+                throw;
+            }
+            finally
+            {
+                // reached on the paths that end the worker without surfacing an error - cancellation and disposal -
+                // while a worker that gave up on a failure keeps reporting it
+                if (Status.State != SubscriptionWorkerState.Faulted)
+                    SetState(SubscriptionWorkerState.Stopped);
+            }
+        }
+
+        private async Task RunSubscriptionInternalAsync()
+        {
             while (_processingCts.IsCancellationRequested == false)
             {
                 try
@@ -800,6 +886,7 @@ namespace Raven.Client.Documents.Subscriptions
                         throw new InvalidOperationException("SimulateUnexpectedException");
 
                     CloseTcpClient();
+                    SetState(SubscriptionWorkerState.Connecting);
                     if (_logger.IsInfoEnabled)
                     {
                         _logger.Info($"Subscription '{_options.SubscriptionName}'. Connecting to server...");
@@ -831,6 +918,9 @@ namespace Raven.Client.Documents.Subscriptions
                         (bool shouldTryToReconnect, _redirectNode) = CheckIfShouldReconnectWorker(ex, AssertLastConnectionFailure, OnUnexpectedSubscriptionError);
                         if (shouldTryToReconnect)
                         {
+                            // set before waiting, so that the state is accurate for the whole of the retry delay
+                            SetState(SubscriptionWorkerState.Retrying, ex);
+
                             await TimeoutManager.WaitFor(GetTimeToWaitBeforeConnectionRetry(), _processingCts.Token).ConfigureAwait(false);
 
                             if (_redirectNode == null)
