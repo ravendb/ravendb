@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.ServerSentEvents;
@@ -371,7 +372,7 @@ public class ChatCompletionClient : IDisposable
             await CompleteAsync(context, request, new AiUsage(), schema: null, trace: null, token);
             return true;
         }
-        catch (Exception)
+        catch (UnsuccessfulAiRequestException e) when (e.StatusCode == HttpStatusCode.BadRequest)
         {
             return false;
         }
