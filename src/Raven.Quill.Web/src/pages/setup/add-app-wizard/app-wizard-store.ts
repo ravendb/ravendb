@@ -33,8 +33,6 @@ export type SetupWizardState = {
      */
     connectKey: string | null;
     setConnectKey: (key: string) => void;
-    verifiedCdcKey: string | null;
-    setVerifiedCdcKey: (key: string) => void;
     appliedMapKey: string | null;
     setAppliedMapKey: (key: string) => void;
     mapTablesKey: string | null;
@@ -66,7 +64,6 @@ const initialState: Pick<
     | "importState"
     | "connectKey"
     | "connectionAttempt"
-    | "verifiedCdcKey"
     | "appliedMapKey"
     | "mapTablesKey"
     | "mapActiveTable"
@@ -81,7 +78,6 @@ const initialState: Pick<
     importState: "none",
     connectKey: null,
     connectionAttempt: null,
-    verifiedCdcKey: null,
     appliedMapKey: null,
     mapTablesKey: null,
     mapActiveTable: null,
@@ -104,7 +100,6 @@ export const useSetupWizardStore = create<SetupWizardState>((set) => ({
     unlockImportedConfig: () => set({ importState: "unlocked" }),
     setConnectKey: (key) => set({ connectKey: key }),
     setConnectionAttempt: (attempt) => set({ connectionAttempt: attempt }),
-    setVerifiedCdcKey: (key) => set({ verifiedCdcKey: key }),
     setAppliedMapKey: (key) => set({ appliedMapKey: key }),
     setMapTablesKey: (key) => set({ mapTablesKey: key }),
     setMapActiveTable: (table) => set({ mapActiveTable: table }),

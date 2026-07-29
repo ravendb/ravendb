@@ -3,6 +3,8 @@ import type { RowSelectionState } from "@tanstack/react-table";
 import { useFormContext, useFormState } from "react-hook-form";
 import { CheckIcon, PlusIcon, SearchIcon, TriangleAlertIcon } from "lucide-react";
 import type { DiscoverResponse, DiscoverTableResponse } from "@/api/generated/server-api";
+import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
+import { WizardErrorAlert } from "@/components/form/wizard/wizard-error-alert";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
@@ -15,6 +17,7 @@ import { ImportedConfigAlert } from "@/pages/setup/add-app-wizard/imported-confi
 import { DefineSchemasSheet } from "@/pages/setup/add-app-wizard/steps/verify/define-schemas-sheet";
 import { NeedsConfigTablesTable } from "@/pages/setup/add-app-wizard/steps/verify/needs-config-tables-table";
 import { useDiscoverTablesMutation } from "@/pages/setup/add-app-wizard/steps/verify/use-discover-tables";
+import { useVerifyCdcState } from "@/pages/setup/add-app-wizard/steps/verify/use-verify-cdc-step";
 import { VerifiedTablesTable } from "@/pages/setup/add-app-wizard/steps/verify/verified-tables-table";
 import { WizardErrorList } from "@/components/form/wizard/wizard-error-list";
 import {
@@ -25,11 +28,12 @@ import {
 
 type VerifyTab = "verified" | "needs-configuration";
 
-export function VerifySchemaStep() {
+export function VerifySchemaStep({ isBusy }: WizardBodyComponentProps) {
     const { control, setValue, getValues } = useFormContext<AppFormData>();
     // formState off the context does not re-render this step; only its own subscription does.
     const { errors } = useFormState({ control, name: "verifySchema.tables" });
     const tablesError = errors.verifySchema?.tables;
+    const { error: cdcError, isRunning: isVerifyCdcRunning } = useVerifyCdcState();
     const discoverResult = useSetupWizardStore((state) => state.discoverResult);
     const discoverSchemas = useSetupWizardStore((state) => state.discoverSchemas);
     const isLocked = useSetupWizardStore((state) => state.importState) === "locked";
@@ -100,9 +104,11 @@ export function VerifySchemaStep() {
 
     return (
         <div className="flex min-h-0 flex-1 flex-col gap-4">
-            <ImportedConfigAlert />
-            <WizardErrorList errors={discoverResult?.errors} />
-            <MessageList messages={discoverResult?.warnings} tone="warning" />
+            <div className="grid shrink-0 gap-4">
+                <ImportedConfigAlert />
+                <WizardErrorList errors={discoverResult?.errors} />
+                <MessageList messages={discoverResult?.warnings} tone="warning" />
+            </div>
 
             {discoverMutation.isPending ? (
                 <DiscoverLoadingSkeleton />
@@ -125,7 +131,7 @@ export function VerifySchemaStep() {
                             variant="outline"
                             className="ml-auto"
                             onClick={() => setIsSchemasSheetOpen(true)}
-                            disabled={isLocked}
+                            disabled={isLocked || isVerifyCdcRunning}
                         >
                             <PlusIcon aria-hidden="true" />
                             Customize schemas
@@ -169,7 +175,8 @@ export function VerifySchemaStep() {
                             search={search}
                             rowSelection={rowSelection}
                             onRowSelectionChange={handleRowSelectionChange}
-                            disabled={isLocked}
+                            disabled={isLocked || isVerifyCdcRunning}
+                            isBusy={isBusy}
                         />
                     ) : (
                         <NeedsConfigTablesTable tables={needsConfigTables} search={search} />
@@ -179,7 +186,14 @@ export function VerifySchemaStep() {
                 <NoTablesFound schemas={discoverSchemas} onCustomizeSchemas={() => setIsSchemasSheetOpen(true)} />
             ) : null}
 
-            {tablesError && <Alert variant="destructive">{tablesError.message}</Alert>}
+            {/* shrink-0: the table below claims the column's free space, and Alert scrolls its own
+                overflow, so a shrinkable alert collapses into an unreadable sliver. */}
+            {tablesError && (
+                <Alert variant="destructive" className="shrink-0">
+                    {tablesError.message}
+                </Alert>
+            )}
+            {cdcError && <WizardErrorAlert error={cdcError} className="shrink-0" />}
 
             <DefineSchemasSheet
                 isOpen={isSchemasSheetOpen}

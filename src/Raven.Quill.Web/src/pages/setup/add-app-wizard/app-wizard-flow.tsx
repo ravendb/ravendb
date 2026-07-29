@@ -21,13 +21,14 @@ import { useMapSchemaStep } from "@/pages/setup/add-app-wizard/steps/map/use-map
 import { useFocusMapTablesError } from "@/pages/setup/add-app-wizard/steps/map-tables/use-focus-map-tables-error";
 import { useMapTablesStep } from "@/pages/setup/add-app-wizard/steps/map-tables/use-map-tables-step";
 import { useIsMapTablesNextDisabled } from "@/pages/setup/add-app-wizard/steps/map-tables/use-suggested-map-tables";
-import { useVerifyCdcStep } from "@/pages/setup/add-app-wizard/steps/verify/use-verify-cdc-step";
+import { useIsVerifyCdcRunning, useVerifyCdcStep } from "@/pages/setup/add-app-wizard/steps/verify/use-verify-cdc-step";
 import { useVerifySchemaStep } from "@/pages/setup/add-app-wizard/steps/verify/use-verify-schema-step";
 
 export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
     const connectSourceBeforeNext = useConnectSourceStep();
     const verifySchemaBeforeNext = useVerifySchemaStep();
     const verifyCdcBeforeNext = useVerifyCdcStep();
+    const isVerifyCdcRunning = useIsVerifyCdcRunning();
     const mapSchemaBeforeNext = useMapSchemaStep();
     const mapTablesBeforeNext = useMapTablesStep();
     const focusMapTablesError = useFocusMapTablesError();
@@ -74,6 +75,8 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
                 await verifyCdcBeforeNext(progress);
                 verifySchemaBeforeNext();
             },
+            // Advancing mid-run would carry a selection the dry run has not answered for yet.
+            isNextDisabled: isVerifyCdcRunning,
         },
         map: {
             title: "How would you like to map your schema?",
