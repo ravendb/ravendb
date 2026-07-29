@@ -74,26 +74,14 @@ export default function NavigationCard({
                     compact,
                 })}
             >
-                {compact ? (
-                    <Card.Body className="d-flex align-items-center">
-                        <Icon icon={iconName} className="task-icon fs-5" margin="me-2" />
+                <Card.Body className={compact ? "d-flex align-items-center" : "d-flex flex-column gap-1"}>
+                    <div className="d-flex align-items-center">
+                        <Icon icon={iconName} className="task-icon" margin="me-2" />
                         <h4 className="mb-0">{title}</h4>
                         {counterBadge}
-                    </Card.Body>
-                ) : (
-                    <Card.Body className="d-flex align-items gap-3">
-                        <div className="align-self-center">
-                            <Icon icon={iconName} className="task-icon fs-2" />
-                        </div>
-                        <div className="d-flex flex-column align-self-center gap-1">
-                            <div className="d-flex align-items-center gap-2">
-                                <h4 className="mb-0">{title}</h4>
-                                {counterBadge}
-                            </div>
-                            <div>{description}</div>
-                        </div>
-                    </Card.Body>
-                )}
+                    </div>
+                    {!compact && <div className="small">{description}</div>}
+                </Card.Body>
 
                 {showLicenseBadge && (
                     <LicenseRestrictedBadge
