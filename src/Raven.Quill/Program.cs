@@ -100,8 +100,8 @@ builder.Services.AddSingleton<IServerReady, ServerReadyFlag>();
 builder.Services.AddSingleton<IBootstrapState, BootstrapStateFlag>();
 builder.Services.AddSingleton<IAgentRouter, AgentRouter>();
 builder.Services.AddSingleton<IApiKeyStore, ApiKeyStore>();
-builder.Services.AddSingleton<IFeedbackSender, FeedbackSender>();
-builder.Services.AddSingleton<ILicenseStatsProvider, LicenseStatsProvider>();
+builder.Services.AddTransient<IFeedbackSender, FeedbackSender>();
+builder.Services.AddTransient<ILicenseStatsProvider, LicenseStatsProvider>();
 if (!isOpenApiDocumentGeneration)
 {
     builder.Services.AddHostedService<RavenReadinessService>();
