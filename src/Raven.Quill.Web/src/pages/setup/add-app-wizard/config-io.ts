@@ -4,14 +4,16 @@ import type {
     CdcSinkLinkedTableConfig,
     CdcSinkTableConfig,
 } from "@/api/generated/server-api";
-import { type AppFormData, providerSchema } from "@/pages/setup/add-app-wizard/app-wizard-validation";
+import { type AppFormData, providerSchema, slugSchema } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { mapFormTablesToDto } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-dto";
 
-/** The portable wizard configuration: connection details plus the CDC Sink table mapping, in the
- * canonical DTO shape (matching `/setup/map`). The application name is intentionally excluded. */
+/** The portable wizard configuration: connection details, the public URL slug, plus the CDC Sink table
+ * mapping, in the canonical DTO shape (matching `/setup/map`). The application name is intentionally
+ * excluded. */
 export type WizardConfig = {
     provider: AppFormData["externalConnection"]["provider"];
     connectionString: string;
+    slug: string;
     tables: CdcSinkTableConfig[];
 };
 
@@ -25,6 +27,7 @@ export type SourceTableRef = {
 const wizardConfigSchema = z.object({
     provider: providerSchema,
     connectionString: z.string().trim().min(1, "The configuration is missing a connection string."),
+    slug: slugSchema.default(""),
     tables: z.array(z.looseObject({})).min(1, "The configuration does not define any tables."),
 });
 
@@ -32,6 +35,7 @@ export function buildConfigExport(values: AppFormData): WizardConfig {
     return {
         provider: values.externalConnection.provider,
         connectionString: values.externalConnection.connectionString,
+        slug: values.externalConnection.slug,
         tables: mapFormTablesToDto(values.mapTables.tables),
     };
 }
@@ -75,6 +79,7 @@ export async function parseConfigFile(file: File): Promise<WizardConfig> {
     return {
         provider: result.data.provider,
         connectionString: result.data.connectionString,
+        slug: result.data.slug,
         tables: result.data.tables as CdcSinkTableConfig[],
     };
 }

@@ -9,7 +9,7 @@ const RELATION_TYPES = ["Array", "Map", "Value"] as const satisfies readonly Cdc
 // Optional override; when empty the server derives the slug from the app name. Mirrors the
 // server's normalization checks so obvious problems surface before provisioning (reserved
 // names are only known server-side and come back as a 400).
-const slugSchema = z
+export const slugSchema = z
     .string()
     .trim()
     .superRefine((value, ctx) => {
