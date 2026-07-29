@@ -186,8 +186,8 @@ public partial class IndexWriter
                 _buffers.Keys[idX] = ilk;
 
                 ref var entries = ref _indexedField.Storage.GetAsRef(termsIndexes[idX]);
-                if (_writer._supportedFeatures.NumericTreesWithoutFrequencies)
-                    NormalizeFrequencies(ref entries);
+                if (_writer._supportedFeatures.NumericalValuesWithoutFrequencies)
+                    UnifyNumericalFrequencies(ref entries);
                 entries.Prepare(_writer._entriesAllocator);
             }
 
@@ -196,7 +196,11 @@ public partial class IndexWriter
             pageOffsets = _buffers.PageOffsets.AsSpan(start: 0, length: max);
         }
 
-        private static void NormalizeFrequencies(ref EntriesModifications entries)
+        /// <summary>
+        /// This is important for numerical values because we do not calculate any particular score for them and do not want to track frequencies.
+        /// Instead of ensuring frequencies are 1 while the entry is being built, we clear them after the fact.
+        /// </summary>
+        private static void UnifyNumericalFrequencies(ref EntriesModifications entries)
         {
             for (int i = 0; i < entries.Additions.Count; i++)
                 entries.Additions[i].Frequency = 1;

@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     isPhraseQuerySupported: index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.PhraseQuerySupportInCoraxIndexes,
                     isStoreOnlySupported: index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.StoreOnlySupportInCoraxIndexes,
                     isPaginationBasedOnEntryIdSupported: index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.CoraxPagingBasedOnEntriesId_62,
-                    isNumericTreesWithoutFrequenciesSupported: IndexDefinitionBaseServerSide.IndexVersion.IsNumericTreesWithoutFrequenciesSupported(index.Definition.Version)));
+                    isNumericalValuesWithoutFrequenciesSupported: IndexDefinitionBaseServerSide.IndexVersion.IsNumericTreesWithoutFrequenciesSupported(index.Definition.Version)));
             }
             catch (Exception e) when (e.IsOutOfMemory())
             {
