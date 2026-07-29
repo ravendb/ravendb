@@ -44,7 +44,7 @@ export default function ImportProcessingSection() {
 
             <div className="small-label mb-2">Import optimization &amp; security</div>
             <Card className="p-4">
-                <FormGroup>
+                <FormGroup marginClass="mb-0">
                     <FormSwitch control={control} name="processing.isSetMaxReadOpsPerSecond">
                         Set max read operations per second
                     </FormSwitch>
@@ -60,7 +60,7 @@ export default function ImportProcessingSection() {
                     </Collapse>
                 </FormGroup>
                 <hr className="my-1" />
-                <FormGroup>
+                <FormGroup marginClass="mb-0">
                     <FormSwitch control={control} name="processing.isEncrypted">
                         Imported file is encrypted
                     </FormSwitch>
