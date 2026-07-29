@@ -20,13 +20,19 @@ export type CdcLiveRawFrame = {
     }[];
 };
 
+export type CdcLiveBatchState = "success" | "pending" | "error";
+
 export type CdcLiveBatch = {
     key: string;
+    id: number;
+    taskName: string;
+    state: CdcLiveBatchState;
     started: string;
     ended: string | null;
     durationInMs: number;
     processed: number;
-    errors: number;
+    scriptErrors: number;
+    readErrors: number;
 };
 
 export type CdcLiveStatus = "active" | "error" | "idle";
@@ -35,9 +41,13 @@ export type CdcLivePerformance = {
     status: CdcLiveStatus;
     recentWrites: number;
     errorCount: number;
-    // Batches observed since the connection opened, including ones pruned from recentBatches.
-    totalBatches: number;
-    recentBatches: CdcLiveBatch[];
+    batches: CdcLiveBatch[];
+};
+
+type TrackedBatch = {
+    key: string;
+    taskName: string;
+    raw: CdcLiveRawBatch;
 };
 
 type CdcLiveConnection = "connecting" | "error" | "open";
@@ -63,10 +73,9 @@ export function useCdcLivePerformance(slug: string) {
     }
 
     useEffect(() => {
-        const batches = new Map<string, CdcLiveRawBatch>();
+        const batches = new Map<string, TrackedBatch>();
         const socket = new WebSocket(buildProgressUrl(slug));
         let isDisposed = false;
-        let totalBatches = 0;
 
         socket.onmessage = (event) => {
             if (isDisposed || typeof event.data !== "string") {
@@ -75,7 +84,7 @@ export function useCdcLivePerformance(slug: string) {
 
             const frame = parseFrame(event.data);
             if (frame) {
-                totalBatches += mergeFrame(batches, frame);
+                mergeFrame(batches, frame);
             }
 
             // Heartbeats (no frame) still land here every few seconds, keeping lag and
@@ -83,7 +92,7 @@ export function useCdcLivePerformance(slug: string) {
             setState({
                 connectionId,
                 connection: "open",
-                performance: shape(batches, totalBatches, Date.now()),
+                performance: shape(batches, Date.now()),
             });
         };
 
@@ -128,36 +137,16 @@ function parseFrame(data: string): CdcLiveRawFrame | null {
 }
 
 // The feed resends an in-progress batch (same Id) until it completes, so merge by
-// task/process/batch identity instead of appending. Returns the number of batches not
-// seen before, so the caller can keep a running total across pruning.
-function mergeFrame(batches: Map<string, CdcLiveRawBatch>, frame: CdcLiveRawFrame): number {
-    let newBatches = 0;
+// task/process/batch identity instead of appending.
+function mergeFrame(batches: Map<string, TrackedBatch>, frame: CdcLiveRawFrame) {
     for (const task of frame.Results ?? []) {
+        const taskName = task.TaskName ?? "";
         (task.Stats ?? []).forEach((process, processIndex) => {
-            for (const batch of process.Performance ?? []) {
-                const key = `${task.TaskName ?? ""}/${processIndex}/${batch.Id}`;
-                if (!batches.has(key)) {
-                    newBatches += 1;
-                }
-                batches.set(key, batch);
+            for (const raw of process.Performance ?? []) {
+                const key = `${taskName}/${processIndex}/${raw.Id}`;
+                batches.set(key, { key, taskName, raw });
             }
         });
-    }
-
-    pruneOldest(batches);
-    return newBatches;
-}
-
-export const MAX_TRACKED_BATCHES = 500;
-
-function pruneOldest(batches: Map<string, CdcLiveRawBatch>) {
-    if (batches.size <= MAX_TRACKED_BATCHES) {
-        return;
-    }
-
-    const oldestFirst = [...batches.entries()].sort(([, a], [, b]) => Date.parse(a.Started) - Date.parse(b.Started));
-    for (const [key] of oldestFirst.slice(0, batches.size - MAX_TRACKED_BATCHES)) {
-        batches.delete(key);
     }
 }
 
@@ -165,9 +154,9 @@ function pruneOldest(batches: Map<string, CdcLiveRawBatch>) {
 // does not carry (task disabled flag, persisted last-activity timestamp).
 const ACTIVE_WINDOW_MS = 60_000;
 
-function shape(batches: Map<string, CdcLiveRawBatch>, totalBatches: number, nowMs: number): CdcLivePerformance {
-    const orderedBatches = [...batches.entries()]
-        .map(([key, raw]) => ({ key, raw, startedMs: Date.parse(raw.Started) }))
+function shape(batches: Map<string, TrackedBatch>, nowMs: number): CdcLivePerformance {
+    const orderedBatches = [...batches.values()]
+        .map((tracked) => ({ ...tracked, startedMs: Date.parse(tracked.raw.Started) }))
         .sort((a, b) => a.startedMs - b.startedMs);
 
     let recentWrites = 0;
@@ -196,14 +185,25 @@ function shape(batches: Map<string, CdcLiveRawBatch>, totalBatches: number, nowM
         status,
         recentWrites,
         errorCount,
-        totalBatches,
-        recentBatches: orderedBatches.map(({ key, raw }) => ({
+        batches: orderedBatches.map(({ key, taskName, raw }) => ({
             key,
+            id: raw.Id,
+            taskName,
+            state: toBatchState(raw),
             started: raw.Started,
             ended: raw.Completed ?? null,
             durationInMs: raw.DurationInMs,
             processed: raw.NumberOfProcessedMessages,
-            errors: raw.ScriptProcessingErrorCount + raw.ReadErrorCount,
+            scriptErrors: raw.ScriptProcessingErrorCount,
+            readErrors: raw.ReadErrorCount,
         })),
     };
+}
+
+function toBatchState(raw: CdcLiveRawBatch): CdcLiveBatchState {
+    if (raw.ScriptProcessingErrorCount + raw.ReadErrorCount > 0) {
+        return "error";
+    }
+
+    return raw.Completed ? "success" : "pending";
 }
