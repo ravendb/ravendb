@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { CodeXml, MessageCircle, Plus, Send, type LucideIcon } from "lucide-react";
+import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import {
     DropdownMenu,
@@ -80,7 +81,14 @@ export function AddChannelMenu({
                         >
                             <option.icon className="mt-0.5 size-4 text-muted-foreground" aria-hidden="true" />
                             <div className="flex flex-col gap-0.5">
-                                <span className="leading-none font-medium">{option.label}</span>
+                                <span className="flex items-center gap-2">
+                                    <span className="leading-none font-medium">{option.label}</span>
+                                    {!option.enabled && (
+                                        <Badge variant="secondary" className="text-muted-foreground">
+                                            Coming soon
+                                        </Badge>
+                                    )}
+                                </span>
                                 <span className="text-xs text-muted-foreground">{option.description}</span>
                             </div>
                         </DropdownMenuItem>
