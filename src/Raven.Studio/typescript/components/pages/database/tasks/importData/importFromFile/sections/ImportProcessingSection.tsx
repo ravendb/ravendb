@@ -1,41 +1,20 @@
-import React, { useState } from "react";
+import React from "react";
 import { useFormContext, useWatch } from "react-hook-form";
-import Button from "react-bootstrap/Button";
 import Collapse from "react-bootstrap/Collapse";
-import Dropdown from "react-bootstrap/Dropdown";
-import Form from "react-bootstrap/Form";
-import InputGroup from "react-bootstrap/InputGroup";
 import { Icon } from "components/common/Icon";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { FormAceEditor, FormGroup, FormInput, FormSwitch } from "components/common/Form";
 import ImportSection from "./ImportSection";
 import { ImportFromFileFormData } from "../importFromFileValidation";
-import { buildImportCurlCommand, ImportCommandType } from "../importFromFileUtils";
-import { useImportLicenseRestrictions } from "../useImportLicenseRestrictions";
-import { useAppSelector } from "components/store";
-import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import Code from "components/common/Code";
 import Card from "react-bootstrap/Card";
-import copyToClipboard = require("common/copyToClipboard");
 
 export default function ImportProcessingSection() {
     const { control } = useFormContext<ImportFromFileFormData>();
-    const formData = useWatch({ control });
-    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const [commandType, setCommandType] = useState<ImportCommandType>("PowerShell");
 
-    const isUseTransformScript = !!formData.processing?.isUseTransformScript;
-    const isSetMaxReadOps = !!formData.processing?.isSetMaxReadOpsPerSecond;
-    const isEncrypted = !!formData.processing?.isEncrypted;
-
-    const { restrictedFeatures, restrictedOngoingTasks } = useImportLicenseRestrictions();
-    const curlCommand = buildImportCurlCommand(
-        commandType,
-        formData as ImportFromFileFormData,
-        databaseName,
-        restrictedFeatures.map((x) => x.settingKey),
-        restrictedOngoingTasks.map((x) => x.taskKey)
-    );
+    const isUseTransformScript = useWatch({ control, name: "processing.isUseTransformScript" });
+    const isSetMaxReadOps = useWatch({ control, name: "processing.isSetMaxReadOpsPerSecond" });
+    const isEncrypted = useWatch({ control, name: "processing.isEncrypted" });
 
     return (
         <ImportSection id="import-processing" title="Import processing & security">
@@ -64,13 +43,13 @@ export default function ImportProcessingSection() {
             </div>
 
             <div className="small-label mb-2">Import optimization &amp; security</div>
-            <Card className="p-4 mb-4">
+            <Card className="p-4">
                 <FormGroup>
                     <FormSwitch control={control} name="processing.isSetMaxReadOpsPerSecond">
                         Set max read operations per second
                     </FormSwitch>
                     <Collapse in={isSetMaxReadOps}>
-                        <div>
+                        <div className="mt-3">
                             <FormInput
                                 control={control}
                                 name="processing.maxReadOpsPerSecond"
@@ -80,12 +59,13 @@ export default function ImportProcessingSection() {
                         </div>
                     </Collapse>
                 </FormGroup>
+                <hr className="my-1" />
                 <FormGroup>
                     <FormSwitch control={control} name="processing.isEncrypted">
                         Imported file is encrypted
                     </FormSwitch>
                     <Collapse in={isEncrypted}>
-                        <div>
+                        <div className="mt-3">
                             <FormInput
                                 control={control}
                                 name="processing.encryptionKey"
@@ -99,44 +79,14 @@ export default function ImportProcessingSection() {
                     </Collapse>
                 </FormGroup>
             </Card>
-
-            <div className="small-label mb-2">Import command</div>
-            <div className="card p-4">
-                <InputGroup>
-                    <Dropdown>
-                        <Dropdown.Toggle variant="secondary">Import Command - {commandType}</Dropdown.Toggle>
-                        <Dropdown.Menu>
-                            {commandTypes.map((type) => (
-                                <Dropdown.Item key={type} onClick={() => setCommandType(type)}>
-                                    Import Command - {type}
-                                </Dropdown.Item>
-                            ))}
-                        </Dropdown.Menu>
-                    </Dropdown>
-                    <Form.Control
-                        readOnly
-                        value={curlCommand}
-                        onClick={(e) => (e.target as HTMLInputElement).select()}
-                    />
-                    <Button
-                        variant="secondary"
-                        title="Copy import command"
-                        onClick={() => copyToClipboard.copy(curlCommand, "Import command was copied to clipboard.")}
-                    >
-                        <Icon icon="copy-to-clipboard" margin="m-0" />
-                    </Button>
-                </InputGroup>
-            </div>
         </ImportSection>
     );
 }
 
 const codeSample = `const name = this.FirstName;
-    
+
 if (name === "Bob")
     throw 'skip'; // filter-out
-    
+
 this.Freight = 15.3;
     `;
-
-const commandTypes: ImportCommandType[] = ["PowerShell", "Cmd", "Bash"];

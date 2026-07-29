@@ -27,6 +27,7 @@ import DataToImportSection from "./sections/DataToImportSection";
 import ConfigurationToImportSection from "./sections/ConfigurationToImportSection";
 import ImportProcessingSection from "./sections/ImportProcessingSection";
 import ImportResultModal from "./ImportResultModal";
+import ImportCommandModal from "./ImportCommandModal";
 import IconName from "typings/server/icons";
 
 type SmugglerProgress = Raven.Client.Documents.Smuggler.SmugglerProgressBase;
@@ -83,6 +84,7 @@ export default function ImportDatabaseFromFile() {
     const [uploadPercent, setUploadPercent] = useState<number | null>(null);
     const [operationState, setOperationState] = useState<OperationState | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isCommandModalOpen, setIsCommandModalOpen] = useState(false);
 
     const isUploading = uploadPercent != null;
     useDirtyFlag(isUploading);
@@ -247,6 +249,13 @@ export default function ImportDatabaseFromFile() {
                     >
                         <Icon icon="import-database" /> Import database
                     </Button>
+                    <Button
+                        variant="secondary"
+                        className="rounded-pill"
+                        onClick={() => setIsCommandModalOpen(true)}
+                    >
+                        <Icon icon="code" /> Use import command
+                    </Button>
                     {uploadPercent != null && (
                         <div>
                             <ProgressBar animated now={uploadPercent} label={`${uploadPercent}%`} />
@@ -274,6 +283,7 @@ export default function ImportDatabaseFromFile() {
                         </fieldset>
                     </div>
                 </div>
+                {isCommandModalOpen && <ImportCommandModal onClose={() => setIsCommandModalOpen(false)} />}
                 {isModalOpen && operationState && (
                     <ImportResultModal
                         progress={operationState.progress}

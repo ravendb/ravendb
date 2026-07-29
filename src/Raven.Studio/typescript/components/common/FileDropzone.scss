@@ -25,7 +25,8 @@
         position: absolute;
         inset: 0;
         opacity: 0;
-        z-index: 9999;
+        // covers only the sibling dropzone body - anything higher leaks above modals/dropdowns
+        z-index: 1;
     }
 
     &:hover {
