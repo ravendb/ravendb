@@ -180,6 +180,30 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
         }
     }
 
+    // Returns the schema at the head of the effective search_path. SQLAlchemy's PGDialect calls
+    // this on every connect (_get_default_schema_name) and aborts the handshake if it fails.
+    // We expose a single namespace for user-visible objects - "public", oid 2200 in
+    // pg_namespace.csv - so the answer is that constant. It also agrees with what
+    // CurrentSettingFunction reports for 'search_path' ("$user", public): the per-user schema
+    // doesn't exist here, so "public" is the first entry that resolves.
+    internal sealed class CurrentSchemaFunction : ScalarFunction
+    {
+        private const string Schema = "public";
+
+        public override string Name => "current_schema";
+        public override string ResultColumnName => "current_schema";
+        public override PgType PgType => PgName.Default;
+
+        public override bool TryEvaluate(IReadOnlyList<object> args, VirtualQueryContext ctx, out object result)
+        {
+            result = null;
+            if (args is { Count: > 0 })
+                return false;
+            result = Schema;
+            return true;
+        }
+    }
+
     // Maps a PG encoding integer to its name. We always serve UTF8 (encoding id 6 in PG); for any
     // input we return "UTF8" since that's the only encoding our wire format produces.
     internal sealed class PgEncodingToCharFunction : ScalarFunction

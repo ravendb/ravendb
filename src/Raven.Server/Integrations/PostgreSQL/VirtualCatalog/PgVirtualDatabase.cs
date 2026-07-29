@@ -45,6 +45,7 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
             RegisterFunction(new VersionFunction());
             RegisterFunction(new CurrentSettingFunction());
             RegisterFunction(new CurrentDatabaseFunction());
+            RegisterFunction(new CurrentSchemaFunction());
             RegisterFunction(new PgEncodingToCharFunction());
             RegisterFunction(new HasDatabasePrivilegeFunction());
             RegisterFunction(new HasSchemaPrivilegeFunction());
