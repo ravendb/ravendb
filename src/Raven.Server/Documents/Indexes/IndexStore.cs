@@ -610,6 +610,10 @@ namespace Raven.Server.Documents.Indexes
 
                     if (replacementIndex != null)
                     {
+                        creationOptions = GetIndexCreationOptions(definition, replacementIndex.ToIndexInformationHolder(), _documentDatabase.Configuration, out _);
+                        if (creationOptions == IndexCreationOptions.Noop)
+                            return null;
+
                         if (replacementIndex is MapReduceIndex replacementMapReduceIndex && replacementMapReduceIndex.OutputReduceToCollection != null)
                         {
                             if (replacementMapReduceIndex.Definition.ReduceOutputIndex != null &&
