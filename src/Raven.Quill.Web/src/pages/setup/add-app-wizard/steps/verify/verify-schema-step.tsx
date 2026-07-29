@@ -12,6 +12,7 @@ import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-sto
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { getTableKey, isTableSupported } from "@/pages/setup/add-app-wizard/discover-utils";
 import { ImportedConfigAlert } from "@/pages/setup/add-app-wizard/imported-config-alert";
+import { CdcDryRunAlert } from "@/pages/setup/add-app-wizard/steps/verify/cdc-dry-run-alert";
 import { DefineSchemasSheet } from "@/pages/setup/add-app-wizard/steps/verify/define-schemas-sheet";
 import { NeedsConfigTablesTable } from "@/pages/setup/add-app-wizard/steps/verify/needs-config-tables-table";
 import { useDiscoverTablesMutation } from "@/pages/setup/add-app-wizard/steps/verify/use-discover-tables";
@@ -105,6 +106,8 @@ export function VerifySchemaStep() {
                 <DiscoverLoadingSkeleton />
             ) : allTables.length > 0 ? (
                 <>
+                    <CdcDryRunAlert />
+
                     <div className="flex items-center gap-2">
                         <InputGroup className="max-w-sm">
                             <InputGroupAddon>

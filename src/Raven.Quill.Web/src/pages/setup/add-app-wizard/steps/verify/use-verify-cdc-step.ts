@@ -1,6 +1,7 @@
 import { useFormContext } from "react-hook-form";
 import { toast } from "sonner";
 import { api } from "@/api/api";
+import type { WizardProgress } from "@/components/form/wizard/form-wizard";
 import { toWizardStepError } from "@/components/form/wizard/wizard-step-error";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
@@ -19,7 +20,7 @@ export function computeVerifyCdcKey(verify: {
 export function useVerifyCdcStep() {
     const { getValues } = useFormContext<AppFormData>();
 
-    return async () => {
+    return async (progress: WizardProgress) => {
         const store = useSetupWizardStore.getState();
         const selectedTables = getValues("verifySchema.tables");
         const verifyCdcKey = computeVerifyCdcKey({ connectKey: store.connectKey, selectedTables });
@@ -27,6 +28,8 @@ export function useVerifyCdcStep() {
         if (verifyCdcKey === store.verifiedCdcKey) {
             return;
         }
+
+        progress.report("Verifying CDC access...");
 
         const result = await api.services.setup.verifyCdc({
             tables: selectedTables.map((table) => ({

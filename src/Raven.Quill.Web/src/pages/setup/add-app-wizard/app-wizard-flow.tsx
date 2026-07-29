@@ -62,13 +62,14 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
         },
         verifySchema: {
             title: "Verify your schema",
-            description: "Fetch existing tables from the linked source.",
+            description:
+                "Choose which of the discovered tables to capture. Continuing checks that CDC works for that selection.",
             bodyComponent: VerifySchemaStep,
             isFullHeight: true,
             validate: "verifySchema",
             // the CDC dry run gates Next, so only warm the AI suggestion once it passes
-            beforeNext: async () => {
-                await verifyCdcBeforeNext();
+            beforeNext: async (progress) => {
+                await verifyCdcBeforeNext(progress);
                 verifySchemaBeforeNext();
             },
         },
