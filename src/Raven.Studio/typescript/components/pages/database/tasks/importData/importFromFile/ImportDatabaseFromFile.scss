@@ -20,6 +20,44 @@
     overflow-y: auto;
 }
 
+// same look as .gather-debug-info-scope-btn (Gather Debug Info - select databases)
+.import-scope-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: sizes.$gutter-xs;
+    flex: 1;
+    padding: sizes.$gutter-sm sizes.$gutter;
+    border: sizes.$border-width solid colors.$border-color-light-var;
+    border-radius: sizes.$border-radius;
+    background: transparent;
+    color: colors.$text-color-var;
+    cursor: pointer;
+    transition: filter 0.1s;
+
+    &:hover:not(.active) {
+        filter: colors.$hover-filter-var;
+    }
+
+    &.active {
+        background: var(--faded-primary);
+        border-color: var(--text-faded-primary);
+        color: var(--text-color);
+
+        i {
+            color: var(--text-faded-primary);
+        }
+
+        body[data-theme="blue"] & {
+            color: var(--bs-body-color);
+
+            i {
+                color: var(--text-faded-primary);
+            }
+        }
+    }
+}
+
 .import-collections-list {
     max-height: 450px;
     overflow-y: auto;

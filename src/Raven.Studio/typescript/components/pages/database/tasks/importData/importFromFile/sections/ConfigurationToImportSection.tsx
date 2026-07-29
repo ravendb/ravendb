@@ -183,21 +183,23 @@ export default function ConfigurationToImportSection() {
                 Select database settings
             </div>
             <Card className="p-4">
-                <div className="d-flex gap-3">
-                    <Button
-                        variant={isImportAllSettings ? "primary" : "outline-secondary"}
-                        className="flex-grow-1 py-3"
+                <div className="d-flex gap-2">
+                    <button
+                        type="button"
+                        className={classNames("import-scope-btn", { active: isImportAllSettings })}
                         onClick={() => setValue("configuration.isImportAllSettings", true, { shouldDirty: true })}
                     >
-                        <Icon icon="database" /> Import all settings
-                    </Button>
-                    <Button
-                        variant={!isImportAllSettings ? "primary" : "outline-secondary"}
-                        className="flex-grow-1 py-3"
+                        <Icon icon="database" margin="m-0" />
+                        Import all settings
+                    </button>
+                    <button
+                        type="button"
+                        className={classNames("import-scope-btn", { active: !isImportAllSettings })}
                         onClick={() => setValue("configuration.isImportAllSettings", false, { shouldDirty: true })}
                     >
-                        <Icon icon="settings" addon="edit" /> Customize
-                    </Button>
+                        <Icon icon="settings" addon="edit" margin="m-0" />
+                        Customize
+                    </button>
                 </div>
                 {!isImportAllSettings && (
                     <Table className="mb-0 mt-4">
