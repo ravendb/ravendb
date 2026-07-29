@@ -185,23 +185,31 @@ function shape(batches: Map<string, TrackedBatch>, nowMs: number): CdcLivePerfor
         status,
         recentWrites,
         errorCount,
-        batches: orderedBatches.map(({ key, taskName, raw }) => ({
-            key,
-            id: raw.Id,
-            taskName,
-            state: toBatchState(raw),
-            started: raw.Started,
-            ended: raw.Completed ?? null,
-            durationInMs: raw.DurationInMs,
-            processed: raw.NumberOfProcessedMessages,
-            scriptErrors: raw.ScriptProcessingErrorCount,
-            readErrors: raw.ReadErrorCount,
-        })),
+        // A batch that moved nothing is noise in the log. An errored batch usually processed
+        // nothing precisely because it failed, so that one still has to be visible.
+        batches: orderedBatches
+            .filter(({ raw }) => raw.NumberOfProcessedMessages > 0 || hasErrors(raw))
+            .map(({ key, taskName, raw }) => ({
+                key,
+                id: raw.Id,
+                taskName,
+                state: toBatchState(raw),
+                started: raw.Started,
+                ended: raw.Completed ?? null,
+                durationInMs: raw.DurationInMs,
+                processed: raw.NumberOfProcessedMessages,
+                scriptErrors: raw.ScriptProcessingErrorCount,
+                readErrors: raw.ReadErrorCount,
+            })),
     };
 }
 
+function hasErrors(raw: CdcLiveRawBatch): boolean {
+    return raw.ScriptProcessingErrorCount + raw.ReadErrorCount > 0;
+}
+
 function toBatchState(raw: CdcLiveRawBatch): CdcLiveBatchState {
-    if (raw.ScriptProcessingErrorCount + raw.ReadErrorCount > 0) {
+    if (hasErrors(raw)) {
         return "error";
     }
 
