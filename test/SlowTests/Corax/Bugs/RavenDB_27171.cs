@@ -71,11 +71,11 @@ public class RavenDB_27171(ITestOutputHelper output) : StorageTest(output)
     [RavenTheory(RavenTestCategory.Corax)]
     [InlineData(true)]
     [InlineData(false)]
-    public void DuplicatedNumericValuesAreRemovedCorrectly(bool numericTreesWithoutFrequencies)
+    public void DuplicatedNumericValuesAreRemovedCorrectly(bool numericalValuesWithoutFrequencies)
     {
-        var supportedFeatures = numericTreesWithoutFrequencies
+        var supportedFeatures = numericalValuesWithoutFrequencies
             ? SupportedFeatures.All
-            : new SupportedFeatures(isPhraseQuerySupported: true, isStoreOnlySupported: true, isPaginationBasedOnEntryIdSupported: true, isNumericTreesWithoutFrequenciesSupported: false);
+            : new SupportedFeatures(isPhraseQuerySupported: true, isStoreOnlySupported: true, isPaginationBasedOnEntryIdSupported: true, isNumericalValuesWithoutFrequenciesSupported: false);
 
         using (var bsc = new ByteStringContext(SharedMultipleUseFlag.None))
         using (var knownFields = CreateKnownFields(bsc))
