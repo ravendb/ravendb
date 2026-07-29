@@ -61,14 +61,33 @@
 .import-collections-list {
     max-height: 450px;
     overflow-y: auto;
+}
 
-    // .table prefix needed to out-rank bootstrap's `.bs5 .table > :not(caption) > * > *`
-    // which paints cells with transparent --bs-table-bg
-    .table thead th {
-        position: sticky;
-        top: 0;
-        z-index: 2;
-        background-color: colors.$panel-bg-1-var;
+// header bar for switch lists - same look as .gather-debug-info-db-header (Gather Debug Info)
+.import-list-header {
+    display: flex;
+    align-items: center;
+    gap: sizes.$gutter-xs;
+    padding: sizes.$gutter-xs;
+    background: var(--panel-bg-3);
+    border: sizes.$border-width solid colors.$border-color-light-var;
+    border-radius: sizes.$border-radius;
+
+    .form-check {
+        padding-left: 0;
+        min-height: unset;
+    }
+}
+
+.import-list-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: sizes.$gutter-xxs sizes.$gutter-xs;
+    border-bottom: sizes.$border-width solid colors.$border-color-light-var;
+
+    &:last-child {
+        border-bottom: none;
     }
 }
 
