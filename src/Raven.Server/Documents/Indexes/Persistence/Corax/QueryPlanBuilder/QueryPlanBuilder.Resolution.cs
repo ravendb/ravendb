@@ -664,7 +664,7 @@ internal static partial class QueryPlanBuilder
 
         if (orderMatchesScanOrder == false)
         {
-            rejectReason = $"the ORDER BY type ({sortFieldType}) doesn't match the term type of the filter driving the scan ({drivingTermType})";
+            rejectReason = "the ORDER BY type doesn't match the term type of the filter driving the scan";
             return false;
         }
 
