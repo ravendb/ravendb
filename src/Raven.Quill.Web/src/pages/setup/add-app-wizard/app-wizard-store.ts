@@ -7,6 +7,9 @@ import {
 
 export type ImportState = "none" | "locked" | "unlocked";
 
+/** Outcome of a connect attempt together with the connect key it ran with. */
+export type ConnectionAttempt = { key: string; error: Error | null };
+
 export type SetupWizardState = {
     reset: () => void;
     discoverResult: DiscoverResponse | null;
@@ -15,18 +18,27 @@ export type SetupWizardState = {
     importState: ImportState;
     lockImportedConfig: () => void;
     unlockImportedConfig: () => void;
+    /**
+     * Last connect attempt made via "Test connection" (or a previous Next). Both the verified state and
+     * the failure alert are derived from it, so neither survives an edit to the connection inputs.
+     */
+    connectionAttempt: ConnectionAttempt | null;
+    setConnectionAttempt: (attempt: ConnectionAttempt) => void;
+    /**
+     * The keys below record what the wizard already did for a given set of inputs, so a step can skip
+     * work when nothing it depends on changed. Everything the server keeps per app - the discovery, the
+     * CDC dry run, the stored map configuration - is keyed by connectKey, because that is the state
+     * document those calls wrote into. The mapping the operator edits in the form is keyed by the source
+     * alone, so renaming the app keeps it.
+     */
     connectKey: string | null;
     setConnectKey: (key: string) => void;
-    /** Connection already verified via "Test connection" (or a previous Next), so Next can skip the connect call. */
-    testedConnectKey: string | null;
-    setTestedConnectKey: (key: string) => void;
     verifiedCdcKey: string | null;
     setVerifiedCdcKey: (key: string) => void;
     appliedMapKey: string | null;
     setAppliedMapKey: (key: string) => void;
     mapTablesKey: string | null;
     setMapTablesKey: (key: string) => void;
-    invalidateMapping: () => void;
     mapActiveTable: MapActiveTable | null;
     setMapActiveTable: (table: MapActiveTable | null) => void;
     /** Bumped by focusMapTable so the explorer scrolls the focused table into view. */
@@ -53,7 +65,7 @@ const initialState: Pick<
     | "discoverSchemas"
     | "importState"
     | "connectKey"
-    | "testedConnectKey"
+    | "connectionAttempt"
     | "verifiedCdcKey"
     | "appliedMapKey"
     | "mapTablesKey"
@@ -68,7 +80,7 @@ const initialState: Pick<
     discoverSchemas: [],
     importState: "none",
     connectKey: null,
-    testedConnectKey: null,
+    connectionAttempt: null,
     verifiedCdcKey: null,
     appliedMapKey: null,
     mapTablesKey: null,
@@ -91,11 +103,10 @@ export const useSetupWizardStore = create<SetupWizardState>((set) => ({
     lockImportedConfig: () => set({ importState: "locked" }),
     unlockImportedConfig: () => set({ importState: "unlocked" }),
     setConnectKey: (key) => set({ connectKey: key }),
-    setTestedConnectKey: (key) => set({ testedConnectKey: key }),
+    setConnectionAttempt: (attempt) => set({ connectionAttempt: attempt }),
     setVerifiedCdcKey: (key) => set({ verifiedCdcKey: key }),
     setAppliedMapKey: (key) => set({ appliedMapKey: key }),
     setMapTablesKey: (key) => set({ mapTablesKey: key }),
-    invalidateMapping: () => set({ appliedMapKey: null, mapTablesKey: null }),
     setMapActiveTable: (table) => set({ mapActiveTable: table }),
     focusMapTable: (table) =>
         set((state) => ({

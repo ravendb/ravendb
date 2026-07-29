@@ -6,10 +6,13 @@ import { useApplyMapTables } from "@/pages/setup/add-app-wizard/steps/map-tables
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import type { WizardProgress } from "@/components/form/wizard/form-wizard";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
+import { computeConnectKey } from "@/pages/setup/add-app-wizard/steps/connect/use-connect-source-step";
 import { useFormContext } from "react-hook-form";
 
-function computeMapTablesKey(tables: AppFormData["mapTables"]["tables"]): string {
-    return JSON.stringify(mapFormTablesToDto(tables));
+// The server stores the mapping on the state document of the slug it was posted for, so the call has
+// to run again for a new slug (or a new source) even when the tables themselves did not change.
+function computeMapTablesKey(connectKey: string, tables: AppFormData["mapTables"]["tables"]): string {
+    return JSON.stringify({ connectKey, tables: mapFormTablesToDto(tables) });
 }
 
 export function useMapTablesStep() {
@@ -27,8 +30,9 @@ export function useMapTablesStep() {
             store.closeMapTablesRawView();
         }
 
+        const connection = getValues("externalConnection");
         const formTables = getValues("mapTables.tables");
-        const mapTablesKey = computeMapTablesKey(formTables);
+        const mapTablesKey = computeMapTablesKey(computeConnectKey(connection), formTables);
 
         if (mapTablesKey === store.mapTablesKey) {
             return;
@@ -37,7 +41,7 @@ export function useMapTablesStep() {
         progress.report("Applying mapping...");
         await api.services.setup.map({
             tables: mapFormTablesToDto(formTables),
-            slug: getValues("externalConnection").slug,
+            slug: connection.slug,
         });
 
         const firstTable = formTables[0];

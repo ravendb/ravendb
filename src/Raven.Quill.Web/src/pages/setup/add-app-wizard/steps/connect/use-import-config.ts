@@ -19,7 +19,10 @@ import {
     getSourceTableLabel,
 } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
 import { discoverTables } from "@/pages/setup/add-app-wizard/steps/verify/use-discover-tables";
-import { computeConnectKey } from "@/pages/setup/add-app-wizard/steps/connect/use-connect-source-step";
+import {
+    computeConnectKey,
+    computeSourceKey,
+} from "@/pages/setup/add-app-wizard/steps/connect/use-connect-source-step";
 import { toWizardStepError } from "@/components/form/wizard/wizard-step-error";
 import { computeMapKey } from "@/pages/setup/add-app-wizard/steps/map/use-map-schema-step";
 
@@ -121,9 +124,14 @@ export function useImportConfig() {
                 slug: getValues("externalConnection").slug,
             });
             store.setConnectKey(connectKey);
-            store.setTestedConnectKey(connectKey);
+            store.setConnectionAttempt({ key: connectKey, error: null });
             store.setAppliedMapKey(
-                computeMapKey({ source: "manual", aiPrompt: "", selectedTables: verifySchemaTables }),
+                computeMapKey({
+                    sourceKey: computeSourceKey(config),
+                    source: "manual",
+                    aiPrompt: "",
+                    selectedTables: verifySchemaTables,
+                }),
             );
             store.lockImportedConfig();
         },

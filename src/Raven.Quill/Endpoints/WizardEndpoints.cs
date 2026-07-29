@@ -107,13 +107,25 @@ public static class WizardEndpoints
         var wizardId = WizardState.DocumentIdFor(body.Slug);
         using (var session = store.OpenAsyncSession())
         {
-            var state = new WizardState
+            var state = await session.LoadAsync<WizardState>(wizardId, ct) ?? new WizardState();
+
+            // Re-testing the same source must keep the discovery and mapping already made against it:
+            // the wizard skips those calls when its inputs did not change and expects them to still be
+            // here. A different source, on the other hand, invalidates both.
+            var isSameSource = state.Provider == factoryName && state.SourceConnectionString == connectionString;
+            if (!isSameSource)
             {
-                Provider = factoryName,
-                SourceConnectionString = connectionString,
-                LastVerifyResult = result,
-                LastVerifyAt = DateTime.UtcNow,
-            };
+                state.LastDiscoveredSchema = null;
+                state.LastDiscoverAt = null;
+                state.LastMapConfiguration = null;
+                state.LastMapAt = null;
+            }
+
+            state.Provider = factoryName;
+            state.SourceConnectionString = connectionString;
+            state.LastVerifyResult = result;
+            state.LastVerifyAt = DateTime.UtcNow;
+
             await session.StoreAsync(state, wizardId, ct);
             await session.SaveChangesAsync(ct);
         }

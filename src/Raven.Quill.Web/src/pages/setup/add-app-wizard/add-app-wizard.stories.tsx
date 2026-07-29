@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FormProvider, useForm } from "react-hook-form";
@@ -18,6 +19,7 @@ import { getAppFlow, useAppSteps } from "./app-wizard-flow";
 import { useSetupWizardStore } from "./app-wizard-store";
 import { isTableSupported } from "./discover-utils";
 import { appSchema, type AppFormData, type AppStepId } from "./app-wizard-validation";
+import { computeSourceKey } from "./steps/connect/use-connect-source-step";
 import { computeMapKey } from "./steps/map/use-map-schema-step";
 import { scaffoldRootTable } from "./steps/map-tables/map-tables-utils";
 
@@ -76,13 +78,20 @@ function AppWizardAtStep({
     initialStep,
     discovery = sampleDiscovery,
     isMappingApplied = true,
+    hasSelectedTables = true,
 }: {
     initialStep: AppStepId;
     discovery?: DiscoverResponse;
     /** When false, the map-tables step treats its seeded tables as stale and asks the AI again. */
     isMappingApplied?: boolean;
+    /** When false, the verify step starts with nothing selected, as it does on a fresh discovery. */
+    hasSelectedTables?: boolean;
 }) {
-    const [seed] = useState(() => buildSeed(discovery));
+    const [seed] = useState(() => {
+        const values = buildSeed(discovery);
+
+        return hasSelectedTables ? values : { ...values, verifySchema: { tables: [] } };
+    });
 
     useState(() =>
         useSetupWizardStore.setState({
@@ -92,6 +101,7 @@ function AppWizardAtStep({
             connectKey: null,
             appliedMapKey: isMappingApplied
                 ? computeMapKey({
+                      sourceKey: computeSourceKey(seed.externalConnection),
                       source: seed.map.source,
                       aiPrompt: seed.map.aiPrompt,
                       selectedTables: seed.verifySchema.tables,
@@ -166,6 +176,26 @@ const connectFailureHandlers = {
 export const ConnectSourceError: Story = {
     parameters: { msw: { handlers: connectFailureHandlers } },
     render: () => <AppWizardAtStep initialStep="externalConnection" />,
+    // A failure belongs to the connection it was made with: editing any part of that connection
+    // drops it, and exactly one alert shows at a time.
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        const findAlerts = () => canvas.queryAllByText(/could not connect to the source database/i);
+
+        await userEvent.click(canvas.getByRole("button", { name: /test connection/i }));
+        await waitFor(() => expect(findAlerts()).toHaveLength(1));
+
+        await userEvent.click(canvas.getByRole("button", { name: /sql server/i }));
+        await waitFor(() => expect(findAlerts()).toHaveLength(0));
+
+        await userEvent.click(canvas.getByRole("button", { name: /test connection/i }));
+        await waitFor(() => expect(findAlerts()).toHaveLength(1));
+
+        // Back on the provider that failed first, the alert stays gone and nothing claims success.
+        await userEvent.click(canvas.getByRole("button", { name: /postgresql/i }));
+        await waitFor(() => expect(findAlerts()).toHaveLength(0));
+        expect(canvas.getByRole("button", { name: /test connection/i })).toBeEnabled();
+    },
 };
 
 // Verified tables (one with table-level warnings), tables that need configuration (CDC
@@ -181,11 +211,37 @@ export const VerifySchemaDiscoveryFailed: Story = {
     render: () => <AppWizardAtStep initialStep="verifySchema" discovery={failedDiscovery} />,
 };
 
+// The array-level "at least one table" error must clear as soon as a table is selected.
+export const VerifySchemaWithoutSelection: Story = {
+    render: () => <AppWizardAtStep initialStep="verifySchema" hasSelectedTables={false} />,
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        await userEvent.click(canvas.getByRole("button", { name: /next/i }));
+        await waitFor(() => expect(canvas.getByText("At least one table is required")).toBeInTheDocument());
+
+        await userEvent.click(canvas.getAllByRole("checkbox", { name: "Select row" })[0]);
+        await waitFor(() => expect(canvas.queryByText("At least one table is required")).not.toBeInTheDocument());
+    },
+};
+
 export const VerifySchemaCdcVerificationFailed: Story = {
     parameters: {
         msw: { handlers: { setup: [setupMocks.verifyCdc(failedCdcVerification), ...defaultApiMocks.setup] } },
     },
     render: () => <AppWizardAtStep initialStep="verifySchema" />,
+    // The dry run's blockers keep the wizard on this step and stay on screen until the selection changes.
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        const findAlert = () => canvas.queryByText(/must have the REPLICATION role attribute/i);
+
+        await userEvent.click(canvas.getByRole("button", { name: /next/i }));
+        await waitFor(() => expect(findAlert()).toBeInTheDocument());
+        expect(canvas.getByRole("heading", { name: /verify your schema/i })).toBeInTheDocument();
+
+        await userEvent.click(canvas.getAllByRole("checkbox", { name: "Select row" })[0]);
+        await waitFor(() => expect(findAlert()).not.toBeInTheDocument());
+    },
 };
 
 export const MapSchema: Story = {

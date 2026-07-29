@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { RowSelectionState } from "@tanstack/react-table";
-import { useFormContext } from "react-hook-form";
+import { useFormContext, useFormState } from "react-hook-form";
 import { CheckIcon, PlusIcon, SearchIcon, TriangleAlertIcon } from "lucide-react";
 import type { DiscoverResponse, DiscoverTableResponse } from "@/api/generated/server-api";
 import { Alert } from "@/components/shadcn/ui/alert";
@@ -26,7 +26,10 @@ import {
 type VerifyTab = "verified" | "needs-configuration";
 
 export function VerifySchemaStep() {
-    const { setValue, getValues, formState } = useFormContext<AppFormData>();
+    const { control, setValue, getValues } = useFormContext<AppFormData>();
+    // formState off the context does not re-render this step; only its own subscription does.
+    const { errors } = useFormState({ control, name: "verifySchema.tables" });
+    const tablesError = errors.verifySchema?.tables;
     const discoverResult = useSetupWizardStore((state) => state.discoverResult);
     const discoverSchemas = useSetupWizardStore((state) => state.discoverSchemas);
     const isLocked = useSetupWizardStore((state) => state.importState) === "locked";
@@ -176,9 +179,7 @@ export function VerifySchemaStep() {
                 <NoTablesFound schemas={discoverSchemas} onCustomizeSchemas={() => setIsSchemasSheetOpen(true)} />
             ) : null}
 
-            {formState.errors?.verifySchema?.tables && (
-                <Alert variant="destructive">{formState.errors.verifySchema.tables.message}</Alert>
-            )}
+            {tablesError && <Alert variant="destructive">{tablesError.message}</Alert>}
 
             <DefineSchemasSheet
                 isOpen={isSchemasSheetOpen}
