@@ -1430,6 +1430,31 @@ ORDER BY ord";
             Assert.Equal("0", DecodeCell(arrayTable, row: 0, column: 0));
         }
 
+        // SQLAlchemy's PGDialect.initialize() calls _get_default_schema_name() -> `select
+        // current_schema()` right after the version probe, on every connect. Without it the
+        // handshake dies with StatementTooComplex before any user query runs (Zoho Desk #7031).
+        // We serve a single namespace, so the answer is always "public" (oid 2200 in
+        // pg_namespace.csv), consistent with current_setting('search_path').
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Current_schema_function_returns_public()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute("select current_schema()", EmptyCtx(), out var table));
+            Assert.NotNull(table);
+            Assert.Single(table.Columns);
+            Assert.Equal("current_schema", table.Columns[0].Name);
+            Assert.Single(table.Data);
+            Assert.Equal("public", DecodeCell(table, row: 0, column: 0));
+        }
+
+        // current_schema() takes no arguments in PG; the one-arg form is current_schema(text) in
+        // no PG version. Reject rather than silently ignoring the argument.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Current_schema_with_argument_falls_through()
+        {
+            Assert.False(PgVirtualInterpreter.TryExecute("select current_schema('public')", EmptyCtx(), out var table));
+            Assert.Null(table);
+        }
+
         private static VirtualQueryContext EmptyCtx() => new();
 
         private static string DecodeCell(Raven.Server.Integrations.PostgreSQL.Messages.PgTable table, int row, int column)
