@@ -3,7 +3,7 @@ import { Control, FieldPath, useFormContext, useWatch } from "react-hook-form";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Collapse from "react-bootstrap/Collapse";
-import Table from "react-bootstrap/Table";
+import Form from "react-bootstrap/Form";
 import { Icon } from "components/common/Icon";
 import LicenseRestrictedBadge, { LicenseBadgeText } from "components/common/LicenseRestrictedBadge";
 import { FormSwitch } from "components/common/Form";
@@ -24,7 +24,7 @@ import {
 import classNames from "classnames";
 
 export default function ConfigurationToImportSection() {
-    const { control, setValue } = useFormContext<ImportFromFileFormData>();
+    const { control, setValue, resetField } = useFormContext<ImportFromFileFormData>();
     const {
         isSettingRestricted,
         getRestrictionTooltip,
@@ -64,17 +64,25 @@ export default function ConfigurationToImportSection() {
 
     const selectableOngoingTaskKeys = ongoingTaskKeys.filter((key) => !isOngoingTaskRestricted(key));
 
-    const areAllCustomizedTasksSelected =
-        selectableOngoingTaskKeys.every((key) => ongoingTasks[key]) &&
-        connectionStringKeys.every((key) => connectionStrings[key]);
+    const areAllOngoingTasksSelected = selectableOngoingTaskKeys.every((key) => ongoingTasks[key]);
+    const areAllConnectionStringsSelected = connectionStringKeys.every((key) => connectionStrings[key]);
 
-    const setAllCustomizedTasks = (value: boolean) => {
+    const setAllOngoingTasks = (value: boolean) => {
         selectableOngoingTaskKeys.forEach((key) =>
             setValue(`configuration.ongoingTasks.${key}`, value, { shouldDirty: true })
         );
+    };
+
+    const setAllConnectionStrings = (value: boolean) => {
         connectionStringKeys.forEach((key) =>
             setValue(`configuration.connectionStrings.${key}`, value, { shouldDirty: true })
         );
+    };
+
+    const resetCustomizedTasksToDefault = () => {
+        ongoingTaskKeys.forEach((key) => resetField(`configuration.ongoingTasks.${key}`));
+        connectionStringKeys.forEach((key) => resetField(`configuration.connectionStrings.${key}`));
+        setValue("configuration.isCustomizeOngoingTasks", false, { shouldDirty: true });
     };
 
     const setAllEntities = (value: boolean) => {
@@ -95,10 +103,10 @@ export default function ConfigurationToImportSection() {
                 </Button>
             </div>
             <div className="card p-4 mb-4">
-                <FormSwitch control={control} name="configuration.isIncludeIndexes">
+                <FormSwitch control={control} name="configuration.isIncludeIndexes" className="pb-1">
                     Include Indexes
                 </FormSwitch>
-                <div className="ms-4">
+                <div className="ms-4 d-flex flex-column gap-1">
                     <FormSwitch
                         control={control}
                         name="configuration.isIncludeIndexHistory"
@@ -110,11 +118,11 @@ export default function ConfigurationToImportSection() {
                         Remove Analyzers
                     </FormSwitch>
                 </div>
-                <hr />
+                <hr className="my-1" />
                 <FormSwitch control={control} name="configuration.isIncludeIdentities">
                     Include Identities
                 </FormSwitch>
-                <hr />
+                <hr className="my-1" />
                 <div className="d-flex justify-content-between align-items-start">
                     <FormSwitch control={control} name="configuration.isIncludeConnectionStringsAndOngoingTasks">
                         Include Connection Strings &amp; Ongoing Tasks
@@ -124,50 +132,73 @@ export default function ConfigurationToImportSection() {
                         size="sm"
                         disabled={!isIncludeTasks}
                         onClick={() =>
-                            setValue("configuration.isCustomizeOngoingTasks", !isCustomizeTasks, { shouldDirty: true })
+                            isCustomizeTasks
+                                ? resetCustomizedTasksToDefault()
+                                : setValue("configuration.isCustomizeOngoingTasks", true, { shouldDirty: true })
                         }
                     >
-                        Customize
+                        {isCustomizeTasks ? "Reset to default" : "Customize"}
                     </Button>
                 </div>
                 <Collapse in={isIncludeTasks && isCustomizeTasks}>
                     <div>
-                        <div className="d-flex justify-content-end mt-2">
-                            <Button
-                                variant="link"
-                                size="sm"
-                                onClick={() => setAllCustomizedTasks(!areAllCustomizedTasksSelected)}
-                            >
-                                {areAllCustomizedTasksSelected ? "Deselect all" : "Select all"}
-                            </Button>
-                        </div>
-                        <div className="row">
+                        <div className="row mt-3">
                             <div className="col-md-6">
-                                <div className="small-label mb-2">Ongoing tasks</div>
-                                {ongoingTaskKeys.map((key) => (
-                                    <LicenseRestrictedSwitch
-                                        key={key}
-                                        control={control}
-                                        name={`configuration.ongoingTasks.${key}`}
-                                        restricted={isOngoingTaskRestricted(key)}
-                                        tooltip={getOngoingTaskRestrictionTooltip(key)}
-                                        licenseRequired={getOngoingTaskLicenseRequired(key)}
-                                    >
-                                        {ongoingTaskLabels[key]}
-                                    </LicenseRestrictedSwitch>
-                                ))}
+                                <div className="import-list-header mb-2">
+                                    <span className="flex-grow-1 fw-semibold">Ongoing tasks</span>
+                                    <div className="d-flex align-items-center gap-2">
+                                        <span>Select all</span>
+                                        <Form.Check
+                                            type="switch"
+                                            id="select-all-ongoing-tasks"
+                                            label=""
+                                            className="m-0"
+                                            checked={areAllOngoingTasksSelected}
+                                            onChange={(e) => setAllOngoingTasks(e.target.checked)}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="d-flex flex-column gap-1">
+                                    {ongoingTaskKeys.map((key) => (
+                                        <LicenseRestrictedSwitch
+                                            key={key}
+                                            control={control}
+                                            name={`configuration.ongoingTasks.${key}`}
+                                            restricted={isOngoingTaskRestricted(key)}
+                                            tooltip={getOngoingTaskRestrictionTooltip(key)}
+                                            licenseRequired={getOngoingTaskLicenseRequired(key)}
+                                        >
+                                            {ongoingTaskLabels[key]}
+                                        </LicenseRestrictedSwitch>
+                                    ))}
+                                </div>
                             </div>
                             <div className="col-md-6">
-                                <div className="small-label mb-2">Connection strings</div>
-                                {connectionStringKeys.map((key) => (
-                                    <FormSwitch
-                                        key={key}
-                                        control={control}
-                                        name={`configuration.connectionStrings.${key}`}
-                                    >
-                                        {connectionStringLabels[key]}
-                                    </FormSwitch>
-                                ))}
+                                <div className="import-list-header mb-2">
+                                    <span className="flex-grow-1 fw-semibold">Connection strings</span>
+                                    <div className="d-flex align-items-center gap-2">
+                                        <span>Select all</span>
+                                        <Form.Check
+                                            type="switch"
+                                            id="select-all-connection-strings"
+                                            label=""
+                                            className="m-0"
+                                            checked={areAllConnectionStringsSelected}
+                                            onChange={(e) => setAllConnectionStrings(e.target.checked)}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="d-flex flex-column gap-1">
+                                    {connectionStringKeys.map((key) => (
+                                        <FormSwitch
+                                            key={key}
+                                            control={control}
+                                            name={`configuration.connectionStrings.${key}`}
+                                        >
+                                            {connectionStringLabels[key]}
+                                        </FormSwitch>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -202,40 +233,36 @@ export default function ConfigurationToImportSection() {
                     </button>
                 </div>
                 {!isImportAllSettings && (
-                    <Table className="mb-0 mt-4">
-                        <thead>
-                            <tr>
-                                <th>Setting name</th>
-                                <th className="text-end">
-                                    <Button
-                                        variant="link"
-                                        size="sm"
-                                        className="p-0"
-                                        onClick={() => setAllSettings(!areAllSettingsSelected)}
-                                    >
-                                        {areAllSettingsSelected ? "Deselect all" : "Select all"}
-                                    </Button>
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
+                    <div className="mt-4">
+                        <div className="import-list-header mb-2">
+                            <span className="flex-grow-1 fw-semibold">Setting name</span>
+                            <div className="d-flex align-items-center gap-2">
+                                <span>Select all</span>
+                                <Form.Check
+                                    type="switch"
+                                    id="select-all-database-settings"
+                                    label=""
+                                    className="m-0"
+                                    checked={areAllSettingsSelected}
+                                    onChange={(e) => setAllSettings(e.target.checked)}
+                                />
+                            </div>
+                        </div>
+                        <div className="d-flex flex-column gap-1">
                             {databaseSettingKeys.map((key) => (
-                                <tr key={key}>
-                                    <td colSpan={2}>
-                                        <LicenseRestrictedSwitch
-                                            control={control}
-                                            name={`configuration.databaseSettings.${key}`}
-                                            restricted={isSettingRestricted(key)}
-                                            tooltip={getRestrictionTooltip(key)}
-                                            licenseRequired={getLicenseRequired(key)}
-                                        >
-                                            {databaseSettingLabels[key]}
-                                        </LicenseRestrictedSwitch>
-                                    </td>
-                                </tr>
+                                <LicenseRestrictedSwitch
+                                    key={key}
+                                    control={control}
+                                    name={`configuration.databaseSettings.${key}`}
+                                    restricted={isSettingRestricted(key)}
+                                    tooltip={getRestrictionTooltip(key)}
+                                    licenseRequired={getLicenseRequired(key)}
+                                >
+                                    {databaseSettingLabels[key]}
+                                </LicenseRestrictedSwitch>
                             ))}
-                        </tbody>
-                    </Table>
+                        </div>
+                    </div>
                 )}
             </Card>
         </ImportSection>
