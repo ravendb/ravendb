@@ -26,6 +26,7 @@ export interface NavigationCardProps<TVariant extends string = string> {
     isShardingSupported?: boolean;
     accessRequired: databaseAccessLevel;
     customDisabledReason?: ReactNode;
+    compact?: boolean;
 }
 
 export default function NavigationCard({
@@ -41,6 +42,7 @@ export default function NavigationCard({
     isShardingSupported,
     accessRequired,
     customDisabledReason,
+    compact,
 }: NavigationCardProps) {
     const { reportEvent } = useEventsCollector();
     const isSharded = useAppSelector(databaseSelectors.activeDatabase)?.isSharded;
@@ -69,20 +71,29 @@ export default function NavigationCard({
                 onClick={() => reportEvent(target, "new")}
                 className={classNames("card no-decor w-100 h-100 navigation-card", `variant-${variant}`, {
                     "item-disabled": !!isDisabled,
+                    compact,
                 })}
             >
-                <Card.Body className="d-flex align-items gap-3">
-                    <div className="align-self-center">
-                        <Icon icon={iconName} className="task-icon fs-2" />
-                    </div>
-                    <div className="d-flex flex-column align-self-center gap-1">
-                        <div className="d-flex align-items-center gap-2">
-                            <h4 className="mb-0">{title}</h4>
-                            {counterBadge}
+                {compact ? (
+                    <Card.Body className="d-flex align-items-center">
+                        <Icon icon={iconName} className="task-icon fs-5" margin="me-2" />
+                        <h4 className="mb-0">{title}</h4>
+                        {counterBadge}
+                    </Card.Body>
+                ) : (
+                    <Card.Body className="d-flex align-items gap-3">
+                        <div className="align-self-center">
+                            <Icon icon={iconName} className="task-icon fs-2" />
                         </div>
-                        <div>{description}</div>
-                    </div>
-                </Card.Body>
+                        <div className="d-flex flex-column align-self-center gap-1">
+                            <div className="d-flex align-items-center gap-2">
+                                <h4 className="mb-0">{title}</h4>
+                                {counterBadge}
+                            </div>
+                            <div>{description}</div>
+                        </div>
+                    </Card.Body>
+                )}
 
                 {showLicenseBadge && (
                     <LicenseRestrictedBadge
