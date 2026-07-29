@@ -3,6 +3,15 @@
 // Variant styles (colors, gradients) are registered per page via the
 // navigation-card-variant mixin from navigationCardVariants.scss.
 
+// Extra class beats the min-height set per variant by navigation-card-base.
+.card.navigation-card.compact {
+    min-height: 0;
+
+    .card-body {
+        padding: sizes.$gutter-sm;
+    }
+}
+
 // Pair with Bootstrap "d-grid gap-3" at the call site — this class only defines column counts.
 .navigation-cards-grid {
     grid-template-columns: 1fr;
