@@ -11,12 +11,13 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.ServerWide.Backups
 {
-    public class BackupTombstoneCleanerInfo : ITombstoneAware
+    public class DatabaseBackupTombstoneCleanerInfo : ITombstoneAware
     {
-        public BackupTombstoneCleanerInfo(ServerStore serverStore, DocumentDatabase database)
+        public DatabaseBackupTombstoneCleanerInfo(ServerStore serverStore, DocumentDatabase database)
         {
             _serverStore = serverStore;
             _database = database;
+            database.TombstoneCleaner.Subscribe(this);
         }
 
         private readonly ServerStore _serverStore;
@@ -47,7 +48,7 @@ namespace Raven.Server.ServerWide.Backups
         {
             var dict = new Dictionary<TombstoneDeletionBlockageSource, HashSet<string>>();
 
-            var data = _serverStore.BackupRunner.BackupsPerDatabasePerTaskId.TryGetValue(_database.Name, out ConcurrentDictionary<long, DatabaseBackupState> databaseBackupStates);
+            var data = _serverStore.ServerBackupRunner.BackupsPerDatabasePerTaskId.TryGetValue(_database.Name, out ConcurrentDictionary<long, DatabaseBackupState> databaseBackupStates);
             if (data == false)
                 return dict;
 

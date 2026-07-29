@@ -62,7 +62,7 @@ internal abstract class AbstractDatabasesHandlerProcessorForAllowedDatabases<TRe
             });
         }
 
-        return database.ServerStore.BackupRunner.GetBackupInfo(context, databaseName);
+        return database.ServerStore.ServerBackupRunner.GetBackupInfo(context, databaseName);
     }
 
     protected static TimeSpan? GetUpTime(DocumentDatabase database)

@@ -155,7 +155,7 @@ namespace Raven.Server.ServerWide
         public readonly SecretProtection Secrets;
         public readonly AsyncManualResetEvent InitializationCompleted;
         public readonly GlobalIndexingScratchSpaceMonitor GlobalIndexingScratchSpaceMonitor;
-        public readonly ServerBackupRunner BackupRunner;
+        public readonly ServerBackupRunner ServerBackupRunner;
         public bool Initialized;
 
         private readonly TimeSpan _frequencyToCheckForIdleDatabases;
@@ -229,7 +229,7 @@ namespace Raven.Server.ServerWide
 
             Secrets = new SecretProtection(configuration.Security);
 
-            BackupRunner = new ServerBackupRunner(this);
+            ServerBackupRunner = new ServerBackupRunner(this);
 
             InitializationCompleted = new AsyncManualResetEvent(_shutdownNotification.Token);
 
@@ -956,7 +956,7 @@ namespace Raven.Server.ServerWide
 
             RavenLogManager.Instance.ConfigureAuditLog(Server, Logger);
 
-            BackupRunner.Initialize();
+            ServerBackupRunner.Initialize();
 
             Initialized = true;
             InitializationCompleted.Set();
@@ -2828,7 +2828,7 @@ namespace Raven.Server.ServerWide
 
                     var exceptionAggregator = new ExceptionAggregator(Logger, $"Could not dispose {nameof(ServerStore)}.");
 
-                    exceptionAggregator.Execute(() => BackupRunner?.Dispose());
+                    exceptionAggregator.Execute(() => ServerBackupRunner?.Dispose());
 
                     exceptionAggregator.Execute(() =>
                     {

@@ -23,7 +23,7 @@ internal sealed class OngoingTasksHandlerProcessorForGetPeriodicBackupTimers : A
         using (context.OpenReadTransaction())
         await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
         {
-            var backups = ServerStore.BackupRunner.GetPeriodicBackupsInformation(RequestHandler.DatabaseName);
+            var backups = ServerStore.ServerBackupRunner.GetPeriodicBackupsInformationFor(RequestHandler.DatabaseName);
             var result = new GetPeriodicBackupTimersCommand.PeriodicBackupTimersResponse
             {
                 Count = backups.Count,
