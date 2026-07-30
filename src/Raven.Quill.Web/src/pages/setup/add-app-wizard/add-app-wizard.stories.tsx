@@ -49,7 +49,16 @@ function buildSeed(discovery: DiscoverResponse): AppFormData {
             appName: "AcmeShop",
             slug: "acme-shop",
             provider: "Npgsql",
-            connectionString: "Host=localhost;Port=5432;Database=acme_shop;Username=admin;Password=secret",
+            mode: "fields",
+            fields: {
+                host: "localhost",
+                port: 5432,
+                database: "acme_shop",
+                username: "admin",
+                password: "secret",
+                isSecured: false,
+            },
+            connectionString: "",
         },
         verifySchema: {
             tables: discovery.tables
@@ -79,6 +88,7 @@ function AppWizardAtStep({
     discovery = sampleDiscovery,
     isMappingApplied = true,
     hasSelectedTables = true,
+    seedOverride,
 }: {
     initialStep: AppStepId;
     discovery?: DiscoverResponse;
@@ -86,11 +96,13 @@ function AppWizardAtStep({
     isMappingApplied?: boolean;
     /** When false, the verify step starts with nothing selected, as it does on a fresh discovery. */
     hasSelectedTables?: boolean;
+    seedOverride?: (seed: AppFormData) => AppFormData;
 }) {
     const [seed] = useState(() => {
-        const values = buildSeed(discovery);
+        const built = buildSeed(discovery);
+        const values = hasSelectedTables ? built : { ...built, verifySchema: { tables: [] } };
 
-        return hasSelectedTables ? values : { ...values, verifySchema: { tables: [] } };
+        return seedOverride ? seedOverride(values) : values;
     });
 
     useState(() =>
@@ -149,6 +161,22 @@ export const ChooseDataSource: Story = {
 
 export const ConnectSource: Story = {
     render: () => <AppWizardAtStep initialStep="externalConnection" />,
+};
+
+export const ConnectSourceConnectionString: Story = {
+    render: () => (
+        <AppWizardAtStep
+            initialStep="externalConnection"
+            seedOverride={(seed) => ({
+                ...seed,
+                externalConnection: {
+                    ...seed.externalConnection,
+                    mode: "raw",
+                    connectionString: "Host=localhost;Port=5432;Database=acme_shop;Username=admin;Password=secret",
+                },
+            })}
+        />
+    ),
 };
 
 const connectFailureHandlers = {

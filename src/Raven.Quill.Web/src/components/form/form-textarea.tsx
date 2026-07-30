@@ -9,6 +9,7 @@ type FormTextareaProps<TFieldValues extends FieldValues, TName extends FieldPath
     UseControllerProps<TFieldValues, TName> & {
         description?: ReactNode;
         label?: ReactNode;
+        labelClassName?: string;
         textareaClassName?: string;
     };
 
@@ -20,6 +21,7 @@ export function FormTextarea<TFieldValues extends FieldValues, TName extends Fie
     disabled,
     id,
     label,
+    labelClassName,
     name,
     textareaClassName,
     ...restProps
@@ -38,7 +40,9 @@ export function FormTextarea<TFieldValues extends FieldValues, TName extends Fie
 
     return (
         <Field className={className} data-invalid={invalid}>
-            <FieldLabel htmlFor={inputId}>{label}</FieldLabel>
+            <FieldLabel htmlFor={inputId} className={labelClassName}>
+                {label}
+            </FieldLabel>
             <Textarea
                 id={inputId}
                 onBlur={onBlur}

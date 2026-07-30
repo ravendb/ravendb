@@ -3,17 +3,21 @@ import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-valida
 import type { WizardProgress } from "@/components/form/wizard/form-wizard";
 import { toError, toWizardStepError, WizardHandledError } from "@/components/form/wizard/wizard-step-error";
 import { useSetupWizardStore, type ConnectionAttempt } from "@/pages/setup/add-app-wizard/app-wizard-store";
+import { resolveConnectionString } from "@/pages/setup/add-app-wizard/connection-string";
 import { getTableKey, isTableSupported } from "@/pages/setup/add-app-wizard/discover-utils";
 import { discoverTables } from "@/pages/setup/add-app-wizard/steps/verify/use-discover-tables";
 import { useFormContext } from "react-hook-form";
 
-export type ConnectSourceInput = Pick<AppFormData["externalConnection"], "provider" | "connectionString" | "slug">;
+export type ConnectSourceInput = Pick<
+    AppFormData["externalConnection"],
+    "provider" | "mode" | "fields" | "connectionString" | "slug"
+>;
 
 /** Identifies the source database, and with it the discovered schema and any mapping built from it. */
-export function computeSourceKey(connection: Pick<ConnectSourceInput, "provider" | "connectionString">): string {
+export function computeSourceKey(connection: Omit<ConnectSourceInput, "slug">): string {
     return JSON.stringify({
         provider: connection.provider,
-        connectionString: connection.connectionString,
+        connectionString: resolveConnectionString(connection),
     });
 }
 
@@ -46,7 +50,7 @@ export async function testConnection(connection: ConnectSourceInput): Promise<vo
 
     try {
         const connectResult = await api.services.setup.connect({
-            connectionString: connection.connectionString,
+            connectionString: resolveConnectionString(connection),
             provider: connection.provider,
             slug: connection.slug,
         });

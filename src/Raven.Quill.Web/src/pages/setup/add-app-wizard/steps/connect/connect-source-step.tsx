@@ -1,7 +1,6 @@
 import { useController, useFormContext, useFormState } from "react-hook-form";
 import { SELECTED_CARD_CLASSES } from "@/components/form/form-radio-cards";
 import { FormInput } from "@/components/form/form-input";
-import { FormTextarea } from "@/components/form/form-textarea";
 import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
 import { Field, FieldDescription, FieldLabel } from "@/components/shadcn/ui/field";
 import { cn } from "@/lib/utils";
@@ -9,9 +8,11 @@ import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-sto
 import { type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { ImportedConfigAlert } from "@/pages/setup/add-app-wizard/imported-config-alert";
 import { PROVIDER_OPTIONS } from "@/pages/setup/add-app-wizard/steps/connect/connect-source-options";
+import { ConnectionEditor } from "@/pages/setup/add-app-wizard/steps/connect/connection-editor";
 import { ImportConfigDialog } from "@/pages/setup/add-app-wizard/steps/connect/import-config-dialog";
 import { TestConnectionButton } from "@/pages/setup/add-app-wizard/steps/connect/test-connection-button";
 import { toSlug } from "@/pages/setup/add-app-wizard/slugify";
+import { useConnectionSync } from "@/pages/setup/add-app-wizard/steps/connect/use-connection-sync";
 import { InputGroupAddon } from "@/components/shadcn/ui/input-group";
 import { Button } from "@/components/shadcn/ui/button";
 import { RefreshCw } from "lucide-react";
@@ -26,9 +27,10 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
     const isSlugTouched = Boolean(touchedFields.externalConnection?.slug);
 
     const {
-        field: { value, onChange },
+        field: { value },
         fieldState: { error, invalid },
     } = useController({ control, name: "externalConnection.provider" });
+    const { changeProvider } = useConnectionSync();
 
     const isConnectionDisabled = isBusy || isLocked;
 
@@ -92,7 +94,7 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
                                 key={option.value}
                                 type="button"
                                 aria-pressed={isSelected}
-                                onClick={() => onChange(option.value)}
+                                onClick={() => changeProvider(option.value)}
                                 disabled={isConnectionDisabled}
                                 className={cn(
                                     "flex min-h-28 flex-col items-center justify-center gap-3 rounded-lg border bg-background p-4 transition-colors",
@@ -111,14 +113,7 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
                 </div>
                 {error?.message && <FieldDescription className="text-destructive">{error.message}</FieldDescription>}
             </Field>
-            <FormTextarea
-                control={control}
-                name="externalConnection.connectionString"
-                label="Connection string"
-                placeholder="Host=localhost;Port=5432;Database=my_db;Username=admin;Password=pass"
-                textareaClassName="font-mono text-xs"
-                disabled={isConnectionDisabled}
-            />
+            <ConnectionEditor isDisabled={isConnectionDisabled} />
             <TestConnectionButton disabled={isConnectionDisabled} />
         </div>
     );

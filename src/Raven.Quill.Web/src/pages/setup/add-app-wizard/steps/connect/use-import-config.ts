@@ -51,6 +51,13 @@ export function useImportConfig() {
             const config = await parseConfigFile(file);
             // An older configuration carries no slug; keep whatever the operator already typed.
             const slug = config.slug || getValues("externalConnection").slug;
+            const connection = {
+                ...getValues("externalConnection"),
+                provider: config.provider,
+                mode: "raw" as const,
+                connectionString: config.connectionString,
+                slug,
+            };
 
             setProgressLabel(IMPORT_PHASES.connecting);
             const connectResult = await api.services.setup.connect({
@@ -67,11 +74,7 @@ export function useImportConfig() {
             // in custom schemas can still be verified.
             setProgressLabel(IMPORT_PHASES.discovering);
             const schemas = collectConfigSchemas(config.tables);
-            const discoverResult = await discoverTables(
-                { provider: config.provider, connectionString: config.connectionString },
-                schemas,
-                slug,
-            );
+            const discoverResult = await discoverTables(connection, schemas, slug);
 
             if (!discoverResult.success) {
                 throw toWizardStepError(discoverResult.errors, "Could not discover tables.");
@@ -109,6 +112,7 @@ export function useImportConfig() {
             }));
 
             setValue("externalConnection.provider", config.provider);
+            setValue("externalConnection.mode", "raw");
             setValue("externalConnection.connectionString", config.connectionString);
             setValue("externalConnection.slug", slug, { shouldValidate: true, shouldTouch: true });
             setValue("verifySchema.tables", verifySchemaTables);
@@ -121,16 +125,14 @@ export function useImportConfig() {
             store.setDiscoverResult(discoverResult, schemas);
             store.resetMapTablesUiState();
 
-            const connectKey = computeConnectKey({
-                provider: config.provider,
-                connectionString: config.connectionString,
-                slug,
-            });
+            const connection = getValues("externalConnection");
+            const connectKey = computeConnectKey(connection);
+
             store.setConnectKey(connectKey);
             store.setConnectionAttempt({ key: connectKey, error: null });
             store.setAppliedMapKey(
                 computeMapKey({
-                    sourceKey: computeSourceKey(config),
+                    sourceKey: computeSourceKey(connection),
                     source: "manual",
                     aiPrompt: "",
                     selectedTables: verifySchemaTables,

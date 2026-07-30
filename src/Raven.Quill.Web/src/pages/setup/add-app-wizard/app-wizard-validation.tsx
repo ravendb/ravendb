@@ -156,6 +156,30 @@ export const tablesSchema = z
         });
     });
 
+export const connectionModeSchema = z.union([z.literal("fields"), z.literal("raw")]);
+
+const connectionFieldsShape = {
+    host: z.string(),
+    port: z.number().nullable(),
+    database: z.string(),
+    username: z.string(),
+    password: z.string(),
+    isSecured: z.boolean(),
+};
+
+const filledConnectionFieldsSchema = z.object({
+    ...connectionFieldsShape,
+    host: z.string().trim().min(1, "Host is required"),
+    port: z
+        .number()
+        .int("Port must be a whole number")
+        .min(1, "Port must be between 1 and 65535")
+        .max(65535, "Port must be between 1 and 65535")
+        .nullable(),
+    database: z.string().trim().min(1, "Database name is required"),
+    username: z.string().trim().min(1, "Username is required"),
+});
+
 /** `takenSlugs` are the slugs of the already existing apps; the new app must not reuse one. */
 export const createExternalConnectionSchema = (takenSlugs: string[] = []) => {
     const normalizedTakenSlugs = new Set(takenSlugs.map((slug) => toSlug(slug)));
@@ -165,7 +189,9 @@ export const createExternalConnectionSchema = (takenSlugs: string[] = []) => {
             appName: z.string().trim().min(1, "Application name is required"),
             slug: slugSchema,
             provider: providerSchema,
-            connectionString: z.string().trim().min(1, "Connection string is required."),
+            mode: connectionModeSchema,
+            fields: z.object(connectionFieldsShape),
+            connectionString: z.string(),
         })
         .superRefine((values, ctx) => {
             const overrideSlug = values.slug.trim();
@@ -179,6 +205,28 @@ export const createExternalConnectionSchema = (takenSlugs: string[] = []) => {
                     path: [overrideSlug === "" ? "appName" : "slug"],
                     message: `Slug "${slug}" is already used by another app`,
                 });
+            }
+
+            if (values.mode === "raw") {
+                if (values.connectionString.trim() === "") {
+                    ctx.addIssue({
+                        code: "custom",
+                        path: ["connectionString"],
+                        message: "Connection string is required",
+                    });
+                }
+
+                return;
+            }
+
+            const fields = filledConnectionFieldsSchema.safeParse(values.fields);
+
+            if (fields.success) {
+                return;
+            }
+
+            for (const issue of fields.error.issues) {
+                ctx.addIssue({ code: "custom", path: ["fields", ...issue.path], message: issue.message });
             }
         });
 };
