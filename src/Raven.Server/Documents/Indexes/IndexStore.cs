@@ -1617,6 +1617,23 @@ namespace Raven.Server.Documents.Indexes
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"Initialized static index: `{name}`, took: {sp.ElapsedMilliseconds:#,#;;0}ms");
                 }
+
+                // A side-by-side reset replacement (ReplacementOf/...) is created through a local-only path and is
+                // not persisted in the database record, so it isn't opened by the loop above. Open its directory here
+                // so an in-progress side-by-side reset survives a restart instead of being left as an orphaned directory.
+                var replacementName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + name;
+                var replacementSafeName = IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(replacementName);
+                var replacementPath = path.Combine(replacementSafeName).FullPath;
+                if (Directory.Exists(replacementPath))
+                {
+                    var sp = Stopwatch.StartNew();
+
+                    addToInitLog(LogMode.Information, $"Initializing side-by-side reset replacement index: `{replacementName}`");
+                    OpenIndex(path, replacementPath, exceptions, replacementName, startIndex, indexDefinition: null);
+
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Initialized side-by-side reset replacement index: `{replacementName}`, took: {sp.ElapsedMilliseconds:#,#;;0}ms");
+                }
             }
 
             foreach (var kvp in record.AutoIndexes)
@@ -1634,7 +1651,7 @@ namespace Raven.Server.Documents.Indexes
                     var sp = Stopwatch.StartNew();
 
                     addToInitLog(LogMode.Information, $"Initializing auto index: `{name}`");
-                    OpenIndex(path, indexPath, exceptions, name, startIndex, definition);
+                     OpenIndex(path, indexPath, exceptions, name, startIndex, definition);
 
                     addToInitLog(LogMode.Information, $"Initialized auto index: `{name}`, took: {sp.ElapsedMilliseconds:#,#;;0}ms");
                 }
@@ -1713,6 +1730,8 @@ namespace Raven.Server.Documents.Indexes
             {
                 index = Index.Open(indexPath, _documentDatabase, generateNewDatabaseId: false, out searchEngineType);
 
+                indexDefinition ??= index.GetIndexDefinition();
+
                 var differences = IndexDefinitionCompareDifferences.None;
 
                 if (indexDefinition is IndexDefinition def)
@@ -1770,6 +1789,9 @@ namespace Raven.Server.Documents.Indexes
                 exceptions?.Add(e);
 
                 if (alreadyFaulted)
+                    return;
+
+                if (indexDefinition == null)
                     return;
 
                 var configuration = new FaultyInMemoryIndexConfiguration(path, _documentDatabase.Configuration);
