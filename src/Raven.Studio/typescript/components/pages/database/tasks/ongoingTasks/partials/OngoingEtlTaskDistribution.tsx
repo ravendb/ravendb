@@ -1,4 +1,4 @@
-﻿import { useEffect, useId, useMemo, useState } from "react";
+﻿import { useId, useMemo, useState } from "react";
 import {
     ClickableProgress,
     DistributionItem,
@@ -21,7 +21,7 @@ import { useAppSelector } from "components/store";
 import { getPopoverMessageForTaskHealth, getTaskErrorCount } from "../panels/etlPanelUtils";
 import { useServices } from "hooks/useServices";
 import { useAsync, useAsyncCallback } from "react-async-hook";
-import { useViewSheet } from "components/common/splitView/ViewSheet";
+import { SheetPortalOutlet, useViewSheet } from "components/common/splitView/ViewSheet";
 import TaskErrorDetailsSheet from "components/pages/database/tasks/tasksErrors/partials/TaskErrorDetailsSheet";
 import {
     EtlHealthStatus,
@@ -265,7 +265,7 @@ function TaskDistributionRow(props: TaskDistributionRowProps) {
         </div>
     );
 
-    const { open, update } = useViewSheet();
+    const { open, renderIntoSheet } = useViewSheet();
 
     const key = taskNodeInfoKey(nodeInfo);
     const hasError = !!nodeInfo.details?.error;
@@ -335,36 +335,13 @@ function TaskDistributionRow(props: TaskDistributionRowProps) {
         setActiveNodeIndex(nodeIndex);
         open({
             ownerId,
-            component: (
-                <EtlProgressDetailsSheet
-                    key={ownerId}
-                    task={task}
-                    allNodes={allNodes}
-                    initialNodeIndex={nodeIndex}
-                    onNodeChange={setActiveNodeIndex}
-                />
-            ),
+            component: <SheetPortalOutlet />,
             initialWidth: "40%",
             minWidth: "25%",
             maxWidth: "60%",
             onClose: () => setActiveNodeIndex(null),
         });
     };
-
-    useEffect(() => {
-        if (isActive) {
-            update(
-                ownerId,
-                <EtlProgressDetailsSheet
-                    key={ownerId}
-                    task={task}
-                    allNodes={allNodes}
-                    initialNodeIndex={nodeIndex}
-                    onNodeChange={setActiveNodeIndex}
-                />
-            );
-        }
-    }, [isActive, task, allNodes, nodeIndex]);
 
     const canOpenSheet = nodeInfo.status !== "loading" && nodeInfo.status !== "idle";
 
@@ -421,6 +398,17 @@ function TaskDistributionRow(props: TaskDistributionRowProps) {
                     onClick={canOpenSheet ? openProgressSheet : undefined}
                 />
             </DistributionItem>
+            {renderIntoSheet(
+                ownerId,
+                isActive,
+                <EtlProgressDetailsSheet
+                    key={ownerId}
+                    task={task}
+                    allNodes={allNodes}
+                    initialNodeIndex={nodeIndex}
+                    onNodeChange={setActiveNodeIndex}
+                />
+            )}
         </div>
     );
 }
