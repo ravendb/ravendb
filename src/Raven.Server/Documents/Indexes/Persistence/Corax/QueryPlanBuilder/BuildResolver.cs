@@ -151,10 +151,12 @@ ref struct BuildResolver(PlanTemplate template, PlanParameters planParams, Query
         // A clause that collapses (WHEN(false), a statically-true exists()/NOT exists(), an empty IN, a contradictory BETWEEN, etc) is replaced IN PLACE by a MatchAll / MatchNothing sentinel. 
         var execList = new List<ClauseExecution>(template.Clauses.Count);
         QueryExecution queryExecution = new();
+        // no filter left means match everything, so the top level takes the AND identity whatever IsOr says
+        bool enclosingIsOr = template.IsOr && WholeWhereVanishes() == false;
         foreach (var cached in template.Clauses)
         {
             var exec = QueryPlanBuilder.CreateExecution(cached);
-            ApplyFate(exec, cached);
+            ApplyFate(exec, cached, enclosingIsOr);
             if (exec.IsSentinel == false)
             {
                 QueryPlanBuilder.PopulateClauseValues(exec, planParams.SlotBindings, planParams.QueryParameters, _writer, builderParameters, SentinelBits());
@@ -195,23 +197,60 @@ ref struct BuildResolver(PlanTemplate template, PlanParameters planParams, Query
         }
     }
 
-    private void ApplyFate(ClauseExecution exec, ClauseInfo clause)
+    private void ApplyFate(ClauseExecution exec, ClauseInfo clause, bool enclosingIsOr)
     {
         if (template.WhenCount is 0)
             return;
 
-        ApplyFateRecursive(exec, clause, template.IsOr);
+        ApplyFateRecursive(exec, clause, enclosingIsOr);
+    }
+
+    // A clause stops filtering when its own guard is off - or, for a group, when every clause under it has gone,
+    // which leaves the group itself empty.
+    private bool VanishesFromGuards(ClauseInfo clause)
+    {
+        RuntimeHelpers.EnsureSufficientExecutionStack();
+
+        if (clause.WhenCondition is { } predicate && predicate(planParams.QueryParameters) == false)
+            return true;
+
+        if (clause.SubClauses is not { Count: > 0 } subClauses)
+            return false;
+
+        foreach (var sub in subClauses)
+        {
+            if (VanishesFromGuards(sub) == false)
+                return false;
+        }
+
+        return true;
+    }
+
+    // True when the guards leave no filter at all, so the query matches the whole index. The top-level clauses then
+    // have no surviving sibling to be joined with, and MatchNothing - the OR identity - would answer the wrong
+    // question: it is the identity for joining, not for a WHERE that has ceased to exist.
+    private bool WholeWhereVanishes()
+    {
+        if (template.WhenCount is 0 || template.Clauses.Count is 0)
+            return false;
+
+        foreach (var clause in template.Clauses)
+        {
+            if (VanishesFromGuards(clause) == false)
+                return false;
+        }
+
+        return true;
     }
 
     private void ApplyFateRecursive(ClauseExecution exec, ClauseInfo clause, bool enclosingIsOr)
     {
         RuntimeHelpers.EnsureSufficientExecutionStack();
 
-        if (clause.WhenCondition is { } predicate && predicate(planParams.QueryParameters) == false)
+        if (VanishesFromGuards(clause))
         {
-            // WHEN(false): the guard is off, so the whole guarded clause (its negation included) does not filter.
-            // It collapses to the identity of its enclosing boolean operator: MatchAll under AND, MatchNothing
-            // under OR. Once the (sub)clause is a sentinel its children are irrelevant, so stop descending.
+            // The clause does not filter, so it collapses to the identity of its enclosing boolean operator:
+            // MatchAll under AND, MatchNothing under OR. Its children are then irrelevant, so stop descending.
             if (enclosingIsOr)
                 exec.MarkAsSentinel(ClauseType.MatchNothing, 0);
             else
