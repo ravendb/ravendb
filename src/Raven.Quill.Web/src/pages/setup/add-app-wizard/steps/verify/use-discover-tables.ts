@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { api } from "@/api/api";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
+import { resolveConnectionString } from "@/pages/setup/add-app-wizard/connection-string";
 
 /** Trims entries, drops empties, and dedupes the user-entered schema list. */
 export function normalizeDiscoverSchemas(schemas: string[] | undefined): string[] {
@@ -12,13 +13,13 @@ export function normalizeDiscoverSchemas(schemas: string[] | undefined): string[
 
 /** Discovers source tables. An empty schema list means the connection's default schema. */
 export function discoverTables(
-    connection: Pick<AppFormData["externalConnection"], "provider" | "connectionString">,
+    connection: Pick<AppFormData["externalConnection"], "provider" | "mode" | "fields" | "connectionString">,
     schemas: string[],
     slug: string,
 ) {
     return api.services.setup.discover({
         provider: connection.provider,
-        connectionString: connection.connectionString,
+        connectionString: resolveConnectionString(connection),
         schemas: schemas.length > 0 ? schemas : null,
         slug,
     });

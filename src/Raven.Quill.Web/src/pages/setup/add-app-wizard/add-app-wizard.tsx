@@ -23,6 +23,7 @@ import {
     DialogTitle,
 } from "@/components/shadcn/ui/dialog";
 import { CdcPerformanceSection } from "@/pages/apps/cdc-performance-section";
+import { DEFAULT_PORT_BY_PROVIDER, DEFAULT_PROVIDER } from "@/pages/setup/add-app-wizard/connection-string";
 import { cancelAbandonedSuggestions } from "@/pages/setup/add-app-wizard/steps/map-tables/suggest-map-tables-query";
 import { VERIFY_CDC_QUERY_KEY } from "@/pages/setup/add-app-wizard/steps/verify/verify-cdc-query";
 
@@ -158,7 +159,16 @@ function getDefaultValues(): AppFormData {
         externalConnection: {
             appName: "",
             slug: "",
-            provider: "Npgsql",
+            provider: DEFAULT_PROVIDER,
+            mode: "fields",
+            fields: {
+                host: "",
+                port: DEFAULT_PORT_BY_PROVIDER[DEFAULT_PROVIDER],
+                database: "",
+                username: "",
+                password: "",
+                isSecured: true,
+            },
             connectionString: "",
         },
         verifySchema: {

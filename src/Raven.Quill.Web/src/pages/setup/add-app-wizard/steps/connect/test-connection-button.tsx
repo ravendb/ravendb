@@ -14,11 +14,7 @@ import {
     testConnection,
 } from "@/pages/setup/add-app-wizard/steps/connect/use-connect-source-step";
 
-const CONNECTION_FIELDS = [
-    "externalConnection.provider",
-    "externalConnection.connectionString",
-    "externalConnection.slug",
-] as const satisfies FieldPath<AppFormData>[];
+const CONNECTION_FIELD = "externalConnection" as const satisfies FieldPath<AppFormData>;
 
 export function TestConnectionButton({ disabled }: { disabled: boolean }) {
     const { control, getValues, trigger } = useFormContext<AppFormData>();
@@ -26,8 +22,7 @@ export function TestConnectionButton({ disabled }: { disabled: boolean }) {
 
     // The key must be derived from the watched values (not getValues), otherwise React Compiler
     // memoizes it against the stable getValues reference and it never reflects form changes.
-    const [provider, connectionString, slug] = useWatch({ control, name: CONNECTION_FIELDS });
-    const connectKey = computeConnectKey({ provider, connectionString, slug });
+    const connectKey = computeConnectKey(useWatch({ control, name: CONNECTION_FIELD }));
     const isVerified = isConnectionVerified(connectionAttempt, connectKey);
     const error = getConnectionError(connectionAttempt, connectKey);
 
@@ -37,7 +32,7 @@ export function TestConnectionButton({ disabled }: { disabled: boolean }) {
     });
 
     const handleTest = async () => {
-        if (await trigger([...CONNECTION_FIELDS])) {
+        if (await trigger(CONNECTION_FIELD)) {
             mutate();
         }
     };

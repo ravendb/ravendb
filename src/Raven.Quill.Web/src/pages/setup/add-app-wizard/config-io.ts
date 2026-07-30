@@ -5,6 +5,7 @@ import type {
     CdcSinkTableConfig,
 } from "@/api/generated/server-api";
 import { type AppFormData, providerSchema, slugSchema } from "@/pages/setup/add-app-wizard/app-wizard-validation";
+import { resolveConnectionString } from "@/pages/setup/add-app-wizard/connection-string";
 import { mapFormTablesToDto } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-dto";
 
 /** The portable wizard configuration: connection details, the public URL slug, plus the CDC Sink table
@@ -34,7 +35,7 @@ const wizardConfigSchema = z.object({
 export function buildConfigExport(values: AppFormData): WizardConfig {
     return {
         provider: values.externalConnection.provider,
-        connectionString: values.externalConnection.connectionString,
+        connectionString: resolveConnectionString(values.externalConnection),
         slug: values.externalConnection.slug,
         tables: mapFormTablesToDto(values.mapTables.tables),
     };
