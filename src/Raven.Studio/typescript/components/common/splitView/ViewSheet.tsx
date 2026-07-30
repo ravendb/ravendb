@@ -142,9 +142,7 @@ export function useViewSheet() {
     // updates), render into this node from that row's JSX - via SheetPortalOutlet passed as `component` to `open` -
     // instead of imperatively pushing a new `component` on every relevant change.
     const renderIntoSheet = (ownerId: string, isActive: boolean, content: ReactNode): ReactNode =>
-        isActive && activeSheetOwnerId === ownerId && sheetPortalNode
-            ? createPortal(content, sheetPortalNode)
-            : null;
+        isActive && activeSheetOwnerId === ownerId && sheetPortalNode ? createPortal(content, sheetPortalNode) : null;
 
     return {
         open,
