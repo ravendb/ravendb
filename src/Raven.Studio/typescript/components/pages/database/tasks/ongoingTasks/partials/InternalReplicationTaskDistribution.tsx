@@ -9,7 +9,7 @@ import {
     LocationDistribution,
 } from "components/common/LocationDistribution";
 import { Icon } from "components/common/Icon";
-import { useEffect, useId, useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import classNames from "classnames";
 import { ProgressCircle } from "components/common/ProgressCircle";
 import {
@@ -18,7 +18,7 @@ import {
 } from "components/pages/database/tasks/ongoingTasks/partials/ReplicationProgressDetailsSheet";
 import { withPreventDefault } from "components/utils/common";
 import { ErrorModal } from "components/pages/database/tasks/ongoingTasks/partials/ErrorModal";
-import { useViewSheet } from "components/common/splitView/ViewSheet";
+import { SheetPortalOutlet, useViewSheet } from "components/common/splitView/ViewSheet";
 
 interface TaskDistributionRowProps {
     nodeInfo: Omit<OngoingInternalReplicationNodeInfo, "progress">;
@@ -62,42 +62,19 @@ function TaskDistributionRow(props: TaskDistributionRowProps) {
 
     const hasError = nodeInfo.status === "failure";
 
-    const { open, update } = useViewSheet();
+    const { open, renderIntoSheet } = useViewSheet();
 
     const openProgressSheet = () => {
         setActiveNodeIndex(syntheticNodeIndex);
         open({
             ownerId,
-            component: (
-                <ReplicationProgressDetailsSheet
-                    key={ownerId}
-                    taskType="Internal Replication"
-                    allNodes={allSyntheticNodes}
-                    initialNodeIndex={syntheticNodeIndex}
-                    onNodeChange={setActiveNodeIndex}
-                />
-            ),
+            component: <SheetPortalOutlet />,
             initialWidth: "40%",
             minWidth: "25%",
             maxWidth: "60%",
             onClose: () => setActiveNodeIndex(null),
         });
     };
-
-    useEffect(() => {
-        if (isActive) {
-            update(
-                ownerId,
-                <ReplicationProgressDetailsSheet
-                    key={ownerId}
-                    taskType="Internal Replication"
-                    allNodes={allSyntheticNodes}
-                    initialNodeIndex={syntheticNodeIndex}
-                    onNodeChange={setActiveNodeIndex}
-                />
-            );
-        }
-    }, [isActive, allSyntheticNodes, syntheticNodeIndex]);
 
     const canOpenSheet = nodeInfo.status !== "loading" && nodeInfo.status !== "idle";
 
@@ -129,6 +106,17 @@ function TaskDistributionRow(props: TaskDistributionRowProps) {
                 />
             </DistributionItem>
             {errorToDisplay && <ErrorModal key="modal" toggleErrorModal={toggleErrorModal} error={errorToDisplay} />}
+            {renderIntoSheet(
+                ownerId,
+                isActive,
+                <ReplicationProgressDetailsSheet
+                    key={ownerId}
+                    taskType="Internal Replication"
+                    allNodes={allSyntheticNodes}
+                    initialNodeIndex={syntheticNodeIndex}
+                    onNodeChange={setActiveNodeIndex}
+                />
+            )}
         </div>
     );
 }

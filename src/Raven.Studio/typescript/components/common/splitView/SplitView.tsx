@@ -25,6 +25,8 @@ const SplitViewContext = createContext<{
     registerSheetClose: (callback: (() => void) | null) => void;
     activeSheetOwnerId: string | null;
     setActiveSheetOwnerId: (ownerId: string | null) => void;
+    sheetPortalNode: HTMLDivElement | null;
+    setSheetPortalNode: (node: HTMLDivElement | null) => void;
 }>(null);
 
 export const useSplitViewContext = () => useContext(SplitViewContext);
@@ -37,6 +39,7 @@ function SplitViewWithSize(props: Required<PropsWithChildren> & { viewWidthInPx:
     const dispatch = useAppDispatch();
     const [sheetComponent, setSheetComponentState] = useState<ReactNode>(null);
     const [activeSheetOwnerId, setActiveSheetOwnerId] = useState<string | null>(null);
+    const [sheetPortalNode, setSheetPortalNode] = useState<HTMLDivElement | null>(null);
     const onSheetCloseRef = useRef<(() => void) | null>(null);
 
     const setSheetComponent = useCallback((component: ReactNode) => {
@@ -57,8 +60,16 @@ function SplitViewWithSize(props: Required<PropsWithChildren> & { viewWidthInPx:
     }, [props.viewWidthInPx]);
 
     const contextValue = useMemo(
-        () => ({ sheetComponent, setSheetComponent, registerSheetClose, activeSheetOwnerId, setActiveSheetOwnerId }),
-        [sheetComponent, setSheetComponent, registerSheetClose, activeSheetOwnerId, setActiveSheetOwnerId]
+        () => ({
+            sheetComponent,
+            setSheetComponent,
+            registerSheetClose,
+            activeSheetOwnerId,
+            setActiveSheetOwnerId,
+            sheetPortalNode,
+            setSheetPortalNode,
+        }),
+        [sheetComponent, setSheetComponent, registerSheetClose, activeSheetOwnerId, sheetPortalNode]
     );
 
     return (

@@ -13,13 +13,13 @@ import {
     LocationDistribution,
 } from "components/common/LocationDistribution";
 import { Icon } from "components/common/Icon";
-import { useEffect, useId, useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import classNames from "classnames";
 import { ProgressCircle } from "components/common/ProgressCircle";
 import { ReplicationProgressDetailsSheet } from "components/pages/database/tasks/ongoingTasks/partials/ReplicationProgressDetailsSheet";
 import { databaseLocationComparator, withPreventDefault } from "components/utils/common";
 import { ErrorModal } from "components/pages/database/tasks/ongoingTasks/partials/ErrorModal";
-import { useViewSheet } from "components/common/splitView/ViewSheet";
+import { SheetPortalOutlet, useViewSheet } from "components/common/splitView/ViewSheet";
 
 interface ExternalReplicationTaskDistributionProps {
     task: OngoingTaskExternalReplicationInfo | OngoingTaskReplicationHubInfo | OngoingTaskReplicationSinkInfo;
@@ -67,7 +67,7 @@ function TaskDistributionRow(props: TaskDistributionRowProps) {
     const key = taskNodeInfoKey(task, nodeInfo);
     const hasError = !!nodeInfo.details?.error;
 
-    const { open, update } = useViewSheet();
+    const { open, renderIntoSheet } = useViewSheet();
 
     const nodeIndex = allNodes.indexOf(nodeInfo);
 
@@ -75,38 +75,13 @@ function TaskDistributionRow(props: TaskDistributionRowProps) {
         setActiveNodeIndex(nodeIndex);
         open({
             ownerId,
-            component: (
-                <ReplicationProgressDetailsSheet
-                    key={ownerId}
-                    taskType={getTaskTypeLabel(task.shared.taskType)}
-                    taskName={task.shared.taskName}
-                    allNodes={allNodes}
-                    initialNodeIndex={nodeIndex}
-                    onNodeChange={setActiveNodeIndex}
-                />
-            ),
+            component: <SheetPortalOutlet />,
             initialWidth: "40%",
             minWidth: "25%",
             maxWidth: "60%",
             onClose: () => setActiveNodeIndex(null),
         });
     };
-
-    useEffect(() => {
-        if (isActive) {
-            update(
-                ownerId,
-                <ReplicationProgressDetailsSheet
-                    key={ownerId}
-                    taskType={getTaskTypeLabel(task.shared.taskType)}
-                    taskName={task.shared.taskName}
-                    allNodes={allNodes}
-                    initialNodeIndex={nodeIndex}
-                    onNodeChange={setActiveNodeIndex}
-                />
-            );
-        }
-    }, [isActive, task, allNodes, nodeIndex]);
 
     const canOpenSheet = nodeInfo.status !== "loading" && nodeInfo.status !== "idle";
 
@@ -144,6 +119,18 @@ function TaskDistributionRow(props: TaskDistributionRowProps) {
                 />
             </DistributionItem>
             {errorToDisplay && <ErrorModal key="modal" toggleErrorModal={toggleErrorModal} error={errorToDisplay} />}
+            {renderIntoSheet(
+                ownerId,
+                isActive,
+                <ReplicationProgressDetailsSheet
+                    key={ownerId}
+                    taskType={getTaskTypeLabel(task.shared.taskType)}
+                    taskName={task.shared.taskName}
+                    allNodes={allNodes}
+                    initialNodeIndex={nodeIndex}
+                    onNodeChange={setActiveNodeIndex}
+                />
+            )}
         </div>
     );
 }
