@@ -160,6 +160,50 @@ namespace SlowTests.Issues
             }
         }
 
+        // not(...) is the fourth spelling of the same problem: De Morgan flips the connective, so the operands of a
+        // negated AND join the parent as an OR - and the parent decides grouping from the syntactic child, a
+        // NegatedExpression, which is neither an AND nor an OR. Every assertion below also runs on Lucene, which is
+        // the oracle for the expected counts.
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void NegatedConjunctionUnderAndMustFlipTheConnective(Options options)
+        {
+            Seed(options, out var store);
+            using (store)
+            using (var session = store.OpenSession())
+            {
+                // not(A and C) drops only the doc that has both, leaving the other two E docs
+                Assert.Equal(2, Count(session, "E = \"y\" and not (A = \"y\" and C = \"y\")"));
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void NegatedDisjunctionUnderOrMustFlipTheConnective(Options options)
+        {
+            Seed(options, out var store);
+            using (store)
+            using (var session = store.OpenSession())
+            {
+                // not(A or C) keeps only docs with neither, and no doc qualifies - so only the B doc is left
+                Assert.Equal(1, Count(session, "B = \"y\" or not (A = \"y\" or C = \"y\")"));
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void NegationWithNothingToDisagreeWithStaysCorrect(Options options)
+        {
+            Seed(options, out var store);
+            using (store)
+            using (var session = store.OpenSession())
+            {
+                // the negation is the whole predicate, so its own connective is the root's - nothing to group
+                Assert.Equal(5, Count(session, "true and not (A = \"y\" and C = \"y\")"));
+                Assert.Equal(2, Count(session, "true and not (A = \"y\" or B = \"y\")"));
+            }
+        }
+
         private class Tagged
         {
             public string Id { get; set; }

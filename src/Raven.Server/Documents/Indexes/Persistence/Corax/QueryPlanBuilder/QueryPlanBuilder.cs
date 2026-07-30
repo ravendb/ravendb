@@ -554,15 +554,21 @@ internal static partial class QueryPlanBuilder
     // not (Name != $p0 and Name != $p1) -> (Name = $p0 or Name = $p1), not(A = 1 or B = 2) -> A !=1 AND B != 2, etc
     private static BooleanOp ParseNegated(NegatedExpression negated, ResolutionContext walkerCtx)
     {
-        return negated.Expression switch
+        int beforeCount = walkerCtx.Clauses.Count;
+        BooleanOp innerOp = negated.Expression switch
         {
             NegatedExpression or BinaryExpression
                 {
                     Operator: OperatorType.And or OperatorType.Or or OperatorType.Equal or OperatorType.NotEqual
-                } => 
+                } =>
                     ParseExpression(NegationNormalForm(negated.Expression), walkerCtx),
             _ => ParseNegatedLeaf(negated.Expression, walkerCtx)
         };
+
+        // De Morgan flips the connective, so a NegatedExpression is an OR to the parent even when it reads as an AND -
+        // and ParseBinaryExpression decides grouping from the *syntactic* child, which is neither.
+        GroupWrapperOperands(walkerCtx, beforeCount, innerOp);
+        return innerOp;
     }
 
     private static QueryExpression NegationNormalForm(QueryExpression expr)
