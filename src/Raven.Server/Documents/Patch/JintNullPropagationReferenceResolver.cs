@@ -101,6 +101,7 @@ namespace Raven.Server.Documents.Patch
                 var baseValue = reference.Base;
 
                 if (baseValue.IsUndefined() ||
+                    reference.IsUnresolvableReference ||
                     baseValue.IsArray() && baseValue.AsArray().Length == 0)
                 {
                     JsValue referencedName = reference.ReferencedName;
