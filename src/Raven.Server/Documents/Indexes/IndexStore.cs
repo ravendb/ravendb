@@ -1629,7 +1629,7 @@ namespace Raven.Server.Documents.Indexes
                     var sp = Stopwatch.StartNew();
 
                     addToInitLog(LogMode.Information, $"Initializing side-by-side reset replacement index: `{replacementName}`");
-                    OpenIndex(path, replacementPath, exceptions, replacementName, startIndex, indexDefinition: null);
+                    OpenIndex(path, replacementPath, exceptions, replacementName, startIndex, definition);
 
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"Initialized side-by-side reset replacement index: `{replacementName}`, took: {sp.ElapsedMilliseconds:#,#;;0}ms");
@@ -1730,8 +1730,6 @@ namespace Raven.Server.Documents.Indexes
             {
                 index = Index.Open(indexPath, _documentDatabase, generateNewDatabaseId: false, out searchEngineType);
 
-                indexDefinition ??= index.GetIndexDefinition();
-
                 var differences = IndexDefinitionCompareDifferences.None;
 
                 if (indexDefinition is IndexDefinition def)
@@ -1789,9 +1787,6 @@ namespace Raven.Server.Documents.Indexes
                 exceptions?.Add(e);
 
                 if (alreadyFaulted)
-                    return;
-
-                if (indexDefinition == null)
                     return;
 
                 var configuration = new FaultyInMemoryIndexConfiguration(path, _documentDatabase.Configuration);
