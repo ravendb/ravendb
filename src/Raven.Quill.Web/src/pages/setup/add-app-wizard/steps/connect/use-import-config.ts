@@ -12,6 +12,7 @@ import {
     parseConfigFile,
     type WizardConfig,
 } from "@/pages/setup/add-app-wizard/config-io";
+import { parseConnectionString } from "@/pages/setup/add-app-wizard/connection-string";
 import { isTableSupported } from "@/pages/setup/add-app-wizard/discover-utils";
 import { wrapDtoTablesToFormShape } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-dto";
 import {
@@ -111,8 +112,11 @@ export function useImportConfig() {
                 sourceTableName: table.sourceTableName ?? "",
             }));
 
+            const { values: fields, droppedKeywords } = parseConnectionString(config.connectionString);
+
             setValue("externalConnection.provider", config.provider);
-            setValue("externalConnection.mode", "raw");
+            setValue("externalConnection.mode", droppedKeywords.length === 0 ? "fields" : "raw");
+            setValue("externalConnection.fields", fields);
             setValue("externalConnection.connectionString", config.connectionString);
             setValue("externalConnection.slug", slug, { shouldValidate: true, shouldTouch: true });
             setValue("verifySchema.tables", verifySchemaTables);
