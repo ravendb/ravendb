@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
 using Tests.Infrastructure;
 using Xunit;
@@ -41,6 +42,11 @@ public class RavenDB_27045 : RavenTestBase
         // field as holding time values too. A TimeOnly literal has the very same shape, so canonicalizing it outright
         // would stop this from matching - guarded below.
         public string Duration { get; set; }
+
+        // A date kept as a string, which is how the issue was reported: the same TypeConverter turns it into a
+        // DateTime while indexing, so the field is indexed canonically and marked as holding time values. This is
+        // also the only shape that reproduces the bug through the client API - see the query below.
+        public string DateAsText { get; set; }
     }
 
     private class Items_ByDate : AbstractIndexCreationTask<Item>
@@ -48,7 +54,7 @@ public class RavenDB_27045 : RavenTestBase
         public Items_ByDate()
         {
             Map = items => from item in items
-                           select new { item.Date, item.UtcDate, item.Duration };
+                           select new { item.Date, item.UtcDate, item.Duration, item.DateAsText };
         }
     }
 
@@ -60,7 +66,14 @@ public class RavenDB_27045 : RavenTestBase
 
         using (var session = store.OpenSession())
         {
-            session.Store(new Item { Id = "items/1", Date = DateUnspecified, UtcDate = DateUtc, Duration = "07:28:42" });
+            session.Store(new Item
+            {
+                Id = "items/1",
+                Date = DateUnspecified,
+                UtcDate = DateUtc,
+                Duration = "07:28:42",
+                DateAsText = "2009-06-16T07:28:42.7700000"
+            });
             session.SaveChanges();
         }
 
@@ -96,6 +109,19 @@ public class RavenDB_27045 : RavenTestBase
             Assert.Empty(Query(session, "where Date all in ('2009-06-16T07:28:42.771')"));
             // a single-valued field cannot hold both null and the date, but the null must not choke the term building
             Assert.Empty(Query(session, "where Date all in (null, '2009-06-16T07:28:42.770')"));
+
+            // The same gap reached through the client API rather than RQL. It needs a string-typed property: a
+            // DateTime one cannot express a shortened literal at all, because the client always serialises it through
+            // GetDefaultRavenFormat, which writes all seven fractional digits.
+            const string shortened = "2009-06-16T07:28:42.770";
+
+            Assert.Single(session.Query<Item, Items_ByDate>()
+                .Where(x => x.DateAsText.In(new[] { shortened }))
+                .ToList());
+
+            Assert.Single(session.Advanced.DocumentQuery<Item, Items_ByDate>()
+                .WhereIn(x => x.DateAsText, new[] { shortened })
+                .ToList());
         }
 
         // spelling out the field and the literal, otherwise a failure here only says 'the collection was empty'
