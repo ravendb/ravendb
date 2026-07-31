@@ -5,7 +5,6 @@ import { FormTextarea } from "@/components/form/form-textarea";
 import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
 import { AgentParametersSection } from "@/pages/setup/add-capability-wizard/steps/review/agent-parameters-section";
 import { AgentQueryToolsSection } from "@/pages/setup/add-capability-wizard/steps/review/agent-query-tools-section";
-import { SampleObjectAndSchemaTabs } from "@/pages/setup/add-capability-wizard/steps/review/sample-object-and-schema-tabs";
 
 export const SYSTEM_PROMPT_PLACEHOLDER =
     "Describe the agent's purpose and capabilities. " +
@@ -19,7 +18,7 @@ export function AgentConfigurationTab() {
         <div className="grid gap-8">
             <ConfigurationSection
                 title="Configure basic settings"
-                description="Define your agent's purpose, its AI provider connection, and the structure of its responses."
+                description="Define your agent's purpose and its AI provider connection."
             >
                 <div className="grid gap-5 rounded-lg border bg-background p-4">
                     <FormInput
@@ -42,22 +41,6 @@ export function AgentConfigurationTab() {
                         placeholder={SYSTEM_PROMPT_PLACEHOLDER}
                         rows={7}
                         description="Defines the agent's role and capabilities, guiding the LLM's responses throughout the conversation."
-                    />
-                    <SampleObjectAndSchemaTabs
-                        sampleObject={{
-                            name: "review.sampleObject",
-                            label: "Sample response object",
-                            placeholder: `{\n    // "ResponseField": "Instruction to the LLM"\n}`,
-                            description:
-                                "A JSON object defining the structure of the responses you expect from the LLM. " +
-                                "RavenDB generates the response JSON schema from it.",
-                        }}
-                        schema={{
-                            name: "review.outputSchema",
-                            label: "Response JSON schema",
-                            placeholder: `{\n    "type": "object",\n    "properties": { ... }\n}`,
-                            description: "Takes precedence over the sample response object when both are provided.",
-                        }}
                     />
                 </div>
             </ConfigurationSection>
