@@ -4,6 +4,7 @@ import { FormAutocomplete } from "@/components/form/form-autocomplete";
 import { FormInput } from "@/components/form/form-input";
 import type { ConnectionStringFormData } from "@/components/ai-connection-string/ai-connection-string-utils";
 import { AdvancedFields } from "@/components/ai-connection-string/provider-fields/advanced-fields";
+import { ExperimentalProviderAlert } from "@/components/ai-connection-string/provider-fields/experimental-provider-alert";
 import {
     DimensionsField,
     EmbeddingsMaxConcurrentBatchesField,
@@ -38,6 +39,8 @@ export function OpenAiFields({ modelType }: { modelType: AiModelType }) {
         ],
     });
     const trimmedApiKey = apiKey.trim();
+    const trimmedEndpoint = endpoint.trim();
+    const isCustomEndpoint = trimmedEndpoint !== "" && !trimmedEndpoint.startsWith("https://api.openai.com");
     const models = useAiModelOptions(
         trimmedApiKey
             ? {
@@ -56,6 +59,12 @@ export function OpenAiFields({ modelType }: { modelType: AiModelType }) {
 
     return (
         <>
+            {isCustomEndpoint && (
+                <ExperimentalProviderAlert>
+                    Using a custom endpoint. Self-hosted OpenAI-compatible servers such as vLLM are experimental and may
+                    yield significantly worse results than OpenAI's hosted models.
+                </ExperimentalProviderAlert>
+            )}
             <FormInput
                 control={control}
                 name="openAiSettings.apiKey"

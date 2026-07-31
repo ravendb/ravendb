@@ -1,5 +1,6 @@
 import { useId, type ReactNode } from "react";
 import { type FieldPath, type FieldValues, type UseControllerProps, useController } from "react-hook-form";
+import { Badge } from "@/components/shadcn/ui/badge";
 import { Field, FieldDescription, FieldLabel } from "@/components/shadcn/ui/field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/shadcn/ui/select";
 import { cn } from "@/lib/utils";
@@ -7,6 +8,7 @@ import { cn } from "@/lib/utils";
 export type FormSelectOption<T extends string | number | boolean> = {
     value: T;
     label: string;
+    badge?: string;
     disabled?: boolean;
 };
 
@@ -64,6 +66,7 @@ export function FormSelect<TFieldValues extends FieldValues, TName extends Field
                         {options.map((option) => (
                             <SelectItem key={option.value} value={option.value} disabled={option.disabled}>
                                 {option.label}
+                                {option.badge && <Badge variant="warning">{option.badge}</Badge>}
                             </SelectItem>
                         ))}
                     </SelectContent>
