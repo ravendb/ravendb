@@ -5,12 +5,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { FormProvider, useForm } from "react-hook-form";
 import type { DiscoverResponse } from "@/api/generated/server-api";
 import { FormWizard } from "@/components/form/wizard/form-wizard";
+import { RANGE_PREVIEW_ROW_CLASSNAME } from "@/components/table/row-range-selection";
 import { preventEnterKeySubmission } from "@/lib/form-utils";
 import { defaultApiMocks } from "@/mocks/default-mocks";
 import {
     discoveryWithAllStates,
     failedCdcVerification,
     failedDiscovery,
+    manyTablesDiscovery,
     sampleDiscovery,
     setupMocks,
 } from "@/mocks/setup-mocks";
@@ -250,6 +252,45 @@ export const VerifySchemaWithoutSelection: Story = {
 
         await userEvent.click(canvas.getAllByRole("checkbox", { name: "Select row" })[0]);
         await waitFor(() => expect(canvas.queryByText("At least one table is required")).not.toBeInTheDocument());
+    },
+};
+
+export const VerifySchemaSelectionLimit: Story = {
+    parameters: { msw: { handlers: discoverHandlers(manyTablesDiscovery) } },
+    render: () => (
+        <AppWizardAtStep initialStep="verifySchema" discovery={manyTablesDiscovery} hasSelectedTables={false} />
+    ),
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        // One instance for the whole run: the direct userEvent API starts a fresh one per call,
+        // which would drop the held shift key before the range click.
+        const user = userEvent.setup();
+        const rowCheckboxes = () => canvas.getAllByRole("checkbox", { name: "Select row" });
+        const limitNotice = () => canvas.queryByText(/one app processes at most 64 tables/i);
+        const previewedRows = () => canvasElement.querySelectorAll(`.${RANGE_PREVIEW_ROW_CLASSNAME}`);
+
+        expect(canvas.getByText(/while clicking to select a range of tables/i)).toBeInTheDocument();
+
+        await user.click(rowCheckboxes()[0]);
+
+        // Holding shift previews the range from the anchor to the hovered row before taking it.
+        await user.keyboard("{Shift>}");
+        await user.hover(rowCheckboxes()[3]);
+        await waitFor(() => expect(previewedRows()).toHaveLength(4));
+
+        await user.click(rowCheckboxes()[3]);
+        await user.keyboard("{/Shift}");
+        await waitFor(() => expect(canvas.getByText(/4 out of 80 tables selected/)).toBeInTheDocument());
+        await waitFor(() => expect(previewedRows()).toHaveLength(0));
+        expect(limitNotice()).not.toBeInTheDocument();
+
+        const selectAll = canvas.getByRole("checkbox", { name: "Select all" });
+        await user.click(selectAll);
+        await waitFor(() => expect(canvas.getByText(/64 out of 80 tables selected/)).toBeInTheDocument());
+        expect(limitNotice()).toBeInTheDocument();
+
+        await user.click(selectAll);
+        await waitFor(() => expect(limitNotice()).not.toBeInTheDocument());
     },
 };
 

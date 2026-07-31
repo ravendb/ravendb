@@ -13,7 +13,7 @@ import {
     type WizardConfig,
 } from "@/pages/setup/add-app-wizard/config-io";
 import { parseConnectionString } from "@/pages/setup/add-app-wizard/connection-string";
-import { isTableSupported } from "@/pages/setup/add-app-wizard/discover-utils";
+import { isTableSupported, MAX_SELECTED_TABLES } from "@/pages/setup/add-app-wizard/discover-utils";
 import { wrapDtoTablesToFormShape } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-dto";
 import {
     findDiscoveredTable,
@@ -50,6 +50,13 @@ export function useImportConfig() {
         mutationFn: async (file) => {
             setProgressLabel(IMPORT_PHASES.reading);
             const config = await parseConfigFile(file);
+
+            if (config.tables.length > MAX_SELECTED_TABLES) {
+                throw new Error(
+                    `The configuration maps ${config.tables.length} tables, but during the beta one app processes at most ${MAX_SELECTED_TABLES}. Support for unlimited tables is coming later.`,
+                );
+            }
+
             // An older configuration carries no slug; keep whatever the operator already typed.
             const slug = config.slug || getValues("externalConnection").slug;
             const connection = {

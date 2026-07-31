@@ -1,5 +1,6 @@
 import type { CdcColumnType, CdcSinkRelationType } from "@/api/generated/server-api";
 import { z } from "zod";
+import { MAX_SELECTED_TABLES } from "@/pages/setup/add-app-wizard/discover-utils";
 import { MAX_SLUG_LENGTH, toSlug } from "@/pages/setup/add-app-wizard/slugify";
 
 // Mirrors the generated CdcSinkTableConfig graph. Kept in sync with the API enums via `satisfies`.
@@ -244,7 +245,11 @@ export const appSchema = z.object({
                     sourceTableName: z.string(),
                 }),
             )
-            .min(1, "At least one table is required"),
+            .min(1, "At least one table is required")
+            .max(
+                MAX_SELECTED_TABLES,
+                `During the beta, at most ${MAX_SELECTED_TABLES} tables can be processed by one app`,
+            ),
     }),
     map: z.object({
         source: z.union([z.literal("ai-suggested"), z.literal("manual")]),

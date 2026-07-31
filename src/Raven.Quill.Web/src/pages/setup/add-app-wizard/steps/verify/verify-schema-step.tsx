@@ -10,9 +10,10 @@ import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/shadcn/ui/input-group";
 import { Tabs, TabsList, TabsTrigger } from "@/components/shadcn/ui/tabs";
+import { countSelectedRows } from "@/components/table/row-range-selection";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
-import { getTableKey, isTableSupported } from "@/pages/setup/add-app-wizard/discover-utils";
+import { getTableKey, isTableSupported, MAX_SELECTED_TABLES } from "@/pages/setup/add-app-wizard/discover-utils";
 import { ImportedConfigAlert } from "@/pages/setup/add-app-wizard/imported-config-alert";
 import { DefineSchemasSheet } from "@/pages/setup/add-app-wizard/steps/verify/define-schemas-sheet";
 import { NeedsConfigTablesTable } from "@/pages/setup/add-app-wizard/steps/verify/needs-config-tables-table";
@@ -24,6 +25,7 @@ import {
     DiscoverLoadingSkeleton,
     MessageList,
     NoTablesFound,
+    WarningNotice,
 } from "@/pages/setup/add-app-wizard/steps/verify/verify-schema-states";
 
 type VerifyTab = "verified" | "needs-configuration";
@@ -126,6 +128,13 @@ export function VerifySchemaStep({ isBusy }: WizardBodyComponentProps) {
                                 type="search"
                             />
                         </InputGroup>
+                        {currentTab === "verified" && (
+                            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                Hold
+                                <kbd className="rounded border px-1 py-0.5 font-mono text-[10px]">Shift</kbd>
+                                while clicking to select a range of tables
+                            </span>
+                        )}
                         <Button
                             type="button"
                             variant="outline"
@@ -160,12 +169,18 @@ export function VerifySchemaStep({ isBusy }: WizardBodyComponentProps) {
                     )}
 
                     {currentTab === "needs-configuration" && (
-                        <div className="flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
-                            <TriangleAlertIcon className="size-4 shrink-0" aria-hidden="true" />
+                        <WarningNotice>
                             {needsConfigTables.length === 1
                                 ? "1 discovered table needs configuration before it can be selected."
                                 : `${needsConfigTables.length} discovered tables need configuration before they can be selected.`}
-                        </div>
+                        </WarningNotice>
+                    )}
+
+                    {currentTab === "verified" && countSelectedRows(rowSelection) >= MAX_SELECTED_TABLES && (
+                        <WarningNotice>
+                            During the beta, one app processes at most {MAX_SELECTED_TABLES} tables - support for
+                            unlimited tables is coming later. Deselect a table to pick a different one.
+                        </WarningNotice>
                     )}
 
                     {currentTab === "verified" ? (
