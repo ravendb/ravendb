@@ -26,9 +26,12 @@ export const Default: Story = {
         expect(slug).toHaveValue("acme-shop");
         expect(slug).toBeDisabled();
 
-        const connectionString = canvas.getByLabelText("Connection string");
-        expect(connectionString).toHaveValue(sampleAppCdcConfiguration.connectionString);
-        expect(connectionString).toBeDisabled();
+        // The stored string parses cleanly, so the wizard seeds the connection details, not the raw string.
+        const host = canvas.getByLabelText("Host");
+        expect(host).toHaveValue("localhost");
+        expect(host).toBeDisabled();
+        expect(canvas.getByLabelText("Database")).toHaveValue("demo_shop");
+        expect(canvas.getByLabelText("Username")).toHaveValue("admin");
         expect(canvas.getByRole("button", { name: /enable editing/i })).toBeInTheDocument();
     },
 };
