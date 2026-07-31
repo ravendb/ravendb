@@ -13,7 +13,7 @@ import { ZERO_SAFE_Y_DOMAIN } from "@/lib/chart-domain";
 import { seriesColor } from "@/lib/palette";
 
 const writesChartConfig = {
-    writes: { label: "Writes", color: "var(--chart-1)" },
+    writes: { label: "WRU", color: "var(--chart-1)" },
 } satisfies ChartConfig;
 
 // Zooms the chart in from a clicked bar. Played imperatively (not via a keyed
@@ -35,7 +35,7 @@ function useZoomOnClick() {
     return { ref, zoomFrom };
 }
 
-// Single-series writes bar chart shared by the Usage page ("Writes this month") and the
+// Single-series writes bar chart shared by the Usage page ("WRU" card) and the
 // per-app CDC writes section, which differ only in their x-axis key. Passing `onBarClick`
 // makes the bars clickable and receives the clicked bucket, used to drill a period from
 // year into month into day; the chart then zooms in from the clicked bar.

@@ -2,6 +2,7 @@ import { useId } from "react";
 import { TrendingDown, TrendingUp } from "lucide-react";
 import { Area, AreaChart, YAxis } from "recharts";
 import { ZERO_SAFE_Y_DOMAIN } from "@/lib/chart-domain";
+import { InfoHint } from "@/components/data/info-hint";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Card, CardContent } from "@/components/shadcn/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/shadcn/ui/chart";
@@ -10,6 +11,8 @@ import { formatCompact } from "@/lib/format";
 
 export type DashboardStatCard = {
     label: string;
+    // Tooltip shown on an info icon next to the label (e.g. expanding an abbreviation).
+    labelInfo?: string;
     value: number | undefined;
     isLoading: boolean;
     caption?: string;
@@ -40,7 +43,10 @@ function StatCard({ card }: { card: DashboardStatCard }) {
         <Card className="gap-3">
             <CardContent className="space-y-1">
                 <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm text-muted-foreground">{card.label}</span>
+                    <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                        {card.label}
+                        {card.labelInfo && <InfoHint content={card.labelInfo} />}
+                    </span>
                     {card.delta !== undefined && !card.isLoading && <DeltaBadge delta={card.delta} />}
                 </div>
                 {card.isLoading ? (

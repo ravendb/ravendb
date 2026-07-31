@@ -6,6 +6,7 @@ import type { QuillApplicationUsage, QuillPeriodUsage } from "@/api/generated/se
 import { ApiState } from "@/components/data/api-state";
 import { WritesBarChart } from "@/components/data/charts";
 import { DatePeriodPicker } from "@/components/data/date-period-picker";
+import { WruLabel } from "@/components/data/wru-label";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/shadcn/ui/card";
 import { canDrillInto, drillInto, formatPeriodLabel, getDefaultDatePeriod, type DatePeriod } from "@/lib/date-period";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/ui/table";
@@ -37,7 +38,9 @@ export function DashboardUsage() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Writes</CardTitle>
+                    <CardTitle>
+                        <WruLabel />
+                    </CardTitle>
                     <CardDescription>{periodLabel}</CardDescription>
                     {totalUsage !== undefined && (
                         <CardAction className="text-right">
@@ -114,7 +117,9 @@ function PerAppUsageTable({ apps }: { apps: QuillApplicationUsage[] }) {
             <TableHeader>
                 <TableRow className="hover:bg-transparent">
                     <TableHead className="w-full pl-4 text-xs font-medium text-muted-foreground">Name</TableHead>
-                    <TableHead className="pr-4 text-right text-xs font-medium text-muted-foreground">Writes</TableHead>
+                    <TableHead className="pr-4 text-right text-xs font-medium text-muted-foreground">
+                        <WruLabel />
+                    </TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>

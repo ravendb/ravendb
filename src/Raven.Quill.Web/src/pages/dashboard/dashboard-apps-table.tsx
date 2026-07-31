@@ -4,6 +4,7 @@ import type { ApplianceAppResponse } from "@/api/generated/server-api";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/ui/table";
+import { WruLabel } from "@/components/data/wru-label";
 import { appRoutes } from "@/lib/app-routes";
 import { formatCompact } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -62,7 +63,9 @@ export function DashboardAppsTable({ apps }: { apps: ApplianceAppResponse[] }) {
                             <TableHead className="text-xs font-medium text-muted-foreground">Source</TableHead>
                             <TableHead className="text-xs font-medium text-muted-foreground">Agents</TableHead>
                             <TableHead className="text-xs font-medium text-muted-foreground">Channels</TableHead>
-                            <TableHead className="text-xs font-medium text-muted-foreground">Writes / month</TableHead>
+                            <TableHead className="text-xs font-medium text-muted-foreground">
+                                <WruLabel suffix=" / month" />
+                            </TableHead>
                             <TableHead className="w-[20%] text-xs font-medium text-muted-foreground">Status</TableHead>
                             <TableHead className="w-0 text-right text-xs font-medium text-muted-foreground">
                                 <span className="sr-only">Actions</span>
