@@ -6,17 +6,19 @@ namespace Raven.Quill.Endpoints.Helpers;
 
 internal static class AppLookup
 {
+    internal static string DocumentIdFor(string slug) => $"apps/{slug}";
+
     internal static async Task<App?> LoadAppAsync(IDocumentStore store, string slug, CancellationToken ct)
     {
         using var session = store.OpenAsyncSession();
         // LoadAsync by slug-keyed id: no index, no staleness race
-        return await session.LoadAsync<App>($"apps/{slug}", ct);
+        return await session.LoadAsync<App>(DocumentIdFor(slug), ct);
     }
 
     internal static async Task DeleteAppAsync(IDocumentStore store, string slug, CancellationToken ct)
     {
         using var session = store.OpenAsyncSession();
-        session.Delete($"apps/{slug}");
+        session.Delete(DocumentIdFor(slug));
         session.Delete(WizardState.DocumentIdFor(slug));   // the app's in-progress wizard doc, if any
         await session.SaveChangesAsync(ct);
     }

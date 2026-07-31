@@ -872,7 +872,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Creates the app. The slug (also the app's database name, used in public embed URLs) derives from appName unless an explicit slug is supplied; either is normalized to lowercase ASCII alphanumerics with hyphens. Duplicate slug => 409. */
+        /** @description Creates the app, or updates it when one already exists under the same slug. The slug (also the app's database name, used in public embed URLs) derives from appName unless an explicit slug is supplied; either is normalized to lowercase ASCII alphanumerics with hyphens. A slug whose database exists without an app behind it => 409. */
         post: operations["setup.provision"];
         delete?: never;
         options?: never;
@@ -1058,6 +1058,10 @@ export interface components {
             error?: null | string;
             errors?: null | string[];
             code?: null | string;
+        };
+        AppCdcConfigurationResponse: {
+            configuration: components["schemas"]["CdcSinkConfiguration"];
+            connectionString: null | string;
         };
         ApplianceAppResponse: {
             id: string;
@@ -2194,7 +2198,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CdcSinkConfiguration"];
+                    "application/json": components["schemas"]["AppCdcConfigurationResponse"];
                 };
             };
             /** @description Not Found */
@@ -3917,6 +3921,7 @@ export type AiModelType = components["schemas"]["AiModelType"];
 export type AiToolCallResult = components["schemas"]["AiToolCallResult"];
 export type AiUsage = components["schemas"]["AiUsage"];
 export type ApiErrorResponse = components["schemas"]["ApiErrorResponse"];
+export type AppCdcConfigurationResponse = components["schemas"]["AppCdcConfigurationResponse"];
 export type ApplianceAppResponse = components["schemas"]["ApplianceAppResponse"];
 export type AppOverviewResponse = components["schemas"]["AppOverviewResponse"];
 export type AppResponse = components["schemas"]["AppResponse"];
@@ -4132,7 +4137,7 @@ export function createServerApi(client: ApiClient) {
         apps: {
             aiConnectionStringsList: (slug: string) => client.get<AiConnectionString[], ApiErrorResponse>(API_ENDPOINTS.apps.aiConnectionStringsList(slug)),
             cdcErrors: (slug: string) => client.get<CdcError[], ApiErrorResponse>(API_ENDPOINTS.apps.cdcErrors(slug)),
-            cdcGet: (slug: string) => client.get<CdcSinkConfiguration, ApiErrorResponse>(API_ENDPOINTS.apps.cdcGet(slug)),
+            cdcGet: (slug: string) => client.get<AppCdcConfigurationResponse, ApiErrorResponse>(API_ENDPOINTS.apps.cdcGet(slug)),
             cdcPerformance: (slug: string) => client.get<CdcPerformanceResponse, ApiErrorResponse>(API_ENDPOINTS.apps.cdcPerformance(slug)),
             delete: (slug: string) => client.delete<void, ApiErrorResponse>(API_ENDPOINTS.apps.delete(slug)),
             detail: (slug: string) => client.get<AppResponse, ApiErrorResponse>(API_ENDPOINTS.apps.detail(slug)),

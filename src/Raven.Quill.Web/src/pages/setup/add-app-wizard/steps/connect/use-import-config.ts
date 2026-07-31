@@ -19,6 +19,7 @@ import {
     findDiscoveredTable,
     getSourceTableLabel,
 } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
+import { toSlug } from "@/pages/setup/add-app-wizard/slugify";
 import { discoverTables } from "@/pages/setup/add-app-wizard/steps/verify/use-discover-tables";
 import {
     computeConnectKey,
@@ -57,10 +58,13 @@ export function useImportConfig() {
                 );
             }
 
-            // An older configuration carries no slug; keep whatever the operator already typed.
-            const slug = config.slug || getValues("externalConnection").slug;
+            // The export carries no slug, so the import runs under the operator's, derived from the
+            // app name when the override is empty. It cannot be blank: the wizard endpoints key
+            // their state by it, which is why the trigger stays disabled until one can be derived.
+            const connectionValues = getValues("externalConnection");
+            const slug = connectionValues.slug.trim() || toSlug(connectionValues.appName);
             const connection = {
-                ...getValues("externalConnection"),
+                ...connectionValues,
                 provider: config.provider,
                 mode: "raw" as const,
                 connectionString: config.connectionString,
@@ -125,7 +129,8 @@ export function useImportConfig() {
             setValue("externalConnection.mode", droppedKeywords.length === 0 ? "fields" : "raw");
             setValue("externalConnection.fields", fields);
             setValue("externalConnection.connectionString", config.connectionString);
-            setValue("externalConnection.slug", slug, { shouldValidate: true, shouldTouch: true });
+            // The form must carry the slug the import ran under: later steps key their work by it.
+            setValue("externalConnection.slug", slug, { shouldValidate: true });
             setValue("verifySchema.tables", verifySchemaTables);
             setValue("map.source", "manual");
             setValue("map.aiPrompt", "");
@@ -149,7 +154,7 @@ export function useImportConfig() {
                     selectedTables: verifySchemaTables,
                 }),
             );
-            store.lockImportedConfig();
+            store.lockConfig();
         },
     });
 

@@ -1,6 +1,8 @@
 using System.Net;
 using QuillTests.E2E.Fixtures;
 using Raven.Client.Documents;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Raven.Quill.Wizard;
 using Tests.Infrastructure;
 using Xunit;
@@ -39,47 +41,66 @@ public class WizardProvisionEndpointTests(ITestOutputHelper output, QuillCollect
         Assert.Contains("reserved", ex.Body);
     }
 
+    // provision is an upsert: the edit wizard reruns the whole flow and submits to the same endpoint
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Provision_with_duplicate_slug_returns_409()
+    public async Task Provision_on_an_existing_slug_updates_the_app()
     {
-        var taken = "taken-" + Guid.NewGuid().ToString("N");
-        await SeedWizardMapAsync(Host.Config, taken);
+        var slug = "twice-" + Guid.NewGuid().ToString("N");
+        await SeedWizardMapAsync(Host.Config, slug, collection: "Orders");
+        var first = await Host.ProvisionAsync(new ProvisionRequest("First App", slug));
 
-        await Host.ProvisionAsync(new ProvisionRequest("First App", taken));
+        await SeedWizardMapAsync(Host.Config, slug, collection: "RenamedOrders");
+        var second = await Host.ProvisionAsync(new ProvisionRequest("Second App", slug));
 
-        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => Host.ProvisionAsync(new ProvisionRequest(UniqueAppName(), taken)));
+        Assert.Equal(first.Id, second.Id);
+        Assert.Equal(slug, second.Slug);
 
-        Assert.Equal(HttpStatusCode.Conflict, ex.StatusCode);
-        Assert.Contains(taken, ex.Body);
+        var cdc = await Host.GetCdcAsync(slug);
+        Assert.Equal("RenamedOrders", cdc.Configuration.Tables[0].CollectionName);
+
+        using var session = Host.Config.OpenAsyncSession();
+        var app = await session.LoadAsync<App>($"apps/{slug}");
+        Assert.Equal("Second App", app.AppName);
+        // the CDC process state is keyed by task name, so an update must not rename the task
+        Assert.Equal($"{slug}-cdc", app.CdcTaskName);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Provision_normalizes_explicit_slug_before_uniqueness_gate()
+    public async Task Provision_normalizes_explicit_slug_before_looking_for_an_existing_app()
     {
         var suffix = Guid.NewGuid().ToString("N");
         var normalized = $"my-custom-app-{suffix}";
         await SeedWizardMapAsync(Host.Config, normalized);
 
-        await Host.ProvisionAsync(new ProvisionRequest("First App", normalized));
+        var first = await Host.ProvisionAsync(new ProvisionRequest("First App", normalized));
 
-        // messy slug normalizes to the already-provisioned one
-        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => Host.ProvisionAsync(new ProvisionRequest(UniqueAppName(), $"My Custom App {suffix}!!")));
+        // messy slug normalizes to the already-provisioned one, so this updates it
+        var second = await Host.ProvisionAsync(new ProvisionRequest("Renamed App", $"My Custom App {suffix}!!"));
 
-        Assert.Equal(HttpStatusCode.Conflict, ex.StatusCode);
-        Assert.Contains(normalized, ex.Body);
+        Assert.Equal(first.Id, second.Id);
+        Assert.Equal(normalized, second.Slug);
     }
 
+    // a database under the slug with no app behind it is not ours to adopt
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Provision_returns_409_when_slug_is_already_provisioned()
+    public async Task Provision_returns_409_when_the_database_exists_without_an_app()
     {
-        var slug = "twice-" + Guid.NewGuid().ToString("N");
+        var slug = "orphan-" + Guid.NewGuid().ToString("N");
         await SeedWizardMapAsync(Host.Config, slug);
-        await Host.ProvisionAsync(new ProvisionRequest("First App", slug));
+        await Host.Config.Maintenance.Server.SendAsync(
+            new CreateDatabaseOperation(new DatabaseRecord(slug)));
 
-        var second = await Assert.ThrowsAsync<QuillHttpException>(() => Host.ProvisionAsync(new ProvisionRequest("Second App", slug)));
+        try
+        {
+            var ex = await Assert.ThrowsAsync<QuillHttpException>(() => Host.ProvisionAsync(new ProvisionRequest(UniqueAppName(), slug)));
 
-        Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
-        Assert.Contains(slug, second.Body);
+            Assert.Equal(HttpStatusCode.Conflict, ex.StatusCode);
+            Assert.Contains(slug, ex.Body);
+        }
+        finally
+        {
+            await Host.Config.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(slug, hardDelete: true));
+        }
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -113,9 +134,11 @@ public class WizardProvisionEndpointTests(ITestOutputHelper output, QuillCollect
 
     private static string UniqueAppName() => "App " + Guid.NewGuid().ToString("N");
 
-    private static async Task SeedWizardMapAsync(IDocumentStore store, string slug)
+    private static async Task SeedWizardMapAsync(IDocumentStore store, string slug, string? collection = null)
     {
         var cdc = AiHelperSamples.BuildCdcConfig();
+        if (collection is not null)
+            cdc.Tables[0].CollectionName = collection;
         cdc.Disabled = true;
         cdc.SkipInitialLoad = true;
 

@@ -1,4 +1,4 @@
-import { useController, useFormContext, useFormState } from "react-hook-form";
+import { useController, useFormContext, useFormState, useWatch } from "react-hook-form";
 import { SELECTED_CARD_CLASSES } from "@/components/form/form-radio-cards";
 import { FormInput } from "@/components/form/form-input";
 import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
@@ -6,7 +6,7 @@ import { Field, FieldDescription, FieldLabel } from "@/components/shadcn/ui/fiel
 import { cn } from "@/lib/utils";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import { type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
-import { ImportedConfigAlert } from "@/pages/setup/add-app-wizard/imported-config-alert";
+import { LockedConfigAlert } from "@/pages/setup/add-app-wizard/locked-config-alert";
 import { PROVIDER_OPTIONS } from "@/pages/setup/add-app-wizard/steps/connect/connect-source-options";
 import { ConnectionEditor } from "@/pages/setup/add-app-wizard/steps/connect/connection-editor";
 import { ImportConfigDialog } from "@/pages/setup/add-app-wizard/steps/connect/import-config-dialog";
@@ -20,11 +20,18 @@ import { RefreshCw } from "lucide-react";
 export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
     const { control, setValue, getValues } = useFormContext<AppFormData>();
     const { touchedFields } = useFormState({ control });
-    const importState = useSetupWizardStore((state) => state.importState);
-    const isLocked = importState === "locked";
+    const configLock = useSetupWizardStore((state) => state.configLock);
+    const isEditingApp = useSetupWizardStore((state) => state.editedAppSlug !== null);
+    const isLocked = configLock === "locked";
 
-    // The slug follows the app name until the operator touch it
-    const isSlugTouched = Boolean(touchedFields.externalConnection?.slug);
+    // The slug follows the app name until the operator touches it, and never on an existing app,
+    // where it is already the app's database name.
+    const isSlugFollowingName = !touchedFields.externalConnection?.slug && !isEditingApp;
+
+    const appName = useWatch({ control, name: "externalConnection.appName" });
+    const slug = useWatch({ control, name: "externalConnection.slug" });
+    // The import runs through the wizard endpoints, which key their state by slug.
+    const isImportReady = slug.trim() !== "" || toSlug(appName) !== "";
 
     const {
         field: { value },
@@ -32,12 +39,13 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
     } = useController({ control, name: "externalConnection.provider" });
     const { changeProvider } = useConnectionSync();
 
+    // A locked configuration owns its connection until the operator enables editing.
     const isConnectionDisabled = isBusy || isLocked;
 
     return (
         <div className="grid gap-5">
-            <ImportedConfigAlert />
-            {importState === "none" && (
+            <LockedConfigAlert />
+            {configLock === "none" && (
                 <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 px-4 py-3">
                     <div className="grid gap-0.5">
                         <span className="text-sm font-medium">Have an exported configuration?</span>
@@ -45,7 +53,12 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
                             Import it to reuse a saved connection and table mapping.
                         </span>
                     </div>
-                    <ImportConfigDialog disabled={isBusy} />
+                    <ImportConfigDialog
+                        disabled={isBusy || !isImportReady}
+                        disabledExplanation={
+                            isImportReady ? undefined : "Enter an application name first to import a configuration."
+                        }
+                    />
                 </div>
             )}
             <FormInput
@@ -55,7 +68,7 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
                 placeholder="e.g. AcmeShop"
                 disabled={isBusy}
                 afterChange={(event) => {
-                    if (!isSlugTouched) {
+                    if (isSlugFollowingName) {
                         setValue("externalConnection.slug", toSlug(event.target.value), { shouldValidate: true });
                     }
                 }}
@@ -63,24 +76,32 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
             <FormInput
                 control={control}
                 name="externalConnection.slug"
-                label="Public URL slug (optional)"
+                label={isEditingApp ? "Public URL slug" : "Public URL slug (optional)"}
                 placeholder="e.g. acme-shop"
-                disabled={isBusy}
-                description="Appears in every public embed URL and becomes the app's database name. Permanent once the app is created."
+                disabled={isBusy || isEditingApp}
+                description={
+                    isEditingApp
+                        ? "Appears in every public embed URL and is the app's database name, so it cannot be changed."
+                        : "Appears in every public embed URL and becomes the app's database name. Permanent once the app is created."
+                }
                 addons={
-                    <InputGroupAddon align="inline-end">
-                        <Button
-                            variant="ghost"
-                            onClick={() =>
-                                setValue("externalConnection.slug", toSlug(getValues("externalConnection.appName")), {
-                                    shouldValidate: true,
-                                })
-                            }
-                        >
-                            <RefreshCw />
-                            Regenerate
-                        </Button>
-                    </InputGroupAddon>
+                    !isEditingApp && (
+                        <InputGroupAddon align="inline-end">
+                            <Button
+                                variant="ghost"
+                                onClick={() =>
+                                    setValue(
+                                        "externalConnection.slug",
+                                        toSlug(getValues("externalConnection.appName")),
+                                        { shouldValidate: true },
+                                    )
+                                }
+                            >
+                                <RefreshCw />
+                                Regenerate
+                            </Button>
+                        </InputGroupAddon>
+                    )
                 }
             />
             <Field data-invalid={invalid}>

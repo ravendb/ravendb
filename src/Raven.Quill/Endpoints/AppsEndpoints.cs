@@ -3,6 +3,7 @@ using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Quill.Agents;
@@ -48,7 +49,7 @@ public static class AppsEndpoints
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
         group.MapGet("/{slug}/cdc", GetCdcAsync)
             .WithName("apps.cdcGet")
-            .Produces<CdcSinkConfiguration>()
+            .Produces<AppCdcConfigurationResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
         group.MapPost("/{slug}/setup/try", SetupTryAsync)
@@ -284,7 +285,8 @@ public static class AppsEndpoints
         return Results.Ok(CdcPerformanceShaper.ShapeErrors(raw));
     }
 
-    // read-side: the current CDC sink config, so the UI can populate an edit form
+    // read-side: the current CDC sink config plus the source it captures from, so the UI can
+    // populate an edit form
     private static async Task<IResult> GetCdcAsync(
         string slug,
         IDocumentStore store,
@@ -299,7 +301,20 @@ public static class AppsEndpoints
         if (cdc is null)
             return Results.NotFound(new ApiErrorResponse("cdc task not found"));
 
-        return Results.Ok(cdc);
+        return Results.Ok(new AppCdcConfigurationResponse(
+            cdc, ResolveSourceConnectionString(record?.SqlConnectionStrings, cdc.ConnectionStringName)));
+    }
+
+    private static string? ResolveSourceConnectionString(
+        Dictionary<string, SqlConnectionString>? connectionStrings,
+        string? connectionStringName)
+    {
+        if (connectionStrings is null || connectionStringName is null)
+            return null;
+
+        return connectionStrings.TryGetValue(connectionStringName, out var connection)
+            ? connection.ConnectionString
+            : null;
     }
 
     private static async Task SetupTryAsync(

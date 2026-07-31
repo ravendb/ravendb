@@ -42,6 +42,7 @@ import { AppScopedNotFoundPage, NotFoundPage } from "@/pages/utility/not-found-p
 import { RouteErrorBoundary } from "@/pages/utility/route-error-boundary";
 import { SimpleInfoPage } from "@/pages/utility/simple-info-page";
 import { AddAppWizard } from "@/pages/setup/add-app-wizard/add-app-wizard";
+import { EditAppWizard } from "@/pages/setup/add-app-wizard/edit-app-wizard";
 import { AddCapabilityWizard } from "@/pages/setup/add-capability-wizard/add-capability-wizard";
 
 export type AppRouteHandle = {
@@ -415,6 +416,18 @@ export const router = createBrowserRouter([
                                 element: <AddCapabilityWizard />,
                                 handle: {
                                     title: "Add AI Capability",
+                                    appScoped: true,
+                                    isBareLayout: true,
+                                    isPageTitleHidden: true,
+                                    isSidebarCollapsed: true,
+                                } satisfies AppRouteHandle,
+                            },
+                            {
+                                // No navigation entry: reached from the dashboard's apps table.
+                                path: ROUTE_PATTERNS.editApp,
+                                element: <EditAppWizard />,
+                                handle: {
+                                    title: "Edit application",
                                     appScoped: true,
                                     isBareLayout: true,
                                     isPageTitleHidden: true,

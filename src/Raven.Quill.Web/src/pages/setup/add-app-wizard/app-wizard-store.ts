@@ -5,7 +5,11 @@ import {
     type MapActiveTable,
 } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-types";
 
-export type ImportState = "none" | "locked" | "unlocked";
+/**
+ * Protects a mapping the wizard started from - an imported file, or the edited app's own
+ * configuration. While locked, the inputs it was generated from stay frozen.
+ */
+export type ConfigLockState = "none" | "locked" | "unlocked";
 
 /** Outcome of a connect attempt together with the connect key it ran with. */
 export type ConnectionAttempt = { key: string; error: Error | null };
@@ -15,9 +19,12 @@ export type SetupWizardState = {
     discoverResult: DiscoverResponse | null;
     discoverSchemas: string[];
     setDiscoverResult: (result: DiscoverResponse, discoverSchemas: string[]) => void;
-    importState: ImportState;
-    lockImportedConfig: () => void;
-    unlockImportedConfig: () => void;
+    /** Slug of the app being edited; null while a new app is being created. */
+    editedAppSlug: string | null;
+    startEditingApp: (slug: string, discoverSchemas: string[]) => void;
+    configLock: ConfigLockState;
+    lockConfig: () => void;
+    unlockConfig: () => void;
     /**
      * Last connect attempt made via "Test connection" (or a previous Next). Both the verified state and
      * the failure alert are derived from it, so neither survives an edit to the connection inputs.
@@ -61,7 +68,8 @@ const initialState: Pick<
     SetupWizardState,
     | "discoverResult"
     | "discoverSchemas"
-    | "importState"
+    | "editedAppSlug"
+    | "configLock"
     | "connectKey"
     | "connectionAttempt"
     | "appliedMapKey"
@@ -75,7 +83,8 @@ const initialState: Pick<
 > = {
     discoverResult: null,
     discoverSchemas: [],
-    importState: "none",
+    editedAppSlug: null,
+    configLock: "none",
     connectKey: null,
     connectionAttempt: null,
     appliedMapKey: null,
@@ -96,8 +105,11 @@ export const useSetupWizardStore = create<SetupWizardState>((set) => ({
             discoverResult: result,
             discoverSchemas,
         }),
-    lockImportedConfig: () => set({ importState: "locked" }),
-    unlockImportedConfig: () => set({ importState: "unlocked" }),
+    // Starts locked: the mapping comes from the app itself. Its schemas are seeded too - discovery
+    // only covers the default one otherwise, and tables it misses cannot be verified.
+    startEditingApp: (slug, discoverSchemas) => set({ editedAppSlug: slug, configLock: "locked", discoverSchemas }),
+    lockConfig: () => set({ configLock: "locked" }),
+    unlockConfig: () => set({ configLock: "unlocked" }),
     setConnectKey: (key) => set({ connectKey: key }),
     setConnectionAttempt: (attempt) => set({ connectionAttempt: attempt }),
     setAppliedMapKey: (key) => set({ appliedMapKey: key }),

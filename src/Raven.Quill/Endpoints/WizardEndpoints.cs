@@ -8,8 +8,10 @@ using Raven.Client.Documents.Operations.CdcSink.Schema;
 using Raven.Client.Documents.Operations.CdcSink.Test;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Exceptions;
+using Raven.Client.ServerWide.Operations;
 using Raven.Quill.AiHelper;
 using Raven.Quill.Contracts;
+using Raven.Quill.Endpoints.Helpers;
 using Raven.Quill.Infrastructure;
 using Raven.Quill.Wizard;
 
@@ -68,9 +70,11 @@ public static class WizardEndpoints
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
         group.MapPost("/provision", ProvisionAsync)
             .WithName("setup.provision")
-            .WithDescription("Creates the app. The slug (also the app's database name, used in public " +
-                             "embed URLs) derives from appName unless an explicit slug is supplied; either " +
-                             "is normalized to lowercase ASCII alphanumerics with hyphens. Duplicate slug => 409.")
+            .WithDescription("Creates the app, or updates it when one already exists under the same slug. " +
+                             "The slug (also the app's database name, used in public embed URLs) derives " +
+                             "from appName unless an explicit slug is supplied; either is normalized to " +
+                             "lowercase ASCII alphanumerics with hyphens. A slug whose database exists " +
+                             "without an app behind it => 409.")
             .Accepts<ProvisionRequest>("application/json")
             .Produces<ProvisionResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
@@ -510,6 +514,13 @@ public static class WizardEndpoints
             sourceProvider = state.Provider;
         }
 
+        var existingApp = await AppLookup.LoadAppAsync(store, slug, ct);
+        if (existingApp is not null)
+        {
+            return await UpdateAppAsync(
+                store, logger, existingApp, body.AppName, cdcConfig, sourceProvider, sourceConnectionString, ct);
+        }
+
         bool created;
         try
         {
@@ -542,6 +553,62 @@ public static class WizardEndpoints
 
         logger.LogInformation("Provisioned app slug={Slug} id={Id} cdcTask={CdcTaskName}",
             app.Slug, app.Id, app.CdcTaskName);
+
+        return Results.Ok(new ProvisionResponse(app.Id!, app.Slug));
+    }
+
+    /// <summary>
+    /// Re-points an existing app at the mapping and source the wizard just produced. The database
+    /// and its read model are already in place, so only the source connection string, the CDC sink,
+    /// and the application name are written.
+    /// </summary>
+    private static async Task<IResult> UpdateAppAsync(
+        IDocumentStore store,
+        ILogger<WizardLogger> logger,
+        App app,
+        string appName,
+        CdcSinkConfiguration cdcConfig,
+        string? sourceProvider,
+        string sourceConnectionString,
+        CancellationToken ct)
+    {
+        var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(app.Database), ct);
+        var existingCdc = record?.CdcSinks?.FirstOrDefault();
+
+        // Keep the names the app already runs on: the CDC process state is keyed by the task name,
+        // so a rename restarts the sync, and a renamed connection string strands the old one.
+        cdcConfig.Name = string.IsNullOrWhiteSpace(existingCdc?.Name) ? $"{app.Slug}-cdc" : existingCdc.Name;
+        if (string.IsNullOrWhiteSpace(existingCdc?.ConnectionStringName) == false)
+            cdcConfig.ConnectionStringName = existingCdc.ConnectionStringName;
+
+        // A paused sink stays paused; editing the mapping is not a request to resume it.
+        cdcConfig.Disabled = existingCdc?.Disabled ?? false;
+
+        var transplantedCs = new SqlConnectionString
+        {
+            Name = cdcConfig.ConnectionStringName,
+            FactoryName = sourceProvider,
+            ConnectionString = sourceConnectionString,
+        };
+        await store.Maintenance.ForDatabase(app.Database).SendAsync(
+            new PutConnectionStringOperation<SqlConnectionString>(transplantedCs), ct);
+
+        if (existingCdc is null)
+            await store.Maintenance.ForDatabase(app.Database).SendAsync(new AddCdcSinkOperation(cdcConfig), ct);
+        else
+            await store.Maintenance.ForDatabase(app.Database).SendAsync(
+                new UpdateCdcSinkOperation(existingCdc.TaskId, cdcConfig), ct);
+
+        using (var session = store.OpenAsyncSession())
+        {
+            app.AppName = appName;
+            app.CdcTaskName = cdcConfig.Name;
+            await session.StoreAsync(app, AppLookup.DocumentIdFor(app.Slug), ct);
+            await session.SaveChangesAsync(ct);
+        }
+
+        logger.LogInformation("Updated app slug={Slug} id={Id} cdcTask={CdcTaskName}",
+            app.Slug, app.Id, cdcConfig.Name);
 
         return Results.Ok(new ProvisionResponse(app.Id!, app.Slug));
     }

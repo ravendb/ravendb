@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { Database, Plus, Trash2 } from "lucide-react";
+import { Database, Pencil, Plus, Trash2 } from "lucide-react";
 import type { ApplianceAppResponse } from "@/api/generated/server-api";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
@@ -102,15 +102,22 @@ function AppRow({ app }: { app: ApplianceAppResponse }) {
                 <AppStatusCell app={app} />
             </TableCell>
             <TableCell className="text-right">
-                <DeleteAppDialog
-                    slug={app.slug}
-                    appName={app.name}
-                    trigger={
-                        <Button variant="ghost" size="icon-sm" aria-label={`Delete ${app.name}`}>
-                            <Trash2 className="size-3.5" aria-hidden="true" />
-                        </Button>
-                    }
-                />
+                <div className="flex items-center justify-end gap-1">
+                    <Button asChild variant="ghost" size="icon-sm" aria-label={`Edit ${app.name}`}>
+                        <Link to={appRoutes.editApp(app.slug)}>
+                            <Pencil className="size-3.5" aria-hidden="true" />
+                        </Link>
+                    </Button>
+                    <DeleteAppDialog
+                        slug={app.slug}
+                        appName={app.name}
+                        trigger={
+                            <Button variant="ghost" size="icon-sm" aria-label={`Delete ${app.name}`}>
+                                <Trash2 className="size-3.5" aria-hidden="true" />
+                            </Button>
+                        }
+                    />
+                </div>
             </TableCell>
         </TableRow>
     );

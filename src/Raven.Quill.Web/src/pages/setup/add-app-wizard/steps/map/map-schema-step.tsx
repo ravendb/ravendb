@@ -5,17 +5,17 @@ import { FormTextarea } from "@/components/form/form-textarea";
 import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import { type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
-import { ImportedConfigAlert } from "@/pages/setup/add-app-wizard/imported-config-alert";
+import { LockedConfigAlert } from "@/pages/setup/add-app-wizard/locked-config-alert";
 import { AI_SUGGEST_OPTION, MANUAL_OPTION } from "@/pages/setup/add-app-wizard/steps/map/map-source-options";
 
 export function MapSchemaStep({ isBusy }: WizardBodyComponentProps) {
     const { control } = useFormContext<AppFormData>();
-    const isLocked = useSetupWizardStore((state) => state.importState) === "locked";
+    const isLocked = useSetupWizardStore((state) => state.configLock) === "locked";
     const isDisabled = isBusy || isLocked;
 
     return (
         <div className="grid gap-5">
-            <ImportedConfigAlert />
+            <LockedConfigAlert />
             <FormRadioCards
                 control={control}
                 name="map.source"

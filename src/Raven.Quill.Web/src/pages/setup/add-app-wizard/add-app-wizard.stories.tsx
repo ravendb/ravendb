@@ -111,7 +111,8 @@ function AppWizardAtStep({
         useSetupWizardStore.setState({
             discoverResult: discovery,
             discoverSchemas: [],
-            importState: "none",
+            editedAppSlug: null,
+            configLock: "none",
             connectKey: null,
             appliedMapKey: isMappingApplied
                 ? computeMapKey({

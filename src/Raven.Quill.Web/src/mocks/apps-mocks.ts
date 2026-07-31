@@ -1,6 +1,7 @@
 import { delay, http, HttpResponse, ws, type RequestHandler } from "msw";
 import type {
     AiConnectionString,
+    AppCdcConfigurationResponse,
     AppResponse,
     CdcError,
     ProvisionAgentResponse,
@@ -10,6 +11,7 @@ import type { AgentStreamEvent } from "@/api/custom-services/agent-stream";
 import type { CdcLiveRawFrame } from "@/pages/apps/use-cdc-live-performance";
 import { apiHttp } from "./api-http";
 import { samplePropagatedConnectionStrings } from "./ai-connection-strings-mocks";
+import { sampleCdcConfiguration } from "./setup-mocks";
 
 // WS-only relay route, so it has no generated client or `apiHttp` path to lean on.
 // The pattern must start with "*": msw resolves other patterns through `new URL()`,
@@ -24,6 +26,8 @@ export const appsMocks = {
         cdcProgressFeed.addEventListener("connection", ({ client }) => {
             client.send(JSON.stringify(frame));
         }) as unknown as RequestHandler,
+    cdcGet: (cdc: AppCdcConfigurationResponse = sampleAppCdcConfiguration) =>
+        apiHttp.get("/api/apps/{slug}/cdc", ({ response }) => response(200).json(cdc)),
     cdcErrors: (errors: CdcError[] = sampleCdcErrors) =>
         apiHttp.get("/api/apps/{slug}/cdc/errors", ({ response }) => response(200).json(errors)),
     detail: (apps: AppResponse[] = sampleApps) =>
@@ -61,6 +65,11 @@ export const appsMocks = {
         }),
     aiConnectionStringsList: (connectionStrings: AiConnectionString[] = samplePropagatedConnectionStrings) =>
         apiHttp.get("/api/apps/{slug}/connection-strings", ({ response }) => response(200).json(connectionStrings)),
+};
+
+export const sampleAppCdcConfiguration: AppCdcConfigurationResponse = {
+    configuration: sampleCdcConfiguration,
+    connectionString: "Host=localhost;Port=5432;Database=demo_shop;Username=admin;Password=pass",
 };
 
 export const sampleApps: AppResponse[] = [
