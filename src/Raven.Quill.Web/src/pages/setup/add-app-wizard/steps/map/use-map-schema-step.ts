@@ -56,8 +56,11 @@ export function useMapSchemaStep() {
             selectedTables,
         });
 
-        // Same inputs as the last generation - keep the (possibly edited) tables.
-        if (appliedMapKey === store.appliedMapKey && getValues("mapTables.tables").length > 0) {
+        // A mapping already in the form - imported, seeded from the edited app, or scaffolded and
+        // hand-edited since - is never regenerated behind the operator's back. Adopting its key
+        // makes it the applied answer for the current inputs.
+        if (getValues("mapTables.tables").length > 0) {
+            store.setAppliedMapKey(appliedMapKey);
             return;
         }
 

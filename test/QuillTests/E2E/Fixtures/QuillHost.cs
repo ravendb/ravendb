@@ -250,8 +250,8 @@ public sealed class QuillHost : IAsyncDisposable
     public Task<ConversationDto> GetConversationAsync(string slug, string conversationId) =>
         QuillHttp.GetAsync<ConversationDto>(Client, $"{QuillRoutes.AppConversations(slug)}/{conversationId}");
 
-    public Task<CdcSinkConfiguration> GetCdcAsync(string slug) =>
-        QuillHttp.GetAsync<CdcSinkConfiguration>(Client, QuillRoutes.AppCdc(slug));
+    public Task<AppCdcConfigurationResponse> GetCdcAsync(string slug) =>
+        QuillHttp.GetAsync<AppCdcConfigurationResponse>(Client, QuillRoutes.AppCdc(slug));
 
     public Task<CdcPerformanceResponse> GetCdcPerformanceAsync(string slug) =>
         QuillHttp.GetAsync<CdcPerformanceResponse>(Client, QuillRoutes.AppCdcPerformance(slug));

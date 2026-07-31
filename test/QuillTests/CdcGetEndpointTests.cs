@@ -11,6 +11,8 @@ namespace QuillTests;
 
 public class CdcGetEndpointTests(ITestOutputHelper output) : QuillTestBase(output)
 {
+    private const string SourceConnectionString = "Host=localhost;Port=5432;Database=northwind;Username=u;Password=p";
+
     [RavenFact(RavenTestCategory.Quill)]
     public async Task CdcGet_returns_current_configuration()
     {
@@ -18,10 +20,21 @@ public class CdcGetEndpointTests(ITestOutputHelper output) : QuillTestBase(outpu
         await SeedCdcSinkAsync(app.Store, app.Slug, name: "app-cdc");
 
         var cdc = await app.GetCdcAsync();
-        Assert.Equal("app-cdc", cdc.Name);
-        Assert.Equal("src", cdc.ConnectionStringName);
-        var table = Assert.Single(cdc.Tables);
+        Assert.Equal("app-cdc", cdc.Configuration.Name);
+        Assert.Equal("src", cdc.Configuration.ConnectionStringName);
+        var table = Assert.Single(cdc.Configuration.Tables);
         Assert.Equal("Customers", table.CollectionName);
+    }
+
+    // the edit wizard reconnects to the source, so it needs the connection string itself, not its name
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task CdcGet_returns_the_source_connection_string()
+    {
+        await using var app = await NewAppAsync();
+        await SeedCdcSinkAsync(app.Store, app.Slug, name: "app-cdc");
+
+        var cdc = await app.GetCdcAsync();
+        Assert.Equal(SourceConnectionString, cdc.ConnectionString);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -48,7 +61,7 @@ public class CdcGetEndpointTests(ITestOutputHelper output) : QuillTestBase(outpu
             {
                 Name = "src",
                 FactoryName = "Npgsql",
-                ConnectionString = "Host=localhost;Port=5432;Database=northwind;Username=u;Password=p",
+                ConnectionString = SourceConnectionString,
             }));
 
         await store.Maintenance.ForDatabase(database).SendAsync(new AddCdcSinkOperation(new CdcSinkConfiguration

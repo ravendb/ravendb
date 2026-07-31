@@ -10,15 +10,18 @@ import {
     DialogTrigger,
 } from "@/components/shadcn/ui/dialog";
 import { Spinner } from "@/components/shadcn/ui/spinner";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
 import { FileDropzone } from "@/components/form/file-dropzone";
 import { WizardErrorAlert } from "@/components/form/wizard/wizard-error-alert";
 import { useImportConfig } from "@/pages/setup/add-app-wizard/steps/connect/use-import-config";
 
 type ImportConfigDialogProps = {
     disabled?: boolean;
+    /** Tooltip on the disabled trigger, explaining why the import is unavailable. */
+    disabledExplanation?: string;
 };
 
-export function ImportConfigDialog({ disabled }: ImportConfigDialogProps) {
+export function ImportConfigDialog({ disabled, disabledExplanation }: ImportConfigDialogProps) {
     const [isOpen, setIsOpen] = useState(false);
     const { importMutation, progressLabel } = useImportConfig();
 
@@ -38,14 +41,30 @@ export function ImportConfigDialog({ disabled }: ImportConfigDialogProps) {
         importMutation.mutate(file);
     };
 
+    const trigger = (
+        <DialogTrigger asChild>
+            <Button type="button" variant="outline" disabled={disabled}>
+                <UploadIcon aria-hidden="true" />
+                Import configuration
+            </Button>
+        </DialogTrigger>
+    );
+
     return (
         <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-            <DialogTrigger asChild>
-                <Button type="button" variant="outline" disabled={disabled}>
-                    <UploadIcon aria-hidden="true" />
-                    Import configuration
-                </Button>
-            </DialogTrigger>
+            {disabled && disabledExplanation ? (
+                // The disabled button swallows pointer events, so the span carries the tooltip.
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <span>{trigger}</span>
+                        </TooltipTrigger>
+                        <TooltipContent>{disabledExplanation}</TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            ) : (
+                trigger
+            )}
             <DialogContent showCloseButton={!importMutation.isPending}>
                 <DialogHeader>
                     <DialogTitle>Import configuration</DialogTitle>

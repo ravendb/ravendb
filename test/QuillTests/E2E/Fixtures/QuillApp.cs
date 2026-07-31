@@ -103,7 +103,7 @@ public sealed class QuillApp : IAsyncDisposable
     /// Caller passes the raw conversation document id, e.g. a percent-encoded <c>chats%2Frecent</c>.
     public Task<ConversationDto> GetConversationAsync(string conversationId) => Host.GetConversationAsync(Slug, conversationId);
 
-    public Task<CdcSinkConfiguration> GetCdcAsync() => Host.GetCdcAsync(Slug);
+    public Task<AppCdcConfigurationResponse> GetCdcAsync() => Host.GetCdcAsync(Slug);
 
     public Task<CdcPerformanceResponse> GetCdcPerformanceAsync() => Host.GetCdcPerformanceAsync(Slug);
 

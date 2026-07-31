@@ -112,11 +112,17 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
     };
 };
 
-export const getAppFlow = ({ dataSource }: { dataSource: string }): AppStepId[] => {
+export const getAppFlow = ({ dataSource, isEditing }: { dataSource: string; isEditing?: boolean }): AppStepId[] => {
     // The "Choose data source" step is temporarily dropped from the UI; uncomment the
     // "dataSource" entries below to bring it back.
     if (dataSource === "ravendb") {
         return [/* "dataSource", */ "preview"];
+    }
+
+    // The edit seed pins the map source to "manual", so the "How would you like to map your
+    // schema?" step has nothing to ask.
+    if (isEditing) {
+        return ["externalConnection", "verifySchema", "mapTables", "preview"];
     }
 
     return [/* "dataSource", */ "externalConnection", "verifySchema", "map", "mapTables", "preview"];

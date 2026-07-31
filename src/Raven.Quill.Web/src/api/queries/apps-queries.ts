@@ -20,6 +20,11 @@ export function createAppsQueries(api: ServerApi["apps"]) {
                 queryKey: [baseKey, "list"],
                 queryFn: () => api.list(),
             }),
+        cdcGet: (slug: string) =>
+            queryOptions({
+                queryKey: [baseKey, "cdcGet", slug],
+                queryFn: () => api.cdcGet(slug),
+            }),
         cdcErrors: (slug: string) =>
             queryOptions({
                 queryKey: [baseKey, "cdcErrors", slug],

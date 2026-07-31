@@ -57,7 +57,7 @@ public class WizardStateIsolationTests(ITestOutputHelper output, QuillCollection
         await Host.ProvisionAsync(new ProvisionRequest("Mine", mine));
 
         var cdc = await Host.GetCdcAsync(mine);
-        Assert.Equal("MyOrders", cdc.Tables[0].CollectionName);
+        Assert.Equal("MyOrders", cdc.Configuration.Tables[0].CollectionName);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
