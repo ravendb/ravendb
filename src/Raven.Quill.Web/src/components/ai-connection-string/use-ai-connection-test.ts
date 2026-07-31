@@ -63,7 +63,7 @@ export function useAiConnectionTest(modelType: AiModelType, form: UseFormReturn<
         isPending: testMutation.isPending,
         error: attempt?.key === testKey ? attempt.error : null,
         test: async () => {
-            if (await trigger(provider)) {
+            if (await trigger([provider], { shouldFocus: true })) {
                 await testMutation.mutateAsync(getValues());
             }
         },
