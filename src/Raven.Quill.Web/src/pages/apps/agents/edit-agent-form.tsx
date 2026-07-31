@@ -31,7 +31,6 @@ import { agentSchema } from "@/pages/setup/add-capability-wizard/capability-wiza
 import { SYSTEM_PROMPT_PLACEHOLDER } from "@/pages/setup/add-capability-wizard/steps/review/agent-configuration-tab";
 import { AgentParametersSection } from "@/pages/setup/add-capability-wizard/steps/review/agent-parameters-section";
 import { AgentQueryToolsSection } from "@/pages/setup/add-capability-wizard/steps/review/agent-query-tools-section";
-import { SampleObjectAndSchemaTabs } from "@/pages/setup/add-capability-wizard/steps/review/sample-object-and-schema-tabs";
 import { ReviewTestAgentButton } from "@/pages/setup/add-capability-wizard/steps/review/test-agent-sheet";
 
 const editAgentSchema = agentSchema.pick({ connection: true, review: true });
@@ -39,13 +38,7 @@ type EditAgentFormData = z.infer<typeof editAgentSchema>;
 type SectionId = "basic" | "parameters" | "tools";
 
 const SECTION_FIELDS: Record<SectionId, readonly FieldPath<EditAgentFormData>[]> = {
-    basic: [
-        "review.name",
-        "connection.connectionStringName",
-        "review.systemPrompt",
-        "review.sampleObject",
-        "review.outputSchema",
-    ],
+    basic: ["review.name", "connection.connectionStringName", "review.systemPrompt"],
     parameters: ["review.parameters"],
     tools: ["review.queries"],
 };
@@ -116,7 +109,7 @@ export function EditAgentForm({ slug, agentId, config, connectionStrings }: Edit
                 <div className="flex min-h-0 flex-1 flex-col gap-8 overflow-y-auto">
                     <CollapsibleSection
                         title="Basic settings"
-                        description="The agent's purpose, its AI provider connection, and the structure of its responses."
+                        description="The agent's purpose and its AI provider connection."
                         errorIcon={<FormErrorIcon control={form.control} paths={SECTION_FIELDS.basic} />}
                         isOpen={openSections.basic}
                         onOpenChange={setSectionOpen("basic")}
@@ -160,23 +153,6 @@ export function EditAgentForm({ slug, agentId, config, connectionStrings }: Edit
                                 placeholder={SYSTEM_PROMPT_PLACEHOLDER}
                                 rows={7}
                                 description="Defines the agent's role and capabilities, guiding the LLM's responses throughout the conversation."
-                            />
-                            <SampleObjectAndSchemaTabs
-                                sampleObject={{
-                                    name: "review.sampleObject",
-                                    label: "Sample response object",
-                                    placeholder: `{\n    // "ResponseField": "Instruction to the LLM"\n}`,
-                                    description:
-                                        "A JSON object defining the structure of the responses you expect from the LLM. " +
-                                        "RavenDB generates the response JSON schema from it.",
-                                }}
-                                schema={{
-                                    name: "review.outputSchema",
-                                    label: "Response JSON schema",
-                                    placeholder: `{\n    "type": "object",\n    "properties": { ... }\n}`,
-                                    description:
-                                        "Takes precedence over the sample response object when both are provided.",
-                                }}
                             />
                         </div>
                     </CollapsibleSection>

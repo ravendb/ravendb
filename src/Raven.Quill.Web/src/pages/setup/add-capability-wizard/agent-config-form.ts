@@ -10,12 +10,16 @@ import type {
 // Mapping between the wizard's editable agent configuration (form values) and the
 // AiAgentConfiguration the server API speaks. Mirrors Studio's editAiAgentUtils.
 
+// The app's chat UI only understands a single "reply" string response, so the response
+// shape editor is hidden for now and every agent uses this fixed sample object.
+export const AGENT_SAMPLE_OBJECT = '{"reply":""}';
+
 export function emptyAgentConfiguration(): AgentConfigurationFormData {
     return {
         name: "",
         identifier: "",
         systemPrompt: "",
-        sampleObject: "",
+        sampleObject: AGENT_SAMPLE_OBJECT,
         outputSchema: "",
         parameters: [],
         queries: [],
@@ -95,8 +99,10 @@ export function suggestionToAgentConfiguration(suggestion: AiAgentConfiguration)
         name: suggestion.name ?? "",
         identifier: suggestion.identifier ?? "",
         systemPrompt: suggestion.systemPrompt ?? "",
-        sampleObject: suggestion.sampleObject ?? "",
-        outputSchema: suggestion.outputSchema ?? "",
+        // The response shape is not editable while the editor is hidden, so any suggested or
+        // stored shape is replaced with the fixed one.
+        sampleObject: AGENT_SAMPLE_OBJECT,
+        outputSchema: "",
         parameters: (suggestion.parameters ?? []).map(toFormParameter),
         queries: (suggestion.queries ?? []).map(toFormQueryTool),
     };
