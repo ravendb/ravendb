@@ -1,4 +1,5 @@
 import type { UsagePoint } from "@/api/generated/server-api";
+import { WRU_DESCRIPTION } from "@/components/data/wru-label";
 import type { DashboardStatCard } from "@/pages/dashboard/dashboard-stat-cards";
 
 // The "My apps" / app-overview stat cards, derived from the usage series: each card totals
@@ -16,6 +17,6 @@ export function buildUsageStatCards(points: UsagePoint[] | undefined, isPending:
         toCard("Conversations", (point) => point.conversations),
         toCard("Messages", (point) => point.messages),
         toCard("Tokens", (point) => point.tokens),
-        toCard("Writes", (point) => point.writes),
+        { ...toCard("WRU", (point) => point.writes), labelInfo: WRU_DESCRIPTION },
     ];
 }

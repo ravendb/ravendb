@@ -7,7 +7,7 @@ export function SectionCard({
     action,
     children,
 }: {
-    title: string;
+    title: ReactNode;
     description?: ReactNode;
     action?: ReactNode;
     children: ReactNode;

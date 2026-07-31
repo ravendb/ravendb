@@ -6,6 +6,7 @@ import type { AppUsageResponse, SeriesData } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
 import { SeriesBarChart, WritesBarChart } from "@/components/data/charts";
 import { DatePeriodPicker } from "@/components/data/date-period-picker";
+import { WRU_DESCRIPTION, WruLabel } from "@/components/data/wru-label";
 import { PagePanel } from "@/components/data/page-panel";
 import { canDrillInto, drillInto, getDefaultDatePeriod } from "@/lib/date-period";
 import { TableCell, TableRow } from "@/components/shadcn/ui/table";
@@ -84,7 +85,8 @@ function UsageMetricCards({ usage }: { usage: AppUsageResponse }) {
         },
         { label: "Tokens", value: tokens.value, isLoading: false, delta: tokens.delta, series: tokens.sparkline },
         {
-            label: "CDC writes",
+            label: "WRU",
+            labelInfo: WRU_DESCRIPTION,
             value: cdcWrites.value,
             isLoading: false,
             delta: cdcWrites.delta,
@@ -125,7 +127,7 @@ function CdcWritesSection({
     onBarClick?: BarClickHandler;
 }) {
     return (
-        <SectionCard title="CDC writes">
+        <SectionCard title={<WruLabel />}>
             <div className="rounded-lg border p-4">
                 <WritesBarChart data={points} xKey="t" onBarClick={onBarClick} />
             </div>
@@ -137,7 +139,7 @@ function TopTablesSection({ tables }: { tables: AppUsageResponse["topTables"] })
     return (
         <SectionCard title="Top tables">
             <SectionTable
-                headers={["Table", "Writes"]}
+                headers={["Table", "WRU"]}
                 isEmpty={tables.length === 0}
                 emptyMessage="No table activity yet."
             >
