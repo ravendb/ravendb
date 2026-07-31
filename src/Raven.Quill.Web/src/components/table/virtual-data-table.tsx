@@ -26,6 +26,9 @@ interface VirtualDataTableProps<TData> {
     rowHeightInPx?: number;
     getCellClassName?: (cellId: string) => string;
     getRowState?: (rowId: string) => string;
+    getRowClassName?: (rowId: string) => string;
+    /** Called with the row the pointer entered, or null when it left the rows. */
+    onRowHoverChange?: (rowId: string | null) => void;
     /** Floating content laid over the table region, e.g. a selection toolbar pinned to the bottom edge. */
     overlay?: ReactNode;
 }
@@ -44,6 +47,8 @@ export function VirtualDataTable<TData>({
     rowHeightInPx = DEFAULT_ROW_HEIGHT_IN_PX,
     getCellClassName,
     getRowState,
+    getRowClassName,
+    onRowHoverChange,
     overlay,
 }: VirtualDataTableProps<TData>) {
     // Enable resizing for the whole table so the drag handles and content-based auto-sizing
@@ -127,7 +132,9 @@ export function VirtualDataTable<TData>({
                                     data-index={virtualRow.index}
                                     data-state={getRowState?.(row.id)}
                                     ref={(node) => rowVirtualizer.measureElement(node)}
-                                    className="absolute flex w-full"
+                                    onPointerEnter={() => onRowHoverChange?.(row.id)}
+                                    onPointerLeave={() => onRowHoverChange?.(null)}
+                                    className={cn("absolute flex w-full", getRowClassName?.(row.id))}
                                     // Positioned via top instead of translateY: Chromium never shrinks
                                     // scrollable overflow contributed by transformed children, so rows
                                     // that transiently render lower leave a permanent phantom scrollbar.

@@ -430,6 +430,13 @@
     }
 }
 
+/* Rows a pending shift-click range would cover. The wash is forced because the row's own selected
+   and hover backgrounds are more specific, and the whole range has to read as one block. */
+@utility table-row-range-preview {
+    box-shadow: inset 3px 0 0 var(--color-primary);
+    background-color: color-mix(in oklab, var(--color-primary) 10%, transparent) !important;
+}
+
 @utility no-scrollbar {
     scrollbar-width: none;
 

@@ -1,10 +1,21 @@
 /* eslint-disable react-refresh/only-export-components */
-import type { ColumnDef } from "@tanstack/react-table";
+// The react-table instance keeps one identity for its whole lifetime and mutates its state in
+// place, so a compiled renderer would be memoized against a prop that never changes.
+"use no memo";
+
+import type { RefObject } from "react";
+import type { ColumnDef, Table } from "@tanstack/react-table";
 import { TriangleAlertIcon } from "lucide-react";
 import type { DiscoverTableResponse } from "@/api/generated/server-api";
 import { Checkbox } from "@/components/shadcn/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
-import { getTableLabel } from "@/pages/setup/add-app-wizard/discover-utils";
+import {
+    countSelectedRows,
+    getRangeSelectionRows,
+    isRowSelected,
+    setRowsSelected,
+} from "@/components/table/row-range-selection";
+import { getTableLabel, MAX_SELECTED_TABLES } from "@/pages/setup/add-app-wizard/discover-utils";
 import { Button } from "@/components/shadcn/ui/button";
 
 const TABLE_NAME_COLUMN: ColumnDef<DiscoverTableResponse> = {
@@ -47,34 +58,83 @@ const COLUMNS_COUNT_COLUMN: ColumnDef<DiscoverTableResponse> = {
     cell: ({ getValue }) => <span className="tabular-nums">{getValue<number>()}</span>,
 };
 
-export const VERIFIED_COLUMNS: ColumnDef<DiscoverTableResponse>[] = [
-    {
-        id: "select",
-        header: ({ table }) => (
-            <Checkbox
-                checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
-                onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-                aria-label="Select all"
-                disabled={table.options.enableRowSelection === false}
-            />
-        ),
-        cell: ({ row }) => (
-            <Checkbox
-                checked={row.getIsSelected()}
-                onCheckedChange={(value) => row.toggleSelected(!!value)}
-                aria-label="Select row"
-                disabled={!row.getCanSelect()}
-            />
-        ),
-        enableSorting: false,
-        enableHiding: false,
-        enableResizing: false,
-        size: 40,
-    },
-    TABLE_NAME_COLUMN,
-    PRIMARY_KEY_COLUMN,
-    COLUMNS_COUNT_COLUMN,
-];
+/**
+ * Columns of the verified tables table. Built per mounted table rather than shared as a constant so
+ * the select column can write the row of the last plain click into `anchorRowIdRef`: a shift-click
+ * applies that row's state to everything in between, and the table previews the same range on hover.
+ */
+export function createVerifiedColumns(anchorRowIdRef: RefObject<string | null>): ColumnDef<DiscoverTableResponse>[] {
+    return [
+        {
+            id: "select",
+            header: ({ table }) => <SelectAllCheckbox table={table} />,
+            cell: ({ row, table }) => (
+                <Checkbox
+                    checked={row.getIsSelected()}
+                    // Radix skips its own toggle once a click handler prevents the default, which is
+                    // what turns a shift-click into a range selection instead of a single toggle.
+                    onClick={(event) => {
+                        const rangeRows = event.shiftKey
+                            ? getRangeSelectionRows(table, anchorRowIdRef.current, row.id, MAX_SELECTED_TABLES)
+                            : [];
+
+                        if (rangeRows.length === 0) {
+                            return;
+                        }
+
+                        event.preventDefault();
+                        setRowsSelected(
+                            table,
+                            rangeRows,
+                            isRowSelected(table, anchorRowIdRef.current),
+                            MAX_SELECTED_TABLES,
+                        );
+                    }}
+                    onCheckedChange={(value) => {
+                        row.toggleSelected(!!value);
+                        anchorRowIdRef.current = row.id;
+                    }}
+                    aria-label="Select row"
+                    disabled={!row.getCanSelect()}
+                />
+            ),
+            enableSorting: false,
+            enableHiding: false,
+            enableResizing: false,
+            size: 40,
+        },
+        TABLE_NAME_COLUMN,
+        PRIMARY_KEY_COLUMN,
+        COLUMNS_COUNT_COLUMN,
+    ];
+}
+
+/**
+ * Selects or clears every currently visible row. Not react-table's own `toggleAllPageRowsSelected`:
+ * that one reports "all selected" as soon as the only selectable rows are the selected ones, which
+ * is exactly the state the selection limit puts the table in.
+ */
+function SelectAllCheckbox({ table }: { table: Table<DiscoverTableResponse> }) {
+    const rows = table.getRowModel().rows;
+    const { rowSelection } = table.getState();
+    const selectedCount = rows.filter((row) => rowSelection[row.id]).length;
+    // Radix reads a click on an indeterminate box as a request to select, which the limit cannot
+    // grant - clearing the visible rows is then the only thing left for the click to do.
+    const hasRoomForMore = countSelectedRows(rowSelection) < MAX_SELECTED_TABLES;
+
+    return (
+        <Checkbox
+            checked={selectedCount === 0 ? false : selectedCount === rows.length ? true : "indeterminate"}
+            onCheckedChange={(value) =>
+                setRowsSelected(table, rows, Boolean(value) && hasRoomForMore, MAX_SELECTED_TABLES)
+            }
+            aria-label="Select all"
+            // Nothing left to toggle when the selection is read-only, or when the limit is reached
+            // and none of the visible rows is selected.
+            disabled={!rows.some((row) => row.getCanSelect())}
+        />
+    );
+}
 
 export const NEEDS_CONFIG_COLUMNS: ColumnDef<DiscoverTableResponse>[] = [
     TABLE_NAME_COLUMN,

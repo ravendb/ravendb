@@ -1,7 +1,17 @@
-import { CircleSlash2Icon, PlusIcon } from "lucide-react";
+import type { ReactNode } from "react";
+import { CircleSlash2Icon, PlusIcon, TriangleAlertIcon } from "lucide-react";
 import { Button } from "@/components/shadcn/ui/button";
 import { Skeleton } from "@/components/shadcn/ui/skeleton";
 import { cn } from "@/lib/utils";
+
+export function WarningNotice({ children }: { children: ReactNode }) {
+    return (
+        <div className="flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
+            <TriangleAlertIcon className="size-4 shrink-0" aria-hidden="true" />
+            {children}
+        </div>
+    );
+}
 
 export function DiscoverLoadingSkeleton() {
     return (

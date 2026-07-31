@@ -265,6 +265,25 @@ export const discoveryWithAllStates: DiscoverResponse = {
     ],
 };
 
+export const manyTablesDiscovery: DiscoverResponse = {
+    catalogName: "demo_shop",
+    success: true,
+    hasPermissionToSetup: true,
+    errors: [],
+    warnings: [],
+    tables: Array.from({ length: 80 }, (_, index) => ({
+        sourceTableSchema: "dbo",
+        sourceTableName: `Table${String(index + 1).padStart(2, "0")}`,
+        columns: [
+            { name: "Id", nativeType: "int", suggestedType: "Default", isPrimaryKey: true, isCdcCapturable: true },
+        ],
+        primaryKeyColumns: ["Id"],
+        foreignKeys: [],
+        isCdcEnabled: true,
+        warnings: [],
+    })),
+};
+
 // Discovery that failed outright: the verify step shows only the destructive error banner.
 export const failedDiscovery: DiscoverResponse = {
     catalogName: null,

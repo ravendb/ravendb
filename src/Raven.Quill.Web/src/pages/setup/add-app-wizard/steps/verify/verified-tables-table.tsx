@@ -6,10 +6,11 @@ import { getCoreRowModel, getFilteredRowModel, useReactTable, type RowSelectionS
 import { XIcon } from "lucide-react";
 import type { DiscoverTableResponse } from "@/api/generated/server-api";
 import { TooltipProvider } from "@/components/shadcn/ui/tooltip";
+import { RANGE_PREVIEW_ROW_CLASSNAME, useRowRangeSelection } from "@/components/table/row-range-selection";
 import { VirtualDataTable } from "@/components/table/virtual-data-table";
-import { getTableKey } from "@/pages/setup/add-app-wizard/discover-utils";
+import { getTableKey, MAX_SELECTED_TABLES } from "@/pages/setup/add-app-wizard/discover-utils";
 import { VerifySchemaButton } from "@/pages/setup/add-app-wizard/steps/verify/verify-schema-button";
-import { VERIFIED_COLUMNS } from "@/pages/setup/add-app-wizard/steps/verify/verify-schema-columns";
+import { createVerifiedColumns } from "@/pages/setup/add-app-wizard/steps/verify/verify-schema-columns";
 
 type VerifiedTablesTableProps = {
     tables: DiscoverTableResponse[];
@@ -38,14 +39,24 @@ export function VerifiedTablesTable({
     // loop. "use no memo" opts this file out of the React Compiler (incompatible with react-table),
     // so the explicit useMemo matters. The `tables` data array is memoized by the parent.
     const columnFilters = useMemo(() => [{ id: "tableName", value: search }], [search]);
+    const rangeSelection = useRowRangeSelection<DiscoverTableResponse>(MAX_SELECTED_TABLES);
+    const columns = useMemo(
+        () => createVerifiedColumns(rangeSelection.anchorRowIdRef),
+        [rangeSelection.anchorRowIdRef],
+    );
+
+    const selectedCount = tables.filter((verifiedTable) => rowSelection[getTableKey(verifiedTable)]).length;
 
     const table = useReactTable({
-        columns: VERIFIED_COLUMNS,
+        columns,
         data: tables,
         getCoreRowModel: getCoreRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
         getRowId: getTableKey,
-        enableRowSelection: !disabled,
+        // At the limit only the already selected rows stay togglable, so the operator has to free a
+        // slot before picking another table.
+        enableRowSelection: (row) =>
+            !disabled && (Boolean(rowSelection[row.id]) || selectedCount < MAX_SELECTED_TABLES),
         onRowSelectionChange: (updaterOrValue) => {
             const value = typeof updaterOrValue === "function" ? updaterOrValue(rowSelection) : updaterOrValue;
             onRowSelectionChange(value);
@@ -56,17 +67,20 @@ export function VerifiedTablesTable({
         },
     });
 
-    const selectedCount = tables.filter((verifiedTable) => rowSelection[getTableKey(verifiedTable)]).length;
+    // Shows the range a shift-click would take before it is taken, trimmed the same way the click is.
+    const rangePreviewRowIds = rangeSelection.getPreviewRowIds(table);
 
     return (
         <TooltipProvider>
             <VirtualDataTable
                 table={table}
-                columnCount={VERIFIED_COLUMNS.length}
+                columnCount={columns.length}
                 emptyMessage="No tables match the current filter."
                 maxHeight="fill"
                 className="mb-4"
                 getRowState={(rowId) => (rowSelection[rowId] ? "selected" : "")}
+                getRowClassName={(rowId) => (rangePreviewRowIds.has(rowId) ? RANGE_PREVIEW_ROW_CLASSNAME : "")}
+                onRowHoverChange={rangeSelection.onRowHoverChange}
                 overlay={
                     selectedCount > 0 && (
                         <div className="absolute bottom-0 left-1/2 flex -translate-x-1/2 translate-y-1/2 items-center gap-2.5 rounded-full border bg-card px-4 py-2 text-sm shadow-md">
