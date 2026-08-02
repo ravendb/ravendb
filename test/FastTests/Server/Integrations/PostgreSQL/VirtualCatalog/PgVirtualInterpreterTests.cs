@@ -69,6 +69,50 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
             Assert.False(PgVirtualInterpreter.TryExecute("select format_type('not_an_oid')", EmptyCtx(), out _));
         }
 
+        // pg_table_is_visible(oid) asks whether a relation is reachable unqualified. RavenDB has a
+        // single schema and every pg_class row is in it, so the answer is always true - see
+        // PgIsVisibleFunction. The bare-call form here; the per-row WHERE form (which is what
+        // SQLAlchemy's get_table_oid actually sends) is covered in PgCatalogPgClassTests.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_table_is_visible_returns_true()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute("select pg_table_is_visible(16384)", EmptyCtx(), out var table));
+            Assert.NotNull(table);
+            Assert.Single(table.Columns);
+            Assert.Equal("pg_table_is_visible", table.Columns[0].Name);
+            Assert.Single(table.Data);
+            Assert.Equal("t", DecodeCell(table, row: 0, column: 0));
+        }
+
+        // Same rationale for functions: every pg_proc row is a pg_catalog builtin, and pg_catalog is
+        // always searched. (pg_type_is_visible is deliberately absent - see PgIsVisibleFunction.)
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_function_is_visible_returns_true()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute("select pg_function_is_visible(2400)", EmptyCtx(), out var table));
+            Assert.NotNull(table);
+            Assert.Single(table.Data);
+            Assert.Equal("t", DecodeCell(table, row: 0, column: 0));
+        }
+
+        // The function takes exactly one oid. Any other arity is a call we didn't understand, and
+        // answering true for it would claim we handled a query we didn't.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_table_is_visible_wrong_arity_falls_through()
+        {
+            Assert.False(PgVirtualInterpreter.TryExecute("select pg_table_is_visible()", EmptyCtx(), out _));
+            Assert.False(PgVirtualInterpreter.TryExecute("select pg_table_is_visible(16384, 16385)", EmptyCtx(), out _));
+        }
+
+        // pg_type_is_visible is NOT implemented, on purpose - pg_type carries information_schema
+        // domain types whose namespace is not on the search_path, so a blanket true would be a
+        // wrong answer rather than a conservative one.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_type_is_visible_is_not_implemented()
+        {
+            Assert.False(PgVirtualInterpreter.TryExecute("select pg_type_is_visible(23)", EmptyCtx(), out _));
+        }
+
         [RavenFact(RavenTestCategory.PostgreSql)]
         public void Star_projection_over_character_sets_returns_full_table()
         {

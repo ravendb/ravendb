@@ -112,6 +112,41 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
             Assert.Equal("Orders", DecodeCell(table, row: 0, column: 0));
         }
 
+        // SQLAlchemy's PGDialect.get_table_oid(), verbatim off the wire (1.4.54 + psycopg2). It runs
+        // BEFORE get_columns() and its result keys every later reflection query, so while
+        // pg_table_is_visible() was unimplemented this was rejected and Superset could not create a
+        // dataset - even though pg_class itself already listed the table.
+        //
+        // This is the per-row call path: the predicate is evaluated once per pg_class row with a
+        // column argument, not as a bare constant call (that form is in PgVirtualInterpreterTests).
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public async Task SqlAlchemy_get_table_oid_resolves_a_collection_to_its_oid()
+        {
+            const string sql = """
+                SELECT c.oid
+                FROM pg_catalog.pg_class c
+                LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+                WHERE (pg_catalog.pg_table_is_visible(c.oid))
+                AND c.relname = 'Orders' AND c.relkind in ('r', 'v', 'm', 'f', 'p')
+                """;
+
+            using var store = GetDocumentStore();
+            StoreSampleDocuments(store);
+
+            var ctx = await CtxFor(store);
+            Assert.True(PgVirtualInterpreter.TryExecute(sql, ctx, out var table));
+
+            Assert.Single(table.Columns);
+            Assert.Equal("oid", table.Columns[0].Name);
+            Assert.Single(table.Data);
+
+            // The oid must be the same one pg_class reports for Orders - reflection keyed off a
+            // different value would find no columns.
+            Assert.True(PgVirtualInterpreter.TryExecute(
+                "select oid from pg_class where relname = 'Orders'", ctx, out var expected));
+            Assert.Equal(DecodeCell(expected, row: 0, column: 0), DecodeCell(table, row: 0, column: 0));
+        }
+
         // pgAdmin's schema-tree probe (the shape PgVirtualInterpreterTests covers against a null
         // database) reads pg_class.relnamespace inside correlated EXISTS subqueries. While pg_class
         // was empty those never evaluated per row; now they do, and an unresolvable column there

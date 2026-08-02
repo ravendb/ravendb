@@ -190,6 +190,42 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
         }
     }
 
+    // pg_table_is_visible(oid) / pg_function_is_visible(oid): does this object's namespace sit on the
+    // current search_path - i.e. can the object be referenced by its bare name. SQLAlchemy's
+    // get_table_oid() filters pg_class through `pg_table_is_visible(c.oid)`, and it runs BEFORE
+    // column reflection, so while this was unimplemented the query was rejected and Superset could
+    // not create a dataset even though pg_class already listed the table (Zoho Desk #7031). pgAdmin
+    // uses the same predicate.
+    //
+    // TRUE is the right answer, not a workaround. RavenDB exposes a single schema for user objects -
+    // "public", oid 2200 in pg_namespace.csv, the only schema CurrentSchemaFunction ever names - and
+    // every pg_class row carries relnamespace 2200, so every relation really is on the search_path.
+    // Likewise every pg_proc row is a pg_catalog builtin, and pg_catalog is implicitly searched
+    // ahead of the rest, so those are visible too.
+    //
+    // pg_type_is_visible is deliberately NOT one of these. pg_type also carries the
+    // information_schema domain types (cardinal_number, sql_identifier, yes_or_no, ...), whose
+    // namespace is not on the search_path, so a blanket TRUE would be a wrong answer for those rows
+    // rather than a conservative one.
+    internal sealed class PgIsVisibleFunction : ScalarFunction
+    {
+        private readonly string _name;
+
+        public PgIsVisibleFunction(string name) { _name = name; }
+
+        public override string Name => _name;
+        public override string ResultColumnName => _name;
+        public override PgType PgType => PgBool.Default;
+
+        public override bool TryEvaluate(IReadOnlyList<object> args, VirtualQueryContext ctx, out object result)
+        {
+            result = true;
+            // Exactly one argument, the object's oid. We don't inspect it (see above), but any other
+            // arity is a call we haven't modelled - fall through rather than claim we answered it.
+            return args is { Count: 1 };
+        }
+    }
+
     // Maps a PG encoding integer to its name. We always serve UTF8 (encoding id 6 in PG); for any
     // input we return "UTF8" since that's the only encoding our wire format produces.
     internal sealed class PgEncodingToCharFunction : ScalarFunction
