@@ -346,7 +346,7 @@ namespace Raven.Server.Documents.Indexes
 
             _disposeOnce = new DisposeOnce<SingleAttempt>(() =>
             {
-                using (DrainRunningQueries())
+                using (DrainRunningQueries(true))
                     DisposeIndex();
             });
         }
@@ -787,18 +787,20 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        internal IDisposable DrainRunningQueries()
+        internal IDisposable DrainRunningQueries(bool waitForRunningQueriesToEnd = false)
         {
             if (_isRunningQueriesWriteLockTaken.Value)
                 return null;
 
             IDisposable currentlyRunningQueriesWriteLock;
 
+            var timeout = waitForRunningQueriesToEnd ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(10);
+
             try
             {
-                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
+                using (var cts = new CancellationTokenSource(timeout))
                     currentlyRunningQueriesWriteLock = _currentlyRunningQueriesLock.WriterLock(cts.Token);
-
+                
                 _isRunningQueriesWriteLockTaken.Value = true;
             }
             catch (OperationCanceledException)
@@ -5529,14 +5531,23 @@ namespace Raven.Server.Documents.Indexes
             if (_forTestingPurposes != null)
                 return _forTestingPurposes;
 
-            return _forTestingPurposes = new TestingStuff();
+            return _forTestingPurposes = new TestingStuff(this);
         }
 
         internal sealed class TestingStuff
         {
+            private readonly Index _index;
+
+            public TestingStuff(Index index)
+            {
+                _index = index;
+            }
+
             internal Action ActionToCallInFinallyOfExecuteIndexing;
 
             internal bool ShouldRenewTransaction;
+
+            internal IDisposable HoldRunningQueriesReadLock() => _index.CurrentlyInUse();
 
             internal Action BeforeClosingDocumentsReadTransactionForHandleReferences;
 
