@@ -16,8 +16,7 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
         {
         }
 
-        // SQLAlchemy 1.4.54's PGDialect.get_columns() SQL_COLS, verbatim, as it renders for the
-        // server_version we report (13.3).
+        // SQLAlchemy 1.4.54's PGDialect.get_columns() SQL_COLS, verbatim.
         private const string SqlCols = """
                         SELECT a.attname,
                           pg_catalog.format_type(a.atttypid, a.atttypmod),

@@ -177,9 +177,7 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
         }
     }
 
-    // Registered for tables and functions, both of which are always visible: every relation lives
-    // in the single "public" schema and every pg_proc row is a pg_catalog builtin. Types are the
-    // exception and get their own class below.
+    // Tables and functions are always visible: one schema, and every pg_proc row is a pg_catalog builtin.
     internal sealed class PgIsVisibleFunction : ScalarFunction
     {
         private readonly string _name;
@@ -197,22 +195,13 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
         }
     }
 
-    // pg_type_is_visible(oid): can the type be referenced by its bare name, i.e. is its namespace on
-    // the search_path. This one cannot answer unconditionally the way the two above do - pg_type
-    // also carries the information_schema domain types (cardinal_number, character_data,
-    // sql_identifier, time_stamp, yes_or_no), and information_schema is not searched. SQLAlchemy's
-    // get_columns() calls _load_domains(), which keys a domain by (name) when it is visible and by
-    // (schema, name) when it is not, so a blanket true would misfile exactly those five rows.
+    // Not constant true like the above: the information_schema domain types are off the search_path.
     internal sealed class PgTypeIsVisibleFunction : ScalarFunction
     {
-        // pg_catalog is implicitly searched ahead of everything else, public is what PgSettings
-        // reports as search_path. information_schema is deliberately absent.
         private static readonly HashSet<string> SearchedSchemas =
             new(StringComparer.OrdinalIgnoreCase) { "pg_catalog", "public" };
 
-        // Type oid -> the name of its namespace, joined from pg_type.typnamespace through
-        // pg_namespace.nspname. Built once: both are immutable CSV catalogs, and _load_domains
-        // evaluates this per pg_type row, so re-scanning per call would be quadratic.
+        // Built once: evaluated per pg_type row, so re-scanning per call would be quadratic.
         private static readonly Lazy<Dictionary<long, string>> SchemaByTypeOid = new(BuildSchemaByTypeOid);
 
         public override string Name => "pg_type_is_visible";
@@ -231,9 +220,7 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
             if (CatalogOid.TryRead(args[0], out var oid) == false)
                 return false;
 
-            // No pg_type row for this oid: PG returns NULL, not false - namespace.c checks the
-            // syscache before calling TypeIsVisible - which keeps "no such type" distinguishable
-            // from "exists, but off the search_path".
+            // Unknown oid -> NULL, not false: PG checks the syscache before calling TypeIsVisible.
             if (SchemaByTypeOid.Value.TryGetValue(oid, out var schema) == false)
                 return true;
 
@@ -249,7 +236,7 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
             var result = new Dictionary<long, string>(typeNamespaces.Count);
             foreach (var (typeOid, rawNamespace) in typeNamespaces)
             {
-                // A namespace we can't name can't be one we search - the empty string never matches.
+                // The empty string never matches a searched schema.
                 var schema = string.Empty;
                 if (CatalogOid.TryRead(rawNamespace, out var namespaceOid) &&
                     namespaceNames.TryGetValue(namespaceOid, out var name))
@@ -261,8 +248,7 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
             return result;
         }
 
-        // Reads one pg_catalog table into { keyColumn -> valueColumn }. Only used for the CSV-backed
-        // catalogs, which serve the same cached rows to every query and ignore ctx - hence null.
+        // CSV-backed catalogs serve the same cached rows to every query, so ctx is unused.
         private static Dictionary<long, object> ReadCatalogColumn(string tableName, string keyColumn, string valueColumn)
         {
             var result = new Dictionary<long, object>();
@@ -295,8 +281,7 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
         }
     }
 
-    // Catalog oids reach us as int (CSV-parsed rows), long (integer literals) or string (a quoted
-    // literal), depending on where the argument came from.
+    // Oids arrive as int (CSV rows), long (integer literals) or string (quoted literals).
     internal static class CatalogOid
     {
         public static bool TryRead(object value, out long oid)

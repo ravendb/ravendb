@@ -9,21 +9,13 @@ using Xunit;
 
 namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
 {
-    // pg_am lists index access methods - btree, hash, gist and so on. RavenDB exposes none of
-    // them: a collection has no indexes in the PG sense, so there is no access method to name.
-    //
-    // SQLAlchemy's get_indexes() LEFT-JOINs it to label each index with its method. Unregistered,
-    // that arm made JoinExecutor.TryResolveSource return false and rejected IDX_SQL outright; empty
-    // instead leaves am.amname NULL, which is what a LEFT JOIN with nothing to match yields.
     public class PgCatalogPgAmTests : RavenTestBase
     {
         public PgCatalogPgAmTests(ITestOutputHelper output) : base(output)
         {
         }
 
-        // The access-method arm of IDX_SQL, spelled the way SQLAlchemy 1.4.54 spells it, over the
-        // populated pg_class it joins from. The full IDX_SQL needs pg_class.reloptions as well,
-        // which lands in the next commit.
+        // The access-method arm of SQLAlchemy 1.4.54's IDX_SQL, verbatim.
         private const string AccessMethodJoin = """
                   SELECT
                       i.relname as relname, am.amname
@@ -48,8 +40,6 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
 
             Assert.Equal(new[] { "relname", "amname" }, ColumnNames(table));
 
-            // pg_class has rows, so the LEFT JOIN preserves them - it is pg_am that contributes
-            // nothing, leaving amname NULL on every one.
             Assert.NotEmpty(table.Data);
             for (int row = 0; row < table.Data.Count; row++)
             {

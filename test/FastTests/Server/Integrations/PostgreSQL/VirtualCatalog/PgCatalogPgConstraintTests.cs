@@ -9,23 +9,13 @@ using Xunit;
 
 namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
 {
-    // pg_constraint is the single table behind four of SQLAlchemy's reflection methods -
-    // get_pk_constraint's second statement, get_foreign_keys, get_unique_constraints and
-    // get_check_constraints - plus one join arm of get_indexes. Unregistered, each of those
-    // rejected its whole statement.
-    //
-    // RavenDB has no constraints: no primary keys, no foreign keys (cross-document links are
-    // document ids resolved with `load`, not FKs), no unique or check constraints. Empty is the
-    // correct answer for all four, and none of them fabricate anything from a zero-row result -
-    // they return an empty column list, an empty fkey list, and empty lists respectively.
     public class PgCatalogPgConstraintTests : RavenTestBase
     {
         public PgCatalogPgConstraintTests(ITestOutputHelper output) : base(output)
         {
         }
 
-        // All four verbatim from SQLAlchemy 1.4.54's dialects/postgresql/base.py, with the bind
-        // parameter substituted. None of them has a version-dependent branch.
+        // All four verbatim from SQLAlchemy 1.4.54's dialects/postgresql/base.py, bind parameter substituted.
 
         // PGDialect.get_pk_constraint(), the second of its two statements.
         private const string PkConsSql = """
@@ -35,9 +25,7 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
                    ORDER BY 1
                 """;
 
-        // PGDialect.get_foreign_keys(). Note the comma-separated FROM: pg_namespace and pg_class
-        // are both populated here, so it is pg_constraint's emptiness alone that empties the
-        // product.
+        // PGDialect.get_foreign_keys().
         private const string FkSql = """
                   SELECT r.conname,
                         pg_catalog.pg_get_constraintdef(r.oid, true) as condef,
@@ -143,9 +131,6 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
             Assert.Empty(table.Data);
         }
 
-        // get_foreign_keys and get_check_constraints both render the constraint through
-        // pg_get_constraintdef(), and SQLAlchemy then regex-parses what comes back. We don't
-        // implement it - there is no constraint to render - and with no rows it is never called.
         [RavenFact(RavenTestCategory.PostgreSql)]
         public async Task Pg_get_constraintdef_is_not_implemented_and_is_never_reached()
         {

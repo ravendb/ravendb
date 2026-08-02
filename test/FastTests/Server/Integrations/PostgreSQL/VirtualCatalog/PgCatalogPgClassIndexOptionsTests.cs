@@ -9,23 +9,13 @@ using Xunit;
 
 namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
 {
-    // The last two columns get_indexes() needs off pg_class. reloptions is projected, and a
-    // projected column we don't declare fails TryResolveColumnType and rejects the statement even
-    // when the result would be empty - now that pg_class has rows, an undeclared column is an error
-    // rather than a quietly empty answer. relam is only read in an ON clause, where a missing
-    // column degrades to NULL, but it is declared too so the join means what it says.
-    //
-    // Both are NULL on every row: RavenDB collections carry no storage parameters and no access
-    // method.
     public class PgCatalogPgClassIndexOptionsTests : RavenTestBase
     {
         public PgCatalogPgClassIndexOptionsTests(ITestOutputHelper output) : base(output)
         {
         }
 
-        // SQLAlchemy 1.4.54's PGDialect.get_indexes() IDX_SQL, verbatim, taking the
-        // server_version_info >= (8, 5) branch with the >= (11, 0) `ix.indnkeyatts` fill-in - we
-        // report 13.3 - and the :table_oid bind parameter substituted.
+        // SQLAlchemy 1.4.54's PGDialect.get_indexes() IDX_SQL, verbatim, with :table_oid substituted.
         private const string IdxSql = """
                       SELECT
                           i.relname as relname,
@@ -58,8 +48,6 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
                           i.relname
                     """;
 
-        // The statement that completes Superset's reflection round. It resolves against a populated
-        // catalog and reports no indexes, because RavenDB collections have none.
         [RavenFact(RavenTestCategory.PostgreSql)]
         public async Task Sqlalchemys_get_indexes_statement_resolves_and_reports_no_indexes()
         {
@@ -68,10 +56,7 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
 
             Assert.True(PgVirtualInterpreter.TryExecute(string.Format(IdxSql, oid), ctx, out var table));
 
-            // SQLAlchemy unpacks these rows positionally, so only relname and attname - the two it
-            // names in .columns() - have to carry their PG names. The three casts and the
-            // pg_get_expr() call are unaliased expressions, which PG would name after the
-            // underlying column and we name "?column?"; nothing reads them by name.
+            // SQLAlchemy unpacks positionally; unaliased expressions we name "?column?" are read by position.
             Assert.Equal(
                 new[]
                 {
@@ -102,8 +87,6 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
             }
         }
 
-        // The columns pg_class already carried keep their place - reflection that resolved before
-        // this commit still resolves.
         [RavenFact(RavenTestCategory.PostgreSql)]
         public async Task The_existing_pg_class_columns_are_unchanged()
         {

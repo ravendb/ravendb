@@ -6,9 +6,6 @@ using Raven.Server.Integrations.PostgreSQL.Types;
 
 namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
 {
-    /// <summary>
-    /// Handles <c>SHOW &lt;setting&gt;</c> and <c>SHOW ALL</c>.
-    /// </summary>
     internal static class PgShowStatement
     {
         private const string ShowAll = "all";

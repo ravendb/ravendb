@@ -61,16 +61,14 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
             new("enumlabel",     PgName.Default,   PgFormat.Text),
             new("enumsortorder", PgFloat4.Default, PgFormat.Text));
 
-        // RavenDB has no column defaults; SQLAlchemy's get_columns() subqueries this table, so it
-        // must be registered even though it's empty.
+        // RavenDB has no column defaults; registered empty so get_columns() resolves.
         public static EmptyCatalogTable PgAttrdef => new("pg_catalog", "pg_attrdef",
             new("oid",     PgOid.Default,  PgFormat.Text),
             new("adrelid", PgOid.Default,  PgFormat.Text),
             new("adnum",   PgInt2.Default, PgFormat.Text),
             new("adbin",   PgText.Default, PgFormat.Text));
 
-        // RavenDB has no sequences; SQLAlchemy's get_columns() subqueries this table, so it must be
-        // registered even though it's empty.
+        // RavenDB has no sequences; registered empty so get_columns() resolves.
         public static EmptyCatalogTable PgSequence => new("pg_catalog", "pg_sequence",
             new("seqrelid",     PgOid.Default,  PgFormat.Text),
             new("seqstart",     PgInt8.Default, PgFormat.Text),
@@ -80,16 +78,7 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
             new("seqcache",     PgInt8.Default, PgFormat.Text),
             new("seqcycle",     PgBool.Default, PgFormat.Text));
 
-        // RavenDB has no indexes on collections in the PG sense - a Raven index is a separate,
-        // named artifact, not a relation attached to a collection - so this stays empty.
-        //
-        // SQLAlchemy's get_pk_constraint() joins pg_attribute against a subquery over this table,
-        // and get_indexes() joins it too. Registering it empty answers both with a zero-row rowset
-        // rather than a rejected statement, which is what "this table has no primary key and no
-        // indexes" looks like on the wire.
-        //
-        // indkey/indoption are int2vector and indexprs/indpred are pg_node_tree; there is no row to
-        // put in them, so the declared types only have to let the projection resolve.
+        // RavenDB has no indexes on collections in the PG sense; registered empty so get_pk_constraint() resolves.
         public static EmptyCatalogTable PgIndex => new("pg_catalog", "pg_index",
             new("indrelid",     PgOid.Default,  PgFormat.Text),
             new("indexrelid",   PgOid.Default,  PgFormat.Text),
@@ -101,20 +90,7 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
             new("indoption",    PgText.Default, PgFormat.Text),
             new("indnkeyatts",  PgInt2.Default, PgFormat.Text));
 
-        // RavenDB has no constraints of any kind: no primary keys, no foreign keys (cross-document
-        // links are document ids resolved with `load`, not FKs), no unique or check constraints.
-        //
-        // Four of SQLAlchemy's reflection methods read nothing but this table - get_pk_constraint's
-        // PK_CONS_SQL, get_foreign_keys, get_unique_constraints and get_check_constraints - and
-        // get_indexes LEFT-JOINs it to attach constraint-backed indexes. Registered empty, each
-        // answers with a zero-row rowset, which they turn into "no primary key", "no foreign keys"
-        // and empty lists rather than an error.
-        //
-        // With no rows, the pg_get_constraintdef() that get_foreign_keys and get_check_constraints
-        // project is never evaluated - there is no constraint to render, so we don't implement it.
-        //
-        // conkey/confkey are int2[]; nothing reads a value out of them, so text is enough for the
-        // projection to resolve.
+        // RavenDB has no constraints of any kind; registered empty so the four constraint reflections resolve.
         public static EmptyCatalogTable PgConstraint => new("pg_catalog", "pg_constraint",
             new("oid",       PgOid.Default,  PgFormat.Text),
             new("conname",   PgName.Default, PgFormat.Text),
@@ -124,10 +100,7 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
             new("confrelid", PgOid.Default,  PgFormat.Text),
             new("conindid",  PgOid.Default,  PgFormat.Text));
 
-        // Index access methods - btree, hash, gist and the rest. RavenDB exposes none: with no
-        // indexes on a collection there is no access method to name. SQLAlchemy's get_indexes()
-        // LEFT-JOINs this to label each index with its method, so an empty table leaves am.amname
-        // NULL, which is what that join yields when there is nothing to match.
+        // Index access methods; RavenDB exposes none, so get_indexes() leaves am.amname NULL.
         public static EmptyCatalogTable PgAm => new("pg_catalog", "pg_am",
             new("oid",    PgOid.Default,  PgFormat.Text),
             new("amname", PgName.Default, PgFormat.Text));
