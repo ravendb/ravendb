@@ -44,7 +44,7 @@ public class RavenDB_24887(ITestOutputHelper output) : RavenTestBase(output)
 
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanCallOneAgentFromAnother(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -130,7 +130,7 @@ public class RavenDB_24887(ITestOutputHelper output) : RavenTestBase(output)
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task AnActionFromSubAgentCanBeHandledByParentConversation(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);

@@ -1,8 +1,10 @@
 using System;
 using System.Net;
 using System.Net.Http;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.AI;
@@ -219,5 +221,142 @@ internal class MockLlm : ChatCompletionClient
                 "system_fingerprint": "fp_mock"
             }
             """;
+    }
+}
+
+/// <summary>
+/// A provider response injected in-process instead of being fetched from the real provider.
+/// </summary>
+internal sealed class InjectedResponse
+{
+    private InjectedResponse(string body, string contentType)
+    {
+        Body = body;
+        ContentType = contentType;
+    }
+
+    public string Body { get; }
+    public string ContentType { get; }
+
+    /// <summary>A non-streaming chat completion body.</summary>
+    public static InjectedResponse Json(string body) => new(body, "application/json");
+
+    /// <summary>A streaming (SSE) response body, as the provider would send it.</summary>
+    public static InjectedResponse Sse(string body) => new(body, "text/event-stream");
+}
+
+/// <summary>
+/// Builders for provider wire shapes a real model cannot be asked to produce on demand (empty answers,
+/// non-JSON answers, truncated answers). Text is JSON-escaped here, so callers pass plain strings.
+/// </summary>
+internal static class Wire
+{
+    private const int PromptTokens = 7000;
+    private const int CompletionTokens = 777;
+    private const int TotalTokens = PromptTokens + CompletionTokens;
+
+    /// <summary>A non-streaming chat completion. A null <paramref name="content"/> means a JSON null content.</summary>
+    public static string Completion(string content, string finishReason, string reasoning = null)
+    {
+        var contentJson = content == null ? "null" : JsonConvert.ToString(content);
+        var reasoningJson = reasoning == null ? "" : $",\"reasoning\":{JsonConvert.ToString(reasoning)}";
+        return $$"""
+        {
+            "id": "chatcmpl-injected",
+            "object": "chat.completion",
+            "choices": [{
+                "index": 0,
+                "finish_reason": "{{finishReason}}",
+                "message": { "role": "assistant", "content": {{contentJson}}{{reasoningJson}} }
+            }],
+            "usage": { "prompt_tokens": {{PromptTokens}}, "completion_tokens": {{CompletionTokens}}, "total_tokens": {{TotalTokens}} }
+        }
+        """;
+    }
+
+    /// <summary>Wraps SSE chunks into a full event stream, terminated the way providers terminate it.</summary>
+    public static string Stream(params string[] chunks) =>
+        string.Concat(Array.ConvertAll(chunks, c => "data: " + c + "\n\n")) + "data: [DONE]\n\n";
+
+    /// <summary>An SSE chunk carrying a 'content' delta.</summary>
+    public static string ContentDelta(string content) => Chunk($"{{\"content\":{JsonConvert.ToString(content)}}}");
+
+    /// <summary>An SSE chunk carrying a 'reasoning' (or 'reasoning_content') delta.</summary>
+    public static string ReasoningDelta(string reasoning, bool reasoningContentField = false) =>
+        Chunk($"{{\"{(reasoningContentField ? "reasoning_content" : "reasoning")}\":{JsonConvert.ToString(reasoning)}}}");
+
+    /// <summary>The terminating SSE chunk carrying finish_reason and usage.</summary>
+    public static string FinishChunk(string finishReason) => Chunk("{}", finishReason, usage: true);
+
+    private static string Chunk(string delta, string finishReason = null, bool usage = false)
+    {
+        var finish = finishReason == null ? "null" : $"\"{finishReason}\"";
+        var usageJson = usage
+            ? $",\"usage\":{{\"prompt_tokens\":{PromptTokens},\"completion_tokens\":{CompletionTokens},\"total_tokens\":{TotalTokens}}}"
+            : "";
+        return $"{{\"choices\":[{{\"index\":0,\"delta\":{delta},\"finish_reason\":{finish}}}]{usageJson}}}";
+    }
+}
+
+/// <summary>
+/// A real <see cref="ConversationHandler"/> over a real provider connection string, where only the responses
+/// a real model cannot be made to produce on demand are injected in-process. Requests without an injected
+/// response are forwarded to the provider over HTTP, so the pipeline is always real and the model is real
+/// wherever the scenario allows it.
+/// <para>
+/// A <c>null</c> <paramref name="injected"/> forwards the request to the provider instead.
+/// </para>
+/// </summary>
+internal class InjectingConversationHandler(
+    Raven.Server.ServerWide.ServerStore server,
+    DocumentDatabase database,
+    AiConnectionString connection,
+    InjectedResponse injected)
+    : ConversationHandler(server, database)
+{
+    private readonly DocumentDatabase _database = database;
+    private ChatCompletionClient _client;
+
+    protected internal override ChatCompletionClient CreateClient()
+    {
+        if (_client != null)
+            return _client;
+
+        if (AbstractChatCompletionClientSettings.TryGetParameters(connection, out var settings) == false)
+            throw new NotSupportedException($"The provider '{connection.GetActiveProvider()}' is not supported.");
+
+        return _client = new InjectingClient(_database.DocumentsStorage.ContextPool, settings, injected);
+    }
+
+    private sealed class InjectingClient(
+        IMemoryContextPool contextPool,
+        AbstractChatCompletionClientSettings settings,
+        InjectedResponse injected)
+        : ChatCompletionClient(contextPool, settings, ConventionsToUse)
+    {
+        protected override Task<HttpResponseMessage> SendRequestAsync(HttpRequestMessage request, CancellationToken token) =>
+            HandleAsync(request, streaming: false, token);
+
+        protected override Task<HttpResponseMessage> SendStreamingRequestAsync(HttpRequestMessage request, CancellationToken token) =>
+            HandleAsync(request, streaming: true, token);
+
+        private async Task<HttpResponseMessage> HandleAsync(HttpRequestMessage request, bool streaming, CancellationToken token)
+        {
+            if (injected != null)
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(injected.Body, Encoding.UTF8, injected.ContentType)
+                };
+            }
+
+            if (streaming)
+            {
+                // Do not buffer a forwarded stream - that would defeat the incremental streaming under test.
+                return await base.SendStreamingRequestAsync(request, token);
+            }
+
+            return await base.SendRequestAsync(request, token);
+        }
     }
 }
