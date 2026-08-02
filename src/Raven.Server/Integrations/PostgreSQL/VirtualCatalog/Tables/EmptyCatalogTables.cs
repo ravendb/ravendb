@@ -124,6 +124,14 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
             new("confrelid", PgOid.Default,  PgFormat.Text),
             new("conindid",  PgOid.Default,  PgFormat.Text));
 
+        // Index access methods - btree, hash, gist and the rest. RavenDB exposes none: with no
+        // indexes on a collection there is no access method to name. SQLAlchemy's get_indexes()
+        // LEFT-JOINs this to label each index with its method, so an empty table leaves am.amname
+        // NULL, which is what that join yields when there is nothing to match.
+        public static EmptyCatalogTable PgAm => new("pg_catalog", "pg_am",
+            new("oid",    PgOid.Default,  PgFormat.Text),
+            new("amname", PgName.Default, PgFormat.Text));
+
         // RavenDB has no PG extensions; an empty table lets pgAdmin's `count(extname)` probe return 0.
         public static EmptyCatalogTable PgExtension => new("pg_catalog", "pg_extension",
             new("oid",        PgOid.Default,  PgFormat.Text),
