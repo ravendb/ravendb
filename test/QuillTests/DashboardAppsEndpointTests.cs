@@ -32,8 +32,8 @@ public class DashboardAppsEndpointTests(ITestOutputHelper output, QuillCollectio
         Assert.Equal("running", appResp.Status);
         Assert.True(appResp.DocumentsCount >= 1);
         Assert.Equal("Web widget", appResp.ChannelsLabel);
-        Assert.Equal(0, appResp.TablesCount);
-        Assert.Equal("", appResp.Source.Type);
+        Assert.Equal(1, appResp.TablesCount);
+        Assert.Equal("PostgreSQL", appResp.Source.Type);
         Assert.Null(appResp.WritesPerMonth);
     }
 

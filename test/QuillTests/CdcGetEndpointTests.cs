@@ -3,7 +3,7 @@ using QuillTests.E2E.Fixtures;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Client.Documents.Operations.ETL.SQL;
+using Raven.Quill.Wizard;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -11,30 +11,17 @@ namespace QuillTests;
 
 public class CdcGetEndpointTests(ITestOutputHelper output) : QuillTestBase(output)
 {
-    private const string SourceConnectionString = "Host=localhost;Port=5432;Database=northwind;Username=u;Password=p";
-
     [RavenFact(RavenTestCategory.Quill)]
     public async Task CdcGet_returns_current_configuration()
     {
         await using var app = await NewAppAsync();
-        await SeedCdcSinkAsync(app.Store, app.Slug, name: "app-cdc");
 
         var cdc = await app.GetCdcAsync();
-        Assert.Equal("app-cdc", cdc.Configuration.Name);
+        Assert.Equal($"{app.Slug}-cdc", cdc.Configuration.Name);
         Assert.Equal("src", cdc.Configuration.ConnectionStringName);
+        Assert.Equal("Host=localhost;Database=src", cdc.ConnectionString);
         var table = Assert.Single(cdc.Configuration.Tables);
-        Assert.Equal("Customers", table.CollectionName);
-    }
-
-    // the edit wizard reconnects to the source, so it needs the connection string itself, not its name
-    [RavenFact(RavenTestCategory.Quill)]
-    public async Task CdcGet_returns_the_source_connection_string()
-    {
-        await using var app = await NewAppAsync();
-        await SeedCdcSinkAsync(app.Store, app.Slug, name: "app-cdc");
-
-        var cdc = await app.GetCdcAsync();
-        Assert.Equal(SourceConnectionString, cdc.ConnectionString);
+        Assert.Equal("Orders", table.CollectionName);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -42,6 +29,11 @@ public class CdcGetEndpointTests(ITestOutputHelper output) : QuillTestBase(outpu
     {
         await using var app = await NewAppAsync();
 
+        var session = Host.Config.OpenAsyncSession();
+        var wizard = await session.LoadAsync<WizardState>(WizardState.DocumentIdFor(app.Slug));
+        wizard.LastMapConfiguration = null;
+        await session.SaveChangesAsync();
+        
         var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.GetCdcAsync());
         Assert.Equal(HttpStatusCode.NotFound, ex.StatusCode);
     }
@@ -51,38 +43,5 @@ public class CdcGetEndpointTests(ITestOutputHelper output) : QuillTestBase(outpu
     {
         var ex = await Assert.ThrowsAsync<QuillHttpException>(() => Host.GetCdcAsync("nonexistent"));
         Assert.Equal(HttpStatusCode.NotFound, ex.StatusCode);
-    }
-
-    // CDC sink is cluster metadata — no Postgres contacted until the task runs
-    private static async Task SeedCdcSinkAsync(IDocumentStore store, string database, string name)
-    {
-        await store.Maintenance.ForDatabase(database).SendAsync(
-            new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString
-            {
-                Name = "src",
-                FactoryName = "Npgsql",
-                ConnectionString = SourceConnectionString,
-            }));
-
-        await store.Maintenance.ForDatabase(database).SendAsync(new AddCdcSinkOperation(new CdcSinkConfiguration
-        {
-            Name = name,
-            ConnectionStringName = "src",
-            Tables =
-            [
-                new CdcSinkTableConfig
-                {
-                    CollectionName = "Customers",
-                    SourceTableSchema = "public",
-                    SourceTableName = "customers",
-                    PrimaryKeyColumns = ["customer_id"],
-                    Columns =
-                    [
-                        new CdcColumnMapping { Column = "customer_id", Name = "Id" },
-                        new CdcColumnMapping { Column = "company_name", Name = "CompanyName" },
-                    ],
-                },
-            ],
-        }));
     }
 }

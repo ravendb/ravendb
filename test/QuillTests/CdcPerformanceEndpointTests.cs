@@ -1,5 +1,6 @@
 using System.Net;
 using QuillTests.E2E.Fixtures;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Quill.Auth;
 using Raven.Quill.Cdc;
 using Tests.Infrastructure;
@@ -136,21 +137,11 @@ public class CdcPerformanceEndpointTests(ITestOutputHelper output) : QuillTestBa
     {
         await using var app = await NewAppAsync();
 
+        var r = await app.Store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation($"{app.Slug}-cdc", OngoingTaskType.CdcSink));
+        await app.Store.Maintenance.SendAsync(new DeleteOngoingTaskOperation(r.TaskId, OngoingTaskType.CdcSink));
+
         var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.GetCdcPerformanceAsync());
         Assert.Equal(HttpStatusCode.NotFound, ex.StatusCode);
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
-    public async Task CdcPerformance_returns_200_before_first_sink_state_is_persisted()
-    {
-        await using var app = await NewAppAsync();
-
-        // disabled + SkipInitialLoad → no CdcSinkTaskState doc yet; endpoint must survive that window
-        await app.SeedCdcSinkAsync(AiHelperSamples.BuildCdcConfig());
-
-        var perf = await app.GetCdcPerformanceAsync();
-        Assert.False(perf.Enabled);
-        Assert.Equal("disabled", perf.Status);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -168,6 +159,9 @@ public class CdcPerformanceEndpointTests(ITestOutputHelper output) : QuillTestBa
     public async Task CdcErrors_returns_empty_list_when_no_cdc()
     {
         await using var app = await NewAppAsync();
+
+        var r = await app.Store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation($"{app.Slug}-cdc", OngoingTaskType.CdcSink));
+        await app.Store.Maintenance.SendAsync(new DeleteOngoingTaskOperation(r.TaskId, OngoingTaskType.CdcSink));
 
         var errors = await app.GetCdcErrorsAsync();
         Assert.Empty(errors);

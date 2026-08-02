@@ -18,9 +18,9 @@ public class RavenStoreFactoryTests(ITestOutputHelper output) : RavenTestBase(ou
 
         try
         {
-            var created = await RavenStoreFactory.EnsureDatabaseAsync(store, name, DatabaseLockMode.PreventDeletesError);
+            var status = await RavenStoreFactory.EnsureDatabaseAsync(store, name, DatabaseLockMode.PreventDeletesError);
 
-            Assert.True(created);
+            Assert.True(status.Created);
             Assert.Equal(DatabaseLockMode.PreventDeletesError, await GetLockModeAsync(store, name));
         }
         finally
@@ -36,9 +36,9 @@ public class RavenStoreFactoryTests(ITestOutputHelper output) : RavenTestBase(ou
         var name = "per-app-" + Guid.NewGuid().ToString("N");
         using var _ = Databases.EnsureDatabaseDeletion(name, store);
 
-        var created = await RavenStoreFactory.EnsureDatabaseAsync(store, name);
+        var status = await RavenStoreFactory.EnsureDatabaseAsync(store, name);
 
-        Assert.True(created);
+        Assert.True(status.Created);
         Assert.Equal(DatabaseLockMode.Unlock, await GetLockModeAsync(store, name));
     }
 

@@ -137,6 +137,7 @@ public class WizardProvisionEndpointTests(ITestOutputHelper output, QuillCollect
     private static async Task SeedWizardMapAsync(IDocumentStore store, string slug, string? collection = null)
     {
         var cdc = AiHelperSamples.BuildCdcConfig();
+        cdc.Name = $"{slug}-cdc";
         if (collection is not null)
             cdc.Tables[0].CollectionName = collection;
         cdc.Disabled = true;
