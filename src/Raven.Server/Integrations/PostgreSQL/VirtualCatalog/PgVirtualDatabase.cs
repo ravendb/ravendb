@@ -51,6 +51,7 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
             RegisterFunction(new PgEncodingToCharFunction());
             RegisterFunction(new PgIsVisibleFunction("pg_table_is_visible"));
             RegisterFunction(new PgIsVisibleFunction("pg_function_is_visible"));
+            RegisterFunction(new PgTypeIsVisibleFunction());
             RegisterFunction(new HasDatabasePrivilegeFunction());
             RegisterFunction(new HasSchemaPrivilegeFunction());
             RegisterFunction(new PgBackendPidFunction());
