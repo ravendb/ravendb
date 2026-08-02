@@ -62,10 +62,10 @@ public sealed class RavenReadinessService(
                         await store.Maintenance.Server.SendAsync(new GetBuildNumberOperation(), ct);
                     }, stoppingToken);
 
-                    var created = await RavenStoreFactory.EnsureDatabaseAsync(store, opts.ConfigDatabase, DatabaseLockMode.PreventDeletesError, stoppingToken);
+                    var r = await RavenStoreFactory.EnsureDatabaseAsync(store, opts.ConfigDatabase, DatabaseLockMode.PreventDeletesError, stoppingToken);
                     logger.LogInformation(
                         "RavenDB ready at {Url}; config database {Database} {Action}.",
-                        opts.RavenUrl, opts.ConfigDatabase, created ? "created" : "already present");
+                        opts.RavenUrl, opts.ConfigDatabase, r.Created ? "created" : "already present");
 
                     ready.MarkReady();
 

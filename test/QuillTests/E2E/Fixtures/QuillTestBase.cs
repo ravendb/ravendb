@@ -1,8 +1,12 @@
 using FastTests;
 using Microsoft.Extensions.DependencyInjection;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Quill.Hosting;
 using Raven.Quill.Infrastructure;
+using Raven.Quill.Wizard;
 using Xunit;
+using static Raven.Server.Utils.MetricCacher.Keys;
 
 [assembly: AssemblyFixture(typeof(QuillTests.E2E.Fixtures.SharedApplianceReaper))]
 
@@ -75,25 +79,66 @@ public abstract class QuillTestBase : RavenTestBase
             seedChatConnectionString: seedChatConnectionString);
     }
 
+
     private protected async Task<QuillApp> NewAppAsync(QuillHost? host = null)
     {
+        var slug = "app-" + Guid.NewGuid().ToString("N");
         host ??= Host;
 
-        var slug = "app-" + Guid.NewGuid().ToString("N");   // well-formed slug == database name
-        var store = GetDocumentStore(new Options
-        {
-            ModifyDatabaseName = _ => slug,
-            Server = host.Server,
-            // the delete endpoint hard-deletes the database, so teardown must not race it
-            DeleteDatabaseOnDispose = false,
-            ModifyDocumentStore = s => s.Conventions.FindCollectionName = QuillConventions.FindCollectionName,
-        });
+        var cdc = AiHelperSamples.BuildCdcConfig();
+        cdc.Name = $"{slug}-cdc";
+        cdc.SkipInitialLoad = true;
 
-        await AppProvisioner.CreateAppAsync(host.Config, slug, appName: slug, cdcTaskName: $"{slug}-cdc", CancellationToken.None);
+        using var session = host.Config.OpenAsyncSession();
+        await session.StoreAsync(
+            new WizardState
+            {
+                Provider = "Npgsql",
+                SourceConnectionString = "Host=localhost;Database=src",
+                LastMapConfiguration = cdc,
+            },
+            WizardState.DocumentIdFor(slug));
+        await session.SaveChangesAsync();
+
+        await host.ProvisionAsync(new ProvisionRequest(slug, slug));
+
+        var store = GetQuillDocumentStore(slug, host);
 
         var app = new QuillApp(this, host, store, slug);
         return app;
     }
+
+    private protected async Task<QuillApp> NewAppAsyncWithoutCdc(QuillHost? host = null)
+    {
+        var slug = "app-" + Guid.NewGuid().ToString("N");
+        host ??= Host;
+
+        using var session = host.Config.OpenAsyncSession();
+        await session.StoreAsync(
+            new WizardState
+            {
+                Provider = "Npgsql",
+                SourceConnectionString = "Host=localhost;Database=src",
+                LastMapConfiguration = null,
+            },
+            WizardState.DocumentIdFor(slug));
+        await session.SaveChangesAsync();
+
+        await host.ProvisionAsync(new ProvisionRequest(slug, slug));
+
+        var store = GetQuillDocumentStore(slug, host);
+
+        var app = new QuillApp(this, host, store, slug);
+        return app;
+    }
+
+    protected IDocumentStore GetQuillDocumentStore(string slug, QuillHost host) => GetDocumentStore(new Options
+    {
+        ModifyDatabaseName = _ => slug,
+        Server = host.Server,
+        DeleteDatabaseOnDispose = false,
+        ModifyDocumentStore = s => s.Conventions.FindCollectionName = QuillConventions.FindCollectionName,
+    });
 }
 
 internal static class SharedAppliance

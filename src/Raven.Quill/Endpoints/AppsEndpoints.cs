@@ -4,6 +4,7 @@ using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL.SQL;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Quill.Agents;
@@ -134,8 +135,8 @@ public static class AppsEndpoints
         if (mode == "from-prompt" && string.IsNullOrWhiteSpace(body!.IntentPrompt))
             return Results.BadRequest(new ApiErrorResponse("intentPrompt is required for from-prompt mode"));
 
-        var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(app.Database), ct);
-        var cdcConfig = record?.CdcSinks?.FirstOrDefault();
+        var task = await store.Maintenance.ForDatabase(slug).SendAsync(new GetOngoingTaskInfoOperation(app.CdcTaskName, OngoingTaskType.CdcSink), ct);
+        var cdcConfig = (task as OngoingTaskCdcSink)?.Configuration;
 
         if (mode == "from-data" && cdcConfig is null)
             return Results.BadRequest(new ApiErrorResponse(
@@ -259,16 +260,15 @@ public static class AppsEndpoints
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
-        var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(app.Database), ct);
-        var cdc = record?.CdcSinks?.FirstOrDefault();
-        if (cdc is null)
+        var task = await store.Maintenance.ForDatabase(slug).SendAsync(new GetOngoingTaskInfoOperation(app.CdcTaskName, OngoingTaskType.CdcSink), ct);
+        if (task is not OngoingTaskCdcSink cdc)
             return Results.NotFound(new ApiErrorResponse("cdc task not found"));
 
         var raw = await CdcPerformanceReader.ReadAsync(store.Maintenance.ForDatabase(app.Database), ct);
-        var (state, lastModified) = await AppLookup.LoadCdcStateAsync(store, app.Database, cdc.Name, ct);
+        var (state, lastModified) = await AppLookup.LoadCdcStateAsync(store, app.Database, app.CdcTaskName, ct);
 
         var snapshot = CdcPerformanceShaper.Shape(
-            raw, disabled: cdc.Disabled, DateTime.UtcNow, lastActivityAt: lastModified);
+            raw, disabled: cdc.Configuration.Disabled, DateTime.UtcNow, lastActivityAt: lastModified);
         return Results.Ok(snapshot);
     }
 
@@ -285,8 +285,6 @@ public static class AppsEndpoints
         return Results.Ok(CdcPerformanceShaper.ShapeErrors(raw));
     }
 
-    // read-side: the current CDC sink config plus the source it captures from, so the UI can
-    // populate an edit form
     private static async Task<IResult> GetCdcAsync(
         string slug,
         IDocumentStore store,
@@ -296,25 +294,15 @@ public static class AppsEndpoints
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
-        var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(app.Database), ct);
-        var cdc = record?.CdcSinks?.FirstOrDefault();
-        if (cdc is null)
-            return Results.NotFound(new ApiErrorResponse("cdc task not found"));
+        var wizardId = WizardState.DocumentIdFor(slug);
+        using (var session = store.OpenAsyncSession())
+        {
+            var state = await session.LoadAsync<WizardState>(wizardId, ct);
+            if (state?.LastMapConfiguration is null)
+                return Results.NotFound(new ApiErrorResponse($"no cdc config for {slug} found"));
 
-        return Results.Ok(new AppCdcConfigurationResponse(
-            cdc, ResolveSourceConnectionString(record?.SqlConnectionStrings, cdc.ConnectionStringName)));
-    }
-
-    private static string? ResolveSourceConnectionString(
-        Dictionary<string, SqlConnectionString>? connectionStrings,
-        string? connectionStringName)
-    {
-        if (connectionStrings is null || connectionStringName is null)
-            return null;
-
-        return connectionStrings.TryGetValue(connectionStringName, out var connection)
-            ? connection.ConnectionString
-            : null;
+            return Results.Ok(new AppCdcConfigurationResponse(state.LastMapConfiguration, state.SourceConnectionString));
+        }
     }
 
     private static async Task SetupTryAsync(

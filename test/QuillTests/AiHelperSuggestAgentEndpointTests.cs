@@ -2,7 +2,9 @@ using System.Net;
 using System.Text.Json.Nodes;
 using QuillTests.E2E.Fixtures;
 using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Quill.Contracts;
+using Raven.Quill.Wizard;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -18,7 +20,7 @@ public class AiHelperSuggestAgentEndpointTests(ITestOutputHelper output, QuillAi
         Mock.AgentResponse = (200, AiHelperSamples.AgentEnvelope(
             AiHelperSamples.BuildAgentConfig(), AiHelperSamples.BuildAgentConfig()));
 
-        await using var app = await SeedProvisionedAppAsync(withCdc: true);
+        await using var app = await NewAppAsync();
 
         var resp = await app.SuggestAgentAsync(new SuggestAgentRequest(null, "from-data"));
         Assert.Equal("Success", resp.Status);
@@ -38,7 +40,7 @@ public class AiHelperSuggestAgentEndpointTests(ITestOutputHelper output, QuillAi
     {
         Mock.AgentResponse = (200, AiHelperSamples.AgentEnvelope(AiHelperSamples.BuildAgentConfig()));
 
-        await using var app = await SeedProvisionedAppAsync(withCdc: false);
+        await using var app = await NewAppAsync();
 
         var resp = await app.SuggestAgentAsync(new SuggestAgentRequest("help shoppers find orders", "from-prompt"));
         Assert.Single(resp.Configurations);
@@ -54,7 +56,7 @@ public class AiHelperSuggestAgentEndpointTests(ITestOutputHelper output, QuillAi
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Rejects_unknown_mode()
     {
-        await using var app = await SeedProvisionedAppAsync(withCdc: true);
+        await using var app = await NewAppAsync();
 
         var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.SuggestAgentAsync(new SuggestAgentRequest(null, "sideways")));
         Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
@@ -64,7 +66,10 @@ public class AiHelperSuggestAgentEndpointTests(ITestOutputHelper output, QuillAi
     [RavenFact(RavenTestCategory.Quill)]
     public async Task From_data_without_cdc_config_returns_400()
     {
-        await using var app = await SeedProvisionedAppAsync(withCdc: false);
+        await using var app = await NewAppAsync();
+
+        var r = await app.Store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation($"{app.Slug}-cdc", OngoingTaskType.CdcSink));
+        await app.Store.Maintenance.SendAsync(new DeleteOngoingTaskOperation(r.TaskId, OngoingTaskType.CdcSink));
 
         var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.SuggestAgentAsync(new SuggestAgentRequest(null, "from-data")));
         Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
@@ -78,7 +83,7 @@ public class AiHelperSuggestAgentEndpointTests(ITestOutputHelper output, QuillAi
         var invalid = new AiAgentConfiguration { Identifier = "x", Name = "y" };
         Mock.AgentResponse = (200, AiHelperSamples.AgentEnvelope(invalid));
 
-        await using var app = await SeedProvisionedAppAsync(withCdc: true);
+        await using var app = await NewAppAsync();
 
         var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.SuggestAgentAsync(new SuggestAgentRequest(null, "from-data")));
         Assert.Equal(HttpStatusCode.UnprocessableEntity, ex.StatusCode);
@@ -91,7 +96,7 @@ public class AiHelperSuggestAgentEndpointTests(ITestOutputHelper output, QuillAi
         var noId = new AiAgentConfiguration { Name = "Support", SystemPrompt = "You help." };
         Mock.AgentResponse = (200, AiHelperSamples.AgentEnvelope(noId));
 
-        await using var app = await SeedProvisionedAppAsync(withCdc: true);
+        await using var app = await NewAppAsync();
 
         var resp = await app.SuggestAgentAsync(new SuggestAgentRequest(null, "from-data"));
         Assert.Single(resp.Configurations);
@@ -104,7 +109,7 @@ public class AiHelperSuggestAgentEndpointTests(ITestOutputHelper output, QuillAi
             AiHelperSamples.BuildAgentConfig(), AiHelperSamples.BuildAgentConfig(),
             AiHelperSamples.BuildAgentConfig(), AiHelperSamples.BuildAgentConfig()));
 
-        await using var app = await SeedProvisionedAppAsync(withCdc: true);
+        await using var app = await NewAppAsync();
 
         var resp = await app.SuggestAgentAsync(new SuggestAgentRequest(null, "from-data"));
         Assert.Equal(3, resp.Configurations.Count);
@@ -116,7 +121,7 @@ public class AiHelperSuggestAgentEndpointTests(ITestOutputHelper output, QuillAi
         Mock.AgentResponse = (200, AiHelperSamples.AgentEnvelope(
             AiHelperSamples.BuildAgentConfig(), AiHelperSamples.BuildAgentConfig()));
 
-        await using var app = await SeedProvisionedAppAsync(withCdc: false);
+        await using var app = await NewAppAsync();
 
         var resp = await app.SuggestAgentAsync(new SuggestAgentRequest("help shoppers", "from-prompt"));
         Assert.Single(resp.Configurations);
@@ -129,7 +134,7 @@ public class AiHelperSuggestAgentEndpointTests(ITestOutputHelper output, QuillAi
         Mock.RequireConsentForAssist = true;
         Mock.AgentResponse = (200, AiHelperSamples.AgentEnvelope(AiHelperSamples.BuildAgentConfig()));
 
-        await using var app = await SeedProvisionedAppAsync(withCdc: true);
+        await using var app = await NewAppAsync();
 
         var resp = await app.SuggestAgentAsync(new SuggestAgentRequest(null, "from-data"));
         Assert.Equal("Success", resp.Status);
@@ -144,20 +149,9 @@ public class AiHelperSuggestAgentEndpointTests(ITestOutputHelper output, QuillAi
         Mock.AgentResponse = (200, AiHelperSamples.AgentEnvelope(AiHelperSamples.BuildAgentConfig()));
         Mock.AssistDelay = TimeSpan.FromSeconds(2);   // well within the shared host's 30s assist timeout
 
-        await using var app = await SeedProvisionedAppAsync(withCdc: false);
-
+        await using var app = await NewAppAsync();
         var resp = await app.SuggestAgentAsync(new SuggestAgentRequest("help shoppers find orders", "from-prompt"));
         Assert.Equal("Success", resp.Status);
         Assert.Single(resp.Configurations);
-    }
-
-    private async Task<QuillApp> SeedProvisionedAppAsync(bool withCdc)
-    {
-        var app = await NewAppAsync(Host);
-
-        if (withCdc)
-            await app.SeedCdcSinkAsync(AiHelperSamples.BuildCdcConfig());
-
-        return app;
     }
 }
