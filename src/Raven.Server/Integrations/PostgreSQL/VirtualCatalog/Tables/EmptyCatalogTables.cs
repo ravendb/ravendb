@@ -101,6 +101,29 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
             new("indoption",    PgText.Default, PgFormat.Text),
             new("indnkeyatts",  PgInt2.Default, PgFormat.Text));
 
+        // RavenDB has no constraints of any kind: no primary keys, no foreign keys (cross-document
+        // links are document ids resolved with `load`, not FKs), no unique or check constraints.
+        //
+        // Four of SQLAlchemy's reflection methods read nothing but this table - get_pk_constraint's
+        // PK_CONS_SQL, get_foreign_keys, get_unique_constraints and get_check_constraints - and
+        // get_indexes LEFT-JOINs it to attach constraint-backed indexes. Registered empty, each
+        // answers with a zero-row rowset, which they turn into "no primary key", "no foreign keys"
+        // and empty lists rather than an error.
+        //
+        // With no rows, the pg_get_constraintdef() that get_foreign_keys and get_check_constraints
+        // project is never evaluated - there is no constraint to render, so we don't implement it.
+        //
+        // conkey/confkey are int2[]; nothing reads a value out of them, so text is enough for the
+        // projection to resolve.
+        public static EmptyCatalogTable PgConstraint => new("pg_catalog", "pg_constraint",
+            new("oid",       PgOid.Default,  PgFormat.Text),
+            new("conname",   PgName.Default, PgFormat.Text),
+            new("conrelid",  PgOid.Default,  PgFormat.Text),
+            new("contype",   PgChar.Default, PgFormat.Text),
+            new("conkey",    PgText.Default, PgFormat.Text),
+            new("confrelid", PgOid.Default,  PgFormat.Text),
+            new("conindid",  PgOid.Default,  PgFormat.Text));
+
         // RavenDB has no PG extensions; an empty table lets pgAdmin's `count(extname)` probe return 0.
         public static EmptyCatalogTable PgExtension => new("pg_catalog", "pg_extension",
             new("oid",        PgOid.Default,  PgFormat.Text),
