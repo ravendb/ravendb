@@ -568,20 +568,29 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
             var groupFieldName = groupFieldNames[0];
 
             var projections = new List<string>(capacity: targets.Count);
+            var aggregates = new List<GroupByAggregate>(capacity: targets.Count);
             foreach (var t in targets)
             {
                 var val = t.ResTarget?.Val;
                 if (val == null)
                     throw UnsupportedGroupBy();
 
-                projections.Add(BuildProjectionForGroupByTarget(val, groupFieldName, fromAlias, t.ResTarget?.Name));
+                if (val.FuncCall == null)
+                {
+                    projections.Add(BuildProjectionForGroupByTarget(val, groupFieldName, fromAlias));
+                    continue;
+                }
+
+                var aggregate = BuildGroupByAggregate(val.FuncCall, t.ResTarget?.Name, fromAlias);
+                aggregates.Add(aggregate);
+                projections.Add(aggregate.Projection);
             }
 
             q.GroupBy(groupFieldName);
             q.SelectFields<JObject>(projections.ToArray());
 
             if (selectStmt.SortClause != null && selectStmt.SortClause.Count > 0)
-                TranslateOrderByForGroupBy(q, selectStmt.SortClause, groupFieldName, projections, fromAlias);
+                TranslateOrderByForGroupBy(q, selectStmt.SortClause, groupFieldName, projections, aggregates, fromAlias);
         }
 
         // True iff every column referenced by the WHERE predicate is in <paramref name="allowed"/>.
@@ -639,6 +648,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
             Google.Protobuf.Collections.RepeatedField<Node> sortClause,
             string groupFieldName,
             IReadOnlyList<string> projections,
+            IReadOnlyList<GroupByAggregate> aggregates,
             string fromAlias = null)
         {
             foreach (var sortNode in sortClause)
@@ -647,7 +657,8 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
                 if (sortBy == null)
                     continue;
 
-                string orderExpr = null;
+                string orderField;
+                OrderingType ordering;
 
                 if (sortBy.Node?.ColumnRef != null)
                 {
@@ -655,22 +666,25 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
                     if (string.IsNullOrWhiteSpace(fieldName))
                         throw UnsupportedOrderByForGroupBy();
 
-                    if (string.Equals(fieldName, groupFieldName, StringComparison.OrdinalIgnoreCase) == false)
-                        throw UnsupportedOrderByForGroupBy();
+                    if (string.Equals(fieldName, groupFieldName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (projections.Any(p => string.Equals(p, groupFieldName, StringComparison.OrdinalIgnoreCase)) == false)
+                            throw UnsupportedOrderByForGroupBy();
 
-                    if (projections.Any(p => string.Equals(p, groupFieldName, StringComparison.OrdinalIgnoreCase)) == false)
-                        throw UnsupportedOrderByForGroupBy();
-
-                    orderExpr = projections.First(p => string.Equals(p, groupFieldName, StringComparison.OrdinalIgnoreCase));
+                        orderField = projections.First(p => string.Equals(p, groupFieldName, StringComparison.OrdinalIgnoreCase));
+                        ordering = OrderingType.String;
+                    }
+                    else
+                    {
+                        var aggregate = FindAggregate(aggregates, a => string.Equals(a.OutputName, fieldName, StringComparison.OrdinalIgnoreCase));
+                        (orderField, ordering) = AggregateOrderTarget(aggregate, groupFieldName);
+                    }
                 }
                 else if (sortBy.Node?.FuncCall != null)
                 {
-                    var projection = BuildAggregateProjectionForGroupByOrderBy(sortBy.Node.FuncCall, fromAlias);
-
-                    if (projections.Any(p => string.Equals(p, projection, StringComparison.OrdinalIgnoreCase)) == false)
-                        throw UnsupportedOrderByForGroupBy();
-
-                    orderExpr = $"'{projections.First(p => string.Equals(p, projection, StringComparison.OrdinalIgnoreCase))}'";
+                    var expression = BuildAggregateProjectionForGroupByOrderBy(sortBy.Node.FuncCall, fromAlias);
+                    var aggregate = FindAggregate(aggregates, a => string.Equals(a.Expression, expression, StringComparison.OrdinalIgnoreCase));
+                    (orderField, ordering) = AggregateOrderTarget(aggregate, groupFieldName);
                 }
                 else
                 {
@@ -678,10 +692,31 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
                 }
 
                 if (sortBy.SortbyDir == SortByDir.SortbyDesc)
-                    q.OrderByDescending(orderExpr);
+                    q.OrderByDescending(orderField, ordering);
                 else
-                    q.OrderBy(orderExpr);
+                    q.OrderBy(orderField, ordering);
             }
+        }
+
+        private static GroupByAggregate FindAggregate(IReadOnlyList<GroupByAggregate> aggregates, Func<GroupByAggregate, bool> predicate)
+        {
+            for (int i = 0; i < aggregates.Count; i++)
+            {
+                if (predicate(aggregates[i]))
+                    return aggregates[i];
+            }
+
+            throw UnsupportedOrderByForGroupBy();
+        }
+
+        private static (string Field, OrderingType Ordering) AggregateOrderTarget(GroupByAggregate aggregate, string groupFieldName)
+        {
+            // sum(<group key>) and the key itself resolve to the same RQL field name, so `order by`
+            // would silently sort by the key instead of the aggregate.
+            if (string.Equals(aggregate.OrderField, groupFieldName, StringComparison.OrdinalIgnoreCase))
+                throw UnsupportedOrderByForGroupBy();
+
+            return (aggregate.OrderField, aggregate.Ordering);
         }
 
         private static void ApplySelectProjection(AsyncDocumentQuery<JObject> q, SelectStmt selectStmt, string fromAlias)
@@ -928,51 +963,78 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
             return $"{funcName}({fieldName})";
         }
 
-        private static string BuildProjectionForGroupByTarget(Node val, string groupFieldName, string fromAlias = null, string sqlAlias = null)
+        private static string BuildProjectionForGroupByTarget(Node val, string groupFieldName, string fromAlias = null)
         {
-            if (val.ColumnRef != null)
-            {
-                var field = ExtractFieldName(val, fromAlias);
-                if (string.Equals(field, groupFieldName, StringComparison.OrdinalIgnoreCase) == false)
-                    throw UnsupportedGroupBy();
-                
-                if (IsSafeRqlFieldPath(groupFieldName) == false)
-                    throw UnsupportedGroupBy();
+            if (val.ColumnRef == null)
+                throw UnsupportedGroupBy();
 
-                return groupFieldName;
+            var field = ExtractFieldName(val, fromAlias);
+            if (string.Equals(field, groupFieldName, StringComparison.OrdinalIgnoreCase) == false)
+                throw UnsupportedGroupBy();
+
+            if (IsSafeRqlFieldPath(groupFieldName) == false)
+                throw UnsupportedGroupBy();
+
+            return groupFieldName;
+        }
+
+        // OrderField/Ordering describe how RQL refers to the aggregate in an `order by` clause:
+        // count() reduces into the well-known 'Count' field, sum(x) into 'x' (see QueryMetadata's
+        // GetSelectField). OutputName is the column name PostgreSQL would give the aggregate,
+        // which is what an ORDER BY over the SELECT alias refers to.
+        private readonly record struct GroupByAggregate(
+            string Projection,
+            string Expression,
+            string OutputName,
+            string OrderField,
+            OrderingType Ordering);
+
+        private static GroupByAggregate BuildGroupByAggregate(FuncCall funcCall, string sqlAlias, string fromAlias)
+        {
+            var funcName = GetFuncNameOrThrow(funcCall);
+
+            string expr;
+            string orderField;
+            OrderingType ordering;
+
+            switch (funcName)
+            {
+                case "count":
+                    expr = BuildCountProjection(funcCall, fromAlias);
+                    orderField = Constants.Documents.Indexing.Fields.CountFieldName;
+                    ordering = OrderingType.Long;
+                    break;
+
+                case "sum":
+                    expr = BuildSingleColumnAggregateProjection(funcName, funcCall, fromAlias);
+                    orderField = ExtractFieldName(GetSingleArgOrThrow(funcCall), fromAlias);
+                    ordering = OrderingType.Double;
+                    break;
+
+                // avg() is intentionally absent: RQL's grouped SELECT supports only count/sum,
+                // so avg falls through to UnhandledQueryDiagnoser for a friendly message.
+                default:
+                    throw UnsupportedGroupBy();
             }
 
-            if (val.FuncCall != null)
+            var projection = expr;
+
+            // Aggregates over a group-by key collide on RQL's implicit alias rule:
+            // `sum(Freight)`'s implicit alias is `Freight`, identical to the group-by
+            // key's own alias, and RQL rejects the SELECT with
+            // `Duplicate alias 'Freight' detected`. Preserve the SQL's explicit AS clause
+            // when present — PowerBI always emits one (`as "a0"`/`as "a1"`/…) — so the
+            // RQL becomes `select Freight, sum(Freight) as a0` and the implicit alias
+            // never matters.
+            if (string.IsNullOrWhiteSpace(sqlAlias) == false &&
+                string.Equals(sqlAlias, expr, StringComparison.OrdinalIgnoreCase) == false)
             {
-                var funcName = GetFuncNameOrThrow(val.FuncCall);
-                var expr = funcName switch
-                {
-                    "count" => BuildCountProjection(val.FuncCall, fromAlias),
-                    "sum" => BuildSingleColumnAggregateProjection(funcName, val.FuncCall, fromAlias),
-                    // avg() is intentionally absent: RQL's grouped SELECT supports only count/sum,
-                    // so avg falls through to UnhandledQueryDiagnoser for a friendly message.
-                    _ => throw UnsupportedGroupBy()
-                };
-
-                // Aggregates over a group-by key collide on RQL's implicit alias rule:
-                // `sum(Freight)`'s implicit alias is `Freight`, identical to the group-by
-                // key's own alias, and RQL rejects the SELECT with
-                // `Duplicate alias 'Freight' detected`. Preserve the SQL's explicit AS clause
-                // when present — PowerBI always emits one (`as "a0"`/`as "a1"`/…) — so the
-                // RQL becomes `select Freight, sum(Freight) as a0` and the implicit alias
-                // never matters.
-                if (string.IsNullOrWhiteSpace(sqlAlias) == false &&
-                    string.Equals(sqlAlias, expr, StringComparison.OrdinalIgnoreCase) == false)
-                {
-                    if (IsSafeRqlIdentifier(sqlAlias) == false)
-                        throw UnsupportedGroupBy();
-                    return $"{expr} as {sqlAlias}";
-                }
-
-                return expr;
+                if (IsSafeRqlIdentifier(sqlAlias) == false)
+                    throw UnsupportedGroupBy();
+                projection = $"{expr} as {sqlAlias}";
             }
 
-            throw UnsupportedGroupBy();
+            return new GroupByAggregate(projection, expr, string.IsNullOrWhiteSpace(sqlAlias) ? funcName : sqlAlias, orderField, ordering);
         }
 
         private static string BuildAggregateProjectionForGroupByOrderBy(FuncCall funcCall, string fromAlias = null)

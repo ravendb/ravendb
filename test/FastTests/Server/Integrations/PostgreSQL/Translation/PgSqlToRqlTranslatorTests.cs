@@ -490,9 +490,72 @@ namespace FastTests.Server.Integrations.PostgreSQL.Translation
         public void GroupByCountOrderByCountDesc()
         {
             var sql = "SELECT status, COUNT(*) FROM orders GROUP BY status ORDER BY COUNT(*) DESC";
-            var expected = "from 'orders' group by status order by 'count()' desc select status, count()";
+            var expected = "from 'orders' group by status order by Count as long desc select status, count()";
 
             Assert.Equal(expected, Translate(sql));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void GroupByCountOrderByCountAsc()
+        {
+            var sql = "SELECT status, COUNT(*) FROM orders GROUP BY status ORDER BY COUNT(*)";
+            var expected = "from 'orders' group by status order by Count as long select status, count()";
+
+            Assert.Equal(expected, Translate(sql));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void GroupByCountOrderByAggregateAlias()
+        {
+            var sql = "SELECT \"Company\" AS \"Company\", COUNT(*) AS count FROM public.\"Orders\" GROUP BY \"Company\" ORDER BY count DESC LIMIT 10000";
+            var expected = "from 'Orders' group by Company order by Count as long desc select Company, count() as count limit 0, 10000";
+
+            Assert.Equal(expected, Translate(sql));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void GroupBySumOrderBySumDesc()
+        {
+            var sql = "SELECT \"Company\", sum(\"Freight\") AS \"a0\" FROM public.\"Orders\" GROUP BY \"Company\" ORDER BY sum(\"Freight\") DESC";
+            var expected = "from 'Orders' group by Company order by Freight as double desc select Company, sum(Freight) as a0";
+
+            Assert.Equal(expected, Translate(sql));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void GroupBySumOrderByAggregateAlias()
+        {
+            var sql = "SELECT \"Company\", sum(\"Freight\") AS \"a0\" FROM public.\"Orders\" GROUP BY \"Company\" ORDER BY \"a0\"";
+            var expected = "from 'Orders' group by Company order by Freight as double select Company, sum(Freight) as a0";
+
+            Assert.Equal(expected, Translate(sql));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void GroupByCountOrderByGroupKey()
+        {
+            var sql = "SELECT status, COUNT(*) FROM orders GROUP BY status ORDER BY status DESC";
+            var expected = "from 'orders' group by status order by status desc select status, count()";
+
+            Assert.Equal(expected, Translate(sql));
+        }
+
+        // sum() over the group key resolves to the key's own RQL field name, so ordering by it
+        // would sort by the key instead of the aggregate.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void GroupByOrderBySumOfGroupKey_IsRejected()
+        {
+            var sql = "SELECT \"Freight\", sum(\"Freight\") AS \"a0\" FROM public.\"Orders\" GROUP BY \"Freight\" ORDER BY \"a0\" DESC";
+
+            Assert.False(Raven.Server.Integrations.PostgreSQL.Translation.PgSqlToRqlTranslator.TryParse(sql, Array.Empty<int>(), out _));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void GroupByOrderByAggregateNotInSelect_IsRejected()
+        {
+            var sql = "SELECT status, COUNT(*) FROM orders GROUP BY status ORDER BY sum(amount) DESC";
+
+            Assert.False(Raven.Server.Integrations.PostgreSQL.Translation.PgSqlToRqlTranslator.TryParse(sql, Array.Empty<int>(), out _));
         }
 
         [RavenFact(RavenTestCategory.PostgreSql)]
