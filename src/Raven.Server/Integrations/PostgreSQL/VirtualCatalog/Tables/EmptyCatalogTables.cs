@@ -80,6 +80,27 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
             new("seqcache",     PgInt8.Default, PgFormat.Text),
             new("seqcycle",     PgBool.Default, PgFormat.Text));
 
+        // RavenDB has no indexes on collections in the PG sense - a Raven index is a separate,
+        // named artifact, not a relation attached to a collection - so this stays empty.
+        //
+        // SQLAlchemy's get_pk_constraint() joins pg_attribute against a subquery over this table,
+        // and get_indexes() joins it too. Registering it empty answers both with a zero-row rowset
+        // rather than a rejected statement, which is what "this table has no primary key and no
+        // indexes" looks like on the wire.
+        //
+        // indkey/indoption are int2vector and indexprs/indpred are pg_node_tree; there is no row to
+        // put in them, so the declared types only have to let the projection resolve.
+        public static EmptyCatalogTable PgIndex => new("pg_catalog", "pg_index",
+            new("indrelid",     PgOid.Default,  PgFormat.Text),
+            new("indexrelid",   PgOid.Default,  PgFormat.Text),
+            new("indisunique",  PgBool.Default, PgFormat.Text),
+            new("indisprimary", PgBool.Default, PgFormat.Text),
+            new("indexprs",     PgText.Default, PgFormat.Text),
+            new("indpred",      PgText.Default, PgFormat.Text),
+            new("indkey",       PgText.Default, PgFormat.Text),
+            new("indoption",    PgText.Default, PgFormat.Text),
+            new("indnkeyatts",  PgInt2.Default, PgFormat.Text));
+
         // RavenDB has no PG extensions; an empty table lets pgAdmin's `count(extname)` probe return 0.
         public static EmptyCatalogTable PgExtension => new("pg_catalog", "pg_extension",
             new("oid",        PgOid.Default,  PgFormat.Text),
