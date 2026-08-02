@@ -41,9 +41,7 @@ namespace FastTests.Server.Integrations.PostgreSQL
         [RavenFact(RavenTestCategory.PostgreSql)]
         public void Npgsql5_composite_types_probe_returns_empty_rowset()
         {
-            // No database on the context → no collections → pg_class and pg_attribute are both
-            // empty, so the INNER JOINs yield nothing. Even against a populated database the
-            // `relkind='c'` / composite-type filters exclude collections. Three projected columns.
+            // No database on the context → the joins yield nothing. Three projected columns.
             Assert.True(PgVirtualInterpreter.TryExecute(Npgsql5CompositeTypesQuery, new VirtualQueryContext(), out var table));
             Assert.Equal(3, table.Columns.Count);
             Assert.Empty(table.Data);

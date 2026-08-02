@@ -11,13 +11,6 @@ using Xunit;
 
 namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
 {
-    // pg_class is where SQLAlchemy - and therefore Apache Superset - looks for the table list:
-    // PGDialect.get_table_names() joins pg_class to pg_namespace and filters on relkind, it never
-    // reads information_schema.tables. While pg_class was empty, Superset connected but offered no
-    // tables to build a dataset from (Zoho Desk #7031).
-    //
-    // Unlike PgVirtualInterpreterTests (which runs against a null-database context), these need a
-    // live database: the rows come from its collections.
     public class PgCatalogPgClassTests : RavenTestBase
     {
         public PgCatalogPgClassTests(ITestOutputHelper output) : base(output)
@@ -60,7 +53,6 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
                 Assert.True(int.TryParse(values.Oid, out var oid) && oid > 0, $"'{name}' has a non-oid value '{values.Oid}'");
             }
 
-            // oids identify a relation - two collections must never share one.
             Assert.Equal(byName.Count, byName.Values.Select(v => v.Oid).Distinct().Count());
         }
 
@@ -78,7 +70,6 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
             Assert.Equal(new[] { "Companies", "Employees", "Orders" }, ColumnValues(table, column: 0).OrderBy(n => n, StringComparer.Ordinal));
         }
 
-        // The invariant that broke: the two catalogs a client may reflect through must agree.
         [RavenFact(RavenTestCategory.PostgreSql)]
         public async Task Pg_class_and_information_schema_tables_report_the_same_names()
         {
@@ -97,7 +88,6 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
                 ColumnValues(fromPgClass, column: 0).OrderBy(n => n, StringComparer.Ordinal));
         }
 
-        // Collection names keep their exact casing on both sides - 'Orders', not 'orders'.
         [RavenFact(RavenTestCategory.PostgreSql)]
         public async Task Pg_class_keeps_the_collection_name_casing()
         {
@@ -112,13 +102,7 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
             Assert.Equal("Orders", DecodeCell(table, row: 0, column: 0));
         }
 
-        // SQLAlchemy's PGDialect.get_table_oid(), verbatim off the wire (1.4.54 + psycopg2). It runs
-        // BEFORE get_columns() and its result keys every later reflection query, so while
-        // pg_table_is_visible() was unimplemented this was rejected and Superset could not create a
-        // dataset - even though pg_class itself already listed the table.
-        //
-        // This is the per-row call path: the predicate is evaluated once per pg_class row with a
-        // column argument, not as a bare constant call (that form is in PgVirtualInterpreterTests).
+        // SQLAlchemy's PGDialect.get_table_oid(), verbatim off the wire (1.4.54 + psycopg2).
         [RavenFact(RavenTestCategory.PostgreSql)]
         public async Task SqlAlchemy_get_table_oid_resolves_a_collection_to_its_oid()
         {
@@ -140,17 +124,12 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
             Assert.Equal("oid", table.Columns[0].Name);
             Assert.Single(table.Data);
 
-            // The oid must be the same one pg_class reports for Orders - reflection keyed off a
-            // different value would find no columns.
             Assert.True(PgVirtualInterpreter.TryExecute(
                 "select oid from pg_class where relname = 'Orders'", ctx, out var expected));
             Assert.Equal(DecodeCell(expected, row: 0, column: 0), DecodeCell(table, row: 0, column: 0));
         }
 
-        // pgAdmin's schema-tree probe (the shape PgVirtualInterpreterTests covers against a null
-        // database) reads pg_class.relnamespace inside correlated EXISTS subqueries. While pg_class
-        // was empty those never evaluated per row; now they do, and an unresolvable column there
-        // would reject the whole query instead of returning the namespace list.
+        // pgAdmin's schema-tree probe, which reads pg_class.relnamespace in correlated EXISTS arms.
         [RavenFact(RavenTestCategory.PostgreSql)]
         public async Task Pgadmin_schema_tree_query_is_still_accepted_over_a_populated_pg_class()
         {
@@ -188,13 +167,9 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
             Assert.True(PgVirtualInterpreter.TryExecute(sql, ctx, out var table));
 
             Assert.Equal(5, table.Columns.Count);
-            // No collection is named 'pg_class' / 'tables', so both EXISTS arms stay false and the
-            // namespaces survive the NOT(...) - the same list the null-database run produces.
             Assert.Equal(new[] { "information_schema", "public" }, ColumnValues(table, column: 1));
         }
 
-        // No database on the context (the PgVirtualInterpreterTests case): still a well-formed,
-        // empty rowset - never a rejected query.
         [RavenFact(RavenTestCategory.PostgreSql)]
         public void Pg_class_with_null_db_returns_empty_rowset()
         {

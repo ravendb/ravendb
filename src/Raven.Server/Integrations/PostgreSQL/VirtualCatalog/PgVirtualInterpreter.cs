@@ -14,9 +14,7 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
         {
             result = null;
 
-            // `SHOW <setting>` / `SHOW ALL` parse to a VariableShowStmt, not a SelectStmt, so they
-            // have to be checked before the SELECT-shaped paths below. They still belong here:
-            // they return rows, and they read the same settings table current_setting() does.
+            // SHOW parses to a VariableShowStmt, so it has to be checked before the SELECT paths.
             if (PgShowStatement.TryExecute(queryText, out result))
                 return true;
 

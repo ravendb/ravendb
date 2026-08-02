@@ -61,42 +61,16 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
             new("enumlabel",     PgName.Default,   PgFormat.Text),
             new("enumsortorder", PgFloat4.Default, PgFormat.Text));
 
-        // Column defaults. RavenDB has none - a document either carries a field or it doesn't - so
-        // an empty table is the correct answer here, not a missing one.
-        //
-        // SQLAlchemy's get_columns() reads the default of every column through a correlated subquery
-        // over this table: `SELECT pg_get_expr(d.adbin, d.adrelid) FROM pg_attrdef d WHERE
-        // d.adrelid = a.attrelid AND d.adnum = a.attnum AND a.atthasdef`. Registering the table is
-        // all that takes - with no rows, the projection is never evaluated, so the subquery yields
-        // SQL NULL and pg_get_expr is never called. We deliberately don't implement it: rendering a
-        // stored expression tree back to source text is not something we could do honestly.
-        //
-        // adbin is really pg_node_tree, an internal type we don't model; it's declared as text so a
-        // reference to it resolves.
+        // RavenDB has no column defaults; SQLAlchemy's get_columns() subqueries this table, so it
+        // must be registered even though it's empty.
         public static EmptyCatalogTable PgAttrdef => new("pg_catalog", "pg_attrdef",
             new("oid",     PgOid.Default,  PgFormat.Text),
             new("adrelid", PgOid.Default,  PgFormat.Text),
             new("adnum",   PgInt2.Default, PgFormat.Text),
             new("adbin",   PgText.Default, PgFormat.Text));
 
-        // Sequences. RavenDB has none - document ids come from the change vector / identity
-        // machinery, not from a sequence relation - so an empty table is the correct answer.
-        //
-        // SQLAlchemy's get_columns() reads each column's identity metadata through a scalar
-        // subquery over this table: `SELECT json_build_object(...) FROM pg_sequence s JOIN pg_class
-        // c ON s.seqrelid = c."oid" WHERE ... AND s.seqrelid = pg_get_serial_sequence(...)`. It was
-        // the last unregistered table in SQL_COLS, and one unregistered table rejects the whole
-        // statement - so column reflection got nothing back even though every other element of it
-        // (format_type, the pg_attrdef default lookup, the pg_description join) already resolved.
-        //
-        // With no rows the join is empty, so nothing inside the subquery is ever evaluated: neither
-        // json_build_object() in its projection nor pg_get_serial_sequence() and the ::regclass
-        // casts in its WHERE. We deliberately don't implement any of them - we'd only be inventing
-        // identity metadata for columns that have none. The subquery yields SQL NULL, which is
-        // precisely "this column is not an identity column".
-        //
-        // The columns are the ones the subquery reads; real pg_sequence also carries seqtypid,
-        // which nothing asks us for.
+        // RavenDB has no sequences; SQLAlchemy's get_columns() subqueries this table, so it must be
+        // registered even though it's empty.
         public static EmptyCatalogTable PgSequence => new("pg_catalog", "pg_sequence",
             new("seqrelid",     PgOid.Default,  PgFormat.Text),
             new("seqstart",     PgInt8.Default, PgFormat.Text),

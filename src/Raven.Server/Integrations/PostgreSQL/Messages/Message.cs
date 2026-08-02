@@ -101,9 +101,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
         public List<PgColumn> Columns;
         public List<PgDataRow> Data;
 
-        // CommandComplete tag to report for this result. Null means the default "SELECT <rowcount>",
-        // which is right for everything that reads like a query. Statements that PG tags differently
-        // while still returning rows (SHOW) set it explicitly.
+        // Null means the default "SELECT <rowcount>".
         public string CommandTag;
 
         public PgTable()
