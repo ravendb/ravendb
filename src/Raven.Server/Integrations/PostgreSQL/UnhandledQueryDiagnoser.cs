@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using PgSqlParser;
+using Raven.Server.Integrations.PostgreSQL.Translation;
 using Raven.Server.Integrations.PostgreSQL.VirtualCatalog;
 
 namespace Raven.Server.Integrations.PostgreSQL
@@ -79,6 +80,11 @@ namespace Raven.Server.Integrations.PostgreSQL
                 return true;
             }
 
+            // Before the GROUP BY checks: an unsupported LIKE on a group key otherwise gets reported as a
+            // non-grouped-field filter, which points the user at the wrong part of the query.
+            if (TryDiagnoseLike(outer, out message))
+                return true;
+
             if (outer.HavingClause != null)
             {
                 message = "SQL HAVING is not supported. RavenDB filters aggregated groups with a post-reduction predicate the bridge doesn't translate yet — fetch the grouped rows without HAVING and apply the threshold client-side.";
@@ -94,6 +100,84 @@ namespace Raven.Server.Integrations.PostgreSQL
             }
 
             return false;
+        }
+
+        // Reports the first LIKE / ILIKE whose pattern shape has no correct RQL form. Supported shapes
+        // return false so a query that failed for an unrelated reason keeps its own diagnosis.
+        private static bool TryDiagnoseLike(SelectStmt selectStmt, out string message)
+        {
+            message = null;
+
+            var wheres = new List<Node>();
+            CollectWhereClauses(selectStmt, wheres, depth: 0);
+
+            foreach (var where in wheres)
+            {
+                if (TryDiagnoseLike(where, depth: 0, out message))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static void CollectWhereClauses(SelectStmt selectStmt, List<Node> acc, int depth)
+        {
+            if (selectStmt == null || depth >= MaxJoinSearchDepth)
+                return;
+
+            if (selectStmt.Op != SetOperation.SetopNone)
+            {
+                CollectWhereClauses(selectStmt.Larg, acc, depth + 1);
+                CollectWhereClauses(selectStmt.Rarg, acc, depth + 1);
+            }
+
+            if (selectStmt.WhereClause != null)
+                acc.Add(selectStmt.WhereClause);
+
+            if (selectStmt.FromClause == null)
+                return;
+
+            foreach (var item in selectStmt.FromClause)
+            {
+                if (item?.RangeSubselect?.Subquery?.SelectStmt is { } inner)
+                    CollectWhereClauses(inner, acc, depth + 1);
+            }
+        }
+
+        private static bool TryDiagnoseLike(Node node, int depth, out string message)
+        {
+            message = null;
+            if (node == null || depth >= MaxJoinSearchDepth)
+                return false;
+
+            if (node.BoolExpr?.Args is { } args)
+            {
+                foreach (var arg in args)
+                {
+                    if (TryDiagnoseLike(arg, depth + 1, out message))
+                        return true;
+                }
+                return false;
+            }
+
+            if (node.AExpr is not { } aExpr)
+                return false;
+
+            var op = aExpr.Name is { Count: 1 } ? aExpr.Name[0]?.String?.Sval?.Trim() : null;
+            if (op != null && SqlLikePattern.IsLikeOperator(op))
+            {
+                var pattern = aExpr.Rexpr?.AConst?.Sval?.Sval;
+                if (pattern == null)
+                {
+                    message = SqlLikePattern.NonLiteralPattern;
+                    return true;
+                }
+
+                return SqlLikePattern.TryClassify(pattern, out _, out _, out message) == false;
+            }
+
+            return TryDiagnoseLike(aExpr.Lexpr, depth + 1, out message)
+                || TryDiagnoseLike(aExpr.Rexpr, depth + 1, out message);
         }
 
         // Textual check for a `declare function {...}` fragment: starts with `declare function` and has

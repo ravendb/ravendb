@@ -1085,6 +1085,14 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
 
                 case ParsedNot n:
                 {
+                    // LIKE carries its own negation flag (it emits a NULL guard around the negated form),
+                    // so flip that rather than letting NegateNext() consume the guard instead.
+                    if (n.Child is ParsedLike likeChild)
+                    {
+                        EmitWhere(q, likeChild with { Negated = likeChild.Negated == false }, wrapInSubclause: false);
+                        break;
+                    }
+
                     // RQL has no `NOT (expr)` syntax; instead the client side exposes NegateNext()
                     // which flips the polarity of the very next predicate. That maps cleanly when the
                     // child is a single primitive predicate (Binary / In / IsNull / Between). For a
@@ -1115,6 +1123,43 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
                         case ">=":  q.WhereGreaterThanOrEqual(field, value); break;
                         default:    throw new NotSupportedException($"Unsupported operator '{b.Operator}'");
                     }
+                    break;
+                }
+
+                case ParsedLike l:
+                {
+                    var field = JoinPath(l.FieldPath);
+                    if (l.Pattern.Kind != ParsedValueKind.String || l.Pattern.Raw is not string pattern)
+                        throw new NotSupportedException(SqlLikePattern.NonLiteralPattern);
+
+                    if (SqlLikePattern.TryClassify(pattern, out var shape, out var literal, out var limitation) == false)
+                        throw new NotSupportedException(limitation);
+
+                    // LIKE is case-sensitive, so it needs exact() — an auto index stores the plain field
+                    // through the lower-casing default analyzer, and only the exact() companion field keeps
+                    // the original casing. ILIKE is the analyzed field's own (case-insensitive) behaviour.
+                    var exact = l.CaseInsensitive == false;
+
+                    // `x NOT LIKE p` is NULL - not true - when x is NULL, so PG drops the row. RQL's negation
+                    // is "everything the positive match didn't hit", which keeps it; guard explicitly.
+                    if (l.Negated)
+                    {
+                        q.OpenSubclause();
+                        q.WhereNotEquals(field, null);
+                        q.AndAlso();
+                        q.NegateNext();
+                    }
+
+                    switch (shape)
+                    {
+                        case SqlLikeShape.Equals:     q.WhereEquals(field, literal, exact); break;
+                        case SqlLikeShape.StartsWith: q.WhereStartsWith(field, literal, exact); break;
+                        case SqlLikeShape.EndsWith:   q.WhereEndsWith(field, literal, exact); break;
+                        default: throw new NotSupportedException(SqlLikePattern.NonLiteralPattern);
+                    }
+
+                    if (l.Negated)
+                        q.CloseSubclause();
                     break;
                 }
 

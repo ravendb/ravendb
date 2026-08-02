@@ -729,5 +729,57 @@ namespace FastTests.Server.Integrations.PostgreSQL.Translation
             Assert.Contains("$1", rql, StringComparison.Ordinal);
             Assert.Contains("$2", rql, StringComparison.Ordinal);
         }
+
+        // LIKE is case-sensitive, so it needs exact() to reach the auto index's unanalyzed companion
+        // field; ILIKE is what the analyzed field already does.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Like_Prefix_TranslatesToExactStartsWith()
+        {
+            Assert.Equal("from 'orders' where exact(startsWith(company, 'Choc'))",
+                Translate("SELECT * FROM orders WHERE company LIKE 'Choc%'"));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Ilike_Prefix_TranslatesToStartsWith()
+        {
+            Assert.Equal("from 'orders' where startsWith(company, 'Choc')",
+                Translate("SELECT * FROM orders WHERE company ILIKE 'Choc%'"));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Like_Suffix_TranslatesToExactEndsWith()
+        {
+            Assert.Equal("from 'orders' where exact(endsWith(company, 'ade'))",
+                Translate("SELECT * FROM orders WHERE company LIKE '%ade'"));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Like_WithoutWildcards_TranslatesToExactEquality()
+        {
+            Assert.Equal("from 'orders' where exact(company = 'Chocolade')",
+                Translate("SELECT * FROM orders WHERE company LIKE 'Chocolade'"));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void NotLike_GuardsAgainstNull()
+        {
+            Assert.Equal("from 'orders' where (company != null and not exact(startsWith(company, 'Choc')))",
+                Translate("SELECT * FROM orders WHERE company NOT LIKE 'Choc%'"));
+        }
+
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("SELECT * FROM orders WHERE company LIKE '%Choc%'")]
+        [InlineData("SELECT * FROM orders WHERE company ILIKE '%Choc%'")]
+        [InlineData("SELECT * FROM orders WHERE company LIKE 'C_ocolade'")]
+        [InlineData("SELECT * FROM orders WHERE company LIKE 'Choc%ade'")]
+        [InlineData("SELECT * FROM orders WHERE company LIKE 'Choc\\%ade'")]
+        [InlineData("SELECT * FROM orders WHERE company LIKE '%'")]
+        [InlineData("SELECT * FROM orders WHERE company LIKE '!%Choc%' ESCAPE '!'")]
+        [InlineData("SELECT * FROM orders WHERE company LIKE $1")]
+        public void UnsupportedLikePattern_FallsThrough(string sql)
+        {
+            Assert.False(Raven.Server.Integrations.PostgreSQL.Translation.PgSqlToRqlTranslator.TryParse(
+                sql, Array.Empty<int>(), out _));
+        }
     }
 }
