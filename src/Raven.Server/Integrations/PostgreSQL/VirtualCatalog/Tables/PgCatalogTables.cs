@@ -51,6 +51,11 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
             new("typreceive",  PgOid.Default,  PgFormat.Text),
             new("typcategory", PgChar.Default, PgFormat.Text),
             new("typarray",    PgOid.Default,  PgFormat.Text),
+            // Domain-only columns, projected by SQLAlchemy's _load_domains alongside typbasetype:
+            // the typmod to apply to the base type, and the domain's default expression. -1 / NULL
+            // on every non-domain row, which is what PG stores there too.
+            new("typtypmod",   PgInt4.Default, PgFormat.Text),
+            new("typdefault",  PgText.Default, PgFormat.Text),
         };
     }
 

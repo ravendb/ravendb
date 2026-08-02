@@ -1141,6 +1141,22 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
             if (expr.CaseExpr != null)
                 return (InferCaseType(expr.CaseExpr, sources), format);
 
+            // A registered scalar function declares its own result type. Without this a projected
+            // `pg_type_is_visible(t.oid)` would be advertised as text and put "False" on the wire
+            // where the client expects a boolean's "f" - and a non-empty string is truthy to the
+            // client, so it would read a false as a true.
+            if (expr.FuncCall?.Funcname is { Count: > 0 } funcname)
+            {
+                // Multi-part names like pg_catalog.pg_type_is_visible -> use the last segment.
+                var name = funcname[^1]?.String?.Sval;
+                if (string.IsNullOrEmpty(name) == false && PgVirtualDatabase.TryGetFunction(name, out var function))
+                    return (function.PgType, format);
+            }
+
+            // AND / OR / NOT yield a boolean, same reasoning - `not t.typnotnull as "nullable"`.
+            if (expr.BoolExpr != null)
+                return (PgBool.Default, format);
+
             return (PgText.Default, format);
         }
 

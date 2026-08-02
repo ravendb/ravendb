@@ -96,11 +96,105 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
             Assert.False(PgVirtualInterpreter.TryExecute("select pg_table_is_visible(16384, 16385)", EmptyCtx(), out _));
         }
 
-        // Not implemented on purpose - see PgIsVisibleFunction.
+        // pg_type_is_visible resolves the type's namespace rather than answering unconditionally.
+        // A pg_catalog builtin (23 = int4) is always searched, so it is visible.
         [RavenFact(RavenTestCategory.PostgreSql)]
-        public void Pg_type_is_visible_is_not_implemented()
+        public void Pg_type_is_visible_is_true_for_a_pg_catalog_type()
         {
-            Assert.False(PgVirtualInterpreter.TryExecute("select pg_type_is_visible(23)", EmptyCtx(), out _));
+            Assert.True(PgVirtualInterpreter.TryExecute("select pg_type_is_visible(23)", EmptyCtx(), out var table));
+            Assert.NotNull(table);
+            Assert.Single(table.Columns);
+            Assert.Equal("pg_type_is_visible", table.Columns[0].Name);
+            Assert.Single(table.Data);
+            Assert.Equal("t", DecodeCell(table, row: 0, column: 0));
+        }
+
+        // 13183 is information_schema.yes_or_no - a domain in namespace 13158, which is not on the
+        // search_path. This row is why the function cannot be a constant true.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_type_is_visible_is_false_for_an_information_schema_domain()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute("select pg_type_is_visible(13183)", EmptyCtx(), out var table));
+            Assert.Single(table.Data);
+            Assert.Equal("f", DecodeCell(table, row: 0, column: 0));
+        }
+
+        // An oid with no pg_type row is NULL, not false: PG's pg_type_is_visible checks the syscache
+        // before answering, so "no such type" stays distinguishable from "off the search_path".
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_type_is_visible_unknown_oid_is_null()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute("select pg_type_is_visible(999999)", EmptyCtx(), out var table));
+            Assert.Single(table.Data);
+            Assert.False(table.Data[0].ColumnData.Span[0].HasValue);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_type_is_visible_wrong_arity_falls_through()
+        {
+            Assert.False(PgVirtualInterpreter.TryExecute("select pg_type_is_visible()", EmptyCtx(), out _));
+            Assert.False(PgVirtualInterpreter.TryExecute("select pg_type_is_visible(23, 25)", EmptyCtx(), out _));
+        }
+
+        // SQLAlchemy's PGDialect._load_domains(), verbatim off the wire (1.4.54 + psycopg2).
+        // get_columns() calls it unconditionally, so while pg_type_is_visible was unimplemented the
+        // whole of column reflection failed and Superset reported "Unable to load columns for the
+        // selected table" even though the column query itself resolved.
+        //
+        // This is the per-row call path - the function is evaluated once per pg_type row with a
+        // column argument, not as a bare constant call (that form is above). The five rows are the
+        // information_schema domains, and all of them must report visible = false: SQLAlchemy keys a
+        // visible domain by (name) and a non-visible one by (schema, name).
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void SqlAlchemy_load_domains_reports_the_information_schema_domains_as_not_visible()
+        {
+            const string sql = """
+                SELECT t.typname as "name",
+                   pg_catalog.format_type(t.typbasetype, t.typtypmod) as "attype",
+                   not t.typnotnull as "nullable",
+                   t.typdefault as "default",
+                   pg_catalog.pg_type_is_visible(t.oid) as "visible",
+                   n.nspname as "schema"
+                FROM pg_catalog.pg_type t
+                   LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+                WHERE t.typtype = 'd'
+                """;
+
+            Assert.True(PgVirtualInterpreter.TryExecute(sql, EmptyCtx(), out var table));
+
+            var columnNames = new List<string>();
+            foreach (var column in table.Columns)
+                columnNames.Add(column.Name);
+            Assert.Equal(new[] { "name", "attype", "nullable", "default", "visible", "schema" }, columnNames);
+
+            var byName = new Dictionary<string, string[]>(StringComparer.Ordinal);
+            for (int row = 0; row < table.Data.Count; row++)
+            {
+                var span = table.Data[row].ColumnData.Span;
+                var values = new string[table.Columns.Count];
+                for (int column = 0; column < values.Length; column++)
+                    values[column] = span[column].HasValue ? Encoding.UTF8.GetString(span[column].Value.Span) : null;
+                byName[values[0]] = values;
+            }
+
+            var names = new List<string>(byName.Keys);
+            names.Sort(StringComparer.Ordinal);
+            Assert.Equal(new[] { "cardinal_number", "character_data", "sql_identifier", "time_stamp", "yes_or_no" }, names);
+
+            foreach (var values in byName.Values)
+            {
+                // "f", not "False" - the projected column has to be typed as the boolean the
+                // function returns, or a client reads the text back as a true.
+                Assert.Equal("f", values[4]);
+                Assert.Equal("information_schema", values[5]);
+                Assert.Equal("t", values[2]); // none of the five domains is NOT NULL
+            }
+
+            Assert.Equal("integer", byName["cardinal_number"][1]);
+            Assert.Null(byName["cardinal_number"][3]);
+            // The only one of the five with a default: `CREATE DOMAIN time_stamp AS timestamp(2)
+            // with time zone DEFAULT current_timestamp(2)`.
+            Assert.Equal("CURRENT_TIMESTAMP(2)", byName["time_stamp"][3]);
         }
 
         [RavenFact(RavenTestCategory.PostgreSql)]

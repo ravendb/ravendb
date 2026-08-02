@@ -177,8 +177,9 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
         }
     }
 
-    // Registered for tables and functions only - pg_type_is_visible would be wrong, since pg_type
-    // also carries the information_schema domain types, whose namespace is off the search_path.
+    // Registered for tables and functions, both of which are always visible: every relation lives
+    // in the single "public" schema and every pg_proc row is a pg_catalog builtin. Types are the
+    // exception and get their own class below.
     internal sealed class PgIsVisibleFunction : ScalarFunction
     {
         private readonly string _name;
@@ -193,6 +194,121 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
         {
             result = true;
             return args is { Count: 1 };
+        }
+    }
+
+    // pg_type_is_visible(oid): can the type be referenced by its bare name, i.e. is its namespace on
+    // the search_path. This one cannot answer unconditionally the way the two above do - pg_type
+    // also carries the information_schema domain types (cardinal_number, character_data,
+    // sql_identifier, time_stamp, yes_or_no), and information_schema is not searched. SQLAlchemy's
+    // get_columns() calls _load_domains(), which keys a domain by (name) when it is visible and by
+    // (schema, name) when it is not, so a blanket true would misfile exactly those five rows.
+    internal sealed class PgTypeIsVisibleFunction : ScalarFunction
+    {
+        // pg_catalog is implicitly searched ahead of everything else, public is what PgSettings
+        // reports as search_path. information_schema is deliberately absent.
+        private static readonly HashSet<string> SearchedSchemas =
+            new(StringComparer.OrdinalIgnoreCase) { "pg_catalog", "public" };
+
+        // Type oid -> the name of its namespace, joined from pg_type.typnamespace through
+        // pg_namespace.nspname. Built once: both are immutable CSV catalogs, and _load_domains
+        // evaluates this per pg_type row, so re-scanning per call would be quadratic.
+        private static readonly Lazy<Dictionary<long, string>> SchemaByTypeOid = new(BuildSchemaByTypeOid);
+
+        public override string Name => "pg_type_is_visible";
+        public override string ResultColumnName => "pg_type_is_visible";
+        public override PgType PgType => PgBool.Default;
+
+        public override bool TryEvaluate(IReadOnlyList<object> args, VirtualQueryContext ctx, out object result)
+        {
+            result = null;
+            if (args is not { Count: 1 })
+                return false;
+
+            if (args[0] == null)
+                return true; // NULL oid -> NULL.
+
+            if (CatalogOid.TryRead(args[0], out var oid) == false)
+                return false;
+
+            // No pg_type row for this oid: PG returns NULL, not false - namespace.c checks the
+            // syscache before calling TypeIsVisible - which keeps "no such type" distinguishable
+            // from "exists, but off the search_path".
+            if (SchemaByTypeOid.Value.TryGetValue(oid, out var schema) == false)
+                return true;
+
+            result = SearchedSchemas.Contains(schema);
+            return true;
+        }
+
+        private static Dictionary<long, string> BuildSchemaByTypeOid()
+        {
+            var namespaceNames = ReadCatalogColumn("pg_namespace", "oid", "nspname");
+            var typeNamespaces = ReadCatalogColumn("pg_type", "oid", "typnamespace");
+
+            var result = new Dictionary<long, string>(typeNamespaces.Count);
+            foreach (var (typeOid, rawNamespace) in typeNamespaces)
+            {
+                // A namespace we can't name can't be one we search - the empty string never matches.
+                var schema = string.Empty;
+                if (CatalogOid.TryRead(rawNamespace, out var namespaceOid) &&
+                    namespaceNames.TryGetValue(namespaceOid, out var name))
+                    schema = name as string ?? string.Empty;
+
+                result[typeOid] = schema;
+            }
+
+            return result;
+        }
+
+        // Reads one pg_catalog table into { keyColumn -> valueColumn }. Only used for the CSV-backed
+        // catalogs, which serve the same cached rows to every query and ignore ctx - hence null.
+        private static Dictionary<long, object> ReadCatalogColumn(string tableName, string keyColumn, string valueColumn)
+        {
+            var result = new Dictionary<long, object>();
+            if (PgVirtualDatabase.TryGetTable("pg_catalog", tableName, out var table) == false)
+                return result;
+
+            var keyIndex = ColumnIndex(table, keyColumn);
+            var valueIndex = ColumnIndex(table, valueColumn);
+            if (keyIndex < 0 || valueIndex < 0)
+                return result;
+
+            foreach (var row in table.EnumerateRows(ctx: null))
+            {
+                if (CatalogOid.TryRead(row[keyIndex], out var key))
+                    result[key] = row[valueIndex];
+            }
+
+            return result;
+        }
+
+        private static int ColumnIndex(PgVirtualTable table, string name)
+        {
+            for (int i = 0; i < table.Columns.Count; i++)
+            {
+                if (string.Equals(table.Columns[i].Name, name, StringComparison.OrdinalIgnoreCase))
+                    return i;
+            }
+
+            return -1;
+        }
+    }
+
+    // Catalog oids reach us as int (CSV-parsed rows), long (integer literals) or string (a quoted
+    // literal), depending on where the argument came from.
+    internal static class CatalogOid
+    {
+        public static bool TryRead(object value, out long oid)
+        {
+            switch (value)
+            {
+                case long l: oid = l; return true;
+                case int i: oid = i; return true;
+                case short s: oid = s; return true;
+                case string str when long.TryParse(str, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed): oid = parsed; return true;
+                default: oid = 0; return false;
+            }
         }
     }
 
@@ -310,23 +426,11 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
             if (args[0] == null)
                 return true;
 
-            if (TryGetOid(args[0], out var oid) == false)
+            if (CatalogOid.TryRead(args[0], out var oid) == false)
                 return false;
 
             result = TypeNames.TryGetValue(oid, out var name) ? name : oid.ToString(CultureInfo.InvariantCulture);
             return true;
-        }
-
-        private static bool TryGetOid(object value, out long oid)
-        {
-            switch (value)
-            {
-                case long l: oid = l; return true;
-                case int i: oid = i; return true;
-                case short s: oid = s; return true;
-                case string str when long.TryParse(str, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed): oid = parsed; return true;
-                default: oid = 0; return false;
-            }
         }
     }
 }
