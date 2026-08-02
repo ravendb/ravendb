@@ -1,3 +1,4 @@
+using System;
 using Raven.Client.Documents.Operations.AI;
 
 namespace Tests.Infrastructure.ConnectionString.AI;
@@ -18,7 +19,7 @@ public class EmbeddingsOllamaConnectorForTesting : AbstractEmbeddingsConnectorFo
 
 public class GenAiOllamaConnectorForTesting : AbstractGenAiConnectorForTesting<GenAiOllamaConnectorForTesting>
 {
-    public const string Model = "qwen2.5:0.5b";
+    public const string Model = "qwen3-vl:4b";
 
     public GenAiOllamaConnectorForTesting()
     {
@@ -26,6 +27,20 @@ public class GenAiOllamaConnectorForTesting : AbstractGenAiConnectorForTesting<G
     }
 
     public override AiConnectorType AiConnectorType { get; init; } = AiConnectorType.Ollama;
+
+    // The first request also loads the model into the GPU, which can take far longer than a hosted provider
+    // needs to answer. Only this connector waits that long.
+    protected override TimeSpan ConnectionProbeTimeout => TimeSpan.FromSeconds(120);
+
+    public override GenAiConfiguration GetAiConfiguration()
+    {
+        var configuration = base.GetAiConfiguration();
+
+        // A single local GPU serializes completions; parallel requests just accumulate wait time until they time out.
+        configuration.MaxConcurrency = 1;
+
+        return configuration;
+    }
 
     protected override AiConnectionString CreateAiConnectionStringImpl() => OllamaConnectorHelper.CreateAiConnectionString(Model, AiModelType.Chat, RavenTestHelper.EnvironmentVariables.AiIntegrationOllamaChatUri);
 }

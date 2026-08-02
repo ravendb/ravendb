@@ -31,6 +31,7 @@ using Raven.Server.Documents.SchemaValidation.ErrorMessage;
 using Raven.Server.Json;
 using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Exceptions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
@@ -193,6 +194,12 @@ public class ChatCompletionClient : IDisposable
         object message = null;
         StringBuilder stringContent = structuredOutput ? null : new StringBuilder();
 
+        // Some OpenAI-compatible providers emit reasoning on a separate delta field before the answer, so it is
+        // never fed to the answer parser per delta - non-empty `content` may still arrive after it.
+        StringBuilder reasoningFallback = null;
+        var sawContent = false;
+        string finishReason = null;
+
         // need two contexts here because we run two parsing operations at once, first for each of the SSE events
         // and then for the internal buffer that there are providing.
         using var ___ = contextPool.AllocateOperationContext(out JsonOperationContext parsingContext);
@@ -233,37 +240,27 @@ public class ChatCompletionClient : IDisposable
             }
 
             var choice = (BlittableJsonReaderObject)choices[0];
+            if (choice.TryGet(Constants.ResponseFields.FinishReason, out string chunkFinishReason) && chunkFinishReason != null)
+                finishReason = chunkFinishReason;
+
             if (choice.TryGet(Constants.ResponseFields.Delta, out BlittableJsonReaderObject delta))
             {
-                if (TryGetDeltaContent(delta, out LazyStringValue content))
+                if (delta.TryGet(Constants.ResponseFields.Content, out LazyStringValue content) && content?.Length > 0)
                 {
+                    sawContent = true;
+                    reasoningFallback = null;
                     toolCallState.AddAndReset();
 
-                    if (structuredOutput)
-                    {
-                        var final = parser.Process(content);
-                        if (streamedPropertyBuffer.Length is not 0) // Length is the written data length (not the buffer real size)
-                        {
-                            // here we send all the data that wasn't sent so far to the client
-                            await streamedPropertyCallback(streamedPropertyBuffer.AsMemory());
-                            // reset the buffer length so we can overwrite the start of the buffer
-                            // and only retain in memory the parts we'll need to send next time
-                            streamedPropertyBuffer.Length = 0;
-                        }
-
-                        if (final is not null)
-                        {
-                            message = final;
-                        }
-                    }
-                    else
-                    {
-                        // For unstructured output, stream the raw text chunks directly
-                        stringContent.Append(content);
-                        streamedPropertyBuffer.Append(content.AsSpan());
-                        await streamedPropertyCallback(streamedPropertyBuffer.AsMemory());
-                        streamedPropertyBuffer.Length = 0;
-                    }
+                    // A mid-stream parser rejection is deferred (the parser latches it and stops accepting
+                    // content) so the terminating finish_reason is still observed - 'length' must win over an
+                    // invalid-JSON error.
+                    await AppendContentAsync(content, streamedPropertyBuffer, parser);
+                }
+                else if (sawContent == false &&
+                         ((delta.TryGet(Constants.ResponseFields.ReasoningContent, out LazyStringValue reasoning) && reasoning?.Length > 0) ||
+                          (delta.TryGet(Constants.ResponseFields.Reasoning, out reasoning) && reasoning?.Length > 0)))
+                {
+                    (reasoningFallback ??= new StringBuilder()).Append(reasoning);
                 }
 
                 if (delta.TryGet(Constants.ResponseFields.ToolCalls, out BlittableJsonReaderArray toolCalls))
@@ -291,29 +288,104 @@ public class ChatCompletionClient : IDisposable
             };
         }
 
-        if (structuredOutput == false)
+        if (structuredOutput)
         {
-            var fullText = stringContent.ToString();
+            // A length-truncated structured response is incomplete even if its partial JSON parsed, so it is
+            // rejected before the content is considered.
+            if (string.Equals(finishReason, Constants.ResponseFields.FinishReasonLength, StringComparison.OrdinalIgnoreCase))
+                throw new TooManyTokensException(
+                    $"The model response was truncated (finish_reason='length') before producing a complete structured answer.{GetReasoningPreview(reasoningFallback)}")
+                {
+                    RequestId = GetRequestId(response.Headers)
+                };
+
+            // 'message' is set only by content that parsed into a complete JSON object. Whatever reasoning was
+            // buffered is chain-of-thought, never the structured answer - parsing it was the RavenDB-26944 crash.
+            if (message is null)
+            {
+                var problem = parser.IsInvalid
+                    ? "streamed content that is not valid JSON"
+                    : sawContent
+                        ? "streamed content that did not form a complete JSON object"
+                        : "streamed no content";
+                throw UnexpectedResponseException.Create(
+                    $"Structured output was requested but the model {problem} (finish_reason='{finishReason}').{GetReasoningPreview(reasoningFallback)}",
+                    response, content: (string)null);
+            }
+
             return new AiResponse(AiResponseType.Result)
             {
                 Message = streamingContext.ReadObject(new DynamicJsonValue
                 {
                     [Constants.ResponseFields.Role] = Constants.RequestFields.RoleAssistantValue,
-                    [Constants.ResponseFields.Content] = fullText,
+                    [Constants.ResponseFields.Content] = message,
                 }, "persisted/streamed/message"),
-                Result = fullText,
+                Result = message,
             };
         }
 
+        // Unstructured output keeps the reasoning fallback (reasoning_content / reasoning) for LM Studio and
+        // other reasoning models - see RavenDB-25681 - used only when no answer 'content' was streamed.
+        if (sawContent == false && reasoningFallback is { Length: > 0 })
+        {
+            await AppendContentAsync(streamingContext.GetLazyString(reasoningFallback.ToString()), streamedPropertyBuffer, parser);
+        }
+
+        var fullText = stringContent.ToString();
         return new AiResponse(AiResponseType.Result)
         {
             Message = streamingContext.ReadObject(new DynamicJsonValue
             {
                 [Constants.ResponseFields.Role] = Constants.RequestFields.RoleAssistantValue,
-                [Constants.ResponseFields.Content] = message,
+                [Constants.ResponseFields.Content] = fullText,
             }, "persisted/streamed/message"),
-            Result = message,
+            Result = fullText,
         };
+
+        async Task AppendContentAsync(LazyStringValue content, JsonOperationContextBuffer<byte> propertyBuffer, SseStreamingJsonParser jsonParser)
+        {
+            if (structuredOutput)
+            {
+                // The parser owns the "model did not produce valid JSON" state; the failure is reported at the
+                // end of the stream. A failing client flush below still propagates.
+                if (jsonParser.TryProcess(content, out var final) == false)
+                    return;
+
+                if (propertyBuffer.Length is not 0) // Length is the written data length (not the buffer real size)
+                {
+                    // here we send all the data that wasn't sent so far to the client
+                    await streamedPropertyCallback(propertyBuffer.AsMemory());
+                    // reset the buffer length so we can overwrite the start of the buffer
+                    // and only retain in memory the parts we'll need to send next time
+                    propertyBuffer.Length = 0;
+                }
+
+                if (final is not null)
+                {
+                    message = final;
+                }
+
+                return;
+            }
+
+            // For unstructured output, stream the raw text chunks directly
+            stringContent.Append(content);
+            propertyBuffer.Append(content.AsSpan());
+            await streamedPropertyCallback(propertyBuffer.AsMemory());
+            propertyBuffer.Length = 0;
+        }
+
+        // A thinking model can produce many KB of chain-of-thought, so only the beginning of it is quoted in errors.
+        static string GetReasoningPreview(StringBuilder reasoning)
+        {
+            if (reasoning is not { Length: > 0 })
+                return string.Empty;
+
+            const int maxLength = 500;
+            return reasoning.Length <= maxLength
+                ? $" Reasoning: {reasoning}"
+                : $" Reasoning: {reasoning.ToString(0, maxLength)}...";
+        }
     }
 
     private static bool TryGetDeltaContent(BlittableJsonReaderObject delta, out LazyStringValue content)
@@ -457,20 +529,15 @@ public class ChatCompletionClient : IDisposable
 
         public object GetContent(JsonOperationContext context, bool structuredOutput)
         {
-            // Try content, then reasoning_content, then reasoning (for LM Studio and other OpenAI-like APIs that still use the older mechanism)
-            if (TryGetDeltaContent(Message, out var content) == false)
-            {
-                _choice0.TryGet(Constants.ResponseFields.FinishReason, out string finishReason);
-                var refusal = client.GetRefusal(_choice0, Message);
-                if (string.IsNullOrEmpty(refusal))
-                    throw UnexpectedResponseException.Create(message: "No response content", response, responseContent);
+            _choice0.TryGet(Constants.ResponseFields.FinishReason, out string finishReason);
+            var lengthTruncated = string.Equals(finishReason, Constants.ResponseFields.FinishReasonLength, StringComparison.OrdinalIgnoreCase);
 
-                RefusedToAnswerException.Throw(refusal, responseContent.ToString(), finishReason, GetRequestId(response.Headers));
-            }
+            // A thinking model can return empty 'content' plus a large 'reasoning' block.
+            var hasContent = Message.TryGet(Constants.ResponseFields.Content, out LazyStringValue content) && content?.Length > 0;
 
-            object result = structuredOutput
-                ? context.Sync.ReadForMemory(content, "ai/output")
-                : content.ToString();
+            var result = structuredOutput
+                ? GetStructuredContent(context, content, hasContent, finishReason, lengthTruncated)
+                : GetPlainTextContent(content, hasContent, finishReason, lengthTruncated);
 
             Message.Modifications ??= new DynamicJsonValue(Message);
             Message.Modifications[Constants.ResponseFields.Content] = result;
@@ -478,6 +545,68 @@ public class ChatCompletionClient : IDisposable
             return result;
         }
 
+        // Structured output is parsed only from real 'content'. A thinking model's reasoning is natural
+        // language, never the structured answer - feeding it to the JSON parser was the RavenDB-26944 crash.
+        private object GetStructuredContent(JsonOperationContext context, LazyStringValue content, bool hasContent, string finishReason, bool lengthTruncated)
+        {
+            // A truncated response is incomplete even if its content happens to be valid JSON, so it is
+            // rejected before parsing.
+            if (lengthTruncated)
+                throw Truncated("a complete structured answer");
+
+            if (hasContent == false)
+                throw NoUsableAnswer(finishReason);
+
+            try
+            {
+                return context.Sync.ReadForMemory(content, "ai/output");
+            }
+            catch (Exception e) when (e is InvalidDataException or InvalidStartOfObjectException)
+            {
+                // Malformed JSON raises InvalidDataException; well-formed JSON with a non-object root (an
+                // array, string or number) raises InvalidStartOfObjectException. Surface both as a clean
+                // error instead of leaking the raw parser exception.
+                throw UnexpectedResponseException.Create(
+                    $"Structured output was requested but the model returned content that is not valid JSON (finish_reason='{finishReason}'). Content: {content}",
+                    response, responseContent);
+            }
+        }
+
+        // Unstructured output may use 'reasoning_content' / 'reasoning' as the answer when no normal content
+        // arrived - see RavenDB-25681.
+        private object GetPlainTextContent(LazyStringValue content, bool hasContent, string finishReason, bool lengthTruncated)
+        {
+            if (hasContent == false)
+            {
+                if (lengthTruncated)
+                    throw Truncated("an answer");
+
+                if (TryGetDeltaContent(Message, out content) == false)
+                    throw NoUsableAnswer(finishReason);
+
+                // 'content' now holds the reasoning text, used as the plain-text answer.
+            }
+
+            return content.ToString();
+        }
+
+        // Refusal handling for both flows lives here only: a refusal is reported as such, anything else as a
+        // missing answer. RefusedToAnswerException.Throw always throws, so the returned exception just lets
+        // the callers keep a single `throw` statement.
+        private Exception NoUsableAnswer(string finishReason)
+        {
+            var refusal = client.GetRefusal(_choice0, Message);
+            if (string.IsNullOrEmpty(refusal) == false)
+                RefusedToAnswerException.Throw(refusal, responseContent.ToString(), finishReason, GetRequestId(response.Headers));
+
+            return UnexpectedResponseException.Create(message: "No response content", response, responseContent);
+        }
+
+        private TooManyTokensException Truncated(string expected) =>
+            new($"The model response was truncated (finish_reason='length') before producing {expected}. Response content: {responseContent}")
+            {
+                RequestId = GetRequestId(response.Headers)
+            };
     }
 
     protected virtual Task<HttpResponseMessage> SendRequestAsync(HttpRequestMessage request, CancellationToken token) => _client.SendAsync(request, token);
@@ -565,7 +694,9 @@ public class ChatCompletionClient : IDisposable
         });
 
         // Optional
-        if (tools?.Count > 0)
+        // When tools are disabled, providers that honor 'tool_choice' keep the tools array and get "none";
+        // providers that ignore 'tool_choice' (Ollama) get no tools array at all, since a model cannot call a tool it was never offered.
+        if (tools?.Count > 0 && (useTools || _settings.SupportsToolChoiceNone))
         {
             writer.WriteComma();
             writer.WriteArray(Constants.RequestFields.Tools, tools);
@@ -1035,6 +1166,7 @@ public class ChatCompletionClient : IDisposable
             public const string ReasoningContent = "reasoning_content";
             public const string Reasoning = "reasoning";
             public const string FinishReason = "finish_reason";
+            public const string FinishReasonLength = "length";
             public const string ToolCalls = "tool_calls";
             public const string Refusal = "refusal";
             public const string Usage = "usage";

@@ -20,7 +20,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent;
 public class RavenDB_24887_2(ITestOutputHelper output) : RavenDB_24887_Base(output)
 {
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanCallOneAgentFromAnother(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -131,7 +131,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenDB_24887_Base(outp
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanCallOneAgentFromAnotherWithError(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -264,7 +264,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenDB_24887_Base(outp
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task ThreeLevelsOfNesting(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -338,7 +338,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenDB_24887_Base(outp
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task ActionToolsOnSubAgentWithDifferentParam(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -410,7 +410,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenDB_24887_Base(outp
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task ThreeLevelsOfNesting_endless_loop(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -484,7 +484,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenDB_24887_Base(outp
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task SubAgent2OpenActionTools(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -572,7 +572,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenDB_24887_Base(outp
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CheckMaxToolIterationsLimitOnSubAgent(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -655,7 +655,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenDB_24887_Base(outp
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task SubAgent2OpenActionToolsAtOnce(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -744,7 +744,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenDB_24887_Base(outp
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task SubAgent2OpenActionTools2Agents(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -886,6 +886,8 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenDB_24887_Base(outp
 
     [RavenTheory(RavenTestCategory.Ai)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single,
+        Skip = "Flaky on Ollama: the local model often exhausts its 8K context window while reasoning, so the response ends with finish_reason = 'length'.")]
     public async Task SubAgentWitAnotherActionCallOnTheFirstActionCallResponse(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -965,9 +967,10 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenDB_24887_Base(outp
         Assert.Equal(AiConversationResult.Done, r.Status);
     }
 
-
     [RavenTheory(RavenTestCategory.Ai)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single,
+        Skip = "Flaky on Ollama: the local model often exhausts its 8K context window while reasoning, so the response ends with finish_reason = 'length'.")]
     public async Task ResumeChatAfterError(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);

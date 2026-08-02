@@ -19,7 +19,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent;
 public class RavenDB_24887_3(ITestOutputHelper output) : RavenDB_24887_Base(output)
 {
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task ActionToolsOnSubAgent_DepthOf3(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -105,9 +105,9 @@ public class RavenDB_24887_3(ITestOutputHelper output) : RavenDB_24887_Base(outp
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = [false, false])]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, Data = [false, false])]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
     public async Task SubAgent2OpenActionTools_DepthOf3(Options options, GenAiConfiguration config, bool level1OncePrompt, bool level0OncePrompt)
     {
         const string atOncePrompt =
@@ -235,7 +235,7 @@ public class RavenDB_24887_3(ITestOutputHelper output) : RavenDB_24887_Base(outp
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task SubAgent2OpenActionTools_Depth3and4(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -478,7 +478,7 @@ public class RavenDB_24887_3(ITestOutputHelper output) : RavenDB_24887_Base(outp
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task ResumeChatAfterError_Depth3(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -649,7 +649,7 @@ public class RavenDB_24887_3(ITestOutputHelper output) : RavenDB_24887_Base(outp
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CheckMaxToolIterationsLimitOnSubAgent_Depth3(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
