@@ -106,6 +106,10 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
         private const string OrdinaryTable = "r";
         private const int NotACompositeType = 0;
 
+        // A collection carries no storage parameters and no access method.
+        private const object NoStorageParameters = null;
+        private const object NoAccessMethod = null;
+
         public override string SchemaName => "pg_catalog";
         public override string TableName => "pg_class";
 
@@ -116,6 +120,13 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
             new("relnamespace", PgOid.Default,  PgFormat.Text),
             new("relkind",      PgChar.Default, PgFormat.Text),
             new("typrelid",     PgOid.Default,  PgFormat.Text),
+            // Index-reflection columns, appended so the ones above keep their positions. SQLAlchemy's
+            // get_indexes() projects reloptions, and since this table gained rows an undeclared
+            // projected column fails the statement outright instead of answering empty. relam is only
+            // read in that query's `on i.relam = am.oid`, where an absent column would degrade to
+            // NULL anyway - declared so the join says what it means. text[] and oid in real PG.
+            new("reloptions",   PgText.Default, PgFormat.Text),
+            new("relam",        PgOid.Default,  PgFormat.Text),
         };
 
         public override IEnumerable<object[]> EnumerateRows(VirtualQueryContext ctx)
@@ -124,7 +135,8 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
             {
                 yield return new object[]
                 {
-                    relation.Oid, relation.Name, PublicNamespaceOid, OrdinaryTable, NotACompositeType
+                    relation.Oid, relation.Name, PublicNamespaceOid, OrdinaryTable, NotACompositeType,
+                    NoStorageParameters, NoAccessMethod
                 };
             }
         }
