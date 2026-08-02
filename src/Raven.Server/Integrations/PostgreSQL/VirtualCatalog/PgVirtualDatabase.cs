@@ -33,6 +33,7 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
             RegisterTable(new PgCatalogPgAttributeTable());
             RegisterTable(EmptyCatalogTables.PgAttrdef);
             RegisterTable(EmptyCatalogTables.PgSequence);
+            RegisterTable(EmptyCatalogTables.PgIndex);
             RegisterTable(new PgCatalogPgNamespaceTable());
             RegisterTable(EmptyCatalogTables.PgExtension);
             RegisterTable(EmptyCatalogTables.PgReplicationSlots);
