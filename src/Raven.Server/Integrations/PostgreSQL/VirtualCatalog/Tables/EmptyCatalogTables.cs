@@ -79,6 +79,33 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
             new("adnum",   PgInt2.Default, PgFormat.Text),
             new("adbin",   PgText.Default, PgFormat.Text));
 
+        // Sequences. RavenDB has none - document ids come from the change vector / identity
+        // machinery, not from a sequence relation - so an empty table is the correct answer.
+        //
+        // SQLAlchemy's get_columns() reads each column's identity metadata through a scalar
+        // subquery over this table: `SELECT json_build_object(...) FROM pg_sequence s JOIN pg_class
+        // c ON s.seqrelid = c."oid" WHERE ... AND s.seqrelid = pg_get_serial_sequence(...)`. It was
+        // the last unregistered table in SQL_COLS, and one unregistered table rejects the whole
+        // statement - so column reflection got nothing back even though every other element of it
+        // (format_type, the pg_attrdef default lookup, the pg_description join) already resolved.
+        //
+        // With no rows the join is empty, so nothing inside the subquery is ever evaluated: neither
+        // json_build_object() in its projection nor pg_get_serial_sequence() and the ::regclass
+        // casts in its WHERE. We deliberately don't implement any of them - we'd only be inventing
+        // identity metadata for columns that have none. The subquery yields SQL NULL, which is
+        // precisely "this column is not an identity column".
+        //
+        // The columns are the ones the subquery reads; real pg_sequence also carries seqtypid,
+        // which nothing asks us for.
+        public static EmptyCatalogTable PgSequence => new("pg_catalog", "pg_sequence",
+            new("seqrelid",     PgOid.Default,  PgFormat.Text),
+            new("seqstart",     PgInt8.Default, PgFormat.Text),
+            new("seqincrement", PgInt8.Default, PgFormat.Text),
+            new("seqmin",       PgInt8.Default, PgFormat.Text),
+            new("seqmax",       PgInt8.Default, PgFormat.Text),
+            new("seqcache",     PgInt8.Default, PgFormat.Text),
+            new("seqcycle",     PgBool.Default, PgFormat.Text));
+
         // RavenDB has no PG extensions; an empty table lets pgAdmin's `count(extname)` probe return 0.
         public static EmptyCatalogTable PgExtension => new("pg_catalog", "pg_extension",
             new("oid",        PgOid.Default,  PgFormat.Text),
