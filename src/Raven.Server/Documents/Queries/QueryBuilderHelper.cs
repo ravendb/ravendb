@@ -444,6 +444,7 @@ public static class QueryBuilderHelper
                 alternateTerm = to.ToString(DefaultFormat.TimeOnlyFormatToWrite, CultureInfo.InvariantCulture);
                 return true;
             case LazyStringParser.Result.DateOnly:
+                // nothing to render: the parser accepts 'yyyy-MM-dd' only, which already is what the converters write
                 return true;
             default:
                 return false;
