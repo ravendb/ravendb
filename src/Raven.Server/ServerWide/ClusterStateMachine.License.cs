@@ -1305,58 +1305,58 @@ public sealed partial class ClusterStateMachine
 
     private void AssertToggleTaskStateLicenseLimits(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context, UpdateDatabaseCommand updateDatabaseCommand)
     {
+        if (updateDatabaseCommand is not ToggleTaskStateCommand ttsc)
+            return;
+
         if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
 
-        if (updateDatabaseCommand != null && updateDatabaseCommand is ToggleTaskStateCommand ttsc)
+        switch (ttsc.TaskType)
         {
-            switch (ttsc.TaskType)
-            {
-                case OngoingTaskType.Replication:
-                    AssertExternalReplicationLicenseLimits(databaseRecord, licenseStatus, context, updateDatabaseCommand);
-                    break;
-                case OngoingTaskType.RavenEtl:
-                    AssertRavenEtlLicenseLimits(databaseRecord, licenseStatus, context);
-                    break;
-                case OngoingTaskType.SqlEtl:
-                    AssertSqlEtlLicenseLimits(databaseRecord, licenseStatus, context);
-                    break;
-                case OngoingTaskType.OlapEtl:
-                    AssertOlapEtlLicenseLimits(databaseRecord, licenseStatus, context);
-                    break;
-                case OngoingTaskType.ElasticSearchEtl:
-                    AssertElasticSearchEtlLicenseLimits(databaseRecord, licenseStatus, context);
-                    break;
-                case OngoingTaskType.QueueEtl:
-                    AssertQueueEtlLicenseLimits(databaseRecord, licenseStatus, context);
-                    break;
-                case OngoingTaskType.SnowflakeEtl:
-                    AssertSnowflakeEtl(databaseRecord, licenseStatus, context);
-                    break;
-                case OngoingTaskType.Backup:
-                    AssertPeriodicBackupLicenseLimits(databaseRecord, licenseStatus, context);
-                    break;
-                case OngoingTaskType.PullReplicationAsHub:
-                    AssertPullReplicationAsHubLicenseLimits(databaseRecord, licenseStatus, context);
-                    break;
-                case OngoingTaskType.PullReplicationAsSink:
-                    AssertPullReplicationAsSinkLicenseLimits(databaseRecord, licenseStatus, context);
-                    break;
-                case OngoingTaskType.QueueSink:
-                    AssertQueueSink(databaseRecord, licenseStatus, context);
-                    break;
-                case OngoingTaskType.CdcSink:
-                    AssertCdcSink(databaseRecord, licenseStatus, context);
-                    break;
-                case OngoingTaskType.EmbeddingsGeneration:
-                    AssertEmbeddingsGeneration(databaseRecord, licenseStatus, context);
-                    break;
-                case OngoingTaskType.GenAi:
-                    AssertGenAi(databaseRecord, licenseStatus, context);
-                    break;
-                default:
-                    return;
-            }
+            case OngoingTaskType.Replication:
+                AssertExternalReplicationLicenseLimits(databaseRecord, licenseStatus, context, updateDatabaseCommand);
+                break;
+            case OngoingTaskType.RavenEtl:
+                AssertRavenEtlLicenseLimits(databaseRecord, licenseStatus, context);
+                break;
+            case OngoingTaskType.SqlEtl:
+                AssertSqlEtlLicenseLimits(databaseRecord, licenseStatus, context);
+                break;
+            case OngoingTaskType.OlapEtl:
+                AssertOlapEtlLicenseLimits(databaseRecord, licenseStatus, context);
+                break;
+            case OngoingTaskType.ElasticSearchEtl:
+                AssertElasticSearchEtlLicenseLimits(databaseRecord, licenseStatus, context);
+                break;
+            case OngoingTaskType.QueueEtl:
+                AssertQueueEtlLicenseLimits(databaseRecord, licenseStatus, context);
+                break;
+            case OngoingTaskType.SnowflakeEtl:
+                AssertSnowflakeEtl(databaseRecord, licenseStatus, context);
+                break;
+            case OngoingTaskType.Backup:
+                AssertPeriodicBackupLicenseLimits(databaseRecord, licenseStatus, context);
+                break;
+            case OngoingTaskType.PullReplicationAsHub:
+                AssertPullReplicationAsHubLicenseLimits(databaseRecord, licenseStatus, context);
+                break;
+            case OngoingTaskType.PullReplicationAsSink:
+                AssertPullReplicationAsSinkLicenseLimits(databaseRecord, licenseStatus, context);
+                break;
+            case OngoingTaskType.QueueSink:
+                AssertQueueSink(databaseRecord, licenseStatus, context);
+                break;
+            case OngoingTaskType.CdcSink:
+                AssertCdcSink(databaseRecord, licenseStatus, context);
+                break;
+            case OngoingTaskType.EmbeddingsGeneration:
+                AssertEmbeddingsGeneration(databaseRecord, licenseStatus, context);
+                break;
+            case OngoingTaskType.GenAi:
+                AssertGenAi(databaseRecord, licenseStatus, context);
+                break;
+            default:
+                return;
         }
     }
 
