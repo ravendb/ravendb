@@ -9,20 +9,13 @@ using Xunit;
 
 namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
 {
-    // SQLAlchemy's PGDialect.get_columns() reads each column's default through a correlated subquery
-    // over pg_attrdef. The table wasn't registered at all, so the whole statement was rejected and
-    // reflection got nothing back - it never reached the columns pg_attribute now reports.
-    //
-    // RavenDB has no column defaults, so an empty pg_attrdef is the correct answer, not a missing
-    // one. These tests pin that down, and pin down the reason pg_get_expr() doesn't need to exist.
     public class PgCatalogPgAttrdefTests : RavenTestBase
     {
         public PgCatalogPgAttrdefTests(ITestOutputHelper output) : base(output)
         {
         }
 
-        // The default-lookup fragment exactly as SQL_COLS spells it, over the columns pg_attribute
-        // reports. `AS DEFAULT` is SQLAlchemy's own labeling, reserved word and all.
+        // The default-lookup fragment exactly as SQLAlchemy's SQL_COLS spells it.
         private const string DefaultLookupOverPgAttribute = """
             SELECT a.attname,
               (
@@ -51,8 +44,6 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
             Assert.Equal(new[] { "attname", "default" }, ColumnNames(table));
             Assert.Equal(new[] { "id", "Company", "json" }, ColumnValues(table, column: 0));
 
-            // No rows in pg_attrdef means the subquery yields SQL NULL - "this column has no
-            // default" - for every column, which is exactly true of a RavenDB document field.
             for (int row = 0; row < table.Data.Count; row++)
                 Assert.False(table.Data[row].ColumnData.Span[1].HasValue);
         }
@@ -67,11 +58,6 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
             Assert.Empty(table.Data);
         }
 
-        // Why registration alone was enough: pg_get_expr() sits in the subquery's projection, and a
-        // projection is only evaluated per row. pg_attrdef has none, so the function is never
-        // called - and it is genuinely absent, as the second half of this test shows. If pg_attrdef
-        // ever gained a row, this query would start failing on the missing function rather than
-        // silently inventing a default expression.
         [RavenFact(RavenTestCategory.PostgreSql)]
         public void Pg_get_expr_is_not_implemented_and_is_never_reached_over_an_empty_pg_attrdef()
         {

@@ -69,10 +69,6 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
             Assert.False(PgVirtualInterpreter.TryExecute("select format_type('not_an_oid')", EmptyCtx(), out _));
         }
 
-        // pg_table_is_visible(oid) asks whether a relation is reachable unqualified. RavenDB has a
-        // single schema and every pg_class row is in it, so the answer is always true - see
-        // PgIsVisibleFunction. The bare-call form here; the per-row WHERE form (which is what
-        // SQLAlchemy's get_table_oid actually sends) is covered in PgCatalogPgClassTests.
         [RavenFact(RavenTestCategory.PostgreSql)]
         public void Pg_table_is_visible_returns_true()
         {
@@ -84,8 +80,6 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
             Assert.Equal("t", DecodeCell(table, row: 0, column: 0));
         }
 
-        // Same rationale for functions: every pg_proc row is a pg_catalog builtin, and pg_catalog is
-        // always searched. (pg_type_is_visible is deliberately absent - see PgIsVisibleFunction.)
         [RavenFact(RavenTestCategory.PostgreSql)]
         public void Pg_function_is_visible_returns_true()
         {
@@ -95,8 +89,6 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
             Assert.Equal("t", DecodeCell(table, row: 0, column: 0));
         }
 
-        // The function takes exactly one oid. Any other arity is a call we didn't understand, and
-        // answering true for it would claim we handled a query we didn't.
         [RavenFact(RavenTestCategory.PostgreSql)]
         public void Pg_table_is_visible_wrong_arity_falls_through()
         {
@@ -104,9 +96,7 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
             Assert.False(PgVirtualInterpreter.TryExecute("select pg_table_is_visible(16384, 16385)", EmptyCtx(), out _));
         }
 
-        // pg_type_is_visible is NOT implemented, on purpose - pg_type carries information_schema
-        // domain types whose namespace is not on the search_path, so a blanket true would be a
-        // wrong answer rather than a conservative one.
+        // Not implemented on purpose - see PgIsVisibleFunction.
         [RavenFact(RavenTestCategory.PostgreSql)]
         public void Pg_type_is_visible_is_not_implemented()
         {
@@ -1476,11 +1466,6 @@ ORDER BY ord";
             Assert.Equal("0", DecodeCell(arrayTable, row: 0, column: 0));
         }
 
-        // SQLAlchemy's PGDialect.initialize() calls _get_default_schema_name() -> `select
-        // current_schema()` right after the version probe, on every connect. Without it the
-        // handshake dies with StatementTooComplex before any user query runs (Zoho Desk #7031).
-        // We serve a single namespace, so the answer is always "public" (oid 2200 in
-        // pg_namespace.csv), consistent with current_setting('search_path').
         [RavenFact(RavenTestCategory.PostgreSql)]
         public void Current_schema_function_returns_public()
         {
@@ -1492,8 +1477,6 @@ ORDER BY ord";
             Assert.Equal("public", DecodeCell(table, row: 0, column: 0));
         }
 
-        // current_schema() takes no arguments in PG; the one-arg form is current_schema(text) in
-        // no PG version. Reject rather than silently ignoring the argument.
         [RavenFact(RavenTestCategory.PostgreSql)]
         public void Current_schema_with_argument_falls_through()
         {
@@ -1501,12 +1484,6 @@ ORDER BY ord";
             Assert.Null(table);
         }
 
-        // SQLAlchemy's PGDialect.get_isolation_level() runs `show transaction isolation level` on
-        // every connect and READS the value, so this can't be a no-op like BEGIN / SET - it has to
-        // return a real rowset. Verified identical on SQLAlchemy 1.4.54 and 2.0.51.
-        // The parser normalises the statement to the GUC name `transaction_isolation`, which is the
-        // column name PG reports. "read committed" is the value PgSettings serves - see the note
-        // there; it is a chosen answer, not a measured property of this bridge.
         [RavenFact(RavenTestCategory.PostgreSql)]
         public void Show_transaction_isolation_level_returns_read_committed()
         {
@@ -1518,8 +1495,6 @@ ORDER BY ord";
             Assert.Equal("read committed", DecodeCell(table, row: 0, column: 0));
         }
 
-        // Case is the parser's job (it lowercases the GUC name), and `show transaction_isolation`
-        // is the same statement spelled with the setting name directly. All three must agree.
         [RavenTheory(RavenTestCategory.PostgreSql)]
         [InlineData("SHOW TRANSACTION ISOLATION LEVEL")]
         [InlineData("Show Transaction Isolation Level")]
@@ -1534,8 +1509,6 @@ ORDER BY ord";
             Assert.Equal("read committed", DecodeCell(table, row: 0, column: 0));
         }
 
-        // Any setting PgSettings knows resolves through the same path - SHOW isn't special-cased
-        // per statement. The expected values are whatever the shared table says.
         [RavenTheory(RavenTestCategory.PostgreSql)]
         [InlineData("show standard_conforming_strings", "standard_conforming_strings", "on")]
         [InlineData("show server_version", "server_version", "13.3")]
@@ -1550,9 +1523,6 @@ ORDER BY ord";
             Assert.Equal(expectedValue, DecodeCell(table, row: 0, column: 0));
         }
 
-        // PG raises ERROR 42704 `unrecognized configuration parameter "x"`. We must not return an
-        // empty rowset or a NULL value instead - either would tell the client the setting exists
-        // with no value, and it would act on that.
         [RavenFact(RavenTestCategory.PostgreSql)]
         public void Show_unrecognized_setting_raises_undefined_object()
         {
@@ -1563,8 +1533,6 @@ ORDER BY ord";
             Assert.Equal("unrecognized configuration parameter \"not_a_real_setting\"", ex.Message);
         }
 
-        // The whole point of routing SHOW through PgSettings: the two ways a client can read a
-        // setting must never disagree, because drivers mix both across one session.
         [RavenTheory(RavenTestCategory.PostgreSql)]
         [InlineData("transaction_isolation")]
         [InlineData("standard_conforming_strings")]
@@ -1580,9 +1548,6 @@ ORDER BY ord";
             Assert.Equal(DecodeCell(currentSettingTable, row: 0, column: 0), DecodeCell(showTable, row: 0, column: 0));
         }
 
-        // `SHOW ALL` is a settings listing, not a lookup of a parameter literally named "all" - it
-        // must not raise 42704. PG's shape is (name, setting, description); we have no descriptions
-        // so that column is NULL rather than invented text.
         [RavenFact(RavenTestCategory.PostgreSql)]
         public void Show_all_lists_the_known_settings()
         {
@@ -1596,7 +1561,7 @@ ORDER BY ord";
             var settings = new Dictionary<string, string>();
             for (var row = 0; row < table.Data.Count; row++)
             {
-                Assert.False(table.Data[row].ColumnData.Span[2].HasValue); // description is NULL
+                Assert.False(table.Data[row].ColumnData.Span[2].HasValue);
                 settings[DecodeCell(table, row, column: 0)] = DecodeCell(table, row, column: 1);
             }
 
@@ -1604,15 +1569,12 @@ ORDER BY ord";
             Assert.Equal("on", settings["standard_conforming_strings"]);
         }
 
-        // PG tags a SHOW result "SHOW", not "SELECT <n>". Drivers that assert on the
-        // CommandComplete tag would trip on the default the interpreter uses for real queries.
         [RavenFact(RavenTestCategory.PostgreSql)]
         public void Show_result_carries_the_show_command_tag()
         {
             Assert.True(PgVirtualInterpreter.TryExecute("show transaction isolation level", EmptyCtx(), out var table));
             Assert.Equal("SHOW", table.CommandTag);
 
-            // A normal virtual-catalog query keeps the default (null ⇒ "SELECT <rowcount>").
             Assert.True(PgVirtualInterpreter.TryExecute("select version()", EmptyCtx(), out var selectTable));
             Assert.Null(selectTable.CommandTag);
         }

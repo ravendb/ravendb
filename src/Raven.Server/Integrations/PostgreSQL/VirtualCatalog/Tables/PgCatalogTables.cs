@@ -94,24 +94,7 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
         };
     }
 
-    // pg_class: PostgreSQL's catalog of relations, and where every client that reflects through
-    // pg_catalog finds the table list. SQLAlchemy's PGDialect.get_table_names() - and therefore
-    // Apache Superset - joins pg_class to pg_namespace and filters on relkind; it never reads
-    // information_schema.tables. While this table held no rows, Superset connected fine but
-    // offered no tables to build a dataset from (Zoho Desk #7031).
-    //
-    // So we report one row per collection, sourced exactly like InformationSchemaTablesTable so the
-    // two catalogs always agree on the same set of names, with the same casing (Orders, not orders):
-    //   relkind 'r'       - ordinary table. SQLAlchemy accepts 'r' and 'p' (partitioned); RavenDB
-    //                       has no partitioned collections, so every row is 'r'.
-    //   relnamespace 2200 - oid of the 'public' namespace, per pg_namespace.csv. We don't model
-    //                       multiple schemas, same as information_schema.tables' table_schema.
-    //   typrelid 0        - a collection isn't the backing relation of a composite type. Npgsql's
-    //                       type-loader LEFT-JOINs pg_class on pg_type.typrelid, and PG uses 0 for
-    //                       non-composite rows.
-    //
-    // The oids come from CollectionCatalog, which PgCatalogPgAttributeTable keys its rows by, so
-    // get_columns() finds the columns of the relation get_table_names() listed.
+    // One row per collection, keyed by the oid PgCatalogPgAttributeTable derives for the same name.
     internal sealed class PgCatalogPgClassTable : PgVirtualTable
     {
         private const int PublicNamespaceOid = 2200;
@@ -142,34 +125,13 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
         }
     }
 
-    // pg_attribute: PostgreSQL's catalog of columns, and how a client that reflects through
-    // pg_catalog learns a relation's column shape. SQLAlchemy's PGDialect.get_columns() - and
-    // therefore Apache Superset - reads columns from here keyed by attrelid; it never reads
-    // information_schema.columns. While this table held no rows, Superset listed the tables but
-    // every one of them reflected with zero columns, so creating a dataset failed with
-    // "Unable to load columns for the selected table" (Zoho Desk #7031).
-    //
-    // Rows come from CollectionCatalog - the same per-collection column derivation
-    // information_schema.columns uses - with attrelid being the oid pg_class reports for the
-    // collection. The remaining attributes describe a plain, nullable column, which is what every
-    // RavenDB document field is:
-    //   atttypmod -1       - no length/precision modifier. format_type(atttypid, atttypmod) renders
-    //                        the type name from these two, exactly as SQLAlchemy asks for it.
-    //   attnotnull false   - a document may simply omit a field; information_schema.columns says
-    //                        is_nullable = YES for the same reason.
-    //   atthasdef false    - RavenDB has no column defaults (see the empty pg_attrdef).
-    //   attidentity ''     - not an identity column. PG stores the empty string, not NULL, and
-    //   attgenerated ''      SQLAlchemy tests `attidentity != ''` - so '' is what says "plain
-    //                        column". We don't model identity or generated columns at all.
-    //   attisdropped false - nothing to drop; a collection's columns are whatever its documents have.
+    // One row per column of each collection, attrelid being the oid pg_class reports for it. Every
+    // row describes a plain, nullable column, which is what every RavenDB document field is.
     internal sealed class PgCatalogPgAttributeTable : PgVirtualTable
     {
-        // SQLAlchemy (and Npgsql) scope every read of this table to one relation. Enumerating the
-        // columns of a collection costs a document read, so honoring the predicate keeps the common
-        // case at one instead of one per collection.
+        // Honored so reflecting one relation costs one document read, not one per collection.
         private const string AttRelIdPredicate = "attrelid";
 
-        // PG's "plain column" markers - see the class doc.
         private const string NotAnIdentityColumn = "";
         private const string NotAGeneratedColumn = "";
 
@@ -178,9 +140,8 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
 
         public override IReadOnlyList<PgVirtualColumn> Columns { get; } = new PgVirtualColumn[]
         {
-            // Real pg_attribute has no oid column. This one predates the table having rows; it stays
-            // declared (always NULL) so a query that projects it still resolves instead of being
-            // rejected for an unknown column, which is what it got when the table was empty.
+            // Real pg_attribute has no oid column; kept declared (always NULL) so queries that
+            // project it still resolve.
             new("oid",          PgOid.Default,  PgFormat.Text),
             new("attrelid",     PgOid.Default,  PgFormat.Text),
             new("attname",      PgName.Default, PgFormat.Text),
@@ -213,8 +174,7 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
                     if (onlyRelation.HasValue && relation.Oid != onlyRelation.Value)
                         continue;
 
-                    // attnum is 1-based and gapless: PG reserves <= 0 for system attributes, and
-                    // SQLAlchemy filters those out with `attnum > 0`.
+                    // PG reserves attnum <= 0 for system attributes.
                     short attnum = 1;
                     foreach (var column in CollectionCatalog.Columns(ctx.Database, context, relation.Name))
                     {

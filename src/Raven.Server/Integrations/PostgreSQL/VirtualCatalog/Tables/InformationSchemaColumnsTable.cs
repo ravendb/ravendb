@@ -6,9 +6,7 @@ using Raven.Server.ServerWide.Context;
 namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
 {
     // information_schema.columns: per-column metadata PowerBI and pgAdmin read to learn a collection's
-    // column shape before the real SELECT. pg_attribute reports the same columns to clients that
-    // reflect through pg_catalog instead; both derive them from CollectionCatalog, which also
-    // documents the ordering and typing contract those columns have to satisfy.
+    // column shape before the real SELECT.
     //
     // table_catalog = ctx.Database.Name; table_schema = "public" (we don't model multiple schemas).
     internal sealed class InformationSchemaColumnsTable : PgVirtualTable

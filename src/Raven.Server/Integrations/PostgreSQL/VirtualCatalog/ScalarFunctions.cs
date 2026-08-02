@@ -54,13 +54,6 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
             if (args[0] is not string setting)
                 return false;
 
-            // Values come from PgSettings so `current_setting('x')` and `SHOW x` can never
-            // disagree - see the remarks on that class.
-            //
-            // An unknown setting returns false (fall through to the next dispatch arm) rather than
-            // the 42704 error `SHOW` raises. That asymmetry is deliberate: current_setting can
-            // appear anywhere in a larger expression that a later arm may still handle, whereas a
-            // bare SHOW is unambiguously a settings lookup with nothing left to try.
             if (PgSettings.TryGetValue(setting, out var value) == false)
                 return false;
 
@@ -166,12 +159,6 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
         }
     }
 
-    // Returns the schema at the head of the effective search_path. SQLAlchemy's PGDialect calls
-    // this on every connect (_get_default_schema_name) and aborts the handshake if it fails.
-    // We expose a single namespace for user-visible objects - "public", oid 2200 in
-    // pg_namespace.csv - so the answer is that constant. It also agrees with what
-    // CurrentSettingFunction reports for 'search_path' ("$user", public): the per-user schema
-    // doesn't exist here, so "public" is the first entry that resolves.
     internal sealed class CurrentSchemaFunction : ScalarFunction
     {
         private const string Schema = "public";
@@ -190,23 +177,8 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
         }
     }
 
-    // pg_table_is_visible(oid) / pg_function_is_visible(oid): does this object's namespace sit on the
-    // current search_path - i.e. can the object be referenced by its bare name. SQLAlchemy's
-    // get_table_oid() filters pg_class through `pg_table_is_visible(c.oid)`, and it runs BEFORE
-    // column reflection, so while this was unimplemented the query was rejected and Superset could
-    // not create a dataset even though pg_class already listed the table (Zoho Desk #7031). pgAdmin
-    // uses the same predicate.
-    //
-    // TRUE is the right answer, not a workaround. RavenDB exposes a single schema for user objects -
-    // "public", oid 2200 in pg_namespace.csv, the only schema CurrentSchemaFunction ever names - and
-    // every pg_class row carries relnamespace 2200, so every relation really is on the search_path.
-    // Likewise every pg_proc row is a pg_catalog builtin, and pg_catalog is implicitly searched
-    // ahead of the rest, so those are visible too.
-    //
-    // pg_type_is_visible is deliberately NOT one of these. pg_type also carries the
-    // information_schema domain types (cardinal_number, sql_identifier, yes_or_no, ...), whose
-    // namespace is not on the search_path, so a blanket TRUE would be a wrong answer for those rows
-    // rather than a conservative one.
+    // Registered for tables and functions only - pg_type_is_visible would be wrong, since pg_type
+    // also carries the information_schema domain types, whose namespace is off the search_path.
     internal sealed class PgIsVisibleFunction : ScalarFunction
     {
         private readonly string _name;
@@ -220,8 +192,6 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
         public override bool TryEvaluate(IReadOnlyList<object> args, VirtualQueryContext ctx, out object result)
         {
             result = true;
-            // Exactly one argument, the object's oid. We don't inspect it (see above), but any other
-            // arity is a call we haven't modelled - fall through rather than claim we answered it.
             return args is { Count: 1 };
         }
     }
@@ -319,8 +289,6 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
             [1083] = "time without time zone",
             [1114] = "timestamp without time zone",
             [1184] = "timestamp with time zone",
-            // A TimeSpan-shaped document field reflects as interval (see CollectionCatalog), so
-            // pg_attribute can hand this oid to format_type and it must resolve to a name.
             [1186] = "interval",
             [1700] = "numeric",
             [2950] = "uuid",
