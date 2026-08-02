@@ -51,9 +51,6 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
             new("typreceive",  PgOid.Default,  PgFormat.Text),
             new("typcategory", PgChar.Default, PgFormat.Text),
             new("typarray",    PgOid.Default,  PgFormat.Text),
-            // Domain-only columns, projected by SQLAlchemy's _load_domains alongside typbasetype:
-            // the typmod to apply to the base type, and the domain's default expression. -1 / NULL
-            // on every non-domain row, which is what PG stores there too.
             new("typtypmod",   PgInt4.Default, PgFormat.Text),
             new("typdefault",  PgText.Default, PgFormat.Text),
         };
@@ -99,14 +96,12 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
         };
     }
 
-    // One row per collection, keyed by the oid PgCatalogPgAttributeTable derives for the same name.
     internal sealed class PgCatalogPgClassTable : PgVirtualTable
     {
         private const int PublicNamespaceOid = 2200;
         private const string OrdinaryTable = "r";
         private const int NotACompositeType = 0;
 
-        // A collection carries no storage parameters and no access method.
         private const object NoStorageParameters = null;
         private const object NoAccessMethod = null;
 
@@ -120,11 +115,7 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
             new("relnamespace", PgOid.Default,  PgFormat.Text),
             new("relkind",      PgChar.Default, PgFormat.Text),
             new("typrelid",     PgOid.Default,  PgFormat.Text),
-            // Index-reflection columns, appended so the ones above keep their positions. SQLAlchemy's
-            // get_indexes() projects reloptions, and since this table gained rows an undeclared
-            // projected column fails the statement outright instead of answering empty. relam is only
-            // read in that query's `on i.relam = am.oid`, where an absent column would degrade to
-            // NULL anyway - declared so the join says what it means. text[] and oid in real PG.
+            // Appended so the columns above keep their positions.
             new("reloptions",   PgText.Default, PgFormat.Text),
             new("relam",        PgOid.Default,  PgFormat.Text),
         };
@@ -142,8 +133,6 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
         }
     }
 
-    // One row per column of each collection, attrelid being the oid pg_class reports for it. Every
-    // row describes a plain, nullable column, which is what every RavenDB document field is.
     internal sealed class PgCatalogPgAttributeTable : PgVirtualTable
     {
         // Honored so reflecting one relation costs one document read, not one per collection.
@@ -157,8 +146,7 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
 
         public override IReadOnlyList<PgVirtualColumn> Columns { get; } = new PgVirtualColumn[]
         {
-            // Real pg_attribute has no oid column; kept declared (always NULL) so queries that
-            // project it still resolve.
+            // Real pg_attribute has no oid column; declared (always NULL) so projections resolve.
             new("oid",          PgOid.Default,  PgFormat.Text),
             new("attrelid",     PgOid.Default,  PgFormat.Text),
             new("attname",      PgName.Default, PgFormat.Text),

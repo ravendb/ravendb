@@ -9,21 +9,13 @@ using Xunit;
 
 namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
 {
-    // Superset won't save a dataset until get_pk_constraint() answers, and its PK_SQL reads
-    // pg_catalog.pg_index. The table wasn't registered at all, so JoinExecutor.TryResolveSource
-    // returned false and the whole statement was rejected - not the same thing as a registered
-    // table with no rows, which answers cleanly with an empty rowset.
-    //
-    // RavenDB has no indexes on collections in the PG sense, so empty is the correct answer.
     public class PgCatalogPgIndexTests : RavenTestBase
     {
         public PgCatalogPgIndexTests(ITestOutputHelper output) : base(output)
         {
         }
 
-        // SQLAlchemy 1.4.54's PGDialect.get_pk_constraint() PK_SQL, verbatim, taking the
-        // server_version_info >= (8, 4) branch (we report 13.3) and with the :table_oid bind
-        // parameter substituted.
+        // SQLAlchemy 1.4.54's PGDialect.get_pk_constraint() PK_SQL, verbatim, with :table_oid substituted.
         private const string PkSql = """
                         SELECT a.attname
                         FROM pg_attribute a JOIN (
@@ -36,9 +28,6 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
                         ORDER BY k.ord
                     """;
 
-        // The statement whose rejection stopped Superset from saving a dataset. It has to resolve
-        // against a populated catalog - a real collection oid, a pg_attribute with rows for it -
-        // and report no primary-key columns, because RavenDB collections have none.
         [RavenFact(RavenTestCategory.PostgreSql)]
         public async Task Sqlalchemys_get_pk_constraint_statement_resolves_and_reports_no_key_columns()
         {
@@ -68,15 +57,7 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
             Assert.Empty(table.Data);
         }
 
-        // Why registering the table was enough. PK_SQL's inner SELECT projects unnest() and
-        // generate_subscripts(), neither of which we implement - the second half of this test
-        // shows they genuinely aren't there. The subquery still resolves because its only FROM
-        // source is always-empty, so TryDeriveEmptySubqueryColumns takes the aliased output
-        // columns straight off the target list and never executes the body.
-        //
-        // pg_attribute on the outer side is populated, so it is pg_index's emptiness alone that
-        // empties the join. If pg_index ever gained a row this would start failing on the missing
-        // functions rather than inventing key columns.
+        // The subquery's only FROM source is always-empty, so its columns are derived without executing the body.
         [RavenFact(RavenTestCategory.PostgreSql)]
         public async Task The_set_returning_functions_in_the_subquery_are_not_implemented_and_are_never_reached()
         {
@@ -86,7 +67,6 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
             var ctx = await CtxFor(store);
             var ordersOid = OidOf(ctx, "Orders");
 
-            // The subquery on its own, standing in a FROM: derived to (attnum, ord), zero rows.
             Assert.True(PgVirtualInterpreter.TryExecute(
                 $"""
                  SELECT k.attnum, k.ord
@@ -100,7 +80,6 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
             Assert.Equal(new[] { "attnum", "ord" }, ColumnNames(subquery));
             Assert.Empty(subquery.Data);
 
-            // pg_attribute is not empty - the join is empty because pg_index is.
             Assert.True(PgVirtualInterpreter.TryExecute(
                 $"select attname from pg_attribute where attrelid = {ordersOid}", ctx, out var attributes));
             Assert.NotEmpty(attributes.Data);

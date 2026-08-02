@@ -96,8 +96,7 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
             Assert.False(PgVirtualInterpreter.TryExecute("select pg_table_is_visible(16384, 16385)", EmptyCtx(), out _));
         }
 
-        // pg_type_is_visible resolves the type's namespace rather than answering unconditionally.
-        // A pg_catalog builtin (23 = int4) is always searched, so it is visible.
+        // 23 = int4, a pg_catalog builtin.
         [RavenFact(RavenTestCategory.PostgreSql)]
         public void Pg_type_is_visible_is_true_for_a_pg_catalog_type()
         {
@@ -109,8 +108,7 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
             Assert.Equal("t", DecodeCell(table, row: 0, column: 0));
         }
 
-        // 13183 is information_schema.yes_or_no - a domain in namespace 13158, which is not on the
-        // search_path. This row is why the function cannot be a constant true.
+        // 13183 is information_schema.yes_or_no, a domain off the search_path.
         [RavenFact(RavenTestCategory.PostgreSql)]
         public void Pg_type_is_visible_is_false_for_an_information_schema_domain()
         {
@@ -119,8 +117,7 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
             Assert.Equal("f", DecodeCell(table, row: 0, column: 0));
         }
 
-        // An oid with no pg_type row is NULL, not false: PG's pg_type_is_visible checks the syscache
-        // before answering, so "no such type" stays distinguishable from "off the search_path".
+        // PG checks the syscache first, so "no such type" stays distinct from "off the search_path".
         [RavenFact(RavenTestCategory.PostgreSql)]
         public void Pg_type_is_visible_unknown_oid_is_null()
         {
@@ -137,14 +134,6 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
         }
 
         // SQLAlchemy's PGDialect._load_domains(), verbatim off the wire (1.4.54 + psycopg2).
-        // get_columns() calls it unconditionally, so while pg_type_is_visible was unimplemented the
-        // whole of column reflection failed and Superset reported "Unable to load columns for the
-        // selected table" even though the column query itself resolved.
-        //
-        // This is the per-row call path - the function is evaluated once per pg_type row with a
-        // column argument, not as a bare constant call (that form is above). The five rows are the
-        // information_schema domains, and all of them must report visible = false: SQLAlchemy keys a
-        // visible domain by (name) and a non-visible one by (schema, name).
         [RavenFact(RavenTestCategory.PostgreSql)]
         public void SqlAlchemy_load_domains_reports_the_information_schema_domains_as_not_visible()
         {
@@ -183,8 +172,7 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
 
             foreach (var values in byName.Values)
             {
-                // "f", not "False" - the projected column has to be typed as the boolean the
-                // function returns, or a client reads the text back as a true.
+                // "f", not "False": the column must be typed boolean.
                 Assert.Equal("f", values[4]);
                 Assert.Equal("information_schema", values[5]);
                 Assert.Equal("t", values[2]); // none of the five domains is NOT NULL
@@ -192,8 +180,7 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
 
             Assert.Equal("integer", byName["cardinal_number"][1]);
             Assert.Null(byName["cardinal_number"][3]);
-            // The only one of the five with a default: `CREATE DOMAIN time_stamp AS timestamp(2)
-            // with time zone DEFAULT current_timestamp(2)`.
+            // time_stamp is the only one of the five with a DEFAULT.
             Assert.Equal("CURRENT_TIMESTAMP(2)", byName["time_stamp"][3]);
         }
 

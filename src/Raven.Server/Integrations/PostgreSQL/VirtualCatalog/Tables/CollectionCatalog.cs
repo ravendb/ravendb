@@ -36,8 +36,7 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
                 }
             }
 
-            // Oids aren't persisted anywhere, so every catalog table must derive them the same way
-            // (ordinal name order from a fixed base) or joins on them silently return nothing.
+            // Oids aren't persisted; every catalog table must derive them the same way or joins silently return nothing.
             names.Sort(StringComparer.Ordinal);
 
             for (int i = 0; i < names.Count; i++)
@@ -46,8 +45,7 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
             return relations;
         }
 
-        // Must match what RqlQuery emits in its RowDescription - same count, order, names and
-        // types - or PowerBI raises DataSource.Changed.
+        // Must match RqlQuery's RowDescription exactly, or PowerBI raises DataSource.Changed.
         public static IEnumerable<CollectionColumn> Columns(DocumentDatabase database, DocumentsOperationContext context, string collection)
         {
             BlittableJsonReaderObject sample = null;

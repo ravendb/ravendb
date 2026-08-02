@@ -25,8 +25,7 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
             ["standard_conforming_strings"] = "on",
             ["integer_datetimes"] = "on",
 
-            // A chosen answer, not a measured one: RavenDB has no PG-style isolation, and reporting
-            // PG's own default keeps drivers off their serializable-retry paths.
+            // RavenDB has no PG-style isolation; PG's default keeps drivers off serializable-retry paths.
             ["transaction_isolation"] = "read committed",
         };
 
