@@ -70,10 +70,44 @@ const columnMappingsSchema = z
     .min(1, "At least one column mapping is required")
     .refine((columns) => hasUniqueValues(columns.map((column) => column.column)), {
         message: "Source columns must be unique",
-    })
-    .refine((columns) => hasUniqueValues(columns.map((column) => column.name)), {
-        message: "Target properties must be unique",
     });
+
+const addPropertyNameIssues = (
+    table: {
+        columns: { name: string }[];
+        embeddedTables: { propertyName: string }[];
+        linkedTables: { propertyName: string }[];
+    },
+    ctx: z.RefinementCtx,
+) => {
+    const takenNames = new Set<string>();
+
+    const check = (name: string, path: (number | string)[]) => {
+        const normalized = name.trim().toLowerCase();
+
+        if (!normalized) {
+            return;
+        }
+
+        if (takenNames.has(normalized)) {
+            ctx.addIssue({
+                code: "custom",
+                path,
+                message: `Property name "${name.trim()}" is already used by another column, embedded table, or linked table.`,
+            });
+
+            return;
+        }
+
+        takenNames.add(normalized);
+    };
+
+    table.columns.forEach((column, index) => check(column.name, ["columns", index, "name"]));
+    table.embeddedTables.forEach((embedded, index) =>
+        check(embedded.propertyName, ["embeddedTables", index, "propertyName"]),
+    );
+    table.linkedTables.forEach((linked, index) => check(linked.propertyName, ["linkedTables", index, "propertyName"]));
+};
 
 const onDeleteSchema = z.object({
     patch: z.string().nullable(),
@@ -88,41 +122,45 @@ const linkedTableSchema = z.object({
     linkedCollectionName: z.string().min(1, "Linked collection name is required"),
 });
 
-const embeddedTableSchema = z.object({
-    sourceTableSchema: z.string().nullable(),
-    sourceTableName: z.string().min(1, "Source table name is required"),
-    propertyName: z.string().min(1, "Property name is required"),
-    columns: columnMappingsSchema,
-    primaryKeyColumns: requiredUniqueStringsSchema(
-        "At least one primary key column is required",
-        "Primary key columns must be unique",
-    ),
-    joinColumns: requiredUniqueStringsSchema("At least one join column is required", "Join columns must be unique"),
-    type: z.enum(RELATION_TYPES),
-    patch: z.string().nullable(),
-    onDelete: onDeleteSchema.nullable(),
-    caseSensitiveKeys: z.boolean().optional(),
-    linkedTables: z.array(linkedTableSchema),
-    get embeddedTables() {
-        return z.array(embeddedTableSchema);
-    },
-});
+const embeddedTableSchema = z
+    .object({
+        sourceTableSchema: z.string().nullable(),
+        sourceTableName: z.string().min(1, "Source table name is required"),
+        propertyName: z.string().min(1, "Property name is required"),
+        columns: columnMappingsSchema,
+        primaryKeyColumns: requiredUniqueStringsSchema(
+            "At least one primary key column is required",
+            "Primary key columns must be unique",
+        ),
+        joinColumns: requiredUniqueStringsSchema("At least one join column is required", "Join columns must be unique"),
+        type: z.enum(RELATION_TYPES),
+        patch: z.string().nullable(),
+        onDelete: onDeleteSchema.nullable(),
+        caseSensitiveKeys: z.boolean().optional(),
+        linkedTables: z.array(linkedTableSchema),
+        get embeddedTables() {
+            return z.array(embeddedTableSchema);
+        },
+    })
+    .superRefine(addPropertyNameIssues);
 
-const tableSchema = z.object({
-    collectionName: z.string().min(1, "Collection name is required"),
-    sourceTableSchema: z.string().nullable(),
-    sourceTableName: z.string().min(1, "Source table name is required"),
-    columns: columnMappingsSchema,
-    primaryKeyColumns: requiredUniqueStringsSchema(
-        "At least one primary key column is required",
-        "Primary key columns must be unique",
-    ),
-    patch: z.string().nullable(),
-    onDelete: onDeleteSchema.nullable(),
-    disabled: z.boolean(),
-    embeddedTables: z.array(embeddedTableSchema),
-    linkedTables: z.array(linkedTableSchema),
-});
+const tableSchema = z
+    .object({
+        collectionName: z.string().min(1, "Collection name is required"),
+        sourceTableSchema: z.string().nullable(),
+        sourceTableName: z.string().min(1, "Source table name is required"),
+        columns: columnMappingsSchema,
+        primaryKeyColumns: requiredUniqueStringsSchema(
+            "At least one primary key column is required",
+            "Primary key columns must be unique",
+        ),
+        patch: z.string().nullable(),
+        onDelete: onDeleteSchema.nullable(),
+        disabled: z.boolean(),
+        embeddedTables: z.array(embeddedTableSchema),
+        linkedTables: z.array(linkedTableSchema),
+    })
+    .superRefine(addPropertyNameIssues);
 
 export const tablesSchema = z
     .array(tableSchema)

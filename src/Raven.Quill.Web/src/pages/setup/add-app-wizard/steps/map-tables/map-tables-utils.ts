@@ -20,8 +20,20 @@ export function pascalCase(value: string): string {
         .join("");
 }
 
+function stripIdSuffix(column: string): string {
+    const separated = /^(.*[^a-zA-Z0-9])id$/i.exec(column);
+
+    if (separated) {
+        return separated[1];
+    }
+
+    const camelCased = /^(.*[a-z0-9])(?:Id|ID)$/.exec(column);
+
+    return camelCased ? camelCased[1] : column;
+}
+
 export function propertyNameFromJoinColumn(column: string): string {
-    return pascalCase(column.toLowerCase().endsWith("_id") ? column.slice(0, -3) : column);
+    return pascalCase(stripIdSuffix(column)) || pascalCase(column);
 }
 
 export function getSourceTableLabel(table: SourceTableRef) {
@@ -128,20 +140,40 @@ export function scaffoldLinkedTable(foreignKey: DiscoverForeignKeyResponse): For
     };
 }
 
+function withUniquePropertyNames(linkedTables: FormLinkedTable[], columns: FormColumnMapping[]): FormLinkedTable[] {
+    const takenNames = new Set(columns.map((column) => column.name.toLowerCase()));
+
+    return linkedTables.map((linkedTable) => {
+        let propertyName = linkedTable.propertyName;
+        let suffix = 1;
+
+        while (takenNames.has(propertyName.toLowerCase())) {
+            suffix++;
+            propertyName = `${linkedTable.propertyName}${suffix}`;
+        }
+
+        takenNames.add(propertyName.toLowerCase());
+
+        return propertyName === linkedTable.propertyName ? linkedTable : { ...linkedTable, propertyName };
+    });
+}
+
 /** Scaffolds a root table from the discovered schema: columns, primary keys, and linked
  * tables (one per foreign key) are pre-filled, while embedding decisions are left to the user. */
 export function scaffoldRootTable(
     discoverResult: DiscoverResponse | null,
     table: DiscoverTableResponse,
 ): FormRootTable {
+    const columns = mapDiscoveredColumns(discoverResult, table);
+
     return {
         ...createEmptyRootTable(),
         collectionName: pascalCase(table.sourceTableName),
         sourceTableSchema: table.sourceTableSchema ?? null,
         sourceTableName: table.sourceTableName,
-        columns: mapDiscoveredColumns(discoverResult, table),
+        columns,
         primaryKeyColumns: toStringValueItems(table.primaryKeyColumns),
-        linkedTables: table.foreignKeys.map(scaffoldLinkedTable),
+        linkedTables: withUniquePropertyNames(table.foreignKeys.map(scaffoldLinkedTable), columns),
     };
 }
 
