@@ -11,7 +11,7 @@ using Raven.Server.Config;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
+using ITestOutputHelper = Xunit.ITestOutputHelper;
 
 namespace SlowTests.Issues;
 
