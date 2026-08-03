@@ -89,6 +89,31 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
             Assert.Equal("t", DecodeCell(table, row: 0, column: 0));
         }
 
+        // The visibility functions are strict in PG: NULL in, NULL out.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_table_is_visible_null_oid_is_null()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute("select pg_table_is_visible(NULL)", EmptyCtx(), out var table));
+            Assert.Single(table.Data);
+            Assert.False(table.Data[0].ColumnData.Span[0].HasValue);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_function_is_visible_null_oid_is_null()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute("select pg_function_is_visible(NULL)", EmptyCtx(), out var table));
+            Assert.Single(table.Data);
+            Assert.False(table.Data[0].ColumnData.Span[0].HasValue);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_type_is_visible_null_oid_is_null()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute("select pg_type_is_visible(NULL)", EmptyCtx(), out var table));
+            Assert.Single(table.Data);
+            Assert.False(table.Data[0].ColumnData.Span[0].HasValue);
+        }
+
         [RavenFact(RavenTestCategory.PostgreSql)]
         public void Pg_table_is_visible_wrong_arity_falls_through()
         {

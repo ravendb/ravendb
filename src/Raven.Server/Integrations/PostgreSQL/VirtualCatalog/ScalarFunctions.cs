@@ -190,8 +190,15 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
 
         public override bool TryEvaluate(IReadOnlyList<object> args, VirtualQueryContext ctx, out object result)
         {
+            result = null;
+            if (args is not { Count: 1 })
+                return false;
+
+            if (args[0] == null)
+                return true; // NULL oid -> NULL.
+
             result = true;
-            return args is { Count: 1 };
+            return true;
         }
     }
 
