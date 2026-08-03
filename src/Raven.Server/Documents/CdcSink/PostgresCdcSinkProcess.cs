@@ -924,16 +924,89 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             // pgoutput text protocol sends booleans as "t"/"f" rather than "true"/"false",
             // which Convert.ToBoolean cannot parse. Handle all Postgres boolean forms.
             PostgresTypeCategory.Boolean => value is bool b ? b : ParsePostgresBoolean(value),
-            // Npgsql 10+ returns DateOnly natively for date columns; earlier versions or
-            // pgoutput text decoding may return DateTime or string — handle both.
-            PostgresTypeCategory.DateOnly => value is DateOnly dateOnly ? dateOnly : DateOnly.FromDateTime(Convert.ToDateTime(value)),
-            PostgresTypeCategory.DateTime => value is DateTime dt ? dt : DateTime.Parse(value.ToString(), System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind),
+            // Date/time columns arrive as text literals over pgoutput and as typed CLR values from
+            // the initial-load reader, so each category handles both and settles on the CLR type
+            // the reader produces (DateOnly, TimeOnly, DateTime).
+            PostgresTypeCategory.DateOnly => value is DateOnly dateOnly ? dateOnly : ParsePostgresDate(value),
+            PostgresTypeCategory.TimeOnly => value is TimeOnly timeOnly ? timeOnly : ParsePostgresTime(value),
+            PostgresTypeCategory.DateTime => value is DateTime dt ? dt : ParsePostgresTimestamp(value),
+            PostgresTypeCategory.DateTimeTz => value is DateTime dtz ? ToUtc(dtz) : ParsePostgresTimestampTz(value),
             PostgresTypeCategory.Uuid => value.ToString(),
             PostgresTypeCategory.Bytea => value,
             PostgresTypeCategory.Json => value.ToString(),
             PostgresTypeCategory.TextArray => ParsePostgresArrayLiteral(value.ToString()),
             PostgresTypeCategory.Vector => ParseVectorLiteral(value.ToString(), table, column),
             _ => value,
+        };
+    }
+    
+    private const string PositiveInfinity = "infinity";
+    private const string NegativeInfinity = "-infinity";
+
+    private static bool TryParseInfinity(string text, out DateTime value)
+    {
+        switch (text)
+        {
+            case PositiveInfinity:
+                value = DateTime.MaxValue;
+                return true;
+            case NegativeInfinity:
+                value = DateTime.MinValue;
+                return true;
+            default:
+                value = default;
+                return false;
+        }
+    }
+    
+    private static DateTime ParsePostgresTimestamp(object value)
+    {
+        var text = value.ToString();
+        if (TryParseInfinity(text, out var infinity))
+            return infinity;
+
+        return DateTime.Parse(text, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind);
+    }
+    
+    private static DateTime ParsePostgresTimestampTz(object value)
+    {
+        var text = value.ToString();
+        if (TryParseInfinity(text, out var infinity))
+            return infinity;
+
+        return DateTime.Parse(text, System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal);
+    }
+    
+    private static DateOnly ParsePostgresDate(object value)
+    {
+        if (value is DateTime asDateTime)
+            return DateOnly.FromDateTime(asDateTime);
+
+        var text = value.ToString();
+        return text switch
+        {
+            PositiveInfinity => DateOnly.MaxValue,
+            NegativeInfinity => DateOnly.MinValue,
+            _ => DateOnly.Parse(text, System.Globalization.CultureInfo.InvariantCulture),
+        };
+    }
+    
+    private static object ParsePostgresTime(object value)
+    {
+        var text = value.ToString();
+        return TimeOnly.TryParse(text, System.Globalization.CultureInfo.InvariantCulture, out var parsed)
+            ? parsed
+            : text;
+    }
+    
+    private static DateTime ToUtc(DateTime value)
+    {
+        return value.Kind switch
+        {
+            DateTimeKind.Utc => value,
+            DateTimeKind.Local => value.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc),
         };
     }
 
