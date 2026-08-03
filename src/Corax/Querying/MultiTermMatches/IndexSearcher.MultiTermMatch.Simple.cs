@@ -49,18 +49,14 @@ public partial class IndexSearcher
             : MultiTermMatchBuilder<EndsWithTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>>(field, endsWith, streamingEnabled, validatePostfixLen: false, token: token);
     }
     
-    public MultiTermMatch ContainsQuery(in FieldMetadata field, string containsTerm, bool isNegated = false, bool forward = true, in CancellationToken token = default) => ContainsQuery(field, (Slice)EncodeAndApplyAnalyzer(field, containsTerm), isNegated, forward, token);
-    
+    public MultiTermMatch ContainsQuery(in FieldMetadata field, string containsTerm, bool forward = true, in CancellationToken token = default) => ContainsQuery(field, (Slice)EncodeAndApplyAnalyzer(field, containsTerm), forward, token);
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MultiTermMatch ContainsQuery(in FieldMetadata field, Slice containsTerm, bool isNegated = false, bool forward = true, in CancellationToken token = default)
+    public MultiTermMatch ContainsQuery(in FieldMetadata field, Slice containsTerm, bool forward = true, in CancellationToken token = default)
     {
-        return (forward, isNegated) switch
-        {
-            (true, false) => MultiTermMatchBuilder<ContainsTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>>(field, containsTerm, token: token),
-            (false, false) => MultiTermMatchBuilder<ContainsTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>>(field, containsTerm, token: token),
-            (true, true) => MultiTermMatchBuilder<NotContainsTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>>(field, containsTerm, token: token),
-            (false, true) => MultiTermMatchBuilder<NotContainsTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>>(field, containsTerm, token: token)
-        };
+        return forward
+            ? MultiTermMatchBuilder<ContainsTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>>(field, containsTerm, token: token)
+            : MultiTermMatchBuilder<ContainsTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>>(field, containsTerm, token: token);
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
