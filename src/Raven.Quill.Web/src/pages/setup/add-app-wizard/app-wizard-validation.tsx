@@ -59,8 +59,8 @@ const requiredUniqueStringsSchema = (requiredMessage: string, uniqueMessage: str
         .refine((items) => hasUniqueValues(items.map((item) => item.value)), { message: uniqueMessage });
 
 const columnMappingSchema = z.object({
-    column: z.string().min(1, "Source column is required"),
-    name: z.string().min(1, "Target property name is required"),
+    column: z.string().trim().min(1, "Source column is required"),
+    name: z.string().trim().min(1, "Target property name is required"),
     type: z.enum(COLUMN_TYPES),
 });
 
@@ -82,7 +82,7 @@ const addPropertyNameIssues = (
     const takenNames = new Set<string>();
 
     const check = (name: string, path: (number | string)[]) => {
-        const normalized = name.trim().toLowerCase();
+        const normalized = name.toLowerCase();
 
         if (!normalized) {
             return;
@@ -92,7 +92,7 @@ const addPropertyNameIssues = (
             ctx.addIssue({
                 code: "custom",
                 path,
-                message: `Property name "${name.trim()}" is already used by another column, embedded table, or linked table.`,
+                message: `Property name "${name}" is already used by another column, embedded table, or linked table.`,
             });
 
             return;
@@ -115,17 +115,17 @@ const onDeleteSchema = z.object({
 
 const linkedTableSchema = z.object({
     sourceTableSchema: z.string().nullable(),
-    sourceTableName: z.string().min(1, "Source table name is required"),
-    propertyName: z.string().min(1, "Property name is required"),
+    sourceTableName: z.string().trim().min(1, "Source table name is required"),
+    propertyName: z.string().trim().min(1, "Property name is required"),
     joinColumns: requiredUniqueStringsSchema("At least one join column is required", "Join columns must be unique"),
-    linkedCollectionName: z.string().min(1, "Linked collection name is required"),
+    linkedCollectionName: z.string().trim().min(1, "Linked collection name is required"),
 });
 
 const embeddedTableSchema = z
     .object({
         sourceTableSchema: z.string().nullable(),
-        sourceTableName: z.string().min(1, "Source table name is required"),
-        propertyName: z.string().min(1, "Property name is required"),
+        sourceTableName: z.string().trim().min(1, "Source table name is required"),
+        propertyName: z.string().trim().min(1, "Property name is required"),
         columns: columnMappingsSchema,
         primaryKeyColumns: requiredUniqueStringsSchema(
             "At least one primary key column is required",
@@ -145,9 +145,9 @@ const embeddedTableSchema = z
 
 const tableSchema = z
     .object({
-        collectionName: z.string().min(1, "Collection name is required"),
+        collectionName: z.string().trim().min(1, "Collection name is required"),
         sourceTableSchema: z.string().nullable(),
-        sourceTableName: z.string().min(1, "Source table name is required"),
+        sourceTableName: z.string().trim().min(1, "Source table name is required"),
         columns: columnMappingsSchema,
         primaryKeyColumns: requiredUniqueStringsSchema(
             "At least one primary key column is required",

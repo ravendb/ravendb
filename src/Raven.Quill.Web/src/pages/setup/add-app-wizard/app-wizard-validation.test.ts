@@ -58,6 +58,20 @@ describe("tablesSchema property names", () => {
         expect(issues.map((issue) => issue.path)).toEqual(["0.linkedTables.0.propertyName"]);
     });
 
+    it("compares trimmed property names, and reports the trimmed name", () => {
+        const issues = parseIssues([rootTable({ linkedTables: [linkedTable("  LanguageId  ")] })]);
+
+        expect(issues.map((issue) => issue.path)).toEqual(["0.linkedTables.0.propertyName"]);
+        expect(issues[0].message).toContain('"LanguageId"');
+    });
+
+    it("rejects a whitespace-only property name as missing", () => {
+        const issues = parseIssues([rootTable({ linkedTables: [linkedTable("   ")] })]);
+
+        expect(issues.map((issue) => issue.path)).toEqual(["0.linkedTables.0.propertyName"]);
+        expect(issues[0].message).toBe("Property name is required");
+    });
+
     it("flags the second of two links that share a property name", () => {
         const issues = parseIssues([rootTable({ linkedTables: [linkedTable("Language"), linkedTable("Language")] })]);
 
