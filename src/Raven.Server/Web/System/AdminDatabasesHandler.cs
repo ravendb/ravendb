@@ -406,7 +406,7 @@ namespace Raven.Server.Web.System
                     {
                         var persisted = DocumentsStorage.ReadSupportedFeatures(ctx.Transaction.InnerTransaction);
 
-                        if (databaseRecord.SupportedFeatures == null || databaseRecord.SupportedFeatures.Count == 0) 
+                        if (databaseRecord.SupportedFeatures == null || databaseRecord.SupportedFeatures.Count == 0)
                             databaseRecord.SupportedFeatures = persisted;
 
                         if (Logger.IsInfoEnabled)

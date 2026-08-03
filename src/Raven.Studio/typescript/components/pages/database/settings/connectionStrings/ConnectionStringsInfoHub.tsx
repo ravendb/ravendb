@@ -2,9 +2,14 @@ import { AboutViewAnchored, AccordionItemWrapper } from "components/common/About
 import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
 import useConnectionStringsLicense from "./useConnectionStringsLicense";
 import appUrl from "common/appUrl";
+import { Icon } from "components/common/Icon";
+import { useRavenLink } from "hooks/useRavenLink";
 
 export function ConnectionStringsInfoHub() {
     const { hasAll, featureAvailability } = useConnectionStringsLicense();
+
+    const connectionStringsOverviewDocsLink = useRavenLink({ hash: "P5XJOV" });
+    const connectionStringsPerDatabaseDocsLink = useRavenLink({ hash: "BOYDGL" });
 
     return (
         <AboutViewAnchored defaultOpen={hasAll ? null : "licensing"}>
@@ -36,6 +41,15 @@ export function ConnectionStringsInfoHub() {
                             databases are excluded.
                         </li>
                     </ul>
+                    <hr />
+                    <div className="small-label mb-2">useful links</div>
+                    <a href={connectionStringsOverviewDocsLink} target="_blank">
+                        <Icon icon="newtab" /> Docs - Connection Strings Overview
+                    </a>
+                    <br />
+                    <a href={connectionStringsPerDatabaseDocsLink} target="_blank">
+                        <Icon icon="newtab" /> Docs - Connection Strings Per Database
+                    </a>
                 </div>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper

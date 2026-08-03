@@ -50,7 +50,7 @@ public partial class IndexSearcher
     }
     
     //Numerical TermMatch.
-    public TermMatch TermQuery<TNumeric>(in FieldMetadata field, TNumeric term, CompactTree termsTree = null)
+    public TermMatch TermQuery<TNumeric>(in FieldMetadata field, TNumeric term, CompactTree terms = null)
     {
         var containerId = GetContainerIdOfNumericalTerm(field, out var numericalField, term);
 
@@ -65,15 +65,15 @@ public partial class IndexSearcher
     
     public Lookup<DoubleLookupKey> GetDoubleTermsFor(Slice name) =>_fieldsTree.LookupFor<DoubleLookupKey>(name);
 
-    public TermMatch TermQuery(in FieldMetadata field, string term, CompactTree termsTree = null)
+    public TermMatch TermQuery(in FieldMetadata field, string term, CompactTree terms = null)
     {
-        if (termsTree == null)
+        if (terms == null)
         {
             // If either the term or the fields tree does not exist the request will be empty. 
             if (_fieldsTree == null)
                 return TermMatch.CreateEmpty(this, Allocator);
 
-            if (_fieldsTree.TryGetCompactTreeFor(field.FieldName, out termsTree) == false)
+            if (_fieldsTree.TryGetCompactTreeFor(field.FieldName, out terms) == false)
                 return TermMatch.CreateEmpty(this, Allocator);
         }
 
@@ -90,47 +90,35 @@ public partial class IndexSearcher
             _ => EncodeAndApplyAnalyzer(field, term)
         };
 
-        CompactKey termKey;
-        if (termSlice.Size != 0)
-        {
-            termKey = _fieldsTree.Llt.AcquireCompactKey();
-            termKey.Set(termSlice.AsReadOnlySpan());
-        }
-        else
-        {
-            termKey = null;
-        }
+        if (termSlice.Size == 0)
+            return TermMatch.CreateEmpty(this, Allocator);
 
-        return termKey is null 
-            ? TermMatch.CreateEmpty(this, Allocator) 
-            : TermQuery(field, termKey, termsTree);
+        using var termKeyScope = new CompactKeyCacheScope(_fieldsTree.Llt);
+        var termKey = termKeyScope.Key;
+        termKey.Set(termSlice.AsReadOnlySpan());
+        return TermQuery(field, termKey, terms);
     }
-    
+
     //Should be already analyzed...
-    public TermMatch TermQuery(in FieldMetadata field, Slice term, CompactTree termsTree = null)
+    public TermMatch TermQuery(in FieldMetadata field, Slice term, CompactTree terms = null)
     {
-        if (termsTree == null)
+        if (terms == null)
         {
-            // If either the term or the fields tree does not exist the request will be empty. 
+            // If either the term or the fields tree does not exist the request will be empty.
             if (_fieldsTree == null)
                 return TermMatch.CreateEmpty(this, Allocator);
 
-            if (_fieldsTree.TryGetCompactTreeFor(field.FieldName, out termsTree) == false)
+            if (_fieldsTree.TryGetCompactTreeFor(field.FieldName, out terms) == false)
                 return TermMatch.CreateEmpty(this, Allocator);
         }
 
-        CompactKey termKey;
-        if (term.Size != 0)
-        {
-            termKey = _fieldsTree.Llt.AcquireCompactKey();
-            termKey.Set(term.AsReadOnlySpan());
-        }
-        else
-        {
-            termKey = null;
-        }
+        if (term.Size == 0)
+            return TermQuery(field, (CompactKey)null, terms);
 
-        return TermQuery(field, termKey, termsTree);
+        using var termKeyScope = new CompactKeyCacheScope(_fieldsTree.Llt);
+        var termKey = termKeyScope.Key;
+        termKey.Set(term.AsReadOnlySpan());
+        return TermQuery(field, termKey, terms);
     }
 
     public TermMatch TermQuery(in FieldMetadata field, CompactKey term, CompactTree tree)

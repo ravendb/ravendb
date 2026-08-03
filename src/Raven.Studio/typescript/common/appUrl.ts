@@ -64,7 +64,7 @@ class appUrl {
         editCdcSink: (taskId?: number) => ko.pureComputed(() => appUrl.forEditCdcSink(appUrl.currentDatabase(), taskId)),
         query: (indexName?: string) => ko.pureComputed(() => appUrl.forQuery(appUrl.currentDatabase(), indexName)),
         terms: (indexName?: string) => ko.pureComputed(() => appUrl.forTerms(indexName, appUrl.currentDatabase())),
-        addNewOngoingTask: (isAiOnly: boolean) => ko.pureComputed(() => appUrl.forAddNewOngoingTasks(appUrl.currentDatabase(), isAiOnly)),
+        addNewOngoingTaskUrl: (isAiOnly: boolean, noBack?: boolean) => ko.pureComputed(() => appUrl.forAddNewOngoingTasks(appUrl.currentDatabase(), isAiOnly, noBack)),
         importDatabaseFromFileUrl: ko.pureComputed(() => appUrl.forImportDatabaseFromFile(appUrl.currentDatabase())),
         importCollectionFromCsv: ko.pureComputed(() => appUrl.forImportCollectionFromCsv(appUrl.currentDatabase())),
         importDatabaseFromSql: ko.pureComputed(() => appUrl.forImportFromSql(appUrl.currentDatabase())),
@@ -73,7 +73,7 @@ class appUrl {
         migrateDatabaseUrl: ko.pureComputed(() => appUrl.forMigrateDatabase(appUrl.currentDatabase())),
         sampleDataUrl: ko.pureComputed(() => appUrl.forSampleData(appUrl.currentDatabase())),
         backupsUrl: ko.pureComputed(() => appUrl.forBackups(appUrl.currentDatabase())),
-        ongoingTasksUrl: ko.pureComputed(() => appUrl.forOngoingTasks(appUrl.currentDatabase())),
+        ongoingTasksUrl: (allowEmpty?: boolean) => ko.pureComputed(() => appUrl.forOngoingTasks(appUrl.currentDatabase(), allowEmpty)),
         editExternalReplicationTaskUrl: ko.pureComputed(() => appUrl.forEditExternalReplication(appUrl.currentDatabase())),
         editReplicationHubTaskUrl: ko.pureComputed(() => appUrl.forEditReplicationHub(appUrl.currentDatabase())),
         editReplicationSinkTaskUrl: ko.pureComputed(() => appUrl.forEditReplicationSink(appUrl.currentDatabase())),
@@ -300,7 +300,7 @@ class appUrl {
         return "#clusterDashboard";
     }
 
-    static forEditCmpXchg(key: string, db: database) {
+    static forEditCmpXchg(key: string, db: database | string) {
         const databaseUrlPart = appUrl.getEncodedDbPart(db);
         const keyUrlPart = key ? "&key=" + encodeURIComponent(key) : "";
         return "#databases/cmpXchg/edit?" + databaseUrlPart + keyUrlPart;
@@ -342,7 +342,7 @@ class appUrl {
         return databaseTag + "/edit?" + itemIdUrlPart + urlPart + pagedListInfo;
     }
 
-    static forNewCmpXchg(db: database) {
+    static forNewCmpXchg(db: database | string) {
         const baseUrlPart = "#databases/cmpXchg/edit?";
         const databasePart = appUrl.getEncodedDbPart(db);
         return baseUrlPart + databasePart;
@@ -660,15 +660,17 @@ class appUrl {
         return "#databases/tasks/backups?" + databasePart;
     }
     
-    static forOngoingTasks(db: database | string): string {
+    static forOngoingTasks(db: database | string, allowEmpty?: boolean): string {
         const databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/tasks/ongoingTasks?" + databasePart;
+        const allowEmptyPart = allowEmpty ? "&allowEmpty=1" : "";
+        return "#databases/tasks/ongoingTasks?" + databasePart + allowEmptyPart;
     }
     
-    static forAddNewOngoingTasks(db: database | string, isAiOnly: boolean): string {
+    static forAddNewOngoingTasks(db: database | string, isAiOnly: boolean, noBack?: boolean): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const isAiOnlyPart = isAiOnly ? "&isAiOnly=true" : "";
-        return "#databases/tasks/addNewOngoingTasks?" + databasePart + isAiOnlyPart;
+        const noBackPart = noBack ? "&noBack=1" : "";
+        return "#databases/tasks/addNewOngoingTasks?" + databasePart + isAiOnlyPart + noBackPart;
     }
 
     static forEditExternalReplication(db: database | string, taskId?: number): string {
@@ -798,12 +800,12 @@ class appUrl {
 
     static forEditGenAi(db: database | string, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
-        
+
         const sourceViewPart = "&sourceView=" + appUrl.getAiTaskSourceView();
         const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editGenAiTask?" + databasePart + sourceViewPart + taskPart;
     }
-    
+
     static getAiTaskSourceView(): EditAiTaskSourceView {
         if (window.location.href.includes("/ai/")) {
             return "AiTasks";

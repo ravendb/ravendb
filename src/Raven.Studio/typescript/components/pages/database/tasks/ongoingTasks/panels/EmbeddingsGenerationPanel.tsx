@@ -10,7 +10,6 @@ import {
 } from "components/common/RichPanel";
 import {
     ConnectionStringItem,
-    ICanShowTransformationScriptPreview,
     OngoingTaskActions,
     OngoingTaskName,
     OngoingTaskResponsibleNode,
@@ -31,7 +30,7 @@ import copyToClipboard from "common/copyToClipboard";
 
 type EmbeddingsGenerationPanelProps = EtlPanelBaseProps<OngoingTaskEmbeddingsGenerationInfo>;
 
-export function EmbeddingsGenerationPanel(props: EmbeddingsGenerationPanelProps & ICanShowTransformationScriptPreview) {
+export function EmbeddingsGenerationPanel(props: EmbeddingsGenerationPanelProps) {
     const { data, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState, etlStats } = props;
 
     const { forCurrentDatabase } = useAppUrls();
@@ -43,7 +42,6 @@ export function EmbeddingsGenerationPanel(props: EmbeddingsGenerationPanelProps 
         detailsVisible,
         toggleDetails,
         onEdit,
-        showPreview,
         taskHealth,
         errorCount,
         errorsByLocation,
@@ -124,7 +122,7 @@ export function EmbeddingsGenerationPanel(props: EmbeddingsGenerationPanelProps 
             </RichPanelDetails>
             <Collapse in={detailsVisible}>
                 <div>
-                    <OngoingEtlTaskDistribution task={data} showPreview={showPreview} etlStats={etlStats} />
+                    <OngoingEtlTaskDistribution task={data} etlStats={etlStats} />
                 </div>
             </Collapse>
         </RichPanel>

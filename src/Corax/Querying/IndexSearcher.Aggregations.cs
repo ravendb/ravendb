@@ -23,8 +23,8 @@ public partial class IndexSearcher
             return new EmptyAggregationProvider();
         
         return forward
-            ? new ExistsTermProvider<Lookup<CompactTree.CompactKeyLookup>.ForwardIterator>(this, compactTree, field, forAggregation: true)
-            : new ExistsTermProvider<Lookup<CompactTree.CompactKeyLookup>.BackwardIterator>(this, compactTree, field, forAggregation: true);
+            ? new ExistsTermProvider<Lookup<CompactTree.CompactKeyLookup>.ForwardIterator>(this, compactTree, field)
+            : new ExistsTermProvider<Lookup<CompactTree.CompactKeyLookup>.BackwardIterator>(this, compactTree, field);
     }
 
     public IAggregationProvider LowAggregationBuilder<TValue>(in FieldMetadata field, TValue value, UnaryMatchOperation operation, bool forward)

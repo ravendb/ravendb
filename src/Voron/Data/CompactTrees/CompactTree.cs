@@ -103,7 +103,6 @@ public sealed partial class CompactTree : IPrepareForCommit
             }
             
             Key = llt.AcquireCompactKey();
-            Key.Initialize(llt);
             Key.Set(keyLenInBits, keyPtr, parent.State.DictionaryId);
             return Key;
         }

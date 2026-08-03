@@ -132,7 +132,7 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
             return Task.FromResult(_document.Id);
         }
 
-        public override DynamicJsonValue GetConversationResponse(JsonOperationContext context, BlittableJsonReaderObject response, int toolsIterations)
+        public override DynamicJsonValue GetConversationResponse(JsonOperationContext context, object response, int toolsIterations)
         {
             var r = base.GetConversationResponse(context, response, toolsIterations);
             r[nameof(AiAgentTestResult.Documents)] = DynamicJsonValue.Convert(_documents);

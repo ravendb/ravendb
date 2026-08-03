@@ -107,7 +107,7 @@ describe("buildExplorerRows", () => {
 
         expect(rows.some((row) => row.type === "linked")).toBe(false);
         expect(getRootRows(rows)[0].warningMessages).toEqual([
-            expect.stringContaining('"public.media" is also configured as a root table'),
+            expect.stringContaining('"public.media" is not configured as a root table'),
         ]);
     });
 
@@ -174,7 +174,7 @@ describe("buildExplorerRows", () => {
 
         expect(rows.some((row) => row.type === "linked")).toBe(false);
         expect(embeddedRow?.warningMessages).toEqual([
-            expect.stringContaining('"public.media" is also configured as a root table'),
+            expect.stringContaining('"public.media" is not configured as a root table'),
         ]);
     });
 });

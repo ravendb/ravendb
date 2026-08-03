@@ -1,4 +1,3 @@
-import { useCallback } from "react";
 import {
     AnyEtlOngoingTaskInfo,
     OngoingEtlTaskNodeInfo,
@@ -12,11 +11,7 @@ import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppUrls } from "hooks/useAppUrls";
-import {
-    BaseOngoingTaskPanelProps,
-    ICanShowTransformationScriptPreview,
-    useTasksOperations,
-} from "../../shared/shared";
+import { BaseOngoingTaskPanelProps, useTasksOperations } from "../../shared/shared";
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
 import TaskErrors = Raven.Server.Documents.TasksErrors.TaskErrors;
 import {
@@ -125,14 +120,13 @@ export function computeEtlPanelProgress(
     };
 }
 
-export type EtlPanelBaseProps<T extends AnyEtlOngoingTaskInfo> = BaseOngoingTaskPanelProps<T> &
-    ICanShowTransformationScriptPreview & {
-        etlStats?: EtlTaskStats[];
-        taskErrors?: TaskErrorsWithLocation[];
-    };
+export type EtlPanelBaseProps<T extends AnyEtlOngoingTaskInfo> = BaseOngoingTaskPanelProps<T> & {
+    etlStats?: EtlTaskStats[];
+    taskErrors?: TaskErrorsWithLocation[];
+};
 
 export function useEtlPanel<T extends AnyEtlOngoingTaskInfo>(props: EtlPanelBaseProps<T>, editUrl: string) {
-    const { data, showItemPreview, etlStats, taskErrors } = props;
+    const { data, etlStats, taskErrors } = props;
 
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
     const { appUrl } = useAppUrls();
@@ -142,11 +136,6 @@ export function useEtlPanel<T extends AnyEtlOngoingTaskInfo>(props: EtlPanelBase
     const goToTaskErrors = appUrl.forTasksErrors(databaseName, { taskName: data.shared.taskName });
 
     const { detailsVisible, toggleDetails, onEdit } = useTasksOperations(editUrl, props);
-
-    const showPreview = useCallback(
-        (transformationName: string) => showItemPreview(data, transformationName),
-        [data, showItemPreview]
-    );
 
     const taskHealth = getTaskHealthStatus(etlStats ?? [], data.shared.taskName);
     const healthBadge = healthStatusToBadge(taskHealth);
@@ -164,7 +153,6 @@ export function useEtlPanel<T extends AnyEtlOngoingTaskInfo>(props: EtlPanelBase
         detailsVisible,
         toggleDetails,
         onEdit,
-        showPreview,
         taskHealth,
         healthBadge,
         errorCount,

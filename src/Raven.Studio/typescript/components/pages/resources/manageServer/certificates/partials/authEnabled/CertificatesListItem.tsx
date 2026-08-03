@@ -53,7 +53,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
     const ssoServerCertificates = useAppSelector(certificatesSelectors.ssoServerCertificates);
     const ssoUserCertificates = useAppSelector(certificatesSelectors.ssoUserCertificates);
 
-    const state = certificate.NotAfter ? certificatesUtils.getState(certificate) : null;
+    const state = certificatesUtils.getState(certificate);
     const clearance = certificatesUtils.getClearance(certificate.SecurityClearance);
     const isServerCert = certificate.Thumbprints.includes(serverCertificateThumbprint);
     const isServerCertForCommunication = certificate.Thumbprints.includes(serverCertificateForCommunicationThumbprint);
@@ -175,7 +175,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
 
     return (
         <RichPanel className="flex-row with-status" hover>
-            <CertificatesItemStatus state={state ?? "Valid"} />
+            <CertificatesItemStatus state={state} />
             <div className="flex-grow">
                 <RichPanelHeader>
                     <div className="flex-grow">

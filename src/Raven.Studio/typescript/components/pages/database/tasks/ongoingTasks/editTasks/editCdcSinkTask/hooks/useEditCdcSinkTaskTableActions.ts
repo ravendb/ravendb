@@ -12,6 +12,7 @@ import {
     castToLinkedTablePath,
 } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskTypes";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
+import { alignLinkedTableCollectionNames } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskSchemaUtils";
 import { useAppDispatch } from "components/store";
 import { FieldPath, useFormContext, UseFormSetValue } from "react-hook-form";
 
@@ -64,6 +65,22 @@ export function useEditCdcSinkTaskTableActions() {
         dispatch(editCdcSinkTaskActions.activeTableSet({ type: "embedded", path: newPath }));
     };
 
+    const addRootTables = (newTables: FormRootTable[]) => {
+        if (newTables.length === 0) {
+            return;
+        }
+
+        const currentTables = getTableList<FormRootTable>("tables");
+        const alignedCurrentTables = alignLinkedTableCollectionNames(currentTables, newTables);
+
+        // The added tables are complete (unlike manually added empty rows) — validate immediately
+        // so any problem surfaces at the click, not at save time.
+        setValue("tables", [...alignedCurrentTables, ...newTables], {
+            shouldDirty: true,
+            shouldValidate: true,
+        });
+    };
+
     const addLinkedTable = (parentPath: RootTablePath | EmbeddedTablePath) => {
         const listPath = `${parentPath}.linkedTables` as TableListPath;
         const linkedTables = getTableList<FormLinkedTable>(listPath);
@@ -94,6 +111,7 @@ export function useEditCdcSinkTaskTableActions() {
     return {
         addEmbeddedTable,
         addLinkedTable,
+        addRootTables,
         removeTable,
         toggleRootTableDisabled,
     };

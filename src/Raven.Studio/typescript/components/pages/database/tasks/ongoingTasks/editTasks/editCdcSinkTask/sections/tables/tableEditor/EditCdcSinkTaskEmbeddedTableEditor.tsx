@@ -142,7 +142,18 @@ export default function EditCdcSinkTaskEmbeddedTableEditor({ path }: { path: Emb
             <EditCdcSinkTaskAdvancedSettings hasAdvancedValues={hasAdvancedValues}>
                 <FormGroup>
                     <FormSwitch control={control} name={`${path}.caseSensitiveKeys`}>
-                        Case sensitive keys
+                        Case-sensitive keys
+                        <PopoverWithHoverWrapper
+                            message={
+                                <>
+                                    When enabled, string values in primary key columns are compared case-sensitively
+                                    when matching embedded items. Applies only to <strong>Array</strong> and{" "}
+                                    <strong>Map</strong> embedded tables.
+                                </>
+                            }
+                        >
+                            <Icon icon="info-new" margin="ms-1" />
+                        </PopoverWithHoverWrapper>
                     </FormSwitch>
                 </FormGroup>
                 <EditCdcSinkTaskPatchAdvancedField path={path} />

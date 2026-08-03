@@ -35,8 +35,8 @@ export default function EditCdcSinkTaskOnDeleteFields({ path }: { path: RootTabl
                                     embedded item, or <code>Value</code>-type property is kept.
                                 </p>
                                 <p>
-                                    If a delete patch is configured, it still runs BEFORE the delete decision, even when{" "}
-                                    <em>Skip deletion</em> is on.
+                                    If a delete patch is configured, it still runs even when <em>Skip deletion</em> is
+                                    on.
                                     <br />
                                     You can use it to mark the document as archived,
                                     <br />
@@ -56,13 +56,28 @@ export default function EditCdcSinkTaskOnDeleteFields({ path }: { path: RootTabl
                         message={
                             <>
                                 <p>
-                                    A delete patch is a JavaScript snippet that runs on <strong>DELETE</strong> events
-                                    from the source, BEFORE the delete is applied or ignored.
+                                    A delete patch is a JavaScript snippet that runs when RavenDB processes a{" "}
+                                    <strong>DELETE</strong> event from the source.
+                                </p>
+                                <ul>
+                                    <li>
+                                        <strong>Root tables:</strong> <code>this</code> is the existing document.
+                                        <br />
+                                        When deletion is not skipped, RavenDB deletes the document after the patch runs.
+                                    </li>
+                                    <li>
+                                        <strong>Embedded tables:</strong> <code>this</code> is the parent document. When
+                                        deletion is not skipped, the embedded item is removed before the patch runs; use{" "}
+                                        <code>$old</code> to access the removed item.
+                                    </li>
+                                </ul>
+                                <p>
+                                    When <em>Skip deletion</em> is enabled, the automatic deletion or removal is not
+                                    applied, but the patch still runs.
                                 </p>
                                 <p>
-                                    Use it when a delete should trigger additional changes, such as marking documents as
-                                    archived (combined with <em>Skip deletion</em>), writing an audit record with{" "}
-                                    <code>put()</code>, or reversing parent-level aggregates when an embedded item is
+                                    Use it to mark retained documents as archived, write audit records with{" "}
+                                    <code>put()</code>, or update parent-level aggregates after an embedded item is
                                     removed.
                                 </p>
                             </>
@@ -184,6 +199,6 @@ const deletePatchSyntaxHelp = (
     </div>
 );
 
-const deletePatchPlaceholder = `// Optional. Runs on DELETE events from the source BEFORE the delete is applied or ignored.
+const deletePatchPlaceholder = `// Optional. Runs when a DELETE event is processed, even when "Skip deletion" is enabled.
 // e.g.  this.Archived = true;   // combine with "Skip deletion" for soft-delete
 // Click the (?) icon below for syntax and more examples.`;
