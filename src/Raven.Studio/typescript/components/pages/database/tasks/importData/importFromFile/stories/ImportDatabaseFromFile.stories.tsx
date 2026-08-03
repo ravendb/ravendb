@@ -22,17 +22,11 @@ export default {
 interface ImportFromFileStoryArgs {
     databaseAccess: databaseAccessLevel;
     licenseType: Raven.Server.Commercial.LicenseType;
+    /** 0 documents + 0 indexes = empty database, so the overwrite warning is not shown */
+    isEmptyDatabase: boolean;
 }
 
-interface StoryOptions {
-    /** 0 documents + 0 indexes = empty database */
-    isEmptyDatabase?: boolean;
-}
-
-function init(
-    { databaseAccess, licenseType }: ImportFromFileStoryArgs,
-    { isEmptyDatabase = false }: StoryOptions = {}
-) {
+function init({ databaseAccess, licenseType, isEmptyDatabase }: ImportFromFileStoryArgs) {
     const { accessManager, databases, license, collectionsTracker } = mockStore;
     const { tasksService, databasesService } = mockServices;
 
@@ -54,29 +48,15 @@ function init(
     tasksService.withImportDatabaseFromFile();
 }
 
-const story = (name: string, description: string, options: StoryOptions = {}): StoryObj<ImportFromFileStoryArgs> => ({
-    name,
+export const Default: StoryObj<ImportFromFileStoryArgs> = {
+    name: "Import From File",
     render: (props) => {
-        init(props, options);
+        init(props);
         return <ImportDatabaseFromFile />;
     },
     args: {
         databaseAccess: "DatabaseAdmin",
         licenseType: "Enterprise",
+        isEmptyDatabase: false,
     },
-    parameters: { docs: { description: { story: description } } },
-});
-
-export const Story00_Default = story(
-    "00 - Default (everything available)",
-    "Enterprise + DatabaseAdmin + non-sharded, database has data. EXPECT: no license/sharding/access " +
-        "chips under the file input; every toggle enabled; the orange overwrite warning IS shown; " +
-        '"Customize" panels start collapsed (nothing is restricted).'
-);
-
-export const Story01a_EmptyDatabase = story(
-    "01a - Empty database (no overwrite warning)",
-    "CountOfDocuments = 0 and CountOfIndexes = 0. EXPECT: the " +
-        '"Importing will overwrite any existing documents and indexes" alert is ABSENT - nothing can be overwritten.',
-    { isEmptyDatabase: true }
-);
+};
