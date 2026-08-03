@@ -23,49 +23,16 @@ export default class MockTasksService extends AutoMockService<TasksService> {
         return this.mockResolvedValue(this.mocks.getOngoingTasks, dto, TasksStubs.getTasksList());
     }
 
-    /**
-     * Import-from-file flow. `uploadDurationMs` > 0 drives the progress callback over time so the
-     * upload state (progress bar, disabled controls, navigation guard) can be inspected.
-     */
-    withImportDatabaseFromFile({
-        uploadDurationMs = 0,
-        failUpload = false,
-        validationError,
-    }: {
-        uploadDurationMs?: number;
-        failUpload?: boolean;
-        validationError?: string;
-    } = {}) {
-        if (validationError) {
-            this.mocks.validateSmugglerOptions.mockImplementation(async () => {
-                throw mockJQueryError(validationError);
-            });
-        } else {
-            this.mocks.validateSmugglerOptions.mockResolvedValue(undefined);
-        }
-
+    /** Import-from-file flow: validation passes and the upload completes immediately. */
+    withImportDatabaseFromFile() {
+        this.mocks.validateSmugglerOptions.mockResolvedValue(undefined);
         this.mocks.getNextOperationId.mockResolvedValue(1234);
         // only HasRevisionsConfiguration is read by the import view
         this.mocks.getDatabaseForStudio.mockResolvedValue({ HasRevisionsConfiguration: true });
 
         this.mocks.importDatabaseFromFile.mockImplementation(
             async (_db: unknown, _operationId: unknown, _file: unknown, _dto: unknown, onUploadProgress: unknown) => {
-                const reportProgress = onUploadProgress as (percent: number) => void;
-
-                if (uploadDurationMs > 0) {
-                    const steps = 20;
-                    for (let step = 1; step <= steps; step++) {
-                        await new Promise((resolve) => setTimeout(resolve, uploadDurationMs / steps));
-                        // deliberately unrounded, mirroring commandBase's loaded/total ratio
-                        reportProgress((step / steps) * 100);
-                    }
-                } else {
-                    reportProgress(100);
-                }
-
-                if (failUpload) {
-                    throw mockJQueryError("Simulated upload failure");
-                }
+                (onUploadProgress as (percent: number) => void)(100);
             }
         );
     }
