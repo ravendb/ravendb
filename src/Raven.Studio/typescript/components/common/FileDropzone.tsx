@@ -17,7 +17,12 @@ interface FileDropzoneProps {
     className?: string;
     showSelectedFiles?: boolean;
     disabled?: boolean;
-    isExtensionsListHidden?: boolean;
+    /**
+     * Extensions to advertise below the dropzone. Defaults to `validExtensions`; pass a narrower
+     * list when some extensions are accepted only to show a dedicated message (e.g. backup files
+     * that redirect the user to Restore), or an empty array to hide the list entirely.
+     */
+    displayedExtensions?: string[];
 }
 
 export default function FileDropzone({
@@ -28,7 +33,7 @@ export default function FileDropzone({
     className,
     showSelectedFiles = true,
     disabled = false,
-    isExtensionsListHidden,
+    displayedExtensions,
 }: FileDropzoneProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -141,7 +146,7 @@ export default function FileDropzone({
                     maxFiles={maxFiles}
                     isDragging={isDragging}
                 />
-                {!isExtensionsListHidden && <ValidExtensionsList validExtensions={validExtensions} />}
+                <ValidExtensionsList validExtensions={displayedExtensions ?? validExtensions} />
             </div>
         </div>
     );
