@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
     buildConnectionString,
-    getPortAfterProviderChange,
     parseConnectionString,
     resolveConnectionString,
     type ConnectionValues,
@@ -181,21 +180,5 @@ describe("resolveConnectionString", () => {
                 connectionString: "  Server=host\\SQLEXPRESS;Integrated Security=true  ",
             }),
         ).toBe("Server=host\\SQLEXPRESS;Integrated Security=true");
-    });
-});
-
-describe("getPortAfterProviderChange", () => {
-    it("follows the new provider when the port is still the previous default", () => {
-        expect(getPortAfterProviderChange(5432, "Npgsql", "SqlClient")).toBe(1433);
-        expect(getPortAfterProviderChange(1433, "SqlClient", "MySqlConnectorFactory")).toBe(3306);
-        expect(getPortAfterProviderChange(3306, "MySqlConnectorFactory", "Npgsql")).toBe(5432);
-    });
-
-    it("fills the new provider's default when the port is empty", () => {
-        expect(getPortAfterProviderChange(null, "Npgsql", "MySqlConnectorFactory")).toBe(3306);
-    });
-
-    it("keeps a port the operator chose", () => {
-        expect(getPortAfterProviderChange(6543, "Npgsql", "SqlClient")).toBe(6543);
     });
 });

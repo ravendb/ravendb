@@ -25,16 +25,6 @@ export const DEFAULT_PORT_BY_PROVIDER: Record<Provider, number> = {
     MySqlConnectorFactory: 3306,
 };
 
-export function getPortAfterProviderChange(
-    port: number | null,
-    previousProvider: Provider,
-    nextProvider: Provider,
-): number {
-    const isPortOwnedByOperator = port !== null && port !== DEFAULT_PORT_BY_PROVIDER[previousProvider];
-
-    return isPortOwnedByOperator ? port : DEFAULT_PORT_BY_PROVIDER[nextProvider];
-}
-
 const KEYWORDS_BY_PROVIDER: Record<
     Provider,
     { host: string; port: string | null; database: string; username: string; password: string }
