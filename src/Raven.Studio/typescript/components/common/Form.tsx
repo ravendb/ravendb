@@ -714,8 +714,8 @@ function FormToggle<TFieldValues extends FieldValues, TName extends FieldPath<TF
                     isInvalid={invalid}
                     onBlur={onBlur}
                     color="primary"
-                    disabled={formState.isSubmitting}
                     {...rest}
+                    disabled={formState.isSubmitting || rest.disabled}
                 />
             </div>
         </div>
