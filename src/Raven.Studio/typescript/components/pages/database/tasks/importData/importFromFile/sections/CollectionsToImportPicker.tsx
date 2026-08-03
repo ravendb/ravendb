@@ -1,9 +1,10 @@
-import React, { useState } from "react";
-import { useForm, useFormContext, useWatch } from "react-hook-form";
+import React, { useEffect, useState } from "react";
+import { useForm, useFormContext, useFormState, useWatch } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
+import InputGroup from "react-bootstrap/InputGroup";
 import { Icon } from "components/common/Icon";
 import { FormInput } from "components/common/Form";
 import { ImportFromFileFormData } from "../importFromFileValidation";
@@ -21,6 +22,8 @@ export default function CollectionsToImportPicker() {
     // Rows live in local state so deselecting only turns the toggle off - the trash icon removes
     // the row entirely.
     const [manualCollections, setManualCollections] = useState<string[]>([]);
+    // bumped on every successful add; drives the refocus effect below
+    const [addedCount, setAddedCount] = useState(0);
 
     // A form of its own, separate from the page's import form: its only field is the name being
     // typed, which is never submitted to the server - it just appends a row. Keeping it local means
@@ -55,14 +58,29 @@ export default function CollectionsToImportPicker() {
 
         setManualCollections((prev) => [...prev, trimmed]);
         setIncludedCollections([...includedCollections, trimmed]);
+        setAddedCount((prev) => prev + 1);
         // setValue rather than reset: it clears the field without unregistering it, so the input
-        // keeps its ref and setFocus below lands. Validating here would immediately complain the
-        // field is empty, so a stale message from an earlier attempt is dropped explicitly instead.
+        // keeps the ref that setFocus needs. Validating here would immediately complain the field is
+        // empty, so a stale message from an earlier attempt is dropped explicitly instead.
         setAddValue("collectionName", "");
         clearErrors("collectionName");
-        // keep the caret in the field so several collections can be typed in a row
-        setFocus("collectionName");
     };
+
+    // FormInput disables itself while the add form is submitting, and a disabled input silently
+    // ignores focus() - so refocusing is deferred until isSubmitting drops back to false. That flip
+    // re-runs the effect, landing the focus on the re-enabled input regardless of how React batched
+    // the renders. Also covers mount (picker revealed) and failed validation, so a typo can be
+    // corrected without reaching for the mouse. Counting additions rather than watching the list
+    // length keeps the trash icon from pulling focus back into the input.
+    const { isSubmitting: isAddSubmitting } = useFormState({ control: addControl });
+
+    useEffect(() => {
+        if (isAddSubmitting) {
+            return;
+        }
+
+        setFocus("collectionName");
+    }, [addedCount, isAddSubmitting, setFocus]);
 
     const removeCollection = (name: string) => {
         setManualCollections((prev) => prev.filter((x) => x !== name));
@@ -98,11 +116,10 @@ export default function CollectionsToImportPicker() {
 
     return (
         <div className="mt-4">
-            {/* FormInput renders its validation message as a sibling of the input wrapper, so the
-                row itself is a flex container of just those two children - the message then lands
-                below the row instead of stretching it and shrinking the button */}
             <Form onSubmit={handleSubmit(addCollection)} className="mb-3">
-                <div className="d-flex gap-2">
+                {/* one InputGroup for both controls keeps their heights equal, and FormInput's
+                    validation message (w-100) wraps to its own line below the pair */}
+                <InputGroup>
                     <FormInput
                         type="text"
                         control={addControl}
@@ -111,10 +128,10 @@ export default function CollectionsToImportPicker() {
                     />
                     {/* deliberately always enabled: handleSubmit blocks the append and the schema
                         message explains why, which beats a greyed-out button with no reason */}
-                    <Button type="submit" variant="secondary" className="align-self-stretch">
-                        <Icon icon="plus" margin="m-0" /> Add
+                    <Button type="submit" variant="secondary" className="text-nowrap">
+                        <Icon icon="plus" /> Add
                     </Button>
-                </div>
+                </InputGroup>
             </Form>
             {manualCollections.length > 0 && (
                 <div className="mb-2">
