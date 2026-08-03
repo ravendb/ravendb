@@ -82,94 +82,162 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         // baseQueryDisposable owns the bitmap allocations of a CompiledQueryMatch base query;
         // disposed at the end of this method (or before the scanning fallback runs).
         IDisposable baseQueryDisposable = null;
-        if (query.Metadata.Query.Where is not null)
+        try
         {
-            var parameters = new QueryBuilderParameters(_indexSearcher, _allocator, null, null, query, _index,
-                query.QueryParameters, _queryBuilderFactories, _fieldMappings, null, null, global::Corax.Constants.IndexSearcher.TakeAll,
-                token: token);
-
-            IQueryMatch baseQuery = QueryPlanBuilder.QueryPlanBuilder.BuildFilterMatch(
-                new QueryPlanBuilder.PlanParameters
-                {
-                    IndexSearcher = _indexSearcher,
-                    Metadata = query.Metadata,
-                    QueryParameters = query.QueryParameters,
-                    Index = _index,
-                    IndexFieldsMapping = _fieldMappings,
-                    Allocator = _allocator,
-                    HasDynamics = parameters.HasDynamics,
-                    DynamicFields = parameters.DynamicFields,
-                    HasBoost = parameters.HasBoost
-                }, parameters, highlightingTerms: null, wantTimings: false, token);
-            baseQueryDisposable = baseQuery as IDisposable;
-            queryTimings?.SetQueryPlan(baseQuery.Inspect());
-
-            // If the base query is bitmap-backed, use it directly for Contains checks
-            // instead of materializing into a HashSet.
-            if (baseQuery is global::Corax.Querying.Matches.Meta.IBitmapQueryMatch bqBitmap)
+            if (query.Metadata.Query.Where is not null)
             {
-                // Force execution so bitmap is populated
-                _ = bqBitmap.Count;
-                baseQueryBitmap = bqBitmap;
-            }
-            else
-            {
-                var maxMatchingIds = _indexSearcher.MaxFacetQueryFilterSizeInBytes / sizeof(long);
-                baseQueryMatchingIds = new HashSet<long>();
-                int read;
-                while ((read = baseQuery.Fill(ids)) != 0)
-                {
-                    for (int i = 0; i < read; i++)
-                        baseQueryMatchingIds.Add(ids[i]);
+                var parameters = new QueryBuilderParameters(_indexSearcher, _allocator, null, null, query, _index,
+                    query.QueryParameters, _queryBuilderFactories, _fieldMappings, null, null, global::Corax.Constants.IndexSearcher.TakeAll,
+                    token: token);
 
-                    token.ThrowIfCancellationRequested();
-
-                    // When exceeded, fall back to the scanning path which streams with bounded memory.
-                    if (baseQueryMatchingIds.Count > maxMatchingIds)
+                IQueryMatch baseQuery = QueryPlanBuilder.QueryPlanBuilder.BuildFilterMatch(
+                    new QueryPlanBuilder.PlanParameters
                     {
-                        baseQueryDisposable?.Dispose();
-                        CoraxIndexReadOperation.QueryPool.Return(ids);
-                        return ScanningFacetedQuery(results, facetQuery, queryTimings, queryTime, token);
+                        IndexSearcher = _indexSearcher,
+                        Metadata = query.Metadata,
+                        QueryParameters = query.QueryParameters,
+                        Index = _index,
+                        IndexFieldsMapping = _fieldMappings,
+                        Allocator = _allocator,
+                        HasDynamics = parameters.HasDynamics,
+                        DynamicFields = parameters.DynamicFields,
+                        HasBoost = parameters.HasBoost
+                    }, parameters, highlightingTerms: null, wantTimings: false, token);
+                baseQueryDisposable = baseQuery as IDisposable;
+                queryTimings?.SetQueryPlan(baseQuery.Inspect());
+
+                // If the base query is bitmap-backed, use it directly for Contains checks
+                // instead of materializing into a HashSet.
+                if (baseQuery is global::Corax.Querying.Matches.Meta.IBitmapQueryMatch bqBitmap)
+                {
+                    // Force execution so bitmap is populated
+                    _ = bqBitmap.Count;
+                    baseQueryBitmap = bqBitmap;
+                }
+                else
+                {
+                    var maxMatchingIds = _indexSearcher.MaxFacetQueryFilterSizeInBytes / sizeof(long);
+                    baseQueryMatchingIds = new HashSet<long>();
+                    int read;
+                    while ((read = baseQuery.Fill(ids)) != 0)
+                    {
+                        for (int i = 0; i < read; i++)
+                            baseQueryMatchingIds.Add(ids[i]);
+
+                        token.ThrowIfCancellationRequested();
+
+                        // When exceeded, fall back to the scanning path which streams with bounded memory.
+                        if (baseQueryMatchingIds.Count > maxMatchingIds)
+                        {
+                            baseQueryDisposable?.Dispose();
+                            baseQueryDisposable = null;
+                            CoraxIndexReadOperation.QueryPool.Return(ids);
+                            ids = null;
+                            return ScanningFacetedQuery(results, facetQuery, queryTimings, queryTime, token);
+                        }
+                    }
+                } // end else (non-bitmap path)
+            }
+
+            foreach (var result in results)
+            {
+                using var facetTiming = queryTimings?.For($"{nameof(QueryTimingsScope.Names.AggregateBy)}/{result.Key}");
+                Dictionary<string, FacetValues> facetValues;
+                if (result.Value.Ranges == null || result.Value.Ranges.Count == 0)
+                {
+                    if (facetsByName.TryGetValue(result.Key, out facetValues) == false)
+                        facetsByName[result.Key] = facetValues = new Dictionary<string, FacetValues>();
+
+                    var metadata = GetFieldMetadata(result.Key);
+
+                    var provider = _indexSearcher.TextualAggregation(metadata, forward: result.Value.Options.TermSortMode is not FacetTermSortMode.ValueDesc);
+                    // When WHERE is present, we must NOT set SortedIds: UpdateFacetResults uses it as the
+                    // authoritative term list and would emit FacetValue{count=0} for every term in it,
+                    // including terms filtered out by the WHERE clause.
+                    using var aggregationScope = provider.AggregateByTerms(out List<string> sortedIds, out var counts);
+                    if (baseQueryMatchingIds == null && baseQueryBitmap == null)
+                        result.Value.SortedIds = sortedIds;
+
+                    var idX = 0;
+                    foreach (var term in CollectionsMarshal.AsSpan(sortedIds))
+                    {
+                        long count;
+                        if (baseQueryMatchingIds != null || baseQueryBitmap != null)
+                        {
+                            var queryTerm = ReferenceEquals(term, Constants.ProjectionNullValue) ? null
+                                : ReferenceEquals(term, Constants.ProjectionEmptyString) ? Constants.EmptyString
+                                : term;
+                            var termMatch = _indexSearcher.TermQuery(metadata, queryTerm);
+                            count = 0;
+                            int read;
+                            while ((read = termMatch.Fill(ids)) != 0)
+                            {
+                                // ids is sorted+deduped per the Fill contract, so when the base query is a bitmap we can
+                                // count membership with one grouped merge instead of a point lookup per id.
+                                if (baseQueryBitmap != null)
+                                {
+                                    count += baseQueryBitmap.BitmapState.CountPresentSorted(ids.AsSpan(0, read));
+                                }
+                                else
+                                {
+                                    for (int i = 0; i < read; i++)
+                                    {
+                                        if (baseQueryMatchingIds.Contains(ids[i]))
+                                            count++;
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            count = counts[idX];
+                        }
+
+                        idX++;
+
+                        if (count == 0)
+                            continue;
+
+                        ref var collectionOfFacetValues = ref CollectionsMarshal.GetValueRefOrAddDefault(facetValues, term, out var exists);
+                        if (exists == false)
+                        {
+                            var range = FacetedQueryHelper.GetRangeName(result.Value.AggregateBy, term);
+                            collectionOfFacetValues = new FacetValues(facetQuery.Legacy);
+                            collectionOfFacetValues.AddDefault(range);
+                        }
+
+                        collectionOfFacetValues.IncrementCount((int)count);
                     }
                 }
-            } // end else (non-bitmap path)
-        }
 
-        foreach (var result in results)
-        {
-            using var facetTiming = queryTimings?.For($"{nameof(QueryTimingsScope.Names.AggregateBy)}/{result.Key}");
-            Dictionary<string, FacetValues> facetValues;
-            if (result.Value.Ranges == null || result.Value.Ranges.Count == 0)
-            {
-                if (facetsByName.TryGetValue(result.Key, out facetValues) == false)
-                    facetsByName[result.Key] = facetValues = new Dictionary<string, FacetValues>();
 
-                var metadata = GetFieldMetadata(result.Key);
-
-                var provider = _indexSearcher.TextualAggregation(metadata, forward: result.Value.Options.TermSortMode is not FacetTermSortMode.ValueDesc);
-                // When WHERE is present, we must NOT set SortedIds: UpdateFacetResults uses it as the
-                // authoritative term list and would emit FacetValue{count=0} for every term in it,
-                // including terms filtered out by the WHERE clause.
-                using var aggregationScope = provider.AggregateByTerms(out List<string> sortedIds, out var counts);
-                if (baseQueryMatchingIds == null && baseQueryBitmap == null)
-                    result.Value.SortedIds = sortedIds;
-
-                var idX = 0;
-                foreach (var term in CollectionsMarshal.AsSpan(sortedIds))
+                if (facetsByRange.TryGetValue(result.Key, out facetValues) == false)
                 {
+                    facetValues = new();
+                    facetsByRange.Add(result.Key, facetValues);
+                }
+
+                var ranges = result.Value.Ranges;
+                foreach (var parsedRange in ranges ?? Enumerable.Empty<FacetedQueryParser.ParsedRange>())
+                {
+                    if (parsedRange is not FacetedQueryParser.CoraxParsedRange range)
+                        continue;
+
+                    ref var collectionOfFacetValues = ref CollectionsMarshal.GetValueRefOrAddDefault(facetValues, parsedRange.RangeText, out var exists);
+                    if (exists == false)
+                        collectionOfFacetValues = new FacetValues(facetQuery.Legacy);
+
+                    var fieldMetadata = GetFieldMetadata(range.Field);
                     long count;
+
                     if (baseQueryMatchingIds != null || baseQueryBitmap != null)
                     {
-                        var queryTerm = ReferenceEquals(term, Constants.ProjectionNullValue) ? null
-                            : ReferenceEquals(term, Constants.ProjectionEmptyString) ? Constants.EmptyString
-                            : term;
-                        var termMatch = _indexSearcher.TermQuery(metadata, queryTerm);
+                        var rangeQuery = range.GetQuery(_indexSearcher, fieldMetadata);
                         count = 0;
                         int read;
-                        while ((read = termMatch.Fill(ids)) != 0)
+                        while ((read = rangeQuery.Fill(ids)) != 0)
                         {
-                            // ids is sorted+deduped per the Fill contract, so when the base query is a bitmap we can
-                            // count membership with one grouped merge instead of a point lookup per id.
+                            // ids is sorted+deduped per the Fill contract; batch the bitmap membership count.
                             if (baseQueryBitmap != null)
                             {
                                 count += baseQueryBitmap.BitmapState.CountPresentSorted(ids.AsSpan(0, read));
@@ -186,90 +254,31 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
                     }
                     else
                     {
-                        count = counts[idX];
-                    }
-
-                    idX++;
-
-                    if (count == 0)
-                        continue;
-
-                    ref var collectionOfFacetValues = ref CollectionsMarshal.GetValueRefOrAddDefault(facetValues, term, out var exists);
-                    if (exists == false)
-                    {
-                        var range = FacetedQueryHelper.GetRangeName(result.Value.AggregateBy, term);
-                        collectionOfFacetValues = new FacetValues(facetQuery.Legacy);
-                        collectionOfFacetValues.AddDefault(range);
+                        var aggregationProvider = range.GetAggregation(_indexSearcher, fieldMetadata, true);
+                        count = aggregationProvider.AggregateByRange();
                     }
 
                     collectionOfFacetValues.IncrementCount((int)count);
+
+                    token.ThrowIfCancellationRequested();
                 }
             }
 
 
-            if (facetsByRange.TryGetValue(result.Key, out facetValues) == false)
-            {
-                facetValues = new();
-                facetsByRange.Add(result.Key, facetValues);
-            }
+            UpdateRangeResults(results, facetsByRange);
+            UpdateFacetResults(results, query, facetsByName);
+            CompleteFacetCalculationsStage(results, query);
 
-            var ranges = result.Value.Ranges;
-            foreach (var parsedRange in ranges ?? Enumerable.Empty<FacetedQueryParser.ParsedRange>())
-            {
-                if (parsedRange is not FacetedQueryParser.CoraxParsedRange range)
-                    continue;
-
-                ref var collectionOfFacetValues = ref CollectionsMarshal.GetValueRefOrAddDefault(facetValues, parsedRange.RangeText, out var exists);
-                if (exists == false)
-                    collectionOfFacetValues = new FacetValues(facetQuery.Legacy);
-
-                var fieldMetadata = GetFieldMetadata(range.Field);
-                long count;
-
-                if (baseQueryMatchingIds != null || baseQueryBitmap != null)
-                {
-                    var rangeQuery = range.GetQuery(_indexSearcher, fieldMetadata);
-                    count = 0;
-                    int read;
-                    while ((read = rangeQuery.Fill(ids)) != 0)
-                    {
-                        // ids is sorted+deduped per the Fill contract; batch the bitmap membership count.
-                        if (baseQueryBitmap != null)
-                        {
-                            count += baseQueryBitmap.BitmapState.CountPresentSorted(ids.AsSpan(0, read));
-                        }
-                        else
-                        {
-                            for (int i = 0; i < read; i++)
-                            {
-                                if (baseQueryMatchingIds.Contains(ids[i]))
-                                    count++;
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    var aggregationProvider = range.GetAggregation(_indexSearcher, fieldMetadata, true);
-                    count = aggregationProvider.AggregateByRange();
-                }
-
-                collectionOfFacetValues.IncrementCount((int)count);
-
-                token.ThrowIfCancellationRequested();
-            }
+            return results.Values
+                .Select(x => x.Result)
+                .ToList();
         }
-
-
-        UpdateRangeResults(results, facetsByRange);
-        UpdateFacetResults(results, query, facetsByName);
-        CompleteFacetCalculationsStage(results, query);
-
-        baseQueryDisposable?.Dispose();
-        CoraxIndexReadOperation.QueryPool.Return(ids);
-        return results.Values
-            .Select(x => x.Result)
-            .ToList();
+        finally
+        {
+            baseQueryDisposable?.Dispose();
+            if (ids != null)
+                CoraxIndexReadOperation.QueryPool.Return(ids);
+        }
 
 
         FieldMetadata GetFieldMetadata(string name) => QueryBuilderHelper.GetFieldMetadata(_allocator, name, _index, _fieldMappings,
