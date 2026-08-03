@@ -9,7 +9,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
+using ITestOutputHelper = Xunit.ITestOutputHelper;
 
 namespace SlowTests.Corax;
 

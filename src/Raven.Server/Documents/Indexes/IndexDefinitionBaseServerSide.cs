@@ -202,10 +202,15 @@ namespace Raven.Server.Documents.Indexes
             public const long CoraxUnicodeLengthAnalyzers_62 = 62_007; // RavenDB-24423
             public const long CoraxNumericTreesWithoutFrequencies_62 = 62_008; // RavenDB-27171
 
+            public const long Base72Version = 72_001;
+
+            public const long CoraxOrderPreservingCompoundNumericEncoding = Base72Version; // RavenDB-26831
+            public const long CoraxNumericTreesWithoutFrequencies_72 = 72_002; // RavenDB-27171
+
             /// <summary>
             /// Remember to bump this
             /// </summary>
-            public const long CurrentVersion = CoraxNumericTreesWithoutFrequencies_62;
+            public const long CurrentVersion = CoraxNumericTreesWithoutFrequencies_72;
 
             public static bool IsLowerCasedReferencesSupported(long indexVersion)
             {
@@ -250,6 +255,9 @@ namespace Raven.Server.Documents.Indexes
 
             public static bool IsNumericTreesWithoutFrequenciesSupported(long indexVersion)
             {
+                if (indexVersion >= Base72Version)
+                    return indexVersion >= CoraxNumericTreesWithoutFrequencies_72;
+
                 return indexVersion >= CoraxNumericTreesWithoutFrequencies_62;
             }
         }
