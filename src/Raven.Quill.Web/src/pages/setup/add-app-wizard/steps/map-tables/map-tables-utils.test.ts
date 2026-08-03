@@ -4,8 +4,10 @@ import type {
     DiscoverTableResponse,
 } from "@/api/generated/server-api";
 import {
+    makeUniquePropertyName,
     propertyNameFromJoinColumn,
     scaffoldRootTable,
+    toTakenPropertyNames,
 } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
 import { describe, expect, it } from "vitest";
 
@@ -116,5 +118,31 @@ describe("scaffoldRootTable", () => {
         );
 
         expect(scaffolded.linkedTables.map((linked) => linked.propertyName)).toEqual(["StoreAndLanguage"]);
+    });
+});
+
+describe("makeUniquePropertyName", () => {
+    it("keeps a name nothing else claims", () => {
+        expect(makeUniquePropertyName("Language", toTakenPropertyNames(["Id", "Email"]))).toBe("Language");
+    });
+
+    it("suffixes a taken name", () => {
+        expect(makeUniquePropertyName("Language", toTakenPropertyNames(["Language"]))).toBe("Language2");
+    });
+
+    it("keeps counting past an already suffixed name", () => {
+        expect(makeUniquePropertyName("Language", toTakenPropertyNames(["Language", "Language2"]))).toBe("Language3");
+    });
+
+    it("compares case-insensitively, like the server", () => {
+        expect(makeUniquePropertyName("Language", toTakenPropertyNames(["LANGUAGE"]))).toBe("Language2");
+    });
+});
+
+describe("toTakenPropertyNames", () => {
+    it("drops blank entries and normalizes the rest", () => {
+        expect(toTakenPropertyNames(["Language", " Currency ", "", null, undefined])).toEqual(
+            new Set(["language", "currency"]),
+        );
     });
 });
