@@ -24,7 +24,7 @@ namespace FastTests.Server.Integrations.PostgreSQL
         private const string SupersetQuery =
             "SELECT \"Company\" AS \"Company\", COUNT(*) AS count FROM public.\"Orders\" GROUP BY \"Company\" ORDER BY count DESC LIMIT 10000";
 
-        [RavenFact(RavenTestCategory.PostgreSql)]
+        [RavenFact(RavenTestCategory.PostgreSql, LicenseRequired = true)]
         public async Task Superset_top_n_by_count_executes()
         {
             using var store = GetDocumentStore();
@@ -38,7 +38,7 @@ namespace FastTests.Server.Integrations.PostgreSQL
             Assert.Equal(new[] { "10", "9", "2" }, rows.Select(r => r[1]));
         }
 
-        [RavenFact(RavenTestCategory.PostgreSql)]
+        [RavenFact(RavenTestCategory.PostgreSql, LicenseRequired = true)]
         public async Task OrderBy_count_function_and_alias_agree()
         {
             using var store = GetDocumentStore();
@@ -55,7 +55,7 @@ namespace FastTests.Server.Integrations.PostgreSQL
             Assert.Equal(byFunction.Rows.Select(r => r[1]), byAlias.Rows.Select(r => r[1]));
         }
 
-        [RavenFact(RavenTestCategory.PostgreSql)]
+        [RavenFact(RavenTestCategory.PostgreSql, LicenseRequired = true)]
         public async Task OrderBy_count_ascending()
         {
             using var store = GetDocumentStore();
@@ -69,7 +69,7 @@ namespace FastTests.Server.Integrations.PostgreSQL
             Assert.Equal(new[] { "2", "9", "10" }, rows.Select(r => r[1]));
         }
 
-        [RavenFact(RavenTestCategory.PostgreSql)]
+        [RavenFact(RavenTestCategory.PostgreSql, LicenseRequired = true)]
         public async Task OrderBy_sum_function_and_alias_agree()
         {
             using var store = GetDocumentStore();
@@ -85,7 +85,7 @@ namespace FastTests.Server.Integrations.PostgreSQL
             Assert.Equal(byFunction.Rows.Select(r => r[1]), byAlias.Rows.Select(r => r[1]));
         }
 
-        [RavenFact(RavenTestCategory.PostgreSql)]
+        [RavenFact(RavenTestCategory.PostgreSql, LicenseRequired = true)]
         public async Task OrderBy_sum_ascending()
         {
             using var store = GetDocumentStore();
@@ -98,7 +98,7 @@ namespace FastTests.Server.Integrations.PostgreSQL
             Assert.Equal(new[] { "Gamma", "Beta", "Alpha" }, rows.Select(r => r[0]));
         }
 
-        [RavenFact(RavenTestCategory.PostgreSql)]
+        [RavenFact(RavenTestCategory.PostgreSql, LicenseRequired = true)]
         public async Task OrderBy_group_key_still_works()
         {
             using var store = GetDocumentStore();
