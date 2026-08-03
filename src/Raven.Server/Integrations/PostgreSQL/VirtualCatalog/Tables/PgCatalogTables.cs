@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Globalization;
 using Raven.Server.Integrations.PostgreSQL.Messages;
 using Raven.Server.Integrations.PostgreSQL.Types;
 using Raven.Server.ServerWide.Context;
@@ -168,7 +167,7 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
             long? onlyRelation = null;
             if (ctx.Predicates != null &&
                 ctx.Predicates.TryGetValue(AttRelIdPredicate, out var rawOid) &&
-                TryReadOid(rawOid, out var predicateOid))
+                CatalogOid.TryRead(rawOid, out var predicateOid))
                 onlyRelation = predicateOid;
 
             using (ctx.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -193,17 +192,6 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
                         };
                     }
                 }
-            }
-        }
-
-        private static bool TryReadOid(object value, out long oid)
-        {
-            switch (value)
-            {
-                case long l: oid = l; return true;
-                case int i: oid = i; return true;
-                case string s when long.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed): oid = parsed; return true;
-                default: oid = 0; return false;
             }
         }
     }
