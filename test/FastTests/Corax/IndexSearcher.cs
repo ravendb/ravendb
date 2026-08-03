@@ -1268,16 +1268,7 @@ namespace FastTests.Corax
             }
 
             {
-                var match = searcher.StartWithQuery(contentMetadata, "Run", true);
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(1, match.Fill(ids));
-                long id = ids[0];
-                Assert.Equal("entry/1", searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
-            }
-
-            {
-                var match = searcher.EndsWithQuery(contentMetadata, "ing", false);
+                var match = searcher.EndsWithQuery(contentMetadata, "ing");
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(2, match.Fill(ids));
@@ -1287,15 +1278,6 @@ namespace FastTests.Corax
                 Array.Sort(results);
                 Assert.Equal("entry/1", results[0]);
                 Assert.Equal("entry/2", results[1]);
-            }
-
-            {
-                var match = searcher.EndsWithQuery(contentMetadata, "ing", true);
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(1, match.Fill(ids));
-                long id = ids[0];
-                Assert.Equal("entry/3", searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
             }
 
             {
