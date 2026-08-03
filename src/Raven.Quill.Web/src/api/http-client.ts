@@ -103,6 +103,14 @@ function getErrorMessage(details: unknown) {
         return details.error;
     }
 
+    if ("errors" in details && Array.isArray(details.errors)) {
+        const messages = details.errors.filter((error): error is string => typeof error === "string");
+
+        if (messages.length > 0) {
+            return messages.join("\n");
+        }
+    }
+
     return undefined;
 }
 
