@@ -8,9 +8,11 @@ import {
     getDiscoveredSchemaNames,
     getDiscoveredTableNames,
     getForeignKeysToTable,
+    makeUniquePropertyName,
     mapDiscoveredColumns,
     pascalCase,
     propertyNameFromJoinColumn,
+    toTakenPropertyNames,
 } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
 import { useFormContext, useWatch, type FieldPath, type PathValue } from "react-hook-form";
 
@@ -53,14 +55,34 @@ export function useSourceTableAutofill(path: MapTablePath, mode: AutofillMode) {
         }
     };
 
+    const getParentPath = () => path.split(".").slice(0, -2).join(".");
+
     const getParentDiscoveredTable = () => {
-        const parentPath = path.split(".").slice(0, -2).join(".");
-        const parentTable = getValues(parentPath as FormPath) as {
+        const parentTable = getValues(getParentPath() as FormPath) as {
             sourceTableSchema?: string | null;
             sourceTableName?: string | null;
         } | null;
 
         return findDiscoveredTable(discoverResult, parentTable?.sourceTableSchema, parentTable?.sourceTableName);
+    };
+
+    /** Property names taken by the parent's columns, embedded tables and the other linked tables -
+     * everything this link has to avoid shadowing. Skips the link being filled in. */
+    const getTakenPropertyNames = () => {
+        const ownIndex = Number(path.split(".").at(-1));
+        const parentTable = getValues(getParentPath() as FormPath) as {
+            columns?: { name?: string | null }[];
+            embeddedTables?: { propertyName?: string | null }[];
+            linkedTables?: { propertyName?: string | null }[];
+        } | null;
+
+        return toTakenPropertyNames([
+            ...(parentTable?.columns ?? []).map((column) => column.name),
+            ...(parentTable?.embeddedTables ?? []).map((embedded) => embedded.propertyName),
+            ...(parentTable?.linkedTables ?? [])
+                .filter((_, index) => index !== ownIndex)
+                .map((linked) => linked.propertyName),
+        ]);
     };
 
     // The relation between the parent table and the selected child, but only when it is
@@ -111,7 +133,9 @@ export function useSourceTableAutofill(path: MapTablePath, mode: AutofillMode) {
         setStringIfEmpty(`${path}.linkedCollectionName`, pascalCase(selectedTable.sourceTableName));
 
         if (relation) {
-            setStringIfEmpty(`${path}.propertyName`, relation.columns.map(propertyNameFromJoinColumn).join("And"));
+            const propertyName = relation.columns.map(propertyNameFromJoinColumn).join("And");
+
+            setStringIfEmpty(`${path}.propertyName`, makeUniquePropertyName(propertyName, getTakenPropertyNames()));
             setListIfEmpty(`${path}.joinColumns`, toStringValueItems(relation.columns));
         }
     };

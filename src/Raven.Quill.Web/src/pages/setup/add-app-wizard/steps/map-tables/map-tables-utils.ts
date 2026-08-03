@@ -140,17 +140,30 @@ export function scaffoldLinkedTable(foreignKey: DiscoverForeignKeyResponse): For
     };
 }
 
+/** Lower-cased property names already in use by a table, for the collision checks below. */
+export function toTakenPropertyNames(names: (string | null | undefined)[]): Set<string> {
+    return new Set(
+        names.filter((name): name is string => Boolean(name?.trim())).map((name) => name.trim().toLowerCase()),
+    );
+}
+
+export function makeUniquePropertyName(propertyName: string, takenNames: Set<string>): string {
+    let candidate = propertyName;
+    let suffix = 1;
+
+    while (takenNames.has(candidate.toLowerCase())) {
+        suffix++;
+        candidate = `${propertyName}${suffix}`;
+    }
+
+    return candidate;
+}
+
 function withUniquePropertyNames(linkedTables: FormLinkedTable[], columns: FormColumnMapping[]): FormLinkedTable[] {
-    const takenNames = new Set(columns.map((column) => column.name.toLowerCase()));
+    const takenNames = toTakenPropertyNames(columns.map((column) => column.name));
 
     return linkedTables.map((linkedTable) => {
-        let propertyName = linkedTable.propertyName;
-        let suffix = 1;
-
-        while (takenNames.has(propertyName.toLowerCase())) {
-            suffix++;
-            propertyName = `${linkedTable.propertyName}${suffix}`;
-        }
+        const propertyName = makeUniquePropertyName(linkedTable.propertyName, takenNames);
 
         takenNames.add(propertyName.toLowerCase());
 
