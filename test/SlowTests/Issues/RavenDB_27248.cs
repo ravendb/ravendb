@@ -15,19 +15,6 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    /// <summary>
-    /// RavenDB-27248: date/time fidelity on the PostgreSQL CDC streaming path.
-    ///
-    /// pgoutput delivers every column as a text literal, so the streaming path parses date/time
-    /// values itself instead of getting typed values from Npgsql (unlike the initial load, which
-    /// reads through a DbDataReader). The first group of tests pins the two paths to the same
-    /// representation.
-    ///
-    /// The second group reproduces the shape reported in the ticket against a real nopCommerce
-    /// database; it is opt-in via RAVEN_NOPCOMMERCE_PG. Those tests document that the reported
-    /// symptom (streamed timestamps arriving null) does not reproduce, and that an unmapped column
-    /// is indistinguishable from a null one in the check the report used.
-    /// </summary>
     [Collection(nameof(CdcSinkPostgresTests))]
     public class RavenDB_27248 : CdcSinkIntegrationTestBase
     {
@@ -53,8 +40,6 @@ namespace SlowTests.Issues
             return sqlCs;
         }
 
-        // Date/time fields are read as strings so the assertions compare the stored JSON
-        // representation rather than whatever the client deserializer would coerce it back into.
         private class Attr
         {
             public long DbId { get; set; }
@@ -100,11 +85,6 @@ namespace SlowTests.Issues
                 clock TIME NULL
             )";
 
-        /// <summary>
-        /// A streamed row must store the same date/time representation as the same values read by
-        /// the initial load. Before the fix, timestamptz was re-anchored to the RavenDB host's local
-        /// time zone and stored without a zone marker, so every streamed row's instant was shifted.
-        /// </summary>
         [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task DateTimeTypes_StreamedRow_MatchesInitialLoad()
         {
@@ -135,7 +115,6 @@ namespace SlowTests.Issues
             Assert.Equal("2026-08-02T12:13:34.2107770Z", initial.TsTz);
             Assert.Equal("2026-08-02", initial.Day);
 
-            // Same values, delivered over the replication stream instead.
             ExecuteNpgSql(connectionString, @"
                 INSERT INTO attrs (id, name, ts, ts_tz, day, clock)
                 VALUES (2, 'streamed', '2026-08-02 12:13:34.210777', '2026-08-02 12:13:34.210777+00', '2026-08-02', '12:13:34.567')");
@@ -158,10 +137,6 @@ namespace SlowTests.Issues
             }
         }
 
-        /// <summary>
-        /// A timestamptz written from a non-UTC offset denotes the same instant as its UTC form, so
-        /// the streamed document must store that instant in UTC, not the offset's wall-clock time.
-        /// </summary>
         [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task TimestampTz_StreamedWithNonUtcOffset_StoredAsUtcInstant()
         {
@@ -176,7 +151,6 @@ namespace SlowTests.Issues
 
             await WaitForCdcInitialLoadAsync(store, config.Name);
 
-            // 09:30:00-05:00 is the instant 14:30:00Z.
             ExecuteNpgSql(connectionString, @"
                 INSERT INTO attrs (id, name, ts, ts_tz, day)
                 VALUES (1, 'offset', NULL, '2026-08-02 09:30:00-05:00', NULL)");
@@ -198,11 +172,6 @@ namespace SlowTests.Issues
             }
         }
 
-        /// <summary>
-        /// Postgres accepts "infinity"/"-infinity" for timestamp, timestamptz and date. The
-        /// initial-load reader turns those into DateTime/DateOnly Max/Min; the streaming path used to
-        /// hit a FormatException on the text literal, which fails the batch and stalls the stream.
-        /// </summary>
         [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task DateTimeTypes_Infinity_StreamsWithoutStallingTheTask()
         {
@@ -234,7 +203,6 @@ namespace SlowTests.Issues
                 INSERT INTO attrs (id, name, ts, ts_tz, day)
                 VALUES (3, 'streamed-neg', '-infinity', '-infinity', '-infinity');");
 
-            // Row 3 arriving proves the stream did not stall on row 2.
             await AssertWaitForValueAsync(async () =>
             {
                 using var session = store.OpenAsyncSession();
@@ -267,13 +235,6 @@ namespace SlowTests.Issues
             public string CreatedOrUpdatedDateUTC { get; set; }
         }
 
-        /// <summary>
-        /// Mirrors the nopCommerce GenericAttribute shape from the report: quoted PascalCase
-        /// identifiers, a TOASTed text column, and a nullable timestamp as the last column. Covers
-        /// the timestamp on the initial-load row and on streamed INSERT/UPDATE of the same table,
-        /// including an UPDATE that leaves the TOASTed column untouched, where pgoutput sends an
-        /// "unchanged toasted value" placeholder.
-        /// </summary>
         [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task Timestamp_NopCommerceShape_SurvivesStreaming()
         {
@@ -291,7 +252,6 @@ namespace SlowTests.Issues
                     ""CreatedOrUpdatedDateUTC"" TIMESTAMP NULL
                 )");
 
-            // Long Value so the column is TOASTed out of line.
             ExecuteNpgSql(connectionString, @"
                 INSERT INTO ""GenericAttribute"" (""Id"", ""EntityId"", ""KeyGroup"", ""Key"", ""Value"", ""StoreId"", ""CreatedOrUpdatedDateUTC"")
                 VALUES (1, 1, 'Product', 'Desc', repeat('x', 20000), 0, '2026-07-26 11:36:39.276693')");
@@ -351,7 +311,6 @@ namespace SlowTests.Issues
                 Assert.Equal("2026-08-02T12:13:34.2107770", streamed.CreatedOrUpdatedDateUTC);
             }
 
-            // Streamed UPDATE that leaves the TOASTed Value untouched.
             ExecuteNpgSql(connectionString, @"
                 UPDATE ""GenericAttribute"" SET ""EntityId"" = 22 WHERE ""Id"" = 2");
 
@@ -369,15 +328,6 @@ namespace SlowTests.Issues
                 Assert.Equal(20000, updated.Value?.Length ?? 0);
             }
         }
-
-        // ---------------------------------------------------------------------------------------
-        // Reproduction against a real nopCommerce 4.90.6 PostgreSQL database, using the reporter's
-        // own writer SQL and the same concurrency + restart shape.
-        //
-        // These mutate a live nopCommerce database and restart its container, so they are opt-in:
-        // they run only when RAVEN_NOPCOMMERCE_PG points at a disposable instance, and skip
-        // (rather than fail) everywhere else, CI included.
-        // ---------------------------------------------------------------------------------------
 
         private const string ConnectionStringEnvName = "RAVEN_NOPCOMMERCE_PG";
         private const string ContainerEnvName = "RAVEN_NOPCOMMERCE_PG_CONTAINER";
@@ -399,7 +349,6 @@ namespace SlowTests.Issues
                 $"It deletes and inserts \"GenericAttribute\" rows and restarts the '{NopContainer}' container.");
         }
 
-        // The source container is restarted mid-test, so every statement has to ride out a restart.
         private static TResult WithRetry<TResult>(Func<NpgsqlCommand, TResult> body, string sql)
         {
             for (int attempt = 0; ; attempt++)
@@ -437,7 +386,6 @@ namespace SlowTests.Issues
 
         private static void CleanupReplication()
         {
-            // A slot still held by a previous run's walsender cannot be dropped; kick it off first.
             for (int attempt = 0; attempt < 15; attempt++)
             {
                 try
@@ -456,7 +404,6 @@ namespace SlowTests.Issues
             Exec($"DROP PUBLICATION IF EXISTS {Publication}");
         }
 
-        // The reporter's writer, one batch.
         private static void WriteBatch(int lo, int hi) => Exec($@"
             INSERT INTO ""GenericAttribute"" (""Id"",""KeyGroup"",""Key"",""Value"",""EntityId"",""StoreId"",""CreatedOrUpdatedDateUTC"")
             SELECT s,'CdcLoad','k'||s,'v'||s,s,1,now() FROM generate_series({lo},{hi}) s
@@ -554,11 +501,6 @@ namespace SlowTests.Issues
             }
         }
 
-        /// <summary>
-        /// The ticket's actual repro: three concurrent writers, the sink restarted mid-stream, and
-        /// the source PostgreSQL restarted while writes are still in flight. Asserts every streamed
-        /// row landed with a timestamp matching the source.
-        /// </summary>
         [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task NopCommerce_ConcurrentWriters_WithSinkAndSourceRestart_KeepTimestamp()
         {
@@ -575,7 +517,6 @@ namespace SlowTests.Issues
                 AddCdcSink(store, config);
                 await WaitForCdcInitialLoadAsync(store, config.Name, timeoutMs: 120_000);
 
-                // The ticket's exact three ranges: 60000 rows total.
                 var ranges = new[] { (40000, 49999), (50000, 79999), (80000, 99999) };
 
                 var written = 0;
@@ -589,15 +530,13 @@ namespace SlowTests.Issues
                         for (int g = l; g <= h; g += 250)
                         {
                             var batchHi = Math.Min(g + 249, h);
-                            WriteBatch(g, batchHi); // Exec already rides out a source restart
+                            WriteBatch(g, batchHi);
                             Interlocked.Add(ref written, batchHi - g + 1);
                             Thread.Sleep(300);
                         }
                     }));
                 }
 
-                // Drive the restarts off writer progress so both land while writes are in flight,
-                // regardless of how fast this machine is.
                 var sw = Stopwatch.StartNew();
                 await WaitForWrittenAsync(() => written, 9_000, writers);
                 Output.WriteLine($"[{sw.Elapsed}] restarting sink at written={written}");
@@ -617,7 +556,6 @@ namespace SlowTests.Issues
                 var srcTotal = Scalar<long>(@"SELECT count(*) FROM ""GenericAttribute""");
                 Assert.Equal(60_000, srcRange);
 
-                // Wait for the mirror to catch up to the source row count.
                 var ravenCount = await WaitForValueAsync(async () =>
                 {
                     using var session = store.OpenAsyncSession();
@@ -626,7 +564,6 @@ namespace SlowTests.Issues
 
                 Output.WriteLine($"source total={srcTotal} range={srcRange} raven={ravenCount}");
 
-                // Compare EVERY streamed row's timestamp against the source, in one pass.
                 var srcTimestamps = new Dictionary<long, DateTime?>();
                 WithRetry(cmd =>
                 {
@@ -685,12 +622,6 @@ namespace SlowTests.Issues
             }
         }
 
-        /// <summary>
-        /// Demonstrates the alternative reading of the ticket's evidence: when
-        /// CreatedOrUpdatedDateUTC is absent from the column mapping, the document simply has no such
-        /// property. The reporter's check (jq '.CreatedOrUpdatedDateUTC') prints null for a missing
-        /// key exactly as it does for a null value, so the two are indistinguishable in that output.
-        /// </summary>
         [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task NopCommerce_UnmappedTimestampColumn_LooksIdenticalToANullValue()
         {
@@ -701,7 +632,6 @@ namespace SlowTests.Issues
 
             using var store = GetDocumentStore();
             var config = BuildNopConfig(SetupNopConnectionString(store).Name);
-            // Drop exactly the one column, leaving everything else as the passing test has it.
             config.Tables[0].Columns.RemoveAll(c => c.Column == "CreatedOrUpdatedDateUTC");
 
             try
@@ -718,12 +648,10 @@ namespace SlowTests.Issues
                     return a?.EntityId;
                 }, (long)RangeStart, timeout: 120_000);
 
-                // The source row definitely has a timestamp.
                 var sourceTs = Scalar<DateTime>(
                     $"SELECT \"CreatedOrUpdatedDateUTC\" FROM \"GenericAttribute\" WHERE \"Id\"={RangeStart}");
                 Assert.NotEqual(default, sourceTs);
 
-                // Fetch the raw document over HTTP, the same way the ticket's repro did with curl.
                 using (var http = new System.Net.Http.HttpClient())
                 {
                     var json = await http.GetStringAsync(
