@@ -12,7 +12,6 @@ import { ConnectionEditor } from "@/pages/setup/add-app-wizard/steps/connect/con
 import { ImportConfigDialog } from "@/pages/setup/add-app-wizard/steps/connect/import-config-dialog";
 import { TestConnectionButton } from "@/pages/setup/add-app-wizard/steps/connect/test-connection-button";
 import { toSlug } from "@/pages/setup/add-app-wizard/slugify";
-import { useConnectionSync } from "@/pages/setup/add-app-wizard/steps/connect/use-connection-sync";
 import { InputGroupAddon } from "@/components/shadcn/ui/input-group";
 import { Button } from "@/components/shadcn/ui/button";
 import { RefreshCw } from "lucide-react";
@@ -37,7 +36,6 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
         field: { value },
         fieldState: { error, invalid },
     } = useController({ control, name: "externalConnection.provider" });
-    const { changeProvider } = useConnectionSync();
 
     // A locked configuration owns its connection until the operator enables editing.
     const isConnectionDisabled = isBusy || isLocked;
@@ -115,7 +113,12 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
                                 key={option.value}
                                 type="button"
                                 aria-pressed={isSelected}
-                                onClick={() => changeProvider(option.value)}
+                                onClick={() =>
+                                    setValue("externalConnection.provider", option.value, {
+                                        shouldDirty: true,
+                                        shouldValidate: true,
+                                    })
+                                }
                                 disabled={isConnectionDisabled}
                                 className={cn(
                                     "flex min-h-28 flex-col items-center justify-center gap-3 rounded-lg border bg-background p-4 transition-colors",

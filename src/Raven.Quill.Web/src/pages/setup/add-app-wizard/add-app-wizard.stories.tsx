@@ -164,7 +164,18 @@ export const ChooseDataSource: Story = {
 
 export const ConnectSource: Story = {
     render: () => <AppWizardAtStep initialStep="externalConnection" />,
+    // Switching the database type leaves the connection details untouched.
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        await userEvent.click(canvas.getByRole("button", { name: /sql server/i }));
+
+        expect(canvas.getByLabelText(/port/i)).toHaveValue(5432);
+        expect(canvas.getByLabelText(/host/i)).toHaveValue("localhost");
+    },
 };
+
+const SEEDED_CONNECTION_STRING = "Host=localhost;Port=5432;Database=acme_shop;Username=admin;Password=secret";
 
 export const ConnectSourceConnectionString: Story = {
     render: () => (
@@ -175,11 +186,19 @@ export const ConnectSourceConnectionString: Story = {
                 externalConnection: {
                     ...seed.externalConnection,
                     mode: "raw",
-                    connectionString: "Host=localhost;Port=5432;Database=acme_shop;Username=admin;Password=secret",
+                    connectionString: SEEDED_CONNECTION_STRING,
                 },
             })}
         />
     ),
+    // Switching the database type leaves the pasted connection string untouched.
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        await userEvent.click(canvas.getByRole("button", { name: /mysql/i }));
+
+        expect(canvas.getByRole("textbox", { name: /connection string/i })).toHaveValue(SEEDED_CONNECTION_STRING);
+    },
 };
 
 const connectFailureHandlers = {

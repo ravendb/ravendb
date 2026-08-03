@@ -32,7 +32,7 @@ export function TestConnectionButton({ disabled }: { disabled: boolean }) {
     });
 
     const handleTest = async () => {
-        if (await trigger(CONNECTION_FIELD)) {
+        if (await trigger([CONNECTION_FIELD])) {
             mutate();
         }
     };
