@@ -101,11 +101,12 @@ namespace Raven.Server.Documents.Indexes
                     .Take(_capacity / 4))
                 {
                     
-                    if (_regexCache.TryRemove(kv.Key, out var removed))
+                    if (_regexCache.TryRemove(kv.Key, out _))
                     {
                         countRemoved++;
-                        // release the evicted node's per-thread Regex instances promptly instead 
-                        // the GC's finalizer will do the final cleanup
+                        // the evicted node's ThreadLocal<Regex> is deliberately not disposed here: a concurrent Get()
+                        // may already hold this node and be about to read RegexLazy.Value, which would then throw
+                        // ObjectDisposedException. The GC releases the per-thread slots once the node is unreachable.
                     }
                 }
                 Interlocked.Add(ref _count, -countRemoved);
