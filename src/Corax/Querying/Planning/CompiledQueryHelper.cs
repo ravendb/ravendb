@@ -180,10 +180,10 @@ public static class CompiledQueryHelper
         targetBitmap.Clear();
         sourceBitmap.PrepareForReading();
 
+        using var iterator = sourceBitmap.GetIterator();
+
         // The emitted predicate evaluates readers strictly one at a time, every reader in the batch can share a single key
         var entryKey = llt.AcquireCompactKey();
-
-        using var iterator = sourceBitmap.GetIterator();
         try
         {
             // we deferred building the scan params (not always needed), not we need them
