@@ -24,7 +24,7 @@ namespace FastTests.Server.Integrations.PostgreSQL
     {
         private const string Select = "SELECT \"Company\" FROM public.\"Orders\" WHERE ";
 
-        [RavenFact(RavenTestCategory.PostgreSql)]
+        [RavenFact(RavenTestCategory.PostgreSql, LicenseRequired = true)]
         public async Task Like_prefix_is_case_sensitive()
         {
             using var store = GetDocumentStore();
@@ -35,7 +35,7 @@ namespace FastTests.Server.Integrations.PostgreSQL
                 await Companies(Select + "\"Company\" LIKE 'Choc%'", store, database));
         }
 
-        [RavenFact(RavenTestCategory.PostgreSql)]
+        [RavenFact(RavenTestCategory.PostgreSql, LicenseRequired = true)]
         public async Task Ilike_prefix_is_case_insensitive()
         {
             using var store = GetDocumentStore();
@@ -46,7 +46,7 @@ namespace FastTests.Server.Integrations.PostgreSQL
                 await Companies(Select + "\"Company\" ILIKE 'choc%'", store, database));
         }
 
-        [RavenFact(RavenTestCategory.PostgreSql)]
+        [RavenFact(RavenTestCategory.PostgreSql, LicenseRequired = true)]
         public async Task Like_suffix_is_case_sensitive()
         {
             using var store = GetDocumentStore();
@@ -57,7 +57,7 @@ namespace FastTests.Server.Integrations.PostgreSQL
                 await Companies(Select + "\"Company\" LIKE '%Handel'", store, database));
         }
 
-        [RavenFact(RavenTestCategory.PostgreSql)]
+        [RavenFact(RavenTestCategory.PostgreSql, LicenseRequired = true)]
         public async Task Ilike_suffix_is_case_insensitive()
         {
             using var store = GetDocumentStore();
@@ -68,7 +68,7 @@ namespace FastTests.Server.Integrations.PostgreSQL
                 await Companies(Select + "\"Company\" ILIKE '%handel'", store, database));
         }
 
-        [RavenFact(RavenTestCategory.PostgreSql)]
+        [RavenFact(RavenTestCategory.PostgreSql, LicenseRequired = true)]
         public async Task Like_without_wildcards_is_case_sensitive_equality()
         {
             using var store = GetDocumentStore();
@@ -79,7 +79,7 @@ namespace FastTests.Server.Integrations.PostgreSQL
                 await Companies(Select + "\"Company\" LIKE 'Chocolade'", store, database));
         }
 
-        [RavenFact(RavenTestCategory.PostgreSql)]
+        [RavenFact(RavenTestCategory.PostgreSql, LicenseRequired = true)]
         public async Task Ilike_without_wildcards_is_case_insensitive_equality()
         {
             using var store = GetDocumentStore();
@@ -90,7 +90,7 @@ namespace FastTests.Server.Integrations.PostgreSQL
                 await Companies(Select + "\"Company\" ILIKE 'chocolade'", store, database));
         }
 
-        [RavenFact(RavenTestCategory.PostgreSql)]
+        [RavenFact(RavenTestCategory.PostgreSql, LicenseRequired = true)]
         public async Task Not_like_prefix()
         {
             using var store = GetDocumentStore();
@@ -101,7 +101,7 @@ namespace FastTests.Server.Integrations.PostgreSQL
                 await Companies(Select + "\"Company\" NOT LIKE 'Choc%'", store, database));
         }
 
-        [RavenFact(RavenTestCategory.PostgreSql)]
+        [RavenFact(RavenTestCategory.PostgreSql, LicenseRequired = true)]
         public async Task Not_ilike_suffix()
         {
             using var store = GetDocumentStore();
@@ -114,7 +114,7 @@ namespace FastTests.Server.Integrations.PostgreSQL
 
         // A document without the filtered field must not come back from a negated match, matching PG's
         // NULL handling rather than RQL's "everything the positive match didn't hit".
-        [RavenFact(RavenTestCategory.PostgreSql)]
+        [RavenFact(RavenTestCategory.PostgreSql, LicenseRequired = true)]
         public async Task Not_like_excludes_documents_missing_the_field()
         {
             using var store = GetDocumentStore();
@@ -131,7 +131,7 @@ namespace FastTests.Server.Integrations.PostgreSQL
                 await Companies(Select + "\"Company\" NOT LIKE 'Choc%'", store, database));
         }
 
-        [RavenFact(RavenTestCategory.PostgreSql)]
+        [RavenFact(RavenTestCategory.PostgreSql, LicenseRequired = true)]
         public async Task Not_parenthesised_like_matches_not_like()
         {
             using var store = GetDocumentStore();
@@ -142,7 +142,7 @@ namespace FastTests.Server.Integrations.PostgreSQL
                 await Companies(Select + "NOT (\"Company\" LIKE 'Choc%')", store, database));
         }
 
-        [RavenFact(RavenTestCategory.PostgreSql)]
+        [RavenFact(RavenTestCategory.PostgreSql, LicenseRequired = true)]
         public async Task Like_combines_with_other_predicates()
         {
             using var store = GetDocumentStore();
@@ -153,7 +153,7 @@ namespace FastTests.Server.Integrations.PostgreSQL
                 await Companies(Select + "\"Company\" LIKE 'Choc%' AND \"Freight\" > 1", store, database));
         }
 
-        [RavenFact(RavenTestCategory.PostgreSql)]
+        [RavenFact(RavenTestCategory.PostgreSql, LicenseRequired = true)]
         public async Task Like_pattern_with_quote_is_escaped()
         {
             using var store = GetDocumentStore();
