@@ -1,7 +1,4 @@
 import { api } from "@/api/api";
-import type { ApiErrorResponse, CdcSinkTableConfig } from "@/api/generated/server-api";
-import { isApiError } from "@/api/http-client";
-import { WizardStepError } from "@/components/form/wizard/wizard-step-error";
 import { getSourceTableLabel } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
 import { mapFormTablesToDto } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-dto";
 import { parseRawTablesToForm } from "@/pages/setup/add-app-wizard/steps/map-tables/raw-tables";
@@ -16,23 +13,6 @@ import { useFormContext } from "react-hook-form";
 // to run again for a new slug (or a new source) even when the tables themselves did not change.
 function computeMapTablesKey(connectKey: string, tables: AppFormData["mapTables"]["tables"]): string {
     return JSON.stringify({ connectKey, tables: mapFormTablesToDto(tables) });
-}
-
-async function applyMapping(tables: CdcSinkTableConfig[], slug: string) {
-    try {
-        await api.services.setup.map({ tables, slug });
-    } catch (error) {
-        const messages = isApiError<ApiErrorResponse>(error) ? (error.details?.errors ?? []) : [];
-
-        if (messages.length < 2) {
-            throw error;
-        }
-
-        throw new WizardStepError(
-            `Could not apply the mapping: ${messages.length} problems were reported.`,
-            messages.join("\n"),
-        );
-    }
 }
 
 export function useMapTablesStep() {
@@ -59,7 +39,10 @@ export function useMapTablesStep() {
         }
 
         progress.report("Applying mapping...");
-        await applyMapping(mapFormTablesToDto(formTables), connection.slug);
+        await api.services.setup.map({
+            tables: mapFormTablesToDto(formTables),
+            slug: connection.slug,
+        });
 
         const firstTable = formTables[0];
         setValue("preview.table", getSourceTableLabel(firstTable) ?? "");
