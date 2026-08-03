@@ -1,6 +1,15 @@
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 
+function getJavaScriptSyntaxError(script: string): string | null {
+    try {
+        new Function(script);
+        return null;
+    } catch (e) {
+        return e instanceof SyntaxError ? `Invalid JavaScript: ${e.message}` : null;
+    }
+}
+
 export const databaseSettingKeys = [
     "settings",
     "conflictSolverConfig",
@@ -91,7 +100,16 @@ const processingSchema = yup.object({
     isUseTransformScript: yup.boolean(),
     transformScript: yup.string().when("isUseTransformScript", {
         is: true,
-        then: (schema) => schema.required("Transform script is required when enabled"),
+        then: (schema) =>
+            schema
+                .required("Transform script is required when enabled")
+                .test("valid-javascript", (value, ctx) => {
+                    if (!value?.trim()) {
+                        return true; // "required" above already covers the empty case
+                    }
+                    const error = getJavaScriptSyntaxError(value);
+                    return error ? ctx.createError({ message: error }) : true;
+                }),
     }),
     isSetMaxReadOpsPerSecond: yup.boolean(),
     maxReadOpsPerSecond: yup
@@ -109,7 +127,6 @@ const processingSchema = yup.object({
 });
 
 export const importFromFileSchema = yup.object({
-    // File object kept outside yup type-checking; validated for presence + non-snapshot extension
     file: yup
         .mixed<File>()
         .required("Select a file to import")

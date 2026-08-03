@@ -4,7 +4,7 @@ import React, { ReactNode } from "react";
 import { Icon } from "components/common/Icon";
 import IconName from "typings/server/icons";
 import classNames from "classnames";
-import { useEventsCollector } from "hooks/useEventsCollector";
+import { useEventsCollector } from "components/hooks/useEventsCollector";
 import LicenseRestrictedBadge, { LicenseBadgeText } from "components/common/LicenseRestrictedBadge";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
@@ -13,21 +13,28 @@ import { AccessPopover } from "components/common/AccessPopover";
 
 // Each variant must have matching styles registered via the navigation-card-variant
 // mixin (navigationCardVariants.scss) in the stylesheet of the page using the card.
-export interface NavigationCardProps<TVariant extends string = string> {
+interface NavigationCardBaseProps<TVariant extends string = string> {
     title: string;
     description: string;
     iconName: IconName;
     variant: TVariant;
     link: string;
     target: string;
-    licenseBadge?: LicenseBadgeText;
     counterBadge?: ReactNode;
-    showLicenseBadge?: boolean;
     isShardingSupported?: boolean;
     accessRequired: databaseAccessLevel;
     customDisabledReason?: ReactNode;
     compact?: boolean;
 }
+
+// A shown badge always needs its tier: rendering LicenseRestrictedBadge without one produces an
+// unstyled badge with an empty tooltip, so the two props travel together.
+type NavigationCardLicenseProps =
+    | { showLicenseBadge: true; licenseBadge: LicenseBadgeText }
+    | { showLicenseBadge?: false; licenseBadge?: LicenseBadgeText };
+
+export type NavigationCardProps<TVariant extends string = string> = NavigationCardBaseProps<TVariant> &
+    NavigationCardLicenseProps;
 
 export default function NavigationCard({
     title,
@@ -83,7 +90,7 @@ export default function NavigationCard({
                     {!compact && <div className="small">{description}</div>}
                 </Card.Body>
 
-                {showLicenseBadge && (
+                {showLicenseBadge && licenseBadge && (
                     <LicenseRestrictedBadge
                         className="position-absolute top-0 end-0 m-2"
                         licenseRequired={licenseBadge}

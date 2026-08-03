@@ -163,11 +163,15 @@ function pushGroupTokens<TKey extends string>(
 export function getDatabaseRecordTypes(
     formData: ImportFromFileFormData,
     restrictedSettingKeys: DatabaseSettingKey[] = [],
-    restrictedOngoingTaskKeys: OngoingTaskKey[] = []
+    restrictedOngoingTaskKeys: OngoingTaskKey[] = [],
+    restrictedConnectionStringKeys: ConnectionStringKey[] = []
 ): DatabaseRecordItemType[] {
     const { configuration } = formData;
 
-    const hasRestrictions = restrictedSettingKeys.length > 0 || restrictedOngoingTaskKeys.length > 0;
+    const hasRestrictions =
+        restrictedSettingKeys.length > 0 ||
+        restrictedOngoingTaskKeys.length > 0 ||
+        restrictedConnectionStringKeys.length > 0;
 
     const isCustomized =
         !configuration.isImportAllSettings ||
@@ -205,7 +209,13 @@ export function getDatabaseRecordTypes(
     if (configuration.isIncludeConnectionStringsAndOngoingTasks) {
         const includeAll = !configuration.isCustomizeOngoingTasks;
         pushGroupTokens(ongoingTaskTokens, configuration.ongoingTasks, includeAll, result, restrictedOngoingTaskKeys);
-        pushGroupTokens(connectionStringTokens, configuration.connectionStrings, includeAll, result);
+        pushGroupTokens(
+            connectionStringTokens,
+            configuration.connectionStrings,
+            includeAll,
+            result,
+            restrictedConnectionStringKeys
+        );
     }
 
     if (isRestrictionsOnlyBypass) {
@@ -222,13 +232,19 @@ export function getDatabaseRecordTypes(
 export function toImportDto(
     formData: ImportFromFileFormData,
     restrictedSettingKeys: DatabaseSettingKey[] = [],
-    restrictedOngoingTaskKeys: OngoingTaskKey[] = []
+    restrictedOngoingTaskKeys: OngoingTaskKey[] = [],
+    restrictedConnectionStringKeys: ConnectionStringKey[] = []
 ): ImportOptions {
     const { documents, collections, configuration, processing } = formData;
 
     const operateOnTypes: DatabaseItemType[] = [];
 
-    const databaseRecordTypes = getDatabaseRecordTypes(formData, restrictedSettingKeys, restrictedOngoingTaskKeys);
+    const databaseRecordTypes = getDatabaseRecordTypes(
+        formData,
+        restrictedSettingKeys,
+        restrictedOngoingTaskKeys,
+        restrictedConnectionStringKeys
+    );
 
     if (databaseRecordTypes.length) {
         operateOnTypes.push("DatabaseRecord");
@@ -295,7 +311,8 @@ export function toImportDto(
 export function hasAnyInclude(
     formData: ImportFromFileFormData,
     restrictedSettingKeys: DatabaseSettingKey[] = [],
-    restrictedOngoingTaskKeys: OngoingTaskKey[] = []
+    restrictedOngoingTaskKeys: OngoingTaskKey[] = [],
+    restrictedConnectionStringKeys: ConnectionStringKey[] = []
 ): boolean {
     const d = formData.documents;
     const c = formData.configuration;
@@ -317,7 +334,12 @@ export function hasAnyInclude(
         c.isIncludeIndexes ||
         c.isIncludeIdentities ||
         c.isIncludeConnectionStringsAndOngoingTasks ||
-        getDatabaseRecordTypes(formData, restrictedSettingKeys, restrictedOngoingTaskKeys).length > 0
+        getDatabaseRecordTypes(
+            formData,
+            restrictedSettingKeys,
+            restrictedOngoingTaskKeys,
+            restrictedConnectionStringKeys
+        ).length > 0
     );
 }
 
@@ -326,9 +348,10 @@ export function buildImportCurlCommand(
     formData: ImportFromFileFormData,
     databaseName: string,
     restrictedSettingKeys: DatabaseSettingKey[] = [],
-    restrictedOngoingTaskKeys: OngoingTaskKey[] = []
+    restrictedOngoingTaskKeys: OngoingTaskKey[] = [],
+    restrictedConnectionStringKeys: ConnectionStringKey[] = []
 ): string {
-    const dto = toImportDto(formData, restrictedSettingKeys, restrictedOngoingTaskKeys);
+    const dto = toImportDto(formData, restrictedSettingKeys, restrictedOngoingTaskKeys, restrictedConnectionStringKeys);
     if (!dto.TransformScript) {
         delete dto.TransformScript;
     }
@@ -345,6 +368,48 @@ export function buildImportCurlCommand(
         case "Bash":
             return `curl -F 'importOptions=${json}' -F 'file=@${fileName}' ${commandEndpointUrl}`;
     }
+}
+
+/**
+ * Ongoing tasks that cannot work without their connection string. Importing the task alone leaves a
+ * task pointing at a connection string that does not exist in the target database.
+ */
+const taskConnectionStringDependencies: Partial<Record<OngoingTaskKey, ConnectionStringKey>> = {
+    externalReplications: "ravenConnectionStrings",
+    hubReplications: "ravenConnectionStrings",
+    sinkReplications: "ravenConnectionStrings",
+    ravenEtls: "ravenConnectionStrings",
+    sqlEtls: "sqlConnectionStrings",
+    snowflakeEtls: "snowflakeConnectionStrings",
+    olapEtls: "olapConnectionStrings",
+    elasticSearchEtls: "elasticSearchConnectionStrings",
+    queueEtls: "queueConnectionStrings",
+    cdcSinks: "queueConnectionStrings",
+    genAi: "aiConnectionStrings",
+    aiAgents: "aiConnectionStrings",
+    embeddingsGeneration: "aiConnectionStrings",
+};
+
+export function getTasksMissingConnectionStrings(
+    formData: Pick<ImportFromFileFormData, "configuration">,
+    restrictedOngoingTaskKeys: OngoingTaskKey[] = [],
+    restrictedConnectionStringKeys: ConnectionStringKey[] = []
+): OngoingTaskKey[] {
+    const { configuration } = formData;
+
+    if (!configuration.isIncludeConnectionStringsAndOngoingTasks || !configuration.isCustomizeOngoingTasks) {
+        return [];
+    }
+
+    return (Object.keys(taskConnectionStringDependencies) as OngoingTaskKey[]).filter((taskKey) => {
+        const connectionStringKey = taskConnectionStringDependencies[taskKey];
+        return (
+            configuration.ongoingTasks[taskKey] &&
+            !restrictedOngoingTaskKeys.includes(taskKey) &&
+            !restrictedConnectionStringKeys.includes(connectionStringKey) &&
+            !configuration.connectionStrings[connectionStringKey]
+        );
+    });
 }
 
 export function getItemsToWarnAbout(formData: Pick<ImportFromFileFormData, "documents">): string[] {

@@ -59,6 +59,11 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
         return this.mockResolvedValue(this.mocks.getEssentialStats, dto, DatabasesStubs.essentialStats());
     }
 
+    /** No response body, the way a 204 would arrive - withEssentialStats(undefined) cannot express this. */
+    withEmptyEssentialStats() {
+        return this.mocks.getEssentialStats.mockResolvedValue(undefined);
+    }
+
     withDetailedStats(dto?: MockedValue<DetailedDatabaseStatistics>) {
         return this.mockResolvedValue(this.mocks.getDetailedStats, dto, DatabasesStubs.detailedStats());
     }

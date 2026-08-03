@@ -3,13 +3,14 @@ import { useForm, useWatch } from "react-hook-form";
 import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import {
+    ConnectionStringKey,
     DatabaseSettingKey,
     ImportFromFileFormData,
     importFromFileYupResolver,
     OngoingTaskKey,
 } from "./importFromFileValidation";
 import { getDefaultFormData } from "./importFromFileUtils";
-import { DocumentToggleKey, useImportLicenseRestrictions } from "./useImportLicenseRestrictions";
+import { DocumentToggleKey, useImportRestrictions } from "./useImportRestrictions";
 
 export { getDefaultFormData };
 
@@ -20,21 +21,37 @@ export const defaultTransformScript =
 
 export function useImportFromFileForm() {
     const isAdminAccessOrAbove = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
-    const { restrictedFeatures, restrictedOngoingTasks, restrictedDocumentToggles } = useImportLicenseRestrictions();
+    const {
+        restrictedSettingKeys,
+        restrictedOngoingTaskKeys,
+        restrictedConnectionStringKeys,
+        restrictedDocumentToggleKeys,
+        hasAnyRestriction,
+    } = useImportRestrictions();
 
     // License state normally lives in Redux before mount, so the defaults are deterministic:
-    // license-restricted settings, ongoing tasks and document toggles start unchecked. If the
-    // license status arrives (or changes) after mount, the effect below re-applies the gating.
+    // restricted settings, ongoing tasks, connection strings and document toggles start unchecked.
+    // If the license status arrives (or changes) after mount, the effect below re-applies the gating.
     const defaults = getDefaultFormData(isAdminAccessOrAbove);
-    restrictedFeatures.forEach(({ settingKey }) => {
+    restrictedSettingKeys.forEach((settingKey) => {
         defaults.configuration.databaseSettings[settingKey] = false;
     });
-    restrictedOngoingTasks.forEach(({ taskKey }) => {
+    restrictedOngoingTaskKeys.forEach((taskKey) => {
         defaults.configuration.ongoingTasks[taskKey] = false;
     });
-    restrictedDocumentToggles.forEach((toggleKey) => {
+    restrictedConnectionStringKeys.forEach((key) => {
+        defaults.configuration.connectionStrings[key] = false;
+    });
+    restrictedDocumentToggleKeys.forEach((toggleKey) => {
         defaults.documents[toggleKey] = false;
     });
+
+    // Restricted rows live inside the "Customize" panels, so expand them up front - otherwise the
+    // user sees "Include Connection Strings & Ongoing Tasks" on with no hint that parts are off.
+    if (hasAnyRestriction) {
+        defaults.configuration.isCustomizeOngoingTasks = true;
+        defaults.configuration.isImportAllSettings = false;
+    }
 
     const form = useForm<ImportFromFileFormData>({
         resolver: importFromFileYupResolver,
@@ -50,14 +67,16 @@ export function useImportFromFileForm() {
     const prevRestricted = useRef<{
         settings: Set<DatabaseSettingKey>;
         tasks: Set<OngoingTaskKey>;
+        connectionStrings: Set<ConnectionStringKey>;
         toggles: Set<DocumentToggleKey>;
     } | null>(null);
 
     useEffect(() => {
         const current = {
-            settings: new Set(restrictedFeatures.map((x) => x.settingKey)),
-            tasks: new Set(restrictedOngoingTasks.map((x) => x.taskKey)),
-            toggles: new Set(restrictedDocumentToggles),
+            settings: new Set(restrictedSettingKeys),
+            tasks: new Set(restrictedOngoingTaskKeys),
+            connectionStrings: new Set(restrictedConnectionStringKeys),
+            toggles: new Set(restrictedDocumentToggleKeys),
         };
         const prev = prevRestricted.current;
         prevRestricted.current = current;
@@ -89,6 +108,16 @@ export function useImportFromFileForm() {
                 setValue(`configuration.ongoingTasks.${taskKey}`, baseDefaults.configuration.ongoingTasks[taskKey]);
             }
         });
+        current.connectionStrings.forEach((key) => {
+            if (!prev.connectionStrings.has(key)) {
+                setValue(`configuration.connectionStrings.${key}`, false);
+            }
+        });
+        prev.connectionStrings.forEach((key) => {
+            if (!current.connectionStrings.has(key)) {
+                setValue(`configuration.connectionStrings.${key}`, baseDefaults.configuration.connectionStrings[key]);
+            }
+        });
         current.toggles.forEach((toggleKey) => {
             if (!prev.toggles.has(toggleKey)) {
                 setValue(`documents.${toggleKey}`, false);
@@ -99,7 +128,22 @@ export function useImportFromFileForm() {
                 setValue(`documents.${toggleKey}`, baseDefaults.documents[toggleKey]);
             }
         });
-    }, [restrictedFeatures, restrictedOngoingTasks, restrictedDocumentToggles, isAdminAccessOrAbove, setValue]);
+
+        // Newly gated rows sit inside the "Customize" panels, so expand them the same way the
+        // mount-time defaults do - otherwise the rows switch off behind a collapsed panel.
+        if (hasAnyRestriction) {
+            setValue("configuration.isCustomizeOngoingTasks", true);
+            setValue("configuration.isImportAllSettings", false);
+        }
+    }, [
+        restrictedSettingKeys,
+        restrictedOngoingTaskKeys,
+        restrictedConnectionStringKeys,
+        restrictedDocumentToggleKeys,
+        hasAnyRestriction,
+        isAdminAccessOrAbove,
+        setValue,
+    ]);
 
     const documents = useWatch({ control, name: "documents" });
     const configuration = useWatch({ control, name: "configuration" });

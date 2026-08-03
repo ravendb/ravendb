@@ -580,6 +580,7 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     variant: "AI",
                     target: "EmbeddingsGeneration",
                     showLicenseBadge: !hasEmbeddingGeneration,
+                    licenseBadge: "Enterprise",
                     link: forCurrentDatabase.editEmbeddingsGenerationTaskUrl(),
                     disabledConditions: getDisabledConditions({
                         accessRequired: "DatabaseAdmin",
