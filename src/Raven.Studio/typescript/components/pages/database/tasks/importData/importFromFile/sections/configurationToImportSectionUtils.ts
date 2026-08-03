@@ -1,8 +1,4 @@
-import {
-    ConnectionStringKey,
-    DatabaseSettingKey,
-    OngoingTaskKey,
-} from "components/pages/database/tasks/importData/importFromFile/importFromFileValidation";
+import { ConnectionStringKey, DatabaseSettingKey, OngoingTaskKey } from "../importFromFileValidation";
 
 export const databaseSettingLabels: Record<DatabaseSettingKey, string> = {
     settings: "Settings",

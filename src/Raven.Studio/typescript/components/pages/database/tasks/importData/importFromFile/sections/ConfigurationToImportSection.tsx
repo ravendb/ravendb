@@ -1,38 +1,34 @@
-import React, { ReactNode } from "react";
-import { Control, FieldPath, useFormContext, useWatch } from "react-hook-form";
+import React from "react";
+import { useFormContext, useWatch } from "react-hook-form";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Collapse from "react-bootstrap/Collapse";
 import Form from "react-bootstrap/Form";
 import { Icon } from "components/common/Icon";
-import LicenseRestrictedBadge, { LicenseBadgeText } from "components/common/LicenseRestrictedBadge";
 import { FormSwitch } from "components/common/Form";
 import ImportSection from "./ImportSection";
+import RestrictedSwitch from "./RestrictedSwitch";
 import {
     connectionStringKeys,
     databaseSettingKeys,
     ImportFromFileFormData,
     ongoingTaskKeys,
 } from "../importFromFileValidation";
-import { useImportLicenseRestrictions } from "../useImportLicenseRestrictions";
+import { useImportRestrictions } from "../useImportRestrictions";
+import { getTasksMissingConnectionStrings } from "../importFromFileUtils";
 import Card from "react-bootstrap/Card";
-import {
-    connectionStringLabels,
-    databaseSettingLabels,
-    ongoingTaskLabels,
-} from "components/pages/database/tasks/importData/importFromFile/sections/configurationToImportSectionUtils";
+import { connectionStringLabels, databaseSettingLabels, ongoingTaskLabels } from "./configurationToImportSectionUtils";
 import classNames from "classnames";
 
 export default function ConfigurationToImportSection() {
     const { control, setValue, resetField } = useFormContext<ImportFromFileFormData>();
     const {
-        isSettingRestricted,
-        getRestrictionTooltip,
-        getLicenseRequired,
-        isOngoingTaskRestricted,
-        getOngoingTaskRestrictionTooltip,
-        getOngoingTaskLicenseRequired,
-    } = useImportLicenseRestrictions();
+        databaseSettings: settingRestrictions,
+        ongoingTasks: ongoingTaskRestrictions,
+        connectionStrings: connectionStringRestrictions,
+        restrictedOngoingTaskKeys,
+        restrictedConnectionStringKeys,
+    } = useImportRestrictions();
 
     const isIncludeTasks = useWatch({ control, name: "configuration.isIncludeConnectionStringsAndOngoingTasks" });
     const isCustomizeTasks = useWatch({ control, name: "configuration.isCustomizeOngoingTasks" });
@@ -48,7 +44,7 @@ export default function ConfigurationToImportSection() {
         }
     };
 
-    const selectableSettingKeys = databaseSettingKeys.filter((key) => !isSettingRestricted(key));
+    const selectableSettingKeys = databaseSettingKeys.filter((key) => !settingRestrictions[key]);
     const areAllSettingsSelected = selectableSettingKeys.every((key) => databaseSettings[key]);
 
     const setAllSettings = (value: boolean) => {
@@ -62,10 +58,24 @@ export default function ConfigurationToImportSection() {
     const ongoingTasks = useWatch({ control, name: "configuration.ongoingTasks" });
     const connectionStrings = useWatch({ control, name: "configuration.connectionStrings" });
 
-    const selectableOngoingTaskKeys = ongoingTaskKeys.filter((key) => !isOngoingTaskRestricted(key));
+    const tasksMissingConnectionStrings = getTasksMissingConnectionStrings(
+        {
+            configuration: {
+                isIncludeConnectionStringsAndOngoingTasks: isIncludeTasks,
+                isCustomizeOngoingTasks: isCustomizeTasks,
+                ongoingTasks,
+                connectionStrings,
+            } as ImportFromFileFormData["configuration"],
+        },
+        restrictedOngoingTaskKeys,
+        restrictedConnectionStringKeys
+    );
+
+    const selectableOngoingTaskKeys = ongoingTaskKeys.filter((key) => !ongoingTaskRestrictions[key]);
+    const selectableConnectionStringKeys = connectionStringKeys.filter((key) => !connectionStringRestrictions[key]);
 
     const areAllOngoingTasksSelected = selectableOngoingTaskKeys.every((key) => ongoingTasks[key]);
-    const areAllConnectionStringsSelected = connectionStringKeys.every((key) => connectionStrings[key]);
+    const areAllConnectionStringsSelected = selectableConnectionStringKeys.every((key) => connectionStrings[key]);
 
     const setAllOngoingTasks = (value: boolean) => {
         selectableOngoingTaskKeys.forEach((key) =>
@@ -74,12 +84,14 @@ export default function ConfigurationToImportSection() {
     };
 
     const setAllConnectionStrings = (value: boolean) => {
-        connectionStringKeys.forEach((key) =>
+        selectableConnectionStringKeys.forEach((key) =>
             setValue(`configuration.connectionStrings.${key}`, value, { shouldDirty: true })
         );
     };
 
     const resetCustomizedTasksToDefault = () => {
+        // restricted rows stay off on their own: useImportFromFileForm bakes false into
+        // defaultValues for every gated key, which is what resetField restores
         ongoingTaskKeys.forEach((key) => resetField(`configuration.ongoingTasks.${key}`));
         connectionStringKeys.forEach((key) => resetField(`configuration.connectionStrings.${key}`));
         setValue("configuration.isCustomizeOngoingTasks", false, { shouldDirty: true });
@@ -160,16 +172,14 @@ export default function ConfigurationToImportSection() {
                                 </div>
                                 <div className="d-flex flex-column gap-1">
                                     {ongoingTaskKeys.map((key) => (
-                                        <LicenseRestrictedSwitch
+                                        <RestrictedSwitch
                                             key={key}
                                             control={control}
                                             name={`configuration.ongoingTasks.${key}`}
-                                            restricted={isOngoingTaskRestricted(key)}
-                                            tooltip={getOngoingTaskRestrictionTooltip(key)}
-                                            licenseRequired={getOngoingTaskLicenseRequired(key)}
+                                            restriction={ongoingTaskRestrictions[key]}
                                         >
                                             {ongoingTaskLabels[key]}
-                                        </LicenseRestrictedSwitch>
+                                        </RestrictedSwitch>
                                     ))}
                                 </div>
                             </div>
@@ -190,19 +200,27 @@ export default function ConfigurationToImportSection() {
                                 </div>
                                 <div className="d-flex flex-column gap-1">
                                     {connectionStringKeys.map((key) => (
-                                        <FormSwitch
+                                        <RestrictedSwitch
                                             key={key}
                                             control={control}
                                             name={`configuration.connectionStrings.${key}`}
+                                            restriction={connectionStringRestrictions[key]}
                                         >
                                             {connectionStringLabels[key]}
-                                        </FormSwitch>
+                                        </RestrictedSwitch>
                                     ))}
                                 </div>
                             </div>
                         </div>
                     </div>
                 </Collapse>
+                {tasksMissingConnectionStrings.length > 0 && (
+                    <Alert variant="warning" className="mt-3 mb-0">
+                        <Icon icon="warning" /> The following tasks are selected without their connection strings:{" "}
+                        {tasksMissingConnectionStrings.map((key) => ongoingTaskLabels[key]).join(", ")}. They will be
+                        imported but won&apos;t run until a matching connection string exists in this database.
+                    </Alert>
+                )}
                 {isIncludeTasks && (
                     <Alert variant="info" className="mt-3 mb-0">
                         <Icon icon="info" /> Imported ongoing tasks will be disabled by default.
@@ -250,54 +268,19 @@ export default function ConfigurationToImportSection() {
                         </div>
                         <div className="d-flex flex-column gap-1">
                             {databaseSettingKeys.map((key) => (
-                                <LicenseRestrictedSwitch
+                                <RestrictedSwitch
                                     key={key}
                                     control={control}
                                     name={`configuration.databaseSettings.${key}`}
-                                    restricted={isSettingRestricted(key)}
-                                    tooltip={getRestrictionTooltip(key)}
-                                    licenseRequired={getLicenseRequired(key)}
+                                    restriction={settingRestrictions[key]}
                                 >
                                     {databaseSettingLabels[key]}
-                                </LicenseRestrictedSwitch>
+                                </RestrictedSwitch>
                             ))}
                         </div>
                     </div>
                 )}
             </Card>
         </ImportSection>
-    );
-}
-
-interface LicenseRestrictedSwitchProps {
-    control: Control<ImportFromFileFormData>;
-    name: FieldPath<ImportFromFileFormData>;
-    restricted: boolean;
-    tooltip: string | null;
-    licenseRequired: LicenseBadgeText | null;
-    children: ReactNode;
-}
-
-function LicenseRestrictedSwitch({
-    control,
-    name,
-    restricted,
-    tooltip,
-    licenseRequired,
-    children,
-}: LicenseRestrictedSwitchProps) {
-    return (
-        <div className="d-flex align-items-center gap-2" title={restricted ? tooltip : undefined}>
-            <div
-                className={classNames({
-                    "item-disabled": restricted,
-                })}
-            >
-                <FormSwitch control={control} name={name} {...(restricted && { disabled: true })}>
-                    {children}
-                </FormSwitch>
-            </div>
-            {restricted && <LicenseRestrictedBadge licenseRequired={licenseRequired} />}
-        </div>
     );
 }
