@@ -2,7 +2,6 @@ import React from "react";
 import {
     ConnectionStringItem,
     EmptyScriptsWarning,
-    ICanShowTransformationScriptPreview,
     OngoingTaskActions,
     OngoingTaskName,
     OngoingTaskResponsibleNode,
@@ -30,7 +29,7 @@ import { TaskPanelErrors, EtlPanelHealthBadge, EtlPanelProgressItem, EtlPanelTog
 
 type AzureQueueStorageEtlPanelProps = EtlPanelBaseProps<OngoingTaskAzureQueueStorageEtlInfo>;
 
-export function AzureQueueStorageEtlPanel(props: AzureQueueStorageEtlPanelProps & ICanShowTransformationScriptPreview) {
+export function AzureQueueStorageEtlPanel(props: AzureQueueStorageEtlPanelProps) {
     const { data, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState, etlStats } = props;
 
     const { forCurrentDatabase } = useAppUrls();
@@ -42,7 +41,6 @@ export function AzureQueueStorageEtlPanel(props: AzureQueueStorageEtlPanelProps 
         detailsVisible,
         toggleDetails,
         onEdit,
-        showPreview,
         taskHealth,
         errorCount,
         errorsByLocation,
@@ -110,7 +108,7 @@ export function AzureQueueStorageEtlPanel(props: AzureQueueStorageEtlPanelProps 
             </RichPanelDetails>
             <Collapse in={detailsVisible}>
                 <div>
-                    <OngoingEtlTaskDistribution task={data} showPreview={showPreview} etlStats={etlStats} />
+                    <OngoingEtlTaskDistribution task={data} etlStats={etlStats} />
                 </div>
             </Collapse>
         </RichPanel>

@@ -3,6 +3,7 @@ import { ClassNameProps } from "components/models/common";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { Icon } from "components/common/Icon";
 import { ComponentProps, PropsWithChildren, ReactNode, useCallback } from "react";
+import { createPortal } from "react-dom";
 import Button, { ButtonProps } from "react-bootstrap/Button";
 import { useSplitViewContext } from "./SplitView";
 import { splitViewActions, splitViewSelectors } from "components/common/splitView/store/splitViewSlice";
@@ -90,15 +91,31 @@ function SheetFooter(props: Required<PropsWithChildren> & ClassNameProps) {
 
 export interface OpenSheetOptions {
     component: ReactNode;
+    ownerId?: string;
     initialWidth?: ViewSheetWidth;
     minWidth?: ViewSheetWidth;
     maxWidth?: ViewSheetWidth;
     isPinned?: boolean;
+    onClose?: () => void;
+}
+
+// Renders into the sheet panel from wherever the currently active owner's row lives in the tree,
+// so the sheet content re-renders whenever that row's own props/state change - no manual sync needed.
+export function SheetPortalOutlet() {
+    const { setSheetPortalNode } = useSplitViewContext();
+    return <div className="h-100" ref={setSheetPortalNode} />;
 }
 
 export function useViewSheet() {
     const dispatch = useAppDispatch();
-    const { setSheetComponent, sheetComponent } = useSplitViewContext();
+    const {
+        setSheetComponent,
+        sheetComponent,
+        registerSheetClose,
+        activeSheetOwnerId,
+        setActiveSheetOwnerId,
+        sheetPortalNode,
+    } = useSplitViewContext();
     const viewWidthInPx = useAppSelector(splitViewSelectors.viewWidthInPx);
 
     const getWidthInPx = useCallback(
@@ -112,6 +129,8 @@ export function useViewSheet() {
     );
 
     const open = (options: OpenSheetOptions) => {
+        registerSheetClose(options.onClose ?? null);
+        setActiveSheetOwnerId(options.ownerId ?? null);
         setSheetComponent(options.component);
         dispatch(splitViewActions.isSheetPinnedSet(options.isPinned ?? false));
         dispatch(splitViewActions.initialPanelWidthInPxSet(getWidthInPx(options.initialWidth ?? "50%")));
@@ -119,10 +138,18 @@ export function useViewSheet() {
         dispatch(splitViewActions.maxPanelWidthInPxSet(getWidthInPx(options.maxWidth ?? "75%")));
     };
 
+    // For sheets whose content must stay in sync with a distribution row's own props (e.g. live task/progress
+    // updates), render into this node from that row's JSX - via SheetPortalOutlet passed as `component` to `open` -
+    // instead of imperatively pushing a new `component` on every relevant change.
+    const renderIntoSheet = (ownerId: string, isActive: boolean, content: ReactNode): ReactNode =>
+        isActive && activeSheetOwnerId === ownerId && sheetPortalNode ? createPortal(content, sheetPortalNode) : null;
+
     return {
         open,
+        renderIntoSheet,
         close: () => setSheetComponent(null),
         isOpen: !!sheetComponent,
+        activeSheetOwnerId,
     };
 }
 

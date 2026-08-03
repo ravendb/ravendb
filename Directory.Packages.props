@@ -32,7 +32,7 @@
     <PackageVersion Include="Hl7.Fhir.R4" Version="5.12.2" />
     <PackageVersion Include="HtmlAgilityPack" Version="1.12.4" />
     <PackageVersion Include="JetBrains.Annotations" Version="2026.2.0" />
-    <PackageVersion Include="Jint" Version="4.15.1" />
+    <PackageVersion Include="Jint" Version="4.15.3" />
     <PackageVersion Include="JunitXml.TestLogger" Version="8.0.0" />
     <PackageVersion Include="Lambda2Js.Signed" Version="3.1.4" />
     <PackageVersion Include="Lextm.SharpSnmpLib.Engine" Version="11.3.102" />

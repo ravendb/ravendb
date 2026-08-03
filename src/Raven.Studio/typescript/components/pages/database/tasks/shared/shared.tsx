@@ -50,10 +50,6 @@ export interface BaseOngoingTaskPanelProps<T extends OngoingTaskInfo> {
     isTogglingState: (id: number) => boolean;
 }
 
-export interface ICanShowTransformationScriptPreview {
-    showItemPreview: (task: OngoingTaskInfo, scriptName: string) => void;
-}
-
 export function useTasksOperations(editUrl: string, props: BaseOngoingTaskPanelProps<OngoingTaskInfo>) {
     const { onToggleDetails } = props;
     const { value: detailsVisible, toggle: toggleDetailsVisible } = useBoolean(false);
