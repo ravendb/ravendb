@@ -21,13 +21,30 @@ namespace SlowTests.Server.Documents.CdcSink
         {
         }
 
+        // These tests mutate a live nopCommerce database and restart its container, so they are
+        // opt-in: they run only when RAVEN_NOPCOMMERCE_PG points at a disposable instance, and skip
+        // (rather than fail) everywhere else, CI included.
+        private const string ConnectionStringEnvName = "RAVEN_NOPCOMMERCE_PG";
+        private const string ContainerEnvName = "RAVEN_NOPCOMMERCE_PG_CONTAINER";
+
         private static readonly string NopConnectionString =
-            Environment.GetEnvironmentVariable("RAVEN_NOPCOMMERCE_PG");
+            Environment.GetEnvironmentVariable(ConnectionStringEnvName);
+
+        private static readonly string NopContainer =
+            Environment.GetEnvironmentVariable(ContainerEnvName) ?? "nop-postgres";
+
+        private static void SkipUnlessConfigured()
+        {
+            Assert.SkipWhen(string.IsNullOrEmpty(NopConnectionString),
+                $"Set {ConnectionStringEnvName} to a disposable nopCommerce PostgreSQL instance to run this test. " +
+                $"It deletes and inserts \"GenericAttribute\" rows and restarts the '{NopContainer}' container.");
+        }
 
         private const string Publication = "cdc_27248_pub";
         private const string Slot = "cdc_27248_slot";
         private const int RangeStart = 40000;
-        
+
+
         private static TResult WithRetry<TResult>(Func<NpgsqlCommand, TResult> body, string sql)
         {
             for (int attempt = 0; ; attempt++)
@@ -132,7 +149,7 @@ namespace SlowTests.Server.Documents.CdcSink
         [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task StreamedInserts_KeepTimestamp()
         {
-            Assert.False(string.IsNullOrEmpty(NopConnectionString), "RAVEN_NOPCOMMERCE_PG is not set");
+            SkipUnlessConfigured();
 
             Exec($@"DELETE FROM ""GenericAttribute"" WHERE ""Id"" >= {RangeStart}");
             CleanupReplication();
@@ -188,7 +205,7 @@ namespace SlowTests.Server.Documents.CdcSink
         [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task ConcurrentWriters_WithSinkAndSourceRestart_KeepTimestamp()
         {
-            Assert.False(string.IsNullOrEmpty(NopConnectionString), "RAVEN_NOPCOMMERCE_PG is not set");
+            SkipUnlessConfigured();
 
             Exec($@"DELETE FROM ""GenericAttribute"" WHERE ""Id"" >= {RangeStart}");
             CleanupReplication();
@@ -317,7 +334,7 @@ namespace SlowTests.Server.Documents.CdcSink
         [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task UnmappedTimestampColumn_LooksIdenticalToANullValue()
         {
-            Assert.False(string.IsNullOrEmpty(NopConnectionString), "RAVEN_NOPCOMMERCE_PG is not set");
+            SkipUnlessConfigured();
 
             Exec($@"DELETE FROM ""GenericAttribute"" WHERE ""Id"" >= {RangeStart}");
             CleanupReplication();
@@ -388,7 +405,7 @@ namespace SlowTests.Server.Documents.CdcSink
 
         private static void RestartSourceContainer()
         {
-            var psi = new System.Diagnostics.ProcessStartInfo("docker", "restart nop-postgres")
+            var psi = new System.Diagnostics.ProcessStartInfo("docker", $"restart {NopContainer}")
             {
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
