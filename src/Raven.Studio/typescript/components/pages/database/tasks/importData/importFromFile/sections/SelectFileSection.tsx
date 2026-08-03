@@ -6,7 +6,7 @@ import { Icon } from "components/common/Icon";
 import FileDropzone from "components/common/FileDropzone";
 import ImportSection from "./ImportSection";
 import { ImportFromFileFormData } from "../importFromFileValidation";
-import { LicenseBadgeText } from "components/common/LicenseRestrictedBadge";
+import { useImportRestrictions } from "../useImportRestrictions";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import genUtils from "common/generalUtils";
 
@@ -17,14 +17,14 @@ const backupExtensions = [
     "ravendb-encrypted-incremental-backup",
 ];
 
-interface SelectFileSectionProps {
-    restrictedItems: { key: string; label: string; licenseRequired: LicenseBadgeText }[];
-}
-
-export default function SelectFileSection({ restrictedItems }: SelectFileSectionProps) {
+export default function SelectFileSection() {
     const { control, setValue, formState } = useFormContext<ImportFromFileFormData>();
     const file = useWatch({ control, name: "file" });
     const buyLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
+    const { allRestrictedItems } = useImportRestrictions();
+
+    const licenseRestrictedItems = allRestrictedItems.filter((x) => x.reason === "license");
+    const otherRestrictedItems = allRestrictedItems.filter((x) => x.reason !== "license");
 
     const fileExtension = file ? genUtils.getFileExtension(file.name) : null;
     const isBackupFile = fileExtension ? backupExtensions.includes(fileExtension) : false;
@@ -47,11 +47,10 @@ export default function SelectFileSection({ restrictedItems }: SelectFileSection
                         "ravendb-snapshot",
                         "ravendb-encrypted-snapshot",
                     ]}
-                    isExtensionsListHidden
+                    // only .ravendbdump is actually importable - the rest are accepted so the
+                    // alerts below can redirect the user to the Restore flow
+                    displayedExtensions={["ravendbdump"]}
                 />
-                <div className="d-flex mt-1 justify-content-end">
-                    <small className="text-muted">Supported file type: .ravendbdump</small>
-                </div>
                 {fileError && <div className="text-danger mt-2">{fileError}</div>}
                 {isBackupFile && (
                     <Alert variant="warning" className="mt-3 mb-0">
@@ -60,7 +59,7 @@ export default function SelectFileSection({ restrictedItems }: SelectFileSection
                         RavenDB Backup file.
                     </Alert>
                 )}
-                {restrictedItems.length > 0 ? (
+                {licenseRestrictedItems.length > 0 && (
                     <Alert variant="warning" className="mt-3 mb-0">
                         <div className="fw-bold text-warning">
                             <Icon icon="warning" color="warning" /> Some data may not be imported
@@ -70,7 +69,7 @@ export default function SelectFileSection({ restrictedItems }: SelectFileSection
                             be skipped automatically.
                         </div>
                         <div className="d-flex gap-2 flex-wrap mt-2">
-                            {restrictedItems.map((item) => (
+                            {licenseRestrictedItems.map((item) => (
                                 <Badge key={item.key} bg="secondary">
                                     <Icon icon="license" /> {item.label}
                                 </Badge>
@@ -83,10 +82,23 @@ export default function SelectFileSection({ restrictedItems }: SelectFileSection
                             </a>
                         </div>
                     </Alert>
-                ) : (
-                    <Alert variant="info" className="mt-3 mb-0">
-                        <Icon icon="info" /> Your import might contain settings that aren&apos;t available on your
-                        current license. Those features will be turned off and disabled from your import.
+                )}
+                {otherRestrictedItems.length > 0 && (
+                    <Alert variant="warning" className="mt-3 mb-0">
+                        <div className="fw-bold text-warning">
+                            <Icon icon="warning" color="warning" /> Some data cannot be imported
+                        </div>
+                        <div>
+                            The following features are unavailable for this database or for your certificate. Any
+                            related data in this file will be skipped automatically.
+                        </div>
+                        <div className="d-flex gap-2 flex-wrap mt-2">
+                            {otherRestrictedItems.map((item) => (
+                                <Badge key={item.key} bg="secondary" title={item.tooltip}>
+                                    <Icon icon={item.reason === "sharding" ? "sharding" : "certificate"} /> {item.label}
+                                </Badge>
+                            ))}
+                        </div>
                     </Alert>
                 )}
             </div>

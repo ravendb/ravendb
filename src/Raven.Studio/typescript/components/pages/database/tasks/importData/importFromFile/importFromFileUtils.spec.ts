@@ -4,9 +4,15 @@ import {
     toImportDto,
     hasAnyInclude,
     getItemsToWarnAbout,
+    getTasksMissingConnectionStrings,
     buildImportCurlCommand,
 } from "./importFromFileUtils";
-import { ImportFromFileFormData, importFromFileSchema, databaseSettingKeys } from "./importFromFileValidation";
+import {
+    connectionStringKeys,
+    databaseSettingKeys,
+    ImportFromFileFormData,
+    importFromFileSchema,
+} from "./importFromFileValidation";
 
 // Knockout defaults (importDatabaseModel + smugglerDatabaseRecord) with admin access — all
 // admin-gated toggles on.
@@ -256,6 +262,80 @@ describe("importFromFileUtils", () => {
         it("omits TransformScript from the json when the script is empty", () => {
             const command = buildImportCurlCommand("Bash", createDefaultFormData(), "db1");
             expect(command).not.toContain("TransformScript");
+        });
+    });
+
+    describe("getTasksMissingConnectionStrings", () => {
+        function createCustomizedData(): ImportFromFileFormData {
+            const data = createDefaultFormData();
+            data.configuration.isIncludeConnectionStringsAndOngoingTasks = true;
+            data.configuration.isCustomizeOngoingTasks = true;
+            return data;
+        }
+
+        it("returns nothing while not customizing (everything is imported together)", () => {
+            const data = createDefaultFormData();
+            data.configuration.isCustomizeOngoingTasks = false;
+            connectionStringKeys.forEach((key) => (data.configuration.connectionStrings[key] = false));
+            expect(getTasksMissingConnectionStrings(data)).toEqual([]);
+        });
+
+        it("returns nothing when tasks are excluded entirely", () => {
+            const data = createCustomizedData();
+            data.configuration.isIncludeConnectionStringsAndOngoingTasks = false;
+            connectionStringKeys.forEach((key) => (data.configuration.connectionStrings[key] = false));
+            expect(getTasksMissingConnectionStrings(data)).toEqual([]);
+        });
+
+        it("reports a task whose connection string is deselected", () => {
+            const data = createCustomizedData();
+            data.configuration.ongoingTasks.sqlEtls = true;
+            data.configuration.connectionStrings.sqlConnectionStrings = false;
+            expect(getTasksMissingConnectionStrings(data)).toContain("sqlEtls");
+        });
+
+        it("does not report a task whose connection string is selected", () => {
+            const data = createCustomizedData();
+            data.configuration.ongoingTasks.sqlEtls = true;
+            data.configuration.connectionStrings.sqlConnectionStrings = true;
+            expect(getTasksMissingConnectionStrings(data)).not.toContain("sqlEtls");
+        });
+
+        it("ignores restricted tasks - their data is never emitted", () => {
+            const data = createCustomizedData();
+            data.configuration.ongoingTasks.olapEtls = true;
+            data.configuration.connectionStrings.olapConnectionStrings = false;
+            expect(getTasksMissingConnectionStrings(data, ["olapEtls"])).not.toContain("olapEtls");
+        });
+
+        it("ignores tasks whose connection string is itself restricted", () => {
+            const data = createCustomizedData();
+            data.configuration.ongoingTasks.olapEtls = true;
+            data.configuration.connectionStrings.olapConnectionStrings = false;
+            expect(getTasksMissingConnectionStrings(data, [], ["olapConnectionStrings"])).not.toContain("olapEtls");
+        });
+    });
+
+    describe("transformScript validation", () => {
+        const validate = (transformScript: string) =>
+            importFromFileSchema.validateAt("processing.transformScript", {
+                processing: { isUseTransformScript: true, transformScript },
+            });
+
+        it("accepts a script using this/throw at the top level", async () => {
+            await expect(validate("if (this.Name === 'Bob') throw 'skip';")).resolves.toBeDefined();
+        });
+
+        it("rejects a script with a syntax error", async () => {
+            await expect(validate("this.Freight = ;")).rejects.toThrow(/Invalid JavaScript/);
+        });
+
+        it("ignores the script when the toggle is off", async () => {
+            await expect(
+                importFromFileSchema.validateAt("processing.transformScript", {
+                    processing: { isUseTransformScript: false, transformScript: "this.Freight = ;" },
+                })
+            ).resolves.toBeDefined();
         });
     });
 

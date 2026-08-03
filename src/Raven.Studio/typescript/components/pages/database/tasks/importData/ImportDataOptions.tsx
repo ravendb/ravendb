@@ -2,7 +2,7 @@ import "./ImportDataOptions.scss";
 import React from "react";
 import { AboutViewHeading } from "components/common/AboutView";
 import NavigationCard, { NavigationCardProps } from "components/common/navigationCard/NavigationCard";
-import { useAppUrls } from "hooks/useAppUrls";
+import { useAppUrls } from "components/hooks/useAppUrls";
 
 // Keep in sync with the navigation-card-variant includes in ImportDataOptions.scss
 type ImportDataVariant = "ImportFile" | "ImportRavenDb" | "ImportCsv" | "ImportSql" | "ImportNoSql";

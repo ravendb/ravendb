@@ -6,7 +6,7 @@ import { Icon } from "components/common/Icon";
 import Code from "components/common/Code";
 import { ImportFromFileFormData } from "./importFromFileValidation";
 import { buildImportCurlCommand, ImportCommandType } from "./importFromFileUtils";
-import { useImportLicenseRestrictions } from "./useImportLicenseRestrictions";
+import { useImportRestrictions } from "./useImportRestrictions";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
@@ -20,13 +20,15 @@ export default function ImportCommandModal({ onClose }: ImportCommandModalProps)
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const [commandType, setCommandType] = useState<ImportCommandType>("PowerShell");
 
-    const { restrictedFeatures, restrictedOngoingTasks } = useImportLicenseRestrictions();
+    const { restrictedSettingKeys, restrictedOngoingTaskKeys, restrictedConnectionStringKeys } =
+        useImportRestrictions();
     const curlCommand = buildImportCurlCommand(
         commandType,
         formData as ImportFromFileFormData,
         databaseName,
-        restrictedFeatures.map((x) => x.settingKey),
-        restrictedOngoingTasks.map((x) => x.taskKey)
+        restrictedSettingKeys,
+        restrictedOngoingTaskKeys,
+        restrictedConnectionStringKeys
     );
 
     return (
