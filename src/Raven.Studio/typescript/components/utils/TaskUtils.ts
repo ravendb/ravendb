@@ -206,6 +206,8 @@ export default class TaskUtils {
                 return "Queue";
             case "EmbeddingsGeneration":
                 return "EmbeddingsGeneration";
+            case "GenAi":
+                return "GenAi";
             default:
                 throw new Error("Unsupported task type: " + taskType);
         }

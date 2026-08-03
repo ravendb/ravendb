@@ -305,12 +305,16 @@ namespace Raven.Server.Documents.Patch
                             arrayItems[i] = TranslateToJs(parent, field.Name, BlittableJsonToken.StartObject, itemAsBlittable);
                         }
 
-                        value = FromObject(parent.Engine, arrayItems);
+                        value = new JsArray(parent.Engine, arrayItems);
                         return true;
                     }
 
                     var values = parent.IndexRetriever.LuceneDocument.GetValues(property, parent.IndexRetriever.State);
-                    value = FromObject(parent.Engine, values);
+                    var jsValues = new JsValue[values.Length];
+                    for (int i = 0; i < values.Length; i++)
+                        jsValues[i] = values[i];
+
+                    value = new JsArray(parent.Engine, jsValues);
                     return true;
                 }
 
