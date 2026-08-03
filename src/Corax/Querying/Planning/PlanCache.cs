@@ -132,6 +132,20 @@ public class PlanCache
         private readonly CompiledPlan[] _plans = new CompiledPlan[maxSlots];
 
         /// <summary>
+        /// One bit per slot, set while a publisher owns that slot. A slot's (_plans, _hashLo) pair is written
+        /// by a single thread at a time, so two publishers that pick the same slot can never interleave their
+        /// writes and leave the payload of one paired with the pre-filter key of the other.
+        /// </summary>
+        private readonly ulong[] _publishing = new ulong[(maxSlots + 63) / 64];
+
+        /// <summary>
+        /// How many slots a publisher will try before giving up on caching the plan. Contention here means
+        /// another thread is publishing a plan for the same query right now, which is rare enough that
+        /// dropping this plan (the next execution compiles and publishes it again) beats spinning.
+        /// </summary>
+        private const int PublishAttempts = 8;
+
+        /// <summary>
         /// The query text this bucket was first compiled for diagnostics only — surfaced by <see cref="Snapshot"/>.
         /// Queries are cached _structurally_ - same query with different literals use the same cache key, the first query text is held here.
         /// </summary>
@@ -199,31 +213,61 @@ public class PlanCache
 
         public void Publish(CompiledPlan plan)
         {
-            int slot;
-            while (true)
+            for (int attempt = 0; attempt < PublishAttempts; attempt++)
             {
+                int slot;
                 int filled = Volatile.Read(ref _nextSlot);
                 if (filled >= maxSlots)
                 {
                     // Cache full — random eviction. _nextSlot stays at maxSlots
                     // permanently; see field doc for why this is intentional.
                     slot = Random.Shared.Next(0, maxSlots);
-                    break;
                 }
-
-                if (Interlocked.CompareExchange(ref _nextSlot, filled + 1, filled) == filled)
+                else if (Interlocked.CompareExchange(ref _nextSlot, filled + 1, filled) == filled)
                 {
                     slot = filled;
-                    break;
                 }
-            }
+                else
+                {
+                    continue; // another publisher took this slot from the allocator, ask again
+                }
 
-            // Publish the payload before the pre-filter key: a reader that observes the
-            // matching _hashLo entry must be able to see the corresponding plan. The Confirm
-            // step re-reads _plans[slot] volatile and re-checks the full digest, so a stale
-            // key with a not-yet-written (or already-replaced) plan resolves to a miss.
-            Volatile.Write(ref _plans[slot], plan);
-            Volatile.Write(ref _hashLo[slot], PreFilterKey(plan.CacheKeyHash));
+                // An appended slot can still be drawn by an evicting publisher the moment the allocator
+                // saturates, so both paths go through the claim.
+                if (TryClaimSlot(slot) == false)
+                    continue;
+
+                try
+                {
+                    // Publish the payload before the pre-filter key: a reader that observes the
+                    // matching _hashLo entry must be able to see the corresponding plan. The Confirm
+                    // step re-reads _plans[slot] volatile and re-checks the full digest, so a stale
+                    // key with a not-yet-written (or already-replaced) plan resolves to a miss.
+                    Volatile.Write(ref _plans[slot], plan);
+                    Volatile.Write(ref _hashLo[slot], PreFilterKey(plan.CacheKeyHash));
+                }
+                finally
+                {
+                    ReleaseSlot(slot);
+                }
+
+                return;
+            }
+        }
+
+        /// <summary>Take exclusive ownership of a slot's array entries. Readers are unaffected; they never claim.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool TryClaimSlot(int slot)
+        {
+            ulong bit = 1UL << (slot & 63);
+            return (Interlocked.Or(ref _publishing[slot >> 6], bit) & bit) == 0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ReleaseSlot(int slot)
+        {
+            ulong bit = 1UL << (slot & 63);
+            Interlocked.And(ref _publishing[slot >> 6], ~bit);
         }
 
         /// <summary>Lock-free snapshot of all non-null plan slots. Best-effort; see <see cref="Snapshot"/>.</summary>
