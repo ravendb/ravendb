@@ -199,16 +199,30 @@ namespace Voron.Impl.Scratch
                 _freePagesBySize[value.Size] = list;
             }
 
-            list.AddFirst(new PendingPage
+            var pending = new PendingPage
             {
                 Page = value.PositionInScratchBuffer,
                 ValidAfterTransactionId = asOfTxId,
                 AllocatedInTransaction = value.AllocatedInTransaction,
-            });
+            };
 
-            _txIdAfterWhichLatestFreePagesBecomeAvailable = asOfTxId;
+            // TryGettingFromAllocatedBuffer inspects the tail only, which is correct as long as the tail holds the
+            // lowest ValidAfterTransactionId in the list. Frees carrying a transaction id arrive in increasing order,
+            // so adding them at the head keeps the list descending. A page freed with -1 was never visible to any
+            // transaction (a rollback, or a page the current write tx allocated and dropped), so it belongs at the
+            // tail: it is usable right away, and putting it anywhere else would hide it behind a page that is still
+            // gated on an old read transaction.
+            if (asOfTxId == -1)
+                list.AddLast(pending);
+            else
+                list.AddFirst(pending);
 
-            return NumberOfAllocations == 0; 
+            // Only pages freed with a transaction id hold readers back, and a later free cannot make an earlier one
+            // available sooner, so this watermark only ever moves forward.
+            if (asOfTxId > _txIdAfterWhichLatestFreePagesBecomeAvailable)
+                _txIdAfterWhichLatestFreePagesBecomeAvailable = asOfTxId;
+
+            return NumberOfAllocations == 0;
         }
 
         public ref Pager.State GetStateRef() => ref _scratchPagerState;
