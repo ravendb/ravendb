@@ -407,39 +407,20 @@ public static class CoraxQueryBuilder
                             return indexSearcher.AndNot(builderParameters.AllEntries.Replay(), indexSearcher.Or(left, right), token: builderParameters.Token);
 
                         case (NegatedExpression ne1, _):
+                            // The negation is always applied by subtracting the positive match from the left-hand set.
+                            // Enumerating the complement instead would drop the documents that have no term for the
+                            // field at all, which is what `A and not (startsWith(field, x))` used to do.
                             left = ToCoraxQuery(builderParameters, @where.Right, ref builderParameters.StreamingDisabled, exact);
-                            if (TryUseNegatedQuery(builderParameters, ne1, out right, exact) == false)
-                            {
-                                right = ToCoraxQuery(builderParameters, ne1.Expression, ref builderParameters.StreamingDisabled, exact);
-                                TryMergeTwoNodesForAnd(indexSearcher, builderParameters, ref left, ref right, out merged,
-                                    ref builderParameters.StreamingDisabled,  requiredMaterialization: true);
-                                return indexSearcher.AndNot(left, right, token: builderParameters.Token);
-                            }
-
-                            if (@where.Right is TrueExpression)
-                                return right; // true and not... optimization
-                            
-                            if (TryMergeTwoNodesForAnd(indexSearcher, builderParameters, ref left, ref right, out merged, ref builderParameters.StreamingDisabled))
-                                return merged;
-
-                            return indexSearcher.And(left, right);
+                            right = ToCoraxQuery(builderParameters, ne1.Expression, ref builderParameters.StreamingDisabled, exact);
+                            TryMergeTwoNodesForAnd(indexSearcher, builderParameters, ref left, ref right, out merged,
+                                ref builderParameters.StreamingDisabled,  requiredMaterialization: true);
+                            return indexSearcher.AndNot(left, right, token: builderParameters.Token);
 
                         case (_, NegatedExpression ne1):
                             left = ToCoraxQuery(builderParameters, @where.Left, ref builderParameters.StreamingDisabled, exact);
-                            if (TryUseNegatedQuery(builderParameters, ne1, out right, exact) == false)
-                            {
-                                right = ToCoraxQuery(builderParameters, ne1.Expression, ref builderParameters.StreamingDisabled, exact);
-                                TryMergeTwoNodesForAnd(indexSearcher, builderParameters, ref left, ref right, out merged, ref builderParameters.StreamingDisabled,  requiredMaterialization: true);
-                                return indexSearcher.AndNot(left, right, token: builderParameters.Token);
-                            }
-
-                            if (@where.Left is TrueExpression)
-                                return right; // true and not... optimization
-
-                            if (TryMergeTwoNodesForAnd(indexSearcher, builderParameters, ref left, ref right, out merged, ref builderParameters.StreamingDisabled))
-                                return merged;
-
-                            return indexSearcher.And(left, right);
+                            right = ToCoraxQuery(builderParameters, ne1.Expression, ref builderParameters.StreamingDisabled, exact);
+                            TryMergeTwoNodesForAnd(indexSearcher, builderParameters, ref left, ref right, out merged, ref builderParameters.StreamingDisabled,  requiredMaterialization: true);
+                            return indexSearcher.AndNot(left, right, token: builderParameters.Token);
 
 
                         default:
@@ -699,38 +680,6 @@ public static class CoraxQueryBuilder
         return builderParameters.IndexSearcher.InQuery(fieldMetadata, matches);
     }
 
-    private static bool TryUseNegatedQuery(Parameters builderParameters, NegatedExpression ne1, out IQueryMatch match, bool exact)
-    {
-        if (ne1.Expression is not MethodExpression inner)
-            goto NoOpt;
-        
-        var methodName = inner.Name.Value;
-        var methodType = QueryMethod.GetMethodType(methodName);
-        
-        switch (methodType)
-        {
-            // Do NOT use the internally negated primitive here: NotStartsWith / NotEndsWith enumerate only the
-            // terms that exist in the field, so documents that are missing that field are excluded. That is wrong
-            // for `A and not (startsWith(field, x))` - the negation must apply to the whole left-hand set, which
-            // includes documents missing the field. Falling through to NoOpt makes HandleNegatedAnd use
-            // AndNot(left, <positive match>), which keeps those documents (matching Lucene and Corax 2.0).
-            //
-            // Those providers now emit the null and non-existing posting lists themselves, but that is not enough to
-            // route AND through them again: the non-existing list only exists from UseNonExistingPostingList_60 /_61
-            // on (see IndexVersion.IsNonExistingPostingListSupported), so on an older index the provider still cannot
-            // enumerate the field-missing documents at all. AndNot has no such dependency - it excludes from `left`
-            // instead of enumerating the complement - and it is the same path standalone `not (...)` already uses.
-            case MethodType.StartsWith:
-            case MethodType.EndsWith:
-            default:
-                goto NoOpt;
-        }
-        
-        NoOpt:
-        match = null;
-        return false;
-    }
-
     public static MoreLikeThisQuery.MoreLikeThisQuery BuildMoreLikeThisQuery(Parameters builderParameters, QueryExpression whereExpression)
     {
         using (CultureHelper.EnsureInvariantCulture())
@@ -902,8 +851,7 @@ public static class CoraxQueryBuilder
             : builderParameters.IndexSearcher.ExistsQuery(fieldMetadata);
     }
 
-    private static IQueryMatch HandleStartsWith(Parameters builderParameters, MethodExpression expression, bool exact, ref StreamingOptimization streamingOptimization,
-        bool negated = false)
+    private static IQueryMatch HandleStartsWith(Parameters builderParameters, MethodExpression expression, bool exact, ref StreamingOptimization streamingOptimization)
     {
         var metadata = builderParameters.Metadata;
         var queryParameters = builderParameters.QueryParameters;
@@ -940,12 +888,11 @@ public static class CoraxQueryBuilder
             builderParameters.DynamicFields, exact: exact, hasBoost: builderParameters.HasBoost);
 
         return streamingOptimization.TrySetMultiTermMatchAsStreamingField(builderParameters.IndexSearcher, fieldMetadata, MethodType.StartsWith) 
-            ? builderParameters.IndexSearcher.StartWithQuery(fieldMetadata, valueAsString, forward: streamingOptimization.Forward, streamingEnabled: true, isNegated: negated) 
-            : builderParameters.IndexSearcher.StartWithQuery(fieldMetadata, valueAsString, isNegated: negated);
+            ? builderParameters.IndexSearcher.StartWithQuery(fieldMetadata, valueAsString, forward: streamingOptimization.Forward, streamingEnabled: true)
+            : builderParameters.IndexSearcher.StartWithQuery(fieldMetadata, valueAsString);
     }
 
-    private static MultiTermMatch HandleEndsWith(Parameters builderParameters, MethodExpression expression, bool exact, ref StreamingOptimization streamingOptimization,
-        bool negated = false)
+    private static MultiTermMatch HandleEndsWith(Parameters builderParameters, MethodExpression expression, bool exact, ref StreamingOptimization streamingOptimization)
     {
         var indexSearcher = builderParameters.IndexSearcher;
         var metadata = builderParameters.Metadata;
@@ -985,8 +932,8 @@ public static class CoraxQueryBuilder
             builderParameters.DynamicFields, exact: exact, hasBoost: builderParameters.HasBoost);
         
         return streamingOptimization.TrySetMultiTermMatchAsStreamingField(builderParameters.IndexSearcher, fieldMetadata, MethodType.EndsWith) 
-            ? builderParameters.IndexSearcher.EndsWithQuery(fieldMetadata, valueAsString, forward: streamingOptimization.Forward, streamingEnabled: true, isNegated: negated) 
-            : builderParameters.IndexSearcher.EndsWithQuery(fieldMetadata, valueAsString, isNegated: negated);
+            ? builderParameters.IndexSearcher.EndsWithQuery(fieldMetadata, valueAsString, forward: streamingOptimization.Forward, streamingEnabled: true)
+            : builderParameters.IndexSearcher.EndsWithQuery(fieldMetadata, valueAsString);
     }
 
     private static IQueryMatch HandleBoost(Parameters builderParameters, MethodExpression expression, bool exact)

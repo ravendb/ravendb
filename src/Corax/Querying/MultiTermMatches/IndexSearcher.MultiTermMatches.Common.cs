@@ -129,12 +129,6 @@ public partial class IndexSearcher
         if (typeof(TTermProvider) == typeof(StartsWithTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>))
             return (TTermProvider)(object)new StartsWithTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>(this, termTree, field, term, seekTerm, validatePostfixLen, token);
         
-        if (typeof(TTermProvider) == typeof(NotStartsWithTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>))
-            return (TTermProvider)(object)new NotStartsWithTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>(this, termTree, field, term, validatePostfixLen, token);
-        
-        if (typeof(TTermProvider) == typeof(NotStartsWithTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>))
-            return (TTermProvider)(object)new NotStartsWithTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>(this, termTree, field, term, validatePostfixLen, token);
-        
         Debug.Assert(validatePostfixLen == false, "Not supported for the rest of this");
         
         if (typeof(TTermProvider) == typeof(EndsWithTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>))
@@ -142,12 +136,6 @@ public partial class IndexSearcher
         
         if (typeof(TTermProvider) == typeof(EndsWithTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>))
             return (TTermProvider)(object)new EndsWithTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>(this, termTree, field, term);
-        
-        if (typeof(TTermProvider) == typeof(NotEndsWithTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>))
-            return (TTermProvider)(object)new NotEndsWithTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>(this, termTree, field, term);
-        
-        if (typeof(TTermProvider) == typeof(NotEndsWithTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>))
-            return (TTermProvider)(object)new NotEndsWithTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>(this, termTree, field, term);
         
         if (typeof(TTermProvider) == typeof(ContainsTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>))
             return (TTermProvider)(object)new ContainsTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>(this, termTree, field, term);
