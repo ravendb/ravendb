@@ -26,6 +26,13 @@ public sealed class ApplianceOptions
     [Url]
     public string? AiApiUrl { get; set; }
 
+    // overrides api.telegram.org; tests point this at an in-process mock
+    [Url]
+    public string? TelegramApiUrl { get; set; }
+
+    // min interval between editMessageText calls while streaming a reply
+    public TimeSpan TelegramEditDebounce { get; set; } = TimeSpan.FromSeconds(1);
+
     public TimeSpan ReadinessInitialDelay { get; set; } = TimeSpan.FromSeconds(15);
 
     public TimeSpan ReadinessAttemptTimeout { get; set; } = TimeSpan.FromSeconds(2);

@@ -45,6 +45,7 @@
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Resilience" />
     <PackageReference Include="Polly" />
+    <PackageReference Include="Telegram.Bot" />
   </ItemGroup>
 
 </Project>

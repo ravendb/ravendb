@@ -74,6 +74,7 @@ builder.Services.AddOptions<ApplianceOptions>()
         ReadEnv("RAVEN_QUILL_SETUP_PACKAGE_PATH", v => options.SetupPackagePath = v);
         ReadEnv("RAVEN_QUILL_RAVENDB_S6_SERVICE", v => options.RavenDbS6Service = v);
         ReadEnv("RAVEN_QUILL_API_URL", v => options.AiApiUrl = v);
+        ReadEnv("RAVEN_QUILL_TELEGRAM_API_URL", v => options.TelegramApiUrl = v);
         ReadEnv("QUILL_LICENSE_KEY", v => options.LicenseKey = v);
         ReadEnv("QUILL_API_KEY", v => options.ApiKey = v);
         ReadEnv("RAVEN_QUILL_RAVENDB_INTERNAL_PORT", v =>
