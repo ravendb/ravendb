@@ -26,15 +26,6 @@ class changesContext {
     private globalDatabaseSubscriptions: changeSubscription[] = [];
 
     constructor() {
-        window.addEventListener("unload", () => {
-            this.disconnectFromDatabaseChangesApi("ChangingDatabase");
-            this.serverNotifications().dispose();
-
-            if (this.databaseNotifications()) {
-                this.databaseNotifications().dispose();
-            }
-        });
-
         this.databaseChangesApi.subscribe(newValue => {
             if (!newValue) {
                 this.hasChangesApiConnected = false;
