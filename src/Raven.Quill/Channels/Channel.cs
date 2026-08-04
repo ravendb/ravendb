@@ -20,4 +20,6 @@ internal sealed class Channel
 
     /// Null means "follow the app-level default" (see <see cref="WidgetThemeResolution"/>). Web-widget only.
     public WidgetTheme? Theme { get; set; }
+
+    public TelegramSettings? Telegram { get; set; }
 }
