@@ -4,7 +4,6 @@ import { FieldErrors, FieldPath, FormProvider, useWatch } from "react-hook-form"
 import { useAsync } from "react-async-hook";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
-import ProgressBar from "react-bootstrap/ProgressBar";
 import classNames from "classnames";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
@@ -37,8 +36,6 @@ type SmugglerProgress = Raven.Client.Documents.Smuggler.SmugglerProgressBase;
 type OperationStatus = Raven.Client.Documents.Operations.OperationStatus;
 
 interface OperationState {
-    operationId: number;
-    databaseName: string;
     progress: SmugglerProgress | null;
     status: OperationStatus;
     startTime: Date;
@@ -90,7 +87,7 @@ export default function ImportDatabaseFromFile() {
     const essentialStats = asyncEssentialStats.result;
     // Only a successful response with actual counts proves the database is empty; anything else
     // (still loading, failed, or a response we cannot read) keeps the warning visible.
-    const hasExistingData = !essentialStats || essentialStats.CountOfDocuments > 0 || essentialStats.CountOfIndexes > 0;
+    const hasExistingData = essentialStats?.CountOfDocuments > 0 || essentialStats?.CountOfIndexes > 0;
 
     const onSubmit = async (formData: ImportFromFileFormData) => {
         if (
@@ -139,8 +136,6 @@ export default function ImportDatabaseFromFile() {
         const startTime = new Date();
 
         setOperationState({
-            operationId,
-            databaseName,
             progress: null,
             status: "InProgress",
             startTime,
@@ -252,11 +247,6 @@ export default function ImportDatabaseFromFile() {
                     backUrl={importOptionsUrl}
                     marginBottom={2}
                 />
-                <div className="mb-4">
-                    <a href={importDocsLink} target="_blank" rel="noreferrer">
-                        <Icon icon="link" /> Docs - Import Data
-                    </a>
-                </div>
                 {hasExistingData && (
                     <Alert variant="warning" className="w-50">
                         <Icon icon="warning" /> Note: Importing will overwrite any existing documents and indexes.
@@ -271,14 +261,14 @@ export default function ImportDatabaseFromFile() {
                     >
                         <Icon icon="import-database" /> Import database
                     </Button>
-                    <Button variant="secondary" className="rounded-pill" onClick={() => setIsCommandModalOpen(true)}>
+                    <Button
+                        variant="secondary"
+                        className="rounded-pill"
+                        disabled={!file}
+                        onClick={() => setIsCommandModalOpen(true)}
+                    >
                         <Icon icon="code" /> Use import command
                     </Button>
-                    {uploadPercent != null && (
-                        <div className="flex-grow-1">
-                            <ProgressBar animated now={uploadPercent} label={`${uploadPercent}%`} />
-                        </div>
-                    )}
                 </div>
                 {!hasInclude && (
                     <Alert variant="warning">Note: At least one &apos;include&apos; option must be checked.</Alert>
@@ -309,12 +299,6 @@ export default function ImportDatabaseFromFile() {
                         startTime={operationState.startTime}
                         endTime={operationState.endTime}
                         onClose={() => setIsModalOpen(false)}
-                        onShowDetails={() =>
-                            notificationCenter.instance.openDetailsForOperationById(
-                                operationState.databaseName,
-                                operationState.operationId
-                            )
-                        }
                     />
                 )}
             </div>
