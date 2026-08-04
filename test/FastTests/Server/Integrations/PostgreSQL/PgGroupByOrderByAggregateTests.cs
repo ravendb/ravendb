@@ -1,11 +1,7 @@
 using System;
-using System.Buffers.Binary;
 using System.Collections.Generic;
-using System.IO;
 using System.IO.Pipelines;
 using System.Linq;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Server.Documents;
@@ -14,6 +10,7 @@ using Raven.Server.Integrations.PostgreSQL.Exceptions;
 using Raven.Server.Integrations.PostgreSQL.Messages;
 using Tests.Infrastructure;
 using Xunit;
+using static Tests.Infrastructure.PostgreSqlHelper;
 
 namespace FastTests.Server.Integrations.PostgreSQL
 {
@@ -163,61 +160,6 @@ namespace FastTests.Server.Integrations.PostgreSQL
             var bytes = await readTask;
 
             return (columns.Select(c => c.Name).ToList(), ParseDataRows(bytes));
-        }
-
-        private static async Task<byte[]> ReadAllAsync(PipeReader reader, CancellationToken token)
-        {
-            var ms = new MemoryStream();
-            while (true)
-            {
-                var result = await reader.ReadAsync(token);
-                foreach (var segment in result.Buffer)
-                    ms.Write(segment.Span);
-                reader.AdvanceTo(result.Buffer.End);
-                if (result.IsCompleted)
-                    break;
-            }
-            await reader.CompleteAsync();
-            return ms.ToArray();
-        }
-
-        private static List<string[]> ParseDataRows(byte[] buffer)
-        {
-            var rows = new List<string[]>();
-            int i = 0;
-            while (i + 5 <= buffer.Length)
-            {
-                var type = buffer[i];
-                int length = BinaryPrimitives.ReadInt32BigEndian(buffer.AsSpan(i + 1, 4));
-                int payloadStart = i + 5;
-                int payloadLength = length - 4;
-                if (payloadLength < 0 || payloadStart + payloadLength > buffer.Length)
-                    break;
-
-                if (type == (byte)'D')
-                {
-                    int pos = payloadStart;
-                    int count = BinaryPrimitives.ReadInt16BigEndian(buffer.AsSpan(pos, 2));
-                    pos += 2;
-
-                    var values = new string[count];
-                    for (int c = 0; c < count; c++)
-                    {
-                        int size = BinaryPrimitives.ReadInt32BigEndian(buffer.AsSpan(pos, 4));
-                        pos += 4;
-                        if (size < 0)
-                            continue;
-                        values[c] = Encoding.UTF8.GetString(buffer, pos, size);
-                        pos += size;
-                    }
-
-                    rows.Add(values);
-                }
-
-                i = payloadStart + payloadLength;
-            }
-
-            return rows;
         }
 
         private sealed class Order

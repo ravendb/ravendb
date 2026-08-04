@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -8,6 +9,7 @@ using Raven.Server.Integrations.PostgreSQL.Exceptions;
 using Raven.Server.Integrations.PostgreSQL.VirtualCatalog;
 using Tests.Infrastructure;
 using Xunit;
+using static Tests.Infrastructure.PostgreSqlHelper;
 
 namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
 {
@@ -533,34 +535,7 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
             // has_schema_privilege() function, EXISTS (SELECT 1 FROM pg_class WHERE ...) correlated
             // subqueries, deeply nested NOT (a OR b OR c) WHERE shape, LIKE with E'...' escape
             // string (NOT LIKE E'pg\_%' to hide internal pg_* schemas).
-            const string sql = """
-                SELECT
-                nsp.oid,
-                nsp.nspname as name,
-                pg_catalog.has_schema_privilege(nsp.oid, 'CREATE') as can_create,
-                pg_catalog.has_schema_privilege(nsp.oid, 'USAGE') as has_usage,
-                des.description
-                FROM
-                pg_catalog.pg_namespace nsp
-                LEFT OUTER JOIN pg_catalog.pg_description des ON
-                (des.objoid=nsp.oid AND des.classoid='pg_namespace'::regclass)
-                WHERE
-                nspname NOT LIKE E'pg\\_%' AND
-                NOT (
-                (nsp.nspname = 'pg_catalog' AND EXISTS
-                (SELECT 1 FROM pg_catalog.pg_class WHERE relname = 'pg_class' AND
-                relnamespace = nsp.oid LIMIT 1)) OR
-                (nsp.nspname = 'pgagent' AND EXISTS
-                (SELECT 1 FROM pg_catalog.pg_class WHERE relname = 'pga_job' AND
-                relnamespace = nsp.oid LIMIT 1)) OR
-                (nsp.nspname = 'information_schema' AND EXISTS
-                (SELECT 1 FROM pg_catalog.pg_class WHERE relname = 'tables' AND
-                relnamespace = nsp.oid LIMIT 1))
-                )
-                ORDER BY nspname
-                """;
-
-            Assert.True(PgVirtualInterpreter.TryExecute(sql, EmptyCtx(), out var table));
+            Assert.True(PgVirtualInterpreter.TryExecute(PgAdminSchemaTreeQuery, EmptyCtx(), out var table));
             Assert.Equal(5, table.Columns.Count);
             Assert.Equal("oid", table.Columns[0].Name);
             Assert.Equal("name", table.Columns[1].Name);
@@ -1685,13 +1660,98 @@ ORDER BY ord";
             Assert.Null(selectTable.CommandTag);
         }
 
-        private static VirtualQueryContext EmptyCtx() => new();
-
-        private static string DecodeCell(Raven.Server.Integrations.PostgreSQL.Messages.PgTable table, int row, int column)
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_am_is_registered_and_holds_no_rows()
         {
-            var cell = table.Data[row].ColumnData.Span[column];
-            Assert.True(cell.HasValue);
-            return Encoding.UTF8.GetString(cell.Value.Span);
+            Assert.True(PgVirtualInterpreter.TryExecute(
+                "select oid, amname from pg_catalog.pg_am", EmptyCtx(), out var table));
+
+            Assert.Equal(new[] { "oid", "amname" }, table.Columns.Select(c => c.Name));
+            Assert.Empty(table.Data);
         }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_attrdef_is_registered_and_holds_no_rows()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute(
+                "select oid, adrelid, adnum, adbin from pg_catalog.pg_attrdef", EmptyCtx(), out var table));
+
+            Assert.Equal(new[] { "oid", "adrelid", "adnum", "adbin" }, table.Columns.Select(c => c.Name));
+            Assert.Empty(table.Data);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_get_expr_is_not_implemented_and_is_never_reached_over_an_empty_pg_attrdef()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute(
+                "select pg_catalog.pg_get_expr(d.adbin, d.adrelid) from pg_catalog.pg_attrdef d",
+                EmptyCtx(), out var overEmptyTable));
+            Assert.Empty(overEmptyTable.Data);
+
+            Assert.False(PgVirtualInterpreter.TryExecute(
+                "select pg_catalog.pg_get_expr(null, null)", EmptyCtx(), out _));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_attribute_with_null_db_returns_empty_rowset()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute(
+                "select attrelid, attname, atttypid, attnum from pg_attribute", EmptyCtx(), out var table));
+
+            Assert.Equal(4, table.Columns.Count);
+            Assert.Empty(table.Data);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_class_with_null_db_returns_empty_rowset()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute(
+                "select oid, relname, relkind, relnamespace from pg_class", EmptyCtx(), out var table));
+
+            Assert.Equal(4, table.Columns.Count);
+            Assert.Empty(table.Data);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_constraint_is_registered_and_holds_no_rows()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute(
+                "select oid, conname, conrelid, contype, conkey, confrelid, conindid from pg_catalog.pg_constraint",
+                EmptyCtx(), out var table));
+
+            Assert.Equal(
+                new[] { "oid", "conname", "conrelid", "contype", "conkey", "confrelid", "conindid" },
+                table.Columns.Select(c => c.Name));
+            Assert.Empty(table.Data);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_index_is_registered_and_holds_no_rows()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute(
+                "select indrelid, indexrelid, indisunique, indisprimary, indexprs, indpred, " +
+                "indkey, indoption, indnkeyatts from pg_catalog.pg_index",
+                EmptyCtx(), out var table));
+
+            Assert.Equal(
+                new[] { "indrelid", "indexrelid", "indisunique", "indisprimary", "indexprs", "indpred", "indkey", "indoption", "indnkeyatts" },
+                table.Columns.Select(c => c.Name));
+            Assert.Empty(table.Data);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_sequence_is_registered_and_holds_no_rows()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute(
+                "select seqrelid, seqstart, seqincrement, seqmin, seqmax, seqcache, seqcycle from pg_catalog.pg_sequence",
+                EmptyCtx(), out var table));
+
+            Assert.Equal(
+                new[] { "seqrelid", "seqstart", "seqincrement", "seqmin", "seqmax", "seqcache", "seqcycle" },
+                table.Columns.Select(c => c.Name));
+            Assert.Empty(table.Data);
+        }
+
+        private static VirtualQueryContext EmptyCtx() => new();
     }
 }
