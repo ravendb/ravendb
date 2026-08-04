@@ -59,10 +59,11 @@ public class RavenDB_24423BackwardCompatibility(ITestOutputHelper output) : Rave
             if (currentToken.SequenceEqual(storedToken) == false && IsOsIcuCasingDrift(expectedRune, storedToken))
             {
                 // Rune.ToLowerInvariant is backed by the OS-shipped ICU, whose Unicode case tables vary by
-                // build (e.g. Windows 11 23H2 vs 25H2 / ICU 72 -> Unicode 15.0). The golden file was recorded
-                // on an older ICU that had no lowercase mapping for a few newly-cased code points, so it stored
-                // them un-folded; a newer ICU folds them. That is data drift across runtimes, not a Pre24423
-                // regression - skip just this code point. All other ~1.1M runes still assert the length/format.
+                // build (e.g. Windows 11 23H2 vs 25H2 / ICU 72 -> Unicode 15.0). When this runtime's ICU and
+                // the ICU that recorded the golden file disagree on a code point's case mapping, the bytes
+                // differ. That is data drift across runtimes, not a Pre24423 regression, and it can go either
+                // direction (this box newer or older than the recording box) - skip just this code point.
+                // All other ~1.1M runes still assert the length/format.
                 continue;
             }
 
@@ -70,16 +71,20 @@ public class RavenDB_24423BackwardCompatibility(ITestOutputHelper output) : Rave
         }
     }
 
-    // Detects the signature of an OS/ICU Unicode-version mismatch for a single code point: the golden file
-    // recorded it un-folded (the recording runtime's ICU had no lowercase mapping), but this runtime's ICU does
-    // fold it. This is deliberately narrow so a genuine transform/length regression is still caught.
+    // Detects an OS/ICU Unicode-version disagreement for a single code point: this runtime lowercases the rune
+    // to different bytes than the runtime that recorded the golden file. Bidirectional (this box may be newer or
+    // older). Scoped to the BMP: for a single BMP code point the golden token is exactly the recorded lowercased
+    // bytes, so the comparison is exact; Pre24423 truncates non-BMP tokens so a byte comparison isn't valid there
+    // (and those case mappings predate every ICU we run on, so no non-BMP drift is expected). Because it compares
+    // the directly-computed lowercasing - not the analyzer output - a genuine transform/length regression is still
+    // caught: when the casing agrees the assertion still runs.
     private static bool IsOsIcuCasingDrift(Rune rune, ReadOnlySpan<byte> storedToken)
     {
-        var raw = Encoding.UTF8.GetBytes(rune.ToString());
-        if (storedToken.SequenceEqual(raw) == false)
+        if (rune.IsBmp == false)
             return false;
 
-        return Rune.ToLowerInvariant(rune) != rune;
+        var localLower = Encoding.UTF8.GetBytes(Rune.ToLowerInvariant(rune).ToString());
+        return localLower.AsSpan().SequenceEqual(storedToken) == false;
     }
     
     [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Corax)]

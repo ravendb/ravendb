@@ -10,6 +10,7 @@ using Sparrow.Collections;
 using Sparrow.Server;
 using Sparrow.Server.Strings;
 using Voron;
+using Voron.Data.CompactTrees;
 using static Corax.Constants;
 
 namespace Corax.Querying.Matches
@@ -174,50 +175,55 @@ namespace Corax.Querying.Matches
 
             var iter = tree.Iterate();
 
-            gramTable.Generate(_term.AsSpan());
-            while (gramTable.MoveNext(out var ngram, out var boost))
             {
-                iter.Seek(ngram);
+                using var keyScope = new CompactKeyCacheScope(_searcher.Transaction.LowLevelTransaction);
+                var gramCompactKey = keyScope.Key;
 
-                ref var ngramStart = ref MemoryMarshal.GetReference(ngram);
-
-                ReadOnlySpan<byte> key;
-                while (iter.MoveNext(out var gramCompactKey, out _, out _))
+                gramTable.Generate(_term.AsSpan());
+                while (gramTable.MoveNext(out var ngram, out var boost))
                 {
-                    var gramKey = gramCompactKey.Decoded();
+                    iter.Seek(ngram);
 
-                    // There must be a shared prefix.
-                    ref var gramKeyStart = ref MemoryMarshal.GetReference(gramKey);
+                    ref var ngramStart = ref MemoryMarshal.GetReference(ngram);
 
-                    var cmp = Memory.CompareInline(ref ngramStart, ref gramKeyStart, Math.Min(ngram.Length, gramKey.Length));
-                    if (cmp > 0)
-                        break;
-                    if (cmp < 0)
-                        continue;
-
-                    if (ngram.Length == Suggestions.DefaultNGramSize)
+                    ReadOnlySpan<byte> key;
+                    while (iter.MoveNext(gramCompactKey, out _, out _))
                     {
-                        key = gramKey.Slice(Suggestions.DefaultNGramSize + 1);
+                        var gramKey = gramCompactKey.Decoded();
+
+                        // There must be a shared prefix.
+                        ref var gramKeyStart = ref MemoryMarshal.GetReference(gramKey);
+
+                        var cmp = Memory.CompareInline(ref ngramStart, ref gramKeyStart, Math.Min(ngram.Length, gramKey.Length));
+                        if (cmp > 0)
+                            break;
+                        if (cmp < 0)
+                            continue;
+
+                        if (ngram.Length == Suggestions.DefaultNGramSize)
+                        {
+                            key = gramKey.Slice(Suggestions.DefaultNGramSize + 1);
+                        }
+                        else
+                        {
+                            // This is an ngram prefix, we need to figure out where to cut it.
+                            key = gramKey.Slice(gramKey.IndexOf((byte)':') + 1);
+                        }
+
+                        uint keyHash = Hashing.XXHash32.CalculateInline(key);
+
+                        if (dictionary.TryGetValue(keyHash, out int location) == false)
+                        {
+                            location = values.Count;
+
+                            Slice.From(allocator, key, out var gramSlice);
+                            values.Add((gramSlice, 0));
+                            dictionary.Add(keyHash, location);
+                        }
+
+                        ref var item = ref values.GetAsRef(location);
+                        item.Popularity++;
                     }
-                    else
-                    {
-                        // This is an ngram prefix, we need to figure out where to cut it.
-                        key = gramKey.Slice(gramKey.IndexOf((byte)':') + 1);
-                    }
-
-                    uint keyHash = Hashing.XXHash32.CalculateInline(key);
-
-                    if (dictionary.TryGetValue(keyHash, out int location) == false)
-                    {
-                        location = values.Count;
-
-                        Slice.From(allocator, key, out var gramSlice);
-                        values.Add((gramSlice, 0));
-                        dictionary.Add(keyHash, location);
-                    }
-
-                    ref var item = ref values.GetAsRef(location);
-                    item.Popularity++;
                 }
             }
 

@@ -59,7 +59,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             title: 'Ongoing Tasks',
             nav: true,
             css: 'icon-manage-ongoing-tasks',
-            dynamicHash: appUrls.ongoingTasksUrl,
+            dynamicHash: appUrls.ongoingTasksUrl(),
             search: {
                 alternativeTitles:[
                     "ETL",
@@ -83,7 +83,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             title: 'Add new ongoing task',
             nav: false,
             css: "icon-plus",
-            dynamicHash: appUrls.addNewOngoingTask(false),
+            dynamicHash: appUrls.addNewOngoingTaskUrl(false),
             itemRouteToHighlight: 'databases/tasks/addNewOngoingTasks',
         }),
         new leafMenuItem({

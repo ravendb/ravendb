@@ -64,6 +64,8 @@ namespace Raven.Server.Documents.Indexes
 
             var res = _regexCache.GetOrAdd(pattern, result);
 
+            // if we lost the race, the node (and its per-thread Regex it may have already built) we just
+            // created is simply discarded - the GC reclaims it, no explicit cleanup is needed.
             if (res != result) // someone else created it
                 return res.RegexLazy.Value;
 
@@ -92,12 +94,14 @@ namespace Raven.Server.Documents.Indexes
                     _neverCompile = true; 
                 }
                 //Dropping 25% of the cached items
+                // evicted nodes' ThreadLocal<Regex> instances are not disposed here - Regex holds no
+                // unmanaged handles, so the GC does the final cleanup once nothing references the node.
                 int countRemoved = 0;
                 foreach (var kv in _regexCache
                     .OrderBy(kv => kv.Value.Timestamp)
                     .Take(_capacity / 4))
                 {
-                    
+
                     if (_regexCache.TryRemove(kv.Key, out _))
                         countRemoved++;
                 }
@@ -116,12 +120,14 @@ namespace Raven.Server.Documents.Indexes
     internal sealed class ConcurrentLruRegexCacheNode
     {
         public long Timestamp;
-        public Lazy<Regex> RegexLazy { get; }
+        public ThreadLocal<Regex> RegexLazy { get; }
 
         public ConcurrentLruRegexCacheNode(string pattern, TimeSpan regexTimeout, RegexOptions options = RegexOptions.None)
         {
             var flags = RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | options;
-            RegexLazy = new Lazy<Regex>(()=>new Regex(pattern, flags, 
+            // https://github.com/dotnet/runtime/issues/129445 - concurrent usage of a single Regex instance
+            // across threads allocates internally, so we hand out a separate compiled instance per thread.
+            RegexLazy = new ThreadLocal<Regex>(() => new Regex(pattern, flags,
                 // we use 50 ms as the max timeout because this is going to be evaluated
                 // on _each_ term in the results, potentially millions, so we specify a very
                 // short value to avoid very long queries

@@ -12,7 +12,6 @@ import {
     ConnectionStringItem,
     DestinationUrlItem,
     EmptyScriptsWarning,
-    ICanShowTransformationScriptPreview,
     OngoingTaskActions,
     OngoingTaskName,
     OngoingTaskResponsibleNode,
@@ -31,7 +30,7 @@ import { TaskPanelErrors, EtlPanelHealthBadge, EtlPanelProgressItem, EtlPanelTog
 
 type RavenEtlPanelProps = EtlPanelBaseProps<OngoingTaskRavenEtlInfo>;
 
-export function RavenEtlPanel(props: RavenEtlPanelProps & ICanShowTransformationScriptPreview) {
+export function RavenEtlPanel(props: RavenEtlPanelProps) {
     const { data, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState, etlStats } = props;
 
     const { forCurrentDatabase } = useAppUrls();
@@ -43,7 +42,6 @@ export function RavenEtlPanel(props: RavenEtlPanelProps & ICanShowTransformation
         detailsVisible,
         toggleDetails,
         onEdit,
-        showPreview,
         taskHealth,
         errorCount,
         errorsByLocation,
@@ -126,7 +124,7 @@ export function RavenEtlPanel(props: RavenEtlPanelProps & ICanShowTransformation
             </RichPanelDetails>
             <Collapse in={detailsVisible}>
                 <div>
-                    <OngoingEtlTaskDistribution task={data} showPreview={showPreview} etlStats={etlStats} />
+                    <OngoingEtlTaskDistribution task={data} etlStats={etlStats} />
                 </div>
             </Collapse>
         </RichPanel>

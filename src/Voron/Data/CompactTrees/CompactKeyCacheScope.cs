@@ -8,7 +8,7 @@ public struct CompactKeyCacheScope : IDisposable
 {
     private readonly LowLevelTransaction _llt;
     private CompactKey _key;
-    public CompactKey Key => _key;
+    public readonly CompactKey Key => _key ?? throw new ObjectDisposedException(nameof(CompactKeyCacheScope));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public CompactKeyCacheScope(LowLevelTransaction tx)
@@ -27,7 +27,6 @@ public struct CompactKeyCacheScope : IDisposable
 
     public void Dispose()
     {
-        // We are getting an unsafe references on an scoped object because we are disposing anyways. 
         _llt.ReleaseCompactKey(ref _key);
     }
 }

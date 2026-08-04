@@ -1516,30 +1516,26 @@ namespace Raven.Server
 
         public (bool ShouldRenew, DateTime RenewalDate) CalculateRenewalDate(CertificateUtils.CertificateHolder currentCertificate, bool forceRenew)
         {
-            // we want to setup all the renewals for Saturdays, 30 days before expiration. This is done to reduce the amount of cert renewals that are counted against our renewals
-            // but if we have less than 20 days or user asked to force-renew, we'll try anyway.
+            // we want to setup the renewal for the first possible date, AcmeRenewalThresholdPercentage (default: 30%) of the certificate lifetime before expiration
+            // but if we're already past that threshold or the user asked to force-renew, we'll try anyway.
 
             if (forceRenew)
                 return (true, DateTime.UtcNow.Date);
 
             var remainingDays = (currentCertificate.ServerCertificate.NotAfter - Time.GetUtcNow().ToLocalTime()).TotalDays;
             var daysToRenewBeforeExpiration = CalculateDaysToRenewBeforeExpiration(Certificate.ServerCertificate);
-            
+
             if (remainingDays <= daysToRenewBeforeExpiration)
             {
                 return (true, DateTime.UtcNow.Date);
             }
 
-            var firstPossibleDate = currentCertificate.ServerCertificate.NotAfter.ToUniversalTime().AddDays(-daysToRenewBeforeExpiration);
+            var firstPossibleDate = currentCertificate.ServerCertificate.NotAfter.ToUniversalTime().AddDays(-daysToRenewBeforeExpiration).Date;
 
-            // We can do this because saturday is last in the DayOfWeek enum
-            var daysUntilSaturday = DayOfWeek.Saturday - firstPossibleDate.DayOfWeek;
-            var firstPossibleSaturday = firstPossibleDate.AddDays(daysUntilSaturday);
+            if (firstPossibleDate == DateTime.UtcNow.Date)
+                return (true, firstPossibleDate);
 
-            if (firstPossibleSaturday.Date == DateTime.UtcNow.Date)
-                return (true, firstPossibleSaturday.Date);
-
-            return (false, firstPossibleSaturday.Date);
+            return (false, firstPossibleDate);
         }
 
         public async Task StartCertificateReplicationAsync(X509Certificate2 newCertificate, string password, bool replaceImmediately, string raftRequestId)

@@ -1,8 +1,10 @@
 using System;
+using System.Buffers;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using Sparrow;
 using Sparrow.Binary;
 using Voron.Exceptions;
@@ -18,12 +20,28 @@ public sealed unsafe class CompactKey : IDisposable
 {
     public static readonly CompactKey NullInstance = new();
 
+    // We want to avoid contention here, so we have separate pool per core instead of globally shared
+    // cannot use a [ThreadStatic] here, because we may hop between threads to a thread that didn't have this initialized
+    private static readonly ArrayPool<byte>[] SharedBytesPools = new ArrayPool<byte>[Environment.ProcessorCount];
+    private static readonly ArrayPool<long>[] SharedKeyMappingPools = new ArrayPool<long>[Environment.ProcessorCount];
+
+    private static ArrayPool<T> GetPoolFrom<T>(ArrayPool<T>[] perCore)
+    {
+        // casting to uint here to avoid -1 from GetCurrentProcessorId (the modulus will handle high values anyway)
+        var index = (uint)Thread.GetCurrentProcessorId() % perCore.Length;
+        ArrayPool<T> arrayPool = perCore[index];
+        if (arrayPool != null)
+            return arrayPool;
+        arrayPool = ArrayPool<T>.Create();
+        return Interlocked.CompareExchange(ref perCore[index], arrayPool, null) ?? arrayPool;
+    }
+
     private LowLevelTransaction _owner;
 
     private const int MappingTableSize = 64;
     private const int MappingTableMask = MappingTableSize - 1;
 
-    private readonly long[] _keyMappingCache = new long[2 * MappingTableMask];
+    private long[] _keyMappingCache = new long[2 * MappingTableMask];
     private ref long KeyMappingCache(int i) => ref _keyMappingCache[i];
     private ref long KeyMappingCacheIndex(int i) => ref _keyMappingCache[MappingTableSize + i];
 
@@ -65,11 +83,20 @@ public sealed unsafe class CompactKey : IDisposable
 
         _currentIdx = 0;
         MaxLength = 0;
+
+        _storage = GetPoolFrom(SharedBytesPools).Rent(2 * Constants.CompactTree.MaximumKeySize);
+        _keyMappingCache = GetPoolFrom(SharedKeyMappingPools).Rent(2 * MappingTableSize);
     }
 
     public void Reset()
     {
         _owner = null;
+
+        GetPoolFrom(SharedBytesPools).Return(_storage);
+        _storage = null;
+
+        GetPoolFrom(SharedKeyMappingPools).Return(_keyMappingCache);
+        _keyMappingCache = null;
     }
 
     public bool IsValid => Dictionary > 0;
@@ -105,7 +132,11 @@ public sealed unsafe class CompactKey : IDisposable
 
             int expectedSize = maxSize + _currentIdx + sizeof(int);
             if (expectedSize > _storage.Length)
+            {
                 UnlikelyGrowStorage(expectedSize);
+                // IMPORTANT: we have to re-acquire the decoded key because the grow storage call has invalidated the pointer.
+                decodedKey = Decoded();
+            }
 
             int encodedStartIdx = _currentIdx;
             var encodedKey = _storage.AsSpan(encodedStartIdx + sizeof(int), maxSize);
@@ -211,11 +242,12 @@ public sealed unsafe class CompactKey : IDisposable
 
         // Request more memory, copy the content and return it.
         maxSize = Math.Max(maxSize, oldStorage.Length) * 2;
-        var storage = new byte[maxSize];
+
+        var storage = GetPoolFrom(SharedBytesPools).Rent(maxSize);
         _storage.AsSpan(0, _currentIdx).CopyTo(storage.AsSpan());
 
-        // Update the new references.
-        _storage = storage; 
+        GetPoolFrom(SharedBytesPools).Return(_storage); // Return old to pool.
+        _storage = storage; // Update the new references.
     }
 
     public void Set(ReadOnlySpan<byte> key)

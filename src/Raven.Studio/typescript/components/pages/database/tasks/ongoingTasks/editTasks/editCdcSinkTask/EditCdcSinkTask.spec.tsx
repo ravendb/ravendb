@@ -1,6 +1,6 @@
 import { composeStory } from "@storybook/react-webpack5";
 import * as stories from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/EditCdcSinkTask.stories";
-import { act, rtlRender, waitFor } from "test/rtlTestUtils";
+import { act, rtlRender, waitFor, within } from "test/rtlTestUtils";
 import { mockServices } from "test/mocks/services/MockServices";
 import { TasksStubs } from "test/stubs/TasksStubs";
 
@@ -29,6 +29,10 @@ const selectors = {
     discoverButton: /^Discover$/i,
     configureSelectedTablesButton: /^Configure selected tables$/i,
     saveTaskButton: /Save task configuration/i,
+    missingRelatedTablesAlert: /Linked tables reference 1 source table that is not configured as a root table/,
+    addMissingRootTableButton: /^Add root table$/,
+    addSelectedMissingRootTablesButton: /^Add 1 root table$/,
+    addRootTablesModalTitle: "Add root tables",
 };
 
 describe("Edit CDC Sink task", () => {
@@ -119,6 +123,38 @@ describe("Edit CDC Sink task", () => {
             selectors.databaseName,
             TasksStubs.getCdcSink().TaskId
         );
+    });
+
+    it("adds missing referenced tables as root tables from the alert", async () => {
+        const Story = composeStory(stories.EditTask, stories.default);
+
+        const { screen, fireClick } = rtlRender(<Story />);
+
+        await screen.findByText(selectors.editTaskTitle);
+        expect(await screen.findByText("orders")).toBeInTheDocument();
+
+        // No "alert is absent before discovery" assertion: discovery also auto-runs for the
+        // saved connection string, so such a check would race it.
+        await fireClick(getButtonByText(screen, selectors.discoverTablesButton));
+        await fireClick(await screen.findByText(selectors.discoverButton).then((x) => x.closest("button")));
+
+        const missingRelatedTablesAlert = await screen.findByText(selectors.missingRelatedTablesAlert);
+        const missingRelatedTablesAlertElement = missingRelatedTablesAlert.closest(".alert") as HTMLElement;
+        expect(missingRelatedTablesAlert).toBeInTheDocument();
+        expect(missingRelatedTablesAlertElement).not.toHaveTextContent(selectors.companiesTable);
+
+        await fireClick(getButtonByText(screen, selectors.addMissingRootTableButton));
+        const addRootTablesModal = (await screen.findByText(selectors.addRootTablesModalTitle)).closest(
+            ".modal-content"
+        ) as HTMLElement;
+        expect(within(addRootTablesModal).getByText(selectors.companiesTable)).toBeInTheDocument();
+
+        await fireClick(
+            within(addRootTablesModal).getByText(selectors.addSelectedMissingRootTablesButton).closest("button")
+        );
+
+        await waitFor(() => expect(screen.queryByText(selectors.missingRelatedTablesAlert)).not.toBeInTheDocument());
+        expect(await screen.findByText("companies")).toBeInTheDocument();
     });
 
     it("can render license restricted view", async () => {

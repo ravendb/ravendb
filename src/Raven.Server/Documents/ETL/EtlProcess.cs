@@ -938,9 +938,7 @@ namespace Raven.Server.Documents.ETL
 
                         PauseIfCpuCreditsBalanceIsTooLow();
 
-                        // Snapshot FallbackTime once via pattern: ForceBatchRetry() can null it from another thread
-                        // between the null-check and a .Value read (TOCTOU), which would throw InvalidOperationException.
-                        if (FallbackTime is not { } fallbackTime)
+                        if (FallbackTime is not {} fallbackTime)
                         {
                             _waitForChanges.Wait(CancellationToken);
                         }

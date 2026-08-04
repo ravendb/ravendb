@@ -6,8 +6,8 @@ import {
     analyzeRootTables,
     getDuplicateRootTableErrors,
     getEmbeddedTableWarningMessagesFromAnalysis,
-    getEmbeddedRootTableConflictWarning,
-    getMissingRelatedCollectionWarning,
+    getEmbeddedRootTableConflictWarningFromAnalysis,
+    getMissingRelatedCollectionWarningFromAnalysis,
     getRootTableWarningMessagesFromAnalysis,
 } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskTableWarnings";
 
@@ -25,15 +25,29 @@ describe("CDC Sink table warnings", () => {
         ]);
     });
 
+    it("reports a duplicate even when one of the root tables is disabled", () => {
+        const duplicateErrors = getDuplicateRootTableErrors([
+            createRootTable({ sourceTableSchema: "dbo", sourceTableName: "orders", collectionName: "Orders" }),
+            createRootTable({
+                sourceTableSchema: "dbo",
+                sourceTableName: "orders",
+                collectionName: "Cars",
+                disabled: true,
+            }),
+        ]);
+
+        expect(duplicateErrors).toEqual([expect.objectContaining({ index: 0 }), expect.objectContaining({ index: 1 })]);
+    });
+
     it("returns an embedded warning when the source table is already configured as a root table", () => {
-        const warning = getEmbeddedRootTableConflictWarning(
-            [
+        const warning = getEmbeddedRootTableConflictWarningFromAnalysis(
+            analyzeRootTables([
                 createRootTable({
                     sourceTableSchema: "dbo",
                     sourceTableName: "companies",
                     collectionName: "Companies",
                 }),
-            ],
+            ]),
             {
                 sourceTableName: "companies",
                 sourceTableSchema: "dbo",
@@ -44,14 +58,14 @@ describe("CDC Sink table warnings", () => {
     });
 
     it("returns null when a matching root table creates the linked collection", () => {
-        const warning = getMissingRelatedCollectionWarning(
-            [
+        const warning = getMissingRelatedCollectionWarningFromAnalysis(
+            analyzeRootTables([
                 createRootTable({
                     sourceTableSchema: "dbo",
                     sourceTableName: "companies",
                     collectionName: "companies",
                 }),
-            ],
+            ]),
             {
                 linkedCollectionName: "Companies",
                 propertyName: "Company",
@@ -63,15 +77,15 @@ describe("CDC Sink table warnings", () => {
         expect(warning).toBeNull();
     });
 
-    it("returns a warning when no root table creates the linked collection", () => {
-        const warning = getMissingRelatedCollectionWarning(
-            [
+    it("returns a warning when the source table is not configured as a root table", () => {
+        const warning = getMissingRelatedCollectionWarningFromAnalysis(
+            analyzeRootTables([
                 createRootTable({
                     sourceTableSchema: "dbo",
-                    sourceTableName: "companies",
-                    collectionName: "Businesses",
+                    sourceTableName: "orders",
+                    collectionName: "Orders",
                 }),
-            ],
+            ]),
             {
                 linkedCollectionName: "Companies",
                 propertyName: "Company",
@@ -80,9 +94,99 @@ describe("CDC Sink table warnings", () => {
             }
         );
 
-        expect(warning).toBe(`No root table is configured for the related "Companies" collection.
-The Company property will contain related document IDs that reference documents in the "Companies" collection.
-However, those documents will not be created unless "dbo.companies" is also configured as a root table.`);
+        expect(warning).toBe(
+            `Related documents in the "Companies" collection will not be created because "dbo.companies" is not configured as a root table.`
+        );
+    });
+
+    it("returns a disabled warning when the only matching root table is disabled", () => {
+        const warning = getMissingRelatedCollectionWarningFromAnalysis(
+            analyzeRootTables([
+                createRootTable({
+                    sourceTableSchema: "dbo",
+                    sourceTableName: "companies",
+                    collectionName: "Companies",
+                    disabled: true,
+                }),
+            ]),
+            {
+                linkedCollectionName: "Companies",
+                propertyName: "Company",
+                sourceTableName: "companies",
+                sourceTableSchema: "dbo",
+            }
+        );
+
+        expect(warning).toBe(
+            `Related documents in the "Companies" collection will not be created because the "dbo.companies" root table is disabled.`
+        );
+    });
+
+    it("ignores the disabled duplicate when an enabled root table also matches", () => {
+        const warning = getMissingRelatedCollectionWarningFromAnalysis(
+            analyzeRootTables([
+                createRootTable({
+                    sourceTableSchema: "dbo",
+                    sourceTableName: "companies",
+                    collectionName: "Companies",
+                }),
+                createRootTable({
+                    sourceTableSchema: "dbo",
+                    sourceTableName: "companies",
+                    collectionName: "Archive",
+                    disabled: true,
+                }),
+            ]),
+            {
+                linkedCollectionName: "Companies",
+                propertyName: "Company",
+                sourceTableName: "companies",
+                sourceTableSchema: "dbo",
+            }
+        );
+
+        expect(warning).toBeNull();
+    });
+
+    it("returns a mismatch warning when the source table is configured with a different collection", () => {
+        const warning = getMissingRelatedCollectionWarningFromAnalysis(
+            analyzeRootTables([
+                createRootTable({
+                    sourceTableSchema: "dbo",
+                    sourceTableName: "companies",
+                    collectionName: "Businesses",
+                }),
+            ]),
+            {
+                linkedCollectionName: "Companies",
+                propertyName: "Company",
+                sourceTableName: "companies",
+                sourceTableSchema: "dbo",
+            }
+        );
+
+        expect(warning).toBe(
+            `Related documents in the "Companies" collection will not be created because the "dbo.companies" root table targets the "Businesses" collection instead.`
+        );
+    });
+
+    it("collects embedded source table keys from the whole configured tree", () => {
+        const analysis = analyzeRootTables([
+            createRootTable({
+                embeddedTables: [
+                    createEmbeddedTable({
+                        sourceTableSchema: "dbo",
+                        sourceTableName: "order_lines",
+                        embeddedTables: [
+                            createEmbeddedTable({ sourceTableSchema: "dbo", sourceTableName: "line_notes" }),
+                        ],
+                    }),
+                ],
+            }),
+        ]);
+
+        expect(analysis.embeddedSourceKeys.has("dbo::order_lines")).toBe(true);
+        expect(analysis.embeddedSourceKeys.has("dbo::line_notes")).toBe(true);
     });
 
     it("returns root-level warnings from the whole table tree", () => {
@@ -134,9 +238,7 @@ However, those documents will not be created unless "dbo.companies" is also conf
 
         expect(warnings).toEqual([
             expect.stringContaining("already configured as a root table"),
-            `No root table is configured for the related "Media" collection.
-The Media property will contain related document IDs that reference documents in the "Media" collection.
-However, those documents will not be created unless "public.media" is also configured as a root table.`,
+            `Related documents in the "Media" collection will not be created because "public.media" is not configured as a root table.`,
         ]);
     });
 
@@ -165,7 +267,7 @@ However, those documents will not be created unless "public.media" is also confi
 
         expect(warnings).toEqual([
             expect.stringContaining("already configured as a root table"),
-            expect.stringContaining('"public.media" is also configured as a root table'),
+            expect.stringContaining('"public.media" is not configured as a root table'),
         ]);
     });
 });

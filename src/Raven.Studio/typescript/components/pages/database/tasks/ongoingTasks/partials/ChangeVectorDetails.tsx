@@ -31,9 +31,9 @@ export function ChangeVectorDetails(props: ChangeVectorDetailsProps) {
     }
 
     return (
-        <div className="px-2">
+        <div>
             {sourceDatabaseChangeVectorFormatted && (
-                <div className="mb-3">
+                <div className="mb-2">
                     <FormLabel for="sourceDatabaseCv" className="mb-0 md-label">
                         Source database CV
                     </FormLabel>

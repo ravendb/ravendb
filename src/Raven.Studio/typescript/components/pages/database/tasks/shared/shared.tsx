@@ -20,7 +20,7 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { useAppSelector } from "components/store";
 import Button from "react-bootstrap/Button";
 import Dropdown from "react-bootstrap/Dropdown";
-import { InputItem } from "components/models/common";
+
 import {
     ongoingTasksReducer,
     ongoingTasksReducerInitializer,
@@ -47,10 +47,6 @@ export interface BaseOngoingTaskPanelProps<T extends OngoingTaskInfo> {
     onTaskOperation: (type: OngoingTaskOperationConfirmType, taskSharedInfos: OngoingTaskSharedInfo[]) => void;
     isDeleting: (id: number) => boolean;
     isTogglingState: (id: number) => boolean;
-}
-
-export interface ICanShowTransformationScriptPreview {
-    showItemPreview: (task: OngoingTaskInfo, scriptName: string) => void;
 }
 
 export function useTasksOperations(editUrl: string, props: BaseOngoingTaskPanelProps<OngoingTaskInfo>) {
@@ -442,6 +438,7 @@ export function useOngoingTasksOperations(reload: () => void) {
 
 interface OngoingTasksCategory {
     categoryName: string;
+    categoryHeaderName?: string;
     categoryIcon: IconName;
     tasks: TaskItemProps[];
 }
@@ -494,9 +491,17 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
         !isProfessionalOrAbove &&
         (subscriptionsServerLimitStatus === "limitReached" || subscriptionsDatabaseLimitStatus === "limitReached");
 
-    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
     const [searchText, setSearchText] = useState<string>("");
+    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
     const { forCurrentDatabase } = useAppUrls();
+
+    const toggleCategory = (categoryName: string) => {
+        setSelectedCategories((prev) =>
+            prev.includes(categoryName) ? prev.filter((c) => c !== categoryName) : [...prev, categoryName]
+        );
+    };
+
+    const resetCategories = () => setSelectedCategories([]);
 
     const getSubscriptionLimitReason = () => {
         if (!isSubscriptionDisabled) {
@@ -623,7 +628,8 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
             ],
         },
         {
-            categoryName: "ETL (RavenDB ⇛ TARGET)",
+            categoryName: "ETL",
+            categoryHeaderName: "ETL (RavenDB ⇛ TARGET)",
             categoryIcon: "etl",
             tasks: [
                 {
@@ -740,7 +746,8 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
             ],
         },
         {
-            categoryName: "SINK (SOURCE ⇛ RavenDB)",
+            categoryName: "Sink",
+            categoryHeaderName: "Sink (SOURCE ⇛ RavenDB)",
             categoryIcon: "hub-sink-replication",
             tasks: [
                 {
@@ -804,31 +811,31 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
         return categoryTasks.length;
     }
 
-    const filteredTasks = ongoingTasks
+    const searchFilteredTasks = ongoingTasks
         .map((category) => ({
             ...category,
             tasks: category.tasks.filter((task) => matchesSearchText(task, searchText)),
         }))
-        .filter(
-            (category) => isCategorySelected(category.categoryName, selectedCategories) && category.tasks.length > 0
-        );
+        .filter((category) => category.tasks.length > 0);
 
-    const categoryList: InputItem[] = [
-        { value: "AI", label: "AI", count: getCategoryCount("AI") },
-        { value: "Replication", label: "Replication", count: getCategoryCount("Replication") },
-        { value: "Backups", label: "Backups", count: getCategoryCount("Backups") },
-        { value: "Subscriptions", label: "Subscriptions", count: getCategoryCount("Subscriptions") },
-        { value: "ETL (RavenDB ⇛ TARGET)", label: "ETL", count: getCategoryCount("ETL (RavenDB ⇛ TARGET)") },
-        { value: "SINK (SOURCE ⇛ RavenDB)", label: "Sink", count: getCategoryCount("SINK (SOURCE ⇛ RavenDB)") },
-    ];
+    const filteredTasks = searchFilteredTasks.filter(
+        (category) => selectedCategories.length === 0 || selectedCategories.includes(category.categoryName)
+    );
+
+    const allCategories = ongoingTasks.map((c) => ({
+        categoryName: c.categoryName,
+        categoryIcon: c.categoryIcon,
+    }));
 
     return {
         filteredTasks,
-        categoryList,
+        searchFilteredTasks,
+        allCategories,
         searchText,
-        selectedCategories,
         setSearchText,
-        setSelectedCategories,
+        selectedCategories,
+        toggleCategory,
+        resetCategories,
     };
 }
 
@@ -839,13 +846,4 @@ const matchesSearchText = (task: TaskItemProps, searchText: string) => {
 
     const searchLower = searchText.trim().toLowerCase();
     return task.title.toLowerCase().includes(searchLower) || task.description.toLowerCase().includes(searchLower);
-};
-
-const isCategorySelected = (categoryName: string, selectedCategories: string[]) => {
-    if (selectedCategories.length === 0) {
-        return true;
-    }
-
-    const categoryLower = categoryName.toLowerCase();
-    return selectedCategories.some((selected) => selected.toLowerCase() === categoryLower);
 };

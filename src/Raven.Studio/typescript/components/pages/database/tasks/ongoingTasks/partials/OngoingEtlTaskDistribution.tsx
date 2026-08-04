@@ -1,9 +1,14 @@
-﻿import { useState } from "react";
-import { DistributionItem, DistributionLegend, LocationDistribution } from "components/common/LocationDistribution";
+﻿import { useId, useMemo, useState } from "react";
+import {
+    ClickableProgress,
+    DistributionItem,
+    DistributionLegend,
+    LocationDistribution,
+} from "components/common/LocationDistribution";
 import classNames from "classnames";
 import { AnyEtlOngoingTaskInfo, OngoingEtlTaskNodeInfo, OngoingTaskInfo } from "components/models/tasks";
 import { ProgressCircle } from "components/common/ProgressCircle";
-import { OngoingEtlTaskProgressTooltip } from "../partials/OngoingEtlTaskProgressTooltip";
+import { EtlProgressDetailsSheet } from "../partials/EtlProgressDetailsSheet";
 import { Icon } from "components/common/Icon";
 import { databaseLocationComparator } from "components/utils/common";
 import Badge from "react-bootstrap/Badge";
@@ -16,7 +21,7 @@ import { useAppSelector } from "components/store";
 import { getPopoverMessageForTaskHealth, getTaskErrorCount } from "../panels/etlPanelUtils";
 import { useServices } from "hooks/useServices";
 import { useAsync, useAsyncCallback } from "react-async-hook";
-import { useViewSheet } from "components/common/splitView/ViewSheet";
+import { SheetPortalOutlet, useViewSheet } from "components/common/splitView/ViewSheet";
 import TaskErrorDetailsSheet from "components/pages/database/tasks/tasksErrors/partials/TaskErrorDetailsSheet";
 import {
     EtlHealthStatus,
@@ -34,7 +39,6 @@ import copyToClipboard from "common/copyToClipboard";
 
 interface OngoingEtlTaskDistributionProps {
     task: AnyEtlOngoingTaskInfo;
-    showPreview: (transformationName: string) => void;
     etlStats?: EtlTaskStats[];
 }
 
@@ -43,13 +47,16 @@ interface TxIdLayout {
     isSingleScript: boolean;
 }
 
-interface ItemWithTooltipProps {
+interface TaskDistributionRowProps {
     nodeInfo: OngoingEtlTaskNodeInfo;
+    allNodes: OngoingEtlTaskNodeInfo[];
     sharded: boolean;
     task: AnyEtlOngoingTaskInfo;
-    showPreview: (transformationName: string) => void;
     etlStats?: EtlTaskStats[];
     txIdLayout: TxIdLayout | null;
+    isActive: boolean;
+    setActiveNodeIndex: (index: number | null) => void;
+    ownerId: string;
 }
 
 interface ConnectionStatusCellProps {
@@ -244,8 +251,8 @@ function ConnectionStatusCell({
     );
 }
 
-function ItemWithTooltip(props: ItemWithTooltipProps) {
-    const { nodeInfo, sharded, task, showPreview, etlStats, txIdLayout } = props;
+function TaskDistributionRow(props: TaskDistributionRowProps) {
+    const { nodeInfo, allNodes, sharded, task, etlStats, txIdLayout, isActive, setActiveNodeIndex, ownerId } = props;
 
     const shard = (
         <div className="top shard">
@@ -258,11 +265,10 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
         </div>
     );
 
-    const { open } = useViewSheet();
+    const { open, renderIntoSheet } = useViewSheet();
 
     const key = taskNodeInfoKey(nodeInfo);
     const hasError = !!nodeInfo.details?.error;
-    const [node, setNode] = useState<HTMLDivElement>();
 
     const { appUrl } = useAppUrls();
     const { tasksService } = useServices();
@@ -323,16 +329,36 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
         findNextBatchRetryTime(asyncLocalEtlStats.result, task.shared.taskName) ??
         findNextBatchRetryTime(etlStats, task.shared.taskName);
 
+    const nodeIndex = allNodes.indexOf(nodeInfo);
+
+    const openProgressSheet = () => {
+        setActiveNodeIndex(nodeIndex);
+        open({
+            ownerId,
+            component: <SheetPortalOutlet />,
+            initialWidth: "40%",
+            minWidth: "25%",
+            maxWidth: "60%",
+            onClose: () => setActiveNodeIndex(null),
+        });
+    };
+
+    const canOpenSheet = nodeInfo.status !== "loading" && nodeInfo.status !== "idle";
+
     return (
-        <div ref={setNode}>
-            <DistributionItem loading={nodeInfo.status === "loading" || nodeInfo.status === "idle"} key={key}>
+        <div>
+            <DistributionItem
+                loading={nodeInfo.status === "loading" || nodeInfo.status === "idle"}
+                key={key}
+                className={classNames({ active: isActive })}
+            >
                 {sharded && shard}
                 <div className={classNames("node", { top: !sharded })}>
                     {!sharded && <Icon icon="node" />}
                     {nodeInfo.location.nodeTag}
                 </div>
-                {nodeInfo.status === "success" && (
-                    <div>
+                <div>
+                    {nodeInfo.status === "success" ? (
                         <ConnectionStatusCell
                             status={nodeInfo.details.taskConnectionStatus}
                             processNames={processNames}
@@ -342,8 +368,10 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
                             nextBatchRetryTime={nextBatchRetryTime}
                             onRetrySuccess={asyncLocalEtlStats.execute}
                         />
-                    </div>
-                )}
+                    ) : (
+                        "-"
+                    )}
+                </div>
                 <div>
                     <EtlErrorCountCell
                         hasError={hasError}
@@ -364,16 +392,21 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
                     </PopoverWithHoverWrapper>
                 </div>
                 {txIdLayout && <TransactionalIdCells txIdLayout={txIdLayout} nodeInfo={nodeInfo} />}
-                <OngoingEtlTaskProgress task={task} nodeInfo={nodeInfo} />
+                <OngoingEtlTaskProgress
+                    task={task}
+                    nodeInfo={nodeInfo}
+                    onClick={canOpenSheet ? openProgressSheet : undefined}
+                />
             </DistributionItem>
-            {node && (
-                <OngoingEtlTaskProgressTooltip
-                    hasError={!!nodeInfo.details?.error}
-                    toggleErrorModal={openErrorSheet}
-                    target={node}
-                    progress={nodeInfo.etlProgress}
-                    status={nodeInfo.status}
-                    showPreview={showPreview}
+            {renderIntoSheet(
+                ownerId,
+                isActive,
+                <EtlProgressDetailsSheet
+                    key={ownerId}
+                    task={task}
+                    allNodes={allNodes}
+                    initialNodeIndex={nodeIndex}
+                    onNodeChange={setActiveNodeIndex}
                 />
             )}
         </div>
@@ -436,28 +469,39 @@ function getTxIdLayout(task: AnyEtlOngoingTaskInfo, visibleNodes: OngoingEtlTask
 }
 
 export function OngoingEtlTaskDistribution(props: OngoingEtlTaskDistributionProps) {
-    const { task, showPreview, etlStats } = props;
+    const { task, etlStats } = props;
     const sharded = task.nodesInfo.some((x) => x.location.shardNumber != null);
+    const [activeNodeIndex, setActiveNodeIndex] = useState<number | null>(null);
+    const ownerId = useId();
+    const { activeSheetOwnerId } = useViewSheet();
 
-    const visibleNodes = task.nodesInfo.filter(
-        (nodeInfo) =>
-            nodeInfo.details && task.responsibleLocations.find((l) => databaseLocationComparator(l, nodeInfo.location))
+    const visibleNodes = useMemo(
+        () =>
+            task.nodesInfo.filter(
+                (nodeInfo) =>
+                    nodeInfo.details &&
+                    task.responsibleLocations.find((l) => databaseLocationComparator(l, nodeInfo.location))
+            ),
+        [task]
     );
 
     const txIdLayout = getTxIdLayout(task, visibleNodes);
 
-    const items = visibleNodes.map((nodeInfo) => {
+    const items = visibleNodes.map((nodeInfo, index) => {
         const key = taskNodeInfoKey(nodeInfo);
 
         return (
-            <ItemWithTooltip
+            <TaskDistributionRow
                 key={key}
                 nodeInfo={nodeInfo}
+                allNodes={visibleNodes}
                 sharded={sharded}
-                showPreview={showPreview}
                 task={task}
                 etlStats={etlStats}
                 txIdLayout={txIdLayout}
+                isActive={activeSheetOwnerId === ownerId && activeNodeIndex === index}
+                setActiveNodeIndex={setActiveNodeIndex}
+                ownerId={ownerId}
             />
         );
     });
@@ -495,26 +539,31 @@ export function OngoingEtlTaskDistribution(props: OngoingEtlTaskDistributionProp
 interface OngoingEtlTaskProgressProps {
     nodeInfo: OngoingEtlTaskNodeInfo;
     task: OngoingTaskInfo;
+    onClick?: () => void;
 }
 
 export function OngoingEtlTaskProgress(props: OngoingEtlTaskProgressProps) {
-    const { nodeInfo, task } = props;
+    const { nodeInfo, task, onClick } = props;
 
     const disabled = task.shared.taskState === "Disabled";
 
     if (!nodeInfo.etlProgress || nodeInfo.etlProgress.length === 0) {
         return (
-            <ProgressCircle icon={disabled ? "stop" : null} state="running">
-                {disabled ? "Disabled" : "?"}
-            </ProgressCircle>
+            <ClickableProgress onClick={onClick}>
+                <ProgressCircle icon={disabled ? "stop" : null} state="running" onClick={onClick}>
+                    {disabled ? "Disabled" : "?"}
+                </ProgressCircle>
+            </ClickableProgress>
         );
     }
 
     if (nodeInfo.etlProgress.every((x) => x.completed) && task.shared.taskState === "Enabled") {
         return (
-            <ProgressCircle state="success" icon="check">
-                up to date
-            </ProgressCircle>
+            <ClickableProgress onClick={onClick}>
+                <ProgressCircle state="success" icon="check" onClick={onClick}>
+                    up to date
+                </ProgressCircle>
+            </ClickableProgress>
         );
     }
 
@@ -526,9 +575,11 @@ export function OngoingEtlTaskProgress(props: OngoingEtlTaskProgressProps) {
     const anyDisabled = nodeInfo.etlProgress.some((x) => x.disabled);
 
     return (
-        <ProgressCircle state="running" icon={anyDisabled ? "stop" : null} progress={percentage}>
-            {anyDisabled ? "Disabled" : "Running"}
-        </ProgressCircle>
+        <ClickableProgress onClick={onClick}>
+            <ProgressCircle state="running" icon={anyDisabled ? "stop" : null} progress={percentage} onClick={onClick}>
+                {anyDisabled ? "Disabled" : "Running"}
+            </ProgressCircle>
+        </ClickableProgress>
     );
 }
 
