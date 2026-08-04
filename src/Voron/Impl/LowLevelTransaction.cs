@@ -78,6 +78,7 @@ namespace Voron.Impl
         private readonly WriteAheadJournal _journal;
         public ImmutableDictionary<long, PageFromScratchBuffer> ModifiedPagesInTransaction;
         private ImmutableDictionary<long, PageFromScratchBuffer> _scratchBuffersSnapshotToRollbackTo;
+        private bool _rollbackWouldRestoreFreedScratchPages;
         internal sealed class WriteTransactionPool
         {
 #if DEBUG
@@ -1320,17 +1321,6 @@ namespace Voron.Impl
             if (Committed || RolledBack || Flags != (TransactionFlags.ReadWrite))
                 return;
 
-            if (AppliedJournalStateAfterFlush)
-            {
-                // RavenDB-27166: this transaction applied a piggybacked journal flush-state update in CommitStage1,
-                // freeing the flushed scratch pages, and then failed to commit. The rollback below restores the
-                // tx-start scratch snapshot, which still maps those freed entries - state that cannot be trusted -
-                // so mark the environment as catastrophically failed to force an unload and a clean recovery
-                // instead of serving stale scratch mappings.
-                _env.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(
-                    new InvalidOperationException("Transaction rolled back after applying a piggybacked journal flush-state update; the in-memory scratch state cannot be safely restored (RavenDB-27166)")));
-            }
-
             OnRollBack?.Invoke(this);
 
             _freeSpaceHandling.OnRollback();
@@ -1350,6 +1340,15 @@ namespace Voron.Impl
             }
 
             RolledBack = true;
+
+            if (_rollbackWouldRestoreFreedScratchPages)
+            {
+                Debug.Assert(AppliedJournalStateAfterFlush, "Scratch pages of older transactions are freed only by the journal flush-state update");
+
+                // the restored scratch state cannot be trusted - force an environment unload and a clean recovery
+                _env.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(
+                    new InvalidOperationException("Rollback of a transaction that applied the journal flush-state update has restored mappings to already freed scratch pages. The in-memory scratch state cannot be trusted, the environment must be reloaded to recover a consistent state.")));
+            }
         }
 
         public void RetrieveCommitStats(out CommitStats stats)
@@ -1641,6 +1640,9 @@ namespace Voron.Impl
 
         public void ForgetAboutScratchPage(PageFromScratchBuffer value)
         {
+            if (_rollbackWouldRestoreFreedScratchPages == false) // once set, no need to keep checking
+                _rollbackWouldRestoreFreedScratchPages = RollbackWouldRestoreFreedScratchPage(value);
+
             if (_scratchPagesInUse.TryGetValue(value.PageNumberInDataFile, out var existing) == false)
             {
                 // page may have been freed, that is expected
@@ -1652,6 +1654,15 @@ namespace Voron.Impl
                 return; // transaction scratch page is different
 
             _scratchPagesInUse.Remove(value.PageNumberInDataFile);
+        }
+
+        private bool RollbackWouldRestoreFreedScratchPage(PageFromScratchBuffer value)
+        {
+            // checking if Rollback()'s snapshot restore would really bring back a mapping onto a freed scratch position (via _scratchBuffersSnapshotToRollbackTo)
+
+            return value.AllocatedInTransaction != Id && // the free is done on behalf of an older committed transaction - only a piggybacked journal flush-state update does that
+                _scratchBuffersSnapshotToRollbackTo.TryGetValue(value.PageNumberInDataFile, out var mappedScratchPageAtTxStart) &&
+                mappedScratchPageAtTxStart.AllocatedInTransaction == value.AllocatedInTransaction; // not a newer version that superseded it before this tx started
         }
 
         public void RecordSparseRangeCandidate(long sectionPageNumber)

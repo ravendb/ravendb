@@ -33,8 +33,17 @@ public class RavenDB_27166 : StorageTest
     // This is RavenDB_23264's scenario (a piggybacking tx applies the flush action, fails to commit, and the flush
     // thread retries without double-freeing), continued past the retry: the environment must not serve corrupted
     // data afterwards.
-    [RavenFact(RavenTestCategory.Voron)]
-    public void PiggybackedFlushFailure_MustNotLeaveEnvironmentServingCorruptedData()
+    //
+    // rollBackAnotherTxBeforeTheFlushRetry keeps the flush thread parked after the rollback and lets one more write
+    // transaction roll back first. That matters because a rollback restores env.CurrentStateRecord.ScratchPagesTable
+    // (LowLevelTransaction.cs:294) and a failed transaction never republishes it (StorageEnvironment.cs:876), so the
+    // published table still maps the entries the flush action freed. Repairing only the live scratch builder holds
+    // until that table is restored again, which is what this variant does - ScratchBufferPool.Cleanup opens a write
+    // transaction and disposes it without committing, so a rolling-back write transaction is not a contrived event.
+    [RavenTheory(RavenTestCategory.Voron)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void PiggybackedFlushFailure_MustNotLeaveEnvironmentServingCorruptedData(bool rollBackAnotherTxBeforeTheFlushRetry)
     {
         var values = new Dictionary<string, string>();
 
@@ -75,7 +84,15 @@ public class RavenDB_27166 : StorageTest
         txBlocker.LowLevelTransaction.BeforeCommitFinalization += _ => throw new InvalidOperationException("Simulated failure after flush action completed");
 
         var actionSetEvent = new ManualResetEventSlim(false);
-        Env.Journal.Applicator.ForTestingPurposesOnly().OnWaitForJournalStateToBeUpdated_AfterAssigning_updateJournalStateAfterFlush += () => actionSetEvent.Set();
+
+        // the action is installed before this hook runs and the flush thread has not tried for the write lock yet,
+        // so parking it here keeps the piggyback available while holding the retry back
+        var flushRetryGate = new ManualResetEventSlim(initialState: rollBackAnotherTxBeforeTheFlushRetry == false);
+        Env.Journal.Applicator.ForTestingPurposesOnly().OnWaitForJournalStateToBeUpdated_AfterAssigning_updateJournalStateAfterFlush += () =>
+        {
+            actionSetEvent.Set();
+            flushRetryGate.Wait(TimeSpan.FromSeconds(30));
+        };
 
         Exception flushException = null;
         var flushThread = new Thread(() =>
@@ -97,10 +114,23 @@ public class RavenDB_27166 : StorageTest
             Assert.Throws<InvalidOperationException>(() => txBlocker.Commit());
             txBlocker.Dispose(); // -> Rollback -> restores the tx-start scratch snapshot
 
+            // nothing has republished the scratch table yet, so this rollback restores the same stale published table -
+            // and this transaction freed nothing on behalf of the flush, so it has nothing to re-apply
+            if (rollBackAnotherTxBeforeTheFlushRetry && Env.Options.IsCatastrophicFailureSet == false)
+            {
+                using (Env.WriteTransaction())
+                {
+                    // no Commit, exactly like ScratchBufferPool.Cleanup
+                }
+            }
+
+            flushRetryGate.Set();
+
             Assert.True(flushThread.Join(TimeSpan.FromSeconds(30)), "flush thread did not complete");
         }
         finally
         {
+            flushRetryGate.Set();
             Env.Journal.Applicator.ForTestingPurposesOnly().OnWaitForJournalStateToBeUpdated_AfterAssigning_updateJournalStateAfterFlush = null;
         }
 
