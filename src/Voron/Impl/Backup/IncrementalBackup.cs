@@ -136,8 +136,6 @@ namespace Voron.Impl.Backup
 
                         var journalFile = GetJournalFile(env, journalNum, backupInfo, journalInfo);
 
-                        journalFile.AddRef();
-
                         usedJournals.Add(journalFile);
 
                         var startBackupAt = 0L;
@@ -217,6 +215,8 @@ namespace Voron.Impl.Backup
             return numberOfBackedUpPages;
         }
 
+        // The returned journal already holds one reference (taken on every return path);
+        // callers own that reference and must release it exactly once via Release(), without calling AddRef again.
         internal static JournalFile GetJournalFile(StorageEnvironment env, long journalNum, IncrementalBackupInfo backupInfo, JournalInfo journalInfo)
         {
             var journalFile = env.Journal.Files.FirstOrDefault(x => x.Number == journalNum); // first check journal files currently being in use
