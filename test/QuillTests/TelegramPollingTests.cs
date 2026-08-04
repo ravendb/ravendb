@@ -227,6 +227,66 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         await app.DeleteChannelAsync(channelId);
     }
 
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Health_reports_polls_errors_and_recovery()
+    {
+        var (app, channelId, token) = await ProvisionAsync();
+        await using var appGuard = app;
+
+        await Mock.WaitUntilAsync(() => Mock.GetUpdatesCallCount(token) >= 1, "polling to start");
+
+        var healthy = Assert.Single(await app.GetTelegramHealthAsync());
+        Assert.Equal(channelId, healthy.ChannelId);
+        Assert.Equal("quill_test_bot", healthy.BotUsername);
+        Assert.True(healthy.Enabled);
+        Assert.True(healthy.IsPolling);
+
+        // revoked token: every poll 401s and the counters surface it
+        Mock.GetUpdatesFailure = MockTelegramBotApi.Unauthorized;
+        await Mock.WaitUntilAsync(
+            () => app.GetTelegramHealthAsync().Result.Single().ErrorCount >= 1, "the error counter");
+        var failing = Assert.Single(await app.GetTelegramHealthAsync());
+        Assert.NotNull(failing.LastErrorAt);
+        Assert.Contains("Unauthorized", failing.LastError);
+
+        // restored token: the next successful poll advances the success timestamp past the error
+        Mock.GetUpdatesFailure = null;
+        await Mock.WaitUntilAsync(
+            () => app.GetTelegramHealthAsync().Result.Single() is { LastSuccessfulPoll: not null } h &&
+                  h.LastSuccessfulPoll > failing.LastErrorAt,
+            "a successful poll after recovery");
+
+        // disabled: the row stays (Enabled=false) but no poller backs it
+        await app.UpdateChannelAsync(channelId, new UpdateChannelRequest(null, null, Enabled: false));
+        var disabled = Assert.Single(await app.GetTelegramHealthAsync());
+        Assert.False(disabled.Enabled);
+        Assert.False(disabled.IsPolling);
+
+        await app.DeleteChannelAsync(channelId);
+        Assert.Empty(await app.GetTelegramHealthAsync());
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Health_returns_404_for_unknown_slug()
+    {
+        var e = await Assert.ThrowsAsync<QuillHttpException>(() => Host.GetTelegramHealthAsync("no-such-app"));
+        Assert.Equal(System.Net.HttpStatusCode.NotFound, e.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task App_delete_stops_the_app_pollers()
+    {
+        var (app, _, token) = await ProvisionAsync();
+        await using var appGuard = app;
+
+        await Mock.WaitUntilAsync(() => Mock.GetUpdatesCallCount(token) >= 1, "polling to start");
+
+        await app.Host.DeleteAppAsync(app.Slug);
+        var frozen = Mock.GetUpdatesCallCount(token);
+        await Task.Delay(700);
+        Assert.Equal(frozen, Mock.GetUpdatesCallCount(token));
+    }
+
     private async Task<(QuillApp App, string ChannelId, string Token)> ProvisionAsync(
         Dictionary<string, string>? parameters = null, AiAgentParameter[]? declared = null)
     {
