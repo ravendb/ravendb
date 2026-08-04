@@ -28,11 +28,21 @@ export default class MockTasksService extends AutoMockService<TasksService> {
         this.mocks.validateSmugglerOptions.mockResolvedValue(undefined);
         this.mocks.getNextOperationId.mockResolvedValue(1234);
         // only HasRevisionsConfiguration is read by the import view
-        this.mocks.getDatabaseForStudio.mockResolvedValue({ HasRevisionsConfiguration: true });
+        this.mocks.getDatabaseForStudio.mockResolvedValue({
+            ...DatabasesStubs.nonShardedSingleNodeDatabaseDto(),
+            HasRevisionsConfiguration: true,
+        });
 
         this.mocks.importDatabaseFromFile.mockImplementation(
-            async (_db: unknown, _operationId: unknown, _file: unknown, _dto: unknown, onUploadProgress: unknown) => {
-                (onUploadProgress as (percent: number) => void)(100);
+            async (
+                _db: unknown,
+                operationId: number,
+                _file: unknown,
+                _dto: unknown,
+                onUploadProgress: (percentComplete: number) => void
+            ) => {
+                onUploadProgress(100);
+                return { OperationId: operationId };
             }
         );
     }
