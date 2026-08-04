@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Reflection;
 using System.Threading.Tasks;
 using FastTests;
@@ -32,8 +34,15 @@ public class RavenDB_27081 : RavenTestBase
         UseNewLocalServer(new Dictionary<string, string>
         {
             [RavenConfiguration.GetKey(x => x.Monitoring.Snmp.Enabled)] = "true",
-            [RavenConfiguration.GetKey(x => x.Monitoring.Snmp.Port)] = ReservePort().Port.ToString()
+            [RavenConfiguration.GetKey(x => x.Monitoring.Snmp.Port)] = GetBindableSnmpPort().ToString()
         });
+    }
+
+    private static int GetBindableSnmpPort()
+    {
+        using var probe = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+        probe.Bind(new IPEndPoint(IPAddress.Any, 0));
+        return ((IPEndPoint)probe.LocalEndPoint).Port;
     }
 
     [RavenFact(RavenTestCategory.Monitoring)]
