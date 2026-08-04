@@ -1,13 +1,16 @@
-import React, { JSX } from "react";
+import React, { JSX, useEffect, useState } from "react";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
+import Collapse from "react-bootstrap/Collapse";
 import Table from "react-bootstrap/Table";
 import Spinner from "react-bootstrap/Spinner";
 import Modal from "components/common/Modal";
+import Code from "components/common/Code";
 import { Icon } from "components/common/Icon";
 import moment from "moment";
 
 type SmugglerProgress = Raven.Client.Documents.Smuggler.SmugglerProgressBase;
+type SmugglerResult = Raven.Client.Documents.Smuggler.SmugglerResult;
 type Counts = Raven.Client.Documents.Smuggler.SmugglerProgressBase.Counts;
 type OperationStatus = Raven.Client.Documents.Operations.OperationStatus;
 
@@ -23,20 +26,23 @@ interface ImportResultModalProps {
     startTime: Date;
     endTime: Date | null;
     onClose: () => void;
-    onShowDetails: () => void;
 }
 
-export default function ImportResultModal({
-    progress,
-    status,
-    startTime,
-    endTime,
-    onClose,
-    onShowDetails,
-}: ImportResultModalProps) {
+export default function ImportResultModal({ progress, status, startTime, endTime, onClose }: ImportResultModalProps) {
     const rows = buildRows(progress);
     const durationSeconds = moment(endTime ?? undefined).diff(moment(startTime), "seconds");
     const duration = moment.duration(durationSeconds, "seconds").humanize();
+
+    const [isDetailsVisible, setIsDetailsVisible] = useState(false);
+    // progress updates and the final result are SmugglerResult objects carrying the log lines
+    const messages = (progress as SmugglerResult)?.Messages ?? [];
+
+    // Knockout parity: reveal the log automatically when the operation fails
+    useEffect(() => {
+        if (status === "Faulted") {
+            setIsDetailsVisible(true);
+        }
+    }, [status]);
 
     return (
         <Modal size="lg" show onHide={onClose} className="modal-border bulge-primary">
@@ -70,14 +76,24 @@ export default function ImportResultModal({
                     </thead>
                     <tbody>
                         {rows.map((row, index) => (
-                            <ImportResultTableRow key={`${row.name}-${index}`} row={row} />
+                            <ImportResultTableRow key={`${row.name}-${index}`} row={row} operationStatus={status} />
                         ))}
                     </tbody>
                 </Table>
+                <Collapse in={isDetailsVisible}>
+                    <div>
+                        <Badge bg="info" className="mt-3">
+                            All dates are in UTC
+                        </Badge>
+                        <div className="mt-2" style={{ maxHeight: 300, overflowY: "auto" }}>
+                            <Code code={messages.join("\n")} language="plaintext" whiteSpace="pre-wrap" />
+                        </div>
+                    </div>
+                </Collapse>
             </Modal.Body>
             <Modal.Footer>
-                <Button variant="secondary" onClick={onShowDetails}>
-                    <Icon icon="preview" /> Show details
+                <Button variant="secondary" onClick={() => setIsDetailsVisible((prev) => !prev)}>
+                    <Icon icon="preview" /> {isDetailsVisible ? "Hide details" : "Show details"}
                 </Button>
                 <Button onClick={onClose} variant="secondary">
                     <Icon icon="close" /> Close
@@ -105,8 +121,8 @@ function OperationStatusBadge({ status }: { status: OperationStatus }) {
             return <Badge bg="warning">Canceled</Badge>;
         case "InProgress":
             return (
-                <Badge bg="info">
-                    <Spinner size="sm" /> In progress
+                <Badge bg="info" className="d-inline-flex align-items-center">
+                    <Spinner size="sm" className="me-2" /> In progress
                 </Badge>
             );
         default:
@@ -114,8 +130,8 @@ function OperationStatusBadge({ status }: { status: OperationStatus }) {
     }
 }
 
-function ImportResultTableRow({ row }: { row: ImportResultRow }) {
-    const rowStatus = getRowStatus(row.counts);
+function ImportResultTableRow({ row, operationStatus }: { row: ImportResultRow; operationStatus: OperationStatus }) {
+    const rowStatus = getRowStatus(row.counts, operationStatus);
     return (
         <tr>
             <td className={row.isNested ? "ps-4" : "fw-bold"}>
@@ -157,7 +173,7 @@ function buildRows(progress: SmugglerProgress): ImportResultRow[] {
     ].filter((row) => row.counts != null);
 }
 
-function getRowStatus(counts: Counts): { label: string; icon: JSX.Element } {
+function getRowStatus(counts: Counts, operationStatus: OperationStatus): { label: string; icon: JSX.Element } {
     if (counts.Skipped) {
         return { label: "Skipped", icon: <Icon icon="skip" color="warning" /> };
     }
@@ -166,7 +182,11 @@ function getRowStatus(counts: Counts): { label: string; icon: JSX.Element } {
             ? { label: "Processed with errors", icon: <Icon icon="warning" color="danger" /> }
             : { label: "Processed", icon: <Icon icon="check" color="success" /> };
     }
-    return { label: "Processing", icon: <Spinner size="sm" /> };
+    if (operationStatus === "InProgress") {
+        return { label: "Processing", icon: <Spinner size="sm" className="me-2" /> };
+    }
+    // the operation ended (failed or was canceled) before this item was reached
+    return { label: "Not processed", icon: <Icon icon="cancel" color="danger" /> };
 }
 
 function getSkippedCount(counts: Counts): string {
