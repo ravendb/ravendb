@@ -101,15 +101,13 @@ const processingSchema = yup.object({
     transformScript: yup.string().when("isUseTransformScript", {
         is: true,
         then: (schema) =>
-            schema
-                .required("Transform script is required when enabled")
-                .test("valid-javascript", (value, ctx) => {
-                    if (!value?.trim()) {
-                        return true; // "required" above already covers the empty case
-                    }
-                    const error = getJavaScriptSyntaxError(value);
-                    return error ? ctx.createError({ message: error }) : true;
-                }),
+            schema.required("Transform script is required when enabled").test("valid-javascript", (value, ctx) => {
+                if (!value?.trim()) {
+                    return true; // "required" above already covers the empty case
+                }
+                const error = getJavaScriptSyntaxError(value);
+                return error ? ctx.createError({ message: error }) : true;
+            }),
     }),
     isSetMaxReadOpsPerSecond: yup.boolean(),
     maxReadOpsPerSecond: yup
