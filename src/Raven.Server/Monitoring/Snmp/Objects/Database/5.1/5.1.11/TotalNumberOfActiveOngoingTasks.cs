@@ -18,6 +18,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             count += GetNumberOfActiveOlapEtls(rachisState, nodeTag, database);
             count += GetNumberOfActivePeriodicBackups(rachisState, nodeTag, database);
             count += GetNumberOfActiveQueueEtls(rachisState, nodeTag, database);
+            count += GetNumberOfActiveQueueSinks(rachisState, nodeTag, database);
             count += GetNumberOfActiveRavenEtls(rachisState, nodeTag, database);
             count += GetNumberOfActiveSinkPullReplications(rachisState, nodeTag, database);
             count += GetNumberOfActiveSqlEtls(rachisState, nodeTag, database);
