@@ -6,7 +6,9 @@ namespace Raven.Quill.Endpoints.Helpers;
 
 internal static class AppLookup
 {
-    internal static string DocumentIdFor(string slug) => $"apps/{slug}";
+    internal const string IdPrefix = "apps/";
+
+    internal static string DocumentIdFor(string slug) => IdPrefix + slug;
 
     internal static async Task<App?> LoadAppAsync(IDocumentStore store, string slug, CancellationToken ct)
     {
