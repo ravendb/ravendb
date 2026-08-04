@@ -15,9 +15,7 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { aiConnectionStringUtils } from "components/pages/database/settings/connectionStrings/editForms/aiConnectionStringUtils";
 import { connectionStringSelectors } from "components/pages/database/settings/connectionStrings/store/connectionStringsSlice";
-import { mapConnectionStringToDto } from "components/pages/database/settings/connectionStrings/store/connectionStringsMapsToDto";
-
-type AiConnectionString = Raven.Client.Documents.Operations.AI.AiConnectionString;
+import { mapAiConnectionStringToDto } from "components/pages/database/settings/connectionStrings/store/connectionStringsMapsToDto";
 
 export function EditGenAiTaskStepBasic() {
     const hasGenAi = useAppSelector(licenseSelectors.statusValue("HasGenAi"));
@@ -64,7 +62,7 @@ export function EditGenAiTaskStepBasicFooter() {
     const selectedConnection = aiConnections.find((x) => x.name === formValues.connectionStringName);
 
     const handleTest = () => {
-        const connectionString = mapConnectionStringToDto(selectedConnection) as AiConnectionString;
+        const connectionString = mapAiConnectionStringToDto(selectedConnection);
 
         dispatch(
             editGenAiTaskActions.testConnectionString({

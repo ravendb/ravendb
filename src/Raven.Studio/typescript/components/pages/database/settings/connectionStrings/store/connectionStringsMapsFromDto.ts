@@ -1,5 +1,4 @@
 import {
-    Connection,
     ConnectionStringUsage,
     ElasticSearchAuthenticationMethod,
     ElasticSearchConnection,
@@ -13,7 +12,7 @@ import {
     AmazonSqsConnection,
     AzureServiceBusConnection,
     AiConnection,
-    StudioConnectionType,
+    ConnectionsByType,
     WithExcludedDatabases,
     ServerWideConnectionStringDto,
 } from "../connectionStringsTypes";
@@ -465,9 +464,7 @@ export function mapAiConnectionsFromDto(connections: Record<string, AiConnection
     return Object.values(connections).map((d) => mapAiFromSingleDto(d, mapUsedByFromDto(d)));
 }
 
-export function mapAllConnectionsFromDto(connectionStringsDto: GetConnectionStringsResult): {
-    [key in StudioConnectionType]: Connection[];
-} {
+export function mapAllConnectionsFromDto(connectionStringsDto: GetConnectionStringsResult): ConnectionsByType {
     return {
         Raven: mapRavenConnectionsFromDto(connectionStringsDto.RavenConnectionStrings),
         Sql: mapSqlConnectionsFromDto(connectionStringsDto.SqlConnectionStrings),
@@ -483,10 +480,8 @@ export function mapAllConnectionsFromDto(connectionStringsDto: GetConnectionStri
     };
 }
 
-export function mapServerWideConnectionsFromDto(results: ServerWideConnectionStringDto[]): {
-    [key in StudioConnectionType]: Connection[];
-} {
-    const mapped: Record<StudioConnectionType, Connection[]> = {
+export function mapServerWideConnectionsFromDto(results: ServerWideConnectionStringDto[]): ConnectionsByType {
+    const mapped: ConnectionsByType = {
         Raven: [],
         Sql: [],
         Snowflake: [],
