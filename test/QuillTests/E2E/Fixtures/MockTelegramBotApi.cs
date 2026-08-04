@@ -1,0 +1,327 @@
+using System.Text.Json.Nodes;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+namespace QuillTests.E2E.Fixtures;
+
+/// In-process stand-in for api.telegram.org. Serves the Bot API JSON envelope ({ok, result}) for the methods the
+/// adapter calls, keeps a per-token update queue that honors getUpdates offset semantics, captures every
+/// sendMessage / editMessageText / sendChatAction, and exposes settable failures (getMe / getUpdates / parse-mode).
+/// Tokens follow the real "{botId}:{secret}" shape; the bot id in getMe is derived from the token's prefix.
+/// Caller disposes.
+public sealed class MockTelegramBotApi : IAsyncDisposable
+{
+    private readonly WebApplication _app;
+    private readonly object _lock = new();
+
+    private readonly Dictionary<string, List<JsonObject>> _updateQueues = new();
+    private readonly Dictionary<string, int> _getUpdatesCalls = new();
+    private readonly Dictionary<string, long?> _lastOffsets = new();
+    private readonly List<SentMessage> _sent = [];
+    private readonly List<EditedMessage> _edited = [];
+    private readonly List<ChatActionCall> _chatActions = [];
+    private int _nextUpdateId = 1;
+    private int _nextMessageId = 1000;
+
+    public sealed record SentMessage(string Token, long ChatId, int MessageId, string Text, string? ParseMode);
+
+    public sealed record EditedMessage(string Token, long ChatId, int MessageId, string Text, string? ParseMode);
+
+    public sealed record ChatActionCall(string Token, long ChatId, string Action);
+
+    public string BaseAddress { get; }
+
+    public string BotUsername { get; set; } = "quill_test_bot";
+
+    /// When set, getMe returns this instead of the derived bot user (e.g. (401, unauthorized envelope)).
+    public (int Status, string Body)? GetMeFailure { get; set; }
+
+    /// When set, getUpdates returns this for every call (e.g. revoked token); clear to restore polling.
+    public (int Status, string Body)? GetUpdatesFailure { get; set; }
+
+    /// When true, sendMessage / editMessageText carrying a parse_mode fail with Telegram's
+    /// "can't parse entities" 400 — the plain-text retry (no parse_mode) succeeds.
+    public bool FailParseModeRequests { get; set; }
+
+    public static (int Status, string Body) Unauthorized { get; } =
+        (401, """{"ok":false,"error_code":401,"description":"Unauthorized"}""");
+
+    private MockTelegramBotApi(WebApplication app, string baseAddress)
+    {
+        _app = app;
+        BaseAddress = baseAddress;
+    }
+
+    public IReadOnlyList<SentMessage> SentMessages
+    {
+        get { lock (_lock) return _sent.ToArray(); }
+    }
+
+    public IReadOnlyList<EditedMessage> EditedMessages
+    {
+        get { lock (_lock) return _edited.ToArray(); }
+    }
+
+    public IReadOnlyList<ChatActionCall> ChatActions
+    {
+        get { lock (_lock) return _chatActions.ToArray(); }
+    }
+
+    public int GetUpdatesCallCount(string token)
+    {
+        lock (_lock) return _getUpdatesCalls.GetValueOrDefault(token);
+    }
+
+    /// The offset the poller sent on its most recent getUpdates — asserts confirm-by-offset semantics.
+    public long? LastGetUpdatesOffset(string token)
+    {
+        lock (_lock) return _lastOffsets.GetValueOrDefault(token);
+    }
+
+    public void EnqueueTextMessage(string token, long chatId, long fromUserId, string text)
+    {
+        lock (_lock)
+        {
+            var update = new JsonObject
+            {
+                ["update_id"] = _nextUpdateId++,
+                ["message"] = new JsonObject
+                {
+                    ["message_id"] = _nextMessageId++,
+                    ["from"] = new JsonObject
+                    {
+                        ["id"] = fromUserId,
+                        ["is_bot"] = false,
+                        ["first_name"] = "Tester",
+                    },
+                    ["chat"] = new JsonObject
+                    {
+                        ["id"] = chatId,
+                        ["type"] = "private",
+                    },
+                    ["date"] = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                    ["text"] = text,
+                },
+            };
+
+            if (_updateQueues.TryGetValue(token, out var queue) == false)
+                _updateQueues[token] = queue = [];
+            queue.Add(update);
+        }
+    }
+
+    /// Polls the condition until it holds; throws on timeout so a stuck test fails with the caller's message.
+    public async Task WaitUntilAsync(Func<bool> condition, string what, TimeSpan? timeout = null)
+    {
+        var deadline = DateTime.UtcNow + (timeout ?? TimeSpan.FromSeconds(15));
+        while (condition() == false)
+        {
+            if (DateTime.UtcNow > deadline)
+                throw new TimeoutException($"MockTelegramBotApi: timed out waiting for {what}");
+            await Task.Delay(25);
+        }
+    }
+
+    public void Reset()
+    {
+        lock (_lock)
+        {
+            _updateQueues.Clear();
+            _getUpdatesCalls.Clear();
+            _lastOffsets.Clear();
+            _sent.Clear();
+            _edited.Clear();
+            _chatActions.Clear();
+        }
+
+        BotUsername = "quill_test_bot";
+        GetMeFailure = null;
+        GetUpdatesFailure = null;
+        FailParseModeRequests = false;
+    }
+
+    public static async Task<MockTelegramBotApi> StartAsync()
+    {
+        var builder = WebApplication.CreateBuilder();
+        builder.Logging.ClearProviders();
+        builder.WebHost.UseUrls("http://127.0.0.1:0");
+
+        var app = builder.Build();
+
+        MockTelegramBotApi instance = null!;
+
+        // Telegram.Bot posts JSON to /bot{token}/{method}; one catch-all dispatches per method
+        app.MapPost("/bot{token}/{method}", async (string token, string method, HttpContext ctx) =>
+        {
+            using var reader = new StreamReader(ctx.Request.Body, leaveOpen: true);
+            var raw = await reader.ReadToEndAsync();
+            var body = raw.Length > 0 ? JsonNode.Parse(raw) : null;
+
+            return method switch
+            {
+                "getMe" => instance.HandleGetMe(token),
+                "getUpdates" => await instance.HandleGetUpdatesAsync(token, body, ctx.RequestAborted),
+                "sendMessage" => instance.HandleSendMessage(token, body),
+                "editMessageText" => instance.HandleEditMessageText(token, body),
+                "sendChatAction" => instance.HandleSendChatAction(token, body),
+                _ => Results.Content(
+                    $$"""{"ok":false,"error_code":404,"description":"Not Found: method '{{method}}' is not mocked"}""",
+                    "application/json", statusCode: 404),
+            };
+        });
+
+        await app.StartAsync();
+
+        var addresses = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>();
+        var url = addresses?.Addresses.FirstOrDefault()
+                  ?? throw new InvalidOperationException("MockTelegramBotApi failed to bind a port.");
+
+        instance = new MockTelegramBotApi(app, url.TrimEnd('/'));
+        return instance;
+    }
+
+    private IResult HandleGetMe(string token)
+    {
+        if (GetMeFailure is { } failure)
+            return Results.Content(failure.Body, "application/json", statusCode: failure.Status);
+
+        var result = new JsonObject
+        {
+            ["id"] = BotIdFor(token),
+            ["is_bot"] = true,
+            ["first_name"] = "Quill Test Bot",
+            ["username"] = BotUsername,
+        };
+
+        return Ok(result);
+    }
+
+    private async Task<IResult> HandleGetUpdatesAsync(string token, JsonNode? body, CancellationToken aborted)
+    {
+        var offset = (long?)body?["offset"];
+        lock (_lock)
+        {
+            _getUpdatesCalls[token] = _getUpdatesCalls.GetValueOrDefault(token) + 1;
+            _lastOffsets[token] = offset;
+        }
+
+        if (GetUpdatesFailure is { } failure)
+            return Results.Content(failure.Body, "application/json", statusCode: failure.Status);
+
+        for (var attempt = 0; ; attempt++)
+        {
+            lock (_lock)
+            {
+                if (_updateQueues.TryGetValue(token, out var queue))
+                {
+                    var pending = queue
+                        .Where(u => offset is null || (long)u["update_id"]! >= offset)
+                        .Take(100)
+                        .ToArray();
+                    if (pending.Length > 0)
+                    {
+                        var result = new JsonArray(pending.Select(u => (JsonNode)u.DeepClone()).ToArray());
+                        return Ok(result);
+                    }
+                }
+            }
+
+            // short hold instead of the real 30s long poll so idle tests don't busy-spin
+            if (attempt >= 1)
+                return Ok(new JsonArray());
+
+            try
+            {
+                await Task.Delay(150, aborted);
+            }
+            catch (OperationCanceledException)
+            {
+                return Ok(new JsonArray());
+            }
+        }
+    }
+
+    private IResult HandleSendMessage(string token, JsonNode? body)
+    {
+        var chatId = (long)body!["chat_id"]!;
+        var text = (string)body["text"]!;
+        var parseMode = (string?)body["parse_mode"];
+
+        if (FailParseModeRequests && parseMode is not null)
+            return CantParseEntities();
+
+        int messageId;
+        lock (_lock)
+        {
+            messageId = _nextMessageId++;
+            _sent.Add(new SentMessage(token, chatId, messageId, text, parseMode));
+        }
+
+        return Ok(MessageJson(messageId, chatId, text));
+    }
+
+    private IResult HandleEditMessageText(string token, JsonNode? body)
+    {
+        var chatId = (long)body!["chat_id"]!;
+        var messageId = (int)body["message_id"]!;
+        var text = (string)body["text"]!;
+        var parseMode = (string?)body["parse_mode"];
+
+        if (FailParseModeRequests && parseMode is not null)
+            return CantParseEntities();
+
+        lock (_lock)
+            _edited.Add(new EditedMessage(token, chatId, messageId, text, parseMode));
+
+        return Ok(MessageJson(messageId, chatId, text));
+    }
+
+    private IResult HandleSendChatAction(string token, JsonNode? body)
+    {
+        var chatId = (long)body!["chat_id"]!;
+        var action = (string)body["action"]!;
+
+        lock (_lock)
+            _chatActions.Add(new ChatActionCall(token, chatId, action));
+
+        return Ok(JsonValue.Create(true));
+    }
+
+    private static IResult Ok(JsonNode result)
+    {
+        var envelope = new JsonObject { ["ok"] = true, ["result"] = result };
+        return Results.Content(envelope.ToJsonString(), "application/json");
+    }
+
+    private static IResult CantParseEntities() => Results.Content(
+        """{"ok":false,"error_code":400,"description":"Bad Request: can't parse entities"}""",
+        "application/json", statusCode: 400);
+
+    private static JsonObject MessageJson(int messageId, long chatId, string text) => new()
+    {
+        ["message_id"] = messageId,
+        ["date"] = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+        ["chat"] = new JsonObject { ["id"] = chatId, ["type"] = "private" },
+        ["text"] = text,
+    };
+
+    /// Real tokens are "{botId}:{secret}"; tests keep that shape so the derived id is deterministic.
+    public static long BotIdFor(string token)
+    {
+        var colon = token.IndexOf(':');
+        if (colon > 0 && long.TryParse(token[..colon], out var id))
+            return id;
+        return Math.Abs(token.GetHashCode());
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _app.StopAsync();
+        await _app.DisposeAsync();
+    }
+}
