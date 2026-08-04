@@ -18,6 +18,7 @@ using Raven.Quill.Feedback;
 using Raven.Quill.Hosting;
 using Raven.Quill.Infrastructure;
 using Raven.Quill.Licensing;
+using Raven.Quill.Telegram;
 using Raven.Client.Documents;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -111,10 +112,15 @@ builder.Services.AddSingleton(sp => WidgetAssets.Load(
     sp.GetRequiredService<ILoggerFactory>().CreateLogger<WidgetAssets>()));
 builder.Services.AddTransient<IFeedbackSender, FeedbackSender>();
 builder.Services.AddTransient<ILicenseStatsProvider, LicenseStatsProvider>();
+builder.Services.AddSingleton<ITelegramBotClientFactory, TelegramBotClientFactory>();
+// manager + interface registered unconditionally (endpoints resolve them); only hosting it starts pollers
+builder.Services.AddSingleton<TelegramChannelManager>();
+builder.Services.AddSingleton<ITelegramChannelManager>(sp => sp.GetRequiredService<TelegramChannelManager>());
 if (!isOpenApiDocumentGeneration)
 {
     builder.Services.AddHostedService<RavenReadinessService>();
     builder.Services.AddHostedService<ApplianceActivationService>();
+    builder.Services.AddHostedService(sp => sp.GetRequiredService<TelegramChannelManager>());
 }
 
 builder.Services.ConfigureHttpClientDefaults(httpBuilder =>
