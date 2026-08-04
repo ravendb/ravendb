@@ -25,7 +25,8 @@ public sealed class MockTelegramBotApi : IAsyncDisposable
     private readonly List<SentMessage> _sent = [];
     private readonly List<EditedMessage> _edited = [];
     private readonly List<ChatActionCall> _chatActions = [];
-    private int _nextUpdateId = 1;
+    // stored as long: the getUpdates offset filter casts the in-memory JsonValue, which requires an exact type match
+    private long _nextUpdateId = 1;
     private int _nextMessageId = 1000;
 
     public sealed record SentMessage(string Token, long ChatId, int MessageId, string Text, string? ParseMode);

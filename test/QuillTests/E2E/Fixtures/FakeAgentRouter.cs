@@ -21,6 +21,9 @@ internal sealed class FakeAgentRouter : IAgentRouter
     /// The full reply; defaults to the concatenated chunks.
     public string? Reply { get; set; }
 
+    /// Pause between chunks — longer than the host's edit debounce, it forces edit-in-place flushes.
+    public TimeSpan ChunkDelay { get; set; }
+
     /// Awaited before streaming starts — a TaskCompletionSource here holds a run open.
     public Func<AgentRequest, Task>? BeforeRun { get; set; }
 
@@ -39,10 +42,14 @@ internal sealed class FakeAgentRouter : IAgentRouter
             throw Failure;
 
         foreach (var chunk in Chunks)
+        {
             await onChunk(chunk);
+            if (ChunkDelay > TimeSpan.Zero)
+                await Task.Delay(ChunkDelay, ct);
+        }
 
         var reply = Reply ?? string.Concat(Chunks);
-        return new AgentRunResult(new { reply }, request.ConversationId);
+        return new AgentRunResult(new { reply }, request.ConversationId, reply);
     }
 
     public void Reset()
@@ -51,6 +58,7 @@ internal sealed class FakeAgentRouter : IAgentRouter
             _requests.Clear();
         Chunks = ["Hello ", "from the fake agent."];
         Reply = null;
+        ChunkDelay = TimeSpan.Zero;
         BeforeRun = null;
         Failure = null;
     }
