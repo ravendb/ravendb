@@ -32,13 +32,7 @@ export default function CollectionsToImportPicker() {
         resolver: yupResolver(getAddCollectionSchema(manualCollections)),
         defaultValues: { collectionName: "" },
     });
-    const {
-        control: addControl,
-        handleSubmit,
-        setValue: setAddValue,
-        clearErrors,
-        setFocus,
-    } = addCollectionForm;
+    const { control: addControl, handleSubmit, setValue: setAddValue, clearErrors, setFocus } = addCollectionForm;
 
     const filterForm = useForm<FilterCollectionsFormData>({ defaultValues: { filter: "" } });
     const collectionFilter = useWatch({ control: filterForm.control, name: "filter" }) ?? "";
