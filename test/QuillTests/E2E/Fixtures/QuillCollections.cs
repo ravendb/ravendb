@@ -50,3 +50,9 @@ public class QuillAgentActionsCollection : ICollectionFixture<QuillCollectionHos
 {
     public const string Name = "quill-agent-actions";
 }
+
+[CollectionDefinition(Name)]
+public class QuillTelegramCollection : ICollectionFixture<QuillTelegramFixture>
+{
+    public const string Name = "quill-telegram";
+}
