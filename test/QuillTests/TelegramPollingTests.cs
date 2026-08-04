@@ -1,0 +1,250 @@
+using QuillTests.E2E.Fixtures;
+using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Quill.Agents;
+using Raven.Quill.Channels;
+using Raven.Quill.Contracts;
+using Raven.Quill.Metrics;
+using Raven.Quill.Telegram;
+using Tests.Infrastructure;
+using Xunit;
+
+namespace QuillTests;
+
+[Collection(QuillTelegramCollection.Name)]
+public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture fixture)
+    : QuillTelegramTestBase(output, fixture)
+{
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Disable_stops_polling_within_a_second_and_reenable_resumes()
+    {
+        var (app, channelId, token) = await ProvisionAsync();
+        await using var appGuard = app;
+
+        await Mock.WaitUntilAsync(() => Mock.GetUpdatesCallCount(token) >= 1, "polling to start");
+
+        // the PUT awaits the bounded poller stop, so the count is final once it returns
+        await app.UpdateChannelAsync(channelId, new UpdateChannelRequest(null, null, Enabled: false));
+        var frozen = Mock.GetUpdatesCallCount(token);
+        await Task.Delay(700);
+        Assert.Equal(frozen, Mock.GetUpdatesCallCount(token));
+
+        await app.UpdateChannelAsync(channelId, new UpdateChannelRequest(null, null, Enabled: true));
+        await Mock.WaitUntilAsync(() => Mock.GetUpdatesCallCount(token) > frozen, "polling to resume");
+
+        await app.DeleteChannelAsync(channelId);
+        var afterDelete = Mock.GetUpdatesCallCount(token);
+        await Task.Delay(700);
+        Assert.Equal(afterDelete, Mock.GetUpdatesCallCount(token));
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Message_dispatches_with_derived_conversation_id_and_bound_parameters()
+    {
+        var (app, channelId, token) = await ProvisionAsync(
+            parameters: new Dictionary<string, string> { ["customerId"] = "customers/42" },
+            declared:
+            [
+                new AiAgentParameter("customerId", "scope"),
+                new AiAgentParameter("userIdentifier", "telegram sender"),
+            ]);
+        await using var appGuard = app;
+
+        Mock.EnqueueTextMessage(token, chatId: 555, fromUserId: 777, "hello there");
+        await Mock.WaitUntilAsync(() => Router.Requests.Count >= 1, "the agent run");
+
+        var request = Assert.Single(Router.Requests);
+        Assert.Equal(app.Slug, request.Database);
+        Assert.Equal(Channel.IdPrefix + channelId, request.ChannelId);
+        Assert.Equal("hello there", request.Prompt);
+        Assert.StartsWith($"chats/tg/{channelId}/555/", request.ConversationId);
+        Assert.True(AgentRouter.TryNormalizeConversationId(request.ConversationId, out _, out _));
+        Assert.Equal("customers/42", request.Parameters["customerId"]);
+        // injected under the agent's declared casing, from the sender (not the chat)
+        Assert.Equal("777", request.Parameters["userIdentifier"]);
+
+        await Mock.WaitUntilAsync(() => Mock.SentMessages.Any(m => m.ChatId == 555), "the reply");
+        var typing = Assert.Single(Mock.ChatActions, a => a.ChatId == 555);
+        Assert.Equal("typing", typing.Action);
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Processed_updates_are_confirmed_and_never_redelivered()
+    {
+        var (app, channelId, token) = await ProvisionAsync();
+        await using var appGuard = app;
+
+        Mock.EnqueueTextMessage(token, chatId: 1, fromUserId: 1, "first");
+        await Mock.WaitUntilAsync(() => Router.Requests.Count >= 1, "the first run");
+        await Mock.WaitUntilAsync(() => Mock.LastGetUpdatesOffset(token) is not null, "the confirming poll");
+
+        Mock.EnqueueTextMessage(token, chatId: 1, fromUserId: 1, "second");
+        await Mock.WaitUntilAsync(() => Router.Requests.Count >= 2, "the second run");
+
+        // a redelivered update would repeat a prompt through the per-chat chain
+        Assert.Equal(new[] { "first", "second" }, Router.Requests.Select(r => r.Prompt).ToArray());
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Streamed_reply_lands_as_one_message_edited_in_place()
+    {
+        var (app, channelId, token) = await ProvisionAsync();
+        await using var appGuard = app;
+
+        Router.Chunks = ["The answer ", "is 42. ", "No doubt about it."];
+        Router.ChunkDelay = TimeSpan.FromMilliseconds(120);   // > the host's 50ms debounce => edits happen
+
+        Mock.EnqueueTextMessage(token, chatId: 7, fromUserId: 7, "question");
+        var full = string.Concat(Router.Chunks);
+        await Mock.WaitUntilAsync(
+            () => Mock.EditedMessages.Any(e => e.ChatId == 7 && e.Text == full), "the final edit");
+
+        var sent = Assert.Single(Mock.SentMessages, m => m.ChatId == 7);
+        Assert.All(Mock.EditedMessages.Where(e => e.ChatId == 7), e => Assert.Equal(sent.MessageId, e.MessageId));
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Markdown_rejection_falls_back_to_plain_text()
+    {
+        var (app, channelId, token) = await ProvisionAsync();
+        await using var appGuard = app;
+
+        Mock.FailParseModeRequests = true;
+        Router.Chunks = ["*broken _markdown"];
+
+        Mock.EnqueueTextMessage(token, chatId: 9, fromUserId: 9, "hi");
+        await Mock.WaitUntilAsync(() => Mock.SentMessages.Any(m => m.ChatId == 9), "the plain-text retry");
+
+        // only the successful (plain) attempt is captured; the markdown one got Telegram's 400
+        Assert.All(Mock.SentMessages.Where(m => m.ChatId == 9), m => Assert.Null(m.ParseMode));
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Long_reply_splits_at_a_sentence_boundary_into_follow_up_messages()
+    {
+        var (app, channelId, token) = await ProvisionAsync();
+        await using var appGuard = app;
+
+        var reply = string.Join(" ", Enumerable.Range(0, 160).Select(i => $"Sentence number {i} is here."));
+        Assert.True(reply.Length > 4096);
+        Router.Chunks = [reply];
+
+        var parts = TelegramMessageSplitter.Split(reply);
+        Assert.Equal(2, parts.Count);
+
+        Mock.EnqueueTextMessage(token, chatId: 11, fromUserId: 11, "long please");
+        await Mock.WaitUntilAsync(
+            () => Mock.SentMessages.Count(m => m.ChatId == 11) == 2, "the overflow follow-up message");
+
+        var sends = Mock.SentMessages.Where(m => m.ChatId == 11).ToArray();
+        Assert.Equal(parts[1], sends[1].Text);
+        // the streamed first message was edited down to the sentence-boundary first part
+        await Mock.WaitUntilAsync(
+            () => Mock.EditedMessages.Any(e => e.ChatId == 11 && e.Text == parts[0]), "the boundary edit");
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Turns_are_serialized_per_chat_and_concurrent_across_chats()
+    {
+        var (app, channelId, token) = await ProvisionAsync();
+        await using var appGuard = app;
+
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Router.BeforeRun = request => request.Prompt == "a1" ? gate.Task : Task.CompletedTask;
+
+        Mock.EnqueueTextMessage(token, chatId: 100, fromUserId: 100, "a1");
+        await Mock.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "a1"), "chat A's first run to start");
+
+        Mock.EnqueueTextMessage(token, chatId: 100, fromUserId: 100, "a2");
+        Mock.EnqueueTextMessage(token, chatId: 200, fromUserId: 200, "b1");
+
+        // chat B proceeds while chat A's first turn is still open; A's second stays queued behind it
+        await Mock.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "b1"), "chat B's run");
+        await Task.Delay(300);
+        Assert.DoesNotContain(Router.Requests, r => r.Prompt == "a2");
+
+        gate.SetResult();
+        await Mock.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "a2"), "chat A's second run");
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Clear_command_deletes_the_conversation_and_its_preview()
+    {
+        var (app, channelId, token) = await ProvisionAsync();
+        await using var appGuard = app;
+
+        const long chatId = 300;
+        var conversationId = TelegramConversationId.For(channelId, chatId, DateTime.UtcNow);
+        using (var session = app.Store.OpenAsyncSession(app.Slug))
+        {
+            await session.StoreAsync(new ConversationPreview { ConversationId = conversationId },
+                ConversationPreview.IdFor(conversationId));
+            await session.StoreAsync(new { Seeded = true }, conversationId);
+            await session.SaveChangesAsync();
+        }
+
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 300, "/clear");
+        await Mock.WaitUntilAsync(
+            () => Mock.SentMessages.Any(m => m.ChatId == chatId && m.Text.Contains("cleared")), "the confirmation");
+
+        Assert.Empty(Router.Requests);   // a command never reaches the agent
+        using (var session = app.Store.OpenAsyncSession(app.Slug))
+        {
+            Assert.Null(await session.LoadAsync<object>(conversationId));
+            Assert.Null(await session.LoadAsync<object>(ConversationPreview.IdFor(conversationId)));
+        }
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Agent_failure_sends_an_apology_and_keeps_the_poller_alive()
+    {
+        var (app, channelId, token) = await ProvisionAsync();
+        await using var appGuard = app;
+
+        Router.Failure = new InvalidOperationException("model exploded");
+        Mock.EnqueueTextMessage(token, chatId: 400, fromUserId: 400, "boom");
+        await Mock.WaitUntilAsync(
+            () => Mock.SentMessages.Any(m => m.ChatId == 400 && m.Text.StartsWith("Sorry")), "the apology");
+
+        Router.Failure = null;
+        Mock.EnqueueTextMessage(token, chatId: 400, fromUserId: 400, "again");
+        await Mock.WaitUntilAsync(
+            () => Mock.SentMessages.Any(m => m.ChatId == 400 && m.Text.Contains("fake agent")), "the recovery reply");
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    private async Task<(QuillApp App, string ChannelId, string Token)> ProvisionAsync(
+        Dictionary<string, string>? parameters = null, AiAgentParameter[]? declared = null)
+    {
+        var app = await NewAppAsync();
+        var agentId = "tg-agent-" + Guid.NewGuid().ToString("N")[..8];
+        await app.ProvisionAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = agentId,
+            Name = "Telegram Demo Agent",
+            SystemPrompt = "You are a placeholder demo agent.",
+            ConnectionStringName = app.Host.ConnectionStringName,
+            Parameters = (declared ?? []).ToList(),
+        });
+
+        var token = NewBotToken();
+        var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
+            ChannelType.Telegram, agentId, null, BotToken: token, Parameters: parameters));
+
+        return (app, created.ChannelId, token);
+    }
+}

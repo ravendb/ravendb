@@ -13,7 +13,9 @@ public sealed record AgentRequest(
     string ChannelId,
     IReadOnlyDictionary<string, string> Parameters);
 
-public sealed record AgentRunResult(object Answer, string ConversationId);
+// Answer is the wire shape ({ reply }); Reply carries the extracted text for callers that
+// deliver it outside the NDJSON stream (e.g. the Telegram adapter's final message edit)
+public sealed record AgentRunResult(object Answer, string ConversationId, string Reply = "");
 
 public interface IAgentRouter
 {
@@ -74,7 +76,7 @@ internal sealed class AgentRouter(
 
         await UpsertPreviewAsync(store, request, config.Identifier, conversation.Id, reply, DateTime.UtcNow, ct);
 
-        return new AgentRunResult(new { reply }, conversation.Id);
+        return new AgentRunResult(new { reply }, conversation.Id, reply);
     }
 
     private async Task RunActionsAsync(

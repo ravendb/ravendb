@@ -1,4 +1,9 @@
+using System.Globalization;
+using Raven.Client.Documents;
+using Raven.Quill.Agents;
 using Raven.Quill.Channels;
+using Raven.Quill.Hosting;
+using Raven.Quill.Metrics;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -14,19 +19,31 @@ internal sealed class TelegramChannelPoller
     private static readonly TimeSpan MinBackoff = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan MaxBackoff = TimeSpan.FromSeconds(30);
 
+    private readonly IDocumentStore _store;
+    private readonly IAgentRouter _router;
+    private readonly ApplianceOptions _options;
     private readonly ITelegramBotClient _bot;
     private readonly ILogger _logger;
+    private readonly string _channelId;
     private readonly CancellationTokenSource _cts = new();
     private readonly Dictionary<long, Task> _chatChains = new();
     private readonly object _chainsLock = new();
     private Task _loop = Task.CompletedTask;
 
-    public TelegramChannelPoller(string database, Channel channel, ITelegramBotClient bot, ILogger logger)
+    public TelegramChannelPoller(
+        string database, Channel channel, ITelegramBotClient bot,
+        IDocumentStore store, IAgentRouter router, ApplianceOptions options, ILogger logger)
     {
         Database = database;
         Channel = channel;
         _bot = bot;
+        _store = store;
+        _router = router;
+        _options = options;
         _logger = logger;
+        _channelId = channel.Id is not null && channel.Id.StartsWith(Channel.IdPrefix, StringComparison.Ordinal)
+            ? channel.Id[Channel.IdPrefix.Length..]
+            : channel.Id ?? "";
     }
 
     public string Database { get; }
@@ -69,7 +86,9 @@ internal sealed class TelegramChannelPoller
             }
             catch (Exception e)
             {
-                var scrubbed = TelegramSettings.ScrubToken(e.Message, token);
+                // wrapper messages (e.g. RequestException) are generic; the inner one names the cause
+                var message = e.InnerException is null ? e.Message : $"{e.Message}: {e.InnerException.Message}";
+                var scrubbed = TelegramSettings.ScrubToken(message, token);
                 Health.RecordError(DateTime.UtcNow, scrubbed);
                 _logger.LogWarning(
                     "Telegram poll failed for channel {ChannelId} (bot {Bot}): {Error}",
@@ -135,11 +154,103 @@ internal sealed class TelegramChannelPoller
         }
     }
 
-    private Task HandleMessageAsync(Message message, CancellationToken ct)
+    private async Task HandleMessageAsync(Message message, CancellationToken ct)
     {
-        // agent dispatch pipeline lands with the update-handling commit
-        _logger.LogDebug("Telegram update received for channel {ChannelId} chat {ChatId}", Channel.Id, message.Chat.Id);
-        return Task.CompletedTask;
+        var prompt = message.Text!.Trim();
+        if (prompt.Length == 0)
+            return;
+
+        var chatId = message.Chat.Id;
+        var conversationId = TelegramConversationId.For(_channelId, chatId, DateTime.UtcNow);
+
+        if (IsClearCommand(prompt))
+        {
+            await ClearConversationAsync(conversationId, ct);
+            await SendPlainAsync(chatId, "Conversation cleared. The next message starts a fresh one.", ct);
+            return;
+        }
+
+        var config = await AgentLookup.FindAsync(_store, Database, Channel.AgentId, ct);
+        if (config is null)
+        {
+            await TrySendPlainAsync(chatId, "This bot's agent is not available right now.", ct);
+            throw new UnknownAgentException(Channel.AgentId);
+        }
+
+        var parameters = new Dictionary<string, string>(Channel.Telegram!.Parameters);
+        var identifierParameter = config.Parameters?.FirstOrDefault(p =>
+            string.Equals(p.Name, TelegramSettings.UserIdentifierParameterName, StringComparison.OrdinalIgnoreCase));
+        if (identifierParameter is not null &&
+            parameters.Keys.Any(k => string.Equals(k, identifierParameter.Name, StringComparison.OrdinalIgnoreCase)) == false)
+        {
+            // platform-authenticated sender identity; falls back to the chat id for channel/anonymous posts
+            var userId = message.From?.Id ?? chatId;
+            parameters[identifierParameter.Name] = userId.ToString(CultureInfo.InvariantCulture);
+        }
+
+        try
+        {
+            await _bot.SendChatAction(chatId, ChatAction.Typing, cancellationToken: ct);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            // cosmetic; never blocks the run
+        }
+
+        var reply = new TelegramStreamingReply(
+            _bot, chatId, _options.TelegramEditDebounce, Channel.Telegram.BotToken, _logger, ct);
+
+        try
+        {
+            var result = await _router.RunAsync(
+                new AgentRequest(Database, config.Identifier, conversationId, prompt, Channel.Id!, parameters),
+                reply.OnChunkAsync, config, ct);
+
+            var fullReply = string.IsNullOrWhiteSpace(result.Reply) ? reply.AccumulatedText : result.Reply;
+            await reply.FinalizeAsync(fullReply);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            await TrySendPlainAsync(chatId, "Sorry - something went wrong handling that message. Please try again.", ct);
+            throw;   // HandleMessageSafeAsync records the health error
+        }
+    }
+
+    private bool IsClearCommand(string text)
+    {
+        if (text.Equals("/clear", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        var username = Channel.Telegram?.BotUsername;
+        return string.IsNullOrEmpty(username) == false &&
+               text.Equals($"/clear@{username}", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task ClearConversationAsync(string conversationId, CancellationToken ct)
+    {
+        using var session = _store.OpenAsyncSession(Database);
+        session.Delete(conversationId);
+        session.Delete(ConversationPreview.IdFor(conversationId));
+        await session.SaveChangesAsync(ct);
+    }
+
+    private Task SendPlainAsync(long chatId, string text, CancellationToken ct) =>
+        _bot.SendMessage(chatId, text, cancellationToken: ct);
+
+    private async Task TrySendPlainAsync(long chatId, string text, CancellationToken ct)
+    {
+        try
+        {
+            await SendPlainAsync(chatId, text, ct);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            // best-effort notice; the original failure is what gets recorded
+        }
     }
 
     /// Bounded: cancel aborts the pending long poll, then the loop and any in-flight chat chains get ~1s each.

@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using Microsoft.Extensions.Options;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
+using Raven.Quill.Agents;
 using Raven.Quill.Channels;
 using Raven.Quill.Endpoints.Helpers;
 using Raven.Quill.Hosting;
@@ -30,6 +31,7 @@ internal interface ITelegramChannelManager
 internal sealed class TelegramChannelManager(
     IDocumentStore store,
     ITelegramBotClientFactory botFactory,
+    IAgentRouter router,
     IOptions<ApplianceOptions> options,
     IServerReady ready,
     ILogger<TelegramChannelManager> logger) : BackgroundService, ITelegramChannelManager
@@ -104,7 +106,7 @@ internal sealed class TelegramChannelManager(
                 await existing.StopAsync();
 
             var bot = botFactory.Create(channel.Telegram!.BotToken);
-            var poller = new TelegramChannelPoller(database, channel, bot, logger);
+            var poller = new TelegramChannelPoller(database, channel, bot, store, router, options.Value, logger);
             _pollers[key] = poller;
             poller.Start();
 
