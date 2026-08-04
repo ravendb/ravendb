@@ -22,11 +22,13 @@ public class RavenDB_23264 : StorageTest
     }
     
     [RavenFact(RavenTestCategory.Voron)]
-    public void Piggybacking_tx_failure_after_flush_action_should_not_cause_double_free_on_retry()
+    public void Piggybacking_tx_failure_after_flush_action_should_poison_the_environment_and_recover_on_restart()
     {
-        // RavenDB-23264: This test validates that if the _updateJournalStateAfterFlush action
-        // is invoked by a piggybacking write tx that then fails to commit, the flush thread's
-        // retry succeeds because the free loop is idempotent (entries are nulled after freeing).
+        // RavenDB-23264: the _updateJournalStateAfterFlush action invoked by a piggybacking write tx that then
+        // fails to commit must not double-free on the flush thread's retry (the free loop nulls entries after
+        // freeing them). RavenDB-27166 then revoked the retry contract entirely: such a rollback would restore
+        // the freed scratch entries, so it marks the environment as catastrophically failed and the recovery
+        // happens on restart.
 
         // file-based so RestartDatabase builds fresh options, the way a real database reload does - the
         // catastrophic-failure mark set by the RavenDB-27166 fix lives on the options instance
@@ -118,53 +120,19 @@ public class RavenDB_23264 : StorageTest
         // OnTransactionCompleted will NOT clear the action because Committed = false.
         txBlocker.Dispose();
 
-        // Step 11: Flush thread wakes up, creates its own tx, Commit() →
-        // CommitStage1 → OnTransactionCommitted → action invoked AGAIN.
-        // With the fix (idempotent free loop): entries are null → skip → success.
-        // Without the fix: double-free → crash.
+        // Step 11 (RavenDB-27166): the flush thread wakes up, but txBlocker's rollback marked the environment
+        // as catastrophically failed - its retry transaction is refused and the flush surfaces the failure.
         flushThread.Join(TimeSpan.FromSeconds(30));
 
         // Clean up
         Env.Journal.Applicator.ForTestingPurposesOnly().OnWaitForJournalStateToBeUpdated_AfterAssigning_updateJournalStateAfterFlush = null;
 
-        // Step 12 (RavenDB-27166): the rollback of a transaction that applied the flush action marks the
-        // environment as catastrophically failed - the retry is refused by design and recovery happens on
-        // restart, with no committed data lost (the failed transaction never reached the journal).
-        if (Env.Options.IsCatastrophicFailureSet)
-        {
-            Assert.NotNull(flushException);
+        Assert.True(Env.Options.IsCatastrophicFailureSet, "the rollback did not mark the environment as catastrophically failed");
+        Assert.NotNull(flushException);
 
-            RestartDatabase();
-
-            using (var rtx = Env.ReadTransaction())
-            {
-                foreach (var pageNumber in new[] { p1, p2, p3 })
-                {
-                    var page = rtx.LowLevelTransaction.GetPage(pageNumber);
-                    Assert.Equal(pageNumber, page.PageNumber);
-                }
-            }
-
-            return;
-        }
-
-        // Step 12: Verify no exception from flush thread
-        Assert.Null(flushException);
-
-        // Step 13 (RavenDB-27166): the retry did not double-free, but the environment is not healthy either.
-        // txBlocker's rollback restored its tx-start scratch snapshot, resurrecting the entries the flush action
-        // had already freed via tx.ForgetAboutScratchPage. The retry cannot repair that: the free buffer entries
-        // were nulled by the first (partial) execution, so ForgetAboutScratchPage never runs for them again.
-        // The scratch positions are back on the free list while the environment still maps p1/p2/p3 onto them,
-        // so reusing the scratch makes those pages resolve to whatever now occupies their old positions.
-        for (int c = 0; c < 10; c++)
-        {
-            using var txw = Env.WriteTransaction();
-            var tree = txw.CreateTree("churn");
-            for (int i = 0; i < 100; i++)
-                tree.Add($"churn-{c}-{i}", new string((char)('0' + i % 10), 512));
-            txw.Commit();
-        }
+        // Step 12: no committed data was lost (the failed transaction never reached the journal) - the forced
+        // restart recovers a consistent state
+        RestartDatabase();
 
         using (var rtx = Env.ReadTransaction())
         {
