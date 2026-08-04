@@ -1,10 +1,14 @@
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Session;
 using Raven.Quill.Agents;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints.Helpers;
+using Raven.Quill.Telegram;
 using Raven.Quill.Wizard;
+using Telegram.Bot;
+using Telegram.Bot.Exceptions;
 
 namespace Raven.Quill.Endpoints;
 
@@ -58,6 +62,8 @@ public static class ChannelsEndpoints
         string slug,
         ProvisionChannelRequest body,
         IDocumentStore store,
+        ITelegramBotClientFactory botFactory,
+        ITelegramChannelManager telegramManager,
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
@@ -72,7 +78,7 @@ public static class ChannelsEndpoints
         return body.Type switch
         {
             ChannelType.IFrame => await ProvisionIFrameAsync(app, body, store, logger, ct),
-            ChannelType.Telegram => ProvisionTelegramAsync(),
+            ChannelType.Telegram => await ProvisionTelegramAsync(app, body, store, botFactory, telegramManager, logger, ct),
             ChannelType.WhatsApp => ProvisionWhatsAppAsync(),
             null => Results.BadRequest(new ApiErrorResponse("type is required")),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{body.Type}'")),
@@ -126,9 +132,125 @@ public static class ChannelsEndpoints
         return Results.Ok(new ProvisionChannelResponse(channelId));
     }
 
-    private static IResult ProvisionTelegramAsync() => NotImplementedChannel(ChannelType.Telegram);
+    private static async Task<IResult> ProvisionTelegramAsync(
+        App app,
+        ProvisionChannelRequest body,
+        IDocumentStore store,
+        ITelegramBotClientFactory botFactory,
+        ITelegramChannelManager telegramManager,
+        ILogger<ChannelsLogger> logger,
+        CancellationToken ct)
+    {
+        var config = await AgentLookup.FindAsync(store, app.Database, body.AgentId, ct);
+        if (config is null)
+            return Results.BadRequest(new ApiErrorResponse($"unknown agentId '{body.AgentId}'"));
+
+        if (string.IsNullOrWhiteSpace(body.BotToken))
+            return Results.BadRequest(new ApiErrorResponse("botToken is required for a Telegram channel"));
+
+        // Telegram has no embedding surface; reject a supplied list rather than silently dropping it
+        if (body.AllowedOrigins is { Length: > 0 })
+            return Results.BadRequest(new ApiErrorResponse("allowedOrigins does not apply to Telegram channels"));
+
+        if (TryValidateDisplayName(body.DisplayName, out var nameError) == false)
+            return Results.BadRequest(new ApiErrorResponse(nameError!));
+
+        // bind params at provision (mint-time-binding analogue); the Telegram user id is injected per message
+        if (TryResolveTelegramParameters(config, body.Parameters, out var parameters, out var paramError) == false)
+            return Results.BadRequest(new ApiErrorResponse(paramError!, Code: "missing_parameters"));
+
+        var botToken = body.BotToken.Trim();
+        var (bot, botError) = await ValidateBotTokenAsync(botFactory, botToken, ct);
+        if (bot is null)
+            return Results.BadRequest(new ApiErrorResponse(botError!));
+
+        using var session = store.OpenAsyncSession(app.Database);
+
+        // per-app uniqueness: two getUpdates consumers on one token make Telegram 409
+        var existing = await LoadAllChannelsAsync(session, ct);
+        if (existing.Any(c => c.Type == ChannelType.Telegram && c.Telegram?.BotId == bot.Id))
+            return Results.BadRequest(new ApiErrorResponse($"bot @{bot.Username} is already connected in this app"));
+
+        var channelId = Guid.NewGuid().ToString("N");
+        var channel = new Channel
+        {
+            Id = Channel.IdPrefix + channelId,
+            Type = ChannelType.Telegram,
+            DisplayName = body.DisplayName ?? (string.IsNullOrEmpty(bot.Username) ? "Telegram" : "@" + bot.Username),
+            AgentId = config.Identifier,
+            AllowedOrigins = [],
+            Enabled = true,
+            CreatedAt = DateTime.UtcNow,
+            Telegram = new TelegramSettings
+            {
+                BotToken = botToken,
+                BotId = bot.Id,
+                BotUsername = bot.Username ?? "",
+                Parameters = parameters,
+            },
+        };
+
+        await session.StoreAsync(channel, ct);
+        await session.SaveChangesAsync(ct);
+
+        await telegramManager.StartOrRestartAsync(app.Database, channel);
+
+        logger.LogInformation(
+            "Provisioned Telegram channel slug={Slug} channelId={ChannelId} agentId={AgentId} bot={Bot}",
+            app.Slug, channelId, config.Identifier, TelegramSettings.RedactToken(botToken));
+
+        return Results.Ok(new ProvisionChannelResponse(channelId));
+    }
 
     private static IResult ProvisionWhatsAppAsync() => NotImplementedChannel(ChannelType.WhatsApp);
+
+    /// The agent's declared parameters must be operator-bound now, except the user-identifier one — the
+    /// poller fills that from the sender on every message.
+    private static bool TryResolveTelegramParameters(
+        AiAgentConfiguration config,
+        Dictionary<string, string>? supplied,
+        out Dictionary<string, string> resolved,
+        out string? error)
+    {
+        error = null;
+        if (AgentParameters.TryResolve(config, supplied, out resolved, out var missing))
+            return true;
+
+        missing.RemoveAll(name =>
+            string.Equals(name, TelegramSettings.UserIdentifierParameterName, StringComparison.OrdinalIgnoreCase));
+        if (missing.Count == 0)
+            return true;
+
+        error = $"missing agent parameter(s): {string.Join(", ", missing)}";
+        return false;
+    }
+
+    /// getMe both validates the token and yields the bot identity (id for uniqueness, username for display).
+    private static async Task<(global::Telegram.Bot.Types.User? Bot, string? Error)> ValidateBotTokenAsync(
+        ITelegramBotClientFactory botFactory,
+        string botToken,
+        CancellationToken ct)
+    {
+        try
+        {
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeout.CancelAfter(TimeSpan.FromSeconds(10));
+            var bot = await botFactory.Create(botToken).GetMe(timeout.Token);
+            return (bot, null);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested == false)
+        {
+            return (null, "telegram did not respond while validating the bot token");
+        }
+        catch (ApiRequestException e)
+        {
+            return (null, $"telegram rejected the bot token: {TelegramSettings.ScrubToken(e.Message, botToken)}");
+        }
+        catch (HttpRequestException e)
+        {
+            return (null, $"could not reach telegram: {TelegramSettings.ScrubToken(e.Message, botToken)}");
+        }
+    }
 
 
     private static async Task<IResult> ListChannelsAsync(
@@ -157,6 +279,8 @@ public static class ChannelsEndpoints
         string channelId,
         UpdateChannelRequest body,
         IDocumentStore store,
+        ITelegramBotClientFactory botFactory,
+        ITelegramChannelManager telegramManager,
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
@@ -175,7 +299,7 @@ public static class ChannelsEndpoints
         return channel.Type switch
         {
             ChannelType.IFrame => await UpdateIFrameChannelAsync(session, channel, body, app.Slug, channelId, logger, ct),
-            ChannelType.Telegram => UpdateTelegramChannelAsync(),
+            ChannelType.Telegram => await UpdateTelegramChannelAsync(session, channel, body, app, channelId, botFactory, telegramManager, logger, ct),
             ChannelType.WhatsApp => UpdateWhatsAppChannelAsync(),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{channel.Type}'")),
         };
@@ -217,7 +341,65 @@ public static class ChannelsEndpoints
         return Results.Ok(ChannelSummaryResponse.From(channel));
     }
 
-    private static IResult UpdateTelegramChannelAsync() => NotImplementedChannel(ChannelType.Telegram);
+    private static async Task<IResult> UpdateTelegramChannelAsync(
+        IAsyncDocumentSession session,
+        Channel channel,
+        UpdateChannelRequest body,
+        App app,
+        string channelId,
+        ITelegramBotClientFactory botFactory,
+        ITelegramChannelManager telegramManager,
+        ILogger<ChannelsLogger> logger,
+        CancellationToken ct)
+    {
+        if (body.AllowedOrigins is not null)
+            return Results.BadRequest(new ApiErrorResponse("allowedOrigins does not apply to Telegram channels"));
+
+        if (body.DisplayName is not null)
+        {
+            if (TryValidateDisplayName(body.DisplayName, out var nameError) == false)
+                return Results.BadRequest(new ApiErrorResponse(nameError!));
+            channel.DisplayName = body.DisplayName;
+        }
+
+        var tokenRotated = false;
+        if (string.IsNullOrWhiteSpace(body.BotToken) == false)
+        {
+            var botToken = body.BotToken.Trim();
+            var (bot, botError) = await ValidateBotTokenAsync(botFactory, botToken, ct);
+            if (bot is null)
+                return Results.BadRequest(new ApiErrorResponse(botError!));
+
+            var existing = await LoadAllChannelsAsync(session, ct);
+            if (existing.Any(c => c.Id != channel.Id && c.Type == ChannelType.Telegram && c.Telegram?.BotId == bot.Id))
+                return Results.BadRequest(new ApiErrorResponse($"bot @{bot.Username} is already connected in this app"));
+
+            channel.Telegram ??= new TelegramSettings();
+            channel.Telegram.BotToken = botToken;
+            channel.Telegram.BotId = bot.Id;
+            channel.Telegram.BotUsername = bot.Username ?? "";
+            tokenRotated = true;
+        }
+
+        var wasEnabled = channel.Enabled;
+        if (body.Enabled is not null)
+            channel.Enabled = body.Enabled.Value;
+
+        await session.SaveChangesAsync(ct);
+
+        // poller follows the saved doc; display-name-only edits don't touch it
+        var runnable = channel is { Enabled: true, Telegram.BotToken.Length: > 0 };
+        if (runnable && (tokenRotated || wasEnabled == false))
+            await telegramManager.StartOrRestartAsync(app.Database, channel);
+        else if (channel.Enabled == false)
+            await telegramManager.StopAsync(app.Database, channelId);
+
+        logger.LogInformation(
+            "Updated Telegram channel slug={Slug} channelId={ChannelId} enabled={Enabled} tokenRotated={TokenRotated}",
+            app.Slug, channelId, channel.Enabled, tokenRotated);
+
+        return Results.Ok(ChannelSummaryResponse.From(channel));
+    }
 
     private static IResult UpdateWhatsAppChannelAsync() => NotImplementedChannel(ChannelType.WhatsApp);
 
@@ -226,6 +408,7 @@ public static class ChannelsEndpoints
         string slug,
         string channelId,
         IDocumentStore store,
+        ITelegramChannelManager telegramManager,
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
@@ -243,7 +426,7 @@ public static class ChannelsEndpoints
         return channel.Type switch
         {
             ChannelType.IFrame => await DeleteIFrameChannelAsync(store, app, channelId, logger, ct),
-            ChannelType.Telegram => DeleteTelegramChannelAsync(),
+            ChannelType.Telegram => await DeleteTelegramChannelAsync(store, app, channelId, telegramManager, logger, ct),
             ChannelType.WhatsApp => DeleteWhatsAppChannelAsync(),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{channel.Type}'")),
         };
@@ -266,7 +449,26 @@ public static class ChannelsEndpoints
         return Results.NoContent();
     }
 
-    private static IResult DeleteTelegramChannelAsync() => NotImplementedChannel(ChannelType.Telegram);
+    private static async Task<IResult> DeleteTelegramChannelAsync(
+        IDocumentStore store,
+        App app,
+        string channelId,
+        ITelegramChannelManager telegramManager,
+        ILogger<ChannelsLogger> logger,
+        CancellationToken ct)
+    {
+        // doc first so a concurrent reconciliation can't resurrect the poller, then a bounded stop
+        using (var session = store.OpenAsyncSession(app.Database))
+        {
+            session.Delete(Channel.IdPrefix + channelId);
+            await session.SaveChangesAsync(ct);
+        }
+
+        await telegramManager.StopAsync(app.Database, channelId);
+
+        logger.LogInformation("Deleted Telegram channel slug={Slug} channelId={ChannelId}", app.Slug, channelId);
+        return Results.NoContent();
+    }
 
     private static IResult DeleteWhatsAppChannelAsync() => NotImplementedChannel(ChannelType.WhatsApp);
 

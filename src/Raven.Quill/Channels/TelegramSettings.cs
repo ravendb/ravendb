@@ -4,6 +4,10 @@ namespace Raven.Quill.Channels;
 // never projected in DTOs, redacted in logs and health state
 internal sealed class TelegramSettings
 {
+    /// The agent-declared parameter (matched case-insensitively) that receives the sender's Telegram user id
+    /// per message; every other declared parameter must be operator-bound at provision time.
+    internal const string UserIdentifierParameterName = "UserIdentifier";
+
     // log the bot-id part only ("12345678:..."), the rest is the secret
     internal static string RedactToken(string? token)
     {
