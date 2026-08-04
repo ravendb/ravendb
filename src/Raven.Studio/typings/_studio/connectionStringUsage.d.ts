@@ -34,7 +34,8 @@ declare module Raven.Client.Documents.Operations.ConnectionStrings {
     }
 
     // Merged (declaration merging) with the generated ConnectionString interface.
+    // Optional: the server sends it on reads, the Studio never sends it back on writes.
     interface ConnectionString {
-        UsedBy: Array<ConnectionStringUsage>;
+        UsedBy?: Array<ConnectionStringUsage>;
     }
 }

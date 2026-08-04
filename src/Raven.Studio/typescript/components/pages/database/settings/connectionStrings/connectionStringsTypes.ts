@@ -235,6 +235,10 @@ export type Connection =
     | AzureServiceBusConnection
     | AiConnection;
 
+export type ConnectionsByType = {
+    [K in StudioConnectionType]: Extract<Connection, { type: K }>[];
+};
+
 export type ConnectionStringDto = Partial<
     | ElasticSearchConnectionStringDto
     | OlapConnectionStringDto

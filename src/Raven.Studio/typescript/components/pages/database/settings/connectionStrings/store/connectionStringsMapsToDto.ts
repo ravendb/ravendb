@@ -17,8 +17,13 @@ import {
 } from "../connectionStringsTypes";
 import assertUnreachable from "components/utils/assertUnreachable";
 import ApiKeyAuthentication = Raven.Client.Documents.Operations.ETL.ElasticSearch.ApiKeyAuthentication;
+import AiConnectionStringDto = Raven.Client.Documents.Operations.AI.AiConnectionString;
+import RavenConnectionStringDto = Raven.Client.Documents.Operations.ETL.RavenConnectionString;
+import SqlConnectionStringDto = Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString;
+import SnowflakeConnectionStringDto = Raven.Client.Documents.Operations.ETL.Snowflake.SnowflakeConnectionString;
+import OlapConnectionStringDto = Raven.Client.Documents.Operations.ETL.OLAP.OlapConnectionString;
 
-export function mapRavenConnectionStringToDto(connection: RavenConnection): ConnectionStringDto {
+export function mapRavenConnectionStringToDto(connection: RavenConnection): RavenConnectionStringDto {
     return {
         Type: "Raven",
         Name: connection.name,
@@ -27,7 +32,7 @@ export function mapRavenConnectionStringToDto(connection: RavenConnection): Conn
     };
 }
 
-export function mapSqlConnectionStringToDto(connection: SqlConnection): ConnectionStringDto {
+export function mapSqlConnectionStringToDto(connection: SqlConnection): SqlConnectionStringDto {
     return {
         Type: "Sql",
         Name: connection.name,
@@ -36,7 +41,7 @@ export function mapSqlConnectionStringToDto(connection: SqlConnection): Connecti
     };
 }
 
-export function mapSnowflakeConnectionStringToDto(connection: SnowflakeConnection): ConnectionStringDto {
+export function mapSnowflakeConnectionStringToDto(connection: SnowflakeConnection): SnowflakeConnectionStringDto {
     return {
         Type: "Snowflake",
         Name: connection.name,
@@ -44,7 +49,7 @@ export function mapSnowflakeConnectionStringToDto(connection: SnowflakeConnectio
     };
 }
 
-export function mapOlapConnectionStringToDto(connection: OlapConnection): ConnectionStringDto {
+export function mapOlapConnectionStringToDto(connection: OlapConnection): OlapConnectionStringDto {
     return {
         Type: "Olap",
         Name: connection.name,
@@ -254,7 +259,7 @@ export function mapAzureServiceBusConnectionStringToDto(connection: AzureService
     };
 }
 
-export function mapAiConnectionStringToDto(connection: AiConnection): ConnectionStringDto {
+export function mapAiConnectionStringToDto(connection: AiConnection): AiConnectionStringDto {
     return {
         Type: "Ai",
         Name: connection.name,
