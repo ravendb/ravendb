@@ -14,6 +14,7 @@ using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints.Helpers;
 using Raven.Quill.Live;
 using Raven.Quill.Raven;
+using Raven.Quill.Telegram;
 using Raven.Quill.Wizard;
 
 namespace Raven.Quill.Endpoints;
@@ -96,6 +97,7 @@ public static class AppsEndpoints
     private static async Task<IResult> DeleteAppAsync(
         string slug,
         IDocumentStore store,
+        ITelegramChannelManager telegramManager,
         ILogger<AppsLogger> logger,
         CancellationToken ct)
     {
@@ -108,6 +110,9 @@ public static class AppsEndpoints
 
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
+
+        // reclaim pollers first so none keeps hammering the deleted database
+        await telegramManager.StopAllForDatabaseAsync(app.Database);
 
         await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(slug, true), ct);
         await AppLookup.DeleteAppAsync(store, slug, ct);

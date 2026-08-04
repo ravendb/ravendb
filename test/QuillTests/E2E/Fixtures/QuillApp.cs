@@ -66,6 +66,9 @@ public sealed class QuillApp : IAsyncDisposable
 
     public Task DeleteChannelAsync(string channelId) => Host.DeleteChannelAsync(Slug, channelId);
 
+    public Task<IReadOnlyList<TelegramChannelHealthResponse>> GetTelegramHealthAsync() =>
+        Host.GetTelegramHealthAsync(Slug);
+
     public Task<IReadOnlyList<EmbedLinkSummaryResponse>> GetEmbedLinksAsync() => Host.GetEmbedLinksAsync(Slug);
 
     public Task<MintEmbedLinkResponse> MintEmbedLinkAsync(MintEmbedLinkRequest body) => Host.MintEmbedLinkAsync(Slug, body);
