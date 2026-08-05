@@ -33,10 +33,8 @@ const VERIFY_TABLES_LABELS = {
 };
 
 export function MapTablesStep({ isBusy }: WizardBodyComponentProps) {
-    const { control, getValues, setValue } = useFormContext<AppFormData>();
-    const { errors } = useFormState({ control, name: "mapTables.tables" });
+    const { getValues, setValue } = useFormContext<AppFormData>();
     const applyMapTables = useApplyMapTables();
-    const verifyTables = useVerifyMapTablesState();
     const {
         isSuggesting,
         startedAt: suggestionStartedAt,
@@ -50,9 +48,6 @@ export function MapTablesStep({ isBusy }: WizardBodyComponentProps) {
     const openRawView = useSetupWizardStore((state) => state.openMapTablesRawView);
     const closeRawView = useSetupWizardStore((state) => state.closeMapTablesRawView);
     const setRawContent = useSetupWizardStore((state) => state.setMapTablesRawContent);
-
-    const tablesError = errors.mapTables?.tables;
-    const tablesErrorMessage = tablesError?.message ?? tablesError?.root?.message;
 
     // Invalid raw JSON means the form still holds the previous parse, so what a verify would run
     // against is not what the editor shows.
@@ -104,23 +99,7 @@ export function MapTablesStep({ isBusy }: WizardBodyComponentProps) {
         <RootTablesFieldArrayProvider>
             <div className="flex min-h-0 flex-1 flex-col gap-3">
                 <div className="flex shrink-0 items-center justify-end gap-4">
-                    {/* Runs the dry run Next runs, so the operator can check that the (AI-)suggested tables
-                    exist and are capturable before leaving the step. Without an enabled table there is
-                    nothing to verify, and validation blocks Next anyway, so the button stays out instead
-                    of showing up dead. */}
-                    {verifyTables.selectedTables.length > 0 && (
-                        <>
-                            {/* While the form is behind the editor, verifying would answer for a mapping the
-                            operator is no longer looking at - and an earlier pass must not read as
-                            "verified" against the editor's content either. */}
-                            <VerifyCdcButton
-                                disabled={isBusy || isFormBehindEditor}
-                                state={isFormBehindEditor ? { ...verifyTables, isVerified: false } : verifyTables}
-                                labels={VERIFY_TABLES_LABELS}
-                            />
-                            <div className="h-4 w-px bg-border" />
-                        </>
-                    )}
+                    <VerifyMapTablesButton isBusy={isBusy} isFormBehindEditor={isFormBehindEditor} />
                     <Field orientation="horizontal">
                         <Switch id="map-tables-raw-view" checked={isRawView} onCheckedChange={handleToggleRawView} />
                         <FieldLabel htmlFor="map-tables-raw-view">Raw JSON</FieldLabel>
@@ -154,12 +133,66 @@ export function MapTablesStep({ isBusy }: WizardBodyComponentProps) {
                                 <TableEditor />
                             </ResizablePanel>
                         </ResizablePanelGroup>
-                        {tablesErrorMessage && <Alert variant="destructive">{tablesErrorMessage}</Alert>}
+                        <TablesListErrorAlert />
                     </>
                 )}
 
-                {verifyTables.error && <WizardErrorAlert error={verifyTables.error} className="shrink-0" />}
+                <VerifyMapTablesErrorAlert />
             </div>
         </RootTablesFieldArrayProvider>
     );
+}
+
+/* The verify state and the tables validation errors both track the whole mapTables.tables array,
+   so their consumers live in these leaf components: subscribing from MapTablesStep itself would
+   re-render the entire step (explorer, editor, all row dropdowns) on every table add/remove. */
+
+function VerifyMapTablesButton({ isBusy, isFormBehindEditor }: { isBusy: boolean; isFormBehindEditor: boolean }) {
+    const verifyTables = useVerifyMapTablesState();
+
+    // Runs the dry run Next runs, so the operator can check that the (AI-)suggested tables
+    // exist and are capturable before leaving the step. Without an enabled table there is
+    // nothing to verify, and validation blocks Next anyway, so the button stays out instead
+    // of showing up dead.
+    if (verifyTables.selectedTables.length === 0) {
+        return null;
+    }
+
+    return (
+        <>
+            {/* While the form is behind the editor, verifying would answer for a mapping the
+                operator is no longer looking at - and an earlier pass must not read as
+                "verified" against the editor's content either. */}
+            <VerifyCdcButton
+                disabled={isBusy || isFormBehindEditor}
+                state={isFormBehindEditor ? { ...verifyTables, isVerified: false } : verifyTables}
+                labels={VERIFY_TABLES_LABELS}
+            />
+            <div className="h-4 w-px bg-border" />
+        </>
+    );
+}
+
+function VerifyMapTablesErrorAlert() {
+    const verifyTables = useVerifyMapTablesState();
+
+    if (!verifyTables.error) {
+        return null;
+    }
+
+    return <WizardErrorAlert error={verifyTables.error} className="shrink-0" />;
+}
+
+function TablesListErrorAlert() {
+    const { control } = useFormContext<AppFormData>();
+    const { errors } = useFormState({ control, name: "mapTables.tables" });
+
+    const tablesError = errors.mapTables?.tables;
+    const tablesErrorMessage = tablesError?.message ?? tablesError?.root?.message;
+
+    if (!tablesErrorMessage) {
+        return null;
+    }
+
+    return <Alert variant="destructive">{tablesErrorMessage}</Alert>;
 }

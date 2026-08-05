@@ -68,12 +68,18 @@ export function useTableActions() {
         const parts = path.split(".");
         const index = Number(parts.at(-1));
         const listPath = parts.slice(0, -1).join(".");
-        const tables = getTableList<unknown>(listPath);
 
-        setFieldValue(
-            listPath,
-            tables.filter((_, idx) => idx !== index),
-        );
+        if (listPath === "mapTables.tables") {
+            rootTablesFieldArray.remove(index);
+        } else {
+            const tables = getTableList<unknown>(listPath);
+
+            setFieldValue(
+                listPath,
+                tables.filter((_, idx) => idx !== index),
+            );
+        }
+
         removeMapTableUiState(path);
     };
 
