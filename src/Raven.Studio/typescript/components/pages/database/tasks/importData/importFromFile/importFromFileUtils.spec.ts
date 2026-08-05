@@ -12,6 +12,7 @@ import {
     databaseSettingKeys,
     ImportFromFileFormData,
     importFromFileSchema,
+    ongoingTaskKeys,
 } from "./importFromFileValidation";
 
 // Knockout defaults (importDatabaseModel + smugglerDatabaseRecord) with admin access — all
@@ -213,6 +214,21 @@ describe("importFromFileUtils", () => {
             const data = createAllOffFormData();
             data.configuration.isImportAllSettings = true;
             expect(hasAnyInclude(data)).toBe(true);
+        });
+
+        it("returns true when a customized task yields record types", () => {
+            const data = createAllOffFormData();
+            data.configuration.isIncludeConnectionStringsAndOngoingTasks = true;
+            data.configuration.isCustomizeOngoingTasks = true;
+            expect(hasAnyInclude(data)).toBe(true);
+        });
+
+        it("returns false when tasks are included but every task and connection string is restricted", () => {
+            // the toggle alone must not count as an include: the resulting import would be a no-op
+            const data = createAllOffFormData();
+            data.configuration.isIncludeConnectionStringsAndOngoingTasks = true;
+            data.configuration.isCustomizeOngoingTasks = true;
+            expect(hasAnyInclude(data, [], [...ongoingTaskKeys], [...connectionStringKeys])).toBe(false);
         });
     });
 
