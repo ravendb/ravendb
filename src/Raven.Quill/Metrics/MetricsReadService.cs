@@ -32,7 +32,7 @@ internal static class MetricsReadService
 
     private const int TopTablesLimit = 10;
 
-    public static async Task<List<UsagePoint>> GetUsageAsync(
+    public static async Task<UsageResponse> GetUsageAsync(
         ILicenseStatsProvider provider,
         IDocumentStore store, List<App> apps, int year, int? month, int? day, ILogger? log, CancellationToken ct)
     {
@@ -41,19 +41,20 @@ internal static class MetricsReadService
         var results = await Task.WhenAll(apps.Select(async app =>
         {
             var usage = await GetAppUsageAsync(store, app, period, ct);
-            return (Usage: usage, TopologyId: app.TopologyId);
+            return (Usage: usage, App: app);
         }));
-        
+
         var buckets = period.Buckets();
         var conversations = new long[buckets.Count];
         var messages = new long[buckets.Count];
         var tokens = new long[buckets.Count];
         var writes = new long[buckets.Count];
-        
+
         var stats = await provider.GetUsageAsync(year, month, day, ct);
         var statsPerApp = stats.PerApplication.GroupBy(p => p.TopologyId)
             .ToDictionary(g => g.Key, g => g.ToList());
 
+        var writesByApp = new List<AppWrites>(results.Length);
         foreach (var result in results)
         {
             var usage = result.Usage;
@@ -64,22 +65,26 @@ internal static class MetricsReadService
                 tokens[i] += usage.Tokens[i];
             }
 
-            if (statsPerApp.TryGetValue(result.TopologyId, out var appWriteUsage) == false)
-                continue;
-
-            foreach (var p in appWriteUsage ?? [])
+            long appWrites = 0;
+            if (statsPerApp.TryGetValue(result.App.TopologyId, out var appWriteUsage))
             {
-                var i = period.IndexOf(Utc(p.From));
-                if (i < 0)
-                    continue;
-                writes[i] += p.Usage;
+                foreach (var p in appWriteUsage)
+                {
+                    var i = period.IndexOf(Utc(p.From));
+                    if (i < 0)
+                        continue;
+                    writes[i] += p.Usage;
+                    appWrites += p.Usage;
+                }
             }
+
+            writesByApp.Add(new AppWrites(result.App.Slug, appWrites));
         }
 
         var points = new List<UsagePoint>(buckets.Count);
         for (var i = 0; i < buckets.Count; i++)
             points.Add(new UsagePoint(buckets[i], conversations[i], messages[i], tokens[i], writes[i]));
-        return points;
+        return new UsageResponse(points, writesByApp);
     }
 
     private static async Task<(long[] Conversations, long[] Messages, long[] Tokens)> GetAppUsageAsync(IDocumentStore store, App app, UsagePeriod period, CancellationToken ct)
@@ -368,7 +373,6 @@ internal static class MetricsReadService
                     ChannelsCount: 0,
                     AdaptersCount: 0,
                     AgentsCount: 0,
-                    WritesPerMonth: null,
                     ChannelsLabel: null,
                     StatusSubtitle: "Database unavailable",
                     CreatedAt: Utc(app.CreatedAt),
@@ -420,7 +424,6 @@ internal static class MetricsReadService
             ChannelsCount: channels.Count,
             AdaptersCount: 0,
             AgentsCount: agentsCount,
-            WritesPerMonth: null,
             ChannelsLabel: channelsLabel,
             StatusSubtitle: subtitle,
             CreatedAt: Utc(app.CreatedAt),

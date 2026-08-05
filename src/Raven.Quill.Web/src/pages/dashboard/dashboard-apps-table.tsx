@@ -1,11 +1,12 @@
 import { Link } from "react-router";
 import { Database, Pencil, Plus, Trash2 } from "lucide-react";
-import type { ApplianceAppResponse } from "@/api/generated/server-api";
+import type { ApplianceAppResponse, AppWrites } from "@/api/generated/server-api";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/ui/table";
 import { WruLabel } from "@/components/data/wru-label";
 import { appRoutes } from "@/lib/app-routes";
+import { datePeriodUnit, type DatePeriod } from "@/lib/date-period";
 import { formatCompact } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { DeleteAppDialog } from "@/pages/apps/delete-app-dialog";
@@ -34,10 +35,21 @@ function resolveStatusStyle(status: string): StatusStyle {
     );
 }
 
-export function DashboardAppsTable({ apps }: { apps: ApplianceAppResponse[] }) {
+export function DashboardAppsTable({
+    apps,
+    period,
+    writesByApp,
+}: {
+    apps: ApplianceAppResponse[];
+    period: DatePeriod;
+    /** Per-app WRU totals for the selected period; undefined while the usage query loads. */
+    writesByApp?: AppWrites[];
+}) {
     if (apps.length === 0) {
         return <EmptyAppsState />;
     }
+
+    const writesBySlug = new Map(writesByApp?.map((entry) => [entry.slug, entry.writes]));
 
     return (
         <div className="space-y-4">
@@ -64,7 +76,7 @@ export function DashboardAppsTable({ apps }: { apps: ApplianceAppResponse[] }) {
                             <TableHead className="text-xs font-medium text-muted-foreground">Agents</TableHead>
                             <TableHead className="text-xs font-medium text-muted-foreground">Channels</TableHead>
                             <TableHead className="text-xs font-medium text-muted-foreground">
-                                <WruLabel suffix=" / month" />
+                                <WruLabel suffix={` / ${datePeriodUnit(period)}`} />
                             </TableHead>
                             <TableHead className="w-[20%] text-xs font-medium text-muted-foreground">Status</TableHead>
                             <TableHead className="w-0 text-right text-xs font-medium text-muted-foreground">
@@ -74,7 +86,7 @@ export function DashboardAppsTable({ apps }: { apps: ApplianceAppResponse[] }) {
                     </TableHeader>
                     <TableBody>
                         {apps.map((app) => (
-                            <AppRow key={app.slug} app={app} />
+                            <AppRow key={app.slug} app={app} writes={writesBySlug.get(app.slug)} />
                         ))}
                     </TableBody>
                 </Table>
@@ -83,7 +95,7 @@ export function DashboardAppsTable({ apps }: { apps: ApplianceAppResponse[] }) {
     );
 }
 
-function AppRow({ app }: { app: ApplianceAppResponse }) {
+function AppRow({ app, writes }: { app: ApplianceAppResponse; writes: number | undefined }) {
     return (
         <TableRow className="group">
             <TableCell className="py-3">
@@ -95,9 +107,7 @@ function AppRow({ app }: { app: ApplianceAppResponse }) {
             <TableCell className="text-sm">{app.source.type || "—"}</TableCell>
             <TableCell className="text-sm tabular-nums">{app.agentsCount > 0 ? app.agentsCount : "—"}</TableCell>
             <TableCell className="text-sm">{app.channelsLabel ?? "—"}</TableCell>
-            <TableCell className="text-sm tabular-nums">
-                {app.writesPerMonth != null ? formatCompact(app.writesPerMonth) : "—"}
-            </TableCell>
+            <TableCell className="text-sm tabular-nums">{writes != null ? formatCompact(writes) : "—"}</TableCell>
             <TableCell className="py-3">
                 <AppStatusCell app={app} />
             </TableCell>

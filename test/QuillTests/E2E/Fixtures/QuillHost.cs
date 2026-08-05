@@ -144,12 +144,12 @@ public sealed class QuillHost : IAsyncDisposable
     // ---- config-DB fan-out: waits on every app the test created before querying ----
 
     /// Summed across the config store's apps (or scoped to one via <paramref name="app"/>).
-    public async Task<IReadOnlyList<UsagePoint>> GetUsageAsync(int year, int? month = null, int? day = null, string? app = null)
+    public async Task<UsageResponse> GetUsageAsync(int year, int? month = null, int? day = null, string? app = null)
     {
         await WaitForIndexingAsync();
         var q = Periods.Query(year, month, day);
         if (app is not null) q += $"&app={app}";
-        return await QuillHttp.GetAsync<IReadOnlyList<UsagePoint>>(Client, $"{QuillRoutes.Usage}?{q}");
+        return await QuillHttp.GetAsync<UsageResponse>(Client, $"{QuillRoutes.Usage}?{q}");
     }
 
     public async Task<TokensByAppResponse> GetTokensByAppAsync()

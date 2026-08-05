@@ -38,7 +38,13 @@ export function DashboardHome() {
                 onRetry={() => appsQuery.refetch()}
                 loadingLabel="Loading apps…"
             >
-                {appsQuery.data && <DashboardAppsTable apps={appsQuery.data} />}
+                {appsQuery.data && (
+                    <DashboardAppsTable
+                        apps={appsQuery.data}
+                        period={period}
+                        writesByApp={usageQuery.data?.writesByApp}
+                    />
+                )}
             </ApiState>
         </div>
     );
