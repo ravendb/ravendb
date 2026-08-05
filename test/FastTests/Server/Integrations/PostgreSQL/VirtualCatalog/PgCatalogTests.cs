@@ -68,6 +68,45 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
             Assert.Equal(new[] { "Companies", "Employees", "Orders" }, ColumnValues(table, column: 0).OrderBy(n => n, StringComparer.Ordinal));
         }
 
+        // SQLAlchemy 1.4's PGDialect.get_view_names() / get_sequence_names(), with the :schema bind
+        // substituted. RavenDB has neither views nor sequences and pg_class reports relkind 'r' for every
+        // collection, so both must resolve and return no rows rather than failing the reflection call.
+        private const string SqlAlchemyGetViewNames =
+            "SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace " +
+            "WHERE n.nspname = 'public' AND c.relkind IN ('v', 'm')";
+
+        private const string SqlAlchemyGetSequenceNames =
+            "SELECT relname FROM pg_class c join pg_namespace n on n.oid=c.relnamespace " +
+            "where relkind='S' and n.nspname='public'";
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public async Task SqlAlchemy_get_view_names_shape_reports_no_views()
+        {
+            using var store = GetDocumentStore();
+            StoreThreeCollections(store);
+
+            var ctx = await CtxFor(store);
+            Assert.True(PgVirtualInterpreter.TryExecute(SqlAlchemyGetViewNames, ctx, out var table));
+
+            Assert.Single(table.Columns);
+            Assert.Equal("relname", table.Columns[0].Name);
+            Assert.Empty(table.Data);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public async Task SqlAlchemy_get_sequence_names_shape_reports_no_sequences()
+        {
+            using var store = GetDocumentStore();
+            StoreThreeCollections(store);
+
+            var ctx = await CtxFor(store);
+            Assert.True(PgVirtualInterpreter.TryExecute(SqlAlchemyGetSequenceNames, ctx, out var table));
+
+            Assert.Single(table.Columns);
+            Assert.Equal("relname", table.Columns[0].Name);
+            Assert.Empty(table.Data);
+        }
+
         [RavenFact(RavenTestCategory.PostgreSql)]
         public async Task Pg_class_and_information_schema_tables_report_the_same_names()
         {
