@@ -1,5 +1,5 @@
 import type { WizardError } from "@/api/generated/server-api";
-import { WizardErrorDetails } from "@/components/form/wizard/wizard-error-details";
+import { ErrorDetails } from "@/components/data/error-details";
 import { cn } from "@/lib/utils";
 
 export function WizardErrorList({ errors, className }: { errors?: WizardError[]; className?: string }) {
@@ -14,7 +14,7 @@ export function WizardErrorList({ errors, className }: { errors?: WizardError[];
             {visibleErrors.map((error, index) => (
                 <li key={index} className="grid gap-1">
                     <span className="whitespace-pre-wrap">{error.message}</span>
-                    {error.details && <WizardErrorDetails details={error.details} />}
+                    {error.details && <ErrorDetails details={error.details} />}
                 </li>
             ))}
         </ul>

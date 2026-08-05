@@ -3,7 +3,7 @@ import { ChevronRight } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/shadcn/ui/collapsible";
 import { cn } from "@/lib/utils";
 
-export function WizardErrorDetails({ details }: { details: string }) {
+export function ErrorDetails({ details }: { details: string }) {
     const [isOpen, setIsOpen] = useState(false);
 
     return (
