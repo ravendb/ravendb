@@ -28,6 +28,14 @@ public sealed class ApplianceOptions
 
     public TelegramOptions Telegram { get; set; } = new();
 
+    [Url]
+    public string WhatsAppBridgeUrl { get; set; } = "http://127.0.0.1:8447";
+
+    public string WhatsAppDataDir { get; set; } = "/var/lib/quill/whatsapp";
+
+    // test/dev override; when unset the token is minted at WhatsAppDataDir/bridge-token
+    public string? WhatsAppBridgeToken { get; set; }
+
     public TimeSpan ReadinessInitialDelay { get; set; } = TimeSpan.FromSeconds(15);
 
     public TimeSpan ReadinessAttemptTimeout { get; set; } = TimeSpan.FromSeconds(2);
