@@ -71,9 +71,7 @@ export default function ImportDataOptions() {
     return (
         <div className="content-margin">
             <AboutViewHeading title="Import data" icon="import-database" marginBottom={2} />
-            <div className="text-muted mb-4">
-                Choose an import option that best suits your needs.
-            </div>
+            <div className="text-muted mb-4">Choose an import option that best suits your needs.</div>
             <div className="d-grid gap-3 navigation-cards-grid">
                 {importOptions.map((option) => (
                     <NavigationCard key={option.title} {...option} />
