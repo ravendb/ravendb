@@ -236,6 +236,68 @@ public abstract class QuillTelegramTestBase(ITestOutputHelper output, QuillTeleg
         $"{Random.Shared.NextInt64(1_000_000, 9_999_999)}:AA{Guid.NewGuid():N}";
 }
 
+// ---- WhatsApp ----
+
+/// Collection host for the WhatsApp channel tests: the shared host plus one <see cref="MockWhatsAppBridge"/> the
+/// host's bridge client is pointed at, and one <see cref="FakeAgentRouter"/> so pipeline tests assert on
+/// dispatched requests without a live LLM.
+public sealed class QuillWhatsAppFixture : QuillCollectionHost
+{
+    public const string BridgeToken = "test-whatsapp-bridge-token";
+
+    public MockWhatsAppBridge Bridge { get; private set; } = null!;
+
+    internal FakeAgentRouter Router { get; } = new();
+
+    public override async ValueTask InitializeAsync()
+    {
+        await base.InitializeAsync();
+        Bridge = await MockWhatsAppBridge.StartAsync(BridgeToken);
+    }
+
+    public override async ValueTask DisposeAsync()
+    {
+        await base.DisposeAsync();
+        await Bridge.DisposeAsync();
+    }
+}
+
+/// Base for the WhatsApp tests: points the shared collection host at the mock bridge, injects the shared
+/// token directly (no token file on disk), swaps in the recording router, and resets both per test.
+public abstract class QuillWhatsAppTestBase(ITestOutputHelper output, QuillWhatsAppFixture fixture)
+    : QuillTestBase(output, fixture)
+{
+    protected MockWhatsAppBridge Bridge => fixture.Bridge;
+
+    internal FakeAgentRouter Router => fixture.Router;
+
+    protected override Task<QuillHost> NewHostAsync(
+        Action<ApplianceOptions>? configure = null, Action<IServiceCollection>? configureServices = null,
+        string setupPackagePath = "", bool seedChatConnectionString = true, bool longLived = false) =>
+        base.NewHostAsync(
+            configure: opts =>
+            {
+                opts.WhatsAppBridgeUrl = fixture.Bridge.BaseAddress;
+                opts.WhatsAppBridgeToken = QuillWhatsAppFixture.BridgeToken;
+                configure?.Invoke(opts);
+            },
+            configureServices: services =>
+            {
+                services.RemoveAll<Raven.Quill.Agents.IAgentRouter>();
+                services.AddSingleton<Raven.Quill.Agents.IAgentRouter>(fixture.Router);
+                configureServices?.Invoke(services);
+            },
+            setupPackagePath: setupPackagePath, seedChatConnectionString: seedChatConnectionString,
+            longLived: longLived);
+
+    public override async ValueTask InitializeAsync()
+    {
+        await base.InitializeAsync();
+        Bridge.Reset();
+        Router.Reset();
+    }
+}
+
 // ---- AI models ----
 
 /// A resettable <see cref="IAiHelperClient"/> that records the last call and returns a per-test-configurable

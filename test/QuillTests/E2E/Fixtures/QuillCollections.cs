@@ -56,3 +56,9 @@ public class QuillTelegramCollection : ICollectionFixture<QuillTelegramFixture>
 {
     public const string Name = "quill-telegram";
 }
+
+[CollectionDefinition(Name)]
+public class QuillWhatsAppCollection : ICollectionFixture<QuillWhatsAppFixture>
+{
+    public const string Name = "quill-whatsapp";
+}
