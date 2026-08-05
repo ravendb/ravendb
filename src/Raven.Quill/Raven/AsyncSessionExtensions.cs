@@ -4,7 +4,6 @@ namespace Raven.Quill.Raven;
 
 internal static class AsyncSessionExtensions
 {
-    // LoadStartingWith: immediately consistent, no post-create index wait; pages fully
     internal static async Task<List<T>> LoadAllStartingWithAsync<T>(
         this IAsyncDocumentSession session, string prefix, CancellationToken ct)
     {

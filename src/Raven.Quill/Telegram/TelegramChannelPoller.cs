@@ -161,8 +161,6 @@ internal sealed class TelegramChannelPoller
             return;
         }
 
-        // Telegram clients send the literal /start (with an optional deep-link payload) when a user
-        // first opens the bot; greet without an agent run
         if (IsCommand(prompt, "start"))
         {
             await SendPlainAsync(chatId,
