@@ -262,7 +262,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
             }
             else
             {
-                ApplySelectProjection(q, selectStmt, fromAlias);
+                var aliasToField = ApplySelectProjection(q, selectStmt, fromAlias);
 
                 // Build ORDER BY clause. Type-infer sort fields from a doc sample (when the
                 // database is available) so numeric fields sort numerically instead of falling
@@ -270,8 +270,8 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
                 // have a "first document" in the collection-sampling sense.
                 if (selectStmt.SortClause != null && selectStmt.SortClause.Count > 0)
                 {
-                    var sortTypeMap = isIndex ? null : TryBuildSortTypeMap(documentDatabase, relname, selectStmt.SortClause, fromAlias);
-                    TranslateOrderBy(q, selectStmt.SortClause, fromAlias, sortTypeMap);
+                    var sortTypeMap = isIndex ? null : TryBuildSortTypeMap(documentDatabase, relname, selectStmt.SortClause, fromAlias, aliasToField);
+                    TranslateOrderBy(q, selectStmt.SortClause, fromAlias, sortTypeMap, aliasToField);
                 }
             }
 
@@ -826,14 +826,14 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
             return (aggregate.OrderField, aggregate.Ordering);
         }
 
-        private static void ApplySelectProjection(AsyncDocumentQuery<JObject> q, SelectStmt selectStmt, string fromAlias)
+        private static IReadOnlyDictionary<string, string> ApplySelectProjection(AsyncDocumentQuery<JObject> q, SelectStmt selectStmt, string fromAlias)
         {
             var targets = selectStmt.TargetList;
             if (targets == null || targets.Count == 0)
-                return;
+                return null;
 
             if (IsSelectStar(targets))
-                return;
+                return null;
 
             var isDistinct = selectStmt.DistinctClause is { Count: > 0 };
             var anyAgg = targets.Any(IsAggregateTarget);
@@ -853,17 +853,19 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
                 throw ScalarAggregateWithoutGroupBy();
             }
 
-            var (projectionFields, projectionAliases) = BuildColumnProjections(targets, fromAlias);
+            var (projectionFields, projectionAliases, aliasToField) = BuildColumnProjections(targets, fromAlias);
             if (isDistinct && projectionFields.Length != 1)
                 throw UnsupportedDistinct();
 
             if (projectionFields.Length == 0)
-                return;
+                return null;
 
             // Distinct Fields vs Projections preserves `1 as "c0"`-style aliases (see BuildColumnProjections).
             q.SelectFields<JObject>(new QueryData(projectionFields, projectionAliases) { IsProjectInto = true });
             if (isDistinct)
                 q.Distinct();
+
+            return aliasToField;
         }
 
         private static bool IsSelectStar(IReadOnlyList<Node> targetList)
@@ -896,10 +898,11 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
         // `<field> as <alias>` when the two differ — which is the only way to preserve
         // PowerBI's aliases for constant projections like `1 as "c0"` (their row-preview
         // queries emit those and would otherwise produce a column-count mismatch).
-        private static (string[] Fields, string[] Aliases) BuildColumnProjections(IReadOnlyList<Node> targetList, string fromAlias)
+        private static (string[] Fields, string[] Aliases, Dictionary<string, string> AliasToField) BuildColumnProjections(IReadOnlyList<Node> targetList, string fromAlias)
         {
             var projectionFields = new List<string>(capacity: targetList.Count);
             var projectionAliases = new List<string>(capacity: targetList.Count);
+            var aliasToField = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var t in targetList)
             {
@@ -921,16 +924,26 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
                 if (string.IsNullOrWhiteSpace(alias))
                 {
                     projectionAliases.Add(fieldName);
+                    continue;
                 }
-                else
+
+                // SelectFields splices the `as <alias>` name verbatim; quote when needed. PowerBI
+                // aliases columns to the synthetic id()/json() names, which are known tokens.
+                projectionAliases.Add(EscapeProjectionField(alias));
+
+                string sortableField = null;
+                if (val.ColumnRef != null)
                 {
-                    // SelectFields splices the `as <alias>` name verbatim; quote when needed. PowerBI
-                    // aliases columns to the synthetic id()/json() names, which are known tokens.
-                    projectionAliases.Add(EscapeProjectionField(alias));
+                    var raw = ExtractFieldName(val, fromAlias);
+                    if (PgSyntheticColumns.IsDocumentIdColumn(raw) == false)
+                        sortableField = raw;
                 }
+
+                // A null marks an alias over a constant or id(): there is no document field to sort on.
+                aliasToField[alias] = sortableField;
             }
 
-            return (projectionFields.ToArray(), projectionAliases.ToArray());
+            return (projectionFields.ToArray(), projectionAliases.ToArray(), aliasToField);
         }
 
         private static string TranslateSelectTargetValue(Node val, string fromAlias)
@@ -1375,7 +1388,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
                 ? new PgBoundParameterReference((int)value.Raw)
                 : value.Raw;
 
-        private static void TranslateOrderBy(AsyncDocumentQuery<JObject> q, Google.Protobuf.Collections.RepeatedField<Node> sortClause, string fromAlias, IReadOnlyDictionary<string, OrderingType> sortTypeMap = null)
+        private static void TranslateOrderBy(AsyncDocumentQuery<JObject> q, Google.Protobuf.Collections.RepeatedField<Node> sortClause, string fromAlias, IReadOnlyDictionary<string, OrderingType> sortTypeMap = null, IReadOnlyDictionary<string, string> aliasToField = null)
         {
             // Fail the translation rather than silently dropping a sort key we can't map to a column -
             // a missing ORDER BY term returns mis-ordered rows with no error (caller falls through to the diagnoser).
@@ -1387,6 +1400,11 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
                 var fieldName = ExtractFieldName(sortBy.Node, fromAlias);
                 if (string.IsNullOrEmpty(fieldName))
                     throw new NotSupportedException("Unsupported ORDER BY expression (only column sort keys are supported)");
+
+                if (TryResolveOrderByField(fieldName, aliasToField, out var resolved) == false)
+                    throw new NotSupportedException($"Unsupported ORDER BY target \"{fieldName}\" (the SELECT alias does not name a document field)");
+
+                fieldName = resolved;
 
                 // Pick the right ordering: type-inferred from the sampled doc when we have it,
                 // otherwise PG-style default (String / alphabetic).
@@ -1410,11 +1428,27 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
         // find `Freight` and will fall back to String ordering — the same surface area issue users
         // hit with unquoted WHERE clauses. Quoting (`ORDER BY "Freight"`) preserves case and the
         // type inference kicks in.
+        // ORDER BY may name a SELECT alias instead of a field. RQL sorts on the underlying document
+        // field, so the alias has to be resolved back or the sort targets a field that does not exist.
+        // False means the alias names a constant or id(), which has no field to sort on.
+        private static bool TryResolveOrderByField(string fieldName, IReadOnlyDictionary<string, string> aliasToField, out string resolved)
+        {
+            if (aliasToField == null || aliasToField.TryGetValue(fieldName, out var aliased) == false)
+            {
+                resolved = fieldName;
+                return true;
+            }
+
+            resolved = aliased;
+            return aliased != null;
+        }
+
         private static Dictionary<string, OrderingType> TryBuildSortTypeMap(
             DocumentDatabase documentDatabase,
             string collection,
             Google.Protobuf.Collections.RepeatedField<Node> sortClause,
-            string fromAlias)
+            string fromAlias,
+            IReadOnlyDictionary<string, string> aliasToField = null)
         {
             if (documentDatabase == null || string.IsNullOrWhiteSpace(collection))
                 return null;
@@ -1429,7 +1463,9 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
                 var name = ExtractFieldName(sortNode.SortBy.Node, fromAlias);
                 if (string.IsNullOrEmpty(name))
                     continue;
-                fieldNames.Add(name);
+                if (TryResolveOrderByField(name, aliasToField, out var resolved) == false)
+                    continue;
+                fieldNames.Add(resolved);
             }
 
             if (fieldNames.Count == 0)
