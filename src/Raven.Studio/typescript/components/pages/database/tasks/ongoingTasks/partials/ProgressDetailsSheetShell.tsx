@@ -1,9 +1,6 @@
 import { ReactNode, useState } from "react";
 import { ViewSheet } from "components/common/splitView/ViewSheet";
-import {
-    SheetSlideDirection,
-    SheetSlideTransition,
-} from "components/common/splitView/SheetSlideNavigation";
+import { SheetSlideDirection, SheetSlideTransition } from "components/common/splitView/SheetSlideNavigation";
 import { Icon } from "components/common/Icon";
 import { NodeLocationTabs } from "components/pages/database/tasks/ongoingTasks/partials/NodeLocationSelect";
 

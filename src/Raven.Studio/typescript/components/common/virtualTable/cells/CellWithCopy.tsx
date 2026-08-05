@@ -45,11 +45,7 @@ export function CellWithCopy({
             <PopoverWithHover
                 target={valuePopover}
                 placement="bottom-start"
-                style={
-                    popoverMaxWidth
-                        ? ({ "--bs-popover-max-width": popoverMaxWidth } as CSSProperties)
-                        : undefined
-                }
+                style={popoverMaxWidth ? ({ "--bs-popover-max-width": popoverMaxWidth } as CSSProperties) : undefined}
             >
                 <Popover.Body>
                     <pre
