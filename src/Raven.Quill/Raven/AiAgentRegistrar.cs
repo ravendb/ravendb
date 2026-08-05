@@ -1,5 +1,6 @@
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Quill.Agents;
 
 namespace Raven.Quill.Raven;
 
@@ -26,5 +27,28 @@ public static class AiAgentRegistrar
 
         var result = await store.AI.ForDatabase(targetDatabase).CreateAgentAsync(config, ct);
         return new RegisterResult(result.Identifier);
+    }
+
+    public static async Task RegisterBindingsAsync(
+        IDocumentStore store, string database, string agentId,
+        Dictionary<string, WebhookBinding>? bindings, CancellationToken ct)
+    {
+        using var session = store.OpenAsyncSession(database);
+        var id = AgentActionBindings.IdFor(agentId);
+
+        if (bindings is not { Count: > 0 })
+        {
+            session.Delete(id);
+        }
+        else
+        {
+            var doc = new AgentActionBindings
+            {
+                Bindings = bindings
+            };
+            await session.StoreAsync(doc, id, ct);
+        }
+
+        await session.SaveChangesAsync(ct);
     }
 }

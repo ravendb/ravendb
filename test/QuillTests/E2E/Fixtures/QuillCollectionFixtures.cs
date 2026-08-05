@@ -16,16 +16,16 @@ namespace QuillTests.E2E.Fixtures;
 
 // ---- AI-helper (Suggest Agent / Cdc) ----
 
-/// Collection host for the AI-helper endpoint tests: the shared host plus one <see cref="MockAiApi"/> the host
+/// Collection host for the AI-helper endpoint tests: the shared host plus one <see cref="MockQuillServices"/> the host
 /// is pointed at, both reused across the collection instead of built per test.
 public sealed class QuillAiHelperFixture : QuillCollectionHost
 {
-    public MockAiApi Mock { get; private set; } = null!;
+    public MockQuillServices Mock { get; private set; } = null!;
 
     public override async ValueTask InitializeAsync()
     {
         await base.InitializeAsync();
-        Mock = await MockAiApi.StartAsync();
+        Mock = await MockQuillServices.StartAsync();
     }
 
     public override async ValueTask DisposeAsync()
@@ -41,7 +41,7 @@ public sealed class QuillAiHelperFixture : QuillCollectionHost
 public abstract class QuillAiHelperTestBase(ITestOutputHelper output, QuillAiHelperFixture fixture)
     : QuillTestBase(output, fixture)
 {
-    protected MockAiApi Mock => fixture.Mock;
+    protected MockQuillServices Mock => fixture.Mock;
 
     protected override Task<QuillHost> NewHostAsync(
         Action<ApplianceOptions>? configure = null, Action<IServiceCollection>? configureServices = null,

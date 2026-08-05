@@ -32,7 +32,7 @@ public static class AppsEndpoints
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
         group.MapPost("/{slug}/setup/agent", ProvisionAgentAsync)
             .WithName("apps.provisionAgent")
-            .Accepts<AiAgentConfiguration>("application/json")
+            .Accepts<EditAgentRequest>("application/json")
             .Produces<ProvisionAgentResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
@@ -189,7 +189,7 @@ public static class AppsEndpoints
 
     private static async Task<IResult> ProvisionAgentAsync(
         string slug,
-        AiAgentConfiguration body,
+        EditAgentRequest request,
         IDocumentStore store,
         ILogger<AppsLogger> logger,
         CancellationToken ct)
@@ -199,19 +199,22 @@ public static class AppsEndpoints
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
-        var validationError = await AgentConfigValidator.ValidateAndPrepareAsync(store, slug, body, ct);
+        var validationError = await AgentConfigValidator.ValidateAndPrepareAsync(store, slug, request, ct);
         if (validationError is not null)
             return validationError;
 
+        var body = request.Configuration;
+        
         if (logger.IsEnabled(LogLevel.Information))
             logger.LogInformation(
-                "Provisioning agent for app slug={Slug} name={Name} identifier={Identifier} cs={ConnectionStringName} queries={QueryCount}",
+                "Provisioning agent for app slug={Slug} name={Name} identifier={Identifier} cs={ConnectionStringName} queries={QueryCount}, webhooks={WebHooksCount}",
                 app.Slug, body.Name, string.IsNullOrWhiteSpace(body.Identifier) ? "(server-assigned)" : body.Identifier,
-                body.ConnectionStringName, body.Queries?.Count ?? 0);
+                body.ConnectionStringName, body.Queries?.Count ?? 0, request.ActionBindings?.Count ?? 0);
 
         try
         {
             var result = await AiAgentRegistrar.RegisterAsync(store, body, app.Database, ct);
+            await AiAgentRegistrar.RegisterBindingsAsync(store, app.Database, result.Identifier, request.ActionBindings, ct);
             return Results.Ok(new ProvisionAgentResponse(result.Identifier));
         }
         // map RavenDB validation to a 400 instead of a leaked 500

@@ -172,15 +172,21 @@ public sealed class QuillHost : IAsyncDisposable
         QuillHttp.GetAsync<IReadOnlyList<AiConnectionString>>(Client, QuillRoutes.AppConnectionStrings(slug));
 
     public Task<ProvisionAgentResponse> ProvisionAgentAsync(string slug, AiAgentConfiguration body) =>
+        ProvisionAgentAsync(slug, new EditAgentRequest(body, null));
+
+    public Task<ProvisionAgentResponse> ProvisionAgentAsync(string slug, EditAgentRequest body) =>
         QuillHttp.PostAsync<ProvisionAgentResponse>(Client, QuillRoutes.SetupAgent(slug), body);
 
     public Task<IReadOnlyList<AgentSummaryResponse>> GetAgentsAsync(string slug) =>
         QuillHttp.GetAsync<IReadOnlyList<AgentSummaryResponse>>(Client, QuillRoutes.Agents(slug));
 
-    public Task<AiAgentConfiguration> GetAgentAsync(string slug, string agentId) =>
-        QuillHttp.GetAsync<AiAgentConfiguration>(Client, QuillRoutes.Agent(slug, agentId));
+    public Task<AgentDetailsResponse> GetAgentAsync(string slug, string agentId) =>
+        QuillHttp.GetAsync<AgentDetailsResponse>(Client, QuillRoutes.Agent(slug, agentId));
 
     public Task<ProvisionAgentResponse> EditAgentAsync(string slug, AiAgentConfiguration body) =>
+        EditAgentAsync(slug, new EditAgentRequest(body, null));
+
+    public Task<ProvisionAgentResponse> EditAgentAsync(string slug, EditAgentRequest body) =>
         QuillHttp.PostAsync<ProvisionAgentResponse>(Client, QuillRoutes.EditAgent(slug), body);
 
     public Task DeleteAgentAsync(string slug, string agentId) =>

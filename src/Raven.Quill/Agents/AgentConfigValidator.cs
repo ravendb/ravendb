@@ -1,5 +1,4 @@
 using System.Text.RegularExpressions;
-using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -22,14 +21,14 @@ internal static class AgentConfigValidator
     private const int MaxLimit = 32;
 
     /// <summary>
-    /// Validates and prepares <paramref name="body"/> in place. Returns <c>null</c> on success;
-    /// otherwise the error <see cref="IResult"/> the caller should return.
+    /// Validates and prepares <paramref name="request"/>'s configuration in place. Returns <c>null</c>
+    /// on success; otherwise the error <see cref="IResult"/> the caller should return.
     /// </summary>
     public static async Task<IResult?> ValidateAndPrepareAsync(
-        IDocumentStore store, string slug, AiAgentConfiguration? body, CancellationToken ct)
+        IDocumentStore store, string slug, EditAgentRequest? request, CancellationToken ct)
     {
         // STJ uses the param-less ctor, bypassing the 3-arg guards; validate here
-        if (body is null)
+        if (request?.Configuration is not { } body)
             return Results.BadRequest(new ApiErrorResponse("request body is required"));
 
         if (string.IsNullOrWhiteSpace(body.Name))
@@ -41,8 +40,8 @@ internal static class AgentConfigValidator
         if (string.IsNullOrWhiteSpace(body.ConnectionStringName))
             return Results.BadRequest(new ApiErrorResponse("connectionStringName is required"));
 
-        if (body.Actions is { Count: > 0 })
-            return Results.BadRequest(new ApiErrorResponse("actions are not supported in demo"));
+        if (TryValidateActions(body, request.ActionBindings, out var actionErrors) == false)
+            return Results.BadRequest(new ApiErrorResponse(Errors: actionErrors.ToArray()));
 
         if (body.SubAgents is { Count: > 0 })
             return Results.BadRequest(new ApiErrorResponse("subAgents are not supported in demo"));
@@ -85,6 +84,57 @@ internal static class AgentConfigValidator
 
         return null;
     }
+
+    internal static bool TryValidateActions(
+        AiAgentConfiguration body, Dictionary<string, WebhookBinding>? bindings, out List<string> errors)
+    {
+        errors = [];
+
+        var actions = body.Actions ?? [];
+
+        var byName = new Dictionary<string, WebhookBinding>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (name, binding) in bindings ?? [])
+        {
+            if (byName.TryAdd(name, binding) == false)
+                errors.Add($"binding '{name}' is declared more than once; action names are case-insensitive");
+        }
+
+        foreach (var action in actions)
+        {
+            if (string.IsNullOrWhiteSpace(action.Name))
+            {
+                errors.Add("action name is required");
+                continue;   // no key to match a binding against
+            }
+
+            if (string.IsNullOrWhiteSpace(action.Description))
+            {
+                errors.Add("action description is required");
+            }
+
+            if (string.IsNullOrWhiteSpace(action.ParametersSchema) &&
+                string.IsNullOrWhiteSpace(action.ParametersSampleObject))
+            {
+                errors.Add($"action '{action.Name}': parametersSampleObject or parametersSchema is required");
+            }
+
+            if (byName.Remove(action.Name, out var binding) == false)
+                errors.Add($"action '{action.Name}' has no binding");
+            else if (IsHttpUrl(binding.Url) == false)
+                errors.Add($"action '{action.Name}': url must be http(s)");
+        }
+
+        foreach (var name in byName.Keys)
+        {
+            errors.Add($"binding '{name}' has no matching action");
+        }
+
+        return errors.Count == 0;
+    }
+
+    private static bool IsHttpUrl(string? url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
+        (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 
     public static string EnforceLimit(string rql)
     {
