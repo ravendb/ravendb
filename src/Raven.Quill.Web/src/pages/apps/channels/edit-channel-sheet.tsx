@@ -54,6 +54,7 @@ const editChannelSchema = z.object({
     enabled: z.boolean(),
     shouldReplaceAllowedOrigins: z.boolean(),
     allowedOrigins: z.array(z.object({ value: z.string().trim() })),
+    botToken: z.string().trim(),
 });
 
 type EditChannelFormData = z.infer<typeof editChannelSchema>;
@@ -69,6 +70,8 @@ function EditChannelForm({
 }) {
     const queryClient = useQueryClient();
 
+    const isTelegram = channel.type === "Telegram";
+
     const form = useForm<EditChannelFormData>({
         mode: "onChange",
         resolver: zodResolver(editChannelSchema),
@@ -77,6 +80,7 @@ function EditChannelForm({
             enabled: channel.enabled,
             shouldReplaceAllowedOrigins: false,
             allowedOrigins: [],
+            botToken: "",
         },
     });
 
@@ -88,10 +92,12 @@ function EditChannelForm({
             // Update is a partial edit: null fields are left unchanged on the server.
             api.services.channels.update(slug, channel.channelId, {
                 displayName: values.displayName.trim(),
-                allowedOrigins: values.shouldReplaceAllowedOrigins
-                    ? values.allowedOrigins.map((origin) => origin.value.trim()).filter(Boolean)
-                    : null,
+                allowedOrigins:
+                    !isTelegram && values.shouldReplaceAllowedOrigins
+                        ? values.allowedOrigins.map((origin) => origin.value.trim()).filter(Boolean)
+                        : null,
                 enabled: values.enabled,
+                botToken: isTelegram && values.botToken.trim() ? values.botToken.trim() : null,
             }),
         onSuccess: async () => {
             unsavedChanges.markSaved();
@@ -115,29 +121,42 @@ function EditChannelForm({
                     description="Shown in the channels list."
                 />
                 <FormSwitch control={form.control} name="enabled" label="Enabled" />
-                <div className="flex flex-col gap-1.5">
-                    <FormSwitch
+                {isTelegram ? (
+                    <FormInput
                         control={form.control}
-                        name="shouldReplaceAllowedOrigins"
-                        label="Replace allowed origins"
+                        name="botToken"
+                        type="password"
+                        label="Rotate bot token"
+                        placeholder="Leave empty to keep the current token"
+                        description="Paste a new token from @BotFather to rotate it. The current token is never shown."
                     />
-                    <p className="text-xs text-muted-foreground">
-                        The current origins are not shown here. Leave this off to keep them, or turn it on to replace
-                        the whole list.
-                    </p>
-                </div>
-                {shouldReplaceAllowedOrigins && (
-                    <FormStringList
-                        control={form.control}
-                        name="allowedOrigins"
-                        label="Allowed origins"
-                        description="The widget only loads on these origins. Leave empty to allow any site."
-                        addButtonLabel="Add origin"
-                        emptyLabel="No origins — the widget can be embedded on any site."
-                        defaultValue={{ value: "" }}
-                        fieldName={(index) => `allowedOrigins.${index}.value`}
-                        itemLabel={(index) => `Origin ${index + 1}`}
-                    />
+                ) : (
+                    <>
+                        <div className="flex flex-col gap-1.5">
+                            <FormSwitch
+                                control={form.control}
+                                name="shouldReplaceAllowedOrigins"
+                                label="Replace allowed origins"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                The current origins are not shown here. Leave this off to keep them, or turn it on to
+                                replace the whole list.
+                            </p>
+                        </div>
+                        {shouldReplaceAllowedOrigins && (
+                            <FormStringList
+                                control={form.control}
+                                name="allowedOrigins"
+                                label="Allowed origins"
+                                description="The widget only loads on these origins. Leave empty to allow any site."
+                                addButtonLabel="Add origin"
+                                emptyLabel="No origins — the widget can be embedded on any site."
+                                defaultValue={{ value: "" }}
+                                fieldName={(index) => `allowedOrigins.${index}.value`}
+                                itemLabel={(index) => `Origin ${index + 1}`}
+                            />
+                        )}
+                    </>
                 )}
 
                 {updateMutation.isError && (
