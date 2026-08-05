@@ -16,8 +16,6 @@ import { withNestedSubmit } from "@/lib/form-utils";
 import { invalidateChannelQueries } from "@/lib/query-invalidation";
 import type { FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
 
-// The backend binds this agent parameter to the Telegram sender automatically, so it is
-// never asked for in the form (matched case-insensitively).
 const USER_IDENTIFIER_PARAMETER = "useridentifier";
 
 const telegramChannelSchema = z.object({
@@ -39,7 +37,6 @@ export function TelegramChannelForm({
     onCreated: () => void;
 }) {
     const queryClient = useQueryClient();
-    // The agent list is needed even with a fixed agent: its declared parameters drive the value inputs.
     const agentsQuery = useQuery(api.queries.agents.list(slug));
 
     const form = useForm<TelegramChannelFormData>({
@@ -57,7 +54,6 @@ export function TelegramChannelForm({
         (name) => name.toLowerCase() === USER_IDENTIFIER_PARAMETER,
     );
 
-    // Re-seed the value inputs whenever the agent selection changes its declared parameter set.
     const { replace } = parameterFields;
     useEffect(() => {
         const selected = (agentsQuery.data ?? []).find((candidate) => candidate.agentId === selectedAgentId);

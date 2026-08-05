@@ -26,7 +26,6 @@ public sealed class ApplianceOptions
     [Url]
     public string? AiApiUrl { get; set; }
 
-    // overrides api.telegram.org; tests point this at an in-process mock
     [Url]
     public string? TelegramApiUrl { get; set; }
 

@@ -66,7 +66,6 @@ export function AddChannelMenu({
     label?: string;
     variant?: "default" | "outline";
 }) {
-    // The picked option decides which form the sheet hosts; null keeps the sheet closed.
     const [openOption, setOpenOption] = useState<ChannelOptionId | null>(null);
 
     return (

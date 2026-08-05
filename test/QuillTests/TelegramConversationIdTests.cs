@@ -52,7 +52,6 @@ public class TelegramConversationIdTests(ITestOutputHelper output) : NoDisposalN
         Assert.True(AgentRouter.TryNormalizeConversationId(id, out var normalized, out var error));
         Assert.Null(error);
         Assert.Equal(id, normalized);
-        // AiConversation.Id throws on ids ending with '/' or '|' (server-side allocation markers)
         Assert.False(id.EndsWith('/'));
         Assert.False(id.EndsWith('|'));
     }

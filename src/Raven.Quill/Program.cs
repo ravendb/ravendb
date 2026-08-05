@@ -113,7 +113,6 @@ builder.Services.AddSingleton(sp => WidgetAssets.Load(
 builder.Services.AddTransient<IFeedbackSender, FeedbackSender>();
 builder.Services.AddTransient<ILicenseStatsProvider, LicenseStatsProvider>();
 builder.Services.AddSingleton<ITelegramBotClientFactory, TelegramBotClientFactory>();
-// manager + interface registered unconditionally (endpoints resolve them); only hosting it starts pollers
 builder.Services.AddSingleton<TelegramChannelManager>();
 builder.Services.AddSingleton<ITelegramChannelManager>(sp => sp.GetRequiredService<TelegramChannelManager>());
 if (!isOpenApiDocumentGeneration)

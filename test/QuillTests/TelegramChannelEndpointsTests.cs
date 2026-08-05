@@ -88,7 +88,6 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
             new AiAgentParameter("customerId", "the customer to scope queries to"),
             new AiAgentParameter("UserIdentifier", "the telegram user id"));
 
-        // customerId unbound => 400; the missing list must not mention the auto-injected UserIdentifier
         var e = await Assert.ThrowsAsync<QuillHttpException>(() =>
             app.ProvisionChannelAsync(new ProvisionChannelRequest(
                 ChannelType.Telegram, agentId, null, BotToken: NewBotToken())));
@@ -96,7 +95,6 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
         Assert.Contains("missing agent parameter(s): customerId", e.Body);
         Assert.DoesNotContain("UserIdentifier", e.Body);
 
-        // customerId bound => provisions even though UserIdentifier has no value yet
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.Telegram, agentId, null, BotToken: NewBotToken(),
             Parameters: new Dictionary<string, string> { ["customerId"] = "customers/1" }));
@@ -112,7 +110,6 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
         var agentId = await SeedAgentAsync(app);
         var token = NewBotToken();
 
-        // raw bodies: the no-secrets contract is about the wire payload, not the typed projection
         var resp = await Host.Client.PostAsJsonAsync(QuillRoutes.SetupChannel(app.Slug),
             new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, BotToken: token), QuillHttp.Json);
         var provisionBody = await resp.Content.ReadAsStringAsync();
@@ -166,7 +163,6 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
 
         await Mock.WaitUntilAsync(() => Mock.GetUpdatesCallCount(rotated) >= 1, "a poll with the rotated token");
 
-        // rejected rotation: a token telegram refuses leaves the channel on the old one
         Mock.GetMeFailure = MockTelegramBotApi.Unauthorized;
         var e = await Assert.ThrowsAsync<QuillHttpException>(() =>
             app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null, BotToken: NewBotToken())));
@@ -189,6 +185,5 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
         return agentId;
     }
 
-    /// The part after ':' is the secret; the numeric bot-id prefix legitimately appears in redacted logs.
     private static string TokenSecret(string token) => token[(token.IndexOf(':') + 1)..];
 }
