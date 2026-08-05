@@ -36,15 +36,20 @@ public sealed class QuillApp : IAsyncDisposable
     public Task<ProvisionAgentResponse> ProvisionAgentAsync(AiAgentConfiguration body) =>
         Host.ProvisionAgentAsync(Slug, body);
 
+    public Task<ProvisionAgentResponse> ProvisionAgentAsync(EditAgentRequest body) =>
+        Host.ProvisionAgentAsync(Slug, body);
+
     public async Task<IReadOnlyList<AgentSummaryResponse>> GetAgentsAsync()
     {
         await WaitForIndexingAsync();
         return await Host.GetAgentsAsync(Slug);
     }
 
-    public Task<AiAgentConfiguration> GetAgentAsync(string agentId) => Host.GetAgentAsync(Slug, agentId);
+    public Task<AgentDetailsResponse> GetAgentAsync(string agentId) => Host.GetAgentAsync(Slug, agentId);
 
     public Task<ProvisionAgentResponse> EditAgentAsync(AiAgentConfiguration body) => Host.EditAgentAsync(Slug, body);
+
+    public Task<ProvisionAgentResponse> EditAgentAsync(EditAgentRequest body) => Host.EditAgentAsync(Slug, body);
 
     public Task DeleteAgentAsync(string agentId) => Host.DeleteAgentAsync(Slug, agentId);
 

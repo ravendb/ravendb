@@ -1,4 +1,5 @@
 using Raven.Client.Documents.Conventions;
+using Raven.Quill.Agents;
 using Raven.Quill.Channels;
 using Raven.Quill.Metrics;
 
@@ -13,5 +14,6 @@ public static class QuillConventions
         type == typeof(Channel) ? "@channels"
         : type == typeof(EmbedLink) ? "@embed-links"
         : type == typeof(ConversationPreview) ? ConversationPreview.Collection // "@ConversationPreviews"
+        : type == typeof(AgentActionBindings) ? "@agent-actions"
         : DocumentConventions.DefaultGetCollectionName(type);
 }

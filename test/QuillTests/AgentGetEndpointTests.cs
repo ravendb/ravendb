@@ -18,10 +18,11 @@ public class AgentGetEndpointTests(ITestOutputHelper output) : QuillTestBase(out
             ConnectionStringName = app.Host.ConnectionStringName,
         })).AgentId;
 
-        var cfg = await app.GetAgentAsync(agentId);
-        Assert.Equal(agentId, cfg.Identifier);
-        Assert.Equal("Support", cfg.Name);
-        Assert.Equal(Host.ConnectionStringName, cfg.ConnectionStringName);
+        var details = await app.GetAgentAsync(agentId);
+        Assert.Equal(agentId, details.Configuration.Identifier);
+        Assert.Equal("Support", details.Configuration.Name);
+        Assert.Equal(Host.ConnectionStringName, details.Configuration.ConnectionStringName);
+        Assert.Empty(details.ActionBindings);
     }
 
     [RavenFact(RavenTestCategory.Quill)]

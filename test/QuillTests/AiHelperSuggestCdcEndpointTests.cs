@@ -272,7 +272,7 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHe
     public async Task Generation_exceeding_timeout_surfaces_internal_error()
     {
         // own host + own mock: needs a 1s assist timeout to trip, which the shared 30s host can't provide
-        await using var mockAi = await MockAiApi.StartAsync();
+        await using var mockAi = await MockQuillServices.StartAsync();
         mockAi.CdcResponse = (200, AiHelperSamples.CdcEnvelope(AiHelperSamples.BuildCdcConfig()));
         mockAi.AssistDelay = TimeSpan.FromSeconds(10);
 

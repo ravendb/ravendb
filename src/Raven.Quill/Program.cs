@@ -99,6 +99,7 @@ builder.Services.AddSingleton<IDocumentStore>(sp =>
 builder.Services.AddSingleton<IServerReady, ServerReadyFlag>();
 builder.Services.AddSingleton<IBootstrapState, BootstrapStateFlag>();
 builder.Services.AddSingleton<IAgentRouter, AgentRouter>();
+builder.Services.AddSingleton<WebhookActionExecutor>();
 builder.Services.AddSingleton<IApiKeyStore, ApiKeyStore>();
 builder.Services.AddTransient<IFeedbackSender, FeedbackSender>();
 builder.Services.AddTransient<ILicenseStatsProvider, LicenseStatsProvider>();
@@ -107,7 +108,8 @@ if (!isOpenApiDocumentGeneration)
     builder.Services.AddHostedService<RavenReadinessService>();
     builder.Services.AddHostedService<ApplianceActivationService>();
 }
-builder.Services.AddHttpClient();
+builder.Services.AddHttpClient(WebhookActionExecutor.ClientName,
+    static http => http.Timeout = TimeSpan.FromSeconds(30));
 
 builder.Services.AddHttpClient<IAiHelperClient, AiHelperInternalClient>(static (sp, http) =>
     {

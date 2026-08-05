@@ -23,7 +23,7 @@ public static class AgentsEndpoints
 
         group.MapGet("/agent/{agentId}", GetAgentAsync)
             .WithName("agents.get")
-            .Produces<AiAgentConfiguration>()
+            .Produces<AgentDetailsResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
         group.MapDelete("/agent/{agentId}", DeleteAgentAsync)
@@ -34,10 +34,11 @@ public static class AgentsEndpoints
 
         group.MapPost("/agent", EditAgentAsync)
             .WithName("agents.edit")
-            .Accepts<AiAgentConfiguration>("application/json")
+            .Accepts<EditAgentRequest>("application/json")
             .Produces<ProvisionAgentResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
-            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
+            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound)
+            .Produces<ApiErrorResponse>(StatusCodes.Status500InternalServerError);
     }
 
     private static async Task<IResult> ListAgentsAsync(
@@ -82,8 +83,9 @@ public static class AgentsEndpoints
         return Results.Ok(items);
     }
 
-    // full agent config (unlike the projected list) so the UI can populate an edit form
-    // and POST it back to the edit endpoint. ConnectionStringName only — no secrets.
+    // full agent config (unlike the projected list) so the UI can populate an edit form and POST it
+    // back unchanged. That includes each binding's webhook secret verbatim: the operator edit form has
+    // no other way to preserve it, and the reader is the same authenticated operator who set it.
     private static async Task<IResult> GetAgentAsync(
         string slug,
         string agentId,
@@ -98,12 +100,16 @@ public static class AgentsEndpoints
         if (agent is null)
             return Results.NotFound(new ApiErrorResponse($"no agent '{agentId}' in app '{slug}'"));
 
-        return Results.Ok(agent);
+        using var session = store.OpenAsyncSession(app.Database);
+        var bindings = await session.LoadAsync<AgentActionBindings>(
+            AgentActionBindings.IdFor(agent.Identifier), ct);
+
+        return Results.Ok(new AgentDetailsResponse(agent, bindings?.Bindings ?? []));
     }
 
     private static async Task<IResult> EditAgentAsync(
         string slug,
-        AiAgentConfiguration body,
+        EditAgentRequest request,
         IDocumentStore store,
         ILogger<AgentsLogger> logger,
         CancellationToken ct)
@@ -112,7 +118,7 @@ public static class AgentsEndpoints
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
-        if (body is null || string.IsNullOrWhiteSpace(body.Identifier))
+        if (request?.Configuration is not { } body || string.IsNullOrWhiteSpace(body.Identifier))
             return Results.BadRequest(new ApiErrorResponse("identifier is required to edit an agent"));
 
         // edit = update-only: the agent must already exist
@@ -120,7 +126,7 @@ public static class AgentsEndpoints
         if (existing is null)
             return Results.NotFound(new ApiErrorResponse($"no agent '{body.Identifier}' in app '{slug}'"));
 
-        var validationError = await AgentConfigValidator.ValidateAndPrepareAsync(store, slug, body, ct);
+        var validationError = await AgentConfigValidator.ValidateAndPrepareAsync(store, slug, request, ct);
         if (validationError is not null)
             return validationError;
 
@@ -140,6 +146,7 @@ public static class AgentsEndpoints
         try
         {
             var result = await AiAgentRegistrar.RegisterAsync(store, body, app.Database, ct);
+            await AiAgentRegistrar.RegisterBindingsAsync(store, app.Database, result.Identifier, request.ActionBindings, ct);
             return Results.Ok(new ProvisionAgentResponse(result.Identifier));
         }
         // map RavenDB validation to a 400 instead of a leaked 500
@@ -175,6 +182,13 @@ public static class AgentsEndpoints
                 $"agent '{agentId}' still has {bound} channel(s) bound to it; remove them first"));
 
         await store.AI.ForDatabase(app.Database).DeleteAgentAsync(agent.Identifier, ct);
+
+        using (var session = store.OpenAsyncSession(app.Database))
+        {
+            session.Delete(AgentActionBindings.IdFor(agent.Identifier));
+            await session.SaveChangesAsync(ct);
+        }
+
         if (logger.IsEnabled(LogLevel.Information))
             logger.LogInformation("Deleted agent slug={Slug} agentId={AgentId}", app.Slug, agent.Identifier);
         return Results.NoContent();

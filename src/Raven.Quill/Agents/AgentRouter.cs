@@ -11,8 +11,7 @@ public sealed record AgentRequest(
     string ConversationId,
     string Prompt,
     string ChannelId,
-    IReadOnlyDictionary<string, string> Parameters
-    );
+    IReadOnlyDictionary<string, string> Parameters);
 
 public sealed record AgentRunResult(object Answer, string ConversationId);
 
@@ -27,7 +26,8 @@ public sealed class UnknownAgentException(string agentId)
     public string AgentId { get; } = agentId;
 }
 
-internal sealed class AgentRouter(IDocumentStore store) : IAgentRouter
+internal sealed class AgentRouter(
+    IDocumentStore store, WebhookActionExecutor actionExecutor, ILogger<AgentRouter> logger) : IAgentRouter
 {
     public async Task<AgentRunResult> RunAsync(AgentRequest request, Func<string, ValueTask> onChunk, AiAgentConfiguration config, CancellationToken ct)
     {
@@ -39,13 +39,15 @@ internal sealed class AgentRouter(IDocumentStore store) : IAgentRouter
         var creationOptions = new AiConversationCreationOptions();
         foreach (var (key, value) in request.Parameters)
             creationOptions.AddParameter(key, value);
-       
+
         var conversation = store.AI.ForDatabase(request.Database).Conversation(
             agentId: config.Identifier,
             conversationId: conversationId,
             creationOptions: creationOptions);
 
         conversation.AddUserPrompt(request.Prompt);
+
+        await RegisterActionsAsync(conversation, request, config, ct);
 
         var replyField = AgentOutputShape.ResolveReplyField(config);
 
@@ -54,11 +56,55 @@ internal sealed class AgentRouter(IDocumentStore store) : IAgentRouter
             async chunk => await onChunk(chunk),
             ct);
 
+        // every action gets a response above, so the client's turn loop only returns once done
+        if (result.Status == AiConversationResult.ActionRequired)
+            throw new InvalidOperationException(
+                $"conversation '{conversation.Id}' still requires actions after the turn completed");
+
         var reply = AgentOutputShape.ExtractReplyText(result.Answer, replyField);
 
         await UpsertPreviewAsync(store, request, config.Identifier, conversation.Id, reply, DateTime.UtcNow, ct);
 
         return new AgentRunResult(new { reply }, conversation.Id);
+    }
+
+    private async Task RegisterActionsAsync(
+        IAiConversationOperations conversation, AgentRequest request, AiAgentConfiguration config,
+        CancellationToken ct)
+    {
+        conversation.OnUnhandledAction += args =>
+        {
+            logger.LogWarning(
+                "Agent '{AgentId}' invoked action '{Action}' (toolId {ToolId}) with no binding configured",
+                config.Identifier, args.Action.Name, args.Action.ToolId);
+
+            conversation.AddActionResponse(args.Action.ToolId,
+                $"action failed: no binding configured for '{args.Action.Name}'");
+            return Task.CompletedTask;
+        };
+
+        if (config.Actions is not { Count: > 0 })
+            return;
+
+        AgentActionBindings? bindings;
+        using (var session = store.OpenAsyncSession(request.Database))
+            bindings = await session.LoadAsync<AgentActionBindings>(AgentActionBindings.IdFor(config.Identifier), ct);
+
+        if (bindings is null)
+            return;
+
+        foreach (var action in config.Actions)
+        {
+            if (bindings.Bindings.TryGetValue(action.Name, out var binding) == false)
+                continue;
+
+            conversation.Receive(action.Name, async actionRequest =>
+            {
+                var response = await actionExecutor.ExecuteAsync(actionRequest, binding, ct);
+
+                conversation.AddActionResponse(actionRequest.ToolId, response);
+            });
+        }
     }
 
     internal static async Task UpsertPreviewAsync(
