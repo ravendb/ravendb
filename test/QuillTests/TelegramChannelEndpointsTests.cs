@@ -56,6 +56,28 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Provision_and_rotation_reject_a_malformed_token()
+    {
+        await using var app = await NewAppAsync();
+        var agentId = await SeedAgentAsync(app);
+
+        var e = await Assert.ThrowsAsync<QuillHttpException>(() =>
+            app.ProvisionChannelAsync(new ProvisionChannelRequest(
+                ChannelType.Telegram, agentId, null, BotToken: "not-a-valid-token")));
+        Assert.Equal(HttpStatusCode.BadRequest, e.StatusCode);
+        Assert.Contains("invalid bot token format", e.Body);
+
+        var created = await app.ProvisionChannelAsync(
+            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, BotToken: NewBotToken()));
+        var rotate = await Assert.ThrowsAsync<QuillHttpException>(() =>
+            app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null, BotToken: "12noSecretPart")));
+        Assert.Equal(HttpStatusCode.BadRequest, rotate.StatusCode);
+        Assert.Contains("invalid bot token format", rotate.Body);
+
+        await app.DeleteChannelAsync(created.ChannelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Provision_defaults_display_name_to_bot_username_and_projects_it()
     {
         await using var app = await NewAppAsync();
