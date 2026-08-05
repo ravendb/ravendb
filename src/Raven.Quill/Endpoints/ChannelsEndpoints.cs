@@ -142,13 +142,10 @@ public static class ChannelsEndpoints
         CancellationToken ct)
     {
         var config = await AgentLookup.FindAsync(store, app.Database, body.AgentId, ct);
-        if (config is null)
-            return Results.BadRequest(new ApiErrorResponse($"unknown agentId '{body.AgentId}'"));
 
         if (string.IsNullOrWhiteSpace(body.BotToken))
             return Results.BadRequest(new ApiErrorResponse("botToken is required for a Telegram channel"));
 
-        // Telegram has no embedding surface; reject a supplied list rather than silently dropping it
         if (body.AllowedOrigins is { Length: > 0 })
             return Results.BadRequest(new ApiErrorResponse("allowedOrigins does not apply to Telegram channels"));
 
@@ -166,7 +163,6 @@ public static class ChannelsEndpoints
 
         using var session = store.OpenAsyncSession(app.Database);
 
-        // per-app uniqueness: two getUpdates consumers on one token make Telegram 409
         var existing = await LoadAllChannelsAsync(session, ct);
         if (existing.Any(c => c.Type == ChannelType.Telegram && c.Telegram?.BotId == bot.Id))
             return Results.BadRequest(new ApiErrorResponse($"bot @{bot.Username} is already connected in this app"));
@@ -225,7 +221,6 @@ public static class ChannelsEndpoints
         return false;
     }
 
-    /// getMe both validates the token and yields the bot identity (id for uniqueness, username for display).
     private static async Task<(global::Telegram.Bot.Types.User? Bot, string? Error)> ValidateBotTokenAsync(
         ITelegramBotClientFactory botFactory,
         string botToken,
@@ -387,7 +382,6 @@ public static class ChannelsEndpoints
 
         await session.SaveChangesAsync(ct);
 
-        // poller follows the saved doc; display-name-only edits don't touch it
         var runnable = channel is { Enabled: true, Telegram.BotToken.Length: > 0 };
         if (runnable && (tokenRotated || wasEnabled == false))
             await telegramManager.StartOrRestartAsync(app.Database, channel);
@@ -457,7 +451,6 @@ public static class ChannelsEndpoints
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
-        // doc first so a concurrent reconciliation can't resurrect the poller, then a bounded stop
         using (var session = store.OpenAsyncSession(app.Database))
         {
             session.Delete(Channel.IdPrefix + channelId);

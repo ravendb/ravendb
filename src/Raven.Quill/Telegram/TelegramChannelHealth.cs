@@ -1,7 +1,5 @@
 namespace Raven.Quill.Telegram;
 
-/// Per-poller operational counters, in-memory by design: persisting them would write the channel doc on every
-/// poll cycle for no durability value — a restart repopulates within one poll.
 internal sealed class TelegramChannelHealth
 {
     private long _lastSuccessfulPollTicks;
@@ -12,7 +10,6 @@ internal sealed class TelegramChannelHealth
     public void RecordSuccess(DateTime utcNow) =>
         Interlocked.Exchange(ref _lastSuccessfulPollTicks, utcNow.Ticks);
 
-    /// The message must already be token-scrubbed; exception text can embed /bot{token}/ request urls.
     public void RecordError(DateTime utcNow, string scrubbedMessage)
     {
         Interlocked.Exchange(ref _lastErrorAtTicks, utcNow.Ticks);

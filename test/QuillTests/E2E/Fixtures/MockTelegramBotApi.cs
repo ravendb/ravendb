@@ -9,11 +9,6 @@ using Microsoft.Extensions.Logging;
 
 namespace QuillTests.E2E.Fixtures;
 
-/// In-process stand-in for api.telegram.org. Serves the Bot API JSON envelope ({ok, result}) for the methods the
-/// adapter calls, keeps a per-token update queue that honors getUpdates offset semantics, captures every
-/// sendMessage / editMessageText / sendChatAction, and exposes settable failures (getMe / getUpdates / parse-mode).
-/// Tokens follow the real "{botId}:{secret}" shape; the bot id in getMe is derived from the token's prefix.
-/// Caller disposes.
 public sealed class MockTelegramBotApi : IAsyncDisposable
 {
     private readonly WebApplication _app;
@@ -25,7 +20,6 @@ public sealed class MockTelegramBotApi : IAsyncDisposable
     private readonly List<SentMessage> _sent = [];
     private readonly List<EditedMessage> _edited = [];
     private readonly List<ChatActionCall> _chatActions = [];
-    // stored as long: the getUpdates offset filter casts the in-memory JsonValue, which requires an exact type match
     private long _nextUpdateId = 1;
     private int _nextMessageId = 1000;
 
@@ -39,14 +33,10 @@ public sealed class MockTelegramBotApi : IAsyncDisposable
 
     public string BotUsername { get; set; } = "quill_test_bot";
 
-    /// When set, getMe returns this instead of the derived bot user (e.g. (401, unauthorized envelope)).
     public (int Status, string Body)? GetMeFailure { get; set; }
 
-    /// When set, getUpdates returns this for every call (e.g. revoked token); clear to restore polling.
     public (int Status, string Body)? GetUpdatesFailure { get; set; }
 
-    /// When true, sendMessage / editMessageText carrying a parse_mode fail with Telegram's
-    /// "can't parse entities" 400 — the plain-text retry (no parse_mode) succeeds.
     public bool FailParseModeRequests { get; set; }
 
     public static (int Status, string Body) Unauthorized { get; } =
@@ -78,7 +68,6 @@ public sealed class MockTelegramBotApi : IAsyncDisposable
         lock (_lock) return _getUpdatesCalls.GetValueOrDefault(token);
     }
 
-    /// The offset the poller sent on its most recent getUpdates — asserts confirm-by-offset semantics.
     public long? LastGetUpdatesOffset(string token)
     {
         lock (_lock) return _lastOffsets.GetValueOrDefault(token);
@@ -116,7 +105,6 @@ public sealed class MockTelegramBotApi : IAsyncDisposable
         }
     }
 
-    /// Polls the condition until it holds; throws on timeout so a stuck test fails with the caller's message.
     public async Task WaitUntilAsync(Func<bool> condition, string what, TimeSpan? timeout = null)
     {
         var deadline = DateTime.UtcNow + (timeout ?? TimeSpan.FromSeconds(15));
@@ -156,7 +144,6 @@ public sealed class MockTelegramBotApi : IAsyncDisposable
 
         MockTelegramBotApi instance = null!;
 
-        // Telegram.Bot posts JSON to /bot{token}/{method}; one catch-all dispatches per method
         app.MapPost("/bot{token}/{method}", async (string token, string method, HttpContext ctx) =>
         {
             using var reader = new StreamReader(ctx.Request.Body, leaveOpen: true);
@@ -232,7 +219,6 @@ public sealed class MockTelegramBotApi : IAsyncDisposable
                 }
             }
 
-            // short hold instead of the real 30s long poll so idle tests don't busy-spin
             if (attempt >= 1)
                 return Ok(new JsonArray());
 
@@ -311,7 +297,6 @@ public sealed class MockTelegramBotApi : IAsyncDisposable
         ["text"] = text,
     };
 
-    /// Real tokens are "{botId}:{secret}"; tests keep that shape so the derived id is deterministic.
     public static long BotIdFor(string token)
     {
         var colon = token.IndexOf(':');

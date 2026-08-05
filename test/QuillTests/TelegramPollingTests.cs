@@ -22,7 +22,6 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
 
         await Mock.WaitUntilAsync(() => Mock.GetUpdatesCallCount(token) >= 1, "polling to start");
 
-        // the PUT awaits the bounded poller stop, so the count is final once it returns
         await app.UpdateChannelAsync(channelId, new UpdateChannelRequest(null, null, Enabled: false));
         var frozen = Mock.GetUpdatesCallCount(token);
         await Task.Delay(700);
@@ -59,7 +58,6 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         Assert.StartsWith($"chats/tg/{channelId}/555/", request.ConversationId);
         Assert.True(AgentRouter.TryNormalizeConversationId(request.ConversationId, out _, out _));
         Assert.Equal("customers/42", request.Parameters["customerId"]);
-        // injected under the agent's declared casing, from the sender (not the chat)
         Assert.Equal("777", request.Parameters["userIdentifier"]);
 
         await Mock.WaitUntilAsync(() => Mock.SentMessages.Any(m => m.ChatId == 555), "the reply");
@@ -82,7 +80,6 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         Mock.EnqueueTextMessage(token, chatId: 1, fromUserId: 1, "second");
         await Mock.WaitUntilAsync(() => Router.Requests.Count >= 2, "the second run");
 
-        // a redelivered update would repeat a prompt through the per-chat chain
         Assert.Equal(new[] { "first", "second" }, Router.Requests.Select(r => r.Prompt).ToArray());
 
         await app.DeleteChannelAsync(channelId);
@@ -95,7 +92,7 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         await using var appGuard = app;
 
         Router.Chunks = ["The answer ", "is 42. ", "No doubt about it."];
-        Router.ChunkDelay = TimeSpan.FromMilliseconds(120);   // > the host's 50ms debounce => edits happen
+        Router.ChunkDelay = TimeSpan.FromMilliseconds(120);
 
         Mock.EnqueueTextMessage(token, chatId: 7, fromUserId: 7, "question");
         var full = string.Concat(Router.Chunks);
@@ -120,7 +117,6 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         Mock.EnqueueTextMessage(token, chatId: 9, fromUserId: 9, "hi");
         await Mock.WaitUntilAsync(() => Mock.SentMessages.Any(m => m.ChatId == 9), "the plain-text retry");
 
-        // only the successful (plain) attempt is captured; the markdown one got Telegram's 400
         Assert.All(Mock.SentMessages.Where(m => m.ChatId == 9), m => Assert.Null(m.ParseMode));
 
         await app.DeleteChannelAsync(channelId);
@@ -145,7 +141,6 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
 
         var sends = Mock.SentMessages.Where(m => m.ChatId == 11).ToArray();
         Assert.Equal(parts[1], sends[1].Text);
-        // the streamed first message was edited down to the sentence-boundary first part
         await Mock.WaitUntilAsync(
             () => Mock.EditedMessages.Any(e => e.ChatId == 11 && e.Text == parts[0]), "the boundary edit");
 
@@ -167,7 +162,6 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         Mock.EnqueueTextMessage(token, chatId: 100, fromUserId: 100, "a2");
         Mock.EnqueueTextMessage(token, chatId: 200, fromUserId: 200, "b1");
 
-        // chat B proceeds while chat A's first turn is still open; A's second stays queued behind it
         await Mock.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "b1"), "chat B's run");
         await Task.Delay(300);
         Assert.DoesNotContain(Router.Requests, r => r.Prompt == "a2");
@@ -198,7 +192,7 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         await Mock.WaitUntilAsync(
             () => Mock.SentMessages.Any(m => m.ChatId == chatId && m.Text.Contains("cleared")), "the confirmation");
 
-        Assert.Empty(Router.Requests);   // a command never reaches the agent
+        Assert.Empty(Router.Requests);
         using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
             Assert.Null(await session.LoadAsync<object>(conversationId));
@@ -241,7 +235,6 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         Assert.True(healthy.Enabled);
         Assert.True(healthy.IsPolling);
 
-        // revoked token: every poll 401s and the counters surface it
         Mock.GetUpdatesFailure = MockTelegramBotApi.Unauthorized;
         await Mock.WaitUntilAsync(
             () => app.GetTelegramHealthAsync().Result.Single().ErrorCount >= 1, "the error counter");
@@ -249,14 +242,12 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         Assert.NotNull(failing.LastErrorAt);
         Assert.Contains("Unauthorized", failing.LastError);
 
-        // restored token: the next successful poll advances the success timestamp past the error
         Mock.GetUpdatesFailure = null;
         await Mock.WaitUntilAsync(
             () => app.GetTelegramHealthAsync().Result.Single() is { LastSuccessfulPoll: not null } h &&
                   h.LastSuccessfulPoll > failing.LastErrorAt,
             "a successful poll after recovery");
 
-        // disabled: the row stays (Enabled=false) but no poller backs it
         await app.UpdateChannelAsync(channelId, new UpdateChannelRequest(null, null, Enabled: false));
         var disabled = Assert.Single(await app.GetTelegramHealthAsync());
         Assert.False(disabled.Enabled);

@@ -40,7 +40,6 @@ export function ChannelGroups({ slug }: { slug: string }) {
     // Active-link counts are supplementary — kept out of the ApiState gate so a
     // links hiccup never blocks the channel cards.
     const embedLinksQuery = useQuery(api.queries.embedLinks.list(slug));
-    // Polling health is supplementary too, and only worth fetching when a Telegram bot exists.
     const hasTelegramChannel = (channelsQuery.data ?? []).some((channel) => channel.type === "Telegram");
     const telegramHealthQuery = useQuery({ ...api.queries.telegram.health(slug), enabled: hasTelegramChannel });
 
@@ -277,8 +276,6 @@ function ChannelCard({
     );
 }
 
-// Polling health folds into the status: errors win over "Active" so a revoked token is visible
-// at a glance (the last token-scrubbed error rides in the tooltip).
 function TelegramStatusPill({
     enabled,
     health,

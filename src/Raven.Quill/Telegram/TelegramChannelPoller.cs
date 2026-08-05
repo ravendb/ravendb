@@ -10,10 +10,6 @@ using Telegram.Bot.Types.Enums;
 
 namespace Raven.Quill.Telegram;
 
-/// One long-poll loop per enabled Telegram channel: getUpdates with a 30s hold, offset confirmed after each
-/// batch, exponential backoff with jitter on errors (reset by the next successful poll). Messages dispatch onto
-/// per-chat task chains — strictly ordered within a chat, concurrent across chats — so polling continues while
-/// the agent streams a reply. Cancelling stops within ~1s: the token aborts the pending long-poll HTTP call.
 internal sealed class TelegramChannelPoller
 {
     private static readonly TimeSpan MinBackoff = TimeSpan.FromSeconds(1);
@@ -48,7 +44,6 @@ internal sealed class TelegramChannelPoller
 
     public string Database { get; }
 
-    /// Snapshot of the channel doc at (re)start; edits restart the poller with a fresh snapshot.
     public Channel Channel { get; }
 
     public TelegramChannelHealth Health { get; } = new();
@@ -74,7 +69,6 @@ internal sealed class TelegramChannelPoller
 
                 if (updates.Length > 0)
                 {
-                    // confirm before dispatch: at-most-once for in-flight work, at-least-once across restarts
                     offset = updates[^1].Id + 1;
                     foreach (var update in updates)
                         Dispatch(update, ct);
@@ -86,7 +80,6 @@ internal sealed class TelegramChannelPoller
             }
             catch (Exception e)
             {
-                // wrapper messages (e.g. RequestException) are generic; the inner one names the cause
                 var message = e.InnerException is null ? e.Message : $"{e.Message}: {e.InnerException.Message}";
                 var scrubbed = TelegramSettings.ScrubToken(message, token);
                 Health.RecordError(DateTime.UtcNow, scrubbed);
@@ -171,11 +164,6 @@ internal sealed class TelegramChannelPoller
         }
 
         var config = await AgentLookup.FindAsync(_store, Database, Channel.AgentId, ct);
-        if (config is null)
-        {
-            await TrySendPlainAsync(chatId, "This bot's agent is not available right now.", ct);
-            throw new UnknownAgentException(Channel.AgentId);
-        }
 
         var parameters = new Dictionary<string, string>(Channel.Telegram!.Parameters);
         var identifierParameter = config.Parameters?.FirstOrDefault(p =>
@@ -183,7 +171,6 @@ internal sealed class TelegramChannelPoller
         if (identifierParameter is not null &&
             parameters.Keys.Any(k => string.Equals(k, identifierParameter.Name, StringComparison.OrdinalIgnoreCase)) == false)
         {
-            // platform-authenticated sender identity; falls back to the chat id for channel/anonymous posts
             var userId = message.From?.Id ?? chatId;
             parameters[identifierParameter.Name] = userId.ToString(CultureInfo.InvariantCulture);
         }
@@ -194,7 +181,7 @@ internal sealed class TelegramChannelPoller
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
-            // cosmetic; never blocks the run
+
         }
 
         var reply = new TelegramStreamingReply(
@@ -216,7 +203,7 @@ internal sealed class TelegramChannelPoller
         catch
         {
             await TrySendPlainAsync(chatId, "Sorry - something went wrong handling that message. Please try again.", ct);
-            throw;   // HandleMessageSafeAsync records the health error
+            throw;
         }
     }
 
@@ -249,11 +236,10 @@ internal sealed class TelegramChannelPoller
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
-            // best-effort notice; the original failure is what gets recorded
+
         }
     }
 
-    /// Bounded: cancel aborts the pending long poll, then the loop and any in-flight chat chains get ~1s each.
     public async Task StopAsync()
     {
         await _cts.CancelAsync();

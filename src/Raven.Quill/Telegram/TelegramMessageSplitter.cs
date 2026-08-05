@@ -2,7 +2,6 @@ namespace Raven.Quill.Telegram;
 
 internal static class TelegramMessageSplitter
 {
-    // Telegram rejects sendMessage/editMessageText text longer than 4096 chars
     internal const int TelegramMessageLimit = 4096;
 
     internal static IReadOnlyList<string> Split(string text, int limit = TelegramMessageLimit)
@@ -32,7 +31,6 @@ internal static class TelegramMessageSplitter
         return parts;
     }
 
-    // index just past the last sentence end in the window
     private static int LastSentenceBoundary(ReadOnlySpan<char> window)
     {
         for (var i = window.Length - 1; i >= 0; i--)

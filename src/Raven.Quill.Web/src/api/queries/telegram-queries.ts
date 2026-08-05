@@ -5,7 +5,6 @@ const baseKey = "telegram";
 
 export function createTelegramQueries(api: ServerApi["telegram"]) {
     return {
-        // Poll counters move server-side without user action, so keep the dashboard row fresh.
         health: (slug: string) =>
             queryOptions({
                 queryKey: [baseKey, "health", slug],

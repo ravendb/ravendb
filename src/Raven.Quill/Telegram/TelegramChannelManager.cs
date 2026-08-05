@@ -10,21 +10,14 @@ using Raven.Quill.Wizard;
 
 namespace Raven.Quill.Telegram;
 
-/// The channel endpoints are the only writers of channel docs, so lifecycle is driven by direct in-process
-/// notification (provision / update / delete call in) plus one reconciliation scan at startup for channels that
-/// predate this process. No Changes API by design; a Studio-side manual doc edit is only noticed on restart.
 internal interface ITelegramChannelManager
 {
-    /// Fully stops any existing poller for the channel before starting the new one — two concurrent
-    /// getUpdates consumers on one token make Telegram 409.
     Task StartOrRestartAsync(string database, Channel channel);
 
     Task StopAsync(string database, string channelId);
 
-    /// App delete: reclaim every poller on the app's database so none keeps hammering a deleted DB.
     Task StopAllForDatabaseAsync(string database);
 
-    /// Prefix-stripped channel id -> health snapshot, for the pollers currently registered on the database.
     IReadOnlyDictionary<string, TelegramChannelHealthSnapshot> GetHealth(string database);
 }
 
@@ -38,20 +31,16 @@ internal sealed class TelegramChannelManager(
 {
     private readonly ConcurrentDictionary<(string Database, string ChannelId), TelegramChannelPoller> _pollers = new();
 
-    // serializes start/stop transitions so a rotate/re-enable never overlaps the poller it replaces
     private readonly SemaphoreSlim _transition = new(1, 1);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // sessions would throw until RavenReadinessService flips the flag
         while (ready.IsReady == false)
             await Task.Delay(250, stoppingToken);
 
         await ReconcileAsync(stoppingToken);
     }
 
-    /// Startup scan: page apps on the config DB, then channels per app DB; per-app failures are logged and
-    /// skipped so one broken database does not keep every other bot offline.
     private async Task ReconcileAsync(CancellationToken ct)
     {
         List<App> apps;
@@ -79,7 +68,6 @@ internal sealed class TelegramChannelManager(
 
                 foreach (var channel in channels)
                 {
-                    // tolerate token-less docs (hand-seeded or half-provisioned): nothing to poll with
                     if (channel is not { Type: ChannelType.Telegram, Enabled: true, Telegram.BotToken.Length: > 0 })
                         continue;
 
@@ -163,7 +151,6 @@ internal sealed class TelegramChannelManager(
             ? id[Channel.IdPrefix.Length..]
             : id ?? "";
 
-    // LoadStartingWith: immediately consistent, no post-create index wait; page fully
     private static async Task<List<T>> LoadAllAsync<T>(IAsyncDocumentSession session, string prefix, CancellationToken ct)
     {
         const int pageSize = 1024;

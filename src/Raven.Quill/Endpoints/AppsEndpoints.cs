@@ -111,7 +111,6 @@ public static class AppsEndpoints
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
-        // reclaim pollers first so none keeps hammering the deleted database
         await telegramManager.StopAllForDatabaseAsync(app.Database);
 
         await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(slug, true), ct);

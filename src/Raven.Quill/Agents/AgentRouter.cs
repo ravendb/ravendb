@@ -13,8 +13,6 @@ public sealed record AgentRequest(
     string ChannelId,
     IReadOnlyDictionary<string, string> Parameters);
 
-// Answer is the wire shape ({ reply }); Reply carries the extracted text for callers that
-// deliver it outside the NDJSON stream (e.g. the Telegram adapter's final message edit)
 public sealed record AgentRunResult(object Answer, string ConversationId, string Reply = "");
 
 public interface IAgentRouter

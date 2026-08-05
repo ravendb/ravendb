@@ -3,9 +3,6 @@ using Raven.Quill.Agents;
 
 namespace QuillTests.E2E.Fixtures;
 
-/// A resettable <see cref="IAgentRouter"/> that records every request and streams a scripted chunk sequence;
-/// reused across the Telegram collection so pipeline tests assert on what the poller dispatched without a live
-/// LLM. <see cref="BeforeRun"/> gates a run (per-chat serialization tests); <see cref="Failure"/> makes it throw.
 internal sealed class FakeAgentRouter : IAgentRouter
 {
     private readonly object _lock = new();
@@ -18,13 +15,10 @@ internal sealed class FakeAgentRouter : IAgentRouter
 
     public string[] Chunks { get; set; } = ["Hello ", "from the fake agent."];
 
-    /// The full reply; defaults to the concatenated chunks.
     public string? Reply { get; set; }
 
-    /// Pause between chunks — longer than the host's edit debounce, it forces edit-in-place flushes.
     public TimeSpan ChunkDelay { get; set; }
 
-    /// Awaited before streaming starts — a TaskCompletionSource here holds a run open.
     public Func<AgentRequest, Task>? BeforeRun { get; set; }
 
     public Exception? Failure { get; set; }
