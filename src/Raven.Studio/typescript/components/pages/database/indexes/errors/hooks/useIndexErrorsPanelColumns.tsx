@@ -182,7 +182,13 @@ const IndexErrorsCellWithCopyWrapper = ({ getValue, row, table }: IndexErrorsCel
     );
 
     return (
-        <CellWithCopy additionalButtons={additionalButtons} value={getValue()}>
+        <CellWithCopy
+            additionalButtons={additionalButtons}
+            value={getValue()}
+            previewCode={String(getValue() ?? "")}
+            previewLanguage="csharp"
+            popoverMaxWidth="800px"
+        >
             <CellValue value={getValue()} />
         </CellWithCopy>
     );
