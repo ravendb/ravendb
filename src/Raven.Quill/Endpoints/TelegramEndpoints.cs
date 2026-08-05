@@ -2,6 +2,7 @@ using Raven.Client.Documents;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints.Helpers;
+using Raven.Quill.Raven;
 using Raven.Quill.Telegram;
 
 namespace Raven.Quill.Endpoints;
@@ -33,18 +34,7 @@ public static class TelegramEndpoints
 
         List<Channel> channels;
         using (var session = store.OpenAsyncSession(app.Database))
-        {
-            const int pageSize = 1024;
-            channels = [];
-            for (var start = 0;; start += pageSize)
-            {
-                var page = (await session.Advanced.LoadStartingWithAsync<Channel>(
-                    Channel.IdPrefix, start: start, pageSize: pageSize, token: ct)).ToArray();
-                channels.AddRange(page);
-                if (page.Length < pageSize)
-                    break;
-            }
-        }
+            channels = await session.LoadAllStartingWithAsync<Channel>(Channel.IdPrefix, ct);
 
         var health = telegramManager.GetHealth(app.Database);
 
@@ -53,7 +43,7 @@ public static class TelegramEndpoints
             .OrderByDescending(c => c.CreatedAt)
             .Select(c =>
             {
-                var channelId = StripPrefix(c.Id);
+                var channelId = Channel.StripIdPrefix(c.Id);
                 var snapshot = health.GetValueOrDefault(channelId);
                 return new TelegramChannelHealthResponse(
                     channelId,
@@ -69,9 +59,4 @@ public static class TelegramEndpoints
 
         return Results.Ok(items);
     }
-
-    private static string StripPrefix(string? id) =>
-        id is not null && id.StartsWith(Channel.IdPrefix, StringComparison.Ordinal)
-            ? id[Channel.IdPrefix.Length..]
-            : id ?? "";
 }

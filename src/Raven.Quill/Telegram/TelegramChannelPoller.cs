@@ -37,9 +37,7 @@ internal sealed class TelegramChannelPoller
         _router = router;
         _options = options;
         _logger = logger;
-        _channelId = channel.Id is not null && channel.Id.StartsWith(Channel.IdPrefix, StringComparison.Ordinal)
-            ? channel.Id[Channel.IdPrefix.Length..]
-            : channel.Id ?? "";
+        _channelId = Channel.StripIdPrefix(channel.Id);
     }
 
     public string Database { get; }

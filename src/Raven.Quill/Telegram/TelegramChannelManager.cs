@@ -1,11 +1,11 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Options;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Session;
 using Raven.Quill.Agents;
 using Raven.Quill.Channels;
 using Raven.Quill.Endpoints.Helpers;
 using Raven.Quill.Hosting;
+using Raven.Quill.Raven;
 using Raven.Quill.Wizard;
 
 namespace Raven.Quill.Telegram;
@@ -47,7 +47,7 @@ internal sealed class TelegramChannelManager(
         try
         {
             using var session = store.OpenAsyncSession();
-            apps = await LoadAllAsync<App>(session, AppLookup.IdPrefix, ct);
+            apps = await session.LoadAllStartingWithAsync<App>(AppLookup.IdPrefix, ct);
         }
         catch (Exception e)
         {
@@ -64,7 +64,7 @@ internal sealed class TelegramChannelManager(
             {
                 List<Channel> channels;
                 using (var session = store.OpenAsyncSession(app.Database))
-                    channels = await LoadAllAsync<Channel>(session, Channel.IdPrefix, ct);
+                    channels = await session.LoadAllStartingWithAsync<Channel>(Channel.IdPrefix, ct);
 
                 foreach (var channel in channels)
                 {
@@ -84,7 +84,7 @@ internal sealed class TelegramChannelManager(
 
     public async Task StartOrRestartAsync(string database, Channel channel)
     {
-        var channelId = StripPrefix(channel.Id);
+        var channelId = Channel.StripIdPrefix(channel.Id);
         var key = (database, channelId);
 
         await _transition.WaitAsync();
@@ -144,26 +144,5 @@ internal sealed class TelegramChannelManager(
         _pollers.Clear();
 
         await base.StopAsync(cancellationToken);
-    }
-
-    private static string StripPrefix(string? id) =>
-        id is not null && id.StartsWith(Channel.IdPrefix, StringComparison.Ordinal)
-            ? id[Channel.IdPrefix.Length..]
-            : id ?? "";
-
-    private static async Task<List<T>> LoadAllAsync<T>(IAsyncDocumentSession session, string prefix, CancellationToken ct)
-    {
-        const int pageSize = 1024;
-        var items = new List<T>();
-        for (var start = 0;; start += pageSize)
-        {
-            var page = (await session.Advanced.LoadStartingWithAsync<T>(
-                prefix, start: start, pageSize: pageSize, token: ct)).ToArray();
-            items.AddRange(page);
-            if (page.Length < pageSize)
-                break;
-        }
-
-        return items;
     }
 }
