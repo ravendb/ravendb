@@ -856,5 +856,88 @@ namespace FastTests.Server.Integrations.PostgreSQL.Translation
             Assert.Equal("from 'Orders' group by Company select Company, count() as c",
                 Translate("SELECT \"Company\" AS \"Company\", COUNT(*) AS c FROM \"Orders\" GROUP BY \"Company\""));
         }
+
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("TO_TIMESTAMP('1996-07-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS')", "'1996-07-01 00:00:00'::timestamp")]
+        [InlineData("TO_TIMESTAMP('1996-07-01 13:45:30', 'YYYY-MM-DD HH24:MI:SS')", "'1996-07-01 13:45:30'::timestamp")]
+        [InlineData("TO_TIMESTAMP('1996-07-01 13:45:30.123456', 'YYYY-MM-DD HH24:MI:SS.US')", "'1996-07-01 13:45:30.123456'::timestamp")]
+        [InlineData("TO_TIMESTAMP('1996-07-01', 'YYYY-MM-DD')", "'1996-07-01'::timestamp")]
+        [InlineData("TO_DATE('1996-07-01', 'YYYY-MM-DD')", "'1996-07-01'::timestamp")]
+        public void TimestampFunctionBound_FoldsToTheSameValueAsTheCast(string bound, string cast)
+        {
+            Assert.Equal(
+                Translate($"SELECT * FROM \"Orders\" WHERE \"OrderedAt\" >= {cast}"),
+                Translate($"SELECT * FROM \"Orders\" WHERE \"OrderedAt\" >= {bound}"));
+        }
+
+        // PG's to_date discards the time component even when the format parses one.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void ToDateBound_DropsTheTimeComponent()
+        {
+            Assert.Equal(
+                Translate("SELECT * FROM \"Orders\" WHERE \"OrderedAt\" >= '1996-07-01'::timestamp"),
+                Translate("SELECT * FROM \"Orders\" WHERE \"OrderedAt\" >= TO_DATE('1996-07-01 13:45:30', 'YYYY-MM-DD HH24:MI:SS')"));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void TimestampFunctionBound_TranslatesBothEndsOfAHalfOpenWindow()
+        {
+            var rql = Translate(
+                """
+                SELECT * FROM "Orders"
+                WHERE "OrderedAt" >= TO_TIMESTAMP('1996-07-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS')
+                  AND "OrderedAt" < TO_TIMESTAMP('1996-10-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS')
+                """);
+
+            Assert.Contains("1996-07-01", rql, StringComparison.Ordinal);
+            Assert.Contains("1996-10-01", rql, StringComparison.Ordinal);
+        }
+
+        // A format token that isn't translated must fail the whole bound; passing it through as a
+        // literal would silently shift the date.
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("TO_TIMESTAMP('1996-Jul-01', 'YYYY-Mon-DD')")]
+        [InlineData("TO_TIMESTAMP('1996-07-01', 'FMYYYY-FMMM-FMDD')")]
+        [InlineData("TO_TIMESTAMP('01/07/1996 01:00 PM', 'DD/MM/YYYY HH12:MI AM')")]
+        [InlineData("TO_DATE('1996 182', 'YYYY DDD')")]
+        [InlineData("TO_TIMESTAMP('1996-07-01', '')")]
+        public void TimestampFunctionBound_WithUnrecognisedFormat_IsRejected(string bound)
+        {
+            AssertRejected($"SELECT * FROM \"Orders\" WHERE \"OrderedAt\" >= {bound}");
+        }
+
+        // Neither argument can be resolved at translate time unless it is a string literal.
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("TO_TIMESTAMP(\"RequireAt\", 'YYYY-MM-DD')")]
+        [InlineData("TO_TIMESTAMP('1996-07-01', $1)")]
+        [InlineData("TO_TIMESTAMP($1, 'YYYY-MM-DD')")]
+        [InlineData("TO_TIMESTAMP(820454400)")]
+        [InlineData("TO_TIMESTAMP('1996-07-01')")]
+        public void TimestampFunctionBound_WithNonLiteralArgument_IsRejected(string bound)
+        {
+            AssertRejected($"SELECT * FROM \"Orders\" WHERE \"OrderedAt\" >= {bound}");
+        }
+
+        // The format is recognised but the value does not match it.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void TimestampFunctionBound_WithValueNotMatchingTheFormat_IsRejected()
+        {
+            AssertRejected("SELECT * FROM \"Orders\" WHERE \"OrderedAt\" >= TO_TIMESTAMP('not-a-date', 'YYYY-MM-DD')");
+        }
+
+        // to_timestamp is a WHERE-bound shape only.
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("SELECT TO_TIMESTAMP('1996-07-01', 'YYYY-MM-DD') FROM \"Orders\"")]
+        [InlineData("SELECT \"Company\", COUNT(*) FROM \"Orders\" GROUP BY TO_TIMESTAMP('1996-07-01', 'YYYY-MM-DD')")]
+        public void TimestampFunction_OutsideAWhereBound_IsRejected(string sql)
+        {
+            AssertRejected(sql);
+        }
+
+        private static void AssertRejected(string sql)
+        {
+            Assert.False(Raven.Server.Integrations.PostgreSQL.Translation.PgSqlToRqlTranslator.TryParse(
+                sql, Array.Empty<int>(), out _));
+        }
     }
 }

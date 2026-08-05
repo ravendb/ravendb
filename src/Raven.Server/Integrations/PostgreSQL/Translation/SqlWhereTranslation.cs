@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Text;
 using PgSqlParser;
 using Sparrow.Extensions;
 
@@ -328,6 +329,9 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
             if (TryExtractTimestampLiteral(node, out value))
                 return true;
 
+            if (TryExtractTimestampFunction(node, out value))
+                return true;
+
             var c = node.AConst;
             if (c == null)
                 return false;
@@ -444,6 +448,97 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
                 return false;
 
             value = new ParsedValue(dt.GetDefaultRavenFormat(), ParsedValueKind.Timestamp);
+            return true;
+        }
+
+        // Superset's Time Range filter emits every datetime bound as to_timestamp(<literal>, <format>).
+        private static bool TryExtractTimestampFunction(Node node, out ParsedValue value)
+        {
+            value = null;
+
+            if (node?.FuncCall?.Funcname is not { Count: > 0 } names)
+                return false;
+
+            var funcName = names[names.Count - 1]?.String?.Sval;
+            var dateOnly = string.Equals(funcName, "to_date", StringComparison.OrdinalIgnoreCase);
+            if (dateOnly == false && string.Equals(funcName, "to_timestamp", StringComparison.OrdinalIgnoreCase) == false)
+                return false;
+
+            // The single-argument to_timestamp(epoch) overload takes no format string; only the
+            // two-literal form is recognised, everything else falls through to rejection.
+            if (node.FuncCall.Args is not { Count: 2 } args)
+                return false;
+
+            var raw = args[0]?.AConst?.Sval?.Sval;
+            var format = args[1]?.AConst?.Sval?.Sval;
+            if (raw == null || format == null)
+                return false;
+
+            if (TryConvertPgDateFormat(format, out var netFormat) == false)
+                return false;
+
+            if (DateTime.TryParseExact(raw, netFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt) == false)
+                return false;
+
+            if (dateOnly)
+                dt = dt.Date;
+
+            value = new ParsedValue(dt.GetDefaultRavenFormat(), ParsedValueKind.Timestamp);
+            return true;
+        }
+
+        private static readonly (string Pg, string Net)[] PgDateFormatTokens =
+        {
+            ("YYYY", "yyyy"),
+            ("HH24", "HH"),
+            ("MM", "MM"),
+            ("DD", "dd"),
+            ("MI", "mm"),
+            ("SS", "ss"),
+            ("US", "ffffff"),
+            ("MS", "fff"),
+        };
+
+        private const string PgDateFormatSeparators = "-/:. ,T";
+
+        // Only the subset of PG's format language listed above translates; an unrecognised token has to
+        // fail the whole format rather than be passed through as a literal, which would shift the value.
+        private static bool TryConvertPgDateFormat(string format, out string netFormat)
+        {
+            netFormat = null;
+            if (string.IsNullOrWhiteSpace(format))
+                return false;
+
+            var builder = new StringBuilder(format.Length * 2);
+            var i = 0;
+            while (i < format.Length)
+            {
+                var matched = false;
+                foreach (var (pg, net) in PgDateFormatTokens)
+                {
+                    if (i + pg.Length > format.Length)
+                        continue;
+
+                    if (string.Compare(format, i, pg, 0, pg.Length, StringComparison.OrdinalIgnoreCase) != 0)
+                        continue;
+
+                    builder.Append(net);
+                    i += pg.Length;
+                    matched = true;
+                    break;
+                }
+
+                if (matched)
+                    continue;
+
+                if (PgDateFormatSeparators.IndexOf(format[i]) < 0)
+                    return false;
+
+                builder.Append('\\').Append(format[i]);
+                i++;
+            }
+
+            netFormat = builder.ToString();
             return true;
         }
     }
