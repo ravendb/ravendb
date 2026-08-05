@@ -154,10 +154,19 @@ internal sealed class TelegramChannelPoller
         var chatId = message.Chat.Id;
         var conversationId = TelegramConversationId.For(_channelId, chatId, DateTime.UtcNow);
 
-        if (IsClearCommand(prompt))
+        if (IsCommand(prompt, "clear"))
         {
             await ClearConversationAsync(conversationId, ct);
             await SendPlainAsync(chatId, "Conversation cleared. The next message starts a fresh one.", ct);
+            return;
+        }
+
+        // Telegram clients send the literal /start (with an optional deep-link payload) when a user
+        // first opens the bot; greet without an agent run
+        if (IsCommand(prompt, "start"))
+        {
+            await SendPlainAsync(chatId,
+                "Hi! Ask me anything and I'll answer. Send /clear anytime to start a fresh conversation.", ct);
             return;
         }
 
@@ -207,14 +216,18 @@ internal sealed class TelegramChannelPoller
         }
     }
 
-    private bool IsClearCommand(string text)
+    // matches Telegram's "/name[@botUsername] [payload]" command shape
+    private bool IsCommand(string text, string name)
     {
-        if (text.Equals("/clear", StringComparison.OrdinalIgnoreCase))
+        var separator = text.IndexOfAny([' ', '\t', '\r', '\n']);
+        var command = separator < 0 ? text : text[..separator];
+
+        if (command.Equals($"/{name}", StringComparison.OrdinalIgnoreCase))
             return true;
 
         var username = Channel.Telegram?.BotUsername;
         return string.IsNullOrEmpty(username) == false &&
-               text.Equals($"/clear@{username}", StringComparison.OrdinalIgnoreCase);
+               command.Equals($"/{name}@{username}", StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task ClearConversationAsync(string conversationId, CancellationToken ct)
