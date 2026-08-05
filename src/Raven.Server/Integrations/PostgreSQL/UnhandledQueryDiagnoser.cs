@@ -100,6 +100,11 @@ namespace Raven.Server.Integrations.PostgreSQL
                 return true;
             }
 
+            // count(*) on its own translates, so when a scalar count(*) query still failed the aggregate
+            // is not the cause — blame the WHERE clause when that is what the translator choked on.
+            if (IsSupportedScalarCountStar(outer) && TryDiagnoseWhereClause(outer, out message))
+                return true;
+
             if (IsScalarAggregateWithoutGroupBy(outer))
             {
                 message = "Scalar aggregate without GROUP BY is supported for `count(*)` only. RavenDB's sum() is a map-reduce aggregation that requires a GROUP BY, so `SELECT sum(...) FROM t` with no grouping has no RQL form — compute the aggregate client-side from the underlying rows.";
@@ -449,6 +454,85 @@ namespace Raven.Server.Integrations.PostgreSQL
             }
 
             return false;
+        }
+
+        private static bool IsSupportedScalarCountStar(SelectStmt selectStmt)
+        {
+            if (selectStmt.GroupClause is { Count: > 0 })
+                return false;
+
+            if (selectStmt.TargetList is not { Count: 1 } targets)
+                return false;
+
+            var funcCall = targets[0]?.ResTarget?.Val?.FuncCall;
+            if (funcCall is not { AggStar: true })
+                return false;
+
+            if (funcCall.AggDistinct || funcCall.AggFilter != null || funcCall.Over != null)
+                return false;
+
+            var name = funcCall.Funcname is { Count: > 0 }
+                ? funcCall.Funcname[funcCall.Funcname.Count - 1]?.String?.Sval
+                : null;
+
+            return string.Equals(name, "count", StringComparison.OrdinalIgnoreCase);
+        }
+
+        // Uses the translator's own WHERE parser as the oracle so the diagnoser can't drift from what is
+        // actually supported, then names the offending operator when the AST identifies one.
+        private static bool TryDiagnoseWhereClause(SelectStmt selectStmt, out string message)
+        {
+            message = null;
+
+            if (selectStmt.WhereClause == null)
+                return false;
+
+            if (SqlWhereParser.TryParse(selectStmt.WhereClause, outerAliasToStrip: null, out _))
+                return false;
+
+            message = TryGetUnsupportedPredicateName(selectStmt.WhereClause, depth: 0, out var predicate)
+                ? $"The WHERE clause uses {predicate}, which is not supported. The aggregate itself is fine — `count(*)` translates on its own — so rewrite just the predicate (for example express NOT BETWEEN as `< lower OR > upper`), or run the query as RQL."
+                : "The WHERE clause could not be translated. The aggregate itself is fine — `count(*)` translates on its own — so the unsupported part is the predicate: simplify it to comparisons, IN, BETWEEN, LIKE and IS [NOT] NULL combined with AND / OR / NOT, or run the query as RQL.";
+
+            return true;
+        }
+
+        private static bool TryGetUnsupportedPredicateName(Node node, int depth, out string predicate)
+        {
+            predicate = null;
+            if (node == null || depth >= MaxJoinSearchDepth)
+                return false;
+
+            if (node.BoolExpr?.Args is { } args)
+            {
+                foreach (var arg in args)
+                {
+                    if (TryGetUnsupportedPredicateName(arg, depth + 1, out predicate))
+                        return true;
+                }
+
+                return false;
+            }
+
+            if (node.AExpr is not { } aExpr)
+                return false;
+
+            predicate = aExpr.Kind switch
+            {
+                A_Expr_Kind.AexprNotBetween => "NOT BETWEEN",
+                A_Expr_Kind.AexprBetweenSym => "BETWEEN SYMMETRIC",
+                A_Expr_Kind.AexprNotBetweenSym => "NOT BETWEEN SYMMETRIC",
+                A_Expr_Kind.AexprSimilar => "SIMILAR TO",
+                A_Expr_Kind.AexprOpAny => "an ANY (...) comparison",
+                A_Expr_Kind.AexprOpAll => "an ALL (...) comparison",
+                _ => null
+            };
+
+            if (predicate != null)
+                return true;
+
+            return TryGetUnsupportedPredicateName(aExpr.Lexpr, depth + 1, out predicate)
+                || TryGetUnsupportedPredicateName(aExpr.Rexpr, depth + 1, out predicate);
         }
 
         private static bool TryGetUnsupportedSortModifier(SelectStmt selectStmt, out string modifier)
