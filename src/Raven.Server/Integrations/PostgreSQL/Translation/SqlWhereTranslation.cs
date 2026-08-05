@@ -239,6 +239,12 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
                 return true;
             }
 
+            // IS [NOT] DISTINCT FROM, NULLIF and the ANY/ALL forms are all built as an A_Expr whose
+            // operator name is a plain "=", so without this gate they pass IsKnownBinaryOp and become
+            // an ordinary equality test — the inverse of what IS DISTINCT FROM means.
+            if (IsAExprKind(aExpr, A_Expr_Kind.AexprOp) == false)
+                return false;
+
             if (IsKnownBinaryOp(op) == false)
                 return false;
 
