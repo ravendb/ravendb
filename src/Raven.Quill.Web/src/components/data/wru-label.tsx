@@ -1,6 +1,7 @@
 import { InfoHint } from "@/components/data/info-hint";
 
-export const WRU_DESCRIPTION = "Write Request Unit";
+export const WRU_DESCRIPTION =
+    "Write Request Unit. Usage is reported every 15 minutes, so recent writes may not be included yet.";
 
 // Shared label for the write usage metric, shown as "WRU" with a tooltip
 // expanding the abbreviation.
