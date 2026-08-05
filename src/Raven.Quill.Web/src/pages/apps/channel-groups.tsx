@@ -3,9 +3,14 @@ import { Cable, CodeXml, Link2, MessageCircle, Palette, Pencil, Send, Trash2, ty
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { api } from "@/api/api";
-import type { AgentSummaryResponse, ChannelSummaryResponse, ChannelType } from "@/api/generated/server-api";
+import type {
+    AgentSummaryResponse,
+    ChannelSummaryResponse,
+    ChannelType,
+    WhatsAppChannelHealthResponse,
+} from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
-import { EnabledStatus } from "@/components/data/status-indicator";
+import { EnabledStatus, StatusIndicator } from "@/components/data/status-indicator";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { Card, CardAction, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/shadcn/ui/card";
@@ -35,11 +40,18 @@ export function ChannelGroups({ slug }: { slug: string }) {
     // Active-link counts are supplementary — kept out of the ApiState gate so a
     // links hiccup never blocks the channel cards.
     const embedLinksQuery = useQuery(api.queries.embedLinks.list(slug));
+    const hasWhatsAppChannel = (channelsQuery.data ?? []).some((channel) => channel.type === "WhatsAppPersonal");
+    const whatsAppHealthQuery = useQuery({ ...api.queries.whatsapp.health(slug), enabled: hasWhatsAppChannel });
 
     const activeLinkCounts = new Map<string, number>();
     for (const link of embedLinksQuery.data ?? []) {
         activeLinkCounts.set(link.channelId, (activeLinkCounts.get(link.channelId) ?? 0) + 1);
     }
+
+    const whatsAppHealthByChannel = new Map(
+        (whatsAppHealthQuery.data ?? []).map((health) => [health.channelId, health]),
+    );
+
 
     const onRetry = async () => {
         if (channelsQuery.isError) {
@@ -107,6 +119,7 @@ export function ChannelGroups({ slug }: { slug: string }) {
                                             agent={agentsQuery.data?.find((x) => x.agentId === channel.agentId)}
                                             activeLinkCount={activeLinkCounts.get(channel.channelId) ?? 0}
                                             isLinkCountLoading={embedLinksQuery.isPending}
+                                            whatsAppHealth={whatsAppHealthByChannel.get(channel.channelId)}
                                         />
                                     ))}
                                 </div>
@@ -124,14 +137,17 @@ function ChannelCard({
     agent,
     activeLinkCount,
     isLinkCountLoading,
+    whatsAppHealth,
 }: {
     slug: string;
     channel: ChannelSummaryResponse;
     agent: AgentSummaryResponse | undefined;
     activeLinkCount: number;
     isLinkCountLoading: boolean;
+    whatsAppHealth: WhatsAppChannelHealthResponse | undefined;
 }) {
     const isIFrame = channel.type === "IFrame";
+    const isWhatsAppPersonal = channel.type === "WhatsAppPersonal";
 
     return (
         // The title's stretched ::after overlay turns the whole card into the "open details" link;
@@ -154,9 +170,18 @@ function ChannelCard({
                             @{channel.telegram.botUsername}
                         </div>
                     )}
+                    {channel.whatsApp?.phoneNumber && (
+                        <div className="truncate font-mono text-xs font-normal text-muted-foreground">
+                            {channel.whatsApp.phoneNumber}
+                        </div>
+                    )}
                 </CardTitle>
                 <CardAction>
-                    <EnabledStatus isEnabled={channel.enabled} />
+                    {isWhatsAppPersonal ? (
+                        <WhatsAppStatusPill enabled={channel.enabled} health={whatsAppHealth} />
+                    ) : (
+                        <EnabledStatus isEnabled={channel.enabled} />
+                    )}
                 </CardAction>
             </CardHeader>
 
@@ -241,6 +266,24 @@ function ChannelCard({
             </CardFooter>
         </Card>
     );
+}
+
+function WhatsAppStatusPill({
+    enabled,
+    health,
+}: {
+    enabled: boolean;
+    health: WhatsAppChannelHealthResponse | undefined;
+}) {
+    if (enabled && health) {
+        if (health.state === "Pairing" || health.state === "Starting") {
+            return <StatusIndicator tone="warning" label="Pairing" />;
+        }
+        if (health.state !== "Connected") {
+            return <StatusIndicator tone="warning" label="Not linked" title={health.lastError ?? undefined} />;
+        }
+    }
+    return <EnabledStatus isEnabled={enabled} />;
 }
 
 function StatBox({ label, value }: { label: string; value: ReactNode }) {

@@ -341,6 +341,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/apps/{slug}/channels/{channelId}/whatsapp/pairing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Live pairing status for a WhatsApp Personal channel. While pairing, qr carries the current (rotating) linked-device payload for the dashboard to render; polling this endpoint always returns the freshest code. Also self-heals: if the bridge lost the session (e.g. it restarted before the phone was linked), a new one is started. */
+        get: operations["whatsapp.pairing"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/apps/{slug}/channels/{channelId}/whatsapp/pairing/restart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Restarts pairing with a fresh QR code; a logged-out session has its credentials wiped first. */
+        post: operations["whatsapp.pairingRestart"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/apps/{slug}/whatsapp/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Per-channel session state for the app's WhatsApp Personal channels, proxied from the bridge. State is null when the bridge has no session or is unreachable. */
+        get: operations["whatsapp.health"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/apps/{slug}/iframe/{channelId}/theme": {
         parameters: {
             query?: never;
@@ -1257,6 +1308,7 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             telegram?: null | components["schemas"]["TelegramSummaryResponse"];
+            whatsApp?: null | components["schemas"]["WhatsAppSummaryResponse"];
         };
         /** @enum {unknown} */
         ChannelType: "IFrame" | "Telegram" | "WhatsAppPersonal" | null;
@@ -1502,14 +1554,6 @@ export interface components {
             /** Format: int32 */
             embeddingsMaxConcurrentBatches?: null | number;
         };
-        ProblemDetails: {
-            type?: null | string;
-            title?: null | string;
-            /** Format: int32 */
-            status?: null | number;
-            detail?: null | string;
-            instance?: null | string;
-        };
         ProvisionAgentResponse: {
             agentId: string;
         };
@@ -1748,6 +1792,26 @@ export interface components {
             secret?: null | string;
             /** Format: int32 */
             maxResponseSize?: null | number;
+        };
+        WhatsAppChannelHealthResponse: {
+            channelId: string;
+            phoneNumber: null | string;
+            enabled: boolean;
+            state: null | components["schemas"]["WhatsAppSessionState"];
+            lastError: null | string;
+        };
+        WhatsAppPairingResponse: {
+            state: components["schemas"]["WhatsAppSessionState"];
+            qr: null | string;
+            /** Format: date-time */
+            qrExpiresAt: null | string;
+            phoneNumber: null | string;
+            lastError: null | string;
+        };
+        /** @enum {unknown} */
+        WhatsAppSessionState: "Starting" | "Pairing" | "Connected" | "Disconnected" | "LoggedOut";
+        WhatsAppSummaryResponse: {
+            phoneNumber: null | string;
         };
         /** @enum {unknown} */
         WidgetAppearance: "Light" | "Dark" | "System";
@@ -2423,15 +2487,6 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorResponse"];
                 };
             };
-            /** @description Not Implemented */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ProblemDetails"];
-                };
-            };
         };
     };
     "channels.list": {
@@ -2508,15 +2563,6 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorResponse"];
                 };
             };
-            /** @description Not Implemented */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ProblemDetails"];
-                };
-            };
         };
     };
     "channels.delete": {
@@ -2547,13 +2593,126 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorResponse"];
                 };
             };
-            /** @description Not Implemented */
-            501: {
+            /** @description Bad Gateway */
+            502: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "whatsapp.pairing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                channelId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhatsAppPairingResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "whatsapp.pairingRestart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                channelId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhatsAppPairingResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "whatsapp.health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhatsAppChannelHealthResponse"][];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
                 };
             };
         };
@@ -3972,7 +4131,6 @@ export type MistralAiSettings = components["schemas"]["MistralAiSettings"];
 export type OllamaSettings = components["schemas"]["OllamaSettings"];
 export type OpenAiReasoningEffort = components["schemas"]["OpenAiReasoningEffort"];
 export type OpenAiSettings = components["schemas"]["OpenAiSettings"];
-export type ProblemDetails = components["schemas"]["ProblemDetails"];
 export type ProvisionAgentResponse = components["schemas"]["ProvisionAgentResponse"];
 export type ProvisionChannelRequest = components["schemas"]["ProvisionChannelRequest"];
 export type ProvisionChannelResponse = components["schemas"]["ProvisionChannelResponse"];
@@ -4014,6 +4172,10 @@ export type VerifyCdcTableRequest = components["schemas"]["VerifyCdcTableRequest
 export type VertexAIVersion = components["schemas"]["VertexAIVersion"];
 export type VertexSettings = components["schemas"]["VertexSettings"];
 export type WebhookBinding = components["schemas"]["WebhookBinding"];
+export type WhatsAppChannelHealthResponse = components["schemas"]["WhatsAppChannelHealthResponse"];
+export type WhatsAppPairingResponse = components["schemas"]["WhatsAppPairingResponse"];
+export type WhatsAppSessionState = components["schemas"]["WhatsAppSessionState"];
+export type WhatsAppSummaryResponse = components["schemas"]["WhatsAppSummaryResponse"];
 export type WidgetAppearance = components["schemas"]["WidgetAppearance"];
 export type WidgetDefaultThemeResponse = components["schemas"]["WidgetDefaultThemeResponse"];
 export type WidgetFontOption = components["schemas"]["WidgetFontOption"];
@@ -4113,6 +4275,11 @@ export const API_ENDPOINTS = {
         tokensByApp: "/usage/by-app",
         usage: "/usage",
     },
+    whatsapp: {
+        health: (slug: string) => `/apps/${encodeURIComponent(slug)}/whatsapp/health`,
+        pairing: (slug: string, channelId: string) => `/apps/${encodeURIComponent(slug)}/channels/${encodeURIComponent(channelId)}/whatsapp/pairing`,
+        pairingRestart: (slug: string, channelId: string) => `/apps/${encodeURIComponent(slug)}/channels/${encodeURIComponent(channelId)}/whatsapp/pairing/restart`,
+    },
 } as const;
 
 export function createServerApi(client: ApiClient) {
@@ -4203,6 +4370,11 @@ export function createServerApi(client: ApiClient) {
             overview: (slug: string) => client.get<AppOverviewResponse, ApiErrorResponse>(API_ENDPOINTS.stats.overview(slug)),
             tokensByApp: () => client.get<TokensByAppResponse>(API_ENDPOINTS.stats.tokensByApp),
             usage: (searchParams: { app?: string; day?: string; month?: string; year: string; }) => client.get<UsageResponse>(API_ENDPOINTS.stats.usage, { searchParams }),
+        },
+        whatsapp: {
+            health: (slug: string) => client.get<WhatsAppChannelHealthResponse[], ApiErrorResponse>(API_ENDPOINTS.whatsapp.health(slug)),
+            pairing: (slug: string, channelId: string) => client.get<WhatsAppPairingResponse, ApiErrorResponse>(API_ENDPOINTS.whatsapp.pairing(slug, channelId)),
+            pairingRestart: (slug: string, channelId: string) => client.post<WhatsAppPairingResponse, ApiErrorResponse>(API_ENDPOINTS.whatsapp.pairingRestart(slug, channelId)),
         },
     };
 }

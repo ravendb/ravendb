@@ -1,4 +1,9 @@
-import type { ChannelSummaryResponse, ProvisionChannelResponse } from "@/api/generated/server-api";
+import type {
+    ChannelSummaryResponse,
+    ProvisionChannelResponse,
+    WhatsAppChannelHealthResponse,
+    WhatsAppPairingResponse,
+} from "@/api/generated/server-api";
 import { apiHttp } from "./api-http";
 
 export const channelsMocks = {
@@ -28,10 +33,32 @@ export const channelsMocks = {
     delete: () => apiHttp.delete("/api/apps/{slug}/channels/{channelId}", ({ response }) => response(204).empty()),
 };
 
+export const whatsAppMocks = {
+    health: (items: WhatsAppChannelHealthResponse[] = sampleWhatsAppHealth) =>
+        apiHttp.get("/api/apps/{slug}/whatsapp/health", ({ response }) => response(200).json(items)),
+    pairing: (pairing: WhatsAppPairingResponse = sampleWhatsAppPairing) =>
+        apiHttp.get("/api/apps/{slug}/channels/{channelId}/whatsapp/pairing", ({ response }) =>
+            response(200).json(pairing),
+        ),
+    // Serves the given responses one poll at a time (sticking on the last), so a play
+    // test can walk the panel through Pairing -> Connected without a real bridge.
+    pairingSequence: (responses: WhatsAppPairingResponse[]) => {
+        let call = 0;
+        return apiHttp.get("/api/apps/{slug}/channels/{channelId}/whatsapp/pairing", ({ response }) =>
+            response(200).json(responses[Math.min(call++, responses.length - 1)]),
+        );
+    },
+    pairingRestart: (pairing: WhatsAppPairingResponse = sampleWhatsAppPairing) =>
+        apiHttp.post("/api/apps/{slug}/channels/{channelId}/whatsapp/pairing/restart", ({ response }) =>
+            response(200).json(pairing),
+        ),
+};
+
 // Realistic, URL-safe channel ids (provisioning mints a 32-hex id); the web
 // id is shared with the embed-links mocks so the channel detail route resolves.
 export const SAMPLE_CHANNEL_ID = "4a1f9c2b7d8e4f6a9b0c1d2e3f405162";
 export const SAMPLE_TELEGRAM_CHANNEL_ID = "tlg_2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e";
+export const SAMPLE_WHATSAPP_CHANNEL_ID = "7f3e5a1c9b2d4e6f8a0b1c2d3e4f5061";
 
 export const sampleChannels: ChannelSummaryResponse[] = [
     {
@@ -59,5 +86,48 @@ export const sampleChannels: ChannelSummaryResponse[] = [
             },
             messages: null,
         },
+    },
+    {
+        channelId: SAMPLE_WHATSAPP_CHANNEL_ID,
+        type: "WhatsAppPersonal",
+        agentId: "agents/faq",
+        displayName: "QA test phone",
+        enabled: true,
+        createdAt: "2026-07-21T10:00:00Z",
+    },
+];
+
+// A realistic multi-segment linked-device payload shape (content is arbitrary).
+export const sampleWhatsAppPairing: WhatsAppPairingResponse = {
+    state: "Pairing",
+    qr: "2@AbCdEfGhIjKlMnOpQrStUvWxYz0123456789+/=,ABCDEFabcdef0123456789,XyZ=",
+    qrExpiresAt: "2026-07-21T10:01:00Z",
+    phoneNumber: null,
+    lastError: null,
+};
+
+export const sampleWhatsAppConnected: WhatsAppPairingResponse = {
+    state: "Connected",
+    qr: null,
+    qrExpiresAt: null,
+    phoneNumber: "+48601234567",
+    lastError: null,
+};
+
+export const sampleWhatsAppLoggedOut: WhatsAppPairingResponse = {
+    state: "LoggedOut",
+    qr: null,
+    qrExpiresAt: null,
+    phoneNumber: null,
+    lastError: "the phone unlinked this device",
+};
+
+export const sampleWhatsAppHealth: WhatsAppChannelHealthResponse[] = [
+    {
+        channelId: SAMPLE_WHATSAPP_CHANNEL_ID,
+        phoneNumber: null,
+        enabled: true,
+        state: "Pairing",
+        lastError: null,
     },
 ];
