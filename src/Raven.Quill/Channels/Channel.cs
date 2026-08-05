@@ -4,6 +4,11 @@ internal sealed class Channel
 {
     internal const string IdPrefix = "channels/";
 
+    internal static string StripIdPrefix(string? id) =>
+        id is not null && id.StartsWith(IdPrefix, StringComparison.Ordinal)
+            ? id[IdPrefix.Length..]
+            : id ?? "";
+
     public string? Id { get; set; }
 
     public ChannelType Type { get; set; }

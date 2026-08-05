@@ -5,6 +5,7 @@ using Raven.Quill.Agents;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints.Helpers;
+using Raven.Quill.Raven;
 using Raven.Quill.Telegram;
 using Raven.Quill.Wizard;
 using Telegram.Bot;
@@ -165,7 +166,7 @@ public static class ChannelsEndpoints
 
         using var session = store.OpenAsyncSession(app.Database);
 
-        var existing = await LoadAllChannelsAsync(session, ct);
+        var existing = await session.LoadAllStartingWithAsync<Channel>(Channel.IdPrefix, ct);
         if (existing.Any(c => c.Type == ChannelType.Telegram && c.Telegram?.BotId == bot.Id))
             return Results.BadRequest(new ApiErrorResponse($"bot @{bot.Username} is already connected in this app"));
 
@@ -265,7 +266,7 @@ public static class ChannelsEndpoints
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
         using var session = store.OpenAsyncSession(app.Database);
-        var channels = await LoadAllChannelsAsync(session, ct);
+        var channels = await session.LoadAllStartingWithAsync<Channel>(Channel.IdPrefix, ct);
 
         var items = channels
             .OrderByDescending(c => c.CreatedAt)
@@ -372,7 +373,7 @@ public static class ChannelsEndpoints
             if (bot is null)
                 return Results.BadRequest(new ApiErrorResponse(botError!));
 
-            var existing = await LoadAllChannelsAsync(session, ct);
+            var existing = await session.LoadAllStartingWithAsync<Channel>(Channel.IdPrefix, ct);
             if (existing.Any(c => c.Id != channel.Id && c.Type == ChannelType.Telegram && c.Telegram?.BotId == bot.Id))
                 return Results.BadRequest(new ApiErrorResponse($"bot @{bot.Username} is already connected in this app"));
 
@@ -471,24 +472,6 @@ public static class ChannelsEndpoints
     }
 
     private static IResult DeleteWhatsAppChannelAsync() => NotImplementedChannel(ChannelType.WhatsApp);
-
-
-    // LoadStartingWith: immediately consistent, no post-create index wait; page fully
-    private static async Task<List<Channel>> LoadAllChannelsAsync(IAsyncDocumentSession session, CancellationToken ct)
-    {
-        const int pageSize = 1024;
-        var channels = new List<Channel>();
-        for (var start = 0;; start += pageSize)
-        {
-            var page = (await session.Advanced.LoadStartingWithAsync<Channel>(
-                Channel.IdPrefix, start: start, pageSize: pageSize, token: ct)).ToArray();
-            channels.AddRange(page);
-            if (page.Length < pageSize)
-                break;
-        }
-
-        return channels;
-    }
 
     private static IResult NotImplementedChannel(ChannelType type) =>
         Results.Problem(
