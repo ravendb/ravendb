@@ -654,6 +654,16 @@ namespace Voron.Impl.Journal
         {
             for (; _readAt4Kb < _journalPagerNumberOfAllocated4Kb; _readAt4Kb++)
             {
+                if (TryPeekSkippableForeignTransaction(ref txState, out TransactionHeader* foreign))
+                {
+                    // another environment's transaction in a shared journal - skip it without validating
+                    // its hash, so that its corruption faults only the owning environment (RavenDB-27278)
+                    RecoveredJournalIds.Add(foreign->JournalId);
+                    _next4Kb = _readAt4Kb + GetTransactionSizeIn4Kb(foreign);
+                    _readAt4Kb += GetTransactionSizeIn4Kb(foreign) - 1;
+                    continue;
+                }
+
                 if (TryValidateTransaction(options, ref txState, out current) is false)
                 {
                     Debug.Assert(current != null, "current != null");
@@ -687,8 +697,7 @@ namespace Voron.Impl.Journal
                     continue;
                 }
                 
-                if ((current->JournalId == JournalId) is false &&
-                    current->JournalId != Guid.Empty) // this may be legacy
+                if (BelongsToAnotherEnvironment(current))
                 {
                     // not our env, skip processing it
                     _readAt4Kb += GetTransactionSizeIn4Kb(current) - 1;
@@ -714,6 +723,52 @@ namespace Voron.Impl.Journal
             return false;
         }
 
+        private bool TryPeekSkippableForeignTransaction(ref Pager.PagerTransactionState txState, out TransactionHeader* current)
+        {
+            current = GetTransactionHeaderAt(_readAt4Kb, ref txState);
+
+            if (current->HeaderMarker != Constants.TransactionHeaderMarker)
+                return false;
+
+            if (JournalId == Guid.Empty) // we don't know our own id yet - the validation path adopts it
+                return false;
+
+            if (BelongsToAnotherEnvironment(current) is false)
+                return false;
+
+            // link records are processed by the root and routed by Flags before the owner filter, so
+            // although they carry another environment's id they must stay on the validation path
+            if (current->JournalId == WriteAheadJournal.LinkedJournalsRecord.LinkedJournalId ||
+                current->Flags == TransactionPersistenceModeFlags.LinkedJournalsRecord)
+                return false;
+
+            long size = current->CompressedSize != -1 ? current->CompressedSize : current->UncompressedSize;
+            if (size < 0)
+                return false;
+
+            long transactionEndPosition = _readAt4Kb * (4 * Constants.Size.Kilobyte) + sizeof(TransactionHeader) + size;
+            if (transactionEndPosition > _journalPagerState.TotalAllocatedSize)
+                return false;
+
+            // the header is not covered by the transaction hash, so the size above cannot be trusted blindly:
+            // the skip is taken only when it lands exactly on a following transaction header. Anything else
+            // (torn tail, corrupted size) goes to the validation path and gets reported exactly as it was
+            // before skipping existed - a corrupted size must not silently swallow the journal tail
+            long target4Kb = _readAt4Kb + GetTransactionSizeIn4Kb(current);
+            if (target4Kb >= _journalPagerNumberOfAllocated4Kb)
+                return false;
+
+            return GetTransactionHeaderAt(target4Kb, ref txState)->HeaderMarker == Constants.TransactionHeaderMarker;
+        }
+
+        private TransactionHeader* GetTransactionHeaderAt(long position4Kb, ref Pager.PagerTransactionState txState)
+        {
+            const int pageTo4KbRatio = Constants.Storage.PageSize / (4 * Constants.Size.Kilobyte);
+            long pageNumber = position4Kb / pageTo4KbRatio;
+            long positionInsidePage = (position4Kb % pageTo4KbRatio) * (4 * Constants.Size.Kilobyte);
+
+            return (TransactionHeader*)(_journalPager.AcquirePagePointer(_journalPagerState, ref txState, pageNumber) + positionInsidePage);
+        }
 
         private void ProcessLinkedJournalsRecord(TransactionHeader* current)
         {
@@ -839,6 +894,14 @@ namespace Voron.Impl.Journal
                    IsAlreadySyncTransaction(transactionId);
         }
         
+        // a transaction that carries some other environment's id (shared journals). No id at all
+        // (Guid.Empty) means a legacy (pre 8.0) transaction - those are processed by every environment
+        private bool BelongsToAnotherEnvironment(TransactionHeader* current)
+        {
+            return current->JournalId != JournalId &&
+                   current->JournalId != Guid.Empty;
+        }
+
         // a transaction left over from a previous use of a recycled journal file (< 8.0 feature):
         // a legacy tx (no JournalId) whose id is older than what we have already read
         private bool Legacy_IsOldTransactionFromRecycledJournal(TransactionHeader* currentTx)
