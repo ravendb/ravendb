@@ -1,8 +1,10 @@
 using System.Net;
+using System.Net.Http.Json;
 using QuillTests.E2E.Fixtures;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
+using Raven.Quill.WhatsApp;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -193,6 +195,169 @@ public class WhatsAppChannelEndpointsTests(ITestOutputHelper output, QuillWhatsA
 
         Bridge.Down = false;
         await app.DeleteChannelAsync(created.ChannelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Pairing_returns_the_current_qr_while_pairing()
+    {
+        await using var app = await NewAppAsync();
+        var agentId = await SeedAgentAsync(app);
+        var created = await app.ProvisionChannelAsync(
+            new ProvisionChannelRequest(ChannelType.WhatsAppPersonal, agentId, null));
+
+        var pairing = await Host.Client.GetFromJsonAsync<WhatsAppPairingResponse>(
+            QuillRoutes.WhatsAppPairing(app.Slug, created.ChannelId), QuillHttp.Json);
+
+        Assert.NotNull(pairing);
+        Assert.Equal(WhatsAppSessionState.Pairing, pairing.State);
+        Assert.StartsWith("QR-", pairing.Qr);
+        Assert.NotNull(pairing.QrExpiresAt);
+        Assert.Null(pairing.PhoneNumber);
+
+        await app.DeleteChannelAsync(created.ChannelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Pairing_lazy_starts_a_session_the_bridge_lost()
+    {
+        await using var app = await NewAppAsync();
+        var agentId = await SeedAgentAsync(app);
+        var created = await app.ProvisionChannelAsync(
+            new ProvisionChannelRequest(ChannelType.WhatsAppPersonal, agentId, null));
+
+        Bridge.RemoveSession(app.Slug, created.ChannelId);
+
+        var pairing = await Host.Client.GetFromJsonAsync<WhatsAppPairingResponse>(
+            QuillRoutes.WhatsAppPairing(app.Slug, created.ChannelId), QuillHttp.Json);
+
+        Assert.NotNull(pairing);
+        Assert.Equal(WhatsAppSessionState.Pairing, pairing.State);
+        Assert.Equal(2, Bridge.StartedSessions.Count(s => s == (app.Slug, created.ChannelId)));
+
+        await app.DeleteChannelAsync(created.ChannelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Pairing_persists_the_phone_number_and_clears_it_on_logout()
+    {
+        await using var app = await NewAppAsync();
+        var agentId = await SeedAgentAsync(app);
+        var created = await app.ProvisionChannelAsync(
+            new ProvisionChannelRequest(ChannelType.WhatsAppPersonal, agentId, null));
+
+        Bridge.SetStatus(app.Slug, created.ChannelId, "connected", phoneNumber: "+48111222333");
+        var connected = await Host.Client.GetFromJsonAsync<WhatsAppPairingResponse>(
+            QuillRoutes.WhatsAppPairing(app.Slug, created.ChannelId), QuillHttp.Json);
+        Assert.Equal(WhatsAppSessionState.Connected, connected!.State);
+        Assert.Equal("+48111222333", connected.PhoneNumber);
+
+        var summary = Assert.Single(await app.GetChannelsAsync(), c => c.ChannelId == created.ChannelId);
+        Assert.Equal("+48111222333", summary.PhoneNumber);
+        using (var session = app.Store.OpenAsyncSession(app.Slug))
+        {
+            var channel = await session.LoadAsync<Channel>(Channel.IdPrefix + created.ChannelId);
+            Assert.NotNull(channel.WhatsApp!.LinkedAt);
+        }
+
+        Bridge.SetStatus(app.Slug, created.ChannelId, "loggedOut", lastError: "the phone unlinked this device");
+        var loggedOut = await Host.Client.GetFromJsonAsync<WhatsAppPairingResponse>(
+            QuillRoutes.WhatsAppPairing(app.Slug, created.ChannelId), QuillHttp.Json);
+        Assert.Equal(WhatsAppSessionState.LoggedOut, loggedOut!.State);
+
+        summary = Assert.Single(await app.GetChannelsAsync(), c => c.ChannelId == created.ChannelId);
+        Assert.Null(summary.PhoneNumber);
+
+        await app.DeleteChannelAsync(created.ChannelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Pairing_404s_for_unknown_and_non_whatsapp_channels()
+    {
+        await using var app = await NewAppAsync();
+        var agentId = await SeedAgentAsync(app);
+        var iframe = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, agentId, []));
+
+        var unknown = await Host.Client.GetAsync(QuillRoutes.WhatsAppPairing(app.Slug, Guid.NewGuid().ToString("N")));
+        Assert.Equal(HttpStatusCode.NotFound, unknown.StatusCode);
+
+        var wrongType = await Host.Client.GetAsync(QuillRoutes.WhatsAppPairing(app.Slug, iframe.ChannelId));
+        Assert.Equal(HttpStatusCode.NotFound, wrongType.StatusCode);
+
+        await app.DeleteChannelAsync(iframe.ChannelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Pairing_502s_when_the_bridge_is_down()
+    {
+        await using var app = await NewAppAsync();
+        var agentId = await SeedAgentAsync(app);
+        var created = await app.ProvisionChannelAsync(
+            new ProvisionChannelRequest(ChannelType.WhatsAppPersonal, agentId, null));
+
+        Bridge.Down = true;
+        var response = await Host.Client.GetAsync(QuillRoutes.WhatsAppPairing(app.Slug, created.ChannelId));
+        Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
+
+        Bridge.Down = false;
+        await app.DeleteChannelAsync(created.ChannelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Restart_issues_a_fresh_qr()
+    {
+        await using var app = await NewAppAsync();
+        var agentId = await SeedAgentAsync(app);
+        var created = await app.ProvisionChannelAsync(
+            new ProvisionChannelRequest(ChannelType.WhatsAppPersonal, agentId, null));
+        Bridge.SetStatus(app.Slug, created.ChannelId, "loggedOut");
+
+        var response = await Host.Client.PostAsync(
+            QuillRoutes.WhatsAppPairingRestart(app.Slug, created.ChannelId), content: null);
+        response.EnsureSuccessStatusCode();
+        var pairing = await response.Content.ReadFromJsonAsync<WhatsAppPairingResponse>(QuillHttp.Json);
+
+        Assert.Contains((app.Slug, created.ChannelId), Bridge.RestartedSessions);
+        Assert.Equal(WhatsAppSessionState.Pairing, pairing!.State);
+        Assert.StartsWith("QR-", pairing.Qr);
+
+        await app.DeleteChannelAsync(created.ChannelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Health_reports_each_whatsapp_channel()
+    {
+        await using var app = await NewAppAsync();
+        var agentId = await SeedAgentAsync(app);
+        var pairing = await app.ProvisionChannelAsync(
+            new ProvisionChannelRequest(ChannelType.WhatsAppPersonal, agentId, null, DisplayName: "Pairing one"));
+        var connected = await app.ProvisionChannelAsync(
+            new ProvisionChannelRequest(ChannelType.WhatsAppPersonal, agentId, null, DisplayName: "Connected one"));
+        Bridge.SetStatus(app.Slug, connected.ChannelId, "connected", phoneNumber: "+48111222333");
+        await app.UpdateChannelAsync(pairing.ChannelId, new UpdateChannelRequest(null, null, false));
+
+        var health = await Host.Client.GetFromJsonAsync<WhatsAppChannelHealthResponse[]>(
+            QuillRoutes.WhatsAppHealth(app.Slug), QuillHttp.Json);
+
+        Assert.NotNull(health);
+        Assert.Equal(2, health.Length);
+
+        var pairingRow = Assert.Single(health, h => h.ChannelId == pairing.ChannelId);
+        Assert.Equal(WhatsAppSessionState.Pairing, pairingRow.State);
+        Assert.False(pairingRow.Enabled);
+
+        var connectedRow = Assert.Single(health, h => h.ChannelId == connected.ChannelId);
+        Assert.Equal(WhatsAppSessionState.Connected, connectedRow.State);
+        Assert.Equal("+48111222333", connectedRow.PhoneNumber);
+
+        Bridge.Down = true;
+        var degraded = await Host.Client.GetFromJsonAsync<WhatsAppChannelHealthResponse[]>(
+            QuillRoutes.WhatsAppHealth(app.Slug), QuillHttp.Json);
+        Assert.All(degraded!, h => Assert.Null(h.State));
+        Assert.All(degraded!, h => Assert.Equal("whatsapp bridge is unavailable", h.LastError));
+
+        Bridge.Down = false;
+        await app.DeleteChannelAsync(pairing.ChannelId);
+        await app.DeleteChannelAsync(connected.ChannelId);
     }
 
     private static async Task<string> SeedAgentAsync(QuillApp app, params AiAgentParameter[] parameters)
