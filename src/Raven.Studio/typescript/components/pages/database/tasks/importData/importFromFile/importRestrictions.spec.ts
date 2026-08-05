@@ -1,4 +1,9 @@
-import { connectionStringRules, databaseSettingRules, ongoingTaskRules, resolveRestriction } from "./importRestrictions";
+import {
+    connectionStringRules,
+    databaseSettingRules,
+    ongoingTaskRules,
+    resolveRestriction,
+} from "./importRestrictions";
 
 const fullLicense = {
     HasQueueEtl: true,
