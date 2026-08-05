@@ -1,6 +1,13 @@
 import { connectionStringRules, ongoingTaskRules, resolveRestriction } from "./importRestrictions";
 
-const fullLicense = { HasQueueEtl: true, HasQueueSink: true, HasGenAi: true, HasAiAgent: true } as LicenseStatus;
+const fullLicense = {
+    HasQueueEtl: true,
+    HasQueueSink: true,
+    HasGenAi: true,
+    HasAiAgent: true,
+    HasRavenEtl: true,
+    HasPullReplicationAsHub: true,
+} as LicenseStatus;
 
 const context = (overrides?: {
     licenseStatus?: Partial<LicenseStatus>;
