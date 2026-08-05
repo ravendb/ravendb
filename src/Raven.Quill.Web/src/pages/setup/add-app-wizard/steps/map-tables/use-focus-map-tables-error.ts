@@ -27,6 +27,14 @@ export function useFocusMapTablesError() {
         const target = findFirstInvalidTable(getValues("mapTables.tables") ?? [], getError);
 
         if (!target) {
+            // No table to focus, so the error is list-level (e.g. every table disabled). The raw
+            // view renders no alert for it, so the toast is the only visible reaction there.
+            const listMessage = findFirstErrorMessage(getError("mapTables.tables"));
+
+            if (listMessage) {
+                toast.error(listMessage);
+            }
+
             return;
         }
 

@@ -4,11 +4,16 @@ import type {
     DiscoverTableResponse,
 } from "@/api/generated/server-api";
 import {
+    collectMappedSourceTableKeys,
+    collectMappedSourceTables,
+    createEmptyEmbeddedTable,
+    createEmptyRootTable,
     makeUniquePropertyName,
     propertyNameFromJoinColumn,
     scaffoldRootTable,
     toTakenPropertyNames,
 } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
+import type { FormEmbeddedTable, FormRootTable } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-types";
 import { describe, expect, it } from "vitest";
 
 function table(overrides: Partial<DiscoverTableResponse> = {}): DiscoverTableResponse {
@@ -41,6 +46,14 @@ function foreignKey(columns: string[], referencedTable: string): DiscoverForeign
         referencedTable,
         referencedColumns: ["Id"],
     };
+}
+
+function rootTable(name: string, overrides: Partial<FormRootTable> = {}): FormRootTable {
+    return { ...createEmptyRootTable(), sourceTableSchema: "public", sourceTableName: name, ...overrides };
+}
+
+function embeddedTable(name: string, overrides: Partial<FormEmbeddedTable> = {}): FormEmbeddedTable {
+    return { ...createEmptyEmbeddedTable(), sourceTableSchema: "public", sourceTableName: name, ...overrides };
 }
 
 describe("propertyNameFromJoinColumn", () => {
@@ -136,6 +149,80 @@ describe("makeUniquePropertyName", () => {
 
     it("compares case-insensitively, like the server", () => {
         expect(makeUniquePropertyName("Language", toTakenPropertyNames(["LANGUAGE"]))).toBe("Language2");
+    });
+});
+
+describe("collectMappedSourceTables", () => {
+    const collectNames = (tables: FormRootTable[]) =>
+        collectMappedSourceTables(tables).map((mapped) => mapped.sourceTableName);
+
+    it("collects root tables and nested embedded tables", () => {
+        const tables = [
+            rootTable("Customer", {
+                embeddedTables: [embeddedTable("Address", { embeddedTables: [embeddedTable("Country")] })],
+            }),
+            rootTable("Order"),
+        ];
+
+        expect(collectNames(tables)).toEqual(["Customer", "Address", "Country", "Order"]);
+    });
+
+    it("skips linked tables - a link needs its own root mapping to be captured", () => {
+        const tables = [
+            rootTable("Order", {
+                linkedTables: [
+                    {
+                        sourceTableSchema: "public",
+                        sourceTableName: "Customer",
+                        propertyName: "Customer",
+                        joinColumns: [],
+                        linkedCollectionName: "Customers",
+                    },
+                ],
+            }),
+        ];
+
+        expect(collectNames(tables)).toEqual(["Order"]);
+    });
+
+    it("skips disabled roots including their embedded tables", () => {
+        const tables = [
+            rootTable("Customer", { disabled: true, embeddedTables: [embeddedTable("Address")] }),
+            rootTable("Order"),
+        ];
+
+        expect(collectNames(tables)).toEqual(["Order"]);
+    });
+
+    it("dedupes tables case-insensitively and drops unnamed ones", () => {
+        const tables = [
+            rootTable("Customer", { embeddedTables: [embeddedTable("CUSTOMER"), embeddedTable("")] }),
+            rootTable("customer"),
+        ];
+
+        expect(collectMappedSourceTables(tables)).toEqual([
+            { sourceTableSchema: "public", sourceTableName: "Customer" },
+        ]);
+    });
+
+    it("trims names and schemas, so a stray space cannot reach the server", () => {
+        const tables = [rootTable(" Order ", { sourceTableSchema: " sales " })];
+
+        expect(collectMappedSourceTables(tables)).toEqual([{ sourceTableSchema: "sales", sourceTableName: "Order" }]);
+    });
+
+    it("reports a blank schema as none, matching how the key treats it", () => {
+        const tables = [rootTable("Order", { sourceTableSchema: "  " })];
+
+        expect(collectMappedSourceTables(tables)).toEqual([{ sourceTableSchema: null, sourceTableName: "Order" }]);
+    });
+});
+
+describe("collectMappedSourceTableKeys", () => {
+    it("keeps disabled roots, so the unmapped alert does not offer to map them again", () => {
+        const tables = [rootTable("Customer", { disabled: true, embeddedTables: [embeddedTable("Address")] })];
+
+        expect([...collectMappedSourceTableKeys(tables)]).toEqual(["public::customer", "public::address"]);
     });
 });
 

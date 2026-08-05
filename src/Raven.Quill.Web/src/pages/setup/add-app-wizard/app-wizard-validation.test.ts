@@ -39,6 +39,23 @@ function parseIssues(tables: FormTable[]) {
     return result.success ? [] : result.error.issues.map((issue) => ({ ...issue, path: issue.path.join(".") }));
 }
 
+describe("tablesSchema enabled tables", () => {
+    it("rejects a mapping with every root table disabled", () => {
+        const issues = parseIssues([rootTable({ disabled: true })]);
+
+        expect(issues.map((issue) => issue.message)).toEqual(["At least one enabled table is required"]);
+    });
+
+    it("accepts a mapping as long as one root table is enabled", () => {
+        const tables = [
+            rootTable({ disabled: true }),
+            rootTable({ collectionName: "Orders", sourceTableName: "Order" }),
+        ];
+
+        expect(parseIssues(tables)).toEqual([]);
+    });
+});
+
 describe("tablesSchema property names", () => {
     it("accepts a link whose property name does not collide", () => {
         expect(parseIssues([rootTable({ linkedTables: [linkedTable("Language")] })])).toEqual([]);

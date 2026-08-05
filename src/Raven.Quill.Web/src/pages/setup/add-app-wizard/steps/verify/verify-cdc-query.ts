@@ -1,7 +1,8 @@
-import { queryOptions } from "@tanstack/react-query";
+import { queryOptions, type QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api } from "@/api/api";
-import { toWizardStepError } from "@/components/form/wizard/wizard-step-error";
+import { toWizardStepError, WizardHandledError } from "@/components/form/wizard/wizard-step-error";
+import type { WizardProgress } from "@/components/form/wizard/form-wizard";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { getTableKey } from "@/pages/setup/add-app-wizard/discover-utils";
 
@@ -32,6 +33,30 @@ export function verifyCdcQuery({ connectKey, slug, selectedTables }: VerifyCdcIn
         staleTime: Infinity,
         retry: false,
     });
+}
+
+/**
+ * Runs the dry run a "Next" needs, or serves the pass already in the cache. Failures surface as
+ * WizardHandledError: the step renders them from the cache entry, so the wizard must not alert again.
+ */
+export async function fetchVerifyCdc(
+    queryClient: QueryClient,
+    input: VerifyCdcInput,
+    progress: WizardProgress,
+    progressLabel: string,
+): Promise<void> {
+    const query = verifyCdcQuery(input);
+
+    // A cached pass answers for these inputs on its own, so only a run that really happens is reported.
+    if (queryClient.getQueryState(query.queryKey)?.status !== "success") {
+        progress.report(progressLabel);
+    }
+
+    try {
+        await queryClient.fetchQuery(query);
+    } catch (error) {
+        throw new WizardHandledError(error);
+    }
 }
 
 async function verifyCdc(slug: string, selectedTables: SelectedTables) {

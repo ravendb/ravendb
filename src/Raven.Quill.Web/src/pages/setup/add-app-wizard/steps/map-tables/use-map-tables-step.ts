@@ -1,5 +1,10 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/api";
-import { getSourceTableLabel } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
+import {
+    collectMappedSourceTables,
+    getSourceTableLabel,
+} from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
+import { fetchVerifyCdc } from "@/pages/setup/add-app-wizard/steps/verify/verify-cdc-query";
 import { mapFormTablesToDto } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-dto";
 import { parseRawTablesToForm } from "@/pages/setup/add-app-wizard/steps/map-tables/raw-tables";
 import { useApplyMapTables } from "@/pages/setup/add-app-wizard/steps/map-tables/use-apply-map-tables";
@@ -16,6 +21,7 @@ function computeMapTablesKey(connectKey: string, tables: AppFormData["mapTables"
 }
 
 export function useMapTablesStep() {
+    const queryClient = useQueryClient();
     const { getValues, setValue } = useFormContext<AppFormData>();
     const applyMapTables = useApplyMapTables();
 
@@ -32,9 +38,25 @@ export function useMapTablesStep() {
 
         const connection = getValues("externalConnection");
         const formTables = getValues("mapTables.tables");
+
+        const mappedSourceTables = collectMappedSourceTables(formTables);
+
+        if (mappedSourceTables.length > 0) {
+            // Serves the cached pass when this table set was already verified, here or from the
+            // "Verify tables" button - or from the verify step, when the mapping covers exactly
+            // its selection.
+            await fetchVerifyCdc(
+                queryClient,
+                { connectKey: store.connectKey, slug: connection.slug, selectedTables: mappedSourceTables },
+                progress,
+                "Verifying tables...",
+            );
+        }
+
         const mapTablesKey = computeMapTablesKey(computeConnectKey(connection), formTables);
 
-        if (mapTablesKey === store.mapTablesKey) {
+        // Read again: the dry run above awaited, so the snapshot taken before it can be stale.
+        if (mapTablesKey === useSetupWizardStore.getState().mapTablesKey) {
             return;
         }
 

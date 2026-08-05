@@ -18,7 +18,7 @@ import { LockedConfigAlert } from "@/pages/setup/add-app-wizard/locked-config-al
 import { DefineSchemasSheet } from "@/pages/setup/add-app-wizard/steps/verify/define-schemas-sheet";
 import { NeedsConfigTablesTable } from "@/pages/setup/add-app-wizard/steps/verify/needs-config-tables-table";
 import { useDiscoverTablesMutation } from "@/pages/setup/add-app-wizard/steps/verify/use-discover-tables";
-import { useVerifyCdcState } from "@/pages/setup/add-app-wizard/steps/verify/use-verify-cdc-step";
+import { useVerifySchemaCdcState } from "@/pages/setup/add-app-wizard/steps/verify/use-verify-schema-cdc";
 import { VerifiedTablesTable } from "@/pages/setup/add-app-wizard/steps/verify/verified-tables-table";
 import { WizardErrorList } from "@/components/form/wizard/wizard-error-list";
 import {
@@ -35,7 +35,7 @@ export function VerifySchemaStep({ isBusy }: WizardBodyComponentProps) {
     // formState off the context does not re-render this step; only its own subscription does.
     const { errors } = useFormState({ control, name: "verifySchema.tables" });
     const tablesError = errors.verifySchema?.tables;
-    const { error: cdcError, isRunning: isVerifyCdcRunning } = useVerifyCdcState();
+    const { error: cdcError, isRunning: isVerifyCdcRunning } = useVerifySchemaCdcState();
     const discoverResult = useSetupWizardStore((state) => state.discoverResult);
     const discoverSchemas = useSetupWizardStore((state) => state.discoverSchemas);
     const isLocked = useSetupWizardStore((state) => state.configLock) === "locked";
