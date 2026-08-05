@@ -56,6 +56,21 @@ describe("tablesSchema enabled tables", () => {
     });
 });
 
+describe("tablesSchema collection names", () => {
+    it("flags every root table sharing a collection name, naming the duplicate", () => {
+        const issues = parseIssues([rootTable(), rootTable({ sourceTableName: "Order" })]);
+
+        expect(issues.map((issue) => issue.path)).toEqual(["0.collectionName", "1.collectionName"]);
+        expect(issues[0].message).toContain('"Customers"');
+    });
+
+    it("accepts root tables with distinct collection names", () => {
+        const tables = [rootTable(), rootTable({ collectionName: "Orders", sourceTableName: "Order" })];
+
+        expect(parseIssues(tables)).toEqual([]);
+    });
+});
+
 describe("tablesSchema property names", () => {
     it("accepts a link whose property name does not collide", () => {
         expect(parseIssues([rootTable({ linkedTables: [linkedTable("Language")] })])).toEqual([]);

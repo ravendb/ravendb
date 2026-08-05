@@ -24,11 +24,16 @@ export function toError(value: unknown): Error {
 
 export function toWizardStepError(errors: WizardError[] | undefined, fallbackMessage: string): WizardStepError {
     const list = errors ?? [];
-    const message = list.map((error) => error.message).join("\n") || fallbackMessage;
-    const details =
-        list
-            .map((error) => error.details)
-            .filter(Boolean)
-            .join("\n\n") || undefined;
-    return new WizardStepError(message, details);
+
+    if (list.length <= 1) {
+        return new WizardStepError(list[0]?.message || fallbackMessage, list[0]?.details || undefined);
+    }
+
+    // A long list rendered inline fills the step with red text, so the alert shows a one-line
+    // summary and the individual messages move into its details collapsible.
+    const details = list
+        .map((error) => (error.details ? `${error.message}\n${error.details}` : error.message))
+        .join("\n\n");
+
+    return new WizardStepError(`${fallbackMessage} (${list.length} errors)`, details);
 }
