@@ -78,7 +78,7 @@ public class VectorOptions
         PortableExceptions.ThrowIf<InvalidOperationException>(SourceEmbeddingType is VectorEmbeddingType.Text && Dimensions is not null, "Dimensions are set internally by the embedder.");
         PortableExceptions.ThrowIf<InvalidOperationException>(SourceEmbeddingType is VectorEmbeddingType.Int8 && DestinationEmbeddingType is not VectorEmbeddingType.Int8, "Quantization cannot be performed on already quantized vector.");
         PortableExceptions.ThrowIf<InvalidOperationException>(SourceEmbeddingType is VectorEmbeddingType.Binary && DestinationEmbeddingType is not VectorEmbeddingType.Binary, "Quantization cannot be performed on already quantized vector.");
-        PortableExceptions.ThrowIf<InvalidOperationException>(NumberOfEdges <= 0, "Number of edges has to be positive.");
+        PortableExceptions.ThrowIf<InvalidOperationException>(NumberOfEdges < 2, "Number of edges has to be at least 2.");
         PortableExceptions.ThrowIf<InvalidOperationException>(NumberOfCandidatesForIndexing <= 0, "Number of candidate nodes has to be positive.");
     }
     
