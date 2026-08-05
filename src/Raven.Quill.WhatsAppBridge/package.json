@@ -1,0 +1,26 @@
+{
+    "name": "raven-quill-whatsapp-bridge",
+    "version": "1.0.0",
+    "private": true,
+    "description": "WhatsApp linked-device bridge for the Quill appliance: hosts one Baileys session per WhatsAppPersonal channel and forwards inbound messages to the Quill web app.",
+    "type": "module",
+    "scripts": {
+        "build": "tsc",
+        "start": "node dist/index.js",
+        "typecheck": "tsc --noEmit",
+        "test": "node --import tsx --test \"test/*.test.ts\""
+    },
+    "dependencies": {
+        "@whiskeysockets/baileys": "7.0.0-rc14",
+        "fastify": "^5.11.2",
+        "pino": "^10.3.1"
+    },
+    "devDependencies": {
+        "@types/node": "^22.15.0",
+        "tsx": "^4.23.7",
+        "typescript": "^5.9.0"
+    },
+    "engines": {
+        "node": ">=22"
+    }
+}
