@@ -52,6 +52,17 @@ ENV RAVEN_QUILL_OPENAPI_SKIP_SPEC_BUILD=1
 RUN pnpm build
 
 
+# Stage 2b: build the WhatsApp bridge (pure-JS deps, so multi-arch needs no toolchains).
+FROM ${NODE_IMAGE} AS whatsapp-bridge-build
+WORKDIR /workspace/bridge
+
+COPY src/Raven.Quill.WhatsAppBridge/package.json src/Raven.Quill.WhatsAppBridge/package-lock.json ./
+RUN --mount=type=cache,target=/root/.npm,sharing=locked npm ci
+
+COPY src/Raven.Quill.WhatsAppBridge/ ./
+RUN npm run build && npm prune --omit=dev
+
+
 # Stage 3: publish the backend and overlay the Vite output into wwwroot.
 FROM ${SDK_IMAGE} AS web-build
 ARG TARGETARCH
@@ -106,6 +117,14 @@ EOF
 
 COPY --from=ravendb   /usr/lib/ravendb/server /app/ravendb
 COPY --from=web-build /publish/web            /app/web
+
+# The bridge needs only the node binary, not a full Node install; the frontend build
+# stage already pins the Node version for the whole image.
+COPY --from=whatsapp-bridge-build /usr/local/bin/node /usr/local/bin/node
+COPY --from=whatsapp-bridge-build /workspace/bridge/dist         /app/whatsapp-bridge/dist
+COPY --from=whatsapp-bridge-build /workspace/bridge/node_modules /app/whatsapp-bridge/node_modules
+COPY --from=whatsapp-bridge-build /workspace/bridge/package.json /app/whatsapp-bridge/
+
 COPY docker/quill/ravendb-settings.json /app/ravendb/settings.json
 COPY docker/quill/nginx.conf /etc/nginx/nginx.conf
 
@@ -136,6 +155,9 @@ ENV S6_VERBOSITY=0 \
     RAVEN_QUILL_RAVENDB_S6_SERVICE=/run/service/01-ravendb \
     RAVEN_QUILL_RAVENDB_INTERNAL_PORT=8443 \
     RAVEN_QUILL_RAVENDB_PROXY_PORT=8447 \
+    RAVEN_QUILL_WHATSAPP_BRIDGE_URL=http://127.0.0.1:8448 \
+    RAVEN_QUILL_WHATSAPP_BRIDGE_LISTEN=127.0.0.1:8448 \
+    RAVEN_QUILL_WHATSAPP_DATA_DIR=/var/lib/quill/whatsapp \
     RAVEN_DataDir=/var/lib/quill/ravendb \
     RAVEN_Logs_Path=/var/lib/quill/logs/ravendb-server \
     RAVEN_QUILL_STARTUP_GRACE_SECONDS=180

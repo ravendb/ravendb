@@ -4,8 +4,8 @@ End-to-end: stand up the appliance in Docker, point it at a Northwind PostgreSQL
 provision an AI agent, and chat with it through an embeddable iframe.
 
 The appliance is a single Docker image bundling an **nginx** TLS/SNI front (`:443`) + **RavenDB** (secure) +
-the **appliance web app** (`:5000`), supervised by s6. The canonical way to run it locally is
-`docker/quill/compose/docker-compose.yml`.
+the **appliance web app** (`:5000`) + the **WhatsApp bridge** (loopback `:8447`), supervised by s6. The
+canonical way to run it locally is `docker/quill/compose/docker-compose.yml`.
 
 ```
 browser ─HTTPS :443─> nginx (routes by SNI, one wildcard cert)
@@ -14,7 +14,17 @@ browser ─HTTPS :443─> nginx (routes by SNI, one wildcard cert)
                          └─ db.* / a.*          ─(TLS passthrough, mTLS)─> RavenDB (in-container, secure)
 appliance web ──> RavenDB ──CDC──> PostgreSQL (Northwind) ── mirrors ──> RavenDB collections
 agent turn ──> appliance ──> RavenDB AI ──> OpenAI / Ollama (LLM)
+whatsapp phone <──WhatsApp servers──> bridge (04-whatsapp, Baileys) <──loopback──> appliance web
 ```
+
+WhatsApp Personal channels are served by the `04-whatsapp` s6 service (`src/Raven.Quill.WhatsAppBridge`):
+one linked-device session per channel, credentials under `/var/lib/quill/whatsapp/sessions/`, authenticated
+against the web app with a token the web app mints at `/var/lib/quill/whatsapp/bridge-token`. Those session
+credential files are equivalent to the linked device itself (same trust model as the RavenDB certificate on
+the volume), and restoring an old volume backup resurrects the link. Relevant env keys (defaults baked into
+the image): `RAVEN_QUILL_WHATSAPP_BRIDGE_URL`, `RAVEN_QUILL_WHATSAPP_DATA_DIR`; the bridge additionally reads
+`RAVEN_QUILL_WHATSAPP_BRIDGE_LISTEN` and `RAVEN_QUILL_WEB_INTERNAL_URL`. A dead bridge does not fail the
+container health check — web-widget and Telegram channels keep working while s6 restarts it.
 
 ---
 
