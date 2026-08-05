@@ -4,6 +4,10 @@ namespace Raven.Quill.Agents;
 
 public static class AgentParameters
 {
+    /// Channel integrations bind this parameter per message from the sender identity
+    /// instead of requiring the operator to supply it at provision time.
+    public const string UserIdentifierParameterName = "UserIdentifier";
+
     public static bool TryResolve(
         AiAgentConfiguration config,
         IReadOnlyDictionary<string, string>? supplied,
