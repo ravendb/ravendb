@@ -131,6 +131,7 @@ builder.Services.AddSingleton<ITelegramBotClientFactory, TelegramBotClientFactor
 builder.Services.AddSingleton<TelegramChannelManager>();
 builder.Services.AddSingleton<ITelegramChannelManager>(sp => sp.GetRequiredService<TelegramChannelManager>());
 builder.Services.AddSingleton<IWhatsAppBridgeSecret, WhatsAppBridgeSecret>();
+builder.Services.AddSingleton<WhatsAppInboundProcessor>();
 builder.Services.AddHttpClient<IWhatsAppBridgeClient, WhatsAppBridgeClient>(static (sp, http) =>
 {
     var opts = sp.GetRequiredService<IOptions<ApplianceOptions>>().Value;
@@ -281,6 +282,7 @@ BootstrapEndpoints.Map(app);
 AuthEndpoints.Map(app);
 AppsEndpoints.Map(app);
 ChannelsEndpoints.Map(app);
+WhatsAppEndpoints.Map(app);
 IFrameCustomizationEndpoints.Map(app);
 EmbedLinksEndpoints.Map(app);
 AiConnectionStringsEndpoints.Map(app);
