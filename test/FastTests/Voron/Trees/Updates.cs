@@ -161,6 +161,68 @@ namespace FastTests.Voron.Trees
             }
         }
 
-     
+        [RavenFact(RavenTestCategory.Voron)]
+        public void OverwriteThatShrinksOverflowValueReadsBackInSameTransaction()
+        {
+            var value1 = new byte[33_000];
+            var value2 = new byte[20_000];
+            new Random(1).NextBytes(value1);
+            new Random(2).NextBytes(value2);
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var tree = tx.CreateTree("t");
+                tree.Add("key", value1);
+                tree.Add("key", value2);
+
+                var read = tree.Read("key");
+                Assert.Equal(value2.Length, read.Reader.Length);
+
+                var actual = new byte[value2.Length];
+                read.Reader.Read(actual, 0, actual.Length);
+                Assert.Equal(value2, actual);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Voron)]
+        public void ThirdOverwriteDoesNotFreeNeighboursPages()
+        {
+            var v1 = new byte[33_000];
+            var v2 = new byte[20_000];
+            var v3 = new byte[10_000];
+            var n = new byte[10_000];
+            new Random(1).NextBytes(v1);
+            new Random(2).NextBytes(v2);
+            new Random(3).NextBytes(v3);
+            new Random(4).NextBytes(n);
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var tree = tx.CreateTree("t");
+                tree.Add("K", v1);
+                tree.Add("K", v2); // shrink frees pages the next key can claim
+                tree.Add("N", n);
+                tree.Add("K", v3); // a stale overflow header here would free N's pages
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var tree = tx.ReadTree("t");
+
+                var readN = tree.Read("N");
+                Assert.Equal(n.Length, readN.Reader.Length);
+                var actualN = new byte[n.Length];
+                readN.Reader.Read(actualN, 0, actualN.Length);
+                Assert.Equal(n, actualN);
+
+                var readK = tree.Read("K");
+                Assert.Equal(v3.Length, readK.Reader.Length);
+                var actualK = new byte[v3.Length];
+                readK.Reader.Read(actualK, 0, actualK.Length);
+                Assert.Equal(v3, actualK);
+            }
+        }
     }
 }
