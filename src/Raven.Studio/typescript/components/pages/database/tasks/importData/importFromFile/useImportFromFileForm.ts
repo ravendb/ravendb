@@ -85,6 +85,11 @@ export function useImportFromFileForm() {
         }
 
         const baseDefaults = getDefaultFormData(isAdminAccessOrAbove);
+        const hasNewRestriction =
+            [...current.settings].some((key) => !prev.settings.has(key)) ||
+            [...current.tasks].some((key) => !prev.tasks.has(key)) ||
+            [...current.connectionStrings].some((key) => !prev.connectionStrings.has(key)) ||
+            [...current.toggles].some((key) => !prev.toggles.has(key));
         current.settings.forEach((settingKey) => {
             if (!prev.settings.has(settingKey)) {
                 setValue(`configuration.databaseSettings.${settingKey}`, false);
@@ -131,7 +136,10 @@ export function useImportFromFileForm() {
 
         // Newly gated rows sit inside the "Customize" panels, so expand them the same way the
         // mount-time defaults do - otherwise the rows switch off behind a collapsed panel.
-        if (hasAnyRestriction) {
+        // Gated on an actual diff: the license status object gets a fresh identity on unrelated
+        // store updates (e.g. cluster topology notifications), and re-applying the expansion
+        // unconditionally would silently revert the user's customize choices.
+        if (hasNewRestriction) {
             setValue("configuration.isCustomizeOngoingTasks", true);
             setValue("configuration.isImportAllSettings", false);
         }
@@ -140,7 +148,6 @@ export function useImportFromFileForm() {
         restrictedOngoingTaskKeys,
         restrictedConnectionStringKeys,
         restrictedDocumentToggleKeys,
-        hasAnyRestriction,
         isAdminAccessOrAbove,
         setValue,
     ]);

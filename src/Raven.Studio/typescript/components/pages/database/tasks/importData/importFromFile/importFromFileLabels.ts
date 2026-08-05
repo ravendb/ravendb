@@ -1,4 +1,9 @@
-import { ConnectionStringKey, DatabaseSettingKey, OngoingTaskKey } from "../importFromFileValidation";
+import { ConnectionStringKey, DatabaseSettingKey, OngoingTaskKey } from "./importFromFileValidation";
+
+/**
+ * Single source for the human-readable names of every import entry - used by the customize
+ * switch rows and by the restriction rules (badges, tooltips), so the two can never drift apart.
+ */
 
 export const databaseSettingLabels: Record<DatabaseSettingKey, string> = {
     settings: "Settings",
@@ -24,7 +29,7 @@ export const ongoingTaskLabels: Record<OngoingTaskKey, string> = {
     snowflakeEtls: "Snowflake ETLs",
     olapEtls: "OLAP ETLs",
     elasticSearchEtls: "Elasticsearch ETLs",
-    queueEtls: "Queue ETLs (Kafka, RabbitMQ, Azure Queue Storage)",
+    queueEtls: "Queue ETLs (Kafka, RabbitMQ, Azure Queue Storage, Amazon SQS)",
     hubReplications: "Replication Hubs",
     sinkReplications: "Replication Sinks",
     embeddingsGeneration: "Embeddings Generation",
@@ -40,6 +45,6 @@ export const connectionStringLabels: Record<ConnectionStringKey, string> = {
     snowflakeConnectionStrings: "Snowflake Connection Strings",
     olapConnectionStrings: "OLAP Connection Strings",
     elasticSearchConnectionStrings: "Elasticsearch Connection Strings",
-    queueConnectionStrings: "Queue Connection Strings (Kafka, RabbitMQ, Azure Queue Storage)",
+    queueConnectionStrings: "Queue Connection Strings (Kafka, RabbitMQ, Azure Queue Storage, Amazon SQS)",
     aiConnectionStrings: "AI Connection Strings",
 };

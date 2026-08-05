@@ -1,5 +1,6 @@
 import { LicenseBadgeText } from "components/common/LicenseRestrictedBadge";
 import { ConnectionStringKey, DatabaseSettingKey, OngoingTaskKey } from "./importFromFileValidation";
+import { connectionStringLabels, databaseSettingLabels, ongoingTaskLabels } from "./importFromFileLabels";
 import { DocumentToggleKey } from "components/pages/database/tasks/importData/importFromFile/useImportRestrictions";
 
 type LicenseStatusKey = keyof LicenseStatus;
@@ -55,28 +56,32 @@ export const documentToggleRules: Partial<Record<DocumentToggleKey, ImportRestri
 
 export const databaseSettingRules: Partial<Record<DatabaseSettingKey, ImportRestrictionRule>> = {
     documentsCompression: {
-        label: "Documents Compression",
+        label: databaseSettingLabels.documentsCompression,
         licenseFlags: ["HasDocumentsCompression"],
         licenseRequired: "Enterprise",
     },
-    dataArchival: { label: "Data Archival", licenseFlags: ["HasDataArchival"], licenseRequired: "Enterprise" },
+    dataArchival: {
+        label: databaseSettingLabels.dataArchival,
+        licenseFlags: ["HasDataArchival"],
+        licenseRequired: "Enterprise",
+    },
     timeSeries: {
-        label: "Time Series Configuration",
+        label: databaseSettingLabels.timeSeries,
         licenseFlags: ["HasTimeSeriesRollupsAndRetention"],
         licenseRequired: "Professional +",
     },
     postgreSqlIntegration: {
-        label: "PostgreSQL Integration",
+        label: databaseSettingLabels.postgreSqlIntegration,
         licenseFlags: ["HasPostgreSqlIntegration"],
         licenseRequired: "Enterprise",
     },
     client: {
-        label: "Client Configuration",
+        label: databaseSettingLabels.client,
         licenseFlags: ["HasClientConfiguration"],
         licenseRequired: "Professional +",
     },
     schemaValidation: {
-        label: "Document Schema",
+        label: databaseSettingLabels.schemaValidation,
         licenseFlags: ["HasSchemaValidation"],
         licenseRequired: "Professional +",
     },
@@ -84,101 +89,100 @@ export const databaseSettingRules: Partial<Record<DatabaseSettingKey, ImportRest
 
 export const ongoingTaskRules: Partial<Record<OngoingTaskKey, ImportRestrictionRule>> = {
     periodicBackups: {
-        label: "Periodic Backups",
+        label: ongoingTaskLabels.periodicBackups,
         licenseFlags: ["HasPeriodicBackup"],
         licenseRequired: "Professional +",
         isShardingSupported: true,
         accessRequired: "DatabaseAdmin",
     },
     externalReplications: {
-        label: "External Replications",
+        label: ongoingTaskLabels.externalReplications,
         licenseFlags: ["HasExternalReplication"],
         licenseRequired: "Professional +",
         isShardingSupported: true,
         accessRequired: "DatabaseAdmin",
     },
     ravenEtls: {
-        label: "RavenDB ETLs",
+        label: ongoingTaskLabels.ravenEtls,
         licenseFlags: ["HasRavenEtl"],
         licenseRequired: "Professional +",
         isShardingSupported: true,
         accessRequired: "DatabaseAdmin",
     },
     sqlEtls: {
-        label: "SQL ETLs",
+        label: ongoingTaskLabels.sqlEtls,
         licenseFlags: ["HasSqlEtl"],
         licenseRequired: "Professional +",
         isShardingSupported: true,
         accessRequired: "DatabaseAdmin",
     },
     snowflakeEtls: {
-        label: "Snowflake ETLs",
+        label: ongoingTaskLabels.snowflakeEtls,
         licenseFlags: ["HasSnowflakeEtl"],
         licenseRequired: "Enterprise",
         isShardingSupported: true,
         accessRequired: "DatabaseAdmin",
     },
     olapEtls: {
-        label: "OLAP ETLs",
+        label: ongoingTaskLabels.olapEtls,
         licenseFlags: ["HasOlapEtl"],
         licenseRequired: "Enterprise",
         isShardingSupported: true,
         accessRequired: "DatabaseAdmin",
     },
     elasticSearchEtls: {
-        label: "Elasticsearch ETLs",
+        label: ongoingTaskLabels.elasticSearchEtls,
         licenseFlags: ["HasElasticSearchEtl"],
         licenseRequired: "Enterprise",
         isShardingSupported: true,
         accessRequired: "DatabaseAdmin",
     },
-    // Queue ETLs cover Kafka, RabbitMQ, Azure Queue Storage and Amazon SQS - none of which is
-    // sharding-supported in tasks/shared/shared.tsx
+    // none of the queue brokers is sharding-supported in tasks/shared/shared.tsx
     queueEtls: {
-        label: "Queue ETLs",
+        label: ongoingTaskLabels.queueEtls,
         licenseFlags: ["HasQueueEtl"],
         licenseRequired: "Enterprise",
         accessRequired: "DatabaseAdmin",
     },
     hubReplications: {
-        label: "Replication Hubs",
+        label: ongoingTaskLabels.hubReplications,
         licenseFlags: ["HasPullReplicationAsHub"],
         licenseRequired: "Enterprise",
         accessRequired: "DatabaseAdmin",
     },
     sinkReplications: {
-        label: "Replication Sinks",
+        label: ongoingTaskLabels.sinkReplications,
         licenseFlags: ["HasPullReplicationAsSink"],
         licenseRequired: "Professional +",
         accessRequired: "DatabaseAdmin",
     },
     embeddingsGeneration: {
-        label: "Embeddings Generation",
+        label: ongoingTaskLabels.embeddingsGeneration,
         licenseFlags: ["HasEmbeddingsGeneration"],
         licenseRequired: "Enterprise",
         isShardingSupported: true,
         accessRequired: "DatabaseAdmin",
     },
     genAi: {
-        label: "GenAI",
+        label: ongoingTaskLabels.genAi,
         licenseFlags: ["HasGenAi"],
         licenseRequired: "Enterprise AI",
         accessRequired: "DatabaseAdmin",
     },
     aiAgents: {
-        label: "AI Agents",
+        label: ongoingTaskLabels.aiAgents,
         licenseFlags: ["HasAiAgent"],
         licenseRequired: "Enterprise AI",
         accessRequired: "DatabaseAdmin",
     },
     cdcSinks: {
-        label: "CDC Sinks",
+        label: ongoingTaskLabels.cdcSinks,
         licenseFlags: ["HasCdcSink"],
         licenseRequired: "Enterprise",
         accessRequired: "DatabaseAdmin",
     },
     remoteAttachments: {
-        label: "Remote Attachments",
+        label: ongoingTaskLabels.remoteAttachments,
         licenseFlags: ["HasRemoteAttachments"],
         licenseRequired: "Enterprise",
         accessRequired: "DatabaseAdmin",
@@ -187,43 +191,43 @@ export const ongoingTaskRules: Partial<Record<OngoingTaskKey, ImportRestrictionR
 
 export const connectionStringRules: Partial<Record<ConnectionStringKey, ImportRestrictionRule>> = {
     ravenConnectionStrings: {
-        label: "RavenDB Connection Strings",
+        label: connectionStringLabels.ravenConnectionStrings,
         licenseFlags: ["HasRavenEtl"],
         licenseRequired: "Professional +",
         accessRequired: "DatabaseAdmin",
     },
     sqlConnectionStrings: {
-        label: "SQL Connection Strings",
+        label: connectionStringLabels.sqlConnectionStrings,
         licenseFlags: ["HasSqlEtl"],
         licenseRequired: "Professional +",
         accessRequired: "DatabaseAdmin",
     },
     snowflakeConnectionStrings: {
-        label: "Snowflake Connection Strings",
+        label: connectionStringLabels.snowflakeConnectionStrings,
         licenseFlags: ["HasSnowflakeEtl"],
         licenseRequired: "Enterprise",
         accessRequired: "DatabaseAdmin",
     },
     olapConnectionStrings: {
-        label: "OLAP Connection Strings",
+        label: connectionStringLabels.olapConnectionStrings,
         licenseFlags: ["HasOlapEtl"],
         licenseRequired: "Enterprise",
         accessRequired: "DatabaseAdmin",
     },
     elasticSearchConnectionStrings: {
-        label: "Elasticsearch Connection Strings",
+        label: connectionStringLabels.elasticSearchConnectionStrings,
         licenseFlags: ["HasElasticSearchEtl"],
         licenseRequired: "Enterprise",
         accessRequired: "DatabaseAdmin",
     },
     queueConnectionStrings: {
-        label: "Queue Connection Strings",
+        label: connectionStringLabels.queueConnectionStrings,
         licenseFlags: ["HasQueueEtl", "HasQueueSink"],
         licenseRequired: "Enterprise",
         accessRequired: "DatabaseAdmin",
     },
     aiConnectionStrings: {
-        label: "AI Connection Strings",
+        label: connectionStringLabels.aiConnectionStrings,
         licenseFlags: ["HasGenAi", "HasAiAgent", "HasEmbeddingsGeneration"],
         licenseRequired: "Enterprise AI",
         accessRequired: "DatabaseAdmin",
