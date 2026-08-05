@@ -1149,12 +1149,30 @@ namespace Voron.Impl
                 {
                     Environment.LastWorkTime = DateTime.UtcNow;
                 }
-                
+
                 CommitStage2_WriteToJournal();
             }
-            
-            BeforeCommitFinalization?.Invoke(this);
+
+            InvokeBeforeCommitFinalization();
             CommitStage3_DisposeTransactionResources();
+        }
+
+        /// Once the journal holds the transaction, recovery will replay it no matter what the
+        /// in-memory state decides afterwards. A subscriber failing past that point means the
+        /// application observed a rollback the store will not honor. The environment must come
+        /// down for recovery instead of serving the divergent state.
+        private void InvokeBeforeCommitFinalization()
+        {
+            try
+            {
+                BeforeCommitFinalization?.Invoke(this);
+            }
+            catch (Exception e) when (FlushedToJournal)
+            {
+                _txState |= TxState.Errored;
+                _env.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
+                throw;
+            }
         }
 
         internal Task<bool> AsyncCommit;
@@ -1275,7 +1293,7 @@ namespace Voron.Impl
                     Environment.LastWorkTime = DateTime.UtcNow;
             }
 
-            BeforeCommitFinalization?.Invoke(this);
+            InvokeBeforeCommitFinalization();
             CommitStage3_DisposeTransactionResources();
         }
 
