@@ -8,6 +8,7 @@ using Raven.Server.Documents;
 using Raven.Server.Integrations.PostgreSQL;
 using Raven.Server.Integrations.PostgreSQL.Exceptions;
 using Raven.Server.Integrations.PostgreSQL.Messages;
+using Raven.Server.Integrations.PostgreSQL.Types;
 using Tests.Infrastructure;
 using Xunit;
 using static Tests.Infrastructure.PostgreSqlHelper;
@@ -124,6 +125,77 @@ namespace FastTests.Server.Integrations.PostgreSQL
             Assert.False(string.IsNullOrWhiteSpace(error.Message));
         }
 
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public async Task ScalarCount_returns_the_collection_count()
+        {
+            using var store = GetDocumentStore();
+            await Seed(store);
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            using var query = PgQuery.CreateInstance(
+                "SELECT COUNT(*) FROM public.\"Orders\"", Array.Empty<int>(), database, session: null);
+
+            var column = Assert.Single(await query.Init());
+            Assert.Equal("count", column.Name);
+            Assert.Equal(PgTypeOIDs.Int8, column.PgType.Oid);
+
+            Assert.Equal(new[] { "21" }, Assert.Single(await Drain(query)));
+        }
+
+        // Superset's exact shape: in SQL the LIMIT caps the aggregate's single output row, so it must
+        // not become the engine's page size (which would return 0 rows, or a capped count).
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public async Task ScalarCount_with_a_sql_limit_is_not_capped()
+        {
+            using var store = GetDocumentStore();
+            await Seed(store);
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var (columns, rows) = await Run(
+                "SELECT COUNT(*) AS \"COUNT(*)\" FROM public.\"Orders\" LIMIT 50000", database);
+
+            Assert.Equal(new[] { "COUNT(*)" }, columns);
+            Assert.Equal(new[] { "21" }, Assert.Single(rows));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public async Task ScalarCount_honours_the_where_clause()
+        {
+            using var store = GetDocumentStore();
+            await Seed(store);
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var (_, rows) = await RunWarm(
+                "SELECT COUNT(*) FROM public.\"Orders\" WHERE \"Company\" = 'Beta'", store, database);
+
+            Assert.Equal(new[] { "9" }, Assert.Single(rows));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public async Task ScalarSum_without_group_by_still_returns_a_pg_error()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var error = Assert.Throws<PgErrorException>(() => PgQuery.CreateInstance(
+                "SELECT SUM(\"Freight\") FROM public.\"Orders\"", Array.Empty<int>(), database, session: null));
+
+            Assert.Equal(PgErrorCodes.FeatureNotSupported, error.ErrorCode);
+            Assert.Contains("Scalar aggregate", error.Message);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public async Task Count_mixed_with_a_bare_column_without_group_by_still_returns_a_pg_error()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var error = Assert.Throws<PgErrorException>(() => PgQuery.CreateInstance(
+                "SELECT \"Company\", COUNT(*) FROM public.\"Orders\"", Array.Empty<int>(), database, session: null));
+
+            Assert.Equal(PgErrorCodes.StatementTooComplex, error.ErrorCode);
+        }
+
         // Alpha: 10 orders x 1.5 freight, Beta: 9 x 1, Gamma: 2 x 1. The counts (10/9/2) and the
         // sums (15/9/2) both order differently under string comparison than under numeric.
         private static async Task Seed(IDocumentStore store)
@@ -150,6 +222,11 @@ namespace FastTests.Server.Integrations.PostgreSQL
             using var query = PgQuery.CreateInstance(sql, Array.Empty<int>(), database, session: null);
             var columns = await query.Init();
 
+            return (columns.Select(c => c.Name).ToList(), await Drain(query));
+        }
+
+        private static async Task<List<string[]>> Drain(PgQuery query)
+        {
             var token = TestContext.Current.CancellationToken;
             var pipe = new Pipe();
             var builder = new MessageBuilder();
@@ -157,9 +234,8 @@ namespace FastTests.Server.Integrations.PostgreSQL
             var readTask = ReadAllAsync(pipe.Reader, token);
             await query.Execute(builder, pipe.Writer, token);
             await pipe.Writer.CompleteAsync();
-            var bytes = await readTask;
 
-            return (columns.Select(c => c.Name).ToList(), ParseDataRows(bytes));
+            return ParseDataRows(await readTask);
         }
 
         private sealed class Order
