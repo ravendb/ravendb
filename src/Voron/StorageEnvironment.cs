@@ -498,6 +498,11 @@ namespace Voron
                 return; // already disposed
 
             _cancellationTokenSource.SafeCancel(_log, $"Disposing {Options}");
+
+            // Set when the dispose guard throws. Live transactions still map the data file
+            // and the drain restored the dispose count, so teardown must not run. A later
+            // Dispose retries the full sequence once the transactions are gone.
+            bool teardownRefused = false;
             try
             {
                 SelfReference.Owner = null;
@@ -541,37 +546,45 @@ namespace Voron
                     MoveEnvironmentToDisposeState();
                 }
             }
+            catch (TimeoutException)
+            {
+                teardownRefused = true;
+                throw;
+            }
             finally
             {
-                var errors = new List<Exception>();
-
-                OnLogsApplied = null;
-
-                _options.NullifyHandlers();
-
-                foreach (var disposable in new IDisposable[]
+                if (teardownRefused == false)
                 {
-                    _journal,
-                    _headerAccessor,
-                    _scratchBufferPool,
-                    _decompressionBuffers,
-                    _options.OwnsPagers ? _options : null,
-                })
-                {
-                    try
+                    var errors = new List<Exception>();
+
+                    OnLogsApplied = null;
+
+                    _options.NullifyHandlers();
+
+                    foreach (var disposable in new IDisposable[]
                     {
-                        disposable?.Dispose();
-                    }
-                    catch (Exception e)
+                        _journal,
+                        _headerAccessor,
+                        _scratchBufferPool,
+                        _decompressionBuffers,
+                        _options.OwnsPagers ? _options : null,
+                    })
                     {
-                        errors.Add(e);
+                        try
+                        {
+                            disposable?.Dispose();
+                        }
+                        catch (Exception e)
+                        {
+                            errors.Add(e);
+                        }
                     }
+
+                    GC.SuppressFinalize(this);
+
+                    if (errors.Count != 0)
+                        throw new AggregateException(errors);
                 }
-
-                GC.SuppressFinalize(this);
-
-                if (errors.Count != 0)
-                    throw new AggregateException(errors);
             }
         }
 
