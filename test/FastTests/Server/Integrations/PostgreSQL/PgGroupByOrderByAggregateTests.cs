@@ -272,6 +272,63 @@ namespace FastTests.Server.Integrations.PostgreSQL
             Assert.Equal(new[] { "10" }, Assert.Single(equal));
         }
 
+        [RavenFact(RavenTestCategory.PostgreSql, LicenseRequired = true)]
+        public async Task Aggregate_alias_that_is_not_an_identifier_is_kept()
+        {
+            using var store = GetDocumentStore();
+            await Seed(store);
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var (columns, rows) = await RunWarm(
+                "SELECT \"Company\", COUNT(*) AS \"COUNT(*)\" FROM public.\"Orders\" GROUP BY \"Company\" ORDER BY \"COUNT(*)\" DESC LIMIT 5",
+                store, database);
+
+            Assert.Equal(new[] { "Company", "COUNT(*)" }, columns);
+            Assert.Equal(new[] { "Alpha", "Beta", "Gamma" }, rows.Select(r => r[0]));
+            Assert.Equal(new[] { "10", "9", "2" }, rows.Select(r => r[1]));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql, LicenseRequired = true)]
+        public async Task Sum_alias_that_is_not_an_identifier_is_kept()
+        {
+            using var store = GetDocumentStore();
+            await Seed(store);
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var (columns, rows) = await RunWarm(
+                "SELECT \"Company\", SUM(\"Freight\") AS \"SUM(Freight)\" FROM public.\"Orders\" GROUP BY \"Company\" LIMIT 5",
+                store, database);
+
+            Assert.Equal(new[] { "Company", "SUM(Freight)" }, columns);
+            Assert.Equal(new[] { "Alpha", "Beta", "Gamma" }, rows.Select(r => r[0]).OrderBy(x => x));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql, LicenseRequired = true)]
+        public async Task Identifier_aggregate_alias_is_unchanged()
+        {
+            using var store = GetDocumentStore();
+            await Seed(store);
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var (columns, rows) = await RunWarm(
+                "SELECT \"Company\", COUNT(*) AS total FROM public.\"Orders\" GROUP BY \"Company\" LIMIT 5", store, database);
+
+            Assert.Equal(new[] { "Company", "total" }, columns);
+            Assert.Equal(new[] { "Alpha", "Beta", "Gamma" }, rows.Select(r => r[0]).OrderBy(x => x));
+        }
+
+        // An alias cannot be allowed to break out of the RQL string literal it is spliced into.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public async Task Aggregate_alias_with_a_quote_is_still_rejected()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            Assert.Throws<PgErrorException>(() => PgQuery.CreateInstance(
+                "SELECT \"Company\", COUNT(*) AS \"c'x\" FROM public.\"Orders\" GROUP BY \"Company\"",
+                Array.Empty<int>(), database, session: null));
+        }
+
         // Alpha: 10 orders x 1.5 freight, Beta: 9 x 1, Gamma: 2 x 1. The counts (10/9/2) and the
         // sums (15/9/2) both order differently under string comparison than under numeric.
         private static async Task Seed(IDocumentStore store)

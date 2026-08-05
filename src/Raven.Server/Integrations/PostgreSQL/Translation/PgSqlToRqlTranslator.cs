@@ -1148,13 +1148,12 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
             // when present — PowerBI always emits one (`as "a0"`/`as "a1"`/…) — so the
             // RQL becomes `select Freight, sum(Freight) as a0` and the implicit alias
             // never matters.
-            if (string.IsNullOrWhiteSpace(sqlAlias) == false &&
-                string.Equals(sqlAlias, expr, StringComparison.OrdinalIgnoreCase) == false)
-            {
-                if (IsSafeRqlIdentifier(sqlAlias) == false)
-                    throw UnsupportedGroupBy();
-                projection = $"{expr} as {sqlAlias}";
-            }
+            // Superset labels adhoc metrics COUNT(*) / SUM(col) / COUNT_DISTINCT(col) and uses the label
+            // verbatim as the alias, so quote it rather than reject it. An alias that merely matches the
+            // expression text still has to be emitted: RQL's implicit name for `sum(Freight)` is
+            // `Freight`, so dropping `as "SUM(Freight)"` would rename the column out from under the client.
+            if (string.IsNullOrWhiteSpace(sqlAlias) == false)
+                projection = $"{expr} as {EscapeProjectionField(sqlAlias)}";
 
             return new GroupByAggregate(projection, expr, string.IsNullOrWhiteSpace(sqlAlias) ? funcName : sqlAlias, orderField, ordering);
         }
