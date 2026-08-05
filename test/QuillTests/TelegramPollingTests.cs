@@ -203,6 +203,25 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Start_command_sends_a_canned_greeting_and_skips_the_agent()
+    {
+        var (app, channelId, token) = await ProvisionAsync();
+        await using var appGuard = app;
+
+        Mock.EnqueueTextMessage(token, chatId: 310, fromUserId: 310, "/start");
+        Mock.EnqueueTextMessage(token, chatId: 311, fromUserId: 311, "/start@quill_test_bot deep-link-payload");
+
+        await Mock.WaitUntilAsync(
+            () => Mock.SentMessages.Any(m => m.ChatId == 310 && m.Text.Contains("Ask me anything")) &&
+                  Mock.SentMessages.Any(m => m.ChatId == 311 && m.Text.Contains("Ask me anything")),
+            "the greetings");
+
+        Assert.Empty(Router.Requests);
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Agent_failure_sends_an_apology_and_keeps_the_poller_alive()
     {
         var (app, channelId, token) = await ProvisionAsync();
