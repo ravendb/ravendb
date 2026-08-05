@@ -436,6 +436,37 @@ namespace FastTests.Server.Integrations.PostgreSQL
             Assert.False(UnhandledQueryDiagnoser.TryDiagnose(sql, out _));
         }
 
+        // The WHERE-clause check takes priority over the scalar-aggregate check for count(*).
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("""SELECT count(*) FROM "public"."Orders" WHERE "Freight" NOT BETWEEN 1 AND 10""", "NOT BETWEEN")]
+        [InlineData("""SELECT count(*) FROM "public"."Orders" WHERE "Company" SIMILAR TO 'A%'""", "SIMILAR TO")]
+        public void ScalarCountStar_WithUnsupportedWhere_BlamesTheWhereClause(string sql, string predicate)
+        {
+            Assert.True(UnhandledQueryDiagnoser.TryDiagnose(sql, out var message));
+            Assert.Contains(predicate, message);
+            Assert.DoesNotContain("Scalar aggregate", message);
+        }
+
+        // sum() has no scalar form at all, so the aggregate message is still the right one there.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void ScalarSum_WithUnsupportedWhere_StillBlamesTheAggregate()
+        {
+            var sql = """SELECT sum("Freight") FROM "public"."Orders" WHERE "Freight" NOT BETWEEN 1 AND 10""";
+
+            Assert.True(UnhandledQueryDiagnoser.TryDiagnose(sql, out var message));
+            Assert.Contains("Scalar aggregate", message);
+        }
+
+        // A translatable WHERE must not be blamed.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void ScalarCountStar_WithSupportedWhere_IsNotBlamedOnTheWhereClause()
+        {
+            var sql = """SELECT count(*) FROM "public"."Orders" WHERE "Freight" BETWEEN 1 AND 10""";
+
+            Assert.True(UnhandledQueryDiagnoser.TryDiagnose(sql, out var message));
+            Assert.DoesNotContain("WHERE clause", message);
+        }
+
         [RavenTheory(RavenTestCategory.PostgreSql)]
         [InlineData("""SELECT "Freight" FROM "public"."Orders" ORDER BY "Freight" DESC NULLS LAST""", "NULLS")]
         [InlineData("""SELECT "Freight" FROM "public"."Orders" ORDER BY "Freight" NULLS FIRST""", "NULLS")]
