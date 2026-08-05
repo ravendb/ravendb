@@ -5,7 +5,7 @@ namespace Raven.Quill.Agents;
 
 internal static class AgentLookup
 {
-    public static async Task<AiAgentConfiguration> FindAsync(
+    public static async Task<AiAgentConfiguration?> FindAsync(
         IDocumentStore store, string database, string agentId, CancellationToken ct)
     {
         var all = await store.AI.ForDatabase(database).GetAgentsAsync(ct);

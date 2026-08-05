@@ -7,7 +7,7 @@ public static class AgentOutputShape
 {
     public const string DefaultReplyField = "reply";
 
-    public static string ResolveReplyField(AiAgentConfiguration config)
+    public static string ResolveReplyField(AiAgentConfiguration? config)
     {
         if (config is null)
             return null;
