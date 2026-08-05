@@ -333,7 +333,9 @@ export function hasAnyInclude(
         d.isIncludeSubscriptions ||
         c.isIncludeIndexes ||
         c.isIncludeIdentities ||
-        c.isIncludeConnectionStringsAndOngoingTasks ||
+        // isIncludeConnectionStringsAndOngoingTasks on its own is NOT an include: with every task
+        // and connection string restricted or deselected the import would be a no-op, so the toggle
+        // only counts through the record types it actually yields below
         getDatabaseRecordTypes(
             formData,
             restrictedSettingKeys,

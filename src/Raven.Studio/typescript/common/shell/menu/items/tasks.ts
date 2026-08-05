@@ -96,6 +96,9 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-import-database',
             dynamicHash: appUrls.importDataOptionsUrl,
+            // same gate as the pre-redesign import view - every import option requires
+            // DatabaseReadWrite, so the options page is useless below that level
+            requiredAccess: "DatabaseReadWrite",
         }),
         new leafMenuItem({
             route: 'databases/tasks/import/file',
