@@ -147,7 +147,8 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Embed_returns_404_when_token_resolves_to_a_non_iframe_channel()
     {
-        // Seed the link + channel directly: the API can't provision a Telegram channel (501).
+        // Seed the link + channel directly: provisioning a Telegram channel validates the bot
+        // token with Telegram, and this test only needs a non-iframe channel doc to exist.
         await using var app = await NewAppAsync();
 
         var token = Guid.NewGuid().ToString("N");
