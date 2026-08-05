@@ -9,6 +9,7 @@ import type {
     SeriesKey,
     TokensByAppResponse,
     UsagePoint,
+    UsageResponse,
 } from "@/api/generated/server-api";
 import { apiHttp } from "./api-http";
 
@@ -17,8 +18,8 @@ export const statsMocks = {
         apiHttp.get("/api/dashboard/apps", ({ response }) => response(200).json(apps)),
     dashboardApp: (app: ApplianceAppResponse = sampleDashboardApps[0]) =>
         apiHttp.get("/api/dashboard/apps/{slug}", ({ response }) => response(200).json(app)),
-    usage: (points: UsagePoint[] = sampleUsage) =>
-        apiHttp.get("/api/usage", ({ response }) => response(200).json(points)),
+    usage: (usage: UsageResponse = sampleUsageResponse) =>
+        apiHttp.get("/api/usage", ({ response }) => response(200).json(usage)),
     tokensByApp: (response: TokensByAppResponse = sampleTokensByApp) =>
         apiHttp.get("/api/usage/by-app", ({ response: res }) => res(200).json(response)),
     conversationStats: (response: ConversationStatsResponse = sampleConversationStats) =>
@@ -65,6 +66,16 @@ export const sampleUsage: UsagePoint[] = Array.from({ length: 24 }, (_, hour) =>
     };
 });
 
+export const sampleUsageResponse: UsageResponse = {
+    points: sampleUsage,
+    writesByApp: [
+        { slug: "acme-shop", writes: 18400000 },
+        { slug: "acme-support", writes: 4100000 },
+        { slug: "acme-warehouse", writes: 0 },
+        { slug: "acme-internal", writes: 1200000 },
+    ],
+};
+
 export const sampleDashboardApps: ApplianceAppResponse[] = [
     {
         id: "acme-shop",
@@ -78,7 +89,6 @@ export const sampleDashboardApps: ApplianceAppResponse[] = [
         channelsCount: 3,
         adaptersCount: 0,
         agentsCount: 3,
-        writesPerMonth: 18400000,
         channelsLabel: "Web widget, Telegram, WhatsApp",
         statusSubtitle: null,
         createdAt: "2026-05-02T10:00:00Z",
@@ -96,7 +106,6 @@ export const sampleDashboardApps: ApplianceAppResponse[] = [
         channelsCount: 1,
         adaptersCount: 0,
         agentsCount: 2,
-        writesPerMonth: 4100000,
         channelsLabel: "iframe",
         statusSubtitle: "Replication lag: 42 min",
         createdAt: "2026-05-14T08:30:00Z",
@@ -114,7 +123,6 @@ export const sampleDashboardApps: ApplianceAppResponse[] = [
         channelsCount: 0,
         adaptersCount: 0,
         agentsCount: 0,
-        writesPerMonth: null,
         channelsLabel: null,
         statusSubtitle: "Initial load 62% · ETA 1h 14m",
         createdAt: "2026-06-25T07:40:00Z",
@@ -132,7 +140,6 @@ export const sampleDashboardApps: ApplianceAppResponse[] = [
         channelsCount: 1,
         adaptersCount: 0,
         agentsCount: 2,
-        writesPerMonth: 1200000,
         channelsLabel: "Telegram",
         statusSubtitle: "CDC failed · 2h ago",
         createdAt: "2026-04-28T12:00:00Z",

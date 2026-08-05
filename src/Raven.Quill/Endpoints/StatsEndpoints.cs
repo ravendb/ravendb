@@ -11,7 +11,7 @@ namespace Raven.Quill.Endpoints;
 /// <summary>
 /// Read-side dashboard statistics for the per-app views. Each route aggregates
 /// existing per-app data (conversations, channels, agents, db stats) into the
-/// windows the UI renders — no write path, no live LLM. Live operational
+/// windows the UI renders ï¿½ no write path, no live LLM. Live operational
 /// telemetry (CDC ingestion) is served separately via the WebSocket feed proxy.
 /// </summary>
 public static class StatsEndpoints
@@ -22,7 +22,7 @@ public static class StatsEndpoints
             .WithTags("stats")
             .WithName("stats.usage")
             .RequireAuthorization()
-            .Produces<UsagePoint[]>();
+            .Produces<UsageResponse>();
 
         app.MapGet("/api/usage/by-app", GetTokensByAppAsync)
             .WithTags("stats")

@@ -39,7 +39,7 @@ public class UsageEndpointTests(ITestOutputHelper output, QuillCollectionHost co
         await SeedConversationAsync(app.Store, app.Slug, "chats/b", "demo", duringDay, messages: 5, tokens: 250);
         await SeedConversationAsync(app.Store, app.Slug, "chats/old", "demo", day.AddDays(-20), messages: 9, tokens: 999);
 
-        var points = await Host.GetUsageAsync(day.Year, day.Month, day.Day);
+        var points = (await Host.GetUsageAsync(day.Year, day.Month, day.Day)).Points;
         Assert.Equal(24, points.Count);
 
         Assert.Equal(8, Sum(points, p => p.Messages));
@@ -57,7 +57,7 @@ public class UsageEndpointTests(ITestOutputHelper output, QuillCollectionHost co
         await SeedConversationAsync(appOne.Store, appOne.Slug, "chats/a", "demo", earlierToday, messages: 2, tokens: 50);
         await SeedConversationAsync(appTwo.Store, appTwo.Slug, "chats/b", "demo", earlierToday, messages: 4, tokens: 70);
 
-        var points = await Host.GetUsageAsync(now.Year, now.Month, now.Day);
+        var points = (await Host.GetUsageAsync(now.Year, now.Month, now.Day)).Points;
 
         Assert.Equal(6, Sum(points, p => p.Messages));
         Assert.Equal(120, Sum(points, p => p.Tokens));
@@ -70,7 +70,7 @@ public class UsageEndpointTests(ITestOutputHelper output, QuillCollectionHost co
         var now = DateTime.UtcNow;
         await SeedRealisticConversationAsync(app.Store, app.Slug, "chats/r", "demo", EarlierToday(now));
 
-        var points = await Host.GetUsageAsync(now.Year, now.Month, now.Day);
+        var points = (await Host.GetUsageAsync(now.Year, now.Month, now.Day)).Points;
         Assert.Equal(1, Sum(points, p => p.Messages));  // only the user message counts, not system/assistant/tool
     }
 
@@ -83,7 +83,7 @@ public class UsageEndpointTests(ITestOutputHelper output, QuillCollectionHost co
             new DeleteIndexOperation(new ConversationMetricsIndex().IndexName));
 
         var now = DateTime.UtcNow;
-        var points = await Host.GetUsageAsync(now.Year, now.Month, now.Day);
+        var points = (await Host.GetUsageAsync(now.Year, now.Month, now.Day)).Points;
         Assert.Equal(0, Sum(points, p => p.Messages));
     }
 
@@ -125,7 +125,7 @@ public class UsageEndpointTests(ITestOutputHelper output, QuillCollectionHost co
         var now = DateTime.UtcNow;
         await SeedConversationAsync(healthy.Store, healthy.Slug, "chats/a", "support", EarlierToday(now), messages: 3, tokens: 120);
 
-        var points = await host.GetUsageAsync(now.Year, now.Month, now.Day);
+        var points = (await host.GetUsageAsync(now.Year, now.Month, now.Day)).Points;
         Assert.Equal(3, Sum(points, p => p.Messages));
         Assert.Equal(120, Sum(points, p => p.Tokens));
     }
@@ -140,11 +140,11 @@ public class UsageEndpointTests(ITestOutputHelper output, QuillCollectionHost co
 
         // past year → full unclamped layout (current period clamps to now)
         var pastYear = now.Year - 1;
-        Assert.Equal(24, (await Host.GetUsageAsync(pastYear, 1, 15)).Count);
-        Assert.Equal(DateTime.DaysInMonth(pastYear, 1), (await Host.GetUsageAsync(pastYear, 1)).Count);
-        Assert.Equal(12, (await Host.GetUsageAsync(pastYear)).Count);
+        Assert.Equal(24, (await Host.GetUsageAsync(pastYear, 1, 15)).Points.Count);
+        Assert.Equal(DateTime.DaysInMonth(pastYear, 1), (await Host.GetUsageAsync(pastYear, 1)).Points.Count);
+        Assert.Equal(12, (await Host.GetUsageAsync(pastYear)).Points.Count);
 
-        var byMonth = await Host.GetUsageAsync(now.Year);
+        var byMonth = (await Host.GetUsageAsync(now.Year)).Points;
         Assert.Equal(1, Sum(byMonth, p => p.Conversations));
         Assert.Equal(2, Sum(byMonth, p => p.Messages));
         Assert.Equal(100, Sum(byMonth, p => p.Tokens));
@@ -162,11 +162,27 @@ public class UsageEndpointTests(ITestOutputHelper output, QuillCollectionHost co
         await SeedConversationAsync(app2.Store, app2.Slug, "chats/b", "y", earlierToday, messages: 4, tokens: 70);
 
         var appOne = await Host.GetUsageAsync(now.Year, now.Month, now.Day, app1.Slug);
-        Assert.Equal(2, Sum(appOne, p => p.Messages));
-        Assert.Equal(50, Sum(appOne, p => p.Tokens));
+        Assert.Equal(2, Sum(appOne.Points, p => p.Messages));
+        Assert.Equal(50, Sum(appOne.Points, p => p.Tokens));
+        Assert.Equal(app1.Slug, Assert.Single(appOne.WritesByApp).Slug);
 
         var all = await Host.GetUsageAsync(now.Year, now.Month, now.Day);
-        Assert.Equal(6, Sum(all, p => p.Messages));
+        Assert.Equal(6, Sum(all.Points, p => p.Messages));
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Usage_reports_writes_for_every_app()
+    {
+        await using var app1 = await NewAppAsync();
+        await using var app2 = await NewAppAsync();
+
+        var now = DateTime.UtcNow;
+        var usage = await Host.GetUsageAsync(now.Year, now.Month);
+
+        // license write metering reports nothing in tests; each app still gets a row (0 writes)
+        // so the dashboard can key the WRU column by slug
+        Assert.Equal(0, Assert.Single(usage.WritesByApp, w => w.Slug == app1.Slug).Writes);
+        Assert.Equal(0, Assert.Single(usage.WritesByApp, w => w.Slug == app2.Slug).Writes);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -180,7 +196,7 @@ public class UsageEndpointTests(ITestOutputHelper output, QuillCollectionHost co
         await PutConversationDocAsync(app.Store, app.Slug, "chats/min",
             new { Agent = "support", CreatedAt = earlierToday, LastMessageAt = earlierToday });
 
-        var points = await Host.GetUsageAsync(now.Year, now.Month, now.Day);
+        var points = (await Host.GetUsageAsync(now.Year, now.Month, now.Day)).Points;
         Assert.Equal(2, Sum(points, p => p.Conversations));
         Assert.Equal(2, Sum(points, p => p.Messages));
         Assert.Equal(100, Sum(points, p => p.Tokens));

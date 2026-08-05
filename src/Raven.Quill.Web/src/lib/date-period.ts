@@ -66,6 +66,13 @@ export function canStepDayUp(period: DatePeriod): boolean {
     return isBefore(toDate(period), startOfDay(new Date()));
 }
 
+// The granularity a period selects: a whole year, one month, or one day.
+export function datePeriodUnit(period: DatePeriod): "day" | "month" | "year" {
+    if (period.day !== null) return "day";
+    if (period.month !== null) return "month";
+    return "year";
+}
+
 export function formatPeriodLabel(period: DatePeriod): string {
     if (period.month === null) return String(period.year);
     return format(toDate(period), period.day === null ? "MMMM yyyy" : "MMMM d, yyyy");

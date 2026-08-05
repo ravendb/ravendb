@@ -12,7 +12,6 @@ public sealed record ApplianceAppResponse(
     int ChannelsCount,
     int AdaptersCount,
     int AgentsCount,
-    long? WritesPerMonth,
     string? ChannelsLabel,
     string? StatusSubtitle,
     DateTime CreatedAt,

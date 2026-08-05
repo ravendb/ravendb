@@ -1081,8 +1081,6 @@ export interface components {
             adaptersCount: number;
             /** Format: int32 */
             agentsCount: number;
-            /** Format: int64 */
-            writesPerMonth: null | number;
             channelsLabel: null | string;
             statusSubtitle: null | string;
             /** Format: date-time */
@@ -1132,6 +1130,11 @@ export interface components {
             cdcWrites: components["schemas"]["CdcWritePoint"][];
             topTables: components["schemas"]["TopTable"][];
             topCapabilities: components["schemas"]["TopCapability"][];
+        };
+        AppWrites: {
+            slug: string;
+            /** Format: int64 */
+            writes: number;
         };
         AuthStatusResponse: {
             authenticated: boolean;
@@ -1728,6 +1731,10 @@ export interface components {
             /** Format: int64 */
             writes: number;
         };
+        UsageResponse: {
+            points: components["schemas"]["UsagePoint"][];
+            writesByApp: components["schemas"]["AppWrites"][];
+        };
         VerifyCdcRequest: {
             tables: components["schemas"]["VerifyCdcTableRequest"][];
             /** @default  */
@@ -1828,7 +1835,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UsagePoint"][];
+                    "application/json": components["schemas"]["UsageResponse"];
                 };
             };
         };
@@ -3929,6 +3936,7 @@ export type AppSource = components["schemas"]["AppSource"];
 export type AppTokens = components["schemas"]["AppTokens"];
 export type AppUsageMetrics = components["schemas"]["AppUsageMetrics"];
 export type AppUsageResponse = components["schemas"]["AppUsageResponse"];
+export type AppWrites = components["schemas"]["AppWrites"];
 export type AuthStatusResponse = components["schemas"]["AuthStatusResponse"];
 export type AzureOpenAiSettings = components["schemas"]["AzureOpenAiSettings"];
 export type BootstrapPhase = components["schemas"]["BootstrapPhase"];
@@ -4017,6 +4025,7 @@ export type TopTable = components["schemas"]["TopTable"];
 export type UpdateChannelRequest = components["schemas"]["UpdateChannelRequest"];
 export type UpdateIFrameCustomizationRequest = components["schemas"]["UpdateIFrameCustomizationRequest"];
 export type UsagePoint = components["schemas"]["UsagePoint"];
+export type UsageResponse = components["schemas"]["UsageResponse"];
 export type VerifyCdcRequest = components["schemas"]["VerifyCdcRequest"];
 export type VerifyCdcResponse = components["schemas"]["VerifyCdcResponse"];
 export type VerifyCdcTableRequest = components["schemas"]["VerifyCdcTableRequest"];
@@ -4205,7 +4214,7 @@ export function createServerApi(client: ApiClient) {
             dashboardApps: () => client.get<ApplianceAppResponse[]>(API_ENDPOINTS.stats.dashboardApps),
             overview: (slug: string) => client.get<AppOverviewResponse, ApiErrorResponse>(API_ENDPOINTS.stats.overview(slug)),
             tokensByApp: () => client.get<TokensByAppResponse>(API_ENDPOINTS.stats.tokensByApp),
-            usage: (searchParams: { app?: string; day?: string; month?: string; year: string; }) => client.get<UsagePoint[]>(API_ENDPOINTS.stats.usage, { searchParams }),
+            usage: (searchParams: { app?: string; day?: string; month?: string; year: string; }) => client.get<UsageResponse>(API_ENDPOINTS.stats.usage, { searchParams }),
         },
     };
 }
