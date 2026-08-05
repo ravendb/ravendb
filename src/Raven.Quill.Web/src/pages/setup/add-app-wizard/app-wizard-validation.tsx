@@ -170,8 +170,32 @@ export const tablesSchema = z
     .refine((tables) => tables.length === 0 || tables.some((table) => !table.disabled), {
         message: "At least one enabled table is required",
     })
-    .refine((tables) => hasUniqueValues(tables.map((table) => table.collectionName)), {
-        message: "Collection names must be unique",
+    // Collection names must be unique; flagged per row so the message names the duplicate and the
+    // blocked "Next" can focus the table holding it.
+    .superRefine((tables, ctx) => {
+        const countByName = new Map<string, number>();
+
+        for (const table of tables) {
+            const name = table.collectionName.trim();
+
+            if (name) {
+                countByName.set(name, (countByName.get(name) ?? 0) + 1);
+            }
+        }
+
+        tables.forEach((table, index) => {
+            const name = table.collectionName.trim();
+
+            if (!name || (countByName.get(name) ?? 0) < 2) {
+                return;
+            }
+
+            ctx.addIssue({
+                code: "custom",
+                path: [index, "collectionName"],
+                message: `Collection name "${name}" is already used by another root table. Collection names must be unique.`,
+            });
+        });
     })
     .superRefine((tables, ctx) => {
         const countByKey = new Map<string, number>();
