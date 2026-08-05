@@ -21,7 +21,8 @@ public class From24  : IVoronSchemaUpdate
             }
         }
 
-        headerAccessor.MetadataAccessor.Modify(headerAccessor.MetadataAccessor.FillMetadata);
+        // The metadata file (and its JournalId) already exists at version 24. Regenerating the
+        // id would make recovery skip every journal transaction stamped with the previous one.
 
         versionAfterUpgrade = 25;
         return true;

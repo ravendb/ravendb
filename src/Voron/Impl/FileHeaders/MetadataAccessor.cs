@@ -14,12 +14,26 @@ public sealed class MetadataAccessor(StorageEnvironment env)
     private MetadataFile _metadata;
     public Guid JournalId => _metadata.JournalId;
 
-    public bool Initialize()
+    public bool Initialize(bool isNewStore)
     {
         var hasMetadata = env.Options.ReadValidMetadata(MetadataName, out _metadata);
         if (hasMetadata == false)
         {
-            Modify(FillMetadata);
+            if (isNewStore)
+            {
+                Modify(FillMetadata);
+            }
+            else
+            {
+                // A fresh id on an existing store would make recovery skip the store's own
+                // journal transactions as foreign. Guid.Empty defers the choice to recovery,
+                // which resolves the id from the journals before it applies anything.
+                Modify(static (ref MetadataFile metadata) =>
+                {
+                    metadata.JournalId = Guid.Empty;
+                    metadata.Version = Constants.CurrentVersion;
+                });
+            }
             return true;
         }
 

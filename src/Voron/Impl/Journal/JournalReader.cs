@@ -391,7 +391,7 @@ namespace Voron.Impl.Journal
             return _journalInfo.LastSyncedTransactionId != -1 && transactionId <= _journalInfo.LastSyncedTransactionId;
         }
 
-        private static long GetTransactionSizeIn4Kb(TransactionHeader* current)
+        internal static long GetTransactionSizeIn4Kb(TransactionHeader* current)
         {
             var size = current->CompressedSize != -1 ? current->CompressedSize : current->UncompressedSize;
 
@@ -674,11 +674,6 @@ namespace Voron.Impl.Journal
 
                 _next4Kb = _readAt4Kb + GetTransactionSizeIn4Kb(current);
 
-                if (JournalId == Guid.Empty)
-                {
-                    JournalId = current->JournalId;
-                }
-
                 if (current->Flags == TransactionPersistenceModeFlags.LinkedJournalsRecord &&
                     _environment.Options.RootJournal is null) // this only applies to the _root_, not to branches
                 {
@@ -686,7 +681,14 @@ namespace Voron.Impl.Journal
                     _readAt4Kb += GetTransactionSizeIn4Kb(current) - 1;
                     continue;
                 }
-                
+
+                // A linked-journals record carries the sentinel id, never an environment's.
+                // Adopt only from a real transaction.
+                if (JournalId == Guid.Empty)
+                {
+                    JournalId = current->JournalId;
+                }
+
                 if ((current->JournalId == JournalId) is false &&
                     current->JournalId != Guid.Empty) // this may be legacy
                 {

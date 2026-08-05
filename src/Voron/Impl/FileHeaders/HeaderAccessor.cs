@@ -38,10 +38,11 @@ namespace Voron.Impl.FileHeaders
                 if (_disposed)
                     throw new ObjectDisposedException("Cannot access the header after it was disposed");
 
-                MetadataAccessor.Initialize();
-
                 var hasOne = env.Options.ReadValidHeader(HeaderFileNames[0], out var headerOne);
                 var hasTwo = env.Options.ReadValidHeader(HeaderFileNames[1], out var headerTwo);
+
+                MetadataAccessor.Initialize(isNewStore: hasOne is false && hasTwo is false);
+
                 if (hasOne is false && hasTwo is false)
                 {
                     // new 

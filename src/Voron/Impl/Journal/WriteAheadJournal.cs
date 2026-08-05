@@ -325,6 +325,12 @@ namespace Voron.Impl.Journal
             var lastJournal = _env.Options.GetLatestJournalNumber();
             lastJournal ??= journalToStartReadingFrom;
 
+            // The id must be settled before any transaction is applied. Recovery filters
+            // transactions by it. A guessed id could let recovery apply another
+            // environment's transactions into this data file.
+            if (_headerAccessor.MetadataAccessor.JournalId == Guid.Empty)
+                ResolveRebuiltJournalId(journalToStartReadingFrom, lastJournal.Value, logInfo, addToInitLog);
+
             using var allocator = new ByteStringContext(SharedMultipleUseFlag.None);
             
             for (var journalNumber = journalToStartReadingFrom; journalNumber <= lastJournal.Value; journalNumber++)
@@ -653,6 +659,84 @@ namespace Voron.Impl.Journal
             }
 
             return requireHeaderUpdate;
+        }
+
+        // The metadata file was rebuilt without an id, and recovery filters transactions by it.
+        // Every transaction header carries the id it was stamped with. The header is AEAD
+        // additional data: plaintext even in an encrypted journal. A lone id in single-tenant
+        // journals is this environment's own and is re-adopted. Anything ambiguous fail-stops.
+        // Guessing could let recovery replay another environment's transactions into this file.
+        private void ResolveRebuiltJournalId(long firstJournal, long lastJournal, JournalInfo journalInfo, Action<LogLevel, string> addToInitLog)
+        {
+            var ids = new HashSet<Guid>();
+
+            // A branch reads multi-tenant journals by configuration.
+            var sharedEvidence = _env.Options.RootJournal != null;
+
+            for (var journalNumber = firstJournal; journalNumber <= lastJournal; journalNumber++)
+            {
+                try
+                {
+                    // A hard link proves sharing. A single link proves nothing: peers may
+                    // have unlinked. The probe can only add fail-stop evidence.
+                    sharedEvidence |= _env.Options.IsJournalHardLinked(journalNumber);
+
+                    (Pager journalPager, Pager.State journalPagerState) = _env.Options.OpenJournalPager(journalNumber, journalInfo);
+                    using var _ = journalPager;
+
+                    Pager.PagerTransactionState txState = default;
+                    try
+                    {
+                        const int pageTo4KbRatio = Constants.Storage.PageSize / (4 * Constants.Size.Kilobyte);
+                        long readAt4Kb = 0;
+                        while (readAt4Kb * (4 * Constants.Size.Kilobyte) < journalPagerState.TotalAllocatedSize)
+                        {
+                            var pageNumber = readAt4Kb / pageTo4KbRatio;
+                            var positionInsidePage = (readAt4Kb % pageTo4KbRatio) * (4 * Constants.Size.Kilobyte);
+
+                            var current = (TransactionHeader*)(journalPager.AcquirePagePointer(journalPagerState, ref txState, pageNumber) + positionInsidePage);
+                            if (current->HeaderMarker != Constants.TransactionHeaderMarker)
+                                break;
+
+                            ids.Add(current->JournalId);
+
+                            var transactionSizeIn4Kb = JournalReader.GetTransactionSizeIn4Kb(current);
+                            if (transactionSizeIn4Kb < 1)
+                                break;
+                            readAt4Kb += transactionSizeIn4Kb;
+                        }
+                    }
+                    finally
+                    {
+                        txState.InvokeDispose(_env, ref journalPagerState, ref txState);
+                    }
+                }
+                catch (Exception e)
+                {
+                    // an unreadable journal contributes no ids; recovery proper deals with it
+                    addToInitLog?.Invoke(LogLevel.Warn, $"Could not scan journal {journalNumber} for its journal id: {e.Message}");
+                }
+            }
+
+            ids.Remove(Guid.Empty);
+
+            // Only the root of a shared-journal group writes linked-journals records.
+            // The sentinel proves these journals are multi-tenant.
+            sharedEvidence |= ids.Remove(LinkedJournalsRecord.LinkedJournalId);
+
+            // In multi-tenant journals a lone id can be a sibling's: this environment's own
+            // transactions may all have been synced away. Adopting a foreign id lets recovery
+            // apply foreign transactions into this data file.
+            if (ids.Count > 1 || (ids.Count == 1 && sharedEvidence))
+            {
+                VoronUnrecoverableErrorException.Raise(_env,
+                    $"The '{MetadataAccessor.MetadataName}' file was rebuilt, but the journals carry {ids.Count} distinct journal ids ({string.Join(", ", ids)})" +
+                    (sharedEvidence ? " and show shared-journal involvement (a branch configuration, a hard-linked journal or a linked-journals record)" : "") +
+                    ", so this environment's own id cannot be determined. Restore the metadata file from a backup, or recreate the environment from its source.");
+            }
+
+            var resolved = ids.Count == 1 ? ids.First() : Guid.NewGuid();
+            _headerAccessor.MetadataAccessor.Modify((ref MetadataFile metadata) => metadata.JournalId = resolved);
         }
 
         private void CleanupNewerInvalidJournalFiles(long lastSyncedJournal)
