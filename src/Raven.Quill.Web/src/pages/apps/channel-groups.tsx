@@ -165,9 +165,7 @@ function ChannelCard({
                         {channel.displayName}
                     </Link>
                     {channel.botUsername && (
-                        <div className="truncate text-xs font-normal text-muted-foreground">
-                            @{channel.botUsername}
-                        </div>
+                        <div className="truncate text-xs font-normal text-muted-foreground">@{channel.botUsername}</div>
                     )}
                 </CardTitle>
                 <CardAction>

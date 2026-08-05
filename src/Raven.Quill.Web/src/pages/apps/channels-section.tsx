@@ -207,7 +207,5 @@ function TelegramStatusBadge({
             </Badge>
         );
     }
-    return (
-        <StatusIndicator tone="positive" label={health?.isPolling ? "Polling" : "Connected"} />
-    );
+    return <StatusIndicator tone="positive" label={health?.isPolling ? "Polling" : "Connected"} />;
 }

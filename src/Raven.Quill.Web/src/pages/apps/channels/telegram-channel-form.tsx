@@ -57,9 +57,7 @@ export function TelegramChannelForm({
     const { replace } = parameterFields;
     useEffect(() => {
         const selected = (agentsQuery.data ?? []).find((candidate) => candidate.agentId === selectedAgentId);
-        const names = (selected?.parameters ?? []).filter(
-            (name) => name.toLowerCase() !== USER_IDENTIFIER_PARAMETER,
-        );
+        const names = (selected?.parameters ?? []).filter((name) => name.toLowerCase() !== USER_IDENTIFIER_PARAMETER);
         replace(names.map((name) => ({ name, value: "" })));
     }, [replace, selectedAgentId, agentsQuery.data]);
 
