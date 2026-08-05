@@ -8,7 +8,6 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide.Operations;
 using Raven.Quill.Agents;
-using Raven.Quill.Cdc;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints.Helpers;
@@ -29,8 +28,6 @@ internal static class MetricsReadService
     private const int EmbedLinkPageSize = 1024;
 
     private const string UnknownModel = "unknown";
-
-    private const int TopTablesLimit = 10;
 
     public static async Task<UsageResponse> GetUsageAsync(
         ILicenseStatsProvider provider,
@@ -139,8 +136,6 @@ internal static class MetricsReadService
     public static async Task<AppUsageResponse> GetAppUsageAsync(
         IDocumentStore store, string database, int year, int? month, int? day, CancellationToken ct)
     {
-        var maintenance = store.Maintenance.ForDatabase(database);
-
         // Calendar period selected by year/month/day: [Start, End) is what the buckets cover
         // (a day by hour / a month by day / a year by month); the preceding equal period
         // [PreviousStart, Start) is the baseline for each card's delta.
@@ -166,14 +161,9 @@ internal static class MetricsReadService
             tokByBucket[i] += row.Tokens;
         }
 
-        var cdcRaw = await CdcPerformanceReader.ReadAsync(maintenance, ct);
-        var cdcWrites = BuildCdcWrites(cdcRaw, buckets, period);
-
         var metrics = new AppUsageMetrics(
             Conversations: new MetricCard(convNow, Delta(convNow, convPrev), ToDoubles(convByBucket)),
-            Tokens: new MetricCard(tokNow, Delta(tokNow, tokPrev), ToDoubles(tokByBucket)),
-            CdcWrites: new MetricCard(cdcWrites.Sum(p => p.Writes), 0,
-                cdcWrites.Select(p => (double)p.Writes).ToArray()));
+            Tokens: new MetricCard(tokNow, Delta(tokNow, tokPrev), ToDoubles(tokByBucket)));
 
         var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database), ct);
         
@@ -213,15 +203,12 @@ internal static class MetricsReadService
 
         var conversationsByChannel = await BuildConversationsByChannelAsync(
             session, buckets, period, ct);
-        var topTables = await BuildTopTablesAsync(maintenance, ct);
 
         return new AppUsageResponse(
             metrics,
             TokensByCapability: tokensByCapability,
             TokensByModel: tokensByModel,
             ConversationsByChannel: conversationsByChannel,
-            CdcWrites: cdcWrites,
-            TopTables: topTables,
             TopCapabilities: topCapabilities);
     }
 
@@ -307,19 +294,6 @@ internal static class MetricsReadService
         return new SeriesData(points, seriesKeys);
     }
 
-    private static async Task<TopTable[]> BuildTopTablesAsync(
-        MaintenanceOperationExecutor maintenance, CancellationToken ct)
-    {
-        var stats = await maintenance.SendAsync(new GetCollectionStatisticsOperation(), ct);
-        return stats.Collections
-            .Where(c => c.Key.StartsWith('@') == false)
-            .OrderByDescending(c => c.Value)
-            .ThenBy(c => c.Key, StringComparer.OrdinalIgnoreCase)
-            .Take(TopTablesLimit)
-            .Select(c => new TopTable(c.Key, c.Value, LagSeconds: 0, LastWriteAt: ""))
-            .ToArray();
-    }
-
     private static double Delta(long now, long prev) =>
         prev == 0 ? 0 : Math.Round((now - prev) / (double)prev * 100, 1);
 
@@ -329,23 +303,6 @@ internal static class MetricsReadService
         for (var i = 0; i < values.Length; i++)
             result[i] = values[i];
         return result;
-    }
-
-    internal static CdcWritePoint[] BuildCdcWrites(
-        CdcSinkPerformanceRaw raw, List<DateTime> buckets, UsagePeriod period)
-    {
-        var byBucket = new long[buckets.Count];
-        foreach (var batch in CdcPerformanceShaper.Batches(raw))
-        {
-            var i = period.IndexOf(Utc(batch.Completed ?? batch.Started));
-            if (i < 0) continue;
-            byBucket[i] += batch.NumberOfProcessedMessages;
-        }
-
-        var points = new CdcWritePoint[buckets.Count];
-        for (var i = 0; i < buckets.Count; i++)
-            points[i] = new CdcWritePoint(period.Label(buckets[i]), byBucket[i]);
-        return points;
     }
 
     public static async Task<List<ApplianceAppResponse>> GetDashboardAppsAsync(

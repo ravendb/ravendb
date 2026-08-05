@@ -28,7 +28,7 @@ import { AppConversations } from "@/pages/apps/app-conversations";
 import { AppDataSource } from "@/pages/apps/app-data-source";
 import { AppOverview } from "@/pages/apps/app-overview";
 import { AppSettings } from "@/pages/apps/app-settings";
-import { AppUsage } from "@/pages/apps/app-usage";
+import { AppAnalytics } from "@/pages/apps/app-analytics";
 import { Login } from "@/pages/auth/login";
 import { DashboardCertificates } from "@/pages/dashboard/certificates";
 import { DashboardConnectionStrings } from "@/pages/dashboard/connection-strings";
@@ -251,14 +251,14 @@ const appPages: AppRouteDefinition[] = [
         element: <AppWebWidgetDefaultCustomize />,
     },
     {
-        path: "usage",
-        title: "Usage",
+        path: "analytics",
+        title: "Analytics",
         navigation: {
-            label: "Usage",
+            label: "Analytics",
             icon: LineChart,
             section: "settings",
         },
-        element: <AppUsage />,
+        element: <AppAnalytics />,
     },
     {
         path: "settings",

@@ -4,7 +4,6 @@ import { api } from "@/api/api";
 import { ApiState } from "@/components/data/api-state";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
-import { WRU_DESCRIPTION } from "@/components/data/wru-label";
 import { CdcBatchLog } from "@/pages/apps/cdc-batch-log";
 import { DashboardStatCards, type DashboardStatCard } from "@/pages/dashboard/dashboard-stat-cards";
 import { CdcErrorsSheet } from "@/pages/apps/cdc-errors-sheet";
@@ -79,7 +78,7 @@ function CdcStatusBadge({ status }: { status: CdcLiveStatus }) {
 
 function CdcPerformanceContent({ performance }: { performance: CdcLivePerformance }) {
     const cards: DashboardStatCard[] = [
-        { label: "Recent WRU", labelInfo: WRU_DESCRIPTION, value: performance.recentWrites, isLoading: false },
+        { label: "Recent CDC writes", value: performance.recentWrites, isLoading: false },
         { label: "Errors", value: performance.errorCount, isLoading: false },
     ];
 

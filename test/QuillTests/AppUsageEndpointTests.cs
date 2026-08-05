@@ -36,10 +36,6 @@ public class AppUsageEndpointTests(ITestOutputHelper output) : QuillTestBase(out
 
         Assert.Equal(2, usage.TokensByCapability.Keys.Length);
 
-        Assert.True(usage.CdcWrites.Length > 0);
-        Assert.All(usage.CdcWrites, p => Assert.Equal(0, p.Writes));
-        Assert.Equal(0, usage.Metrics.CdcWrites.Value);
-        Assert.Empty(usage.TopTables);
         Assert.Empty(usage.ConversationsByChannel.Keys);
         // seeded agents aren't provisioned → "unknown" model
         var modelKey = Assert.Single(usage.TokensByModel.Keys);
@@ -47,7 +43,7 @@ public class AppUsageEndpointTests(ITestOutputHelper output) : QuillTestBase(out
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task AppUsage_fills_model_channel_and_table_series_from_real_data()
+    public async Task AppUsage_fills_model_and_channel_series_from_real_data()
     {
         await using var app = await NewAppAsync();
 
@@ -76,7 +72,6 @@ public class AppUsageEndpointTests(ITestOutputHelper output) : QuillTestBase(out
                     CreatedAt = now,
                 }, $"{EmbedLink.IdPrefix}{Guid.NewGuid():N}");
             }
-            await session.StoreAsync(new Product { Name = "Widget" }, "products/1");
             await session.SaveChangesAsync();
         }
 
@@ -93,9 +88,6 @@ public class AppUsageEndpointTests(ITestOutputHelper output) : QuillTestBase(out
         foreach (var point in channelData.Points)
             channelTotal += ((JsonElement)point[channel.ChannelId]).GetInt64();
         Assert.Equal(2, channelTotal);
-
-        var products = usage.TopTables.Single(t => t.Name == "Products");
-        Assert.Equal(1, products.Writes);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -181,10 +173,5 @@ public class AppUsageEndpointTests(ITestOutputHelper output) : QuillTestBase(out
 
         foreach (var p in byChannel.Points)
             Assert.Equal(JsonValueKind.String, ((JsonElement)p["t"]).ValueKind);
-    }
-
-    private sealed class Product
-    {
-        public string Name { get; set; } = "";
     }
 }

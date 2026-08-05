@@ -1,16 +1,16 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { AppUsageResponse } from "@/api/generated/server-api";
 import { statsMocks } from "@/mocks/stats-mocks";
-import { AppUsage } from "./app-usage";
+import { AppAnalytics } from "./app-analytics";
 
 const meta = {
-    title: "Apps/Usage",
-    component: AppUsage,
+    title: "Apps/Analytics",
+    component: AppAnalytics,
     parameters: {
-        page: { title: "Usage" },
+        page: { title: "Analytics" },
         router: { initialPath: "/apps/demo", path: "/apps/:slug" },
     },
-} satisfies Meta<typeof AppUsage>;
+} satisfies Meta<typeof AppAnalytics>;
 
 export default meta;
 
@@ -26,13 +26,10 @@ const emptyAppUsage: AppUsageResponse = {
     metrics: {
         conversations: zeroMetric,
         tokens: zeroMetric,
-        cdcWrites: zeroMetric,
     },
     tokensByCapability: emptySeries,
     tokensByModel: emptySeries,
     conversationsByChannel: emptySeries,
-    cdcWrites: [],
-    topTables: [],
     topCapabilities: [],
 };
 
