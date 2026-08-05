@@ -11,6 +11,7 @@ import { Switch } from "@/components/shadcn/ui/switch";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { MapTablesSuggestionProgress } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-suggestion-progress";
+import { RootTablesFieldArrayProvider } from "@/pages/setup/add-app-wizard/steps/map-tables/root-tables-field-array";
 import {
     parseRawTablesToForm,
     serializeFormTablesToRaw,
@@ -100,60 +101,65 @@ export function MapTablesStep({ isBusy }: WizardBodyComponentProps) {
     }
 
     return (
-        <div className="flex min-h-0 flex-1 flex-col gap-3">
-            <div className="flex shrink-0 items-center justify-end gap-4">
-                {/* Runs the dry run Next runs, so the operator can check that the (AI-)suggested tables
+        <RootTablesFieldArrayProvider>
+            <div className="flex min-h-0 flex-1 flex-col gap-3">
+                <div className="flex shrink-0 items-center justify-end gap-4">
+                    {/* Runs the dry run Next runs, so the operator can check that the (AI-)suggested tables
                     exist and are capturable before leaving the step. Without an enabled table there is
                     nothing to verify, and validation blocks Next anyway, so the button stays out instead
                     of showing up dead. */}
-                {verifyTables.selectedTables.length > 0 && (
-                    <>
-                        {/* While the form is behind the editor, verifying would answer for a mapping the
+                    {verifyTables.selectedTables.length > 0 && (
+                        <>
+                            {/* While the form is behind the editor, verifying would answer for a mapping the
                             operator is no longer looking at - and an earlier pass must not read as
                             "verified" against the editor's content either. */}
-                        <VerifyCdcButton
-                            disabled={isBusy || isFormBehindEditor}
-                            state={isFormBehindEditor ? { ...verifyTables, isVerified: false } : verifyTables}
-                            labels={VERIFY_TABLES_LABELS}
-                        />
-                        <div className="h-4 w-px bg-border" />
+                            <VerifyCdcButton
+                                disabled={isBusy || isFormBehindEditor}
+                                state={isFormBehindEditor ? { ...verifyTables, isVerified: false } : verifyTables}
+                                labels={VERIFY_TABLES_LABELS}
+                            />
+                            <div className="h-4 w-px bg-border" />
+                        </>
+                    )}
+                    <Field orientation="horizontal">
+                        <Switch id="map-tables-raw-view" checked={isRawView} onCheckedChange={handleToggleRawView} />
+                        <FieldLabel htmlFor="map-tables-raw-view">Raw JSON</FieldLabel>
+                    </Field>
+                </div>
+
+                {isRawView ? (
+                    <AceEditor
+                        mode="json"
+                        value={rawContent}
+                        onChange={handleRawChange}
+                        isFillHeight
+                        className="min-h-80"
+                        actions={[
+                            { component: <AceEditor.FormatAction /> },
+                            { component: <AceEditor.FullScreenAction /> },
+                        ]}
+                    />
+                ) : (
+                    <>
+                        <UnmappedTablesAlert />
+                        <ResizablePanelGroup
+                            orientation="horizontal"
+                            className="min-h-80 flex-1 rounded-lg border bg-background"
+                        >
+                            <ResizablePanel defaultSize="30%" minSize="180px" maxSize="50%" className="min-w-0">
+                                <TablesExplorer />
+                            </ResizablePanel>
+                            <ResizableHandle />
+                            <ResizablePanel className="min-w-0">
+                                <TableEditor />
+                            </ResizablePanel>
+                        </ResizablePanelGroup>
+                        {tablesErrorMessage && <Alert variant="destructive">{tablesErrorMessage}</Alert>}
                     </>
                 )}
-                <Field orientation="horizontal">
-                    <Switch id="map-tables-raw-view" checked={isRawView} onCheckedChange={handleToggleRawView} />
-                    <FieldLabel htmlFor="map-tables-raw-view">Raw JSON</FieldLabel>
-                </Field>
+
+                {verifyTables.error && <WizardErrorAlert error={verifyTables.error} className="shrink-0" />}
             </div>
-
-            {isRawView ? (
-                <AceEditor
-                    mode="json"
-                    value={rawContent}
-                    onChange={handleRawChange}
-                    isFillHeight
-                    className="min-h-80"
-                    actions={[{ component: <AceEditor.FormatAction /> }, { component: <AceEditor.FullScreenAction /> }]}
-                />
-            ) : (
-                <>
-                    <UnmappedTablesAlert />
-                    <ResizablePanelGroup
-                        orientation="horizontal"
-                        className="min-h-80 flex-1 rounded-lg border bg-background"
-                    >
-                        <ResizablePanel defaultSize="30%" minSize="180px" maxSize="50%" className="min-w-0">
-                            <TablesExplorer />
-                        </ResizablePanel>
-                        <ResizableHandle />
-                        <ResizablePanel className="min-w-0">
-                            <TableEditor />
-                        </ResizablePanel>
-                    </ResizablePanelGroup>
-                    {tablesErrorMessage && <Alert variant="destructive">{tablesErrorMessage}</Alert>}
-                </>
-            )}
-
-            {verifyTables.error && <WizardErrorAlert error={verifyTables.error} className="shrink-0" />}
-        </div>
+        </RootTablesFieldArrayProvider>
     );
 }
