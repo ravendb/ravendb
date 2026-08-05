@@ -964,6 +964,38 @@ namespace FastTests.Server.Integrations.PostgreSQL.Translation
                 Translate("SELECT \"Company\" AS \"Company\" FROM \"Orders\" GROUP BY \"Company\""));
         }
 
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void OrderBySelectAlias_ResolvesToTheUnderlyingField()
+        {
+            Assert.Equal("from 'Orders' order by Freight select Freight as f",
+                Translate("SELECT \"Freight\" AS f FROM \"Orders\" ORDER BY f"));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void OrderByQuotedSelectAlias_ResolvesToTheUnderlyingField()
+        {
+            Assert.Equal("from 'Orders' order by Freight desc select Freight as 'the freight'",
+                Translate("SELECT \"Freight\" AS \"the freight\" FROM \"Orders\" ORDER BY \"the freight\" DESC"));
+        }
+
+        // A sort key that is a real field rather than an alias keeps resolving as a field.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void OrderByRealFieldAlongsideAnAlias_IsUnchanged()
+        {
+            Assert.Equal("from 'Orders' order by Company select Freight as f",
+                Translate("SELECT \"Freight\" AS f FROM \"Orders\" ORDER BY \"Company\""));
+        }
+
+        // An alias over a constant or id() has no document field behind it, so there is nothing to
+        // sort on - reject instead of emitting a sort on a field that does not exist.
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("SELECT 1 AS c0 FROM \"Orders\" ORDER BY c0")]
+        [InlineData("SELECT \"id\" AS docid FROM \"Orders\" ORDER BY docid")]
+        public void OrderByAliasOverANonField_IsRejected(string sql)
+        {
+            AssertRejected(sql);
+        }
+
         private static void AssertRejected(string sql)
         {
             Assert.False(Raven.Server.Integrations.PostgreSQL.Translation.PgSqlToRqlTranslator.TryParse(
