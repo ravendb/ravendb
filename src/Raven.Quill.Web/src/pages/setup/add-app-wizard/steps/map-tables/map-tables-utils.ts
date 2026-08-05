@@ -52,25 +52,45 @@ export function getSourceTableKey(table: SourceTableRef): string | null {
     return `${table.sourceTableSchema?.trim().toLowerCase() ?? ""}::${name}`;
 }
 
-/** Collects the keys of every source table whose data is captured by the mapping: root
- * tables plus nested embedded tables. Linked tables don't count - a link only references
+/** A source table the mapping refers to, in the shape the verify-schema selection and the CDC
+ * dry run both use. */
+export type MappedSourceTable = AppFormData["verifySchema"]["tables"][number];
+
+/** Source tables whose data the given roots capture: the roots themselves plus their nested embedded
+ * tables, keyed and deduped in encounter order. Linked tables don't count - a link only references
  * documents by id, so the linked table still needs its own root mapping. */
-export function collectMappedSourceTableKeys(tables: FormRootTable[]): Set<string> {
-    const keys = new Set<string>();
+function collectSourceTables(rootTables: FormRootTable[]): Map<string, MappedSourceTable> {
+    const collected = new Map<string, MappedSourceTable>();
 
     const visit = (table: SourceTableRef & { embeddedTables?: FormEmbeddedTable[] }) => {
         const key = getSourceTableKey(table);
+        const sourceTableName = table.sourceTableName?.trim();
 
-        if (key) {
-            keys.add(key);
+        // The key already rejects a blank name; the guard is what convinces TypeScript of it.
+        if (key && sourceTableName && !collected.has(key)) {
+            // Trimmed to match the key, so a stray space cannot both dedupe as the same table and
+            // reach the server as a different one.
+            collected.set(key, { sourceTableSchema: table.sourceTableSchema?.trim() || null, sourceTableName });
         }
 
         table.embeddedTables?.forEach(visit);
     };
 
-    tables.forEach(visit);
+    rootTables.forEach(visit);
 
-    return keys;
+    return collected;
+}
+
+/** Source tables whose changes CDC must capture for the mapping to work. Disabled roots (and their
+ * subtrees) are not ingested, so they need no capture infrastructure. */
+export function collectMappedSourceTables(tables: FormRootTable[]): MappedSourceTable[] {
+    return [...collectSourceTables(tables.filter((table) => !table.disabled)).values()];
+}
+
+/** Keys of every source table the mapping refers to, disabled roots included: a disabled root was
+ * disabled on purpose, and the unmapped-tables alert would otherwise offer to map it a second time. */
+export function collectMappedSourceTableKeys(tables: FormRootTable[]): Set<string> {
+    return new Set(collectSourceTables(tables).keys());
 }
 
 export function createEmptyRootTable(): FormRootTable {

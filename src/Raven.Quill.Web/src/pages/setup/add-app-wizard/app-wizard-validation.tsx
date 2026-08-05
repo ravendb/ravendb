@@ -165,6 +165,11 @@ const tableSchema = z
 export const tablesSchema = z
     .array(tableSchema)
     .min(1, "At least one table is required")
+    // A mapping with every root disabled would ingest nothing, and it would skip the CDC dry run
+    // that gates the step, so it must not advance.
+    .refine((tables) => tables.length === 0 || tables.some((table) => !table.disabled), {
+        message: "At least one enabled table is required",
+    })
     .refine((tables) => hasUniqueValues(tables.map((table) => table.collectionName)), {
         message: "Collection names must be unique",
     })

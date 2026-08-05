@@ -59,9 +59,12 @@ export type SetupWizardState = {
     resetMapTablesUiState: () => void;
     isMapTablesRawView: boolean;
     mapTablesRawContent: string;
+    /** Whether the editor's content still parses into tables. Recorded by the writer, which parses
+     * anyway, so nothing has to re-parse a whole mapping to answer it. */
+    isMapTablesRawContentValid: boolean;
     openMapTablesRawView: (content: string) => void;
     closeMapTablesRawView: () => void;
-    setMapTablesRawContent: (content: string) => void;
+    setMapTablesRawContent: (content: string, isValid: boolean) => void;
 };
 
 const initialState: Pick<
@@ -80,6 +83,7 @@ const initialState: Pick<
     | "mapExpandedPaths"
     | "isMapTablesRawView"
     | "mapTablesRawContent"
+    | "isMapTablesRawContentValid"
 > = {
     discoverResult: null,
     discoverSchemas: [],
@@ -95,6 +99,7 @@ const initialState: Pick<
     mapExpandedPaths: {},
     isMapTablesRawView: false,
     mapTablesRawContent: "",
+    isMapTablesRawContentValid: true,
 };
 
 export const useSetupWizardStore = create<SetupWizardState>((set) => ({
@@ -150,8 +155,13 @@ export const useSetupWizardStore = create<SetupWizardState>((set) => ({
             mapExpandedPaths: {},
             isMapTablesRawView: false,
             mapTablesRawContent: "",
+            isMapTablesRawContentValid: true,
         }),
-    openMapTablesRawView: (content) => set({ isMapTablesRawView: true, mapTablesRawContent: content }),
-    closeMapTablesRawView: () => set({ isMapTablesRawView: false, mapTablesRawContent: "" }),
-    setMapTablesRawContent: (content) => set({ mapTablesRawContent: content }),
+    // The content is serialized from the form, so it parses by construction.
+    openMapTablesRawView: (content) =>
+        set({ isMapTablesRawView: true, mapTablesRawContent: content, isMapTablesRawContentValid: true }),
+    closeMapTablesRawView: () =>
+        set({ isMapTablesRawView: false, mapTablesRawContent: "", isMapTablesRawContentValid: true }),
+    setMapTablesRawContent: (content, isValid) =>
+        set({ mapTablesRawContent: content, isMapTablesRawContentValid: isValid }),
 }));

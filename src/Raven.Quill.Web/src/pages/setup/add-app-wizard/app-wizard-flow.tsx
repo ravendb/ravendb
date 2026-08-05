@@ -100,7 +100,7 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
             validate: "mapTables",
             onValidationFailed: focusMapTablesError,
             beforeNext: mapTablesBeforeNext,
-            isNextDisabled: isMapTablesNextDisabled,
+            isNextDisabled: isMapTablesNextDisabled || isVerifyCdcRunning,
         },
         preview: {
             title: "Preview before full ingest",

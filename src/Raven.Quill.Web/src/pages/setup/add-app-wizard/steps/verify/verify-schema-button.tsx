@@ -1,33 +1,18 @@
-import { CircleCheckIcon, ShieldCheckIcon } from "lucide-react";
-import { Spinner } from "@/components/shadcn/ui/spinner";
-import { cn } from "@/lib/utils";
-import { useVerifyCdcState } from "@/pages/setup/add-app-wizard/steps/verify/use-verify-cdc-step";
+import { useVerifySchemaCdcState } from "@/pages/setup/add-app-wizard/steps/verify/use-verify-schema-cdc";
+import { VerifyCdcButton } from "@/pages/setup/add-app-wizard/steps/verify/verify-cdc-button";
+
+const VERIFY_SCHEMA_LABELS = {
+    idle: "Verify schema",
+    verifying: "Verifying schema...",
+    verified: "Schema verified",
+};
 
 /**
- * Runs the CDC dry run that Next runs, so the operator can settle the selection before leaving the step.
- * Lives in the selection overlay: verifying is only meaningful once at least one table is selected.
+ * The CDC dry run for the verify step's table selection. Lives in the selection overlay:
+ * verifying is only meaningful once at least one table is selected.
  */
 export function VerifySchemaButton({ disabled }: { disabled: boolean }) {
-    const { isVerifying, isVerified, isRunning, verify } = useVerifyCdcState();
+    const state = useVerifySchemaCdcState();
 
-    return (
-        <button
-            type="button"
-            onClick={verify}
-            disabled={disabled || isVerified || isRunning}
-            className={cn(
-                "flex items-center gap-1.5 whitespace-nowrap transition-colors disabled:pointer-events-none",
-                isVerified ? "text-success" : "text-foreground hover:text-muted-foreground",
-            )}
-        >
-            {isVerifying ? (
-                <Spinner className="size-3.5" />
-            ) : isVerified ? (
-                <CircleCheckIcon className="size-3.5" aria-hidden="true" />
-            ) : (
-                <ShieldCheckIcon className="size-3.5" aria-hidden="true" />
-            )}
-            {isVerifying ? "Verifying schema..." : isVerified ? "Schema verified" : "Verify schema"}
-        </button>
-    );
+    return <VerifyCdcButton disabled={disabled} state={state} labels={VERIFY_SCHEMA_LABELS} />;
 }
