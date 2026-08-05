@@ -1,4 +1,4 @@
-import { connectionStringRules, ongoingTaskRules, resolveRestriction } from "./importRestrictions";
+import { connectionStringRules, databaseSettingRules, ongoingTaskRules, resolveRestriction } from "./importRestrictions";
 
 const fullLicense = {
     HasQueueEtl: true,
@@ -48,6 +48,16 @@ describe("resolveRestriction", () => {
 
     it("allows a sharding-supported task on a sharded database", () => {
         expect(resolveRestriction(ongoingTaskRules.ravenEtls, context({ isSharded: true }))).toBeNull();
+    });
+
+    it("reports sharding for PostgreSQL integration when resolved with the sharding-checked context", () => {
+        // the server strips PostgreSQLIntegration from sharded imports, so useImportRestrictions
+        // resolves this one settings entry with the sharding-checked (task) context
+        const result = resolveRestriction(
+            databaseSettingRules.postgreSqlIntegration,
+            context({ licenseStatus: { HasPostgreSqlIntegration: true }, isSharded: true })
+        );
+        expect(result?.reason).toBe("sharding");
     });
 
     it("skips the sharding check when the group opts out", () => {

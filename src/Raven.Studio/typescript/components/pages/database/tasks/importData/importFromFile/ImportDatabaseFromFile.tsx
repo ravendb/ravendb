@@ -1,9 +1,10 @@
 import "./ImportDatabaseFromFile.scss";
 import React, { useEffect, useRef, useState } from "react";
-import { FieldErrors, FieldPath, FormProvider, useWatch } from "react-hook-form";
+import { FieldErrors, FormProvider, useWatch } from "react-hook-form";
 import { useAsync } from "react-async-hook";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
+import ProgressBar from "react-bootstrap/ProgressBar";
 import classNames from "classnames";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
@@ -13,7 +14,6 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { useServices } from "components/hooks/useServices";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import { useScrollSpy } from "components/hooks/useScrollSpy";
-import { useRavenLink } from "components/hooks/useRavenLink";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import notificationCenter from "common/notifications/notificationCenter";
 import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
@@ -21,7 +21,7 @@ import collectionsTracker from "common/helpers/database/collectionsTracker";
 import messagePublisher from "common/messagePublisher";
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import { useImportFromFileForm } from "./useImportFromFileForm";
-import { useImportRestrictions } from "./useImportRestrictions";
+import { ImportRestrictionsProvider, useImportRestrictions } from "./useImportRestrictions";
 import { hasAnyInclude, toImportDto } from "./importFromFileUtils";
 import { ImportFromFileFormData } from "./importFromFileValidation";
 import SelectFileSection from "./sections/SelectFileSection";
@@ -43,6 +43,14 @@ interface OperationState {
 }
 
 export default function ImportDatabaseFromFile() {
+    return (
+        <ImportRestrictionsProvider>
+            <ImportDatabaseFromFileContent />
+        </ImportRestrictionsProvider>
+    );
+}
+
+function ImportDatabaseFromFileContent() {
     const { forCurrentDatabase } = useAppUrls();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { tasksService, databasesService } = useServices();
@@ -81,13 +89,14 @@ export default function ImportDatabaseFromFile() {
     const activeSectionId = useScrollSpy(sectionIds, { root: scrollRoot });
 
     const importOptionsUrl = forCurrentDatabase.importDataOptionsUrl();
-    const importDocsLink = useRavenLink({ hash: "YD9M1R" });
 
     const asyncEssentialStats = useAsync(async () => databasesService.getEssentialStats(databaseName), [databaseName]);
-    const essentialStats = asyncEssentialStats.result;
-    // Only a successful response with actual counts proves the database is empty; anything else
+    // Only a successful response with zero counts proves the database is empty; anything else
     // (still loading, failed, or a response we cannot read) keeps the warning visible.
-    const hasExistingData = essentialStats?.CountOfDocuments > 0 || essentialStats?.CountOfIndexes > 0;
+    const hasExistingData =
+        !asyncEssentialStats.result ||
+        asyncEssentialStats.result.CountOfDocuments > 0 ||
+        asyncEssentialStats.result.CountOfIndexes > 0;
 
     const onSubmit = async (formData: ImportFromFileFormData) => {
         if (
@@ -187,9 +196,21 @@ export default function ImportDatabaseFromFile() {
         }
 
         try {
-            await tasksService.importDatabaseFromFile(databaseName, operationId, formData.file, dto, (percent) =>
-                setUploadPercent(Math.round(percent))
-            );
+            await tasksService.importDatabaseFromFile(databaseName, operationId, formData.file, dto, (percent) => {
+                if (isUnmountedRef.current) {
+                    return;
+                }
+                setUploadPercent(Math.round(percent));
+                // Knockout parity: hide the bar shortly after the upload itself completes - the
+                // request stays open until the server-side import finishes, which can take minutes
+                if (percent === 100) {
+                    setTimeout(() => {
+                        if (!isUnmountedRef.current) {
+                            setUploadPercent(null);
+                        }
+                    }, 700);
+                }
+            });
         } catch {
             // the command reports the upload error itself; if the upload died before the server
             // registered any progress, monitorOperation will never settle - mark Faulted ourselves
@@ -218,9 +239,10 @@ export default function ImportDatabaseFromFile() {
             return;
         }
 
-        target.revealToggles?.forEach((toggle) => form.setValue(toggle, true));
-        // let the Collapse mount its content before scrolling to it
-        requestAnimationFrame(() => scrollToSection(target.sectionId));
+        // every conditional field can only carry an error while its enabling toggle is on
+        // (yup .when), so its Collapse is already expanded and the section can be scrolled to
+        // directly
+        scrollToSection(target.sectionId);
     };
 
     // only these two groups feed hasAnyInclude - watching the whole form here would re-render every
@@ -270,8 +292,22 @@ export default function ImportDatabaseFromFile() {
                         <Icon icon="code" /> Use import command
                     </Button>
                 </div>
+                {/* Knockout parity: striped upload bar under the action buttons, percent only for
+                    screen readers - server-side progress lives in the result modal */}
+                {isUploading && (
+                    <ProgressBar
+                        now={uploadPercent}
+                        striped
+                        animated
+                        label={`${uploadPercent}%`}
+                        visuallyHidden
+                        className="mb-3"
+                    />
+                )}
                 {!hasInclude && (
-                    <Alert variant="warning">Note: At least one &apos;include&apos; option must be checked.</Alert>
+                    <Alert variant="warning" className="mb-2">
+                        Note: At least one &apos;include&apos; option must be checked.
+                    </Alert>
                 )}
                 <div className="d-flex gap-4 import-page-body">
                     <nav className="import-side-nav align-self-start">
@@ -407,23 +443,7 @@ function getFirstErrorPath(errors: unknown, prefix = ""): string | null {
 const errorFieldTargets: {
     path: string;
     sectionId: string;
-    revealToggles?: FieldPath<ImportFromFileFormData>[];
 }[] = [
-    {
-        path: "processing.transformScript",
-        sectionId: "import-processing",
-        revealToggles: ["processing.isUseTransformScript"],
-    },
-    {
-        path: "processing.maxReadOpsPerSecond",
-        sectionId: "import-processing",
-        revealToggles: ["processing.isSetMaxReadOpsPerSecond"],
-    },
-    {
-        path: "processing.encryptionKey",
-        sectionId: "import-processing",
-        revealToggles: ["processing.isEncrypted"],
-    },
     { path: "processing", sectionId: "import-processing" },
     { path: "file", sectionId: "select-file" },
     { path: "documents", sectionId: "data-to-import" },

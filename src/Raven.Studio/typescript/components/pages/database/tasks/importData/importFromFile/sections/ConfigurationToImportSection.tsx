@@ -17,7 +17,7 @@ import {
 import { useImportRestrictions } from "../useImportRestrictions";
 import { getTasksMissingConnectionStrings } from "../importFromFileUtils";
 import Card from "react-bootstrap/Card";
-import { connectionStringLabels, databaseSettingLabels, ongoingTaskLabels } from "./configurationToImportSectionUtils";
+import { connectionStringLabels, databaseSettingLabels, ongoingTaskLabels } from "../importFromFileLabels";
 import classNames from "classnames";
 
 export default function ConfigurationToImportSection() {
@@ -74,8 +74,13 @@ export default function ConfigurationToImportSection() {
     const selectableOngoingTaskKeys = ongoingTaskKeys.filter((key) => !ongoingTaskRestrictions[key]);
     const selectableConnectionStringKeys = connectionStringKeys.filter((key) => !connectionStringRestrictions[key]);
 
-    const areAllOngoingTasksSelected = selectableOngoingTaskKeys.every((key) => ongoingTasks[key]);
-    const areAllConnectionStringsSelected = selectableConnectionStringKeys.every((key) => connectionStrings[key]);
+    // the length guard keeps "Select all" from reading as checked when everything is restricted
+    // (every() is vacuously true on an empty array) - possible for e.g. a DatabaseReadWrite user
+    const areAllOngoingTasksSelected =
+        selectableOngoingTaskKeys.length > 0 && selectableOngoingTaskKeys.every((key) => ongoingTasks[key]);
+    const areAllConnectionStringsSelected =
+        selectableConnectionStringKeys.length > 0 &&
+        selectableConnectionStringKeys.every((key) => connectionStrings[key]);
 
     const setAllOngoingTasks = (value: boolean) => {
         selectableOngoingTaskKeys.forEach((key) =>
@@ -165,6 +170,7 @@ export default function ConfigurationToImportSection() {
                                             id="select-all-ongoing-tasks"
                                             label=""
                                             className="m-0"
+                                            disabled={selectableOngoingTaskKeys.length === 0}
                                             checked={areAllOngoingTasksSelected}
                                             onChange={(e) => setAllOngoingTasks(e.target.checked)}
                                         />
@@ -193,6 +199,7 @@ export default function ConfigurationToImportSection() {
                                             id="select-all-connection-strings"
                                             label=""
                                             className="m-0"
+                                            disabled={selectableConnectionStringKeys.length === 0}
                                             checked={areAllConnectionStringsSelected}
                                             onChange={(e) => setAllConnectionStrings(e.target.checked)}
                                         />

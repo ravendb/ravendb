@@ -7,6 +7,7 @@ import Spinner from "react-bootstrap/Spinner";
 import Modal from "components/common/Modal";
 import Code from "components/common/Code";
 import { Icon } from "components/common/Icon";
+import genUtils from "common/generalUtils";
 import moment from "moment";
 
 type SmugglerProgress = Raven.Client.Documents.Smuggler.SmugglerProgressBase;
@@ -30,8 +31,8 @@ interface ImportResultModalProps {
 
 export default function ImportResultModal({ progress, status, startTime, endTime, onClose }: ImportResultModalProps) {
     const rows = buildRows(progress);
-    const durationSeconds = moment(endTime ?? undefined).diff(moment(startTime), "seconds");
-    const duration = moment.duration(durationSeconds, "seconds").humanize();
+    // hh:mm:ss rather than humanize() - "a few seconds" is useless for comparing import runs
+    const duration = genUtils.formatAsTimeSpan(moment(endTime ?? undefined).diff(moment(startTime)));
 
     const [isDetailsVisible, setIsDetailsVisible] = useState(false);
     // progress updates and the final result are SmugglerResult objects carrying the log lines

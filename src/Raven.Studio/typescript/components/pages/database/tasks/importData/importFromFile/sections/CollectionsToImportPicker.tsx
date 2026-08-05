@@ -15,13 +15,18 @@ import { ImportFromFileFormData } from "../importFromFileValidation";
  * the other only narrows the rows already added.
  */
 export default function CollectionsToImportPicker() {
-    const { control: importControl, setValue } = useFormContext<ImportFromFileFormData>();
+    const { control: importControl, setValue, getValues } = useFormContext<ImportFromFileFormData>();
 
     const includedCollections = useWatch({ control: importControl, name: "collections.includedCollections" }) ?? [];
 
     // Rows live in local state so deselecting only turns the toggle off - the trash icon removes
-    // the row entirely.
-    const [manualCollections, setManualCollections] = useState<string[]>([]);
+    // the row entirely. The picker unmounts whenever "Import all collections" is active, so the
+    // rows are re-seeded from the form's included list on mount - otherwise the selection would
+    // survive in the form while the list showed "No collections added" (deselected-but-kept rows
+    // are the only thing lost across that switch).
+    const [manualCollections, setManualCollections] = useState<string[]>(
+        () => getValues("collections.includedCollections") ?? []
+    );
     // bumped on every successful add; drives the refocus effect below
     const [addedCount, setAddedCount] = useState(0);
 
@@ -161,6 +166,9 @@ export default function CollectionsToImportPicker() {
                     <div key={name} className="import-list-item">
                         <Form.Check
                             type="switch"
+                            // without an id react-bootstrap renders a label with no htmlFor,
+                            // making the collection name unclickable
+                            id={`import-collection-${encodeURIComponent(name)}`}
                             label={name}
                             checked={includedCollections.includes(name)}
                             onChange={(e) => toggleCollection(name, e.target.checked)}
