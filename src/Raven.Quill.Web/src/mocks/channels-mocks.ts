@@ -1,4 +1,8 @@
-import type { ChannelSummaryResponse, ProvisionChannelResponse } from "@/api/generated/server-api";
+import type {
+    ChannelSummaryResponse,
+    ProvisionChannelResponse,
+    TelegramChannelHealthResponse,
+} from "@/api/generated/server-api";
 import { apiHttp } from "./api-http";
 
 export const channelsMocks = {
@@ -25,6 +29,11 @@ export const channelsMocks = {
     delete: () => apiHttp.delete("/api/apps/{slug}/channels/{channelId}", ({ response }) => response(204).empty()),
 };
 
+export const telegramMocks = {
+    health: (items: TelegramChannelHealthResponse[] = sampleTelegramHealth) =>
+        apiHttp.get("/api/apps/{slug}/telegram/health", ({ response }) => response(200).json(items)),
+};
+
 // Realistic, URL-safe channel ids (provisioning mints a 32-hex id); the web
 // id is shared with the embed-links mocks so the channel detail route resolves.
 export const SAMPLE_CHANNEL_ID = "4a1f9c2b7d8e4f6a9b0c1d2e3f405162";
@@ -45,5 +54,19 @@ export const sampleChannels: ChannelSummaryResponse[] = [
         displayName: "Telegram bot",
         enabled: false,
         createdAt: "2026-05-09T14:20:00Z",
+        botUsername: "acme_faq_bot",
+    },
+];
+
+export const sampleTelegramHealth: TelegramChannelHealthResponse[] = [
+    {
+        channelId: "tlg_2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e",
+        botUsername: "acme_faq_bot",
+        enabled: false,
+        isPolling: false,
+        lastSuccessfulPoll: "2026-05-09T15:00:00Z",
+        lastErrorAt: null,
+        errorCount: 0,
+        lastError: null,
     },
 ];

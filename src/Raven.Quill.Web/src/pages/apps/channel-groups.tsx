@@ -3,9 +3,14 @@ import { Cable, CodeXml, Link2, MessageCircle, Palette, Pencil, Send, Trash2, ty
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { api } from "@/api/api";
-import type { AgentSummaryResponse, ChannelSummaryResponse, ChannelType } from "@/api/generated/server-api";
+import type {
+    AgentSummaryResponse,
+    ChannelSummaryResponse,
+    ChannelType,
+    TelegramChannelHealthResponse,
+} from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
-import { EnabledStatus } from "@/components/data/status-indicator";
+import { EnabledStatus, StatusIndicator } from "@/components/data/status-indicator";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { Card, CardAction, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/shadcn/ui/card";
@@ -35,11 +40,18 @@ export function ChannelGroups({ slug }: { slug: string }) {
     // Active-link counts are supplementary — kept out of the ApiState gate so a
     // links hiccup never blocks the channel cards.
     const embedLinksQuery = useQuery(api.queries.embedLinks.list(slug));
+    // Polling health is supplementary too, and only worth fetching when a Telegram bot exists.
+    const hasTelegramChannel = (channelsQuery.data ?? []).some((channel) => channel.type === "Telegram");
+    const telegramHealthQuery = useQuery({ ...api.queries.telegram.health(slug), enabled: hasTelegramChannel });
 
     const activeLinkCounts = new Map<string, number>();
     for (const link of embedLinksQuery.data ?? []) {
         activeLinkCounts.set(link.channelId, (activeLinkCounts.get(link.channelId) ?? 0) + 1);
     }
+
+    const telegramHealthByChannel = new Map(
+        (telegramHealthQuery.data ?? []).map((health) => [health.channelId, health]),
+    );
 
     const onRetry = async () => {
         if (channelsQuery.isError) {
@@ -107,6 +119,7 @@ export function ChannelGroups({ slug }: { slug: string }) {
                                             agent={agentsQuery.data?.find((x) => x.agentId === channel.agentId)}
                                             activeLinkCount={activeLinkCounts.get(channel.channelId) ?? 0}
                                             isLinkCountLoading={embedLinksQuery.isPending}
+                                            telegramHealth={telegramHealthByChannel.get(channel.channelId)}
                                         />
                                     ))}
                                 </div>
@@ -124,14 +137,17 @@ function ChannelCard({
     agent,
     activeLinkCount,
     isLinkCountLoading,
+    telegramHealth,
 }: {
     slug: string;
     channel: ChannelSummaryResponse;
     agent: AgentSummaryResponse | undefined;
     activeLinkCount: number;
     isLinkCountLoading: boolean;
+    telegramHealth: TelegramChannelHealthResponse | undefined;
 }) {
     const isIFrame = channel.type === "IFrame";
+    const isTelegram = channel.type === "Telegram";
 
     return (
         // The title's stretched ::after overlay turns the whole card into the "open details" link;
@@ -149,9 +165,18 @@ function ChannelCard({
                     >
                         {channel.displayName}
                     </Link>
+                    {channel.botUsername && (
+                        <div className="truncate text-xs font-normal text-muted-foreground">
+                            @{channel.botUsername}
+                        </div>
+                    )}
                 </CardTitle>
                 <CardAction>
-                    <EnabledStatus isEnabled={channel.enabled} />
+                    {isTelegram ? (
+                        <TelegramStatusPill enabled={channel.enabled} health={telegramHealth} />
+                    ) : (
+                        <EnabledStatus isEnabled={channel.enabled} />
+                    )}
                 </CardAction>
             </CardHeader>
 
@@ -162,12 +187,26 @@ function ChannelCard({
                     <span className="text-xs text-muted-foreground">Unassigned</span>
                 )}
 
-                <div className={cn("grid gap-2", isIFrame ? "grid-cols-2" : "grid-cols-1")}>
+                <div className={cn("grid gap-2", isIFrame || isTelegram ? "grid-cols-2" : "grid-cols-1")}>
                     {isIFrame && (
                         <StatBox
                             label="Active links"
                             value={
                                 isLinkCountLoading ? <Skeleton className="h-4 w-6" /> : activeLinkCount.toLocaleString()
+                            }
+                        />
+                    )}
+                    {isTelegram && (
+                        <StatBox
+                            label="Last poll"
+                            value={
+                                telegramHealth?.lastSuccessfulPoll ? (
+                                    <span title={formatDateTime(telegramHealth.lastSuccessfulPoll)}>
+                                        {formatRelativeTime(telegramHealth.lastSuccessfulPoll)}
+                                    </span>
+                                ) : (
+                                    "—"
+                                )
                             }
                         />
                     )}
@@ -236,6 +275,27 @@ function ChannelCard({
             </CardFooter>
         </Card>
     );
+}
+
+// Polling health folds into the status: errors win over "Active" so a revoked token is visible
+// at a glance (the last token-scrubbed error rides in the tooltip).
+function TelegramStatusPill({
+    enabled,
+    health,
+}: {
+    enabled: boolean;
+    health: TelegramChannelHealthResponse | undefined;
+}) {
+    if (enabled && health && health.errorCount > 0) {
+        return (
+            <StatusIndicator
+                tone="warning"
+                label={`Errors (${health.errorCount.toLocaleString()})`}
+                title={health.lastError ?? undefined}
+            />
+        );
+    }
+    return <EnabledStatus isEnabled={enabled} />;
 }
 
 function StatBox({ label, value }: { label: string; value: ReactNode }) {

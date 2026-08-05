@@ -10,7 +10,10 @@ import {
 } from "@/components/shadcn/ui/dropdown-menu";
 import { SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/shadcn/ui/sheet";
 import { GuardedSheet } from "@/components/form/unsaved-changes/guarded-overlays";
+import { TelegramChannelForm } from "@/pages/apps/channels/telegram-channel-form";
 import { WebWidgetChannelForm, type FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
+
+type ChannelOptionId = "web-widget" | "telegram";
 
 type ChannelOption = {
     id: string;
@@ -20,7 +23,7 @@ type ChannelOption = {
     enabled: boolean;
 };
 
-// Only the web widget is backed by the channels API today; the rest are previewed as disabled.
+// The web widget and Telegram are backed by the channels API today; the rest are previewed as disabled.
 const CHANNEL_OPTIONS: ChannelOption[] = [
     {
         id: "web-widget",
@@ -34,7 +37,7 @@ const CHANNEL_OPTIONS: ChannelOption[] = [
         label: "Telegram bot",
         description: "Connect a bot via @BotFather",
         icon: Send,
-        enabled: false,
+        enabled: true,
     },
     {
         id: "whatsapp-personal",
@@ -63,7 +66,8 @@ export function AddChannelMenu({
     label?: string;
     variant?: "default" | "outline";
 }) {
-    const [isSheetOpen, setIsSheetOpen] = useState(false);
+    // The picked option decides which form the sheet hosts; null keeps the sheet closed.
+    const [openOption, setOpenOption] = useState<ChannelOptionId | null>(null);
 
     return (
         <>
@@ -80,7 +84,7 @@ export function AddChannelMenu({
                             key={option.id}
                             className="items-start gap-2.5 py-2"
                             disabled={!option.enabled}
-                            onSelect={option.enabled ? () => setIsSheetOpen(true) : undefined}
+                            onSelect={option.enabled ? () => setOpenOption(option.id as ChannelOptionId) : undefined}
                         >
                             <option.icon className="mt-0.5 size-4 text-muted-foreground" aria-hidden="true" />
                             <div className="flex flex-col gap-0.5">
@@ -99,17 +103,40 @@ export function AddChannelMenu({
                 </DropdownMenuContent>
             </DropdownMenu>
 
-            <GuardedSheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+            <GuardedSheet
+                open={openOption !== null}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setOpenOption(null);
+                    }
+                }}
+            >
                 <SheetContent className="w-full gap-0 sm:max-w-lg data-[side=right]:sm:max-w-lg">
-                    <SheetHeader className="border-b">
-                        <SheetTitle>New web widget channel</SheetTitle>
-                        <SheetDescription>
-                            {agent
-                                ? `Embed a chat widget on your site, routed to “${agent.name}”.`
-                                : "Embed a chat widget on your site and route it to an agent."}
-                        </SheetDescription>
-                    </SheetHeader>
-                    <WebWidgetChannelForm slug={slug} agent={agent} onCreated={() => setIsSheetOpen(false)} />
+                    {openOption === "telegram" ? (
+                        <>
+                            <SheetHeader className="border-b">
+                                <SheetTitle>New Telegram bot channel</SheetTitle>
+                                <SheetDescription>
+                                    {agent
+                                        ? `Connect a Telegram bot, routed to “${agent.name}”.`
+                                        : "Connect a Telegram bot and route it to an agent."}
+                                </SheetDescription>
+                            </SheetHeader>
+                            <TelegramChannelForm slug={slug} agent={agent} onCreated={() => setOpenOption(null)} />
+                        </>
+                    ) : (
+                        <>
+                            <SheetHeader className="border-b">
+                                <SheetTitle>New web widget channel</SheetTitle>
+                                <SheetDescription>
+                                    {agent
+                                        ? `Embed a chat widget on your site, routed to “${agent.name}”.`
+                                        : "Embed a chat widget on your site and route it to an agent."}
+                                </SheetDescription>
+                            </SheetHeader>
+                            <WebWidgetChannelForm slug={slug} agent={agent} onCreated={() => setOpenOption(null)} />
+                        </>
+                    )}
                 </SheetContent>
             </GuardedSheet>
         </>
