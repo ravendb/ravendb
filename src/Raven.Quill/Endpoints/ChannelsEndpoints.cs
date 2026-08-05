@@ -235,6 +235,11 @@ public static class ChannelsEndpoints
             var bot = await botFactory.Create(botToken).GetMe(timeout.Token);
             return (bot, null);
         }
+        catch (ArgumentException)
+        {
+            // Telegram.Bot rejects the token shape in the client constructor, before any HTTP call
+            return (null, "invalid bot token format; expected '<botId>:<secret>' as issued by @BotFather");
+        }
         catch (OperationCanceledException) when (ct.IsCancellationRequested == false)
         {
             return (null, "telegram did not respond while validating the bot token");
