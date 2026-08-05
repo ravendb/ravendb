@@ -1,9 +1,9 @@
-import { AboutViewAnchored, AccordionItemWrapper } from "components/common/AboutView";
+import { AboutViewFloating, AccordionItemWrapper } from "components/common/AboutView";
 import React from "react";
 
 export default function IndexErrorsAboutView() {
     return (
-        <AboutViewAnchored>
+        <AboutViewFloating>
             <AccordionItemWrapper targetId="about" icon="about" color="info">
                 <p>
                     An indexing error can occur during indexing if the indexing function is malformed or if the document
@@ -30,6 +30,6 @@ export default function IndexErrorsAboutView() {
                     </li>
                 </ul>
             </AccordionItemWrapper>
-        </AboutViewAnchored>
+        </AboutViewFloating>
     );
 }
