@@ -74,6 +74,26 @@ namespace Raven.Server.Integrations.PostgreSQL
                 return true;
             }
 
+            if (TryGetUnsupportedAggregateModifier(outer, out var modifier))
+            {
+                message = $"An aggregate with {modifier} is not supported. RavenDB's map-reduce aggregates every row that falls into a group, so there is no way to de-duplicate, pre-filter or window the values being aggregated — `count(DISTINCT x)`, `sum(DISTINCT x)`, `count(*) FILTER (WHERE ...)` and `count(*) OVER (...)` would all silently return the plain count/sum over the whole group. De-duplicate or filter client-side, or group by the column so each group already holds only the values you want.";
+                return true;
+            }
+
+            if (HasCountOverColumn(outer))
+            {
+                message = "count(<column>) is not supported — only count(*). PostgreSQL counts the non-NULL values of the named column, while RavenDB's count() returns the group's total row count and ignores the argument, so the two disagree for every document that is missing the field. Use count(*) for the row count, or compute the non-null count client-side.";
+                return true;
+            }
+
+            // Before the scalar-aggregate check: these predicates make `SELECT count(*) ... WHERE x IS
+            // DISTINCT FROM y` fail translation, and blaming the aggregate would hide the real cause.
+            if (HasDistinctFromPredicate(outer))
+            {
+                message = "IS DISTINCT FROM / IS NOT DISTINCT FROM (and NULLIF used as a predicate) are not supported. PostgreSQL builds them from a plain `=` operator that differs only in how it treats NULL, and RavenDB does not distinguish a stored null from a missing field, so neither form can be translated without changing which documents match. Combine `=` / `!=` with an explicit `IS NULL` / `IS NOT NULL` check, or run the query as RQL.";
+                return true;
+            }
+
             if (IsScalarAggregateWithoutGroupBy(outer))
             {
                 message = "Scalar aggregate without GROUP BY is supported for `count(*)` only. RavenDB's sum() is a map-reduce aggregation that requires a GROUP BY, so `SELECT sum(...) FROM t` with no grouping has no RQL form — compute the aggregate client-side from the underlying rows.";
@@ -395,6 +415,99 @@ namespace Raven.Server.Integrations.PostgreSQL
                     return true;
             }
             return false;
+        }
+
+        private static bool TryGetUnsupportedAggregateModifier(SelectStmt selectStmt, out string modifier)
+        {
+            modifier = null;
+
+            if (selectStmt.TargetList is not { Count: > 0 } targets)
+                return false;
+
+            foreach (var t in targets)
+            {
+                var funcCall = t?.ResTarget?.Val?.FuncCall;
+                if (funcCall == null)
+                    continue;
+
+                if (funcCall.AggDistinct)
+                    modifier = "DISTINCT";
+                else if (funcCall.AggFilter != null)
+                    modifier = "a FILTER (WHERE ...) clause";
+                else if (funcCall.Over != null)
+                    modifier = "an OVER (...) window clause";
+                else
+                    continue;
+
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool HasCountOverColumn(SelectStmt selectStmt)
+        {
+            if (selectStmt.TargetList is not { Count: > 0 } targets)
+                return false;
+
+            foreach (var t in targets)
+            {
+                var funcCall = t?.ResTarget?.Val?.FuncCall;
+                if (funcCall == null || funcCall.AggStar)
+                    continue;
+
+                var name = funcCall.Funcname is { Count: > 0 }
+                    ? funcCall.Funcname[funcCall.Funcname.Count - 1]?.String?.Sval
+                    : null;
+                if (string.Equals(name, "count", System.StringComparison.OrdinalIgnoreCase) == false)
+                    continue;
+
+                if (funcCall.Args is { Count: 1 } && funcCall.Args[0]?.ColumnRef != null)
+                    return true;
+            }
+
+            return false;
+        }
+
+        // PG parses IS [NOT] DISTINCT FROM and NULLIF into an A_Expr whose operator name is "=", so
+        // only the Kind separates them from real equality.
+        private static bool HasDistinctFromPredicate(SelectStmt selectStmt)
+        {
+            var wheres = new List<Node>();
+            CollectWhereClauses(selectStmt, wheres, depth: 0);
+
+            foreach (var where in wheres)
+            {
+                if (HasDistinctFromPredicate(where, depth: 0))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static bool HasDistinctFromPredicate(Node node, int depth)
+        {
+            if (node == null || depth >= MaxJoinSearchDepth)
+                return false;
+
+            if (node.BoolExpr?.Args is { } args)
+            {
+                foreach (var arg in args)
+                {
+                    if (HasDistinctFromPredicate(arg, depth + 1))
+                        return true;
+                }
+                return false;
+            }
+
+            if (node.AExpr is not { } aExpr)
+                return false;
+
+            if (aExpr.Kind is A_Expr_Kind.AexprDistinct or A_Expr_Kind.AexprNotDistinct or A_Expr_Kind.AexprNullif)
+                return true;
+
+            return HasDistinctFromPredicate(aExpr.Lexpr, depth + 1)
+                || HasDistinctFromPredicate(aExpr.Rexpr, depth + 1);
         }
 
         // True iff every projection is an aggregate FuncCall (count/sum/avg/min/max) with no GROUP BY key.

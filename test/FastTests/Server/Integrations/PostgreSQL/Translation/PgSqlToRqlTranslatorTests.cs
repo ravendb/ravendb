@@ -427,13 +427,11 @@ namespace FastTests.Server.Integrations.PostgreSQL.Translation
             Assert.Equal(expected, Translate(sql));
         }
 
-        // PowerBI's Top-N visual fires this shape: alias-qualified projection + alias-qualified
-        // count argument, both needing the `rows.` fromAlias stripped to match the GROUP BY key.
-        // The SQL alias on the aggregate must be preserved too: RQL's implicit alias for
-        // count(Freight) would be `Freight`, colliding with the sibling group-by-key projection
-        // (`Duplicate alias 'Freight'`), so we emit `count(Freight) as a0`.
+        // RQL's count() ignores its argument, so emitting count(Freight) returned the group's row
+        // count while PG counts non-null values only. The PowerBI dispatch path normalises the same
+        // shape to count() on purpose (see PowerBIAstTests); the generic SQL path must not guess.
         [RavenFact(RavenTestCategory.PostgreSql)]
-        public void GroupBy_WithFromAlias_QualifiedProjectionAndAggregateArg_StripsAliasAndPreservesAggregateAlias()
+        public void GroupBy_CountOverAliasQualifiedColumn_IsRejected()
         {
             var sql = """
                 select "rows"."Freight" as "Freight", count("rows"."Freight") as "a0"
@@ -441,9 +439,9 @@ namespace FastTests.Server.Integrations.PostgreSQL.Translation
                 group by "Freight"
                 limit 1000001
                 """;
-            var expected = "from 'Orders' group by Freight select Freight, count(Freight) as a0 limit 0, 1000001";
 
-            Assert.Equal(expected, Translate(sql));
+            Assert.False(Raven.Server.Integrations.PostgreSQL.Translation.PgSqlToRqlTranslator.TryParse(
+                sql, Array.Empty<int>(), out _));
         }
 
         [RavenFact(RavenTestCategory.PostgreSql)]
@@ -780,6 +778,83 @@ namespace FastTests.Server.Integrations.PostgreSQL.Translation
         {
             Assert.False(Raven.Server.Integrations.PostgreSQL.Translation.PgSqlToRqlTranslator.TryParse(
                 sql, Array.Empty<int>(), out _));
+        }
+
+        // DISTINCT / FILTER / OVER and count(<column>) all used to translate to the plain aggregate,
+        // which RQL computes over every row in the group - the same number as count(*)/sum(*).
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("SELECT \"Company\", count(distinct \"ShipVia\") FROM \"Orders\" GROUP BY \"Company\"")]
+        [InlineData("SELECT \"Company\", count(\"ShipVia\") FROM \"Orders\" GROUP BY \"Company\"")]
+        [InlineData("SELECT \"Company\", sum(distinct \"Freight\") FROM \"Orders\" GROUP BY \"Company\"")]
+        [InlineData("SELECT \"Company\", count(*) FILTER (WHERE \"Freight\" > 10) FROM \"Orders\" GROUP BY \"Company\"")]
+        [InlineData("SELECT \"Company\", count(*) OVER () FROM \"Orders\" GROUP BY \"Company\"")]
+        [InlineData("SELECT \"Company\", count(*) FROM \"Orders\" GROUP BY \"Company\" ORDER BY count(distinct \"ShipVia\") DESC")]
+        public void GroupByAggregate_WithUnsupportedModifierOrColumnArg_IsRejected(string sql)
+        {
+            Assert.False(Raven.Server.Integrations.PostgreSQL.Translation.PgSqlToRqlTranslator.TryParse(
+                sql, Array.Empty<int>(), out _));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void GroupByCountStar_AndGroupBySum_StillTranslate()
+        {
+            Assert.Equal("from 'Orders' group by Company select Company, count()",
+                Translate("SELECT \"Company\", count(*) FROM \"Orders\" GROUP BY \"Company\""));
+
+            Assert.Equal("from 'Orders' group by Company select Company, sum(Freight)",
+                Translate("SELECT \"Company\", sum(\"Freight\") FROM \"Orders\" GROUP BY \"Company\""));
+        }
+
+        // count(1) counts every row, so it stays equivalent to count(*).
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void GroupByCountOverConstant_StillTranslatesToCountStar()
+        {
+            Assert.Equal("from 'Orders' group by Company select Company, count()",
+                Translate("SELECT \"Company\", count(1) FROM \"Orders\" GROUP BY \"Company\""));
+        }
+
+        // PG builds IS [NOT] DISTINCT FROM and NULLIF with a literal "=" operator name, so before the
+        // A_Expr kind was checked they became a plain equality - the inverse of IS DISTINCT FROM.
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("SELECT * FROM \"Orders\" WHERE \"Company\" IS DISTINCT FROM 'companies/85-A'")]
+        [InlineData("SELECT * FROM \"Orders\" WHERE \"Company\" IS NOT DISTINCT FROM 'companies/85-A'")]
+        [InlineData("SELECT * FROM \"Orders\" WHERE NULLIF(\"Company\", 'companies/85-A')")]
+        public void DistinctFromPredicate_IsRejected(string sql)
+        {
+            Assert.False(Raven.Server.Integrations.PostgreSQL.Translation.PgSqlToRqlTranslator.TryParse(
+                sql, Array.Empty<int>(), out _));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void EqualityAndInequality_StillTranslate()
+        {
+            Assert.Equal("from 'Orders' where Company = 'companies/85-A'",
+                Translate("SELECT * FROM \"Orders\" WHERE \"Company\" = 'companies/85-A'"));
+
+            Assert.Equal("from 'Orders' where Company != 'companies/85-A'",
+                Translate("SELECT * FROM \"Orders\" WHERE \"Company\" != 'companies/85-A'"));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void GroupByKey_WithAlias_KeepsTheAlias()
+        {
+            Assert.Equal("from 'Orders' group by Company select Company as grp, count() as c",
+                Translate("SELECT \"Company\" AS grp, COUNT(*) AS c FROM \"Orders\" GROUP BY \"Company\""));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void GroupByKey_WithAlias_OrderByTheKeyStillResolves()
+        {
+            Assert.Equal("from 'Orders' group by Company order by Company desc select Company as grp, count() as c",
+                Translate("SELECT \"Company\" AS grp, COUNT(*) AS c FROM \"Orders\" GROUP BY \"Company\" ORDER BY \"Company\" DESC"));
+        }
+
+        // An alias equal to the key adds nothing and would make RQL reject the duplicate alias.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void GroupByKey_WithAliasEqualToTheKey_OmitsTheAsClause()
+        {
+            Assert.Equal("from 'Orders' group by Company select Company, count() as c",
+                Translate("SELECT \"Company\" AS \"Company\", COUNT(*) AS c FROM \"Orders\" GROUP BY \"Company\""));
         }
     }
 }

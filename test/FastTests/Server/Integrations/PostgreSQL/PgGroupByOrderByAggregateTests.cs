@@ -196,6 +196,82 @@ namespace FastTests.Server.Integrations.PostgreSQL
             Assert.Equal(PgErrorCodes.StatementTooComplex, error.ErrorCode);
         }
 
+        [RavenFact(RavenTestCategory.PostgreSql, LicenseRequired = true)]
+        public async Task GroupKey_alias_is_used_as_the_column_name()
+        {
+            using var store = GetDocumentStore();
+            await Seed(store);
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var (columns, rows) = await RunWarm(
+                "SELECT \"Company\" AS grp, COUNT(*) AS c FROM public.\"Orders\" GROUP BY \"Company\"", store, database);
+
+            Assert.Equal(new[] { "grp", "c" }, columns);
+            Assert.Equal(new[] { "Alpha", "Beta", "Gamma" }, rows.Select(r => r[0]).OrderBy(x => x));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql, LicenseRequired = true)]
+        public async Task GroupKey_alias_with_order_by_the_key_still_works()
+        {
+            using var store = GetDocumentStore();
+            await Seed(store);
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var (columns, rows) = await RunWarm(
+                "SELECT \"Company\" AS grp, COUNT(*) AS c FROM public.\"Orders\" GROUP BY \"Company\" ORDER BY \"Company\" DESC", store, database);
+
+            Assert.Equal(new[] { "grp", "c" }, columns);
+            Assert.Equal(new[] { "Gamma", "Beta", "Alpha" }, rows.Select(r => r[0]));
+        }
+
+        // These used to return the plain count(*)/sum() value for every group with no error at all.
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("SELECT \"Company\", count(distinct \"Freight\") FROM public.\"Orders\" GROUP BY \"Company\"")]
+        [InlineData("SELECT \"Company\", count(\"Freight\") FROM public.\"Orders\" GROUP BY \"Company\"")]
+        [InlineData("SELECT \"Company\", sum(distinct \"Freight\") FROM public.\"Orders\" GROUP BY \"Company\"")]
+        [InlineData("SELECT \"Company\", count(*) FILTER (WHERE \"Freight\" > 1) FROM public.\"Orders\" GROUP BY \"Company\"")]
+        [InlineData("SELECT \"Company\", count(*) OVER () FROM public.\"Orders\" GROUP BY \"Company\"")]
+        public async Task GroupByAggregate_withUnsupportedModifierOrColumnArg_returns_a_pg_error(string sql)
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var error = Assert.Throws<PgErrorException>(() => PgQuery.CreateInstance(
+                sql, Array.Empty<int>(), database, session: null));
+
+            Assert.Equal(PgErrorCodes.FeatureNotSupported, error.ErrorCode);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public async Task IsDistinctFrom_returns_a_pg_error_instead_of_an_equality_match()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var error = Assert.Throws<PgErrorException>(() => PgQuery.CreateInstance(
+                "SELECT count(*) FROM public.\"Orders\" WHERE \"Company\" IS DISTINCT FROM 'Alpha'",
+                Array.Empty<int>(), database, session: null));
+
+            Assert.Equal(PgErrorCodes.FeatureNotSupported, error.ErrorCode);
+            Assert.Contains("IS DISTINCT FROM", error.Message);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public async Task NotEquals_and_equals_still_count_correctly()
+        {
+            using var store = GetDocumentStore();
+            await Seed(store);
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var (_, notEqual) = await RunWarm(
+                "SELECT COUNT(*) FROM public.\"Orders\" WHERE \"Company\" != 'Alpha'", store, database);
+            var (_, equal) = await RunWarm(
+                "SELECT COUNT(*) FROM public.\"Orders\" WHERE \"Company\" = 'Alpha'", store, database);
+
+            Assert.Equal(new[] { "11" }, Assert.Single(notEqual));
+            Assert.Equal(new[] { "10" }, Assert.Single(equal));
+        }
+
         // Alpha: 10 orders x 1.5 freight, Beta: 9 x 1, Gamma: 2 x 1. The counts (10/9/2) and the
         // sums (15/9/2) both order differently under string comparison than under numeric.
         private static async Task Seed(IDocumentStore store)
