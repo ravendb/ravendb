@@ -763,6 +763,8 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
                 if (sortBy == null)
                     continue;
 
+                RejectUnsupportedSortModifiers(sortNode);
+
                 string orderField;
                 OrderingType ordering;
 
@@ -1397,6 +1399,8 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
                 var sortBy = sortNode.SortBy
                              ?? throw new NotSupportedException("Unsupported ORDER BY clause (only column sort keys are supported)");
 
+                RejectUnsupportedSortModifiers(sortNode);
+
                 var fieldName = ExtractFieldName(sortBy.Node, fromAlias);
                 if (string.IsNullOrEmpty(fieldName))
                     throw new NotSupportedException("Unsupported ORDER BY expression (only column sort keys are supported)");
@@ -1419,15 +1423,21 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
             }
         }
 
-        // Samples the first document of the collection to learn the blittable token type of each
-        // ORDER BY field, mapped to RQL OrderingType. Returns null if the database isn't available
-        // or the collection is empty — callers fall back to OrderingType.String in that case.
-        //
-        // Field lookups are case-sensitive against the document's stored property names. This
-        // means an unquoted `ORDER BY Freight` (case-folded to `freight` by libpg_query) won't
-        // find `Freight` and will fall back to String ordering — the same surface area issue users
-        // hit with unquoted WHERE clauses. Quoting (`ORDER BY "Freight"`) preserves case and the
-        // type inference kicks in.
+        // RQL has no NULLS FIRST / NULLS LAST and no operator-driven sort, and its own null ordering is
+        // not guaranteed to match what was asked for, so an approximation would sort by something else.
+        private static void RejectUnsupportedSortModifiers(Node sortNode)
+        {
+            var sortBy = sortNode.SortBy;
+            if (sortBy == null)
+                return;
+
+            if (sortBy.SortbyNulls is SortByNulls.First or SortByNulls.Last)
+                throw new NotSupportedException("Unsupported ORDER BY clause (NULLS FIRST / NULLS LAST is not supported)");
+
+            if (sortBy.SortbyDir == SortByDir.SortbyUsing)
+                throw new NotSupportedException("Unsupported ORDER BY clause (ORDER BY ... USING is not supported)");
+        }
+
         // ORDER BY may name a SELECT alias instead of a field. RQL sorts on the underlying document
         // field, so the alias has to be resolved back or the sort targets a field that does not exist.
         // False means the alias names a constant or id(), which has no field to sort on.
@@ -1443,6 +1453,15 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
             return aliased != null;
         }
 
+        // Samples the first document of the collection to learn the blittable token type of each
+        // ORDER BY field, mapped to RQL OrderingType. Returns null if the database isn't available
+        // or the collection is empty — callers fall back to OrderingType.String in that case.
+        //
+        // Field lookups are case-sensitive against the document's stored property names. This
+        // means an unquoted `ORDER BY Freight` (case-folded to `freight` by libpg_query) won't
+        // find `Freight` and will fall back to String ordering — the same surface area issue users
+        // hit with unquoted WHERE clauses. Quoting (`ORDER BY "Freight"`) preserves case and the
+        // type inference kicks in.
         private static Dictionary<string, OrderingType> TryBuildSortTypeMap(
             DocumentDatabase documentDatabase,
             string collection,
