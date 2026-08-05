@@ -934,6 +934,36 @@ namespace FastTests.Server.Integrations.PostgreSQL.Translation
             AssertRejected(sql);
         }
 
+        // The distinct-rows path (GROUP BY used as a DISTINCT, no aggregate) is a separate projection
+        // path from the aggregate one and used to drop the SELECT alias.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void GroupByKeyWithoutAggregate_KeepsTheAlias()
+        {
+            Assert.Equal("from 'Orders' select distinct Company as grp",
+                Translate("SELECT \"Company\" AS grp FROM \"Orders\" GROUP BY \"Company\""));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void GroupByKeysWithoutAggregate_KeepEachAlias()
+        {
+            Assert.Equal("from 'Orders' group by Company, Freight select Company as grp, Freight as f",
+                Translate("SELECT \"Company\" AS grp, \"Freight\" AS f FROM \"Orders\" GROUP BY \"Company\", \"Freight\""));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void GroupByKeyWithoutAggregate_NonIdentifierAliasIsQuoted()
+        {
+            Assert.Equal("from 'Orders' select distinct Company as 'the company'",
+                Translate("SELECT \"Company\" AS \"the company\" FROM \"Orders\" GROUP BY \"Company\""));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void GroupByKeyWithoutAggregate_AliasEqualToTheKeyOmitsTheAsClause()
+        {
+            Assert.Equal("from 'Orders' select distinct Company",
+                Translate("SELECT \"Company\" AS \"Company\" FROM \"Orders\" GROUP BY \"Company\""));
+        }
+
         private static void AssertRejected(string sql)
         {
             Assert.False(Raven.Server.Integrations.PostgreSQL.Translation.PgSqlToRqlTranslator.TryParse(

@@ -317,6 +317,21 @@ namespace FastTests.Server.Integrations.PostgreSQL
             Assert.Equal(new[] { "Alpha", "Beta", "Gamma" }, rows.Select(r => r[0]).OrderBy(x => x));
         }
 
+        // The distinct-rows path: a GROUP BY with no aggregate at all.
+        [RavenFact(RavenTestCategory.PostgreSql, LicenseRequired = true)]
+        public async Task GroupKey_alias_without_an_aggregate_is_used_as_the_column_name()
+        {
+            using var store = GetDocumentStore();
+            await Seed(store);
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var (columns, rows) = await RunWarm(
+                "SELECT \"Company\" AS grp FROM public.\"Orders\" GROUP BY \"Company\" LIMIT 5", store, database);
+
+            Assert.Equal(new[] { "grp" }, columns);
+            Assert.Equal(new[] { "Alpha", "Beta", "Gamma" }, rows.Select(r => r[0]).OrderBy(x => x));
+        }
+
         // An alias cannot be allowed to break out of the RQL string literal it is spliced into.
         [RavenFact(RavenTestCategory.PostgreSql)]
         public async Task Aggregate_alias_with_a_quote_is_still_rejected()

@@ -643,12 +643,12 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
                     if (string.IsNullOrWhiteSpace(field) || groupSet.Contains(field) == false)
                         throw UnsupportedGroupBy();
 
-                    projected.Add(field);
+                    projected.Add(BuildDistinctRowProjection(field, t.ResTarget?.Name));
                 }
 
                 if (groupFieldNames.Count == 1)
                 {
-                    q.SelectFields<JObject>(projected.Select(EscapeProjectionField).ToArray());
+                    q.SelectFields<JObject>(projected.ToArray());
                     q.Distinct();
                 }
                 else
@@ -660,7 +660,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
                         ? groupFieldNames.GetRange(1, groupFieldNames.Count - 1).ToArray()
                         : Array.Empty<string>();
                     q.GroupBy(firstKey, restKeys);
-                    q.SelectFields<JObject>(projected.Select(EscapeProjectionField).ToArray());
+                    q.SelectFields<JObject>(projected.ToArray());
                 }
                 return;
             }
@@ -1076,6 +1076,17 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
                 throw UnsupportedSelectAggregate();
 
             return $"{funcName}({fieldName})";
+        }
+
+        // An alias equal to the key adds nothing and would make RQL reject the duplicate alias.
+        private static string BuildDistinctRowProjection(string field, string sqlAlias)
+        {
+            var projection = EscapeProjectionField(field);
+            if (string.IsNullOrWhiteSpace(sqlAlias) ||
+                string.Equals(sqlAlias, field, StringComparison.OrdinalIgnoreCase))
+                return projection;
+
+            return $"{projection} as {EscapeProjectionField(sqlAlias)}";
         }
 
         private static string BuildProjectionForGroupByTarget(Node val, string groupFieldName, string sqlAlias, string fromAlias = null)
