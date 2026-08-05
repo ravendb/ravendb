@@ -119,6 +119,90 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
             }
         }
 
+        // `SELECT count(*) FROM t [WHERE ...]` is the one scalar aggregate RQL answers exactly: a count
+        // query (page size 0) drains the filtered enumerator and reports TotalResults. Kept out of
+        // TryParse because its other callers (PowerBI) discard the count shape and must keep rejecting it.
+        public static bool TryParseScalarCount(string sql, DocumentDatabase documentDatabase, out string rql, out string[] columnNames)
+        {
+            rql = null;
+            columnNames = null;
+
+            try
+            {
+                var parseResult = SqlAstCache.GetOrParse(sql);
+                if (parseResult.IsSuccess == false || parseResult.Value?.Stmts is not { Count: > 0 } stmts)
+                    return false;
+
+                if (stmts[0]?.Stmt?.SelectStmt is not { } selectStmt)
+                    return false;
+
+                if (TryGetScalarCountColumns(selectStmt, out columnNames) == false)
+                    return false;
+
+                rql = TranslateSelectStatement(selectStmt, documentDatabase, asScalarCount: true);
+                return LogSuccess(sql, rql);
+            }
+            catch (NotSupportedException)
+            {
+                rql = null;
+                columnNames = null;
+                return false;
+            }
+        }
+
+        // Only count(*) qualifies: count(x) counts non-null values and count(distinct x) needs dedup,
+        // neither of which TotalResults reports. Everything else - other aggregates, a bare column,
+        // DISTINCT, GROUP BY - keeps falling through to ScalarAggregateWithoutGroupBy.
+        private static bool TryGetScalarCountColumns(SelectStmt selectStmt, out string[] columnNames)
+        {
+            columnNames = null;
+
+            if (selectStmt.GroupClause is { Count: > 0 } ||
+                selectStmt.DistinctClause is { Count: > 0 } ||
+                selectStmt.SortClause is { Count: > 0 } ||
+                selectStmt.HavingClause != null ||
+                selectStmt.WithClause != null ||
+                selectStmt.LimitOffset != null)
+                return false;
+
+            // SQL `LIMIT 0` returns no rows at all, which this always-one-row path can't express.
+            if (selectStmt.LimitCount != null &&
+                (PgSqlAstHelpers.TryReadNonNegativeIntConst(selectStmt.LimitCount, out var limit) == false || limit == 0))
+                return false;
+
+            if (selectStmt.FromClause is not [{ RangeVar: not null }])
+                return false;
+
+            if (selectStmt.TargetList is not { Count: > 0 } targets)
+                return false;
+
+            var names = new string[targets.Count];
+            for (int i = 0; i < targets.Count; i++)
+            {
+                var resTarget = targets[i]?.ResTarget;
+                if (IsCountStar(resTarget?.Val?.FuncCall) == false)
+                    return false;
+
+                names[i] = string.IsNullOrWhiteSpace(resTarget.Name) ? "count" : resTarget.Name;
+            }
+
+            columnNames = names;
+            return true;
+        }
+
+        private static bool IsCountStar(FuncCall func)
+        {
+            if (func == null || func.AggStar == false || func.AggDistinct || func.AggFilter != null || func.Over != null)
+                return false;
+
+            if (func.Args is { Count: > 0 })
+                return false;
+
+            // Match the last name segment so PowerBI's `pg_catalog.count(*)` is recognized too.
+            var name = func.Funcname is { Count: > 0 } ? func.Funcname[^1]?.String?.Sval : null;
+            return string.Equals(name, "count", StringComparison.OrdinalIgnoreCase);
+        }
+
         private static bool LogSuccess(string sql, string rql)
         {
             if (Logger.IsInfoEnabled)
@@ -133,7 +217,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
             return false;
         }
 
-        private static string TranslateSelectStatement(SelectStmt selectStmt, DocumentDatabase documentDatabase = null)
+        private static string TranslateSelectStatement(SelectStmt selectStmt, DocumentDatabase documentDatabase = null, bool asScalarCount = false)
         {
             if (selectStmt.FromClause is [{ JoinExpr: not null }])
                 return TranslateSimpleJoin(selectStmt);
@@ -160,6 +244,12 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
             if (isGroupBy)
             {
                 ApplyGroupBy(q, selectStmt, fromAlias);
+            }
+            else if (asScalarCount)
+            {
+                // The caller runs this as an RQL count query, so neither the projection nor the SQL
+                // bounds may be emitted: in SQL they cap the single output row, not the count.
+                return BuildRql(q);
             }
             else
             {
@@ -196,6 +286,11 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
                 q.Take(limit.Value);
             }
 
+            return BuildRql(q);
+        }
+
+        private static string BuildRql(AsyncDocumentQuery<JObject> q)
+        {
             // Prefer the official query text emitted by IndexQuery when possible.
             // Falls back to ToString() which also returns pure RQL.
             var indexQuery = q.GetIndexQuery();

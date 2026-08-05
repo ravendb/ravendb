@@ -76,7 +76,7 @@ namespace Raven.Server.Integrations.PostgreSQL
 
             if (IsScalarAggregateWithoutGroupBy(outer))
             {
-                message = "Scalar aggregate (e.g. `SELECT sum(...) FROM t` with no GROUP BY) is not yet supported. Wrap the query in a GROUP BY (even a constant key) or compute the aggregate client-side from the underlying rows.";
+                message = "Scalar aggregate without GROUP BY is supported for `count(*)` only. RavenDB's sum() is a map-reduce aggregation that requires a GROUP BY, so `SELECT sum(...) FROM t` with no grouping has no RQL form — compute the aggregate client-side from the underlying rows.";
                 return true;
             }
 
