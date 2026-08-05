@@ -437,6 +437,25 @@ namespace FastTests.Server.Integrations.PostgreSQL
         }
 
         [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("""SELECT "Freight" FROM "public"."Orders" ORDER BY "Freight" DESC NULLS LAST""", "NULLS")]
+        [InlineData("""SELECT "Freight" FROM "public"."Orders" ORDER BY "Freight" NULLS FIRST""", "NULLS")]
+        [InlineData("""SELECT "Freight" FROM "public"."Orders" ORDER BY "Freight" USING >""", "USING")]
+        public void UnsupportedSortModifier_Detected(string sql, string expected)
+        {
+            Assert.True(UnhandledQueryDiagnoser.TryDiagnose(sql, out var message));
+            Assert.Contains(expected, message);
+        }
+
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("""SELECT "Freight" FROM "public"."Orders" ORDER BY "Freight" DESC""")]
+        [InlineData("""SELECT "Freight" FROM "public"."Orders" ORDER BY "Freight" ASC""")]
+        [InlineData("""SELECT "Freight" FROM "public"."Orders" ORDER BY "Freight" """)]
+        public void PlainSortDirection_NoClassification(string sql)
+        {
+            Assert.False(UnhandledQueryDiagnoser.TryDiagnose(sql, out _));
+        }
+
+        [RavenTheory(RavenTestCategory.PostgreSql)]
         [InlineData("""SELECT * FROM "public"."Orders" WHERE "Company" IS DISTINCT FROM 'companies/85-A' """)]
         [InlineData("""SELECT * FROM "public"."Orders" WHERE "Company" IS NOT DISTINCT FROM 'companies/85-A' """)]
         [InlineData("""SELECT * FROM "public"."Orders" WHERE NULLIF("Company", 'companies/85-A') """)]

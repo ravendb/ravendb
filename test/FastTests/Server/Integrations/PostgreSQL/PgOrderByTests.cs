@@ -56,6 +56,32 @@ namespace FastTests.Server.Integrations.PostgreSQL
             Assert.False(string.IsNullOrWhiteSpace(error.Message));
         }
 
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("SELECT \"Freight\" FROM public.\"Orders\" ORDER BY \"Freight\" DESC NULLS LAST LIMIT 5", "NULLS")]
+        [InlineData("SELECT \"Freight\" FROM public.\"Orders\" ORDER BY \"Freight\" USING > LIMIT 5", "USING")]
+        public async Task OrderBy_with_an_unsupported_sort_modifier_returns_a_targeted_pg_error(string sql, string expected)
+        {
+            using var store = GetDocumentStore();
+            var database = await Seed(store);
+
+            var error = Assert.Throws<PgErrorException>(() => PgQuery.CreateInstance(
+                sql, Array.Empty<int>(), database, session: null));
+
+            Assert.Equal(PgErrorCodes.FeatureNotSupported, error.ErrorCode);
+            Assert.Contains(expected, error.Message);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql, LicenseRequired = true)]
+        public async Task OrderBy_without_a_sort_modifier_is_unchanged()
+        {
+            using var store = GetDocumentStore();
+            var database = await Seed(store);
+
+            Assert.Equal(
+                new[] { "10", "2" },
+                await Freights("SELECT \"Freight\" FROM public.\"Orders\" ORDER BY \"Freight\" DESC LIMIT 5", store, database));
+        }
+
         private async Task<DocumentDatabase> Seed(IDocumentStore store)
         {
             using (var session = store.OpenAsyncSession())

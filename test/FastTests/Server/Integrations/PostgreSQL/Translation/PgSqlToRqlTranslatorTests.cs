@@ -996,6 +996,24 @@ namespace FastTests.Server.Integrations.PostgreSQL.Translation
             AssertRejected(sql);
         }
 
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("SELECT \"Freight\" FROM \"Orders\" ORDER BY \"Freight\" DESC NULLS LAST")]
+        [InlineData("SELECT \"Freight\" FROM \"Orders\" ORDER BY \"Freight\" NULLS FIRST")]
+        [InlineData("SELECT \"Freight\" FROM \"Orders\" ORDER BY \"Freight\" USING >")]
+        [InlineData("SELECT \"Company\", COUNT(*) FROM \"Orders\" GROUP BY \"Company\" ORDER BY \"Company\" NULLS LAST")]
+        public void OrderByWithAnUnsupportedSortModifier_IsRejected(string sql)
+        {
+            AssertRejected(sql);
+        }
+
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("SELECT \"Freight\" FROM \"Orders\" ORDER BY \"Freight\" DESC", "from 'Orders' order by Freight desc select Freight")]
+        [InlineData("SELECT \"Freight\" FROM \"Orders\" ORDER BY \"Freight\" ASC", "from 'Orders' order by Freight select Freight")]
+        public void OrderByWithoutASortModifier_IsUnchanged(string sql, string expected)
+        {
+            Assert.Equal(expected, Translate(sql));
+        }
+
         private static void AssertRejected(string sql)
         {
             Assert.False(Raven.Server.Integrations.PostgreSQL.Translation.PgSqlToRqlTranslator.TryParse(

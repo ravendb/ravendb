@@ -94,6 +94,12 @@ namespace Raven.Server.Integrations.PostgreSQL
                 return true;
             }
 
+            if (TryGetUnsupportedSortModifier(outer, out var sortModifier))
+            {
+                message = $"ORDER BY ... {sortModifier} is not supported. RavenDB orders missing and null values by its own rule, which is not guaranteed to match PostgreSQL's, and RQL cannot express a per-key null placement or a sort driven by an operator — so the clause is rejected rather than silently sorted a different way. Drop the clause if the default ordering will do, or sort the rows client-side.";
+                return true;
+            }
+
             if (IsScalarAggregateWithoutGroupBy(outer))
             {
                 message = "Scalar aggregate without GROUP BY is supported for `count(*)` only. RavenDB's sum() is a map-reduce aggregation that requires a GROUP BY, so `SELECT sum(...) FROM t` with no grouping has no RQL form — compute the aggregate client-side from the underlying rows.";
@@ -436,6 +442,32 @@ namespace Raven.Server.Integrations.PostgreSQL
                     modifier = "a FILTER (WHERE ...) clause";
                 else if (funcCall.Over != null)
                     modifier = "an OVER (...) window clause";
+                else
+                    continue;
+
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool TryGetUnsupportedSortModifier(SelectStmt selectStmt, out string modifier)
+        {
+            modifier = null;
+
+            if (selectStmt.SortClause is not { Count: > 0 } sortClause)
+                return false;
+
+            foreach (var sortNode in sortClause)
+            {
+                var sortBy = sortNode?.SortBy;
+                if (sortBy == null)
+                    continue;
+
+                if (sortBy.SortbyNulls is SortByNulls.First or SortByNulls.Last)
+                    modifier = "NULLS FIRST / NULLS LAST";
+                else if (sortBy.SortbyDir == SortByDir.SortbyUsing)
+                    modifier = "USING <operator>";
                 else
                     continue;
 
