@@ -27,6 +27,19 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Provision_rejects_an_unknown_agent_id()
+    {
+        await using var app = await NewAppAsync();
+
+        var e = await Assert.ThrowsAsync<QuillHttpException>(() =>
+            app.ProvisionChannelAsync(new ProvisionChannelRequest(
+                ChannelType.Telegram, "no-such-agent", null, BotToken: NewBotToken())));
+
+        Assert.Equal(HttpStatusCode.BadRequest, e.StatusCode);
+        Assert.Contains("unknown agentId 'no-such-agent'", e.Body);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Provision_rejects_a_token_telegram_rejects_and_never_echoes_it()
     {
         await using var app = await NewAppAsync();

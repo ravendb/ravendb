@@ -164,6 +164,8 @@ internal sealed class TelegramChannelPoller
         }
 
         var config = await AgentLookup.FindAsync(_store, Database, Channel.AgentId, ct);
+        if (config is null)
+            throw new InvalidOperationException($"agent '{Channel.AgentId}' is no longer registered in this app");
 
         var parameters = new Dictionary<string, string>(Channel.Telegram!.Parameters);
         var identifierParameter = config.Parameters?.FirstOrDefault(p =>

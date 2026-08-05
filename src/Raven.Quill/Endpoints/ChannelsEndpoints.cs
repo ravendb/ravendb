@@ -142,6 +142,8 @@ public static class ChannelsEndpoints
         CancellationToken ct)
     {
         var config = await AgentLookup.FindAsync(store, app.Database, body.AgentId, ct);
+        if (config is null)
+            return Results.BadRequest(new ApiErrorResponse($"unknown agentId '{body.AgentId}'"));
 
         if (string.IsNullOrWhiteSpace(body.BotToken))
             return Results.BadRequest(new ApiErrorResponse("botToken is required for a Telegram channel"));
