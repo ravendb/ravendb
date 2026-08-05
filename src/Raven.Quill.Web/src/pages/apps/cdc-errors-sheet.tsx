@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
 import type { CdcError } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
+import { ErrorDetails } from "@/components/data/error-details";
 import { Badge } from "@/components/shadcn/ui/badge";
 import {
     Sheet,
@@ -53,6 +54,9 @@ export function CdcErrorsSheet({ slug, trigger }: { slug: string; trigger: React
 }
 
 function CdcErrorCard({ error }: { error: CdcError }) {
+    const lineBreakIndex = error.error.indexOf("\n");
+    const shortMessage = lineBreakIndex === -1 ? null : error.error.slice(0, lineBreakIndex);
+
     return (
         <div className="space-y-2 rounded-lg border p-3">
             <div className="flex items-center justify-between gap-2">
@@ -60,7 +64,8 @@ function CdcErrorCard({ error }: { error: CdcError }) {
                 <span className="text-xs text-muted-foreground">{formatDateTime(error.createdAt)}</span>
             </div>
             <Badge variant="secondary">{error.step}</Badge>
-            <p className="text-sm break-words whitespace-pre-wrap text-destructive">{error.error}</p>
+            {shortMessage && <p className="text-sm break-words whitespace-pre-wrap text-destructive">{shortMessage}</p>}
+            {error.error && <ErrorDetails details={error.error} />}
             {error.documentId && (
                 <p className="text-xs text-muted-foreground">
                     Document: <span className="font-mono text-foreground">{error.documentId}</span>
