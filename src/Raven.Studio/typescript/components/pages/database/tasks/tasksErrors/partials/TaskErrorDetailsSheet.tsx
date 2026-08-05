@@ -123,11 +123,7 @@ export default function TaskErrorDetailsSheet({
                     {error.errorType === "Item" && error.DocumentId && (
                         <SheetDetailRow>
                             <div className="small">Document ID</div>
-                            <CellDocumentValue
-                                value={error.DocumentId}
-                                databaseName={dbName}
-                                hasHyperlinkForIds
-                            />
+                            <CellDocumentValue value={error.DocumentId} databaseName={dbName} hasHyperlinkForIds />
                         </SheetDetailRow>
                     )}
 
