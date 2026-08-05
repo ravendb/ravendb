@@ -50,7 +50,7 @@ internal sealed class WhatsAppBridgeSecret(
                 Directory.CreateDirectory(opts.WhatsAppDataDir);
                 var token = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(32));
                 await File.WriteAllTextAsync(path, token, ct);
-                if (OperatingSystem.IsWindows() == false)
+                if (!OperatingSystem.IsWindows())
                     File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite);
 
                 logger.LogInformation("Minted whatsapp bridge token at {Path}", path);
