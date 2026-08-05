@@ -16,6 +16,7 @@ import {
     createEmptyLinkedTable,
     createEmptyRootTable,
 } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
+import { useRootTablesFieldArray } from "@/pages/setup/add-app-wizard/steps/map-tables/root-tables-field-array";
 import { useFormContext, type FieldPath, type PathValue } from "react-hook-form";
 
 type ParentTablePath = RootTablePath | EmbeddedTablePath;
@@ -23,6 +24,7 @@ type FormPath = FieldPath<AppFormData>;
 
 export function useTableActions() {
     const { getValues, setValue } = useFormContext<AppFormData>();
+    const rootTablesFieldArray = useRootTablesFieldArray();
     const setMapActiveTable = useSetupWizardStore((state) => state.setMapActiveTable);
     const expandMapTable = useSetupWizardStore((state) => state.expandMapTable);
     const removeMapTableUiState = useSetupWizardStore((state) => state.removeMapTableUiState);
@@ -34,10 +36,10 @@ export function useTableActions() {
     };
 
     const addRootTable = () => {
-        const tables = getTableList<FormRootTable>("mapTables.tables");
+        const nextIndex = getTableList<FormRootTable>("mapTables.tables").length;
 
-        setFieldValue("mapTables.tables", [...tables, createEmptyRootTable()]);
-        setMapActiveTable({ type: "root", path: getRootTablePath(tables.length) });
+        rootTablesFieldArray.append(createEmptyRootTable(), { shouldFocus: false });
+        setMapActiveTable({ type: "root", path: getRootTablePath(nextIndex) });
     };
 
     const addEmbeddedTable = (parentPath: ParentTablePath) => {
