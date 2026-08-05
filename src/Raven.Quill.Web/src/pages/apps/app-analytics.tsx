@@ -4,9 +4,8 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
 import type { AppUsageResponse, SeriesData } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
-import { SeriesBarChart, WritesBarChart } from "@/components/data/charts";
+import { SeriesBarChart } from "@/components/data/charts";
 import { DatePeriodPicker } from "@/components/data/date-period-picker";
-import { WRU_DESCRIPTION, WruLabel } from "@/components/data/wru-label";
 import { PagePanel } from "@/components/data/page-panel";
 import { canDrillInto, drillInto, getDefaultDatePeriod } from "@/lib/date-period";
 import { TableCell, TableRow } from "@/components/shadcn/ui/table";
@@ -16,7 +15,7 @@ import { SectionCard, SectionTable } from "@/pages/apps/section-card";
 
 type BarClickHandler = (entry: Record<string, unknown>) => void;
 
-export function AppUsage() {
+export function AppAnalytics() {
     const { slug = "" } = useParams();
     const [period, setPeriod] = useState(getDefaultDatePeriod);
 
@@ -41,30 +40,28 @@ export function AppUsage() {
             <ApiState
                 isLoading={appUsageQuery.isPending}
                 isError={appUsageQuery.isError}
-                errorTitle="Could not load usage"
+                errorTitle="Could not load analytics"
                 onRetry={() => void appUsageQuery.refetch()}
-                loadingLabel="Loading usage..."
+                loadingLabel="Loading analytics..."
             >
                 {appUsageQuery.data && (
                     <div className="space-y-8">
-                        <UsageMetricCards usage={appUsageQuery.data} />
-                        <UsageSeriesSection
+                        <AnalyticsMetricCards usage={appUsageQuery.data} />
+                        <AnalyticsSeriesSection
                             title="Tokens by capability"
                             series={appUsageQuery.data.tokensByCapability}
                             onBarClick={drillFromBar}
                         />
-                        <UsageSeriesSection
+                        <AnalyticsSeriesSection
                             title="Tokens by model"
                             series={appUsageQuery.data.tokensByModel}
                             onBarClick={drillFromBar}
                         />
-                        <UsageSeriesSection
+                        <AnalyticsSeriesSection
                             title="Conversations by channel"
                             series={appUsageQuery.data.conversationsByChannel}
                             onBarClick={drillFromBar}
                         />
-                        <CdcWritesSection points={appUsageQuery.data.cdcWrites} onBarClick={drillFromBar} />
-                        <TopTablesSection tables={appUsageQuery.data.topTables} />
                         <TopCapabilitiesSection capabilities={appUsageQuery.data.topCapabilities} />
                     </div>
                 )}
@@ -73,8 +70,8 @@ export function AppUsage() {
     );
 }
 
-function UsageMetricCards({ usage }: { usage: AppUsageResponse }) {
-    const { conversations, tokens, cdcWrites } = usage.metrics;
+function AnalyticsMetricCards({ usage }: { usage: AppUsageResponse }) {
+    const { conversations, tokens } = usage.metrics;
     const cards: DashboardStatCard[] = [
         {
             label: "Conversations",
@@ -84,20 +81,12 @@ function UsageMetricCards({ usage }: { usage: AppUsageResponse }) {
             series: conversations.sparkline,
         },
         { label: "Tokens", value: tokens.value, isLoading: false, delta: tokens.delta, series: tokens.sparkline },
-        {
-            label: "WRU",
-            labelInfo: WRU_DESCRIPTION,
-            value: cdcWrites.value,
-            isLoading: false,
-            delta: cdcWrites.delta,
-            series: cdcWrites.sparkline,
-        },
     ];
 
     return <DashboardStatCards cards={cards} />;
 }
 
-function UsageSeriesSection({
+function AnalyticsSeriesSection({
     title,
     series,
     onBarClick,
@@ -115,41 +104,6 @@ function UsageSeriesSection({
                     <SeriesBarChart data={series} onBarClick={onBarClick} />
                 )}
             </div>
-        </SectionCard>
-    );
-}
-
-function CdcWritesSection({
-    points,
-    onBarClick,
-}: {
-    points: AppUsageResponse["cdcWrites"];
-    onBarClick?: BarClickHandler;
-}) {
-    return (
-        <SectionCard title={<WruLabel />}>
-            <div className="rounded-lg border p-4">
-                <WritesBarChart data={points} xKey="t" onBarClick={onBarClick} />
-            </div>
-        </SectionCard>
-    );
-}
-
-function TopTablesSection({ tables }: { tables: AppUsageResponse["topTables"] }) {
-    return (
-        <SectionCard title="Top tables">
-            <SectionTable
-                headers={["Table", "WRU"]}
-                isEmpty={tables.length === 0}
-                emptyMessage="No table activity yet."
-            >
-                {tables.map((table) => (
-                    <TableRow key={table.name}>
-                        <TableCell className="font-medium">{table.name}</TableCell>
-                        <TableCell className="tabular-nums">{formatCompact(table.writes)}</TableCell>
-                    </TableRow>
-                ))}
-            </SectionTable>
         </SectionCard>
     );
 }

@@ -1120,15 +1120,12 @@ export interface components {
         AppUsageMetrics: {
             conversations: components["schemas"]["MetricCard"];
             tokens: components["schemas"]["MetricCard"];
-            cdcWrites: components["schemas"]["MetricCard"];
         };
         AppUsageResponse: {
             metrics: components["schemas"]["AppUsageMetrics"];
             tokensByCapability: components["schemas"]["SeriesData"];
             tokensByModel: components["schemas"]["SeriesData"];
             conversationsByChannel: components["schemas"]["SeriesData"];
-            cdcWrites: components["schemas"]["CdcWritePoint"][];
-            topTables: components["schemas"]["TopTable"][];
             topCapabilities: components["schemas"]["TopCapability"][];
         };
         AppWrites: {
@@ -1259,11 +1256,6 @@ export interface components {
             disabled?: boolean;
             embeddedTables?: null | components["schemas"]["CdcSinkEmbeddedTableConfig"][];
             linkedTables?: null | components["schemas"]["CdcSinkLinkedTableConfig"][];
-        };
-        CdcWritePoint: {
-            t: string;
-            /** Format: int64 */
-            writes: number;
         };
         CertificateItem: {
             name: string;
@@ -1701,14 +1693,6 @@ export interface components {
             avgTokens: number;
             /** Format: int64 */
             totalTokens: number;
-        };
-        TopTable: {
-            name: string;
-            /** Format: int64 */
-            writes: number;
-            /** Format: int32 */
-            lagSeconds: number;
-            lastWriteAt: string;
         };
         UpdateChannelRequest: {
             displayName: null | string;
@@ -3953,7 +3937,6 @@ export type CdcSinkOnDeleteConfig = components["schemas"]["CdcSinkOnDeleteConfig
 export type CdcSinkPostgresSettings = components["schemas"]["CdcSinkPostgresSettings"];
 export type CdcSinkRelationType = components["schemas"]["CdcSinkRelationType"];
 export type CdcSinkTableConfig = components["schemas"]["CdcSinkTableConfig"];
-export type CdcWritePoint = components["schemas"]["CdcWritePoint"];
 export type CertificateItem = components["schemas"]["CertificateItem"];
 export type ChannelStatsResponse = components["schemas"]["ChannelStatsResponse"];
 export type ChannelSummaryResponse = components["schemas"]["ChannelSummaryResponse"];
@@ -4021,7 +4004,6 @@ export type TestMappingResponse = components["schemas"]["TestMappingResponse"];
 export type TestMappingRowResponse = components["schemas"]["TestMappingRowResponse"];
 export type TokensByAppResponse = components["schemas"]["TokensByAppResponse"];
 export type TopCapability = components["schemas"]["TopCapability"];
-export type TopTable = components["schemas"]["TopTable"];
 export type UpdateChannelRequest = components["schemas"]["UpdateChannelRequest"];
 export type UpdateIFrameCustomizationRequest = components["schemas"]["UpdateIFrameCustomizationRequest"];
 export type UsagePoint = components["schemas"]["UsagePoint"];

@@ -538,7 +538,6 @@ export const sampleAppUsage: AppUsageResponse = {
     metrics: {
         conversations: { value: 7400, delta: 12.5, sparkline: usageSparkline(520) },
         tokens: { value: 6100000, delta: 15, sparkline: usageSparkline(430000) },
-        cdcWrites: { value: 18400000, delta: 3, sparkline: usageSparkline(1300000) },
     },
     tokensByCapability: buildSeries(
         [
@@ -561,16 +560,6 @@ export const sampleAppUsage: AppUsageResponse = {
         ],
         [320, 200],
     ),
-    cdcWrites: Array.from({ length: 14 }, (_, index) => ({
-        t: `2026-06-${String(index + 12).padStart(2, "0")}`,
-        writes: Math.round(1300000 * (0.7 + 0.3 * Math.sin((index / 13) * Math.PI * 2))),
-    })),
-    topTables: [
-        { name: "Products", writes: 9200000, lagSeconds: 2, lastWriteAt: "2026-06-25T09:00:00Z" },
-        { name: "Orders", writes: 5100000, lagSeconds: 4, lastWriteAt: "2026-06-25T08:58:00Z" },
-        { name: "Customers", writes: 2300000, lagSeconds: 1, lastWriteAt: "2026-06-25T08:55:00Z" },
-        { name: "Inventory", writes: 1800000, lagSeconds: 9, lastWriteAt: "2026-06-25T08:40:00Z" },
-    ],
     topCapabilities: [
         { name: "Sales assistant", invocations: 8100, avgTokens: 540, totalTokens: 4374000 },
         { name: "FAQ bot", invocations: 2400, avgTokens: 320, totalTokens: 768000 },
