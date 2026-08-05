@@ -244,7 +244,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : QuillTestBase
         await using var app = await NewAppAsync();
 
         var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.WhatsApp, "demo-agent", Array.Empty<string>())));
+            new ProvisionChannelRequest(ChannelType.WhatsAppPersonal, "demo-agent", Array.Empty<string>())));
 
         Assert.Equal(HttpStatusCode.NotImplemented, ex.StatusCode);
     }

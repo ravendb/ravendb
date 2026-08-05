@@ -4,5 +4,5 @@ public enum ChannelType
 {
     IFrame,
     Telegram,
-    WhatsApp,
+    WhatsAppPersonal,
 }

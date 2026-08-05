@@ -1259,7 +1259,7 @@ export interface components {
             telegram?: null | components["schemas"]["TelegramSummaryResponse"];
         };
         /** @enum {unknown} */
-        ChannelType: "IFrame" | "Telegram" | "WhatsApp" | null;
+        ChannelType: "IFrame" | "Telegram" | "WhatsAppPersonal" | null;
         ChatRequest: {
             agentId: string;
             prompt: string;

@@ -26,7 +26,7 @@ type ChannelGroupConfig = {
 const CHANNEL_GROUPS: ChannelGroupConfig[] = [
     { type: "IFrame", label: "Web widgets", icon: CodeXml },
     { type: "Telegram", label: "Telegram bots", icon: Send },
-    { type: "WhatsApp", label: "WhatsApp", icon: MessageCircle },
+    { type: "WhatsAppPersonal", label: "WhatsApp Personal", icon: MessageCircle },
 ];
 
 export function ChannelGroups({ slug }: { slug: string }) {

@@ -80,7 +80,7 @@ public static class ChannelsEndpoints
         {
             ChannelType.IFrame => await ProvisionIFrameAsync(app, body, store, logger, ct),
             ChannelType.Telegram => await ProvisionTelegramAsync(app, body, store, telegramManager, logger, ct),
-            ChannelType.WhatsApp => ProvisionWhatsAppAsync(),
+            ChannelType.WhatsAppPersonal => ProvisionWhatsAppAsync(),
             null => Results.BadRequest(new ApiErrorResponse("type is required")),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{body.Type}'")),
         };
@@ -210,7 +210,7 @@ public static class ChannelsEndpoints
         return Results.Ok(new ProvisionChannelResponse(channelId));
     }
 
-    private static IResult ProvisionWhatsAppAsync() => NotImplementedChannel(ChannelType.WhatsApp);
+    private static IResult ProvisionWhatsAppAsync() => NotImplementedChannel(ChannelType.WhatsAppPersonal);
 
     private static async Task<IResult> ListChannelsAsync(
         string slug,
@@ -258,7 +258,7 @@ public static class ChannelsEndpoints
         {
             ChannelType.IFrame => await UpdateIFrameChannelAsync(session, channel, body, app.Slug, channelId, logger, ct),
             ChannelType.Telegram => await UpdateTelegramChannelAsync(session, channel, body, app, channelId, store, telegramManager, logger, ct),
-            ChannelType.WhatsApp => UpdateWhatsAppChannelAsync(),
+            ChannelType.WhatsAppPersonal => UpdateWhatsAppChannelAsync(),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{channel.Type}'")),
         };
     }
@@ -402,7 +402,7 @@ public static class ChannelsEndpoints
         return Results.Ok(ChannelSummaryResponse.From(channel));
     }
 
-    private static IResult UpdateWhatsAppChannelAsync() => NotImplementedChannel(ChannelType.WhatsApp);
+    private static IResult UpdateWhatsAppChannelAsync() => NotImplementedChannel(ChannelType.WhatsAppPersonal);
 
 
     private static async Task<IResult> DeleteChannelAsync(
@@ -426,7 +426,7 @@ public static class ChannelsEndpoints
         {
             ChannelType.IFrame => await DeleteIFrameChannelAsync(session, channel, app.Slug, channelId, logger, ct),
             ChannelType.Telegram => await DeleteTelegramChannelAsync(session, channel, app, channelId, store, telegramManager, logger, ct),
-            ChannelType.WhatsApp => DeleteWhatsAppChannelAsync(),
+            ChannelType.WhatsAppPersonal => DeleteWhatsAppChannelAsync(),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{channel.Type}'")),
         };
     }
@@ -468,7 +468,7 @@ public static class ChannelsEndpoints
         return Results.NoContent();
     }
 
-    private static IResult DeleteWhatsAppChannelAsync() => NotImplementedChannel(ChannelType.WhatsApp);
+    private static IResult DeleteWhatsAppChannelAsync() => NotImplementedChannel(ChannelType.WhatsAppPersonal);
 
     private static string AlreadyConnected(string? botUsername, string? ownerDatabase) =>
         ownerDatabase is null

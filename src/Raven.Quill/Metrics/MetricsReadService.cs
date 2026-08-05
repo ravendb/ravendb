@@ -400,6 +400,7 @@ internal static class MetricsReadService
     private static string ChannelTypeLabel(ChannelType type) => type switch
     {
         ChannelType.IFrame => "Web widget",
+        ChannelType.WhatsAppPersonal => "WhatsApp Personal",
         _ => type.ToString(),
     };
 
