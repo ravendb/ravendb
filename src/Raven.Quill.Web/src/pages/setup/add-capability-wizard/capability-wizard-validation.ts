@@ -44,6 +44,36 @@ const agentQueryToolSchema = z.object({
     isExpanded: z.boolean(),
 });
 
+// An action the LLM can trigger, together with the webhook Quill calls for it. The two are
+// edited as one row so they cannot drift apart — the server rejects an action without a
+// binding, and a binding without an action.
+const agentActionSchema = z.object({
+    name: z
+        .string()
+        .trim()
+        .min(1, "Action name is required")
+        .regex(/^[a-zA-Z0-9_-]+$/, "Action name can only contain letters, numbers, underscores and hyphens"),
+    description: z.string().trim().min(1, "Description is required"),
+    parametersSampleObject: z.string(),
+    parametersSchema: z.string(),
+    url: z
+        .string()
+        .trim()
+        .min(1, "Webhook URL is required")
+        .refine(isHttpUrl, "Webhook URL must be an absolute http:// or https:// address"),
+    secret: z.string(),
+    isExpanded: z.boolean(),
+});
+
+function isHttpUrl(value: string) {
+    try {
+        const { protocol } = new URL(value);
+        return protocol === "http:" || protocol === "https:";
+    } catch {
+        return false;
+    }
+}
+
 // The working copy of the agent configuration edited in the review step. Seeded from an
 // AI suggestion (mode "ai") or left empty (mode "manual"); always the source the wizard
 // provisions from.
@@ -56,10 +86,13 @@ const agentConfigurationSchema = z
         outputSchema: z.string(),
         parameters: z.array(agentParameterSchema),
         queries: z.array(agentQueryToolSchema),
+        actions: z.array(agentActionSchema),
     })
     .superRefine((config, ctx) => {
         addDuplicateNameIssues(ctx, config.parameters, "parameters", "Parameter name must be unique");
         addDuplicateNameIssues(ctx, config.queries, "queries", "Tool name must be unique");
+        addDuplicateNameIssues(ctx, config.actions, "actions", "Action name must be unique");
+        addToolNameCollisionIssues(ctx, config.queries, config.actions);
         if (config.sampleObject.trim().length === 0 && config.outputSchema.trim().length === 0) {
             ctx.addIssue({
                 code: "custom",
@@ -68,6 +101,22 @@ const agentConfigurationSchema = z
             });
         }
     });
+
+// Queries and actions share one tool-name namespace on the server, so a name used by both
+// is rejected there; flag it on the action instead of shipping the operator a 400.
+function addToolNameCollisionIssues(ctx: z.RefinementCtx, queries: { name: string }[], actions: { name: string }[]) {
+    const queryNames = new Set(queries.map((query) => query.name));
+
+    actions.forEach((action, index) => {
+        if (action.name && queryNames.has(action.name)) {
+            ctx.addIssue({
+                code: "custom",
+                message: "A query tool already uses this name",
+                path: ["actions", index, "name"],
+            });
+        }
+    });
+}
 
 function addDuplicateNameIssues(ctx: z.RefinementCtx, items: { name: string }[], listKey: string, message: string) {
     const counts = new Map<string, number>();
@@ -119,6 +168,7 @@ export type AgentFormData = z.infer<typeof agentSchema>;
 export type AgentConfigurationFormData = AgentFormData["review"];
 export type AgentParameterFormData = AgentConfigurationFormData["parameters"][number];
 export type AgentQueryToolFormData = AgentConfigurationFormData["queries"][number];
+export type AgentActionFormData = AgentConfigurationFormData["actions"][number];
 
 // "channels" has no form fields of its own (channels are created through their own API);
 // it is an optional step shown after the agent is provisioned.

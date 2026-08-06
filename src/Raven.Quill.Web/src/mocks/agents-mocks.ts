@@ -1,11 +1,17 @@
-import type { AgentSummaryResponse, AiAgentConfiguration, ProvisionAgentResponse } from "@/api/generated/server-api";
+import type {
+    AgentDetailsResponse,
+    AgentSummaryResponse,
+    AiAgentConfiguration,
+    ProvisionAgentResponse,
+    WebhookBinding,
+} from "@/api/generated/server-api";
 import { apiHttp } from "./api-http";
 
 export const agentsMocks = {
     list: (agents: AgentSummaryResponse[] = sampleAgents) =>
         apiHttp.get("/api/apps/{slug}/agents", ({ response }) => response(200).json(agents)),
-    get: (config: AiAgentConfiguration = sampleAgentConfiguration) =>
-        apiHttp.get("/api/apps/{slug}/agent/{agentId}", ({ response }) => response(200).json(config)),
+    get: (details: AgentDetailsResponse = sampleAgentDetails) =>
+        apiHttp.get("/api/apps/{slug}/agent/{agentId}", ({ response }) => response(200).json(details)),
     edit: (result: ProvisionAgentResponse = { agentId: "agents/sales" }) =>
         apiHttp.post("/api/apps/{slug}/agent", ({ response }) => response(200).json(result)),
     delete: () => apiHttp.delete("/api/apps/{slug}/agent/{agentId}", ({ response }) => response(204).empty()),
@@ -67,7 +73,22 @@ export const sampleAgentConfiguration: AiAgentConfiguration = {
             sendToModel: true,
         },
     ],
-    actions: [],
+    actions: [
+        {
+            name: "create_ticket",
+            description: "Open a support ticket for the customer.",
+            parametersSampleObject: JSON.stringify({ subject: "What the customer needs help with." }, null, 4),
+        },
+    ],
     subAgents: [],
     disabled: false,
+};
+
+export const sampleActionBindings: Record<string, WebhookBinding> = {
+    create_ticket: { url: "https://hooks.demo-shop.example/tickets", secret: "s3cret" },
+};
+
+export const sampleAgentDetails: AgentDetailsResponse = {
+    configuration: sampleAgentConfiguration,
+    actionBindings: sampleActionBindings,
 };

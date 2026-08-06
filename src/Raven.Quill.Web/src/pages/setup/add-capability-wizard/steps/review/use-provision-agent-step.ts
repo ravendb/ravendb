@@ -6,7 +6,10 @@ import { api } from "@/api/api";
 import type { AiAgentConfiguration } from "@/api/generated/server-api";
 import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
 import type { WizardProgress } from "@/components/form/wizard/form-wizard";
-import { buildAgentConfigurationPayload } from "@/pages/setup/add-capability-wizard/agent-config-form";
+import {
+    buildActionBindings,
+    buildAgentConfigurationPayload,
+} from "@/pages/setup/add-capability-wizard/agent-config-form";
 import { useCapabilityWizardStore } from "@/pages/setup/add-capability-wizard/capability-wizard-store";
 import { invalidateAgentQueries } from "@/lib/query-invalidation";
 
@@ -39,7 +42,10 @@ export function useProvisionAgentStep() {
 
         let agentId: string;
         try {
-            const result = await api.services.apps.provisionAgent(slug, config);
+            const result = await api.services.apps.provisionAgent(slug, {
+                configuration: config,
+                actionBindings: buildActionBindings(values),
+            });
             agentId = result.agentId;
         } catch (error) {
             // Backend rejections can carry a full stack trace; surface only the first line.
