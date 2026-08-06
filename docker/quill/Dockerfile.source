@@ -101,6 +101,8 @@ FROM ${NODE_IMAGE} AS whatsapp-bridge-build
 WORKDIR /workspace/bridge
 
 COPY src/Raven.Quill.WhatsAppBridge/package.json src/Raven.Quill.WhatsAppBridge/package-lock.json ./
+# patches/ must land before npm ci: its postinstall runs patch-package
+COPY src/Raven.Quill.WhatsAppBridge/patches/ ./patches/
 RUN --mount=type=cache,target=/root/.npm,sharing=locked npm ci
 
 COPY src/Raven.Quill.WhatsAppBridge/ ./
