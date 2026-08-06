@@ -15,6 +15,8 @@ export type ConnectionValues = {
 export type ParsedConnectionString = {
     values: ConnectionValues;
     droppedKeywords: string[];
+    /** False when no keyword mapped to a connection value - the values are then all defaults. */
+    hasRecognizedKeywords: boolean;
 };
 
 export const DEFAULT_PROVIDER: Provider = "Npgsql";
@@ -70,6 +72,11 @@ export function buildConnectionString(provider: Provider, values: ConnectionValu
         }
     }
 
+    // Empty details produce an empty string - an SSL keyword alone is never a usable connection.
+    if (pairs.length === 0) {
+        return "";
+    }
+
     const ssl = SSL_BY_PROVIDER[provider];
     pairs.push(`${ssl.keyword}=${values.isSecured ? ssl.secured : ssl.insecure}`);
 
@@ -85,7 +92,7 @@ export function resolveConnectionString(
 }
 
 function escapeValue(value: string): string {
-    if (value !== "" && !/[;'"=]/.test(value) && value === value.trim()) {
+    if (value !== "" && !/[;'"=\r\n]/.test(value) && value === value.trim()) {
         return value;
     }
 
@@ -114,18 +121,33 @@ const FIELD_BY_KEYWORD: Record<string, keyof ConnectionValues> = {
     encrypt: "isSecured",
 };
 
-const INSECURE_SSL_VALUES = new Set(["disable", "disabled", "none", "false", "0", "no"]);
+// "prefer"/"preferred" are the Npgsql/MySqlConnector defaults - no SSL guarantee, so the toggle
+// cannot show them as secured.
+const INSECURE_SSL_VALUES = new Set(["disable", "disabled", "none", "false", "0", "no", "prefer", "preferred"]);
 
-export function parseConnectionString(connectionString: string): ParsedConnectionString {
+/**
+ * What the driver does when the string does not mention SSL: Microsoft.Data.SqlClient encrypts
+ * (Encrypt defaults to True), Npgsql and MySqlConnector only opportunistically try SSL with no
+ * guarantee. The toggle must mirror that, or a round trip through the details editor would
+ * silently flip the connection's security.
+ */
+const IS_SECURED_WHEN_UNSPECIFIED: Record<Provider, boolean> = {
+    Npgsql: false,
+    SqlClient: true,
+    MySqlConnectorFactory: false,
+};
+
+export function parseConnectionString(provider: Provider, connectionString: string): ParsedConnectionString {
     const values: ConnectionValues = {
         host: "",
         port: null,
         database: "",
         username: "",
         password: "",
-        isSecured: true,
+        isSecured: IS_SECURED_WHEN_UNSPECIFIED[provider],
     };
     const droppedKeywords: string[] = [];
+    let hasRecognizedKeywords = false;
 
     for (const segment of splitSegments(connectionString)) {
         const separatorIndex = segment.indexOf("=");
@@ -141,7 +163,12 @@ export function parseConnectionString(connectionString: string): ParsedConnectio
 
         if (!field) {
             droppedKeywords.push(keyword);
-        } else if (field === "port") {
+            continue;
+        }
+
+        hasRecognizedKeywords = true;
+
+        if (field === "port") {
             values.port = parsePort(value);
         } else if (field === "isSecured") {
             values.isSecured = !INSECURE_SSL_VALUES.has(value.trim().toLowerCase());
@@ -154,7 +181,7 @@ export function parseConnectionString(connectionString: string): ParsedConnectio
         }
     }
 
-    return { values, droppedKeywords };
+    return { values, droppedKeywords, hasRecognizedKeywords };
 }
 
 function splitHostAndPort(value: string): { host: string; port: number | null } {

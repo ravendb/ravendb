@@ -123,7 +123,7 @@ export function useImportConfig() {
                 sourceTableName: table.sourceTableName ?? "",
             }));
 
-            const { values: fields, droppedKeywords } = parseConnectionString(config.connectionString);
+            const { values: fields, droppedKeywords } = parseConnectionString(config.provider, config.connectionString);
 
             setValue("externalConnection.provider", config.provider);
             setValue("externalConnection.mode", droppedKeywords.length === 0 ? "fields" : "raw");

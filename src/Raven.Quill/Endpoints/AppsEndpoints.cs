@@ -294,15 +294,32 @@ public static class AppsEndpoints
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
-        var wizardId = WizardState.DocumentIdFor(slug);
-        using (var session = store.OpenAsyncSession())
-        {
-            var state = await session.LoadAsync<WizardState>(wizardId, ct);
-            if (state?.LastMapConfiguration is null)
-                return Results.NotFound(new ApiErrorResponse($"no cdc config for {slug} found"));
+        // The app database is the source of truth: the wizard's state document is scratch space
+        // that a later setup run for the same slug may reset.
+        var task = await store.Maintenance.ForDatabase(app.Database).SendAsync(
+            new GetOngoingTaskInfoOperation(app.CdcTaskName, OngoingTaskType.CdcSink), ct);
+        if (task is not OngoingTaskCdcSink cdc)
+            return Results.NotFound(new ApiErrorResponse($"no cdc config for {slug} found"));
 
-            return Results.Ok(new AppCdcConfigurationResponse(state.LastMapConfiguration, state.SourceConnectionString));
-        }
+        return Results.Ok(new AppCdcConfigurationResponse(
+            cdc.Configuration,
+            await LoadSourceConnectionStringAsync(store, app.Database, cdc.Configuration.ConnectionStringName, ct)));
+    }
+
+    private static async Task<string?> LoadSourceConnectionStringAsync(
+        IDocumentStore store,
+        string database,
+        string? connectionStringName,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(connectionStringName))
+            return null;
+
+        var result = await store.Maintenance.ForDatabase(database).SendAsync(
+            new GetConnectionStringsOperation(connectionStringName, ConnectionStringType.Sql), ct);
+        return result.SqlConnectionStrings.TryGetValue(connectionStringName, out var source)
+            ? source.ConnectionString
+            : null;
     }
 
     private static async Task SetupTryAsync(
