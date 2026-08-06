@@ -1332,17 +1332,22 @@ namespace Voron.Impl
 
             ValidateReadOnlyPages();
 
-            var rollbackPages = _env.WriteTransactionPool.ScratchPagesInUse;
-
             // we need to roll back all the changes we made here
             _env.WriteTransactionPool.ScratchPagesInUse = _scratchPagesInUse = _scratchBuffersSnapshotToRollbackTo.ToBuilder();
 
             // We need to free pages allocated by this transaction in a scratch buffer.
             // During tx, we did partial cleanup via `DiscardScratchModificationOn`
             // So only pages currently allocated by this transaction need to be freed.
-            foreach (var transactionPage in _transactionPages)
+            var forTestingPurposes = _forTestingPurposes;
+            foreach (var scratchPage in _transactionPages)
             {
-                _env.ScratchBufferPool.FreeImmediately(this, transactionPage.File.Number, transactionPage.PositionInScratchBuffer);
+                if (forTestingPurposes != null)
+                    forTestingPurposes.ScratchPagesExaminedDuringRollback++;
+
+                Debug.Assert(scratchPage.AllocatedInTransaction == Id,
+                    $"Scratch page {scratchPage.PositionInScratchBuffer} in the pages of transaction {Id} was allocated in transaction {scratchPage.AllocatedInTransaction}");
+
+                _env.ScratchBufferPool.FreeImmediately(this, scratchPage.File.Number, scratchPage.PositionInScratchBuffer);
             }
 
             RolledBack = true;
@@ -1570,6 +1575,7 @@ namespace Voron.Impl
             private readonly LowLevelTransaction _tx;
             internal bool SimulateThrowingOnCommitStage2 = false;
 
+            internal long ScratchPagesExaminedDuringRollback;
             internal Action ActionToCallDuringEnsurePagerStateReference;
             internal Action ActionToCallJustBeforeWritingToJournal;
             internal Action ActionToCallDuringBeginAsyncCommitAndStartNewTransaction;
