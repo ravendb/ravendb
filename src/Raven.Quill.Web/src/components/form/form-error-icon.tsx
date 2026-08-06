@@ -1,3 +1,7 @@
+// React Compiler memoization is disabled here: the message is derived from react-hook-form's
+// mutable errors object, which keeps a stable identity across updates.
+"use no memo";
+
 import { type Control, type FieldPath, type FieldValues, useFormState } from "react-hook-form";
 import { CircleAlert } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
