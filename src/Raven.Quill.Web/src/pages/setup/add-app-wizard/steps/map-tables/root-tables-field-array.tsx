@@ -3,7 +3,7 @@ import { createContext, useContext, type ReactNode } from "react";
 import { useFieldArray, useFormContext, type UseFieldArrayReturn } from "react-hook-form";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 
-type RootTablesFieldArray = Pick<UseFieldArrayReturn<AppFormData, "mapTables.tables">, "append" | "remove">;
+type RootTablesFieldArray = Pick<UseFieldArrayReturn<AppFormData, "mapTables.tables">, "append" | "remove" | "update">;
 
 const RootTablesFieldArrayContext = createContext<RootTablesFieldArray | null>(null);
 
@@ -14,14 +14,14 @@ const RootTablesFieldArrayContext = createContext<RootTablesFieldArray | null>(n
  * whole-array setValue calls on it as a single array swap instead of recursing into every table
  * field, which used to take hundreds of milliseconds on large schemas.
  *
- * Only the stable append/remove callbacks are exposed. The hook's `fields` state changes on every
+ * Only the append/remove/update callbacks are exposed. The hook's `fields` state changes on every
  * array operation, and passing the whole return object through context would re-render every
  * consumer for a state nobody reads.
  */
 export function RootTablesFieldArrayProvider({ children }: { children: ReactNode }) {
     const { control } = useFormContext<AppFormData>();
-    const { append, remove } = useFieldArray({ control, name: "mapTables.tables" });
-    const fieldArray = { append, remove };
+    const { append, remove, update } = useFieldArray({ control, name: "mapTables.tables" });
+    const fieldArray = { append, remove, update };
 
     return <RootTablesFieldArrayContext.Provider value={fieldArray}>{children}</RootTablesFieldArrayContext.Provider>;
 }

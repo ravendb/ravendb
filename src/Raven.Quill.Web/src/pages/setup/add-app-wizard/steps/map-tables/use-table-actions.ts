@@ -6,7 +6,6 @@ import {
     getRootTablePath,
     type EmbeddedTablePath,
     type FormEmbeddedTable,
-    type FormLinkedTable,
     type FormRootTable,
     type MapTablePath,
     type RootTablePath,
@@ -17,67 +16,107 @@ import {
     createEmptyRootTable,
 } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
 import { useRootTablesFieldArray } from "@/pages/setup/add-app-wizard/steps/map-tables/root-tables-field-array";
-import { useFormContext, type FieldPath, type PathValue } from "react-hook-form";
+import { useFormContext } from "react-hook-form";
 
 type ParentTablePath = RootTablePath | EmbeddedTablePath;
-type FormPath = FieldPath<AppFormData>;
+type ParentTable = FormRootTable | FormEmbeddedTable;
+
+/** Follows the segments below the root table, e.g. "embeddedTables.1.embeddedTables.0". Only
+ * root and embedded tables can hold children, so every list segment is "embeddedTables". */
+function getTableWithinRoot(rootTable: FormRootTable, path: ParentTablePath): ParentTable {
+    const nestedIndexes = path
+        .split(".")
+        .slice(3)
+        .filter((_, idx) => idx % 2 === 1)
+        .map(Number);
+
+    return nestedIndexes.reduce<ParentTable>((table, index) => table.embeddedTables[index], rootTable);
+}
 
 export function useTableActions() {
-    const { getValues, setValue } = useFormContext<AppFormData>();
+    const { getValues } = useFormContext<AppFormData>();
     const rootTablesFieldArray = useRootTablesFieldArray();
     const setMapActiveTable = useSetupWizardStore((state) => state.setMapActiveTable);
     const expandMapTable = useSetupWizardStore((state) => state.expandMapTable);
     const removeMapTableUiState = useSetupWizardStore((state) => state.removeMapTableUiState);
 
-    const getTableList = <TTable>(listPath: string) => (getValues(listPath as FormPath) as TTable[]) ?? [];
+    /** Changes below a root table go through the root field array's update: unlike a plain
+     * setValue, a field array operation revalidates the tables (the form validates on change),
+     * matching how the root-level append/remove already behave. */
+    const updateRootTable = <TResult>(path: MapTablePath, mutate: (rootTable: FormRootTable) => TResult): TResult => {
+        const rootIndex = Number(path.split(".")[2]);
+        const rootTable = structuredClone(getValues(getRootTablePath(rootIndex)));
+        const result = mutate(rootTable);
 
-    const setFieldValue = (path: string, value: unknown) => {
-        setValue(path as FormPath, value as PathValue<AppFormData, FormPath>);
+        rootTablesFieldArray.update(rootIndex, rootTable);
+
+        return result;
     };
 
     const addRootTable = () => {
-        const nextIndex = getTableList<FormRootTable>("mapTables.tables").length;
+        const nextIndex = (getValues("mapTables.tables") ?? []).length;
 
         rootTablesFieldArray.append(createEmptyRootTable(), { shouldFocus: false });
         setMapActiveTable({ type: "root", path: getRootTablePath(nextIndex) });
     };
 
     const addEmbeddedTable = (parentPath: ParentTablePath) => {
-        const listPath = `${parentPath}.embeddedTables`;
-        const embeddedTables = getTableList<FormEmbeddedTable>(listPath);
+        const newIndex = updateRootTable(parentPath, (rootTable) => {
+            const parentTable = getTableWithinRoot(rootTable, parentPath);
 
-        setFieldValue(listPath, [...embeddedTables, createEmptyEmbeddedTable()]);
+            parentTable.embeddedTables.push(createEmptyEmbeddedTable());
+
+            return parentTable.embeddedTables.length - 1;
+        });
+
         expandMapTable(parentPath);
-        setMapActiveTable({ type: "embedded", path: castToEmbeddedTablePath(`${listPath}.${embeddedTables.length}`) });
+        setMapActiveTable({
+            type: "embedded",
+            path: castToEmbeddedTablePath(`${parentPath}.embeddedTables.${newIndex}`),
+        });
     };
 
     const addLinkedTable = (parentPath: ParentTablePath) => {
-        const listPath = `${parentPath}.linkedTables`;
-        const linkedTables = getTableList<FormLinkedTable>(listPath);
+        const newIndex = updateRootTable(parentPath, (rootTable) => {
+            const parentTable = getTableWithinRoot(rootTable, parentPath);
 
-        setFieldValue(listPath, [...linkedTables, createEmptyLinkedTable()]);
+            parentTable.linkedTables.push(createEmptyLinkedTable());
+
+            return parentTable.linkedTables.length - 1;
+        });
+
         expandMapTable(parentPath);
-        setMapActiveTable({ type: "linked", path: castToLinkedTablePath(`${listPath}.${linkedTables.length}`) });
+        setMapActiveTable({
+            type: "linked",
+            path: castToLinkedTablePath(`${parentPath}.linkedTables.${newIndex}`),
+        });
     };
 
     const toggleRootTableDisabled = (path: RootTablePath) => {
-        setFieldValue(`${path}.disabled`, !getValues(`${path}.disabled`));
+        updateRootTable(path, (rootTable) => {
+            rootTable.disabled = !rootTable.disabled;
+        });
     };
 
     const removeTable = (path: MapTablePath) => {
-        const parts = path.split(".");
-        const index = Number(parts.at(-1));
-        const listPath = parts.slice(0, -1).join(".");
+        const segments = path.split(".");
+        const index = Number(segments.at(-1));
 
-        if (listPath === "mapTables.tables") {
+        if (segments.length === 3) {
             rootTablesFieldArray.remove(index);
         } else {
-            const tables = getTableList<unknown>(listPath);
+            const listName = segments.at(-2) as "embeddedTables" | "linkedTables";
+            const parentPath = segments.slice(0, -2).join(".") as ParentTablePath;
 
-            setFieldValue(
-                listPath,
-                tables.filter((_, idx) => idx !== index),
-            );
+            updateRootTable(path, (rootTable) => {
+                const parentTable = getTableWithinRoot(rootTable, parentPath);
+
+                if (listName === "embeddedTables") {
+                    parentTable.embeddedTables.splice(index, 1);
+                } else {
+                    parentTable.linkedTables.splice(index, 1);
+                }
+            });
         }
 
         removeMapTableUiState(path);
