@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using Microsoft.Extensions.Options;
 using Raven.Client.Documents;
 using Raven.Quill.Agents;
@@ -34,7 +33,7 @@ internal sealed class TelegramChannelManager(
     IServerReady ready,
     ILogger<TelegramChannelManager> logger) : BackgroundService, ITelegramChannelManager
 {
-    private readonly ConcurrentDictionary<(string Database, string ChannelId), TelegramChannelPoller> _pollers = new();
+    private readonly Dictionary<(string Database, string ChannelId), TelegramChannelPoller> _pollers = new();
 
     private readonly SemaphoreSlim _transition = new(1, 1);
 
@@ -123,7 +122,7 @@ internal sealed class TelegramChannelManager(
         await _transition.WaitAsync();
         try
         {
-            if (_pollers.TryRemove(key, out var existing))
+            if (_pollers.Remove(key, out var existing))
                 await existing.StopAsync();
 
             var bot = botFactory.Create(channel.Telegram!.BotToken);
@@ -146,12 +145,7 @@ internal sealed class TelegramChannelManager(
         await _transition.WaitAsync();
         try
         {
-            if (_pollers.TryRemove((database, channelId), out var poller))
-            {
-                await poller.StopAsync();
-                logger.LogInformation(
-                    "Telegram poller stopped for channel {ChannelId} on {Database}", channelId, database);
-            }
+            await StopPollerAsync((database, channelId));
         }
         finally
         {
@@ -161,20 +155,56 @@ internal sealed class TelegramChannelManager(
 
     public async Task StopAllForDatabaseAsync(string database)
     {
-        foreach (var key in _pollers.Keys.Where(k => k.Database == database).ToArray())
-            await StopAsync(key.Database, key.ChannelId);
+        await _transition.WaitAsync();
+        try
+        {
+            foreach (var key in _pollers.Keys.Where(k => k.Database == database).ToArray())
+                await StopPollerAsync(key);
+        }
+        finally
+        {
+            _transition.Release();
+        }
     }
 
-    public IReadOnlyDictionary<string, TelegramChannelHealthSnapshot> GetHealth(string database) =>
-        _pollers
-            .Where(kvp => kvp.Key.Database == database)
-            .ToDictionary(kvp => kvp.Key.ChannelId, kvp => kvp.Value.Health.Snapshot(isPolling: true));
+    private async Task StopPollerAsync((string Database, string ChannelId) key)
+    {
+        if (_pollers.Remove(key, out var poller))
+        {
+            await poller.StopAsync();
+            logger.LogInformation(
+                "Telegram poller stopped for channel {ChannelId} on {Database}", key.ChannelId, key.Database);
+        }
+    }
+
+    public IReadOnlyDictionary<string, TelegramChannelHealthSnapshot> GetHealth(string database)
+    {
+        _transition.Wait();
+        try
+        {
+            return _pollers
+                .Where(kvp => kvp.Key.Database == database)
+                .ToDictionary(kvp => kvp.Key.ChannelId, kvp => kvp.Value.Health.Snapshot(isPolling: true));
+        }
+        finally
+        {
+            _transition.Release();
+        }
+    }
 
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
-        foreach (var poller in _pollers.Values.ToArray())
-            await poller.StopAsync();
-        _pollers.Clear();
+        await _transition.WaitAsync(cancellationToken);
+        try
+        {
+            foreach (var poller in _pollers.Values.ToArray())
+                await poller.StopAsync();
+            _pollers.Clear();
+        }
+        finally
+        {
+            _transition.Release();
+        }
 
         await base.StopAsync(cancellationToken);
     }
