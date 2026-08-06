@@ -58,7 +58,7 @@ function buildSeed(discovery: DiscoverResponse): AppFormData {
                 database: "acme_shop",
                 username: "admin",
                 password: "secret",
-                isSecured: false,
+                ssl: "disable",
             },
             connectionString: "",
         },

@@ -75,13 +75,13 @@ function buildConnectionSeed(provider: Provider, connectionString: string): Conn
                 database: "",
                 username: "",
                 password: "",
-                isSecured: true,
+                ssl: "default",
             },
             connectionString: "",
         };
     }
 
-    const { values: fields, droppedKeywords } = parseConnectionString(provider, connectionString);
+    const { values: fields, droppedKeywords } = parseConnectionString(connectionString);
 
     return { mode: droppedKeywords.length === 0 ? "fields" : "raw", fields, connectionString };
 }

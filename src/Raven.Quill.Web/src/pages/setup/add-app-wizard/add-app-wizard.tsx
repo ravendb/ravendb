@@ -22,7 +22,7 @@ function getDefaultValues(): AppFormData {
                 database: "",
                 username: "",
                 password: "",
-                isSecured: true,
+                ssl: "default",
             },
             connectionString: "",
         },

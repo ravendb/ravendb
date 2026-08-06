@@ -3,8 +3,8 @@ import { type FieldPath, type FieldValues, type UseControllerProps, useControlle
 import { Field, FieldDescription, FieldLabel } from "@/components/shadcn/ui/field";
 import { ToggleGroup, ToggleGroupItem } from "@/components/shadcn/ui/toggle-group";
 
-export type FormToggleGroupOption = {
-    value: string;
+export type FormToggleGroupOption<TValue extends string = string> = {
+    value: TValue;
     label: ReactNode;
     ariaLabel?: string;
 };
@@ -13,6 +13,8 @@ type FormToggleGroupProps<TFieldValues extends FieldValues, TName extends FieldP
     TFieldValues,
     TName
 > & {
+    /** When false, clicking the selected item keeps it selected instead of clearing to null. */
+    canDeselect?: boolean;
     className?: string;
     description?: ReactNode;
     disabled?: boolean;
@@ -22,6 +24,7 @@ type FormToggleGroupProps<TFieldValues extends FieldValues, TName extends FieldP
 
 /** Single-select toggle group; clicking the selected item again clears the value back to null. */
 export function FormToggleGroup<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>({
+    canDeselect = true,
     className,
     control,
     defaultValue,
@@ -48,7 +51,13 @@ export function FormToggleGroup<TFieldValues extends FieldValues, TName extends 
                 type="single"
                 variant="outline"
                 value={typeof value === "string" ? value : ""}
-                onValueChange={(next) => onChange(next === "" ? null : next)}
+                onValueChange={(next) => {
+                    if (next !== "") {
+                        onChange(next);
+                    } else if (canDeselect) {
+                        onChange(null);
+                    }
+                }}
                 disabled={disabled || formState.isSubmitting}
                 aria-invalid={invalid}
             >
