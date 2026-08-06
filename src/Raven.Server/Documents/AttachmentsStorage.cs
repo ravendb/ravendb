@@ -1102,7 +1102,7 @@ namespace Raven.Server.Documents
                 Name = TableValueToId(context, (int)AttachmentsTable.Name, ref tvr),
                 ContentType = TableValueToId(context, (int)AttachmentsTable.ContentType, ref tvr),
                 Size = TableValueToLong((int)AttachmentsTable.Size, ref tvr),
-                RevisionVersion = ReadRevisionVersion(context, ref tvr),
+                RevisionVersion = ReadRevisionVersion(ref tvr),
             };
 
             result.RemoteParameters = RemoteAttachmentExtensions.GetRemoteAttachmentParameters(
@@ -1118,10 +1118,10 @@ namespace Raven.Server.Documents
         }
 
         // Field 11 (RevisionVersion) is present only on Hashed RA rows; legacy / doc-attachment rows have <=11 fields.
-        private static string ReadRevisionVersion(JsonOperationContext context, ref TableValueReader tvr)
+        private static string ReadRevisionVersion(ref TableValueReader tvr)
         {
             return tvr.Count > (int)AttachmentsTable.RevisionVersion
-                ? TableValueToChangeVector(context, (int)AttachmentsTable.RevisionVersion, ref tvr)
+                ? TableValueToChangeVector((int)AttachmentsTable.RevisionVersion, ref tvr)
                 : null;
         }
 
