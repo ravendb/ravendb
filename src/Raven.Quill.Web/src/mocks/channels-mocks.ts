@@ -102,6 +102,17 @@ export const sampleWhatsAppPairing: WhatsAppPairingResponse = {
     state: "Pairing",
     qr: "2@AbCdEfGhIjKlMnOpQrStUvWxYz0123456789+/=,ABCDEFabcdef0123456789,XyZ=",
     qrExpiresAt: "2026-07-21T10:01:00Z",
+    pairingCode: null,
+    phoneNumber: null,
+    lastError: null,
+};
+
+// Linking by phone number replaces the QR with a code typed into WhatsApp.
+export const sampleWhatsAppPairingCode: WhatsAppPairingResponse = {
+    state: "Pairing",
+    qr: null,
+    qrExpiresAt: null,
+    pairingCode: "4M7XK2QP",
     phoneNumber: null,
     lastError: null,
 };
@@ -110,6 +121,7 @@ export const sampleWhatsAppConnected: WhatsAppPairingResponse = {
     state: "Connected",
     qr: null,
     qrExpiresAt: null,
+    pairingCode: null,
     phoneNumber: "+48601234567",
     lastError: null,
 };
@@ -118,6 +130,7 @@ export const sampleWhatsAppLoggedOut: WhatsAppPairingResponse = {
     state: "LoggedOut",
     qr: null,
     qrExpiresAt: null,
+    pairingCode: null,
     phoneNumber: null,
     lastError: "the phone unlinked this device",
 };

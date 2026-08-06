@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -22,6 +23,7 @@ public sealed class MockWhatsAppBridge : IAsyncDisposable
     private readonly List<(string Database, string ChannelId)> _restarted = [];
     private readonly List<(string Database, string ChannelId)> _deleted = [];
     private readonly List<SentMessage> _sent = [];
+    private readonly List<(string Database, string ChannelId, string PhoneNumber)> _pairingPhoneNumbers = [];
     private int _nextMessageId = 1;
 
     public sealed record SentMessage(string Database, string ChannelId, string To, string Text);
@@ -30,6 +32,7 @@ public sealed class MockWhatsAppBridge : IAsyncDisposable
     {
         public string State = "pairing";
         public string? Qr;
+        public string? PairingCode;
         public string? PhoneNumber;
         public string? LastError;
     }
@@ -66,6 +69,12 @@ public sealed class MockWhatsAppBridge : IAsyncDisposable
         get { lock (_lock) return _sent.ToArray(); }
     }
 
+    /// Phone numbers the web app asked to link by pairing code.
+    public IReadOnlyList<(string Database, string ChannelId, string PhoneNumber)> PairingPhoneNumbers
+    {
+        get { lock (_lock) return _pairingPhoneNumbers.ToArray(); }
+    }
+
     public bool HasSession(string database, string channelId)
     {
         lock (_lock) return _sessions.ContainsKey(KeyOf(database, channelId));
@@ -74,7 +83,7 @@ public sealed class MockWhatsAppBridge : IAsyncDisposable
     /// Scripts (or overwrites) the status the bridge reports for a session.
     public void SetStatus(
         string database, string channelId, string state,
-        string? qr = null, string? phoneNumber = null, string? lastError = null)
+        string? qr = null, string? pairingCode = null, string? phoneNumber = null, string? lastError = null)
     {
         lock (_lock)
         {
@@ -82,6 +91,7 @@ public sealed class MockWhatsAppBridge : IAsyncDisposable
             {
                 State = state,
                 Qr = qr,
+                PairingCode = pairingCode,
                 PhoneNumber = phoneNumber,
                 LastError = lastError,
             };
@@ -113,6 +123,7 @@ public sealed class MockWhatsAppBridge : IAsyncDisposable
             _restarted.Clear();
             _deleted.Clear();
             _sent.Clear();
+            _pairingPhoneNumbers.Clear();
         }
 
         Down = false;
@@ -147,14 +158,14 @@ public sealed class MockWhatsAppBridge : IAsyncDisposable
             await next();
         });
 
-        app.MapPost("/sessions/{database}/{channelId}", (string database, string channelId) =>
-            instance.HandleStart(database, channelId));
+        app.MapPost("/sessions/{database}/{channelId}", async (string database, string channelId, HttpContext ctx) =>
+            instance.HandleStart(database, channelId, await ReadPhoneNumberAsync(ctx)));
 
         app.MapGet("/sessions/{database}/{channelId}", (string database, string channelId) =>
             instance.HandleStatus(database, channelId));
 
-        app.MapPost("/sessions/{database}/{channelId}/restart", (string database, string channelId) =>
-            instance.HandleRestart(database, channelId));
+        app.MapPost("/sessions/{database}/{channelId}/restart", async (string database, string channelId, HttpContext ctx) =>
+            instance.HandleRestart(database, channelId, await ReadPhoneNumberAsync(ctx)));
 
         app.MapPost("/sessions/{database}/{channelId}/send", async (string database, string channelId, HttpContext ctx) =>
         {
@@ -175,16 +186,39 @@ public sealed class MockWhatsAppBridge : IAsyncDisposable
         return instance;
     }
 
-    private IResult HandleStart(string database, string channelId)
+    private IResult HandleStart(string database, string channelId, string? pairingPhoneNumber)
     {
         lock (_lock)
         {
             _started.Add((database, channelId));
+            if (pairingPhoneNumber is not null)
+                _pairingPhoneNumbers.Add((database, channelId, pairingPhoneNumber));
+
             var key = KeyOf(database, channelId);
             if (_sessions.ContainsKey(key) == false)
-                _sessions[key] = new SessionEntry { State = "pairing", Qr = $"QR-{Guid.NewGuid():N}" };
+                _sessions[key] = NewPairingEntry(pairingPhoneNumber);
 
             return Results.Json(new { state = _sessions[key].State }, statusCode: 202);
+        }
+    }
+
+    /// Mirrors the bridge: a phone number yields a pairing code, otherwise a QR.
+    private static SessionEntry NewPairingEntry(string? pairingPhoneNumber) =>
+        pairingPhoneNumber is null
+            ? new SessionEntry { State = "pairing", Qr = $"QR-{Guid.NewGuid():N}" }
+            : new SessionEntry { State = "pairing", PairingCode = "ABCD1234" };
+
+    // the body may arrive chunked (no Content-Length), so always try to parse it
+    private static async Task<string?> ReadPhoneNumberAsync(HttpContext ctx)
+    {
+        try
+        {
+            var body = await JsonNode.ParseAsync(ctx.Request.Body);
+            return (string?)body?["phoneNumber"];
+        }
+        catch (JsonException)
+        {
+            return null;
         }
     }
 
@@ -200,23 +234,22 @@ public sealed class MockWhatsAppBridge : IAsyncDisposable
                 state = entry.State,
                 qr = entry.Qr,
                 qrExpiresAt = entry.Qr is null ? (DateTime?)null : DateTime.UtcNow.AddSeconds(60),
+                pairingCode = entry.PairingCode,
                 phoneNumber = entry.PhoneNumber,
                 lastError = entry.LastError,
             });
         }
     }
 
-    private IResult HandleRestart(string database, string channelId)
+    private IResult HandleRestart(string database, string channelId, string? pairingPhoneNumber)
     {
         lock (_lock)
         {
             _restarted.Add((database, channelId));
-            _sessions[KeyOf(database, channelId)] = new SessionEntry
-            {
-                State = "pairing",
-                Qr = $"QR-{Guid.NewGuid():N}",
-            };
+            if (pairingPhoneNumber is not null)
+                _pairingPhoneNumbers.Add((database, channelId, pairingPhoneNumber));
 
+            _sessions[KeyOf(database, channelId)] = NewPairingEntry(pairingPhoneNumber);
             return Results.Json(new { state = "pairing" }, statusCode: 202);
         }
     }

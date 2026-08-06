@@ -16,6 +16,23 @@ interface SessionParams {
     channelId: string;
 }
 
+interface PairingBody {
+    phoneNumber?: unknown;
+}
+
+/// Returns the digits of an E.164-ish number, null when absent, undefined when malformed.
+function readPairingPhoneNumber(body: PairingBody | undefined): string | null | undefined {
+    const raw = body?.phoneNumber;
+    if (raw === undefined || raw === null || raw === "")
+        return null;
+
+    if (typeof raw !== "string")
+        return undefined;
+
+    const digits = raw.replace(/[\s()+-]/g, "");
+    return /^[0-9]{6,20}$/.test(digits) ? digits : undefined;
+}
+
 export function buildServer(manager: SessionManager, token: string, logger: Logger): FastifyInstance {
     const app = fastify({ logger: false });
     const tokenDigest = createHash("sha256").update(token, "utf8").digest();
@@ -33,12 +50,16 @@ export function buildServer(manager: SessionManager, token: string, logger: Logg
 
     app.get("/healthz", async () => manager.counts());
 
-    app.post<{ Params: SessionParams }>("/sessions/:database/:channelId", async (request, reply) => {
+    app.post<{ Params: SessionParams; Body: PairingBody }>("/sessions/:database/:channelId", async (request, reply) => {
         const params = validateParams(request.params);
         if (params === null)
             return reply.code(400).send({ error: "invalid database or channelId" });
 
-        const session = await manager.start(params.database, params.channelId);
+        const phoneNumber = readPairingPhoneNumber(request.body);
+        if (phoneNumber === undefined)
+            return reply.code(400).send({ error: "phoneNumber must be 6-20 digits" });
+
+        const session = await manager.start(params.database, params.channelId, phoneNumber);
         return reply.code(202).send({ state: session.status().state });
     });
 
@@ -54,14 +75,21 @@ export function buildServer(manager: SessionManager, token: string, logger: Logg
         return reply.send(session.status());
     });
 
-    app.post<{ Params: SessionParams }>("/sessions/:database/:channelId/restart", async (request, reply) => {
-        const params = validateParams(request.params);
-        if (params === null)
-            return reply.code(400).send({ error: "invalid database or channelId" });
+    app.post<{ Params: SessionParams; Body: PairingBody }>(
+        "/sessions/:database/:channelId/restart",
+        async (request, reply) => {
+            const params = validateParams(request.params);
+            if (params === null)
+                return reply.code(400).send({ error: "invalid database or channelId" });
 
-        const session = await manager.restart(params.database, params.channelId);
-        return reply.code(202).send({ state: session.status().state });
-    });
+            const phoneNumber = readPairingPhoneNumber(request.body);
+            if (phoneNumber === undefined)
+                return reply.code(400).send({ error: "phoneNumber must be 6-20 digits" });
+
+            const session = await manager.restart(params.database, params.channelId, phoneNumber);
+            return reply.code(202).send({ state: session.status().state });
+        },
+    );
 
     app.post<{ Params: SessionParams; Body: { to?: unknown; text?: unknown } }>(
         "/sessions/:database/:channelId/send",

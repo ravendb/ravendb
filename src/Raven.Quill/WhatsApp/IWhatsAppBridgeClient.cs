@@ -15,6 +15,7 @@ internal sealed record WhatsAppSessionStatus(
     WhatsAppSessionState State,
     string? Qr,
     DateTime? QrExpiresAt,
+    string? PairingCode,
     string? PhoneNumber,
     string? LastError);
 
@@ -28,12 +29,13 @@ internal sealed class WhatsAppSendConflictException()
 
 internal interface IWhatsAppBridgeClient
 {
-    Task StartSessionAsync(string database, string channelId, CancellationToken ct);
+    /// A phone number links by pairing code instead of QR; null keeps the QR flow.
+    Task StartSessionAsync(string database, string channelId, string? pairingPhoneNumber, CancellationToken ct);
 
     /// Returns null when the bridge does not know the session (bridge 404).
     Task<WhatsAppSessionStatus?> GetSessionStatusAsync(string database, string channelId, CancellationToken ct);
 
-    Task RestartSessionAsync(string database, string channelId, CancellationToken ct);
+    Task RestartSessionAsync(string database, string channelId, string? pairingPhoneNumber, CancellationToken ct);
 
     Task SendTextAsync(string database, string channelId, string toJid, string text, CancellationToken ct);
 

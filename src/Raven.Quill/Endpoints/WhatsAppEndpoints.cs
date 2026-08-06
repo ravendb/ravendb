@@ -38,8 +38,13 @@ public static class WhatsAppEndpoints
 
         group.MapPost("/channels/{channelId}/whatsapp/pairing/restart", RestartPairingAsync)
             .WithName("whatsapp.pairingRestart")
-            .WithDescription("Restarts pairing with a fresh QR code; a logged-out session has its credentials wiped first.")
+            .WithDescription(
+                "Restarts pairing; a logged-out session has its credentials wiped first. Without a " +
+                "phoneNumber the session issues a QR code to scan. With one, it issues an 8-character " +
+                "pairing code to type into WhatsApp under Linked devices > Link with phone number.")
+            .Accepts<WhatsAppPairingRestartRequest>("application/json")
             .Produces<WhatsAppPairingResponse>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound)
             .Produces<ApiErrorResponse>(StatusCodes.Status502BadGateway);
 
@@ -75,9 +80,9 @@ public static class WhatsAppEndpoints
             if (status is null)
             {
                 // the bridge lost the session (restart before the phone was linked); recreate it
-                await bridge.StartSessionAsync(app.Database, channelId, ct);
+                await bridge.StartSessionAsync(app.Database, channelId, pairingPhoneNumber: null, ct);
                 status = await bridge.GetSessionStatusAsync(app.Database, channelId, ct)
-                         ?? new WhatsAppSessionStatus(WhatsAppSessionState.Starting, null, null, null, null);
+                         ?? new WhatsAppSessionStatus(WhatsAppSessionState.Starting, null, null, null, null, null);
             }
 
             await PersistLinkStateAsync(session, channel, status, ct);
@@ -93,6 +98,8 @@ public static class WhatsAppEndpoints
     private static async Task<IResult> RestartPairingAsync(
         string slug,
         string channelId,
+        // a body with no phoneNumber is the plain QR restart
+        WhatsAppPairingRestartRequest body,
         IDocumentStore store,
         IWhatsAppBridgeClient bridge,
         ILogger<WhatsAppLogger> logger,
@@ -102,6 +109,9 @@ public static class WhatsAppEndpoints
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
+        if (TryNormalizePairingPhoneNumber(body.PhoneNumber, out var pairingPhoneNumber, out var phoneError) == false)
+            return Results.BadRequest(new ApiErrorResponse(phoneError!));
+
         using var session = store.OpenAsyncSession(app.Database);
         var channel = await session.LoadAsync<Channel>(Channel.IdPrefix + channelId, ct);
         if (channel is not { Type: ChannelType.WhatsAppPersonal })
@@ -109,9 +119,9 @@ public static class WhatsAppEndpoints
 
         try
         {
-            await bridge.RestartSessionAsync(app.Database, channelId, ct);
+            await bridge.RestartSessionAsync(app.Database, channelId, pairingPhoneNumber, ct);
             var status = await bridge.GetSessionStatusAsync(app.Database, channelId, ct)
-                         ?? new WhatsAppSessionStatus(WhatsAppSessionState.Starting, null, null, null, null);
+                         ?? new WhatsAppSessionStatus(WhatsAppSessionState.Starting, null, null, null, null, null);
 
             await PersistLinkStateAsync(session, channel, status, ct);
 
@@ -192,8 +202,28 @@ public static class WhatsAppEndpoints
         }
     }
 
+    /// Accepts the usual written forms ("+48 601 234 567") and hands the bridge bare digits.
+    private static bool TryNormalizePairingPhoneNumber(string? phoneNumber, out string? normalized, out string? error)
+    {
+        normalized = null;
+        error = null;
+
+        if (string.IsNullOrWhiteSpace(phoneNumber))
+            return true;
+
+        var digits = new string(phoneNumber.Where(char.IsAsciiDigit).ToArray());
+        if (digits.Length is < 6 or > 20)
+        {
+            error = "phoneNumber must be the full number in international format, digits only (6-20 digits)";
+            return false;
+        }
+
+        normalized = digits;
+        return true;
+    }
+
     private static WhatsAppPairingResponse ToPairingResponse(WhatsAppSessionStatus status) =>
-        new(status.State, status.Qr, status.QrExpiresAt, status.PhoneNumber, status.LastError);
+        new(status.State, status.Qr, status.QrExpiresAt, status.PairingCode, status.PhoneNumber, status.LastError);
 
     private static IResult BridgeUnavailable() =>
         Results.Json(

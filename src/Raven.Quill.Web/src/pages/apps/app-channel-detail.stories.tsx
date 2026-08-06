@@ -7,6 +7,7 @@ import {
     sampleWhatsAppConnected,
     sampleWhatsAppLoggedOut,
     sampleWhatsAppPairing,
+    sampleWhatsAppPairingCode,
     whatsAppMocks,
 } from "@/mocks/channels-mocks";
 import { embedLinksMocks } from "@/mocks/embed-links-mocks";
@@ -71,6 +72,27 @@ export const WhatsAppConnected: Story = {
                 ],
             },
         },
+    },
+};
+
+// Linking by phone number: the panel shows the code to type into WhatsApp, no QR.
+export const WhatsAppPairingCode: Story = {
+    parameters: {
+        router: whatsAppRouter,
+        msw: {
+            handlers: {
+                whatsapp: [
+                    whatsAppMocks.pairing(sampleWhatsAppPairingCode),
+                    whatsAppMocks.pairingRestart(sampleWhatsAppPairingCode),
+                    whatsAppMocks.health(),
+                ],
+            },
+        },
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await waitFor(() => expect(canvas.getByText(sampleWhatsAppPairingCode.pairingCode!)).toBeInTheDocument());
+        expect(canvas.queryByRole("img", { name: /whatsapp pairing qr code/i })).not.toBeInTheDocument();
     },
 };
 

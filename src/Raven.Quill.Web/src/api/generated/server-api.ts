@@ -367,7 +367,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Restarts pairing with a fresh QR code; a logged-out session has its credentials wiped first. */
+        /** @description Restarts pairing; a logged-out session has its credentials wiped first. Without a phoneNumber the session issues a QR code to scan. With one, it issues an 8-character pairing code to type into WhatsApp under Linked devices > Link with phone number. */
         post: operations["whatsapp.pairingRestart"];
         delete?: never;
         options?: never;
@@ -1805,8 +1805,12 @@ export interface components {
             qr: null | string;
             /** Format: date-time */
             qrExpiresAt: null | string;
+            pairingCode: null | string;
             phoneNumber: null | string;
             lastError: null | string;
+        };
+        WhatsAppPairingRestartRequest: {
+            phoneNumber?: null | string;
         };
         /** @enum {unknown} */
         WhatsAppSessionState: "Starting" | "Pairing" | "Connected" | "Disconnected" | "LoggedOut";
@@ -2655,7 +2659,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WhatsAppPairingRestartRequest"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {
@@ -2664,6 +2672,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WhatsAppPairingResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
                 };
             };
             /** @description Not Found */
@@ -4174,6 +4191,7 @@ export type VertexSettings = components["schemas"]["VertexSettings"];
 export type WebhookBinding = components["schemas"]["WebhookBinding"];
 export type WhatsAppChannelHealthResponse = components["schemas"]["WhatsAppChannelHealthResponse"];
 export type WhatsAppPairingResponse = components["schemas"]["WhatsAppPairingResponse"];
+export type WhatsAppPairingRestartRequest = components["schemas"]["WhatsAppPairingRestartRequest"];
 export type WhatsAppSessionState = components["schemas"]["WhatsAppSessionState"];
 export type WhatsAppSummaryResponse = components["schemas"]["WhatsAppSummaryResponse"];
 export type WidgetAppearance = components["schemas"]["WidgetAppearance"];
@@ -4374,7 +4392,7 @@ export function createServerApi(client: ApiClient) {
         whatsapp: {
             health: (slug: string) => client.get<WhatsAppChannelHealthResponse[], ApiErrorResponse>(API_ENDPOINTS.whatsapp.health(slug)),
             pairing: (slug: string, channelId: string) => client.get<WhatsAppPairingResponse, ApiErrorResponse>(API_ENDPOINTS.whatsapp.pairing(slug, channelId)),
-            pairingRestart: (slug: string, channelId: string) => client.post<WhatsAppPairingResponse, ApiErrorResponse>(API_ENDPOINTS.whatsapp.pairingRestart(slug, channelId)),
+            pairingRestart: (slug: string, channelId: string, request: WhatsAppPairingRestartRequest) => client.post<WhatsAppPairingResponse, ApiErrorResponse>(API_ENDPOINTS.whatsapp.pairingRestart(slug, channelId), request),
         },
     };
 }

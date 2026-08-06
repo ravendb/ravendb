@@ -311,14 +311,58 @@ public class WhatsAppChannelEndpointsTests(ITestOutputHelper output, QuillWhatsA
             new ProvisionChannelRequest(ChannelType.WhatsAppPersonal, agentId, null));
         Bridge.SetStatus(app.Slug, created.ChannelId, "loggedOut");
 
-        var response = await Host.Client.PostAsync(
-            QuillRoutes.WhatsAppPairingRestart(app.Slug, created.ChannelId), content: null);
-        response.EnsureSuccessStatusCode();
+        var response = await Host.Client.PostAsJsonAsync(
+            QuillRoutes.WhatsAppPairingRestart(app.Slug, created.ChannelId),
+            new WhatsAppPairingRestartRequest(), QuillHttp.Json);
+        Assert.True(response.IsSuccessStatusCode,
+            $"{(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
         var pairing = await response.Content.ReadFromJsonAsync<WhatsAppPairingResponse>(QuillHttp.Json);
 
         Assert.Contains((app.Slug, created.ChannelId), Bridge.RestartedSessions);
         Assert.Equal(WhatsAppSessionState.Pairing, pairing!.State);
         Assert.StartsWith("QR-", pairing.Qr);
+
+        await app.DeleteChannelAsync(created.ChannelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Restart_with_a_phone_number_issues_a_pairing_code_instead_of_a_qr()
+    {
+        await using var app = await NewAppAsync();
+        var agentId = await SeedAgentAsync(app);
+        var created = await app.ProvisionChannelAsync(
+            new ProvisionChannelRequest(ChannelType.WhatsAppPersonal, agentId, null));
+
+        var response = await Host.Client.PostAsJsonAsync(
+            QuillRoutes.WhatsAppPairingRestart(app.Slug, created.ChannelId),
+            new WhatsAppPairingRestartRequest("+48 601 234 567"), QuillHttp.Json);
+        Assert.True(response.IsSuccessStatusCode,
+            $"{(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
+        var pairing = await response.Content.ReadFromJsonAsync<WhatsAppPairingResponse>(QuillHttp.Json);
+
+        // written forms are normalized to bare digits before reaching the bridge
+        Assert.Contains((app.Slug, created.ChannelId, "48601234567"), Bridge.PairingPhoneNumbers);
+        Assert.Equal(WhatsAppSessionState.Pairing, pairing!.State);
+        Assert.Equal("ABCD1234", pairing.PairingCode);
+        Assert.Null(pairing.Qr);
+
+        await app.DeleteChannelAsync(created.ChannelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Restart_rejects_a_malformed_pairing_phone_number()
+    {
+        await using var app = await NewAppAsync();
+        var agentId = await SeedAgentAsync(app);
+        var created = await app.ProvisionChannelAsync(
+            new ProvisionChannelRequest(ChannelType.WhatsAppPersonal, agentId, null));
+
+        var response = await Host.Client.PostAsJsonAsync(
+            QuillRoutes.WhatsAppPairingRestart(app.Slug, created.ChannelId),
+            new WhatsAppPairingRestartRequest("12345"), QuillHttp.Json);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Empty(Bridge.PairingPhoneNumbers);
 
         await app.DeleteChannelAsync(created.ChannelId);
     }

@@ -31,6 +31,16 @@ class FakeSocket implements WaSocket {
         return { key: { id: "SENT1" } };
     }
 
+    pairingRequests: string[] = [];
+    pairingFailure: Error | null = null;
+
+    async requestPairingCode(phoneNumber: string): Promise<string> {
+        this.pairingRequests.push(phoneNumber);
+        if (this.pairingFailure)
+            throw this.pairingFailure;
+        return "ABCD1234";
+    }
+
     async logout(): Promise<void> {
         this.loggedOut = true;
     }
@@ -136,6 +146,75 @@ describe("Session", () => {
         assert.match(session.status().lastError ?? "", /took over/);
         await tick();
         assert.equal(sockets.length, 1);
+    });
+
+    it("requests a pairing code instead of a QR when a phone number is set", async () => {
+        const { session, socket, authDir } = await makeSession();
+        cleanup.push(() => session.stop(), () => fs.rm(authDir, { recursive: true, force: true }));
+
+        session.setPairingPhoneNumber("48123456789");
+        await session.start();
+        socket().emit("connection.update", { qr: "QR" });
+        await tick();
+
+        assert.deepEqual(socket().pairingRequests, ["48123456789"]);
+
+        const status = session.status();
+        assert.equal(status.state, "pairing");
+        assert.equal(status.pairingCode, "ABCD1234");
+        // the QR is withheld so the operator does not start two competing link attempts
+        assert.equal(status.qr, null);
+        assert.equal(status.qrExpiresAt, null);
+    });
+
+    it("requests the pairing code once across QR rotations", async () => {
+        const { session, socket, authDir } = await makeSession();
+        cleanup.push(() => session.stop(), () => fs.rm(authDir, { recursive: true, force: true }));
+
+        session.setPairingPhoneNumber("48123456789");
+        await session.start();
+        socket().emit("connection.update", { qr: "QR-1" });
+        await tick();
+        socket().emit("connection.update", { qr: "QR-2" });
+        await tick();
+
+        assert.equal(socket().pairingRequests.length, 1);
+    });
+
+    it("falls back to the QR and reports why when the pairing code request fails", async () => {
+        const { session, socket, authDir } = await makeSession();
+        cleanup.push(() => session.stop(), () => fs.rm(authDir, { recursive: true, force: true }));
+
+        session.setPairingPhoneNumber("48123456789");
+        await session.start();
+        socket().pairingFailure = new Error("rate limited");
+        socket().emit("connection.update", { qr: "QR" });
+        await tick();
+
+        const status = session.status();
+        assert.equal(status.pairingCode, null);
+        assert.equal(status.qr, "QR");
+        assert.match(status.lastError ?? "", /rate limited/);
+    });
+
+    it("reverts to QR linking when the phone number is cleared", async () => {
+        const { session, socket, authDir } = await makeSession();
+        cleanup.push(() => session.stop(), () => fs.rm(authDir, { recursive: true, force: true }));
+
+        session.setPairingPhoneNumber("48123456789");
+        await session.start();
+        socket().emit("connection.update", { qr: "QR-1" });
+        await tick();
+        assert.equal(session.status().pairingCode, "ABCD1234");
+
+        session.setPairingPhoneNumber(null);
+        await session.restart();
+        socket().emit("connection.update", { qr: "QR-2" });
+        await tick();
+
+        const status = session.status();
+        assert.equal(status.pairingCode, null);
+        assert.equal(status.qr, "QR-2");
     });
 
     it("reconnects immediately when the server requires a restart after a scan", async () => {

@@ -18,7 +18,7 @@ export class SessionManager {
         return this.sessions.get(keyOf(database, channelId));
     }
 
-    async start(database: string, channelId: string): Promise<Session> {
+    async start(database: string, channelId: string, pairingPhoneNumber: string | null = null): Promise<Session> {
         const existing = this.get(database, channelId);
         if (existing !== undefined)
             return existing;
@@ -44,16 +44,18 @@ export class SessionManager {
             this.logger,
         );
 
+        session.setPairingPhoneNumber(pairingPhoneNumber);
         this.sessions.set(keyOf(database, channelId), session);
         await session.start();
         return session;
     }
 
-    async restart(database: string, channelId: string): Promise<Session> {
+    async restart(database: string, channelId: string, pairingPhoneNumber: string | null = null): Promise<Session> {
         const existing = this.get(database, channelId);
         if (existing === undefined)
-            return this.start(database, channelId);
+            return this.start(database, channelId, pairingPhoneNumber);
 
+        existing.setPairingPhoneNumber(pairingPhoneNumber);
         await existing.restart();
         return existing;
     }

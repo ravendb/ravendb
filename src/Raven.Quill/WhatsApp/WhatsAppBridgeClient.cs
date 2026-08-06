@@ -15,9 +15,10 @@ internal sealed class WhatsAppBridgeClient(HttpClient http, IWhatsAppBridgeSecre
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
     };
 
-    public async Task StartSessionAsync(string database, string channelId, CancellationToken ct)
+    public async Task StartSessionAsync(string database, string channelId, string? pairingPhoneNumber, CancellationToken ct)
     {
-        using var response = await SendAsync(HttpMethod.Post, SessionPath(database, channelId), content: null, ct);
+        using var content = PairingContent(pairingPhoneNumber);
+        using var response = await SendAsync(HttpMethod.Post, SessionPath(database, channelId), content, ct);
         await EnsureSuccessAsync(response, ct);
     }
 
@@ -31,11 +32,17 @@ internal sealed class WhatsAppBridgeClient(HttpClient http, IWhatsAppBridgeSecre
         return await ReadStatusAsync(response, ct);
     }
 
-    public async Task RestartSessionAsync(string database, string channelId, CancellationToken ct)
+    public async Task RestartSessionAsync(string database, string channelId, string? pairingPhoneNumber, CancellationToken ct)
     {
-        using var response = await SendAsync(HttpMethod.Post, SessionPath(database, channelId) + "/restart", content: null, ct);
+        using var content = PairingContent(pairingPhoneNumber);
+        using var response = await SendAsync(HttpMethod.Post, SessionPath(database, channelId) + "/restart", content, ct);
         await EnsureSuccessAsync(response, ct);
     }
+
+    private static HttpContent? PairingContent(string? pairingPhoneNumber) =>
+        string.IsNullOrWhiteSpace(pairingPhoneNumber)
+            ? null
+            : JsonContent.Create(new { phoneNumber = pairingPhoneNumber }, options: SerializerOptions);
 
     public async Task SendTextAsync(string database, string channelId, string toJid, string text, CancellationToken ct)
     {

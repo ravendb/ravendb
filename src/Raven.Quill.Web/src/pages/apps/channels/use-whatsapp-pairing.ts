@@ -38,8 +38,10 @@ export function useWhatsAppPairing(slug: string, channelId: string) {
         },
     });
 
+    // No phone number restarts the QR flow; a number switches to a pairing code.
     const restartMutation = useMutation({
-        mutationFn: () => api.services.whatsapp.pairingRestart(slug, channelId),
+        mutationFn: (phoneNumber?: string) =>
+            api.services.whatsapp.pairingRestart(slug, channelId, { phoneNumber: phoneNumber ?? null }),
         onSuccess: async (pairing) => {
             setStartedAt(Date.now());
             queryClient.setQueryData(api.queries.whatsapp.pairing(slug, channelId).queryKey, pairing);
@@ -63,7 +65,8 @@ export function useWhatsAppPairing(slug: string, channelId: string) {
             setStartedAt(Date.now());
             void pairingQuery.refetch();
         },
-        restart: () => restartMutation.mutate(),
+        restart: () => restartMutation.mutate(undefined),
+        restartWithPhoneNumber: (phoneNumber: string) => restartMutation.mutate(phoneNumber),
         isRestarting: restartMutation.isPending,
         restartError: restartMutation.error,
     };

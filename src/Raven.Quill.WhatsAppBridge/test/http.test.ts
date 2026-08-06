@@ -19,6 +19,9 @@ class IdleSocket implements WaSocket {
     async sendMessage() {
         return { key: { id: "X" } };
     }
+    async requestPairingCode(): Promise<string> {
+        return "ABCD1234";
+    }
     async logout(): Promise<void> {}
     end(): void {}
 }
@@ -103,6 +106,33 @@ describe("bridge http", () => {
         const status = await app.inject({ method: "GET", url: `/sessions/db/${CHANNEL_ID}`, headers: authed });
         assert.equal(status.statusCode, 200);
         assert.equal(status.json().state, "starting");
+    });
+
+    it("accepts a phone number for pairing-code linking and rejects malformed ones", async () => {
+        const { app, manager, sessionsDir } = await makeApp();
+        after(async () => {
+            manager.shutdown();
+            await app.close();
+            await fs.rm(sessionsDir, { recursive: true, force: true });
+        });
+
+        const accepted = await app.inject({
+            method: "POST",
+            url: `/sessions/db/${CHANNEL_ID}`,
+            headers: authed,
+            payload: { phoneNumber: "+48 123-456-789" },
+        });
+        assert.equal(accepted.statusCode, 202);
+
+        for (const phoneNumber of ["12345", "not-a-number", 48123456789]) {
+            const rejected = await app.inject({
+                method: "POST",
+                url: `/sessions/db/${CHANNEL_ID}/restart`,
+                headers: authed,
+                payload: { phoneNumber },
+            });
+            assert.equal(rejected.statusCode, 400, String(phoneNumber));
+        }
     });
 
     it("returns 409 when sending on a session that is not connected", async () => {

@@ -8,6 +8,7 @@ export interface SessionStatus {
     state: SessionState;
     qr: string | null;
     qrExpiresAt: string | null;
+    pairingCode: string | null;
     phoneNumber: string | null;
     lastError: string | null;
 }
@@ -28,6 +29,7 @@ export interface WaSocket {
     user?: { id: string } | null;
     ev: { on(event: string, listener: (arg: never) => void): void };
     sendMessage(jid: string, content: { text: string }): Promise<{ key?: { id?: string | null } } | undefined>;
+    requestPairingCode(phoneNumber: string): Promise<string>;
     logout(): Promise<void>;
     end(error?: Error): void;
 }
@@ -57,6 +59,9 @@ export class Session {
     private qrExpiresAt: Date | null = null;
     private phoneNumber: string | null = null;
     private lastError: string | null = null;
+    // Set when the operator links by phone number instead of scanning a QR.
+    private pairingPhoneNumber: string | null = null;
+    private pairingCode: string | null = null;
     private stopped = false;
     private reconnectDelayMs = MIN_RECONNECT_MS;
     private reconnectTimer: NodeJS.Timeout | null = null;
@@ -73,13 +78,23 @@ export class Session {
     ) {}
 
     status(): SessionStatus {
+        const isPairing = this.state === "pairing";
+        // A pairing code replaces the QR: showing both invites the operator to
+        // start two competing link attempts.
         return {
             state: this.state,
-            qr: this.state === "pairing" ? this.qr : null,
-            qrExpiresAt: this.state === "pairing" && this.qrExpiresAt ? this.qrExpiresAt.toISOString() : null,
+            qr: isPairing && this.pairingCode === null ? this.qr : null,
+            qrExpiresAt:
+                isPairing && this.pairingCode === null && this.qrExpiresAt ? this.qrExpiresAt.toISOString() : null,
+            pairingCode: isPairing ? this.pairingCode : null,
             phoneNumber: this.phoneNumber,
             lastError: this.lastError,
         };
+    }
+
+    /// Null (the default) links by QR; a digits-only number links by pairing code.
+    setPairingPhoneNumber(phoneNumber: string | null): void {
+        this.pairingPhoneNumber = phoneNumber;
     }
 
     async start(): Promise<void> {
@@ -88,6 +103,7 @@ export class Session {
         const generation = this.generation;
         this.state = "starting";
         this.qr = null;
+        this.pairingCode = null;
 
         let socket: WaSocket;
         try {
@@ -164,6 +180,12 @@ export class Session {
             this.state = "pairing";
             this.qr = update.qr;
             this.qrExpiresAt = new Date(Date.now() + QR_TTL_MS);
+
+            // The first qr proves the noise handshake completed, which is what
+            // requestPairingCode needs before it can send its iq.
+            if (this.pairingPhoneNumber !== null && this.pairingCode === null)
+                await this.requestPairingCodeAsync(this.pairingPhoneNumber);
+
             return;
         }
 
@@ -240,6 +262,28 @@ export class Session {
         this.lastError = disconnectMessage(update.lastDisconnect?.error);
         if (!this.stopped)
             this.scheduleReconnect();
+    }
+
+    private async requestPairingCodeAsync(phoneNumber: string): Promise<void> {
+        const socket = this.socket;
+        if (socket === null)
+            return;
+
+        try {
+            this.pairingCode = await socket.requestPairingCode(phoneNumber);
+            this.logger.info(
+                { database: this.database, channelId: this.channelId },
+                "whatsapp pairing code issued",
+            );
+        } catch (error) {
+            this.lastError = `could not request a pairing code: ${
+                error instanceof Error ? error.message : String(error)
+            }`;
+            this.logger.warn(
+                { database: this.database, channelId: this.channelId, error: String(error) },
+                "whatsapp pairing code request failed",
+            );
+        }
     }
 
     private onMessagesUpsert(upsert: MessagesUpsert): void {

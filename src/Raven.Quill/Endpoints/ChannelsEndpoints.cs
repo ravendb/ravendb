@@ -256,7 +256,7 @@ public static class ChannelsEndpoints
         // not a failed provision - the pairing endpoint lazily starts the session later
         try
         {
-            await whatsAppBridge.StartSessionAsync(app.Database, channelId, ct);
+            await whatsAppBridge.StartSessionAsync(app.Database, channelId, pairingPhoneNumber: null, ct);
         }
         catch (WhatsAppBridgeException e)
         {
