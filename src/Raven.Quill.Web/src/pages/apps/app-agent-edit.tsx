@@ -42,7 +42,8 @@ export function AppAgentEdit() {
                     <EditAgentForm
                         slug={slug}
                         agentId={agentId}
-                        config={agentQuery.data}
+                        config={agentQuery.data.configuration}
+                        actionBindings={agentQuery.data.actionBindings}
                         connectionStrings={connectionStringsQuery.data}
                     />
                 )}

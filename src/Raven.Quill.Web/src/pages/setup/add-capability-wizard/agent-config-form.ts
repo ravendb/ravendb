@@ -1,6 +1,13 @@
 import type { UseFormSetValue } from "react-hook-form";
-import type { AiAgentConfiguration, AiAgentParameter, AiAgentToolQuery } from "@/api/generated/server-api";
 import type {
+    AiAgentConfiguration,
+    AiAgentParameter,
+    AiAgentToolAction,
+    AiAgentToolQuery,
+    WebhookBinding,
+} from "@/api/generated/server-api";
+import type {
+    AgentActionFormData,
     AgentConfigurationFormData,
     AgentFormData,
     AgentParameterFormData,
@@ -23,6 +30,7 @@ export function emptyAgentConfiguration(): AgentConfigurationFormData {
         outputSchema: "",
         parameters: [],
         queries: [],
+        actions: [],
     };
 }
 
@@ -46,6 +54,18 @@ export function emptyAgentQueryTool(): AgentQueryToolFormData {
         parametersSchema: "",
         allowModelQueries: "Default",
         addToInitialContext: "Default",
+        isExpanded: true,
+    };
+}
+
+export function emptyAgentAction(): AgentActionFormData {
+    return {
+        name: "",
+        description: "",
+        parametersSampleObject: "",
+        parametersSchema: "",
+        url: "",
+        secret: "",
         isExpanded: true,
     };
 }
@@ -94,7 +114,30 @@ function toFormQueryTool(query: AiAgentToolQuery): AgentQueryToolFormData {
     };
 }
 
-export function suggestionToAgentConfiguration(suggestion: AiAgentConfiguration): AgentConfigurationFormData {
+function toFormAction(action: AiAgentToolAction, binding: WebhookBinding | undefined): AgentActionFormData {
+    return {
+        name: action.name ?? "",
+        description: action.description ?? "",
+        parametersSampleObject: action.parametersSampleObject ?? "",
+        parametersSchema: action.parametersSchema ?? "",
+        url: binding?.url ?? "",
+        secret: binding?.secret ?? "",
+        isExpanded: false,
+    };
+}
+
+// Actions are mapped only when their bindings come with them, which is the case for a stored agent
+// (agents.get returns both) but never for an AI suggestion. A suggested action has no webhook, so
+// seeding it would put a row with an empty URL in front of an operator who never asked for one.
+export function suggestionToAgentConfiguration(
+    suggestion: AiAgentConfiguration,
+    actionBindings?: Record<string, WebhookBinding>,
+): AgentConfigurationFormData {
+    // action names are matched without case everywhere on the server, so match the sidecar's keys the same way
+    const bindingsByName = new Map(
+        Object.entries(actionBindings ?? {}).map(([name, binding]) => [name.toLowerCase(), binding]),
+    );
+
     return {
         name: suggestion.name ?? "",
         identifier: suggestion.identifier ?? "",
@@ -105,6 +148,11 @@ export function suggestionToAgentConfiguration(suggestion: AiAgentConfiguration)
         outputSchema: "",
         parameters: (suggestion.parameters ?? []).map(toFormParameter),
         queries: (suggestion.queries ?? []).map(toFormQueryTool),
+        actions: actionBindings
+            ? (suggestion.actions ?? []).map((action) =>
+                  toFormAction(action, bindingsByName.get((action.name ?? "").toLowerCase())),
+              )
+            : [],
     };
 }
 
@@ -123,8 +171,8 @@ export function applySuggestionToForm(
     setValue("review", suggestionToAgentConfiguration(suggestion), { shouldValidate: true });
 }
 
-// Builds the editable part of the provision payload from form values. Actions and
-// sub-agents stay empty: the provision endpoint rejects them in this preview.
+// Builds the editable part of the provision payload from form values. Sub-agents stay
+// empty: the provision endpoint rejects them in this preview.
 export function buildAgentConfigurationPayload(
     values: Pick<AgentFormData, "connection" | "review">,
 ): AiAgentConfiguration {
@@ -164,8 +212,30 @@ export function buildAgentConfigurationPayload(
                         : { allowModelQueries, addToInitialContext },
             };
         }),
-        actions: [],
+        actions: config.actions.map((action) => {
+            const parametersSampleObject = action.parametersSampleObject.trim();
+            const parametersSchema = action.parametersSchema.trim();
+
+            return {
+                name: action.name.trim(),
+                description: action.description.trim(),
+                // same rule as the query tools above: "{}" stands for "no parameters"
+                parametersSampleObject: parametersSampleObject || (parametersSchema ? null : "{}"),
+                parametersSchema: parametersSchema || null,
+            };
+        }),
         subAgents: [],
         disabled: false,
     };
+}
+
+// The other half of every action row. Keyed by action name, which is what the server matches
+// bindings on, so the 1:1 mapping it validates holds by construction.
+export function buildActionBindings(values: Pick<AgentFormData, "review">): Record<string, WebhookBinding> {
+    return Object.fromEntries(
+        values.review.actions.map((action) => [
+            action.name.trim(),
+            { url: action.url.trim(), secret: action.secret.trim() || null },
+        ]),
+    );
 }

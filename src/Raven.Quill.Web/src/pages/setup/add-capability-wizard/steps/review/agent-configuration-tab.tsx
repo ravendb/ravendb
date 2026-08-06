@@ -3,6 +3,7 @@ import { useFormContext } from "react-hook-form";
 import { FormInput } from "@/components/form/form-input";
 import { FormTextarea } from "@/components/form/form-textarea";
 import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
+import { AgentActionsSection } from "@/pages/setup/add-capability-wizard/steps/review/agent-actions-section";
 import { AgentParametersSection } from "@/pages/setup/add-capability-wizard/steps/review/agent-parameters-section";
 import { AgentQueryToolsSection } from "@/pages/setup/add-capability-wizard/steps/review/agent-query-tools-section";
 
@@ -57,6 +58,13 @@ export function AgentConfigurationTab() {
                 description="Tools are a controlled way to pass context to the LLM."
             >
                 <AgentQueryToolsSection />
+            </ConfigurationSection>
+
+            <ConfigurationSection
+                title="Define agent actions"
+                description="Actions let the agent call an external webhook during a conversation and use its response."
+            >
+                <AgentActionsSection />
             </ConfigurationSection>
         </div>
     );

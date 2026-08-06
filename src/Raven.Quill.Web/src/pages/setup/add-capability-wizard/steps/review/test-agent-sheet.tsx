@@ -36,13 +36,14 @@ import { TestQueryToolCall } from "@/pages/setup/add-capability-wizard/steps/rev
 // prompt, and an AI provider connection).
 export function ReviewTestAgentButton({ isBusy }: WizardFooterComponentProps) {
     const { control } = useFormContext<AgentFormData>();
-    const [name, systemPrompt, connectionStringName] = useWatch({
+    const [name, systemPrompt, connectionStringName, actions] = useWatch({
         control,
-        name: ["review.name", "review.systemPrompt", "connection.connectionStringName"],
+        name: ["review.name", "review.systemPrompt", "connection.connectionStringName", "review.actions"],
     });
     const [isOpen, setIsOpen] = useState(false);
 
     const isReady = Boolean(name?.trim() && systemPrompt?.trim() && connectionStringName);
+    const hasActions = (actions?.length ?? 0) > 0;
 
     return (
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -65,6 +66,8 @@ export function ReviewTestAgentButton({ isBusy }: WizardFooterComponentProps) {
                     <SheetTitle>Test agent</SheetTitle>
                     <SheetDescription>
                         Chat with the draft agent to check its answers. Each message runs a fresh, unsaved turn.
+                        {hasActions &&
+                            " Actions are excluded from test conversations — this agent is tested without them."}
                     </SheetDescription>
                 </SheetHeader>
                 <TestAgentPanel />
@@ -189,7 +192,9 @@ function TestAgentPanel() {
         // fills into `answerShape` (derived above from the same live form values), so the live
         // answer reads as a real JSON object while it streams in.
         const wizardValues = wizardForm.getValues();
-        const configuration = buildAgentConfigurationPayload(wizardValues);
+        // The draft test runs an unsaved configuration, so it has no action bindings to call and
+        // would leave any action the model triggers unanswered. Test the agent without them.
+        const configuration = { ...buildAgentConfigurationPayload(wizardValues), actions: [] };
         const parameters = toParameterRecord(values.parameters);
         // An edit to the sample/schema may have dropped the selected field; fall back to the
         // first streamable one so the value sent matches the current options.
