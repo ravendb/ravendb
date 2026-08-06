@@ -81,7 +81,7 @@ function buildConnectionSeed(provider: Provider, connectionString: string): Conn
         };
     }
 
-    const { values: fields, droppedKeywords } = parseConnectionString(connectionString);
+    const { values: fields, droppedKeywords } = parseConnectionString(provider, connectionString);
 
     return { mode: droppedKeywords.length === 0 ? "fields" : "raw", fields, connectionString };
 }

@@ -214,7 +214,8 @@ const filledConnectionFieldsSchema = z.object({
         .int("Port must be a whole number")
         .min(1, "Port must be between 1 and 65535")
         .max(65535, "Port must be between 1 and 65535")
-        .nullable(),
+        .nullable()
+        .refine((port) => port !== null, "Port is required"),
     database: z.string().trim().min(1, "Database name is required"),
     username: z.string().trim().min(1, "Username is required"),
 });
