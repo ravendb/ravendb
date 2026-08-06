@@ -45,6 +45,8 @@ namespace Voron.Impl.Journal
 
         private long? _firstSkippedTx;
         private long? _lastSkippedTx;
+        private long? _resyncedFromInvalid4KbPosition;
+        private long? _resyncedToValid4KbPosition;
 
         public bool RequireHeaderUpdate { get; private set; }
 
@@ -579,6 +581,16 @@ namespace Voron.Impl.Journal
 
                 if (_journalInfo.LastSyncedTransactionId == -1 || current->TransactionId <= _journalInfo.LastSyncedTransactionId)
                 {
+                    if (_resyncedFromInvalid4KbPosition != null && _journalInfo.LastSyncedTransactionId == -1 && current->TransactionId != 1)
+                    {
+                        // nothing was synced and nothing was read yet, so this transaction not being the very first
+                        // one means the bypassed invalid region could have held the beginning of our transaction chain
+                        throw new InvalidJournalException(
+                            $"Transaction {current->TransactionId} (which has a valid hash) is the first transaction of this environment found in journal {_journalPager.FileName}, " +
+                            $"but the recovery has resumed past an invalid transaction at position {_resyncedFromInvalid4KbPosition * 4 * Constants.Size.Kilobyte} and this environment has nothing synced - " +
+                            $"the invalid region could have contained its earlier transactions. Debug details - file header {_currentFileHeader}", _journalInfo);
+                    }
+
                     AssertValidLastPageNumber(current);
 
                     if (_firstValidTransactionHeader == null)
@@ -610,13 +622,13 @@ namespace Voron.Impl.Journal
                     if (LastTransactionHeader != null)
                     {
                         throw new InvalidJournalException(
-                            $"Transaction has valid(!) hash with invalid transaction id {current->TransactionId}, the last valid transaction id is {LastTransactionHeader->TransactionId}. Tx diff is: {txIdDiff}{AddSkipTxInfoDetails()}." +
+                            $"Transaction has valid(!) hash with invalid transaction id {current->TransactionId}, the last valid transaction id is {LastTransactionHeader->TransactionId}. Tx diff is: {txIdDiff}{AddSkipTxInfoDetails()}{AddResyncInfoDetails()}." +
                             $" Journal file {_journalPager.FileName} might be corrupted or some journals are missing. Debug details - file header {_currentFileHeader}",
                             _journalInfo);
                     }
 
                     throw new InvalidJournalException(
-                        $"The last synced transaction id was {_journalInfo.LastSyncedTransactionId} (in journal: {_journalInfo.LastSyncedJournal}) but the first transaction being read in the recovery process is {current->TransactionId} in journal {_journalPager.FileName} (transaction has valid hash). Tx diff is: {txIdDiff}{AddSkipTxInfoDetails()}. " +
+                        $"The last synced transaction id was {_journalInfo.LastSyncedTransactionId} (in journal: {_journalInfo.LastSyncedJournal}) but the first transaction being read in the recovery process is {current->TransactionId} in journal {_journalPager.FileName} (transaction has valid hash). Tx diff is: {txIdDiff}{AddSkipTxInfoDetails()}{AddResyncInfoDetails()}. " +
                         $"Some journals might be missing. Debug details - file header {_currentFileHeader}", _journalInfo);
                 }
 
@@ -654,29 +666,23 @@ namespace Voron.Impl.Journal
         {
             for (; _readAt4Kb < _journalPagerNumberOfAllocated4Kb; _readAt4Kb++)
             {
-                if (TryPeekSkippableForeignTransaction(ref txState, out TransactionHeader* foreign))
-                {
-                    // another environment's transaction in a shared journal - skip it without validating
-                    // its hash, so that its corruption faults only the owning environment (RavenDB-27278)
-                    RecoveredJournalIds.Add(foreign->JournalId);
-                    _next4Kb = _readAt4Kb + GetTransactionSizeIn4Kb(foreign);
-                    _readAt4Kb += GetTransactionSizeIn4Kb(foreign) - 1;
-                    continue;
-                }
-
                 if (TryValidateTransaction(options, ref txState, out current) is false)
                 {
                     Debug.Assert(current != null, "current != null");
 
-                    if (VerifyNoUnexpectedValidTransactionsAfter(options, ref txState))
+                    if (TryFindNextValidTransaction(options, ref txState))
                     {
-                        // we found a _valid_ transaction (and all the invalid ones were
-                        // already synced, so we can safely ignore them), so we'll go 
-                        // forward from there
+                        // resume from the next transaction that fully validates - the regular routing and
+                        // the transaction sequence verification decide what to do with it. If the invalid
+                        // region destroyed a transaction of THIS environment, the sequence check detects
+                        // the gap and fails the recovery; corruption of another environment's transaction
+                        // in a shared journal does not fail ours
+                        RequireHeaderUpdate = false;
                         _readAt4Kb--;
                         continue;
                     }
 
+                    // no valid transaction until the end of the file - the regular torn-tail handling
                     return false;
                 }
 
@@ -697,7 +703,8 @@ namespace Voron.Impl.Journal
                     continue;
                 }
                 
-                if (BelongsToAnotherEnvironment(current))
+                if ((current->JournalId == JournalId) is false &&
+                    current->JournalId != Guid.Empty) // this may be legacy
                 {
                     // not our env, skip processing it
                     _readAt4Kb += GetTransactionSizeIn4Kb(current) - 1;
@@ -721,53 +728,6 @@ namespace Voron.Impl.Journal
 
             current = null;
             return false;
-        }
-
-        private bool TryPeekSkippableForeignTransaction(ref Pager.PagerTransactionState txState, out TransactionHeader* current)
-        {
-            current = GetTransactionHeaderAt(_readAt4Kb, ref txState);
-
-            if (current->HeaderMarker != Constants.TransactionHeaderMarker)
-                return false;
-
-            if (JournalId == Guid.Empty) // we don't know our own id yet - the validation path adopts it
-                return false;
-
-            if (BelongsToAnotherEnvironment(current) is false)
-                return false;
-
-            // link records are processed by the root and routed by Flags before the owner filter, so
-            // although they carry another environment's id they must stay on the validation path
-            if (current->JournalId == WriteAheadJournal.LinkedJournalsRecord.LinkedJournalId ||
-                current->Flags == TransactionPersistenceModeFlags.LinkedJournalsRecord)
-                return false;
-
-            long size = current->CompressedSize != -1 ? current->CompressedSize : current->UncompressedSize;
-            if (size < 0)
-                return false;
-
-            long transactionEndPosition = _readAt4Kb * (4 * Constants.Size.Kilobyte) + sizeof(TransactionHeader) + size;
-            if (transactionEndPosition > _journalPagerState.TotalAllocatedSize)
-                return false;
-
-            // the header is not covered by the transaction hash, so the size above cannot be trusted blindly:
-            // the skip is taken only when it lands exactly on a following transaction header. Anything else
-            // (torn tail, corrupted size) goes to the validation path and gets reported exactly as it was
-            // before skipping existed - a corrupted size must not silently swallow the journal tail
-            long target4Kb = _readAt4Kb + GetTransactionSizeIn4Kb(current);
-            if (target4Kb >= _journalPagerNumberOfAllocated4Kb)
-                return false;
-
-            return GetTransactionHeaderAt(target4Kb, ref txState)->HeaderMarker == Constants.TransactionHeaderMarker;
-        }
-
-        private TransactionHeader* GetTransactionHeaderAt(long position4Kb, ref Pager.PagerTransactionState txState)
-        {
-            const int pageTo4KbRatio = Constants.Storage.PageSize / (4 * Constants.Size.Kilobyte);
-            long pageNumber = position4Kb / pageTo4KbRatio;
-            long positionInsidePage = (position4Kb % pageTo4KbRatio) * (4 * Constants.Size.Kilobyte);
-
-            return (TransactionHeader*)(_journalPager.AcquirePagePointer(_journalPagerState, ref txState, pageNumber) + positionInsidePage);
         }
 
         private void ProcessLinkedJournalsRecord(TransactionHeader* current)
@@ -829,57 +789,31 @@ namespace Voron.Impl.Journal
             }
         }
 
-        private bool VerifyNoUnexpectedValidTransactionsAfter(StorageEnvironmentOptions options, ref Pager.PagerTransactionState txState)
+        // After an invalid transaction was encountered, scan forward at each 4KB boundary looking for the
+        // next position holding a transaction that fully validates (hash checked - raw header bytes are
+        // never trusted). Recovery resumes from it, so the invalid region is bypassed instead of ending the
+        // whole replay. Whether bypassing was safe is decided by VerifyTransactionSequence once the next
+        // transaction of THIS environment shows up: a gap in our transaction ids means the region held our
+        // own data and the recovery fails; a contiguous sequence means the region belonged to another
+        // environment sharing this journal and we lost nothing
+        private bool TryFindNextValidTransaction(StorageEnvironmentOptions options, ref Pager.PagerTransactionState txState)
         {
             using var _ = options.DisableOnRecoveryErrorHandler();
             using var __ = options.DisableOnIntegrityErrorOfAlreadySyncedDataHandler();
-            
-            // now need to verify if there are any _valid_ transactions after we found an invalid one
-            var original4KbPosition = _readAt4Kb;
+
+            long invalid4KbPosition = _readAt4Kb;
+
             for (; _readAt4Kb < _journalPagerNumberOfAllocated4Kb; _readAt4Kb++)
             {
-                if (TryValidateTransaction(options, ref txState, out var current) is false)
+                if (TryValidateTransaction(options, ref txState, out TransactionHeader* _) is false)
                     continue;
-                
-                if (Legacy_IsOldTransactionFromRecycledJournal(current))
-                {
-                    _readAt4Kb += GetTransactionSizeIn4Kb(current) - 1;
-                    continue;
-                }
 
-                if (current->JournalId == JournalId)
-                {
-                    // This is a valid transaction, but if all the transactions *up to it* are sync-ed, then we know that we can
-                    // ignore corrupted journal, the data is already on the data file
-                    if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current->TransactionId - 1, options))
-                        return true;
-                }
-                else
-                {
-                    // not my transaction, so can skip it
-                    _readAt4Kb += GetTransactionSizeIn4Kb(current) - 1;
-                    continue;
-                }
-                
-                RequireHeaderUpdate = true;
-                ThrowUnexpectedValidTransaction(current);
+                _resyncedFromInvalid4KbPosition ??= invalid4KbPosition;
+                _resyncedToValid4KbPosition ??= _readAt4Kb;
+                return true;
             }
+
             return false;
-
-            void ThrowUnexpectedValidTransaction(TransactionHeader* current)
-            {
-                var message =
-                    $"Got invalid transaction at position {original4KbPosition * 4 * Constants.Size.Kilobyte} when reading journal {_journalPager}. ";
-
-                if (LastTransactionHeader != null)
-                    message += $"Last read transaction was:{Environment.NewLine}{LastTransactionHeader->ToString()}.{Environment.NewLine}";
-
-                message +=
-                    $"Although further reading found a valid transaction at position {_readAt4Kb * 4 * Constants.Size.Kilobyte}:{Environment.NewLine}{current->ToString()}.{Environment.NewLine}" +
-                    "Journal file is likely to be corrupted.";
-
-                throw new InvalidJournalException(message, _journalInfo);
-            }
         }
 
         public Guid JournalId;
@@ -894,14 +828,6 @@ namespace Voron.Impl.Journal
                    IsAlreadySyncTransaction(transactionId);
         }
         
-        // a transaction that carries some other environment's id (shared journals). No id at all
-        // (Guid.Empty) means a legacy (pre 8.0) transaction - those are processed by every environment
-        private bool BelongsToAnotherEnvironment(TransactionHeader* current)
-        {
-            return current->JournalId != JournalId &&
-                   current->JournalId != Guid.Empty;
-        }
-
         // a transaction left over from a previous use of a recycled journal file (< 8.0 feature):
         // a legacy tx (no JournalId) whose id is older than what we have already read
         private bool Legacy_IsOldTransactionFromRecycledJournal(TransactionHeader* currentTx)
@@ -1020,6 +946,14 @@ namespace Voron.Impl.Journal
         private static long GetNumberOf4KbFor(long size)
         {
             return checked(size / (4 * Constants.Size.Kilobyte) + (size % (4 * Constants.Size.Kilobyte) == 0 ? 0 : 1));
+        }
+
+        private string AddResyncInfoDetails()
+        {
+            if (_resyncedFromInvalid4KbPosition == null)
+                return string.Empty;
+
+            return $" The recovery has resumed past an invalid region at positions [{_resyncedFromInvalid4KbPosition * 4 * Constants.Size.Kilobyte} - {_resyncedToValid4KbPosition * 4 * Constants.Size.Kilobyte}) of this journal - the gap most likely means that the invalid region contained transactions of this environment.";
         }
 
         private string AddSkipTxInfoDetails()
