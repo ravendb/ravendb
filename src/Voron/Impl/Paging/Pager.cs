@@ -680,4 +680,9 @@ public unsafe partial class Pager : IDisposable
 
         return (totalSize, physicalSize);
     }
+
+    public override string ToString()
+    {
+        return FileName;
+    }
 }

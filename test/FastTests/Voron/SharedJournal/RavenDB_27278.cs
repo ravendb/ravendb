@@ -15,10 +15,12 @@ using Xunit;
 
 namespace FastTests.Voron.SharedJournal;
 
-// RavenDB-27278 (RavenDB-24520 finding): recovery of a shared journal used to hash-validate every
-// transaction before the owner filter, so one branch's corrupted transaction failed the root and every
-// sibling hard-linked to that file. Foreign transactions are now skipped before validation, and the skip
-// is rejected unless it lands on a following transaction header, so a corrupted size still fails loudly.
+// Recovery of a shared journal used to abort on the first invalid
+// transaction, so one branch's corrupted transaction failed the root and every sibling hard-linked to that
+// file. Recovery now resumes from the next transaction that fully validates (nothing is ever trusted
+// without a hash check) and the per-environment transaction sequence decides the outcome: a gap in OUR
+// transaction ids means the destroyed region held our own data - fail loudly; a contiguous sequence means
+// the corruption belonged to another environment and we lost nothing.
 public class RavenDB_27278(ITestOutputHelper output) : RavenTestBase(output)
 {
     [RavenFact(RavenTestCategory.Voron)]
@@ -35,10 +37,7 @@ public class RavenDB_27278(ITestOutputHelper output) : RavenTestBase(output)
             fs.WriteByte((byte)(payloadByte ^ 0xFF));
         }
 
-        using var rootOptions = StorageEnvironmentOptions.ForPathForTests(setup.RootPath);
-        rootOptions.ManualFlushing = true;
-        rootOptions.ManualSyncing = true;
-        rootOptions.OnRecoveryError += (_, _) => { }; // subscribed like the server does
+        using var rootOptions = CreateOptions(setup.RootPath);
 
         using var root = new StorageEnvironment(rootOptions);
         using var _ = root.Journal.SharedJournalsScope();
@@ -70,18 +69,19 @@ public class RavenDB_27278(ITestOutputHelper output) : RavenTestBase(output)
     }
 
     [RavenFact(RavenTestCategory.Voron)]
-    public unsafe void CorruptedSizeOfForeignTransactionMustFailLoudlyNotSilentlyLoseData()
+    public unsafe void CorruptedSizeOfForeignTransactionMustNotAffectSiblings()
     {
         var setup = PrepareSharedJournalWithVictimTx();
 
-        // the size field is not covered by the transaction hash; an in-bounds garbage size pointing past
-        // every later transaction must not be trusted for a skip (it would jump B over its own b2)
+        // the size field is not covered by the transaction hash, so a garbage size fails the hash
+        // validation over a wrong byte range. The 4KB rescan must not trust it: it revalidates every
+        // candidate position, so branch B provably keeps b1 AND b2 while only the owner fails
         const int garbageSize = 400 * 1024;
         long fileLength = new FileInfo(setup.JournalFile).Length;
         Assert.True(setup.Victim.Offset + TransactionHeader.SizeOf + garbageSize < fileLength,
-            "garbage size must stay within the journal file, otherwise the existing bounds check rejects it before the skip is even considered");
+            "garbage size must stay within the journal file, otherwise the existing bounds check rejects it before the hash validation is even reached");
         Assert.True(setup.Victim.Offset + garbageSize > setup.Txs[^1].Offset,
-            "the garbage jump target must lie past every later transaction, so trusting it would silently swallow them");
+            "the garbage size points past every later transaction - anyone trusting it instead of re-validating would lose them");
 
         var bytes = File.ReadAllBytes(setup.JournalFile);
         fixed (byte* p = bytes)
@@ -92,10 +92,7 @@ public class RavenDB_27278(ITestOutputHelper output) : RavenTestBase(output)
         }
         File.WriteAllBytes(setup.JournalFile, bytes);
 
-        using var rootOptions = StorageEnvironmentOptions.ForPathForTests(setup.RootPath);
-        rootOptions.ManualFlushing = true;
-        rootOptions.ManualSyncing = true;
-        rootOptions.OnRecoveryError += (_, _) => { };
+        using var rootOptions = CreateOptions(setup.RootPath);
 
         using var root = new StorageEnvironment(rootOptions);
         using var _ = root.Journal.SharedJournalsScope();
@@ -105,20 +102,20 @@ public class RavenDB_27278(ITestOutputHelper output) : RavenTestBase(output)
             Assert.Equal("yes", rootTx.ReadTree("rootTree").Read("root").Reader.ToString());
         }
 
-        try
+        using (var branchB = OpenBranch(setup.BranchBPath, root))
+        using (var tx = branchB.ReadTransaction())
         {
-            using var branchB = OpenBranch(setup.BranchBPath, root);
-            using var tx = branchB.ReadTransaction();
-            var b2 = tx.ReadTree("treeB")?.Read("b2");
-            Assert.True(false, b2 == null
-                ? "branch B opened cleanly and silently lost its committed transaction b2 - the corrupted foreign size field was trusted"
-                : "branch B opened cleanly with all its data although the corrupted size should have failed its replay");
-        }
-        catch (InvalidJournalException)
-        {
-            // expected
+            Tree tree = tx.ReadTree("treeB");
+            Assert.True(tree != null, "branch B lost its 'treeB' tree entirely");
+            var b1 = tree.Read("b1");
+            Assert.True(b1 != null, "branch B lost its committed transaction b1");
+            Assert.Equal("1", b1.Reader.ToString());
+            var b2 = tree.Read("b2");
+            Assert.True(b2 != null, "branch B lost its committed transaction b2 (written AFTER the transaction with the corrupted size)");
+            Assert.Equal("2", b2.Reader.ToString());
         }
 
+        // the owner of the corrupted transaction fails on its transaction sequence gap
         Assert.Throws<InvalidJournalException>(() =>
         {
             using var branchA = OpenBranch(setup.BranchAPath, root);
@@ -149,9 +146,7 @@ public class RavenDB_27278(ITestOutputHelper output) : RavenTestBase(output)
         IOExtensions.DeleteDirectory(setup.BranchBPath);
 
         {
-            using var rootOptions = StorageEnvironmentOptions.ForPathForTests(setup.RootPath);
-            rootOptions.ManualFlushing = true;
-            rootOptions.ManualSyncing = true;
+            using var rootOptions = CreateOptions(setup.RootPath);
             rootOptions.InitialLogFileSize = 1024 * 1024; // single physical journal file
 
             using var root = new StorageEnvironment(rootOptions);
@@ -230,12 +225,18 @@ public class RavenDB_27278(ITestOutputHelper output) : RavenTestBase(output)
 
     private static StorageEnvironment OpenBranch(string branchPath, StorageEnvironment root)
     {
-        var options = StorageEnvironmentOptions.ForPathForTests(branchPath);
+        StorageEnvironmentOptions options = CreateOptions(branchPath);
         options.RootJournal = root.Journal;
+        return new StorageEnvironment(options);
+    }
+
+    private static StorageEnvironmentOptions CreateOptions(string path)
+    {
+        StorageEnvironmentOptions options = StorageEnvironmentOptions.ForPathForTests(path);
         options.ManualFlushing = true;
         options.ManualSyncing = true;
-        options.OnRecoveryError += (_, _) => { }; // subscribed like the server does
-        return new StorageEnvironment(options);
+        options.OnRecoveryError += (_, _) => { }; // the server always subscribes this (see SharedJournalsEventsConfig)
+        return options;
     }
 
     private static unsafe List<(long Offset, Guid JournalId, long TxId)> ReadTransactions(byte[] journal)
