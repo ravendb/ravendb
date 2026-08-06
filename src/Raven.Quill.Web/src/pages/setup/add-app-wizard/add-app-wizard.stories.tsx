@@ -322,11 +322,16 @@ export const VerifySchemaCdcVerificationFailed: Story = {
     // The dry run's blockers keep the wizard on this step and stay on screen until the selection changes.
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
-        const findAlert = () => canvas.queryByText(/must have the REPLICATION role attribute/i);
+        // The failed run reports an error and a warning, so the alert shows the two-entry summary
+        // and keeps the individual blockers in its collapsible details.
+        const findAlert = () => canvas.queryByText(/cdc verification failed for the selected tables/i);
 
         await userEvent.click(canvas.getByRole("button", { name: /next/i }));
         await waitFor(() => expect(findAlert()).toBeInTheDocument());
         expect(canvas.getByRole("heading", { name: /verify your schema/i })).toBeInTheDocument();
+
+        await userEvent.click(canvas.getByRole("button", { name: /show details/i }));
+        expect(canvas.getByText(/must have the REPLICATION role attribute/i)).toBeInTheDocument();
 
         await userEvent.click(canvas.getAllByRole("checkbox", { name: "Select row" })[0]);
         await waitFor(() => expect(findAlert()).not.toBeInTheDocument());
