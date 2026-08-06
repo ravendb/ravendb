@@ -8,8 +8,6 @@ using Raven.Quill.Endpoints.Helpers;
 using Raven.Quill.Raven;
 using Raven.Quill.Telegram;
 using Raven.Quill.Wizard;
-using Telegram.Bot;
-using Telegram.Bot.Exceptions;
 
 namespace Raven.Quill.Endpoints;
 
@@ -63,7 +61,6 @@ public static class ChannelsEndpoints
         string slug,
         ProvisionChannelRequest body,
         IDocumentStore store,
-        ITelegramBotClientFactory botFactory,
         ITelegramChannelManager telegramManager,
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
@@ -79,7 +76,7 @@ public static class ChannelsEndpoints
         return body.Type switch
         {
             ChannelType.IFrame => await ProvisionIFrameAsync(app, body, store, logger, ct),
-            ChannelType.Telegram => await ProvisionTelegramAsync(app, body, store, botFactory, telegramManager, logger, ct),
+            ChannelType.Telegram => await ProvisionTelegramAsync(app, body, store, telegramManager, logger, ct),
             ChannelType.WhatsApp => ProvisionWhatsAppAsync(),
             null => Results.BadRequest(new ApiErrorResponse("type is required")),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{body.Type}'")),
@@ -137,7 +134,6 @@ public static class ChannelsEndpoints
         App app,
         ProvisionChannelRequest body,
         IDocumentStore store,
-        ITelegramBotClientFactory botFactory,
         ITelegramChannelManager telegramManager,
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
@@ -160,7 +156,7 @@ public static class ChannelsEndpoints
             return Results.BadRequest(new ApiErrorResponse(paramError!, Code: "missing_parameters"));
 
         var botToken = body.BotToken.Trim();
-        var (bot, botError) = await ValidateBotTokenAsync(botFactory, botToken, ct);
+        var (bot, botError) = await telegramManager.ValidateBotTokenAsync(botToken, ct);
         if (bot is null)
             return Results.BadRequest(new ApiErrorResponse(botError!));
 
@@ -224,38 +220,6 @@ public static class ChannelsEndpoints
         return false;
     }
 
-    private static async Task<(global::Telegram.Bot.Types.User? Bot, string? Error)> ValidateBotTokenAsync(
-        ITelegramBotClientFactory botFactory,
-        string botToken,
-        CancellationToken ct)
-    {
-        try
-        {
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            timeout.CancelAfter(TimeSpan.FromSeconds(10));
-            var bot = await botFactory.Create(botToken).GetMe(timeout.Token);
-            return (bot, null);
-        }
-        catch (ArgumentException)
-        {
-            // Telegram.Bot rejects the token shape in the client constructor, before any HTTP call
-            return (null, "invalid bot token format; expected '<botId>:<secret>' as issued by @BotFather");
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested == false)
-        {
-            return (null, "telegram did not respond while validating the bot token");
-        }
-        catch (ApiRequestException e)
-        {
-            return (null, $"telegram rejected the bot token: {TelegramSettings.ScrubToken(e.Message, botToken)}");
-        }
-        catch (HttpRequestException e)
-        {
-            return (null, $"could not reach telegram: {TelegramSettings.ScrubToken(e.Message, botToken)}");
-        }
-    }
-
-
     private static async Task<IResult> ListChannelsAsync(
         string slug,
         IDocumentStore store,
@@ -282,7 +246,6 @@ public static class ChannelsEndpoints
         string channelId,
         UpdateChannelRequest body,
         IDocumentStore store,
-        ITelegramBotClientFactory botFactory,
         ITelegramChannelManager telegramManager,
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
@@ -302,7 +265,7 @@ public static class ChannelsEndpoints
         return channel.Type switch
         {
             ChannelType.IFrame => await UpdateIFrameChannelAsync(session, channel, body, app.Slug, channelId, logger, ct),
-            ChannelType.Telegram => await UpdateTelegramChannelAsync(session, channel, body, app, channelId, botFactory, telegramManager, logger, ct),
+            ChannelType.Telegram => await UpdateTelegramChannelAsync(session, channel, body, app, channelId, telegramManager, logger, ct),
             ChannelType.WhatsApp => UpdateWhatsAppChannelAsync(),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{channel.Type}'")),
         };
@@ -350,7 +313,6 @@ public static class ChannelsEndpoints
         UpdateChannelRequest body,
         App app,
         string channelId,
-        ITelegramBotClientFactory botFactory,
         ITelegramChannelManager telegramManager,
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
@@ -369,7 +331,7 @@ public static class ChannelsEndpoints
         if (string.IsNullOrWhiteSpace(body.BotToken) == false)
         {
             var botToken = body.BotToken.Trim();
-            var (bot, botError) = await ValidateBotTokenAsync(botFactory, botToken, ct);
+            var (bot, botError) = await telegramManager.ValidateBotTokenAsync(botToken, ct);
             if (bot is null)
                 return Results.BadRequest(new ApiErrorResponse(botError!));
 

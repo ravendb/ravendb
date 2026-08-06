@@ -7,11 +7,16 @@ using Raven.Quill.Endpoints.Helpers;
 using Raven.Quill.Hosting;
 using Raven.Quill.Raven;
 using Raven.Quill.Wizard;
+using Telegram.Bot;
+using Telegram.Bot.Exceptions;
+using TelegramUser = Telegram.Bot.Types.User;
 
 namespace Raven.Quill.Telegram;
 
 internal interface ITelegramChannelManager
 {
+    Task<(TelegramUser? Bot, string? Error)> ValidateBotTokenAsync(string botToken, CancellationToken ct);
+
     Task StartOrRestartAsync(string database, Channel channel);
 
     Task StopAsync(string database, string channelId);
@@ -79,6 +84,34 @@ internal sealed class TelegramChannelManager(
                 logger.LogWarning(
                     "Telegram reconciliation skipped app {Slug}: {Error}", app.Slug, e.Message);
             }
+        }
+    }
+
+    public async Task<(TelegramUser? Bot, string? Error)> ValidateBotTokenAsync(string botToken, CancellationToken ct)
+    {
+        try
+        {
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeout.CancelAfter(TimeSpan.FromSeconds(10));
+            var bot = await botFactory.Create(botToken).GetMe(timeout.Token);
+            return (bot, null);
+        }
+        catch (ArgumentException)
+        {
+            // Telegram.Bot rejects the token shape in the client constructor, before any HTTP call
+            return (null, "invalid bot token format; expected '<botId>:<secret>' as issued by @BotFather");
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested == false)
+        {
+            return (null, "telegram did not respond while validating the bot token");
+        }
+        catch (ApiRequestException e)
+        {
+            return (null, $"telegram rejected the bot token: {TelegramSettings.ScrubToken(e.Message, botToken)}");
+        }
+        catch (HttpRequestException e)
+        {
+            return (null, $"could not reach telegram: {TelegramSettings.ScrubToken(e.Message, botToken)}");
         }
     }
 
