@@ -9,7 +9,7 @@ type MapSourceOption = {
 export const AI_SUGGEST_OPTION: MapSourceOption = {
     value: "ai-suggested",
     label: "AI Suggest",
-    description: "LLM proposes a draft CDCSinkConfiguration based on schema + your intent prompt.",
+    description: "LLM proposes a draft configuration based on schema + your intent prompt.",
 };
 
 export const MANUAL_OPTION: MapSourceOption = {
