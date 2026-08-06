@@ -777,6 +777,11 @@ namespace Voron.Impl
             if (_scratchPagesInUse.TryGetValue(pageNumber, out PageFromScratchBuffer value) == false)
                 throw new InvalidOperationException($"The page {pageNumber} was not previous allocated in this transaction");
 
+            // shrinking a page of a committed transaction would mutate its scratch memory in place (readers may
+            // be looking at it) and would put a foreign page into _transactionPages, which both the journal write
+            // and Rollback() treat as this transaction's own allocations
+            Debug.Assert(value.AllocatedInTransaction == Id, $"ShrinkOverflowPage({pageNumber}) on a page allocated in tx {value.AllocatedInTransaction}, current tx is {Id}");
+
             var page = value.ReadWritable(this);
             if (page.IsOverflow == false || page.OverflowSize < newSize)
                 throw new InvalidOperationException($"The page {pageNumber} was is not an overflow page greater than {newSize}");
@@ -1331,12 +1336,13 @@ namespace Voron.Impl
 
             // we need to roll back all the changes we made here
             _env.WriteTransactionPool.ScratchPagesInUse = _scratchPagesInUse = _scratchBuffersSnapshotToRollbackTo.ToBuilder();
-            foreach (var (k, maybeRollBack) in rollbackPages)
-            {
-                if (maybeRollBack.AllocatedInTransaction != Id)
-                    continue; // from a committed transaction, can keep
 
-                _env.ScratchBufferPool.FreeImmediately(this, maybeRollBack.File.Number, maybeRollBack.PositionInScratchBuffer);
+            // We need to free pages allocated by this transaction in a scratch buffer.
+            // During tx, we did partial cleanup via `DiscardScratchModificationOn`
+            // So only pages currently allocated by this transaction need to be freed.
+            foreach (var transactionPage in _transactionPages)
+            {
+                _env.ScratchBufferPool.FreeImmediately(this, transactionPage.File.Number, transactionPage.PositionInScratchBuffer);
             }
 
             RolledBack = true;
