@@ -371,6 +371,8 @@ namespace Raven.Server.Documents
                     currentCache.LastEtagsByCollection[kvp.Key] = kvp.Value;
 
                 UpdateCollectionCachesForModifiedCollections(tx, currentCache);
+
+                AssertIncrementalCacheMatchesFullScan(tx, currentCache);
             }
             else
             {
@@ -467,6 +469,35 @@ namespace Raven.Server.Documents
                 colCache.LastTombstoneEtag = TableValueToEtag((int)DocumentsTable.Etag, ref holder.Reader);
             }
             cache.LastEtagsByCollection[collectionName.Name] = colCache;
+        }
+
+        // DEBUG-only safety net: the incrementally-updated cache must be identical to a from-scratch full scan.
+        // any divergence means the modified-collection detection or the carry-forward is wrong. compiled out of
+        // release builds, so it costs nothing there; in DEBUG it validates on every write commit across all tests.
+        [Conditional("DEBUG")]
+        private void AssertIncrementalCacheMatchesFullScan(Transaction tx, DocumentTransactionCache incremental)
+        {
+            var full = new DocumentTransactionCache { FullyComputed = true };
+            ComputeCollectionCaches(tx, full);
+
+            if (incremental.LastEtagsByCollection.Count != full.LastEtagsByCollection.Count)
+                throw new InvalidOperationException(
+                    $"Incremental documents transaction cache has {incremental.LastEtagsByCollection.Count} collection(s), a full scan has {full.LastEtagsByCollection.Count}.");
+
+            foreach (var kvp in full.LastEtagsByCollection)
+            {
+                if (incremental.LastEtagsByCollection.TryGetValue(kvp.Key, out var incrementalEntry) == false)
+                    throw new InvalidOperationException(
+                        $"Incremental documents transaction cache is missing collection '{kvp.Key}' that a full scan produced.");
+
+                if (incrementalEntry.LastDocumentEtag != kvp.Value.LastDocumentEtag ||
+                    incrementalEntry.LastTombstoneEtag != kvp.Value.LastTombstoneEtag ||
+                    incrementalEntry.LastChangeVector != kvp.Value.LastChangeVector)
+                    throw new InvalidOperationException(
+                        $"Incremental documents transaction cache diverged from a full scan for collection '{kvp.Key}': " +
+                        $"incremental (doc={incrementalEntry.LastDocumentEtag}, tombstone={incrementalEntry.LastTombstoneEtag}, cv={incrementalEntry.LastChangeVector}) " +
+                        $"vs full (doc={kvp.Value.LastDocumentEtag}, tombstone={kvp.Value.LastTombstoneEtag}, cv={kvp.Value.LastChangeVector}).");
+            }
         }
 
         public static ChangeVector GetDatabaseChangeVector(DocumentsOperationContext context)
