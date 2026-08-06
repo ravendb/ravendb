@@ -1,4 +1,4 @@
-import { pino, type Logger } from "pino";
+import { pino, stdSerializers, type Logger } from "pino";
 
 // Phone numbers are PII: log lines carry only the last four digits of a JID.
 export function redactJid(jid: string): string {
@@ -8,7 +8,16 @@ export function redactJid(jid: string): string {
 }
 
 export function createLogger(level: string): Logger {
-    return pino({ level, base: undefined });
+    return pino({
+        level,
+        base: undefined,
+        // Baileys logs errors under assorted keys; without serializers they render as {}.
+        serializers: {
+            err: stdSerializers.err,
+            error: stdSerializers.err,
+            ackErr: stdSerializers.err,
+        },
+    });
 }
 
 export type { Logger };

@@ -13,11 +13,12 @@ export function baileysSocketFactory(logger: Logger): SocketFactory {
             // offline: fall back to the version baked into the library
         }
 
+        // Baileys chatter stays at warn unless the bridge itself runs at debug/trace.
+        const baileysLevel = logger.level === "debug" || logger.level === "trace" ? logger.level : "warn";
         const socket = makeWASocket({
             auth: state,
             version,
-            // Baileys accepts any pino-compatible logger; its own chatter stays at warn.
-            logger: logger.child({ component: "baileys" }, { level: "warn" }) as never,
+            logger: logger.child({ component: "baileys" }, { level: baileysLevel }) as never,
             markOnlineOnConnect: false,
             syncFullHistory: false,
             browser: ["Quill", "Chrome", "1.0"],

@@ -44,6 +44,7 @@ export class SessionNotConnectedError extends Error {
 const LOGGED_OUT = 401;
 const TIMED_OUT = 408;
 const CONNECTION_REPLACED = 440;
+const RESTART_REQUIRED = 515;
 
 const QR_TTL_MS = 60_000;
 const MIN_RECONNECT_MS = 1_000;
@@ -184,6 +185,27 @@ export class Session {
 
         const wasPairing = this.state === "pairing";
         const statusCode = disconnectStatusCode(update.lastDisconnect?.error);
+
+        this.logger.warn(
+            {
+                database: this.database,
+                channelId: this.channelId,
+                statusCode,
+                error: disconnectMessage(update.lastDisconnect?.error),
+            },
+            "whatsapp connection closed",
+        );
+
+        if (statusCode === RESTART_REQUIRED) {
+            // WhatsApp closes the socket right after a successful QR scan; completing
+            // the registration requires an immediate reconnect with the saved
+            // credentials - keep the session in "starting" so pairing polls continue.
+            this.teardownSocket();
+            this.state = "starting";
+            this.qr = null;
+            void this.start();
+            return;
+        }
 
         if (statusCode === LOGGED_OUT) {
             this.teardownSocket();

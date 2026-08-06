@@ -138,6 +138,25 @@ describe("Session", () => {
         assert.equal(sockets.length, 1);
     });
 
+    it("reconnects immediately when the server requires a restart after a scan", async () => {
+        const { session, sockets, socket, authDir } = await makeSession();
+        cleanup.push(() => session.stop(), () => fs.rm(authDir, { recursive: true, force: true }));
+
+        await session.start();
+        socket().emit("connection.update", { qr: "QR" });
+        await tick();
+        socket().emit("connection.update", {
+            connection: "close",
+            lastDisconnect: { error: { output: { statusCode: 515 } } },
+        });
+        await tick();
+
+        assert.equal(sockets.length, 2);
+        assert.equal(sockets[0]?.ended, true);
+        assert.equal(session.status().state, "starting");
+        assert.equal(session.status().lastError, null);
+    });
+
     it("reports a pairing timeout without looping QR generation", async () => {
         const { session, sockets, socket, authDir } = await makeSession();
         cleanup.push(() => session.stop(), () => fs.rm(authDir, { recursive: true, force: true }));
