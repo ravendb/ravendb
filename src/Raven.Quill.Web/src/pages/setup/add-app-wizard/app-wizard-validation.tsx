@@ -197,13 +197,16 @@ export const tablesSchema = z
 
 export const connectionModeSchema = z.union([z.literal("fields"), z.literal("raw")]);
 
+/** "default" leaves the choice to the driver: the connection string then carries no SSL keyword. */
+export const sslModeSchema = z.enum(["default", "require", "disable"]);
+
 const connectionFieldsShape = {
     host: z.string(),
     port: z.number().nullable(),
     database: z.string(),
     username: z.string(),
     password: z.string(),
-    isSecured: z.boolean(),
+    ssl: sslModeSchema,
 };
 
 const filledConnectionFieldsSchema = z.object({

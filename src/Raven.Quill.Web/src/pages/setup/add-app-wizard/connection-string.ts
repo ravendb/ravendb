@@ -3,13 +3,15 @@ import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-valida
 type ExternalConnection = AppFormData["externalConnection"];
 type Provider = ExternalConnection["provider"];
 
+export type SslMode = ExternalConnection["fields"]["ssl"];
+
 export type ConnectionValues = {
     host: string;
     port: number | null;
     database: string;
     username: string;
     password: string;
-    isSecured: boolean;
+    ssl: SslMode;
 };
 
 export type ParsedConnectionString = {
@@ -42,10 +44,10 @@ const KEYWORDS_BY_PROVIDER: Record<
     },
 };
 
-const SSL_BY_PROVIDER: Record<Provider, { keyword: string; secured: string; insecure: string }> = {
-    Npgsql: { keyword: "SSL Mode", secured: "Require", insecure: "Disable" },
-    SqlClient: { keyword: "Encrypt", secured: "True", insecure: "False" },
-    MySqlConnectorFactory: { keyword: "SslMode", secured: "Required", insecure: "None" },
+const SSL_BY_PROVIDER: Record<Provider, { keyword: string; require: string; disable: string }> = {
+    Npgsql: { keyword: "SSL Mode", require: "Require", disable: "Disable" },
+    SqlClient: { keyword: "Encrypt", require: "True", disable: "False" },
+    MySqlConnectorFactory: { keyword: "SslMode", require: "Required", disable: "None" },
 };
 
 export function buildConnectionString(provider: Provider, values: ConnectionValues): string {
@@ -77,8 +79,10 @@ export function buildConnectionString(provider: Provider, values: ConnectionValu
         return "";
     }
 
-    const ssl = SSL_BY_PROVIDER[provider];
-    pairs.push(`${ssl.keyword}=${values.isSecured ? ssl.secured : ssl.insecure}`);
+    if (values.ssl !== "default") {
+        const ssl = SSL_BY_PROVIDER[provider];
+        pairs.push(`${ssl.keyword}=${values.ssl === "require" ? ssl.require : ssl.disable}`);
+    }
 
     return pairs.join(";");
 }
@@ -116,35 +120,38 @@ const FIELD_BY_KEYWORD: Record<string, keyof ConnectionValues> = {
     uid: "username",
     password: "password",
     pwd: "password",
-    "ssl mode": "isSecured",
-    sslmode: "isSecured",
-    encrypt: "isSecured",
+    "ssl mode": "ssl",
+    sslmode: "ssl",
+    encrypt: "ssl",
 };
 
-// "prefer"/"preferred" are the Npgsql/MySqlConnector defaults - no SSL guarantee, so the toggle
-// cannot show them as secured.
-const INSECURE_SSL_VALUES = new Set(["disable", "disabled", "none", "false", "0", "no", "prefer", "preferred"]);
+const DISABLE_SSL_VALUES = new Set(["disable", "disabled", "none", "false", "0", "no"]);
 
-/**
- * What the driver does when the string does not mention SSL: Microsoft.Data.SqlClient encrypts
- * (Encrypt defaults to True), Npgsql and MySqlConnector only opportunistically try SSL with no
- * guarantee. The toggle must mirror that, or a round trip through the details editor would
- * silently flip the connection's security.
- */
-const IS_SECURED_WHEN_UNSPECIFIED: Record<Provider, boolean> = {
-    Npgsql: false,
-    SqlClient: true,
-    MySqlConnectorFactory: false,
-};
+// "prefer"/"preferred" are what Npgsql/MySqlConnector do anyway when the keyword is absent.
+const DEFAULT_SSL_VALUES = new Set(["prefer", "preferred"]);
 
-export function parseConnectionString(provider: Provider, connectionString: string): ParsedConnectionString {
+function toSslMode(value: string): SslMode {
+    const normalized = value.trim().toLowerCase();
+
+    if (DISABLE_SSL_VALUES.has(normalized)) {
+        return "disable";
+    }
+
+    if (DEFAULT_SSL_VALUES.has(normalized)) {
+        return "default";
+    }
+
+    return "require";
+}
+
+export function parseConnectionString(connectionString: string): ParsedConnectionString {
     const values: ConnectionValues = {
         host: "",
         port: null,
         database: "",
         username: "",
         password: "",
-        isSecured: IS_SECURED_WHEN_UNSPECIFIED[provider],
+        ssl: "default",
     };
     const droppedKeywords: string[] = [];
     let hasRecognizedKeywords = false;
@@ -170,8 +177,8 @@ export function parseConnectionString(provider: Provider, connectionString: stri
 
         if (field === "port") {
             values.port = parsePort(value);
-        } else if (field === "isSecured") {
-            values.isSecured = !INSECURE_SSL_VALUES.has(value.trim().toLowerCase());
+        } else if (field === "ssl") {
+            values.ssl = toSslMode(value);
         } else if (field === "host") {
             const { host, port } = splitHostAndPort(value);
             values.host = host;

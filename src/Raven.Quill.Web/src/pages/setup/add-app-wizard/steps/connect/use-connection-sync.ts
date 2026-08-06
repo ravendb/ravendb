@@ -24,7 +24,6 @@ export function useConnectionSync() {
             // A blank string has nothing to read - wiping the details with it would throw away
             // whatever was already typed there.
             const { values, droppedKeywords, hasRecognizedKeywords } = parseConnectionString(
-                connection.provider,
                 connection.connectionString,
             );
 

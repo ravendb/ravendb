@@ -13,7 +13,7 @@ function values(overrides: Partial<ConnectionValues> = {}): ConnectionValues {
         database: "acme_shop",
         username: "admin",
         password: "secret",
-        isSecured: false,
+        ssl: "disable",
         ...overrides,
     };
 }
@@ -42,11 +42,19 @@ describe("buildConnectionString", () => {
     });
 
     it("asks for an encrypted transport with the keyword each provider expects", () => {
-        expect(buildConnectionString("Npgsql", values({ isSecured: true }))).toContain("SSL Mode=Require");
-        expect(buildConnectionString("SqlClient", values({ isSecured: true }))).toContain("Encrypt=True");
-        expect(buildConnectionString("MySqlConnectorFactory", values({ isSecured: true }))).toContain(
+        expect(buildConnectionString("Npgsql", values({ ssl: "require" }))).toContain("SSL Mode=Require");
+        expect(buildConnectionString("SqlClient", values({ ssl: "require" }))).toContain("Encrypt=True");
+        expect(buildConnectionString("MySqlConnectorFactory", values({ ssl: "require" }))).toContain(
             "SslMode=Required",
         );
+    });
+
+    it("leaves the SSL choice to the driver by omitting the keyword", () => {
+        expect(buildConnectionString("Npgsql", values({ ssl: "default" }))).toBe(
+            "Host=localhost;Port=5432;Database=acme_shop;Username=admin;Password=secret",
+        );
+        expect(buildConnectionString("SqlClient", values({ ssl: "default" }))).not.toContain("Encrypt");
+        expect(buildConnectionString("MySqlConnectorFactory", values({ ssl: "default" }))).not.toContain("SslMode");
     });
 
     it("omits the port and password when not provided", () => {
@@ -62,7 +70,7 @@ describe("buildConnectionString", () => {
         const empty = values({ host: "", port: null, database: "", username: "", password: "" });
 
         expect(buildConnectionString("Npgsql", empty)).toBe("");
-        expect(buildConnectionString("Npgsql", { ...empty, isSecured: true })).toBe("");
+        expect(buildConnectionString("Npgsql", { ...empty, ssl: "require" })).toBe("");
     });
 
     it("quotes values containing separators or quotes", () => {
@@ -78,7 +86,6 @@ describe("parseConnectionString", () => {
     it("parses a PostgreSQL connection string", () => {
         expect(
             parseConnectionString(
-                "Npgsql",
                 "Host=localhost;Port=5432;Database=acme_shop;Username=admin;Password=secret;SSL Mode=Disable",
             ),
         ).toEqual({ values: values(), droppedKeywords: [], hasRecognizedKeywords: true });
@@ -87,7 +94,6 @@ describe("parseConnectionString", () => {
     it("parses a connection string with one keyword per line", () => {
         expect(
             parseConnectionString(
-                "Npgsql",
                 lines(
                     "Host=localhost",
                     "Port=5432",
@@ -103,7 +109,6 @@ describe("parseConnectionString", () => {
     it("parses keyword aliases case-insensitively", () => {
         expect(
             parseConnectionString(
-                "MySqlConnectorFactory",
                 "server=db.example.com;PORT=3306;Initial Catalog=shop;Uid=root;Pwd=secret;sslmode=none",
             ).values,
         ).toEqual(values({ host: "db.example.com", port: 3306, database: "shop", username: "root" }));
@@ -111,76 +116,62 @@ describe("parseConnectionString", () => {
 
     it("extracts the SQL Server port from the server value", () => {
         expect(
-            parseConnectionString(
-                "SqlClient",
-                "Server=db.example.com,1433;Database=shop;User ID=sa;Password=secret;Encrypt=False",
-            ).values,
+            parseConnectionString("Server=db.example.com,1433;Database=shop;User ID=sa;Password=secret;Encrypt=False")
+                .values,
         ).toEqual(values({ host: "db.example.com", port: 1433, database: "shop", username: "sa" }));
     });
 
     it("splits the host and port whichever provider's dialect wrote them", () => {
         const parsed = parseConnectionString(
-            "SqlClient",
             "Server=localhost,5432;Database=acme_shop;User ID=admin;Password=secret;Encrypt=True",
         );
 
-        expect(parsed.values).toEqual(values({ isSecured: true }));
+        expect(parsed.values).toEqual(values({ ssl: "require" }));
         expect(parsed.droppedKeywords).toEqual([]);
     });
 
     it("leaves a multi-host value alone", () => {
         expect(
-            parseConnectionString("Npgsql", "Host=primary.example.com,replica.example.com;Database=shop").values,
+            parseConnectionString("Host=primary.example.com,replica.example.com;Database=shop").values,
         ).toMatchObject({ host: "primary.example.com,replica.example.com", port: null });
     });
 
-    it("reads the secured flag from each provider's SSL keyword", () => {
-        expect(parseConnectionString("Npgsql", "Host=h;SSL Mode=Require").values.isSecured).toBe(true);
-        expect(parseConnectionString("Npgsql", "Host=h;SSL Mode=Disable").values.isSecured).toBe(false);
-        expect(parseConnectionString("SqlClient", "Server=h;Encrypt=True").values.isSecured).toBe(true);
-        expect(parseConnectionString("SqlClient", "Server=h;Encrypt=False").values.isSecured).toBe(false);
-        expect(parseConnectionString("MySqlConnectorFactory", "Server=h;SslMode=Required").values.isSecured).toBe(true);
-        expect(parseConnectionString("MySqlConnectorFactory", "Server=h;SslMode=None").values.isSecured).toBe(false);
+    it("reads the SSL mode from each provider's keyword", () => {
+        expect(parseConnectionString("Host=h;SSL Mode=Require").values.ssl).toBe("require");
+        expect(parseConnectionString("Host=h;SSL Mode=Disable").values.ssl).toBe("disable");
+        expect(parseConnectionString("Server=h;Encrypt=True").values.ssl).toBe("require");
+        expect(parseConnectionString("Server=h;Encrypt=False").values.ssl).toBe("disable");
+        expect(parseConnectionString("Server=h;SslMode=Required").values.ssl).toBe("require");
+        expect(parseConnectionString("Server=h;SslMode=None").values.ssl).toBe("disable");
     });
 
-    it("reads an opportunistic SSL value as not secured", () => {
-        expect(parseConnectionString("Npgsql", "Host=h;SSL Mode=Prefer").values.isSecured).toBe(false);
-        expect(parseConnectionString("MySqlConnectorFactory", "Server=h;SslMode=Preferred").values.isSecured).toBe(
-            false,
-        );
+    it("reads an opportunistic SSL value as the driver default", () => {
+        expect(parseConnectionString("Host=h;SSL Mode=Prefer").values.ssl).toBe("default");
+        expect(parseConnectionString("Server=h;SslMode=Preferred").values.ssl).toBe("default");
     });
 
-    it("maps a missing SSL keyword to what the driver does by default", () => {
-        expect(parseConnectionString("Npgsql", "Host=h;Database=d;Username=u;Password=p").values.isSecured).toBe(false);
-        expect(
-            parseConnectionString("MySqlConnectorFactory", "Server=h;Database=d;User ID=u;Password=p").values.isSecured,
-        ).toBe(false);
-        // Microsoft.Data.SqlClient encrypts unless the string says otherwise.
-        expect(parseConnectionString("SqlClient", "Server=h;Database=d;User ID=u;Password=p").values.isSecured).toBe(
-            true,
-        );
+    it("maps a missing SSL keyword to the driver default", () => {
+        expect(parseConnectionString("Host=h;Database=d;Username=u;Password=p").values.ssl).toBe("default");
     });
 
     it("keeps a SQL Server named instance intact when there is no port", () => {
-        expect(
-            parseConnectionString("SqlClient", "Server=host\\SQLEXPRESS;Database=shop;User ID=sa;Password=x").values
-                .host,
-        ).toBe("host\\SQLEXPRESS");
+        expect(parseConnectionString("Server=host\\SQLEXPRESS;Database=shop;User ID=sa;Password=x").values.host).toBe(
+            "host\\SQLEXPRESS",
+        );
     });
 
     it("reports when nothing in the string maps to a connection value", () => {
-        const parsed = parseConnectionString("Npgsql", "somevalue");
+        const parsed = parseConnectionString("somevalue");
 
         expect(parsed.hasRecognizedKeywords).toBe(false);
         expect(parsed.droppedKeywords).toEqual(["somevalue"]);
-        expect(parseConnectionString("Npgsql", "Application Name=quill").hasRecognizedKeywords).toBe(false);
-        expect(parseConnectionString("Npgsql", "Host=h").hasRecognizedKeywords).toBe(true);
+        expect(parseConnectionString("Application Name=quill").hasRecognizedKeywords).toBe(false);
+        expect(parseConnectionString("Host=h").hasRecognizedKeywords).toBe(true);
     });
 
     it("names the keywords no input represents", () => {
         expect(
             parseConnectionString(
-                "SqlClient",
                 "Server=localhost;Database=shop;User ID=sa;Password=x;TrustServerCertificate=True;Connect Timeout=30",
             ).droppedKeywords,
         ).toEqual(["TrustServerCertificate", "Connect Timeout"]);
@@ -188,24 +179,22 @@ describe("parseConnectionString", () => {
 
     it("drops nothing from a string the values fully express", () => {
         expect(
-            parseConnectionString("Npgsql", "Host=h;Port=5432;Database=d;Username=u;Password=p;SSL Mode=Require")
-                .droppedKeywords,
+            parseConnectionString("Host=h;Port=5432;Database=d;Username=u;Password=p;SSL Mode=Require").droppedKeywords,
         ).toEqual([]);
     });
 
     it("unquotes values containing separators", () => {
         expect(
-            parseConnectionString("Npgsql", "Host=localhost;Database=shop;Username=admin;Password='p;a=''s'").values
-                .password,
+            parseConnectionString("Host=localhost;Database=shop;Username=admin;Password='p;a=''s'").values.password,
         ).toBe("p;a='s");
     });
 
     it("round-trips through build for every provider", () => {
         for (const provider of ["Npgsql", "SqlClient", "MySqlConnectorFactory"] as const) {
-            for (const isSecured of [true, false]) {
-                const original = values({ password: "we;ird'pa=ss", isSecured });
+            for (const ssl of ["default", "require", "disable"] as const) {
+                const original = values({ password: "we;ird'pa=ss", ssl });
 
-                expect(parseConnectionString(provider, buildConnectionString(provider, original))).toEqual({
+                expect(parseConnectionString(buildConnectionString(provider, original))).toEqual({
                     values: original,
                     droppedKeywords: [],
                     hasRecognizedKeywords: true,

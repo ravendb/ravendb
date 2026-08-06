@@ -1,10 +1,10 @@
 import { useFormContext, useWatch } from "react-hook-form";
 import { FormInput } from "@/components/form/form-input";
-import { FormSwitch } from "@/components/form/form-switch";
 import { FormTextarea } from "@/components/form/form-textarea";
+import { FormToggleGroup, type FormToggleGroupOption } from "@/components/form/form-toggle-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/shadcn/ui/tabs";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
-import { DEFAULT_PORT_BY_PROVIDER } from "@/pages/setup/add-app-wizard/connection-string";
+import { DEFAULT_PORT_BY_PROVIDER, type SslMode } from "@/pages/setup/add-app-wizard/connection-string";
 import { useConnectionSync } from "@/pages/setup/add-app-wizard/steps/connect/use-connection-sync";
 
 type Provider = AppFormData["externalConnection"]["provider"];
@@ -13,6 +13,18 @@ const CONNECTION_STRING_PLACEHOLDER_BY_PROVIDER: Record<Provider, string> = {
     Npgsql: "Host=localhost;Port=5432;Database=my_db;Username=admin;Password=pass",
     SqlClient: "Server=localhost,1433;Database=my_db;User ID=sa;Password=pass",
     MySqlConnectorFactory: "Server=localhost;Port=3306;Database=my_db;User ID=admin;Password=pass",
+};
+
+const SSL_OPTIONS: FormToggleGroupOption<SslMode>[] = [
+    { value: "default", label: "Driver default" },
+    { value: "require", label: "Require" },
+    { value: "disable", label: "Disable" },
+];
+
+const SSL_DEFAULT_DESCRIPTION_BY_PROVIDER: Record<Provider, string> = {
+    Npgsql: "Driver default tries SSL first and falls back to an unencrypted connection.",
+    SqlClient: "Driver default requires an encrypted connection.",
+    MySqlConnectorFactory: "Driver default tries SSL first and falls back to an unencrypted connection.",
 };
 
 export function ConnectionEditor({ isDisabled }: { isDisabled: boolean }) {
@@ -86,10 +98,13 @@ function ConnectionFieldsEditor({ isDisabled }: { isDisabled: boolean }) {
                     disabled={isDisabled}
                 />
             </div>
-            <FormSwitch
+            <FormToggleGroup
                 control={control}
-                name="externalConnection.fields.isSecured"
-                label="Secured connection (SSL/TLS)"
+                name="externalConnection.fields.ssl"
+                label="SSL/TLS"
+                options={SSL_OPTIONS}
+                canDeselect={false}
+                description={SSL_DEFAULT_DESCRIPTION_BY_PROVIDER[provider]}
                 disabled={isDisabled}
             />
         </>
