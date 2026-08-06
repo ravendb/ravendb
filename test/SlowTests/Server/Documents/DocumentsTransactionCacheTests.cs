@@ -139,7 +139,7 @@ namespace SlowTests.Server.Documents
                 {
                     Assert.Equal(storage.GetLastDocumentEtag(writeTx, collection), storage.GetLastDocumentEtag(readTx, collection));
                     Assert.Equal(storage.GetLastTombstoneEtag(writeTx, collection), storage.GetLastTombstoneEtag(readTx, collection));
-                    Assert.Equal(storage.GetLastDocumentChangeVector(writeTx, writeContext, collection), storage.GetLastDocumentChangeVector(readTx, readContext, collection));
+                    Assert.Equal(storage.GetLastDocumentChangeVector(writeTx, collection), storage.GetLastDocumentChangeVector(readTx, collection));
                 }
             }
         }

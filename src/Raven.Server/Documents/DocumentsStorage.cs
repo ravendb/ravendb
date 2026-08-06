@@ -389,7 +389,7 @@ namespace Raven.Server.Documents
             {
                 Table.TableValueHolder holder = default;
                 foreach (var collection in IterateCollectionNames(tx, ctx))
-                    ComputeCollectionCache(tx, ctx, new CollectionName(collection), cache, ref holder);
+                    ComputeCollectionCache(tx, new CollectionName(collection), cache, ref holder);
             }
         }
 
@@ -428,7 +428,7 @@ namespace Raven.Server.Documents
             {
                 Table.TableValueHolder holder = default;
                 foreach (var collectionName in modifiedCollections)
-                    ComputeCollectionCache(tx, ctx, collectionName, cache, ref holder);
+                    ComputeCollectionCache(tx, collectionName, cache, ref holder);
             }
         }
 
@@ -448,7 +448,7 @@ namespace Raven.Server.Documents
             map[tombstonesTableName] = collection;
         }
 
-        private void ComputeCollectionCache(Transaction tx, JsonOperationContext ctx, CollectionName collectionName, DocumentTransactionCache cache, ref Table.TableValueHolder holder)
+        private void ComputeCollectionCache(Transaction tx, CollectionName collectionName, DocumentTransactionCache cache, ref Table.TableValueHolder holder)
         {
             if (ReadLastDocument(tx, collectionName, CollectionTableType.Documents, ref holder) == false)
             {
@@ -459,7 +459,7 @@ namespace Raven.Server.Documents
             var colCache = new DocumentTransactionCache.CollectionCache
             {
                 LastDocumentEtag = TableValueToEtag((int)DocumentsTable.Etag, ref holder.Reader),
-                LastChangeVector = TableValueToChangeVector(ctx, (int)DocumentsTable.ChangeVector, ref holder.Reader),
+                LastChangeVector = TableValueToChangeVector((int)DocumentsTable.ChangeVector, ref holder.Reader),
             };
 
             if (ReadLastDocument(tx, collectionName, CollectionTableType.Tombstones, ref holder))
@@ -1562,7 +1562,7 @@ namespace Raven.Server.Documents
             return TableValueToEtag((int)DocumentsTable.Etag, ref result.Reader);
         }
 
-        public string GetLastDocumentChangeVector(Transaction tx, JsonOperationContext ctx, string collection)
+        public string GetLastDocumentChangeVector(Transaction tx, string collection)
         {
             if (tx.IsWriteTransaction == false)
             {
@@ -1576,7 +1576,7 @@ namespace Raven.Server.Documents
             if (LastDocument(tx, collection, ref result) == false)
                 return null;
 
-            return TableValueToChangeVector(ctx, (int)DocumentsTable.ChangeVector, ref result.Reader);
+            return TableValueToChangeVector((int)DocumentsTable.ChangeVector, ref result.Reader);
         }
 
         private bool LastDocument(Transaction transaction, string collection, ref Table.TableValueHolder result)
@@ -1754,7 +1754,7 @@ namespace Raven.Server.Documents
             document.Id = TableValueToId(context, (int)DocumentsTable.Id, ref tvr);
             document.Etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr);
             document.Data = new BlittableJsonReaderObject(tvr.Read((int)DocumentsTable.Data, out int size), size, context);
-            document.ChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref tvr);
+            document.ChangeVector = TableValueToChangeVector((int)DocumentsTable.ChangeVector, ref tvr);
             document.LastModified = TableValueToDateTime((int)DocumentsTable.LastModified, ref tvr);
             document.Flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr);
             document.TransactionMarker = TableValueToShort((int)DocumentsTable.TransactionMarker, nameof(DocumentsTable.TransactionMarker), ref tvr);
@@ -1787,7 +1787,7 @@ namespace Raven.Server.Documents
                 DeletedEtag = TableValueToEtag((int)TombstoneTable.DeletedEtag, ref tvr),
                 Type = *(Tombstone.TombstoneType*)tvr.Read((int)TombstoneTable.Type, out int _),
                 TransactionMarker = *(short*)tvr.Read((int)TombstoneTable.TransactionMarker, out int _),
-                ChangeVector = TableValueToChangeVector(context, (int)TombstoneTable.ChangeVector, ref tvr),
+                ChangeVector = TableValueToChangeVector((int)TombstoneTable.ChangeVector, ref tvr),
                 LastModified = TableValueToDateTime((int)TombstoneTable.LastModified, ref tvr),
                 Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr),
             };
@@ -1800,10 +1800,10 @@ namespace Raven.Server.Documents
                     break;
                 case Tombstone.TombstoneType.Revision:
                     result.Collection = TableValueToId(context, (int)TombstoneTable.Collection, ref tvr);
-                    result.RevisionVersion = ReadRevisionVersion(context, ref tvr);
+                    result.RevisionVersion = ReadRevisionVersion(ref tvr);
                     break;
                 case Tombstone.TombstoneType.Attachment:
-                    result.RevisionVersion = ReadRevisionVersion(context, ref tvr);
+                    result.RevisionVersion = ReadRevisionVersion(ref tvr);
                     break;
             }
 
@@ -1811,10 +1811,10 @@ namespace Raven.Server.Documents
         }
 
         // Field 9 (TombstoneTable.RevisionVersion) -- present only on Hashed-form RT/RAT writes; legacy 9-field rows have no slot.
-        private static string ReadRevisionVersion(JsonOperationContext context, ref TableValueReader tvr)
+        private static string ReadRevisionVersion(ref TableValueReader tvr)
         {
             return tvr.Count > (int)TombstoneTable.RevisionVersion
-                ? TableValueToChangeVector(context, (int)TombstoneTable.RevisionVersion, ref tvr)
+                ? TableValueToChangeVector((int)TombstoneTable.RevisionVersion, ref tvr)
                 : null;
         }
 
@@ -3121,7 +3121,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static string TableValueToChangeVector<TTableValueReader>(JsonOperationContext context, int index, ref TTableValueReader tvr)
+        public static string TableValueToChangeVector<TTableValueReader>(int index, ref TTableValueReader tvr)
             where TTableValueReader : struct, ITableValueReader
         {
             var ptr = tvr.Read(index, out int size);
