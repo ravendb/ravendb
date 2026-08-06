@@ -39,6 +39,11 @@ npm test
 npm run build && RAVEN_QUILL_WHATSAPP_DATA_DIR=/tmp/wa npm start
 ```
 
+`patches/` holds a one-line fix for Baileys 7.0.0-rc14 (applied by patch-package on install):
+`sendMessageAck` dereferences `creds.me.id` unconditionally, which crashes while acking the
+pairing notifications - before pairing completes there is no `creds.me` - and breaks QR
+linking entirely. Drop the patch when a Baileys release fixes it.
+
 ## Manual QA script (real phone)
 
 1. Boot the appliance, create an app and an agent, then add a **WhatsApp Personal** channel from the dashboard.

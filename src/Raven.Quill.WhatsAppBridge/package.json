@@ -5,6 +5,7 @@
     "description": "WhatsApp linked-device bridge for the Quill appliance: hosts one Baileys session per WhatsAppPersonal channel and forwards inbound messages to the Quill web app.",
     "type": "module",
     "scripts": {
+        "postinstall": "patch-package",
         "build": "tsc",
         "start": "node dist/index.js",
         "typecheck": "tsc --noEmit",
@@ -17,6 +18,7 @@
     },
     "devDependencies": {
         "@types/node": "^22.15.0",
+        "patch-package": "^8.0.1",
         "tsx": "^4.23.7",
         "typescript": "^5.9.0"
     },
