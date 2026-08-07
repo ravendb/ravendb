@@ -33,6 +33,9 @@ export interface WaSocket {
     requestPairingCode(phoneNumber: string): Promise<string>;
     logout(): Promise<void>;
     end(error?: Error): void;
+    /// Baileys sends the pairing-code request without a reply handler, so WhatsApp's
+    /// rejection of it is otherwise silent. Optional: test fakes may omit it.
+    onIqError?(listener: (reason: string) => void): void;
 }
 
 export type SocketFactory = (authDir: string) => Promise<WaSocket>;
@@ -300,10 +303,32 @@ export class Session {
         await this.wipeAuthDir();
     }
 
+    private onPairingRejected(reason: string): void {
+        if (this.state === "connected" || this.pairingPhoneNumber === null)
+            return;
+
+        this.logger.warn(
+            { database: this.database, channelId: this.channelId, reason },
+            "whatsapp rejected the pairing code request",
+        );
+
+        this.teardownSocket();
+        this.state = "disconnected";
+        this.qr = null;
+        this.pairingCode = null;
+        this.lastError = `WhatsApp rejected the pairing request (${reason}) - try the QR code instead`;
+    }
+
     private async requestPairingCodeAsync(phoneNumber: string): Promise<void> {
         const socket = this.socket;
         if (socket === null)
             return;
+
+        const generation = this.generation;
+        socket.onIqError?.((reason) => {
+            if (generation === this.generation)
+                this.onPairingRejected(reason);
+        });
 
         try {
             this.pairingCode = await socket.requestPairingCode(phoneNumber);

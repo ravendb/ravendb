@@ -41,6 +41,12 @@ class FakeSocket implements WaSocket {
         return "ABCD1234";
     }
 
+    iqErrorListener: ((reason: string) => void) | null = null;
+
+    onIqError(listener: (reason: string) => void): void {
+        this.iqErrorListener = listener;
+    }
+
     async logout(): Promise<void> {
         this.loggedOut = true;
     }
@@ -158,6 +164,25 @@ describe("Session", () => {
         await session.start();
 
         await fs.access(path.join(authDir, "creds.json"));
+    });
+
+    it("reports the rejection when whatsapp refuses the pairing code request", async () => {
+        const { session, socket, authDir } = await makeSession();
+        cleanup.push(() => session.stop(), () => fs.rm(authDir, { recursive: true, force: true }));
+
+        session.setPairingPhoneNumber("48123456789");
+        await session.start();
+        socket().emit("connection.update", { qr: "QR" });
+        await tick();
+        assert.equal(session.status().pairingCode, "ABCD1234");
+
+        socket().iqErrorListener?.("400 bad-request");
+        await tick();
+
+        const status = session.status();
+        assert.equal(status.state, "disconnected");
+        assert.equal(status.pairingCode, null);
+        assert.match(status.lastError ?? "", /400 bad-request/);
     });
 
     it("stops without reconnecting when another client replaces the session", async () => {

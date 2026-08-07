@@ -7,6 +7,20 @@ import {
 import type { Logger } from "./logger.js";
 import type { SocketFactory, WaSocket } from "./session.js";
 
+/// <iq type="error"><error code="400" text="bad-request"/></iq> -> "400 bad-request"
+function describeIqError(node: unknown): string {
+    const content = (node as { content?: unknown }).content;
+    const error = Array.isArray(content)
+        ? (content.find((child) => (child as { tag?: string }).tag === "error") as
+              | { attrs?: { code?: string; text?: string } }
+              | undefined)
+        : undefined;
+
+    const code = error?.attrs?.code;
+    const text = error?.attrs?.text;
+    return [code, text].filter(Boolean).join(" ") || "unknown error";
+}
+
 export function baileysSocketFactory(logger: Logger): SocketFactory {
     return async (authDir) => {
         const { state, saveCreds } = await useMultiFileAuthState(authDir);
@@ -39,6 +53,16 @@ export function baileysSocketFactory(logger: Logger): SocketFactory {
         });
 
         socket.ev.on("creds.update", saveCreds);
-        return socket as unknown as WaSocket;
+
+        const waSocket = socket as unknown as WaSocket;
+        waSocket.onIqError = (listener) => {
+            // Baileys fans every received node out over CB:<tag>,<attr>:<value>; an iq
+            // error with no pending query would otherwise only reach the debug log.
+            (socket as unknown as { ws: { on(event: string, cb: (node: unknown) => void): void } }).ws.on(
+                "CB:iq,type:error",
+                (node) => listener(describeIqError(node)),
+            );
+        };
+        return waSocket;
     };
 }
