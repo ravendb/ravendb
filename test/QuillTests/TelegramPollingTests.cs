@@ -44,7 +44,7 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
             declared:
             [
                 new AiAgentParameter("customerId", "scope"),
-                new AiAgentParameter("userIdentifier", "telegram sender"),
+                new AiAgentParameter("telegramUserIdentifier", "telegram sender"),
             ]);
         await using var appGuard = app;
 
@@ -58,7 +58,7 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         Assert.StartsWith($"chats/tg/{channelId}/555/", request.ConversationId);
         Assert.True(AgentRouter.TryNormalizeConversationId(request.ConversationId, out _, out _));
         Assert.Equal("customers/42", request.Parameters["customerId"]);
-        Assert.Equal("777", request.Parameters["userIdentifier"]);
+        Assert.Equal("777", request.Parameters["telegramUserIdentifier"]);
 
         await Mock.WaitUntilAsync(() => Mock.SentMessages.Any(m => m.ChatId == 555), "the reply");
         var typing = Assert.Single(Mock.ChatActions, a => a.ChatId == 555);
@@ -73,7 +73,7 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         var (app, channelId, token) = await ProvisionAsync(declared:
         [
             new AiAgentParameter("telegramUserName", "sender's handle"),
-            new AiAgentParameter("userIdentifier", "telegram sender"),
+            new AiAgentParameter("telegramUserIdentifier", "telegram sender"),
         ]);
         await using var appGuard = app;
 
@@ -82,7 +82,7 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
 
         var request = Assert.Single(Router.Requests);
         Assert.Equal("Alice_42", request.Parameters["telegramUserName"]);
-        Assert.Equal("501", request.Parameters["userIdentifier"]);
+        Assert.Equal("501", request.Parameters["telegramUserIdentifier"]);
 
         await Mock.WaitUntilAsync(() => Mock.SentMessages.Any(m => m.ChatId == 500), "the reply");
 

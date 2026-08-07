@@ -16,7 +16,7 @@ import { withNestedSubmit } from "@/lib/form-utils";
 import { invalidateChannelQueries } from "@/lib/query-invalidation";
 import type { FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
 
-const AUTO_BOUND_PARAMETERS = new Set(["useridentifier", "telegramusername"]);
+const AUTO_BOUND_PARAMETERS = new Set(["telegramuseridentifier", "telegramusername"]);
 
 const telegramChannelSchema = z.object({
     agentId: z.string().min(1, "Select an agent to route conversations to"),

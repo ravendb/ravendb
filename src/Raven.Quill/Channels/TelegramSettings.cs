@@ -2,12 +2,12 @@ namespace Raven.Quill.Channels;
 
 internal sealed class TelegramSettings
 {
-    internal const string UserIdentifierParameterName = "UserIdentifier";
+    internal const string TelegramUserIdentifierParameterName = "TelegramUserIdentifier";
 
     internal const string TelegramUsernameParameterName = "TelegramUsername";
 
     internal static bool IsAutoBoundParameter(string name) =>
-        string.Equals(name, UserIdentifierParameterName, StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(name, TelegramUserIdentifierParameterName, StringComparison.OrdinalIgnoreCase) ||
         string.Equals(name, TelegramUsernameParameterName, StringComparison.OrdinalIgnoreCase);
 
     internal static string RedactToken(string? token)
