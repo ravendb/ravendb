@@ -16,7 +16,7 @@ import { withNestedSubmit } from "@/lib/form-utils";
 import { invalidateChannelQueries } from "@/lib/query-invalidation";
 import type { FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
 
-const USER_IDENTIFIER_PARAMETER = "useridentifier";
+const AUTO_BOUND_PARAMETERS = new Set(["useridentifier", "telegramusername"]);
 
 const telegramChannelSchema = z.object({
     agentId: z.string().min(1, "Select an agent to route conversations to"),
@@ -50,14 +50,14 @@ export function TelegramChannelForm({
 
     const agents = agentsQuery.data ?? [];
     const selectedAgent = agents.find((candidate) => candidate.agentId === selectedAgentId);
-    const hasUserIdentifier = (selectedAgent?.parameters ?? []).some(
-        (name) => name.toLowerCase() === USER_IDENTIFIER_PARAMETER,
+    const autoBoundParameters = (selectedAgent?.parameters ?? []).filter((name) =>
+        AUTO_BOUND_PARAMETERS.has(name.toLowerCase()),
     );
 
     const { replace } = parameterFields;
     useEffect(() => {
         const selected = (agentsQuery.data ?? []).find((candidate) => candidate.agentId === selectedAgentId);
-        const names = (selected?.parameters ?? []).filter((name) => name.toLowerCase() !== USER_IDENTIFIER_PARAMETER);
+        const names = (selected?.parameters ?? []).filter((name) => !AUTO_BOUND_PARAMETERS.has(name.toLowerCase()));
         replace(names.map((name) => ({ name, value: "" })));
     }, [replace, selectedAgentId, agentsQuery.data]);
 
@@ -149,10 +149,17 @@ export function TelegramChannelForm({
                                     ))}
                                 </div>
                             )}
-                            {hasUserIdentifier && (
+                            {autoBoundParameters.length > 0 && (
                                 <p className="text-xs text-muted-foreground">
-                                    The agent&apos;s <span className="font-medium">UserIdentifier</span> parameter is
-                                    bound automatically to the Telegram user sending each message.
+                                    The agent&apos;s{" "}
+                                    {autoBoundParameters.map((name, index) => (
+                                        <span key={name}>
+                                            {index > 0 && " and "}
+                                            <span className="font-medium">{name}</span>
+                                        </span>
+                                    ))}{" "}
+                                    {autoBoundParameters.length === 1 ? "parameter is" : "parameters are"} bound
+                                    automatically from the Telegram user sending each message.
                                 </p>
                             )}
                         </>
