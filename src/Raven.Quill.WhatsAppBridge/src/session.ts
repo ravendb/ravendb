@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import path from "node:path";
 import type { Logger } from "./logger.js";
 import { classifyMessage, type ClassifiedMessage } from "./messages.js";
 
@@ -110,6 +111,8 @@ export class Session {
         this.qr = null;
         this.hasIssuedQr = false;
         this.pairingCode = null;
+
+        await this.discardUnlinkedCredentialsAsync();
 
         let socket: WaSocket;
         try {
@@ -271,6 +274,30 @@ export class Session {
         this.lastError = disconnectMessage(update.lastDisconnect?.error);
         if (!this.stopped)
             this.scheduleReconnect();
+    }
+
+    /// requestPairingCode writes creds.me before WhatsApp has accepted anything, so a
+    /// rejected request leaves a "me" with no linked account behind. Baileys picks the
+    /// login path over registration whenever creds.me exists, so the next socket tries
+    /// to log in as an unregistered device, WhatsApp answers 401, and every later
+    /// attempt - QR included - is wedged. Only a completed pairing writes creds.account.
+    private async discardUnlinkedCredentialsAsync(): Promise<void> {
+        let creds: { me?: unknown; account?: unknown };
+        try {
+            creds = JSON.parse(await fs.readFile(path.join(this.authDir, "creds.json"), "utf-8"));
+        } catch {
+            // absent or unreadable: the socket factory writes a fresh set
+            return;
+        }
+
+        if (!creds.me || creds.account)
+            return;
+
+        this.logger.warn(
+            { database: this.database, channelId: this.channelId },
+            "discarding half-finished whatsapp pairing credentials",
+        );
+        await this.wipeAuthDir();
     }
 
     private async requestPairingCodeAsync(phoneNumber: string): Promise<void> {

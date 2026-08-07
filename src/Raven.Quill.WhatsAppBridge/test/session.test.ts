@@ -131,6 +131,35 @@ describe("Session", () => {
         await assert.rejects(fs.access(authDir));
     });
 
+    it("discards half-finished pairing credentials so the next socket registers", async () => {
+        const { session, authDir } = await makeSession();
+        cleanup.push(() => session.stop(), () => fs.rm(authDir, { recursive: true, force: true }));
+
+        // what a rejected requestPairingCode leaves behind: a "me" and no linked account
+        await fs.writeFile(
+            path.join(authDir, "creds.json"),
+            JSON.stringify({ me: { id: "48123456789@s.whatsapp.net" } }),
+        );
+
+        await session.start();
+
+        await assert.rejects(fs.access(path.join(authDir, "creds.json")));
+    });
+
+    it("keeps the credentials of a completed pairing", async () => {
+        const { session, authDir } = await makeSession();
+        cleanup.push(() => session.stop(), () => fs.rm(authDir, { recursive: true, force: true }));
+
+        await fs.writeFile(
+            path.join(authDir, "creds.json"),
+            JSON.stringify({ me: { id: "48123456789@s.whatsapp.net" }, account: { details: "AAA=" } }),
+        );
+
+        await session.start();
+
+        await fs.access(path.join(authDir, "creds.json"));
+    });
+
     it("stops without reconnecting when another client replaces the session", async () => {
         const { session, sockets, socket, authDir } = await makeSession();
         cleanup.push(() => session.stop(), () => fs.rm(authDir, { recursive: true, force: true }));
