@@ -90,7 +90,7 @@ internal sealed class WhatsAppInboundProcessor(
 
         var parameters = new Dictionary<string, string>(channel.WhatsApp?.Parameters ?? new Dictionary<string, string>());
         var identifierParameter = config.Parameters?.FirstOrDefault(p =>
-            string.Equals(p.Name, AgentParameters.UserIdentifierParameterName, StringComparison.OrdinalIgnoreCase));
+            string.Equals(p.Name, WhatsAppSettings.WhatsAppUserIdentifierParameterName, StringComparison.OrdinalIgnoreCase));
         if (identifierParameter is not null &&
             parameters.Keys.Any(k => string.Equals(k, identifierParameter.Name, StringComparison.OrdinalIgnoreCase)) == false)
         {

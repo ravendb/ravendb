@@ -17,7 +17,7 @@ import { invalidateChannelQueries } from "@/lib/query-invalidation";
 import { WhatsAppPairingPanel } from "@/pages/apps/channels/whatsapp-pairing-panel";
 import type { FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
 
-const USER_IDENTIFIER_PARAMETER = "useridentifier";
+const WHATSAPP_USER_IDENTIFIER_PARAMETER = "whatsappuseridentifier";
 
 const whatsAppChannelSchema = z.object({
     agentId: z.string().min(1, "Select an agent to route conversations to"),
@@ -53,14 +53,16 @@ export function WhatsAppPersonalChannelForm({
 
     const agents = agentsQuery.data ?? [];
     const selectedAgent = agents.find((candidate) => candidate.agentId === selectedAgentId);
-    const hasUserIdentifier = (selectedAgent?.parameters ?? []).some(
-        (name) => name.toLowerCase() === USER_IDENTIFIER_PARAMETER,
+    const hasWhatsAppUserIdentifier = (selectedAgent?.parameters ?? []).some(
+        (name) => name.toLowerCase() === WHATSAPP_USER_IDENTIFIER_PARAMETER,
     );
 
     const { replace } = parameterFields;
     useEffect(() => {
         const selected = (agentsQuery.data ?? []).find((candidate) => candidate.agentId === selectedAgentId);
-        const names = (selected?.parameters ?? []).filter((name) => name.toLowerCase() !== USER_IDENTIFIER_PARAMETER);
+        const names = (selected?.parameters ?? []).filter(
+            (name) => name.toLowerCase() !== WHATSAPP_USER_IDENTIFIER_PARAMETER,
+        );
         replace(names.map((name) => ({ name, value: "" })));
     }, [replace, selectedAgentId, agentsQuery.data]);
 
@@ -163,10 +165,10 @@ export function WhatsAppPersonalChannelForm({
                                     ))}
                                 </div>
                             )}
-                            {hasUserIdentifier && (
+                            {hasWhatsAppUserIdentifier && (
                                 <p className="text-xs text-muted-foreground">
-                                    The agent&apos;s <span className="font-medium">UserIdentifier</span> parameter is
-                                    bound automatically to the phone number sending each message.
+                                    The agent&apos;s <span className="font-medium">WhatsAppUserIdentifier</span>{" "}
+                                    parameter is bound automatically to the phone number sending each message.
                                 </p>
                             )}
                         </>

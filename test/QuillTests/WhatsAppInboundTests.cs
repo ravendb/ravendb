@@ -82,7 +82,7 @@ public class WhatsAppInboundTests(ITestOutputHelper output, QuillWhatsAppFixture
         await using var app = await NewAppAsync();
         var agentId = await SeedAgentAsync(app,
             new AiAgentParameter("customerId", "scope"),
-            new AiAgentParameter("UserIdentifier", "the whatsapp sender"));
+            new AiAgentParameter("WhatsAppUserIdentifier", "the whatsapp sender"));
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.WhatsAppPersonal, agentId, null,
             Parameters: new Dictionary<string, string> { ["customerId"] = "customers/1" }));
@@ -92,7 +92,7 @@ public class WhatsAppInboundTests(ITestOutputHelper output, QuillWhatsAppFixture
         await Bridge.WaitUntilAsync(() => Bridge.SentMessages.Count > 0, "the reply");
 
         var request = Assert.Single(Router.Requests);
-        Assert.Equal("48123456789", request.Parameters["UserIdentifier"]);
+        Assert.Equal("48123456789", request.Parameters["WhatsAppUserIdentifier"]);
         Assert.Equal("customers/1", request.Parameters["customerId"]);
 
         await app.DeleteChannelAsync(created.ChannelId);

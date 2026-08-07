@@ -97,13 +97,13 @@ public class WhatsAppChannelEndpointsTests(ITestOutputHelper output, QuillWhatsA
         await using var app = await NewAppAsync();
         var agentId = await SeedAgentAsync(app,
             new AiAgentParameter("customerId", "the customer to scope queries to"),
-            new AiAgentParameter("UserIdentifier", "the whatsapp sender"));
+            new AiAgentParameter("WhatsAppUserIdentifier", "the whatsapp sender"));
 
         var e = await Assert.ThrowsAsync<QuillHttpException>(() =>
             app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.WhatsAppPersonal, agentId, null)));
         Assert.Equal(HttpStatusCode.BadRequest, e.StatusCode);
         Assert.Contains("missing agent parameter(s): customerId", e.Body);
-        Assert.DoesNotContain("UserIdentifier", e.Body);
+        Assert.DoesNotContain("WhatsAppUserIdentifier", e.Body);
 
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.WhatsAppPersonal, agentId, null,
