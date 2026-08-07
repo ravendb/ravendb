@@ -137,18 +137,23 @@ public sealed class QuillTelegramFixture : QuillCollectionHost
 {
     public MockTelegramBotApi Mock { get; private set; } = null!;
 
+    /// Only used by the tests that run the real router; the pipeline tests never reach an LLM.
+    public MockOpenAiApi Llm { get; private set; } = null!;
+
     internal FakeAgentRouter Router { get; } = new();
 
     public override async ValueTask InitializeAsync()
     {
         await base.InitializeAsync();
         Mock = await MockTelegramBotApi.StartAsync();
+        Llm = await MockOpenAiApi.StartAsync();
     }
 
     public override async ValueTask DisposeAsync()
     {
         await base.DisposeAsync();
         await Mock.DisposeAsync();
+        await Llm.DisposeAsync();
     }
 }
 
@@ -181,11 +186,25 @@ public abstract class QuillTelegramTestBase(ITestOutputHelper output, QuillTeleg
             setupPackagePath: setupPackagePath, seedChatConnectionString: seedChatConnectionString,
             longLived: longLived);
 
+    protected MockOpenAiApi Llm => fixture.Llm;
+
+    /// A host that keeps the real <see cref="Raven.Quill.Agents.AgentRouter"/> so a Telegram message drives an
+    /// actual agent run against <see cref="MockOpenAiApi"/>, instead of stopping at the recording fake.
+    protected Task<QuillHost> NewRealRouterHostAsync() =>
+        base.NewHostAsync(
+            configure: opts =>
+            {
+                opts.TelegramApiUrl = fixture.Mock.BaseAddress;
+                opts.TelegramEditDebounce = TimeSpan.FromMilliseconds(50);
+            },
+            seedChatConnectionString: false);
+
     public override async ValueTask InitializeAsync()
     {
         await base.InitializeAsync();
         Mock.Reset();
         Router.Reset();
+        Llm.Reset();
     }
 
     /// Unique per test so captures/counters on the shared mock never bleed across tests in the collection.
