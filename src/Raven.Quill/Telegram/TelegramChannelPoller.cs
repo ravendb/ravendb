@@ -205,6 +205,21 @@ internal sealed class TelegramChannelPoller
             parameters[usernameParameter.Name] = username;
         }
 
+        // the channel binds parameters once at provision time, so an agent that gained a parameter
+        // since then would reach the server unbound; refuse here instead of scoping on a value we
+        // never supplied
+        var unbound = (config.Parameters ?? [])
+            .Select(p => p.Name)
+            .Where(name => string.IsNullOrWhiteSpace(name) == false && parameters.ContainsKey(name) == false)
+            .ToArray();
+        if (unbound.Length > 0)
+        {
+            await SendPlainAsync(chatId,
+                "This assistant is not fully configured yet. Please contact whoever set up this bot.", ct);
+            throw new InvalidOperationException(
+                $"agent '{config.Identifier}' has unbound parameter(s): {string.Join(", ", unbound)}");
+        }
+
         try
         {
             await _bot.SendChatAction(chatId, ChatAction.Typing, cancellationToken: ct);

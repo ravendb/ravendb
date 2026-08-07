@@ -124,6 +124,36 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Parameter_added_after_provisioning_is_refused_before_the_agent_runs()
+    {
+        var (app, channelId, token) = await ProvisionAsync(
+            parameters: new Dictionary<string, string> { ["customerId"] = "customers/42" },
+            declared: [new AiAgentParameter("customerId", "scope")]);
+        await using var appGuard = app;
+
+        var agentId = (await app.GetAgentsAsync()).Single().AgentId;
+        var config = await app.GetAgentAsync(agentId);
+        config.Parameters.Add(new AiAgentParameter("region", "added after the channel was provisioned"));
+        await app.EditAgentAsync(config);
+
+        const long chatId = 530;
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 530, "hello");
+        await Mock.WaitUntilAsync(
+            () => Mock.SentMessages.Any(m => m.ChatId == chatId && m.Text.Contains("not fully configured")),
+            "the misconfiguration notice");
+
+        Assert.Empty(Router.Requests);
+        Assert.DoesNotContain(Mock.ChatActions, a => a.ChatId == chatId);
+
+        await Mock.WaitUntilAsync(
+            () => app.GetTelegramHealthAsync().Result.Single().ErrorCount >= 1, "the health error");
+        var health = Assert.Single(await app.GetTelegramHealthAsync());
+        Assert.Contains("region", health.LastError);
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Processed_updates_are_confirmed_and_never_redelivered()
     {
         var (app, channelId, token) = await ProvisionAsync();
