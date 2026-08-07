@@ -6,6 +6,6 @@ namespace QuillTests.E2E.Fixtures;
 internal static class ActionFixtures
 {
     // url is nullable so the validator tests can build the bindings they expect to be rejected
-    public static WebhookBinding Webhook(string? url, string? secret = null) =>
-        new() { Url = url, Secret = secret };
+    public static WebhookBinding Webhook(string? url, string? secret = null, int? maxResponseSize = null) =>
+        new() { Url = url, Secret = secret, MaxResponseSize = maxResponseSize };
 }

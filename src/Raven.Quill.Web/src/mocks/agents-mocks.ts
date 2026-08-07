@@ -85,7 +85,7 @@ export const sampleAgentConfiguration: AiAgentConfiguration = {
 };
 
 export const sampleActionBindings: Record<string, WebhookBinding> = {
-    create_ticket: { url: "https://hooks.demo-shop.example/tickets", secret: "s3cret" },
+    create_ticket: { url: "https://hooks.demo-shop.example/tickets", secret: "s3cret", maxResponseSize: 2048 },
 };
 
 export const sampleAgentDetails: AgentDetailsResponse = {

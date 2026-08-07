@@ -3,7 +3,10 @@ import { Plus, Webhook } from "lucide-react";
 import { Button } from "@/components/shadcn/ui/button";
 import { FormInput } from "@/components/form/form-input";
 import { FormTextarea } from "@/components/form/form-textarea";
-import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
+import {
+    DEFAULT_ACTION_RESPONSE_BYTES,
+    type AgentFormData,
+} from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
 import { emptyAgentAction } from "@/pages/setup/add-capability-wizard/agent-config-form";
 import { ConfigItemCard, ConfigListEmpty } from "@/pages/setup/add-capability-wizard/steps/review/config-item-card";
 import { SampleObjectAndSchemaTabs } from "@/pages/setup/add-capability-wizard/steps/review/sample-object-and-schema-tabs";
@@ -105,6 +108,14 @@ function ActionItem({ index, remove }: { index: number; remove: () => void }) {
                 label="Secret"
                 placeholder="Optional"
                 description="Sent as the X-Quill-Secret header so the receiver can verify the call came from Quill."
+            />
+            <FormInput
+                control={control}
+                name={`review.actions.${index}.maxResponseSize`}
+                type="number"
+                label="Max response size (optional)"
+                placeholder={`${DEFAULT_ACTION_RESPONSE_BYTES} (default)`}
+                description="Bytes of the response passed back to the agent. The rest is dropped and marked truncated, and every byte kept costs tokens."
             />
         </ConfigItemCard>
     );

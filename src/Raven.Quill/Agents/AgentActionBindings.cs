@@ -5,6 +5,8 @@ public sealed class WebhookBinding
     public string? Url { get; set; }
 
     public string? Secret { get; set; }
+
+    public int? MaxResponseSize { get; set; }
 }
 
 internal sealed class AgentActionBindings

@@ -112,10 +112,13 @@ internal static class AgentConfigValidator
                 errors.Add("action description is required");
             }
 
-            if (string.IsNullOrWhiteSpace(action.ParametersSchema) &&
-                string.IsNullOrWhiteSpace(action.ParametersSampleObject))
+            var hasSchema = string.IsNullOrWhiteSpace(action.ParametersSchema) == false;
+            var hasSample = string.IsNullOrWhiteSpace(action.ParametersSampleObject) == false;
+            if (hasSchema == hasSample)
             {
-                errors.Add($"action '{action.Name}': parametersSampleObject or parametersSchema is required");
+                errors.Add(hasSchema
+                    ? $"action '{action.Name}': set parametersSampleObject or parametersSchema, not both"
+                    : $"action '{action.Name}': parametersSampleObject or parametersSchema is required");
             }
 
             if (byName.Remove(action.Name, out var binding) == false)

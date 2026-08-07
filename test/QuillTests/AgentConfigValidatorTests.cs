@@ -170,6 +170,17 @@ public class AgentConfigValidatorTests(ITestOutputHelper output) : NoDisposalNee
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public void ValidateActions_rejects_a_schema_and_a_sample_object_together()
+    {
+        var config = ConfigWith(("create_ticket", "files a ticket"));
+        config.Actions[0].ParametersSchema = """{"type":"object"}""";
+
+        // the sample object is already set, so both are: the server would silently ignore one of them
+        Assert.Contains("action 'create_ticket': set parametersSampleObject or parametersSchema, not both",
+            ErrorsOf(config, new() { ["create_ticket"] = Webhook("https://h/x") }));
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public void ValidateActions_reports_bindings_that_collide_once_matched_without_case()
     {
         var config = ConfigWith(("create_ticket", "files a ticket"));

@@ -47,7 +47,7 @@ internal sealed class AgentRouter(
 
         conversation.AddUserPrompt(request.Prompt);
 
-        await RegisterActionsAsync(conversation, request, config, ct);
+        conversation.OnUnhandledAction += static _ => Task.CompletedTask; // we handle that manually
 
         var replyField = AgentOutputShape.ResolveReplyField(config);
 
@@ -56,10 +56,18 @@ internal sealed class AgentRouter(
             async chunk => await onChunk(chunk),
             ct);
 
-        // every action gets a response above, so the client's turn loop only returns once done
-        if (result.Status == AiConversationResult.ActionRequired)
-            throw new InvalidOperationException(
-                $"conversation '{conversation.Id}' still requires actions after the turn completed");
+        using var session = store.OpenAsyncSession(request.Database);
+        var bindings = await session.LoadAsync<AgentActionBindings>(AgentActionBindings.IdFor(config.Identifier), ct);
+
+        while (result.Status == AiConversationResult.ActionRequired)
+        {
+            await RunActionsAsync(conversation, config, bindings, ct);
+
+            result = await conversation.StreamAsync<Dictionary<string, object>>(
+                replyField,
+                async chunk => await onChunk(chunk),
+                ct);
+        }
 
         var reply = AgentOutputShape.ExtractReplyText(result.Answer, replyField);
 
@@ -68,43 +76,29 @@ internal sealed class AgentRouter(
         return new AgentRunResult(new { reply }, conversation.Id);
     }
 
-    private async Task RegisterActionsAsync(
-        IAiConversationOperations conversation, AgentRequest request, AiAgentConfiguration config,
-        CancellationToken ct)
+    private async Task RunActionsAsync(
+        IAiConversationOperations conversation, AiAgentConfiguration config,
+        AgentActionBindings bindings, CancellationToken ct)
     {
-        conversation.OnUnhandledAction += args =>
-        {
-            logger.LogWarning(
-                "Agent '{AgentId}' invoked action '{Action}' (toolId {ToolId}) with no binding configured",
-                config.Identifier, args.Action.Name, args.Action.ToolId);
+        var pending = conversation.RequiredActions().ToList();
+        var responses = await Task.WhenAll(pending.Select(action => RunActionAsync(action, config, bindings, ct)));
 
-            conversation.AddActionResponse(args.Action.ToolId,
-                $"action failed: no binding configured for '{args.Action.Name}'");
-            return Task.CompletedTask;
-        };
+        for (var i = 0; i < pending.Count; i++)
+            conversation.AddActionResponse(pending[i].ToolId, responses[i]);
+    }
 
-        if (config.Actions is not { Count: > 0 })
-            return;
+    private Task<string> RunActionAsync(
+        AiAgentActionRequest action, AiAgentConfiguration config,
+        AgentActionBindings bindings, CancellationToken ct)
+    {
+        if (bindings?.Bindings?.TryGetValue(action.Name, out var binding) == true)
+            return actionExecutor.ExecuteAsync(action, binding, ct);
 
-        AgentActionBindings? bindings;
-        using (var session = store.OpenAsyncSession(request.Database))
-            bindings = await session.LoadAsync<AgentActionBindings>(AgentActionBindings.IdFor(config.Identifier), ct);
+        logger.LogWarning(
+            "Agent '{AgentId}' invoked action '{Action}' (toolId {ToolId}) with no binding configured",
+            config.Identifier, action.Name, action.ToolId);
 
-        if (bindings is null)
-            return;
-
-        foreach (var action in config.Actions)
-        {
-            if (bindings.Bindings.TryGetValue(action.Name, out var binding) == false)
-                continue;
-
-            conversation.Receive(action.Name, async actionRequest =>
-            {
-                var response = await actionExecutor.ExecuteAsync(actionRequest, binding, ct);
-
-                conversation.AddActionResponse(actionRequest.ToolId, response);
-            });
-        }
+        return Task.FromResult($"action failed: no binding configured for '{action.Name}'");
     }
 
     internal static async Task UpsertPreviewAsync(

@@ -53,8 +53,10 @@ public class AgentActionE2ETests(ITestOutputHelper output, QuillCollectionHost c
         var ndjson = await h.App.SendEmbedChatAsync(h.Token, "my laptop is broken");
 
         Assert.Equal("Sorry, I could not file that", ReplyOf(ndjson));
-        Assert.Equal("""action failed: webhook returned 500 body: {"error":"boom"}""",
-            mock.LastToolMessageContent());
+
+        var toolMessage = mock.LastToolMessageContent();
+        Assert.StartsWith("action failed: webhook returned 500", toolMessage);
+        Assert.EndsWith("""{"error":"boom"}""", toolMessage);
     }
 
     [RavenFact(RavenTestCategory.Quill)]

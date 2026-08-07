@@ -1759,6 +1759,8 @@ export interface components {
         WebhookBinding: {
             url?: null | string;
             secret?: null | string;
+            /** Format: int32 */
+            maxResponseSize?: null | number;
         };
         WizardError: {
             message: string;
