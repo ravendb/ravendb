@@ -69,6 +69,9 @@ public sealed class MockQuillServices : IAsyncDisposable
 
     public (int Status, string Body) WebhookResponse { get; set; } = (200, """{"ok":true}""");
 
+    /// Extra response headers the receiver sets, e.g. Location or Retry-After.
+    public Dictionary<string, string> WebhookResponseHeaders { get; } = new(StringComparer.OrdinalIgnoreCase);
+
     /// Simulates a slow receiver.
     public TimeSpan WebhookDelay { get; set; }
 
@@ -171,6 +174,7 @@ public sealed class MockQuillServices : IAsyncDisposable
         _consentGiven = false;
 
         WebhookResponse = (200, """{"ok":true}""");
+        WebhookResponseHeaders.Clear();
         WebhookDelay = TimeSpan.Zero;
         _turns.Clear();
         lock (_sync)
@@ -239,6 +243,9 @@ public sealed class MockQuillServices : IAsyncDisposable
 
             if (WebhookDelay > TimeSpan.Zero)
                 await Task.Delay(WebhookDelay, ctx.RequestAborted);
+
+            foreach (var (name, value) in WebhookResponseHeaders)
+                ctx.Response.Headers[name] = value;
 
             var (status, responseBody) = WebhookResponse;
             return Results.Content(responseBody, "application/json", statusCode: status);

@@ -17,6 +17,12 @@ export const AGENT_PARAMETER_POLICIES: AiAgentParameterPolicy[] = ["Default", "F
 // Tri-state for the optional boolean query-tool options ("Default" lets the server decide).
 export const QUERY_TOOL_OPTION_CHOICES = ["Default", "True", "False"] as const;
 
+// How much of a webhook's response may be fed back to the model. The server defaults to 4 KB when the
+// binding leaves it empty; these bounds are the form's own, since the API does not range-check the field.
+export const DEFAULT_ACTION_RESPONSE_BYTES = 4 * 1024;
+const MIN_ACTION_RESPONSE_BYTES = 256;
+const MAX_ACTION_RESPONSE_BYTES = 64 * 1024;
+
 const agentParameterSchema = z.object({
     name: z.string().trim().min(1, "Parameter name is required"),
     type: z.enum(AGENT_PARAMETER_TYPES),
@@ -47,23 +53,40 @@ const agentQueryToolSchema = z.object({
 // An action the LLM can trigger, together with the webhook Quill calls for it. The two are
 // edited as one row so they cannot drift apart — the server rejects an action without a
 // binding, and a binding without an action.
-const agentActionSchema = z.object({
-    name: z
-        .string()
-        .trim()
-        .min(1, "Action name is required")
-        .regex(/^[a-zA-Z0-9_-]+$/, "Action name can only contain letters, numbers, underscores and hyphens"),
-    description: z.string().trim().min(1, "Description is required"),
-    parametersSampleObject: z.string(),
-    parametersSchema: z.string(),
-    url: z
-        .string()
-        .trim()
-        .min(1, "Webhook URL is required")
-        .refine(isHttpUrl, "Webhook URL must be an absolute http:// or https:// address"),
-    secret: z.string(),
-    isExpanded: z.boolean(),
-});
+const agentActionSchema = z
+    .object({
+        name: z
+            .string()
+            .trim()
+            .min(1, "Action name is required")
+            .regex(/^[a-zA-Z0-9_-]+$/, "Action name can only contain letters, numbers, underscores and hyphens"),
+        description: z.string().trim().min(1, "Description is required"),
+        parametersSampleObject: z.string(),
+        parametersSchema: z.string(),
+        url: z
+            .string()
+            .trim()
+            .min(1, "Webhook URL is required")
+            .refine(isHttpUrl, "Webhook URL must be an absolute http:// or https:// address"),
+        secret: z.string(),
+        maxResponseSize: z
+            .number()
+            .int()
+            .min(MIN_ACTION_RESPONSE_BYTES, `Cap must be at least ${MIN_ACTION_RESPONSE_BYTES} bytes`)
+            .max(MAX_ACTION_RESPONSE_BYTES, `Cap must be at most ${MAX_ACTION_RESPONSE_BYTES} bytes`)
+            .nullable(),
+        isExpanded: z.boolean(),
+    })
+    .superRefine((action, ctx) => {
+        // the server takes the schema and ignores the sample object when both are set, so it rejects the pair
+        if (action.parametersSampleObject.trim() && action.parametersSchema.trim()) {
+            ctx.addIssue({
+                code: "custom",
+                message: "Provide a sample parameters object or a schema, not both",
+                path: ["parametersSchema"],
+            });
+        }
+    });
 
 function isHttpUrl(value: string) {
     try {

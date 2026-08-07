@@ -66,6 +66,7 @@ export function emptyAgentAction(): AgentActionFormData {
         parametersSchema: "",
         url: "",
         secret: "",
+        maxResponseSize: null,
         isExpanded: true,
     };
 }
@@ -122,6 +123,7 @@ function toFormAction(action: AiAgentToolAction, binding: WebhookBinding | undef
         parametersSchema: action.parametersSchema ?? "",
         url: binding?.url ?? "",
         secret: binding?.secret ?? "",
+        maxResponseSize: binding?.maxResponseSize ?? null,
         isExpanded: false,
     };
 }
@@ -235,7 +237,11 @@ export function buildActionBindings(values: Pick<AgentFormData, "review">): Reco
     return Object.fromEntries(
         values.review.actions.map((action) => [
             action.name.trim(),
-            { url: action.url.trim(), secret: action.secret.trim() || null },
+            {
+                url: action.url.trim(),
+                secret: action.secret.trim() || null,
+                maxResponseSize: action.maxResponseSize,
+            },
         ]),
     );
 }

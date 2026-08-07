@@ -11,14 +11,33 @@ internal sealed class WebhookActionExecutor(
 
     internal const string SecretHeader = "X-Quill-Secret";
 
-    internal const int MaxResponseBytes = 4 * 1024;
-
-    internal const string TruncationMarker = "\n[truncated]";
+    private static readonly string[] NotableHeaders =
+    [
+        "RateLimit-Limit",
+        "X-RateLimit-Limit",
+        "RateLimit-Remaining",
+        "X-RateLimit-Remaining",
+        "RateLimit-Reset",
+        "Retry-After",
+        "Deprecation",
+        "Sunset",
+        "Link",
+        "X-Request-ID",
+        "X-Correlation-ID",
+        "Date",
+        "Last-Modified",
+        "Location"
+    ];
 
     public async Task<string> ExecuteAsync(AiAgentActionRequest action, WebhookBinding binding, CancellationToken ct)
     {
-        // one byte past the cap, so filling it is proof the body really was longer than the cap
-        var buffer = ArrayPool<byte>.Shared.Rent(MaxResponseBytes + 1);
+        var maxResponseSize = binding.MaxResponseSize ?? 4 * 1024;
+        if (maxResponseSize <= 0)
+            maxResponseSize = 4 * 1024;
+        if (maxResponseSize > 256 * 1024)
+            maxResponseSize = 256 * 1024;
+
+        var buffer = ArrayPool<byte>.Shared.Rent(maxResponseSize);
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Post, binding.Url);
@@ -31,36 +50,16 @@ internal sealed class WebhookActionExecutor(
             await using var stream = await response.Content.ReadAsStreamAsync(ct);
 
             var read = await stream.ReadAtLeastAsync(
-                buffer.AsMemory(0, MaxResponseBytes + 1), MaxResponseBytes + 1, throwOnEndOfStream: false, ct);
+                buffer.AsMemory(0, maxResponseSize), maxResponseSize, throwOnEndOfStream: false, ct);
 
-            var truncated = read > MaxResponseBytes;
-            if (truncated)
-            {
-                read = MaxResponseBytes;
-            }
-
+            var truncated = read == maxResponseSize;
             if (Rune.DecodeLastFromUtf8(buffer.AsSpan(0, read), out _, out var partial) == OperationStatus.NeedMoreData)
             {
                 read -= partial;
             }
 
             var body = Encoding.UTF8.GetString(buffer, 0, read);
-            if (truncated)
-            {
-                body += TruncationMarker;
-            }
-
-            if (response.IsSuccessStatusCode)
-            {
-                if (body.Length == 0)
-                    return "action succeeded: with no content";
-
-                return body;
-            }
-
-            logger.LogWarning("Action webhook '{Action}' returned {Status}. Body: {Body}",
-                action.Name, (int)response.StatusCode, body);
-            return $"action failed: webhook returned {(int)response.StatusCode} body: {body}";
+            return Describe(response, body, truncated);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested == false)
         {
@@ -76,5 +75,32 @@ internal sealed class WebhookActionExecutor(
         {
             ArrayPool<byte>.Shared.Return(buffer);
         }
+    }
+   
+    private static string Describe(HttpResponseMessage response, string body, bool truncated)
+    {
+        var outcome = response.IsSuccessStatusCode ? "succeeded" : "failed";
+        var description =
+            new StringBuilder($"action {outcome}: webhook returned {(int)response.StatusCode}");
+
+        if (body.Length == 0)
+            description.Append(" with no content");
+
+        foreach (var name in NotableHeaders)
+        {
+            if (response.Headers.TryGetValues(name, out var values) ||
+                response.Content.Headers.TryGetValues(name, out values))
+            {
+                description.Append('\n').Append(name).Append(": ").Append(string.Join(", ", values));
+            }
+        }
+
+        if (body.Length > 0)
+            description.Append("\n\n").Append(body);
+
+        if (truncated)
+            description.Append("\n[truncated]");
+
+        return description.ToString();
     }
 }
