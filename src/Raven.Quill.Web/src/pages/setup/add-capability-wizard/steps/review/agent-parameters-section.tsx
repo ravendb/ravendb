@@ -29,9 +29,26 @@ const PARAMETER_POLICY_OPTIONS: FormSelectOption<AgentParameterFormData["policy"
     { value: "ForbidModelGeneration", label: "Forbid model generation" },
 ];
 
+const WELL_KNOWN_CHANNEL_PARAMETERS = [
+    {
+        name: "UserIdentifier",
+        description: "The Telegram user id of the message sender, bound automatically by Telegram channels.",
+    },
+    {
+        name: "TelegramUsername",
+        description: "The Telegram username of the message sender, bound automatically by Telegram channels.",
+    },
+];
+
 export function AgentParametersSection({ className }: { className?: string }) {
     const { control } = useFormContext<AgentFormData>();
     const fieldArray = useFieldArray({ control, name: "review.parameters" });
+    const parameters = useWatch({ control, name: "review.parameters" }) ?? [];
+
+    const missingWellKnownParameters = WELL_KNOWN_CHANNEL_PARAMETERS.filter(
+        (wellKnown) =>
+            !parameters.some((parameter) => parameter.name.trim().toLowerCase() === wellKnown.name.toLowerCase()),
+    );
 
     return (
         <div className={cn("grid gap-3 rounded-lg border bg-background p-4", className)}>
@@ -52,6 +69,33 @@ export function AgentParametersSection({ className }: { className?: string }) {
                 <div className="grid gap-2">
                     {fieldArray.fields.map((field, index) => (
                         <ParameterItem key={field.id} index={index} remove={() => fieldArray.remove(index)} />
+                    ))}
+                </div>
+            )}
+
+            {missingWellKnownParameters.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
+                        Bound automatically by Telegram channels from the message sender:
+                    </span>
+                    {missingWellKnownParameters.map((wellKnown) => (
+                        <Button
+                            key={wellKnown.name}
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                                fieldArray.append({
+                                    ...emptyAgentParameter(),
+                                    name: wellKnown.name,
+                                    type: "String",
+                                    description: wellKnown.description,
+                                    isExpanded: false,
+                                })
+                            }
+                        >
+                            <Plus />
+                            {wellKnown.name}
+                        </Button>
                     ))}
                 </div>
             )}
