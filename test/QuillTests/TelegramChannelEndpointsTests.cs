@@ -139,6 +139,31 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Provision_exempts_the_telegram_username_parameter()
+    {
+        await using var app = await NewAppAsync();
+        var agentId = await SeedAgentAsync(app,
+            new AiAgentParameter("customerId", "the customer to scope queries to"),
+            new AiAgentParameter("UserIdentifier", "the telegram user id"),
+            new AiAgentParameter("TelegramUsername", "the telegram username"));
+
+        var e = await Assert.ThrowsAsync<QuillHttpException>(() =>
+            app.ProvisionChannelAsync(new ProvisionChannelRequest(
+                ChannelType.Telegram, agentId, null, BotToken: NewBotToken())));
+        Assert.Equal(HttpStatusCode.BadRequest, e.StatusCode);
+        Assert.Contains("missing agent parameter(s): customerId", e.Body);
+        Assert.DoesNotContain("TelegramUsername", e.Body);
+        Assert.DoesNotContain("UserIdentifier", e.Body);
+
+        var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
+            ChannelType.Telegram, agentId, null, BotToken: NewBotToken(),
+            Parameters: new Dictionary<string, string> { ["customerId"] = "customers/1" }));
+        Assert.NotEmpty(created.ChannelId);
+
+        await app.DeleteChannelAsync(created.ChannelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Provision_and_list_never_contain_the_bot_token()
     {
         await using var app = await NewAppAsync();
