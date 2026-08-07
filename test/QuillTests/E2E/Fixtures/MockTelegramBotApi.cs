@@ -73,26 +73,31 @@ public sealed class MockTelegramBotApi : IAsyncDisposable
         lock (_lock) return _lastOffsets.GetValueOrDefault(token);
     }
 
-    public void EnqueueTextMessage(string token, long chatId, long fromUserId, string text)
+    public void EnqueueTextMessage(string token, long chatId, long fromUserId, string text,
+        string? username = null, string chatType = "private")
     {
         lock (_lock)
         {
+            var from = new JsonObject
+            {
+                ["id"] = fromUserId,
+                ["is_bot"] = false,
+                ["first_name"] = "Tester",
+            };
+            if (username is not null)
+                from["username"] = username;
+
             var update = new JsonObject
             {
                 ["update_id"] = _nextUpdateId++,
                 ["message"] = new JsonObject
                 {
                     ["message_id"] = _nextMessageId++,
-                    ["from"] = new JsonObject
-                    {
-                        ["id"] = fromUserId,
-                        ["is_bot"] = false,
-                        ["first_name"] = "Tester",
-                    },
+                    ["from"] = from,
                     ["chat"] = new JsonObject
                     {
                         ["id"] = chatId,
-                        ["type"] = "private",
+                        ["type"] = chatType,
                     },
                     ["date"] = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                     ["text"] = text,
