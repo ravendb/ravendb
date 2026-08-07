@@ -189,6 +189,22 @@ internal sealed class TelegramChannelPoller
             parameters[identifierParameter.Name] = userId.ToString(CultureInfo.InvariantCulture);
         }
 
+        var usernameParameter = config.Parameters?.FirstOrDefault(p =>
+            string.Equals(p.Name, TelegramSettings.TelegramUsernameParameterName, StringComparison.OrdinalIgnoreCase));
+        if (usernameParameter is not null &&
+            parameters.Keys.Any(k => string.Equals(k, usernameParameter.Name, StringComparison.OrdinalIgnoreCase)) == false)
+        {
+            var username = message.From?.Username;
+            if (string.IsNullOrEmpty(username))
+            {
+                await SendPlainAsync(chatId,
+                    "This assistant needs your Telegram username. Set one in Telegram Settings and send your message again.", ct);
+                return;
+            }
+
+            parameters[usernameParameter.Name] = username;
+        }
+
         try
         {
             await _bot.SendChatAction(chatId, ChatAction.Typing, cancellationToken: ct);

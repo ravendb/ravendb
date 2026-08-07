@@ -68,6 +68,62 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Telegram_username_is_injected_under_the_declared_casing()
+    {
+        var (app, channelId, token) = await ProvisionAsync(declared:
+        [
+            new AiAgentParameter("telegramUserName", "sender's handle"),
+            new AiAgentParameter("userIdentifier", "telegram sender"),
+        ]);
+        await using var appGuard = app;
+
+        Mock.EnqueueTextMessage(token, chatId: 500, fromUserId: 501, "hello", username: "Alice_42");
+        await Mock.WaitUntilAsync(() => Router.Requests.Count >= 1, "the agent run");
+
+        var request = Assert.Single(Router.Requests);
+        Assert.Equal("Alice_42", request.Parameters["telegramUserName"]);
+        Assert.Equal("501", request.Parameters["userIdentifier"]);
+
+        await Mock.WaitUntilAsync(() => Mock.SentMessages.Any(m => m.ChatId == 500), "the reply");
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Missing_telegram_username_sends_a_canned_nudge_and_skips_the_agent()
+    {
+        var (app, channelId, token) = await ProvisionAsync(declared:
+        [
+            new AiAgentParameter("TelegramUsername", "sender's handle"),
+        ]);
+        await using var appGuard = app;
+
+        const long chatId = 510;
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 510, "first try");
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 510, "second try");
+
+        await Mock.WaitUntilAsync(
+            () => Mock.SentMessages.Count(m => m.ChatId == chatId && m.Text.Contains("username")) == 2,
+            "the nudges");
+
+        Assert.All(Mock.SentMessages.Where(m => m.ChatId == chatId), m => Assert.Null(m.ParseMode));
+        Assert.Empty(Router.Requests);
+        Assert.DoesNotContain(Mock.ChatActions, a => a.ChatId == chatId);
+
+        var conversationId = TelegramConversationId.For(channelId, chatId, DateTime.UtcNow);
+        using (var session = app.Store.OpenAsyncSession(app.Slug))
+        {
+            Assert.Null(await session.LoadAsync<object>(conversationId));
+            Assert.Null(await session.LoadAsync<object>(ConversationPreview.IdFor(conversationId)));
+        }
+
+        var health = Assert.Single(await app.GetTelegramHealthAsync());
+        Assert.Equal(0, health.ErrorCount);
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Processed_updates_are_confirmed_and_never_redelivered()
     {
         var (app, channelId, token) = await ProvisionAsync();
