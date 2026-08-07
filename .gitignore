@@ -67,6 +67,13 @@ _NCrunch_RavenDB/
 artifacts/
 
 
+# Node
+node_modules/
+
+# Quill
+src/Raven.Quill.Web/dist/
+src/Raven.Quill.WhatsAppBridge/dist/
+
 # DNX Studio
 src/Raven.Studio/junit.xml
 junit.xml
