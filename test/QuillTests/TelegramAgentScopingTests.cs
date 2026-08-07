@@ -9,9 +9,6 @@ using Xunit;
 
 namespace QuillTests;
 
-/// End-to-end data scoping: a Telegram message drives a real agent run (real AgentRouter, real RavenDB agent
-/// runtime, <see cref="MockOpenAiApi"/> standing in for the LLM) and the query tool must only ever see the
-/// sender's own documents - including when the model asks for someone else's handle.
 [Collection(QuillTelegramCollection.Name)]
 public class TelegramAgentScopingTests(ITestOutputHelper output, QuillTelegramFixture fixture)
     : QuillTelegramTestBase(output, fixture)
@@ -22,7 +19,6 @@ public class TelegramAgentScopingTests(ITestOutputHelper output, QuillTelegramFi
         var (app, token) = await ProvisionScopedAgentAsync();
         await using var appGuard = app;
 
-        // the "evil" part: the model asks the tool for a handle that is not the sender's
         Llm.ToolCall = ("MyTickets", "{\"TelegramUsername\":\"victim99\"}");
 
         const long chatId = 900;
@@ -51,7 +47,6 @@ public class TelegramAgentScopingTests(ITestOutputHelper output, QuillTelegramFi
         Assert.DoesNotContain("my own ticket", reply);
     }
 
-    /// The streamed reply lands as one message that is edited in place, so the final text can be in either bucket.
     private async Task<string> WaitForReplyAsync(long chatId)
     {
         await Mock.WaitUntilAsync(() => TextFor(chatId).Contains("ticket"), "the agent reply");

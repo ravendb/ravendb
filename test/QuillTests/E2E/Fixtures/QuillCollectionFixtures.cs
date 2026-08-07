@@ -137,7 +137,6 @@ public sealed class QuillTelegramFixture : QuillCollectionHost
 {
     public MockTelegramBotApi Mock { get; private set; } = null!;
 
-    /// Only used by the tests that run the real router; the pipeline tests never reach an LLM.
     public MockOpenAiApi Llm { get; private set; } = null!;
 
     internal FakeAgentRouter Router { get; } = new();
@@ -188,8 +187,6 @@ public abstract class QuillTelegramTestBase(ITestOutputHelper output, QuillTeleg
 
     protected MockOpenAiApi Llm => fixture.Llm;
 
-    /// A host that keeps the real <see cref="Raven.Quill.Agents.AgentRouter"/> so a Telegram message drives an
-    /// actual agent run against <see cref="MockOpenAiApi"/>, instead of stopping at the recording fake.
     protected Task<QuillHost> NewRealRouterHostAsync() =>
         base.NewHostAsync(
             configure: opts =>

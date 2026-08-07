@@ -11,10 +11,6 @@ using Microsoft.Extensions.Logging;
 
 namespace QuillTests.E2E.Fixtures;
 
-/// In-process stand-in for an OpenAI-compatible chat-completions endpoint, speaking the streaming (SSE) protocol
-/// the server consumes via SseParser. Lets a Telegram test drive a real agent run end to end without a live LLM.
-/// The script is fixed: the first call returns <see cref="ToolCall"/>, and once the tool result comes back the
-/// answer echoes it, so a test can assert on the documents the tool query actually returned. Caller disposes.
 public sealed class MockOpenAiApi : IAsyncDisposable
 {
     private readonly WebApplication _app;
@@ -23,7 +19,6 @@ public sealed class MockOpenAiApi : IAsyncDisposable
 
     public string BaseAddress { get; }
 
-    /// The tool call to emit on the first request. Its arguments are what a hostile model would send.
     public (string Name, string Arguments)? ToolCall { get; set; }
 
     private MockOpenAiApi(WebApplication app, string baseAddress)
@@ -53,8 +48,6 @@ public sealed class MockOpenAiApi : IAsyncDisposable
 
         MockOpenAiApi instance = null!;
 
-        // the client resolves "<endpoint>chat/completions"; map the v1-prefixed form too so the mock works
-        // whether or not the endpoint carries it
         foreach (var route in new[] { "/chat/completions", "/v1/chat/completions" })
         {
             app.MapPost(route, async (HttpContext ctx) =>
@@ -80,7 +73,6 @@ public sealed class MockOpenAiApi : IAsyncDisposable
         return instance;
     }
 
-    /// Tool result present -> answer echoing it; otherwise the scripted tool call (or a canned answer).
     private string BuildChunk(string requestBody)
     {
         var toolResult = TryGetLastToolContent(requestBody);

@@ -205,9 +205,6 @@ internal sealed class TelegramChannelPoller
             parameters[usernameParameter.Name] = username;
         }
 
-        // the channel binds parameters once at provision time, so an agent that gained a parameter
-        // since then would reach the server unbound; refuse here instead of scoping on a value we
-        // never supplied
         var unbound = (config.Parameters ?? [])
             .Select(p => p.Name)
             .Where(name => string.IsNullOrWhiteSpace(name) == false && parameters.ContainsKey(name) == false)
