@@ -199,8 +199,8 @@ public static class ChannelsEndpoints
 
     private static IResult ProvisionWhatsAppAsync() => NotImplementedChannel(ChannelType.WhatsApp);
 
-    /// The agent's declared parameters must be operator-bound now, except the auto-bound ones (user
-    /// identifier and Telegram username); the poller fills those from the sender on every message.
+    /// The agent's declared parameters must be operator-bound now, except the auto-bound Telegram ones;
+    /// the poller fills those from the sender on every message.
     private static bool TryResolveTelegramParameters(
         AiAgentConfiguration config,
         Dictionary<string, string>? supplied,

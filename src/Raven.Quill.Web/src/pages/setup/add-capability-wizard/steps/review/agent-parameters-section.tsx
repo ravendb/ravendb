@@ -31,7 +31,7 @@ const PARAMETER_POLICY_OPTIONS: FormSelectOption<AgentParameterFormData["policy"
 
 const WELL_KNOWN_CHANNEL_PARAMETERS = [
     {
-        name: "UserIdentifier",
+        name: "TelegramUserIdentifier",
         description: "The Telegram user id of the message sender, bound automatically by Telegram channels.",
     },
     {

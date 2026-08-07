@@ -181,7 +181,7 @@ internal sealed class TelegramChannelPoller
 
         var parameters = new Dictionary<string, string>(Channel.Telegram!.Parameters);
         var identifierParameter = config.Parameters?.FirstOrDefault(p =>
-            string.Equals(p.Name, TelegramSettings.UserIdentifierParameterName, StringComparison.OrdinalIgnoreCase));
+            string.Equals(p.Name, TelegramSettings.TelegramUserIdentifierParameterName, StringComparison.OrdinalIgnoreCase));
         if (identifierParameter is not null &&
             parameters.Keys.Any(k => string.Equals(k, identifierParameter.Name, StringComparison.OrdinalIgnoreCase)) == false)
         {

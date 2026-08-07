@@ -121,14 +121,14 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
         await using var app = await NewAppAsync();
         var agentId = await SeedAgentAsync(app,
             new AiAgentParameter("customerId", "the customer to scope queries to"),
-            new AiAgentParameter("UserIdentifier", "the telegram user id"));
+            new AiAgentParameter("TelegramUserIdentifier", "the telegram user id"));
 
         var e = await Assert.ThrowsAsync<QuillHttpException>(() =>
             app.ProvisionChannelAsync(new ProvisionChannelRequest(
                 ChannelType.Telegram, agentId, null, BotToken: NewBotToken())));
         Assert.Equal(HttpStatusCode.BadRequest, e.StatusCode);
         Assert.Contains("missing agent parameter(s): customerId", e.Body);
-        Assert.DoesNotContain("UserIdentifier", e.Body);
+        Assert.DoesNotContain("TelegramUserIdentifier", e.Body);
 
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.Telegram, agentId, null, BotToken: NewBotToken(),
@@ -144,7 +144,7 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
         await using var app = await NewAppAsync();
         var agentId = await SeedAgentAsync(app,
             new AiAgentParameter("customerId", "the customer to scope queries to"),
-            new AiAgentParameter("UserIdentifier", "the telegram user id"),
+            new AiAgentParameter("TelegramUserIdentifier", "the telegram user id"),
             new AiAgentParameter("TelegramUsername", "the telegram username"));
 
         var e = await Assert.ThrowsAsync<QuillHttpException>(() =>
@@ -153,7 +153,7 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
         Assert.Equal(HttpStatusCode.BadRequest, e.StatusCode);
         Assert.Contains("missing agent parameter(s): customerId", e.Body);
         Assert.DoesNotContain("TelegramUsername", e.Body);
-        Assert.DoesNotContain("UserIdentifier", e.Body);
+        Assert.DoesNotContain("TelegramUserIdentifier", e.Body);
 
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.Telegram, agentId, null, BotToken: NewBotToken(),
