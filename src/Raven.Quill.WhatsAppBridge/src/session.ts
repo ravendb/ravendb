@@ -48,7 +48,10 @@ const TIMED_OUT = 408;
 const CONNECTION_REPLACED = 440;
 const RESTART_REQUIRED = 515;
 
-const QR_TTL_MS = 60_000;
+// Baileys lets the first QR of a socket live 60s, then rotates every 20s until the
+// server's refs run out; stamping 60s on all of them overstates the later ones by 3x.
+const FIRST_QR_TTL_MS = 60_000;
+const ROTATED_QR_TTL_MS = 20_000;
 const MIN_RECONNECT_MS = 1_000;
 const MAX_RECONNECT_MS = 60_000;
 
@@ -57,6 +60,8 @@ export class Session {
     private state: SessionState = "starting";
     private qr: string | null = null;
     private qrExpiresAt: Date | null = null;
+    // The first QR of a socket lives longer than the rotated ones that follow it.
+    private hasIssuedQr = false;
     private phoneNumber: string | null = null;
     private lastError: string | null = null;
     // Set when the operator links by phone number instead of scanning a QR.
@@ -103,6 +108,7 @@ export class Session {
         const generation = this.generation;
         this.state = "starting";
         this.qr = null;
+        this.hasIssuedQr = false;
         this.pairingCode = null;
 
         let socket: WaSocket;
@@ -179,7 +185,10 @@ export class Session {
         if (update.qr) {
             this.state = "pairing";
             this.qr = update.qr;
-            this.qrExpiresAt = new Date(Date.now() + QR_TTL_MS);
+            this.qrExpiresAt = new Date(
+                Date.now() + (this.hasIssuedQr ? ROTATED_QR_TTL_MS : FIRST_QR_TTL_MS),
+            );
+            this.hasIssuedQr = true;
 
             // The first qr proves the noise handshake completed, which is what
             // requestPairingCode needs before it can send its iq.
