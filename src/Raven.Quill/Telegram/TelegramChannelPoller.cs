@@ -151,6 +151,13 @@ internal sealed class TelegramChannelPoller
         if (prompt.Length == 0)
             return;
 
+        if (message.Chat.Type != ChatType.Private)
+        {
+            await SendPlainAsync(message.Chat.Id,
+                "I only work in one-on-one chats. Message me directly to start a conversation.", ct);
+            return;
+        }
+
         var chatId = message.Chat.Id;
         var conversationId = TelegramConversationId.For(_channelId, chatId, DateTime.UtcNow);
 

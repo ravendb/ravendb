@@ -222,6 +222,46 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Group_chat_messages_get_a_canned_refusal_including_commands()
+    {
+        var (app, channelId, token) = await ProvisionAsync();
+        await using var appGuard = app;
+
+        const long chatId = -520;
+        var conversationId = TelegramConversationId.For(channelId, chatId, DateTime.UtcNow);
+        using (var session = app.Store.OpenAsyncSession(app.Slug))
+        {
+            await session.StoreAsync(new ConversationPreview { ConversationId = conversationId },
+                ConversationPreview.IdFor(conversationId));
+            await session.StoreAsync(new { Seeded = true }, conversationId);
+            await session.SaveChangesAsync();
+        }
+
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 520, "hello group", chatType: "group");
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 520, "/clear", chatType: "supergroup");
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 520, "/start", chatType: "channel");
+
+        await Mock.WaitUntilAsync(
+            () => Mock.SentMessages.Count(m => m.ChatId == chatId && m.Text.Contains("one-on-one")) == 3,
+            "the refusals");
+
+        Assert.All(Mock.SentMessages.Where(m => m.ChatId == chatId), m => Assert.Null(m.ParseMode));
+        Assert.Empty(Router.Requests);
+        Assert.DoesNotContain(Mock.SentMessages, m => m.ChatId == chatId && m.Text.Contains("Ask me anything"));
+
+        using (var session = app.Store.OpenAsyncSession(app.Slug))
+        {
+            Assert.NotNull(await session.LoadAsync<object>(conversationId));
+            Assert.NotNull(await session.LoadAsync<object>(ConversationPreview.IdFor(conversationId)));
+        }
+
+        var health = Assert.Single(await app.GetTelegramHealthAsync());
+        Assert.Equal(0, health.ErrorCount);
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Agent_failure_sends_an_apology_and_keeps_the_poller_alive()
     {
         var (app, channelId, token) = await ProvisionAsync();
