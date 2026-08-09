@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -361,23 +362,27 @@ namespace Raven.Server.Documents
 
             // the previous cache is inherited by this write transaction through the client state (a fresh write tx
             // gets the last committed one, an async-commit clone gets the committing tx's freshly computed one).
-            // when it is fully computed we carry its entries forward and recompute only the modified collections;
-            // otherwise (first commit after startup) we do a full scan to seed it.
+            // when it is fully computed we start a builder from its immutable dictionary (O(1), no copy) and
+            // recompute only the modified collections; otherwise (first commit after startup) we full-scan to seed it.
+            ImmutableDictionary<string, DocumentTransactionCache.CollectionCache>.Builder builder;
             if (llt.TryGetClientState(out DocumentTransactionCache previousCache) && previousCache.FullyComputed)
             {
-                // the entries are immutable, a stale one is always replaced by a new instance,
-                // so they can be shared between the previous cache and the current one
-                foreach (var kvp in previousCache.LastEtagsByCollection)
-                    currentCache.LastEtagsByCollection[kvp.Key] = kvp.Value;
+                // the base is always the last *committed* cache (client state advances only on commit), so no
+                // mutable state survives across transactions - a rolled-back tx leaves nothing behind here.
+                builder = previousCache.LastEtagsByCollection.ToBuilder();
 
-                UpdateCollectionCachesForModifiedCollections(tx, currentCache);
+                UpdateCollectionCachesForModifiedCollections(tx, builder);
 
-                AssertIncrementalCacheMatchesFullScan(tx, currentCache);
+                AssertIncrementalCacheMatchesFullScan(tx, builder);
             }
             else
             {
-                ComputeCollectionCaches(tx, currentCache);
+                builder = ImmutableDictionary.CreateBuilder<string, DocumentTransactionCache.CollectionCache>(StringComparer.OrdinalIgnoreCase);
+
+                ComputeCollectionCaches(tx, builder);
             }
+
+            currentCache.LastEtagsByCollection = builder.ToImmutable();
 
             // we set it on the current transaction because we aren't committed yet
             // this is used to remember the metadata about collections / documents for
@@ -385,7 +390,7 @@ namespace Raven.Server.Documents
             tx.LowLevelTransaction.UpdateClientState(currentCache);
         }
 
-        private void ComputeCollectionCaches(Transaction tx, DocumentTransactionCache cache)
+        private void ComputeCollectionCaches(Transaction tx, ImmutableDictionary<string, DocumentTransactionCache.CollectionCache>.Builder cache)
         {
             using (ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
             {
@@ -395,7 +400,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void UpdateCollectionCachesForModifiedCollections(Transaction tx, DocumentTransactionCache cache)
+        private void UpdateCollectionCachesForModifiedCollections(Transaction tx, ImmutableDictionary<string, DocumentTransactionCache.CollectionCache>.Builder cache)
         {
             // recompute only the collections this tx touched: existing ones via the reverse map (a miss is a
             // non-collection table), plus any it created. collect first, then compute - recompute mutates tx.Tables.
@@ -454,11 +459,11 @@ namespace Raven.Server.Documents
             map[tombstonesTableName] = collection;
         }
 
-        private void ComputeCollectionCache(Transaction tx, CollectionName collectionName, DocumentTransactionCache cache, ref Table.TableValueHolder holder)
+        private void ComputeCollectionCache(Transaction tx, CollectionName collectionName, ImmutableDictionary<string, DocumentTransactionCache.CollectionCache>.Builder cache, ref Table.TableValueHolder holder)
         {
             if (ReadLastDocument(tx, collectionName, CollectionTableType.Documents, ref holder) == false)
             {
-                cache.LastEtagsByCollection.Remove(collectionName.Name);
+                cache.Remove(collectionName.Name);
                 return;
             }
 
@@ -472,25 +477,25 @@ namespace Raven.Server.Documents
             {
                 colCache.LastTombstoneEtag = TableValueToEtag((int)DocumentsTable.Etag, ref holder.Reader);
             }
-            cache.LastEtagsByCollection[collectionName.Name] = colCache;
+            cache[collectionName.Name] = colCache;
         }
 
         // DEBUG-only safety net: the incrementally-updated cache must be identical to a from-scratch full scan.
         // any divergence means the modified-collection detection or the carry-forward is wrong. compiled out of
         // release builds, so it costs nothing there; in DEBUG it validates on every write commit across all tests.
         [Conditional("DEBUG")]
-        private void AssertIncrementalCacheMatchesFullScan(Transaction tx, DocumentTransactionCache incremental)
+        private void AssertIncrementalCacheMatchesFullScan(Transaction tx, ImmutableDictionary<string, DocumentTransactionCache.CollectionCache>.Builder incremental)
         {
-            var full = new DocumentTransactionCache { FullyComputed = true };
+            var full = ImmutableDictionary.CreateBuilder<string, DocumentTransactionCache.CollectionCache>(StringComparer.OrdinalIgnoreCase);
             ComputeCollectionCaches(tx, full);
 
-            if (incremental.LastEtagsByCollection.Count != full.LastEtagsByCollection.Count)
+            if (incremental.Count != full.Count)
                 throw new InvalidOperationException(
-                    $"Incremental documents transaction cache has {incremental.LastEtagsByCollection.Count} collection(s), a full scan has {full.LastEtagsByCollection.Count}.");
+                    $"Incremental documents transaction cache has {incremental.Count} collection(s), a full scan has {full.Count}.");
 
-            foreach (var kvp in full.LastEtagsByCollection)
+            foreach (var kvp in full)
             {
-                if (incremental.LastEtagsByCollection.TryGetValue(kvp.Key, out var incrementalEntry) == false)
+                if (incremental.TryGetValue(kvp.Key, out var incrementalEntry) == false)
                     throw new InvalidOperationException(
                         $"Incremental documents transaction cache is missing collection '{kvp.Key}' that a full scan produced.");
 
