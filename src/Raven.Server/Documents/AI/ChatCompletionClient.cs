@@ -236,7 +236,7 @@ public class ChatCompletionClient : IDisposable
 
             var choice = (BlittableJsonReaderObject)choices[0];
             var hasDelta = choice.TryGet(Constants.ResponseFields.Delta, out BlittableJsonReaderObject delta);
-            var refusalDelta = _settings.GetRefusal(choice, delta);
+            var refusalDelta = _settings.GetRefusal(choice, delta, streaming: true);
             if (string.IsNullOrEmpty(refusalDelta) == false)
                 refusalSb.Append(refusalDelta);
 

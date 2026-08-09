@@ -97,7 +97,7 @@ internal abstract class AbstractChatCompletionClientSettings
     // OpenAI's default: an explicit `refusal` field on the message (non-streaming) or on the delta
     // (streaming - GetRefusal gets the delta here as the "message"). Providers whose refusal
     // shape differs (Azure, Google) override this.
-    public virtual string GetRefusal(BlittableJsonReaderObject choice0, BlittableJsonReaderObject message)
+    public virtual string GetRefusal(BlittableJsonReaderObject choice0, BlittableJsonReaderObject message, bool streaming = false)
     {
         _ = choice0.TryGet(ChatCompletionClient.Constants.ResponseFields.Refusal, out string refusal)
             || (message != null && message.TryGet(ChatCompletionClient.Constants.ResponseFields.Refusal, out refusal));
