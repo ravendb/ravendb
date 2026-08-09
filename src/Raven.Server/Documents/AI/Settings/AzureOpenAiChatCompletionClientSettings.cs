@@ -52,7 +52,7 @@ internal class AzureOpenAiChatCompletionClientSettings : AbstractOpenAiChatCompl
         };
     }
 
-    public override string GetRefusal(BlittableJsonReaderObject choice0, BlittableJsonReaderObject message)
+    public override string GetRefusal(BlittableJsonReaderObject choice0, BlittableJsonReaderObject message, bool streaming = false)
     {
         // Azure annotates the filtered categories/severities in content_filter_results - prefer that detail.
         if (choice0.TryGet(FiltersConstants.ContentFilterResults, out BlittableJsonReaderObject filtersObj)
