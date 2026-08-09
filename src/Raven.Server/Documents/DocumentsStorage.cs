@@ -433,12 +433,9 @@ namespace Raven.Server.Documents
             if (_modifiedCollectionsScratch.Count == 0)
                 return;
 
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
-            {
-                Table.TableValueHolder holder = default;
-                foreach (var collectionName in _modifiedCollectionsScratch)
-                    ComputeCollectionCache(tx, collectionName, cache, ref holder);
-            }
+            Table.TableValueHolder holder = default;
+            foreach (var collectionName in _modifiedCollectionsScratch)
+                ComputeCollectionCache(tx, collectionName, cache, ref holder);
         }
 
         private Dictionary<Slice, CollectionName> BuildCollectionTablesReverseMap(Transaction tx, IEnumerable<CollectionName> collections)
