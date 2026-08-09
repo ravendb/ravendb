@@ -88,6 +88,10 @@ namespace Raven.Server.Documents
         // allocated from _collectionTablesContext, which outlives the transactions that read the map.
         private ByteStringContext _collectionTablesContext;
         private Dictionary<Slice, CollectionName> _collectionTablesReverse;
+
+        // scratch set for the collections modified by the committing transaction. reused across commits and cleared
+        // on each use - safe because the transaction-cache compute always runs on the single merger thread.
+        private readonly HashSet<CollectionName> _modifiedCollectionsScratch = new(CollectionNameComparer.Instance);
         private static readonly Slice LastReplicatedEtagsSlice;
         private static readonly Slice EtagsSlice;
         private static readonly Slice LastEtagSlice;
@@ -404,15 +408,16 @@ namespace Raven.Server.Documents
         {
             // recompute only the collections this tx touched: existing ones via the reverse map (a miss is a
             // non-collection table), plus any it created. collect first, then compute - recompute mutates tx.Tables.
-            HashSet<CollectionName> modifiedCollections = null;
+            // the scratch set is reused across commits (the compute always runs on the single merger thread). we
+            // clear it at the START of every use, never at the end - so it does not matter who left it dirty: a
+            // compute that threw, or a rolled-back tx, leaves stale entries, but the next commit wipes them here
+            // before reading. it is pure transient scratch, never stored in the published cache.
+            _modifiedCollectionsScratch.Clear();
 
             foreach (var table in tx.Tables)
             {
                 if (_collectionTablesReverse.TryGetValue(table.Name, out var collectionName))
-                {
-                    modifiedCollections ??= new HashSet<CollectionName>(CollectionNameComparer.Instance);
-                    modifiedCollections.Add(collectionName);
-                }
+                    _modifiedCollectionsScratch.Add(collectionName);
             }
 
             if (tx.Owner is DocumentsOperationContext { Transaction: { } documentsTransaction })
@@ -421,20 +426,17 @@ namespace Raven.Server.Documents
                 if (createdCollections != null)
                 {
                     foreach (var collectionName in createdCollections)
-                    {
-                        modifiedCollections ??= new HashSet<CollectionName>(CollectionNameComparer.Instance);
-                        modifiedCollections.Add(collectionName);
-                    }
+                        _modifiedCollectionsScratch.Add(collectionName);
                 }
             }
 
-            if (modifiedCollections == null)
+            if (_modifiedCollectionsScratch.Count == 0)
                 return;
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
             {
                 Table.TableValueHolder holder = default;
-                foreach (var collectionName in modifiedCollections)
+                foreach (var collectionName in _modifiedCollectionsScratch)
                     ComputeCollectionCache(tx, collectionName, cache, ref holder);
             }
         }
