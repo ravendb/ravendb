@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections.Immutable;
 
 namespace Raven.Server.ServerWide.Context
 {
@@ -26,6 +26,6 @@ namespace Raven.Server.ServerWide.Context
             public string LastChangeVector;
         }
 
-        public readonly Dictionary<string, CollectionCache> LastEtagsByCollection = new(StringComparer.OrdinalIgnoreCase);
+        public ImmutableDictionary<string, CollectionCache> LastEtagsByCollection = ImmutableDictionary.Create<string, CollectionCache>(StringComparer.OrdinalIgnoreCase);
     }
 }
