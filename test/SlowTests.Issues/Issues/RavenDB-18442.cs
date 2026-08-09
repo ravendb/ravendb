@@ -31,12 +31,6 @@ namespace SlowTests.Issues
             // Setup Db
             var nodes = await CreateMyCluster();
 
-            using var dispose = new DisposableAction(() =>
-            {
-                foreach (var node in nodes)
-                    node.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = false;
-            });
-
             var firstServer = nodes[0]; // leader
             var secondServer = nodes[1]; // no leader
 
@@ -128,11 +122,6 @@ namespace SlowTests.Issues
             };
 
             var (nodes, leader) = await CreateRaftCluster(numberOfNodes: 2, leaderIndex: 0, customSettingsList: customSettingsList);
-
-            foreach (var node in nodes)
-            {
-                node.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = true;
-            }
 
             return nodes;
         }
