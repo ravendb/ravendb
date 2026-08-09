@@ -47,7 +47,6 @@ namespace StressTests.Issues
             {
                 foreach (var server in nodes)
                 {
-                    server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = false;
                     server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipIncreasingLastWorkTimeBasedOnDatabaseSize = false;
                     documentStores[server.ServerStore.NodeTag].Dispose();
                 }
@@ -55,7 +54,6 @@ namespace StressTests.Issues
 
             foreach (var server in nodes)
             {
-                server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = true;
                 server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipIncreasingLastWorkTimeBasedOnDatabaseSize = true;
             }
 
@@ -153,11 +151,9 @@ namespace StressTests.Issues
             using var dispose = new DisposableAction(() =>
             {
                 server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipIncreasingLastWorkTimeBasedOnDatabaseSize = false;
-                server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = false;
             });
 
             server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipIncreasingLastWorkTimeBasedOnDatabaseSize = true;
-            server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = true;
 
             using var store = GetDocumentStore(new Options { Server = server, RunInMemory = false });
             while (DateTime.Now.Second > 10)

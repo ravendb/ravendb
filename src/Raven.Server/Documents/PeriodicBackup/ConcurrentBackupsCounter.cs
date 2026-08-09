@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Threading;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Sparrow.Server.Logging;
 using BackupConfiguration = Raven.Server.Config.Categories.BackupConfiguration;
@@ -16,8 +14,6 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly LicenseManager _licenseManager;
         private readonly Dictionary<string, int> _runningBackupsPerDatabase = new();
         private readonly bool _skipModifications;
-        private SemaphoreSlim _concurrentDatabaseWakeup;
-        private SemaphoreSlim _concurrentIdleBackupStatusUpdates;
 
         public int MaxNumberOfConcurrentBackups { get; private set; }
 
@@ -49,8 +45,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
 
             MaxNumberOfConcurrentBackups = numberOfCoresToUse;
-            _concurrentDatabaseWakeup = new SemaphoreSlim(numberOfCoresToUse);
-            _concurrentIdleBackupStatusUpdates = new SemaphoreSlim(numberOfCoresToUse);
             _skipModifications = skipModifications;
         }
 
@@ -144,27 +138,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        public IDisposable TryStartDatabaseForBackup()
-        {
-            return TryEnter(_concurrentDatabaseWakeup);
-        }
-
-        public IDisposable TryStartIdleBackupStatusUpdate()
-        {
-            return TryEnter(_concurrentIdleBackupStatusUpdates);
-        }
-
-        private static IDisposable TryEnter(SemaphoreSlim sm)
-        {
-            if (sm.Wait(TimeSpan.Zero) == false)
-                return null;
-
-            return new DisposableAction(() =>
-            {
-                sm.Release();
-            });
-        }
-
         public void ModifyMaxConcurrentBackups()
         {
             if (_skipModifications)
@@ -179,8 +152,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             lock (_locker)
             {
                 MaxNumberOfConcurrentBackups = newMaxConcurrentBackups;
-                _concurrentDatabaseWakeup = new SemaphoreSlim(newMaxConcurrentBackups);
-                _concurrentIdleBackupStatusUpdates = new SemaphoreSlim(newMaxConcurrentBackups);
             }
         }
 
