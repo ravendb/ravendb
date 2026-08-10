@@ -17,9 +17,12 @@ internal abstract class AbstractIndexHandlerProcessorForProgress<TRequestHandler
 
     protected override RavenCommand<IndexProgress[]> CreateCommandForNode(string nodeTag)
     {
-        var indexesWithExactProgress = GetIndexesWithExactProgress();
-        return new GetIndexesProgressCommand(nodeTag, indexesWithExactProgress);
+        var names = GetNames();
+        var exact = IsExact();
+        return new GetIndexesProgressCommand(nodeTag, names, exact);
     }
 
-    protected StringValues GetIndexesWithExactProgress() => RequestHandler.GetStringValuesQueryString("exact", required: false);
+    protected StringValues GetNames() => RequestHandler.GetStringValuesQueryString("name", required: false);
+
+    protected bool IsExact() => RequestHandler.GetBoolValueQueryString("exact", required: false) ?? false;
 }
