@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { toast } from "sonner";
 import { api } from "@/api/api";
+import type { TelegramParameterBinding, TelegramParameterSource } from "@/api/generated/server-api";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
 import { Spinner } from "@/components/shadcn/ui/spinner";
@@ -16,16 +17,40 @@ import { withNestedSubmit } from "@/lib/form-utils";
 import { invalidateChannelQueries } from "@/lib/query-invalidation";
 import type { FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
 
-const AUTO_BOUND_PARAMETERS = new Set(["telegramuseridentifier", "telegramusername"]);
+const PARAMETER_SOURCE_OPTIONS: FormSelectOption<TelegramParameterSource>[] = [
+    { value: "Constant", label: "Constant value" },
+    { value: "UserId", label: "Telegram user id" },
+    { value: "Username", label: "Telegram username" },
+];
+
+const parameterBindingSchema = z
+    .object({
+        name: z.string(),
+        source: z.enum(["Constant", "UserId", "Username"]),
+        value: z.string().trim(),
+    })
+    .superRefine((parameter, ctx) => {
+        if (parameter.source === "Constant" && parameter.value.trim().length === 0) {
+            ctx.addIssue({ code: "custom", message: "Required", path: ["value"] });
+        }
+    });
 
 const telegramChannelSchema = z.object({
     agentId: z.string().min(1, "Select an agent to route conversations to"),
     displayName: z.string().trim(),
     botToken: z.string().trim().min(1, "Paste the bot token from @BotFather"),
-    parameters: z.array(z.object({ name: z.string(), value: z.string().trim().min(1, "Required") })),
+    parameters: z.array(parameterBindingSchema),
 });
 
 type TelegramChannelFormData = z.infer<typeof telegramChannelSchema>;
+
+function toParameterBindings(parameters: TelegramChannelFormData["parameters"]) {
+    const bindings: Record<string, TelegramParameterBinding> = {};
+    for (const { name, source, value } of parameters) {
+        bindings[name] = { source, value: source === "Constant" ? value.trim() : null };
+    }
+    return bindings;
+}
 
 export function TelegramChannelForm({
     slug,
@@ -47,18 +72,15 @@ export function TelegramChannelForm({
 
     const selectedAgentId = useWatch({ control: form.control, name: "agentId" });
     const parameterFields = useFieldArray({ control: form.control, name: "parameters" });
+    const parameters = useWatch({ control: form.control, name: "parameters" }) ?? [];
 
     const agents = agentsQuery.data ?? [];
-    const selectedAgent = agents.find((candidate) => candidate.agentId === selectedAgentId);
-    const autoBoundParameters = (selectedAgent?.parameters ?? []).filter((name) =>
-        AUTO_BOUND_PARAMETERS.has(name.toLowerCase()),
-    );
 
     const { replace } = parameterFields;
     useEffect(() => {
         const selected = (agentsQuery.data ?? []).find((candidate) => candidate.agentId === selectedAgentId);
-        const names = (selected?.parameters ?? []).filter((name) => !AUTO_BOUND_PARAMETERS.has(name.toLowerCase()));
-        replace(names.map((name) => ({ name, value: "" })));
+        const names = selected?.parameters ?? [];
+        replace(names.map((name) => ({ name, source: "Constant" as const, value: "" })));
     }, [replace, selectedAgentId, agentsQuery.data]);
 
     const createMutation = useMutation({
@@ -69,10 +91,7 @@ export function TelegramChannelForm({
                 allowedOrigins: null,
                 displayName: values.displayName.trim() || null,
                 botToken: values.botToken.trim(),
-                parameters:
-                    values.parameters.length > 0
-                        ? Object.fromEntries(values.parameters.map(({ name, value }) => [name, value.trim()]))
-                        : null,
+                parameterBindings: values.parameters.length > 0 ? toParameterBindings(values.parameters) : null,
             }),
         onSuccess: async () => {
             await invalidateChannelQueries(queryClient, slug);
@@ -133,34 +152,29 @@ export function TelegramChannelForm({
                             />
                             {parameterFields.fields.length > 0 && (
                                 <div className="flex flex-col gap-3">
+                                    <p className="text-xs text-muted-foreground">
+                                        Map each agent parameter to a constant value bound once for the whole channel,
+                                        or to a field of the Telegram user sending each message.
+                                    </p>
                                     {parameterFields.fields.map((field, index) => (
-                                        <FormInput
-                                            key={field.id}
-                                            control={form.control}
-                                            name={`parameters.${index}.value`}
-                                            label={field.name}
-                                            placeholder="e.g. customers/1"
-                                            description={
-                                                index === 0
-                                                    ? "Agent parameters are bound once for the whole channel."
-                                                    : undefined
-                                            }
-                                        />
+                                        <div key={field.id} className="grid gap-2 sm:grid-cols-2">
+                                            <FormSelect
+                                                control={form.control}
+                                                name={`parameters.${index}.source`}
+                                                label={field.name}
+                                                options={PARAMETER_SOURCE_OPTIONS}
+                                            />
+                                            {parameters[index]?.source === "Constant" && (
+                                                <FormInput
+                                                    control={form.control}
+                                                    name={`parameters.${index}.value`}
+                                                    label="Value"
+                                                    placeholder="e.g. customers/1"
+                                                />
+                                            )}
+                                        </div>
                                     ))}
                                 </div>
-                            )}
-                            {autoBoundParameters.length > 0 && (
-                                <p className="text-xs text-muted-foreground">
-                                    The agent&apos;s{" "}
-                                    {autoBoundParameters.map((name, index) => (
-                                        <span key={name}>
-                                            {index > 0 && " and "}
-                                            <span className="font-medium">{name}</span>
-                                        </span>
-                                    ))}{" "}
-                                    {autoBoundParameters.length === 1 ? "parameter is" : "parameters are"} bound
-                                    automatically from the Telegram user sending each message.
-                                </p>
                             )}
                         </>
                     )}

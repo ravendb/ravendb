@@ -83,11 +83,15 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
     public async Task Message_dispatches_with_derived_conversation_id_and_bound_parameters()
     {
         var (app, channelId, token) = await ProvisionAsync(
-            parameters: new Dictionary<string, string> { ["customerId"] = "customers/42" },
+            bindings: new Dictionary<string, TelegramParameterBinding>
+            {
+                ["customerId"] = new() { Source = TelegramParameterSource.Constant, Value = "customers/42" },
+                ["senderId"] = new() { Source = TelegramParameterSource.UserId },
+            },
             declared:
             [
                 new AiAgentParameter("customerId", "scope"),
-                new AiAgentParameter("telegramUserIdentifier", "telegram sender"),
+                new AiAgentParameter("senderId", "telegram sender"),
             ]);
         await using var appGuard = app;
 
@@ -101,7 +105,7 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         Assert.StartsWith($"chats/tg/{channelId}/555/", request.ConversationId);
         Assert.True(AgentRouter.TryNormalizeConversationId(request.ConversationId, out _, out _));
         Assert.Equal("customers/42", request.Parameters["customerId"]);
-        Assert.Equal("777", request.Parameters["telegramUserIdentifier"]);
+        Assert.Equal("777", request.Parameters["senderId"]);
 
         await Mock.WaitUntilAsync(() => Mock.SentMessages.Any(m => m.ChatId == 555), "the reply");
         var typing = Assert.Single(Mock.ChatActions, a => a.ChatId == 555);
@@ -111,21 +115,27 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Telegram_username_is_injected_under_the_declared_casing()
+    public async Task Sender_values_are_injected_under_the_declared_parameter_casing()
     {
-        var (app, channelId, token) = await ProvisionAsync(declared:
-        [
-            new AiAgentParameter("telegramUserName", "sender's handle"),
-            new AiAgentParameter("telegramUserIdentifier", "telegram sender"),
-        ]);
+        var (app, channelId, token) = await ProvisionAsync(
+            bindings: new Dictionary<string, TelegramParameterBinding>
+            {
+                ["USERHANDLE"] = new() { Source = TelegramParameterSource.Username },
+                ["SENDERID"] = new() { Source = TelegramParameterSource.UserId },
+            },
+            declared:
+            [
+                new AiAgentParameter("userHandle", "sender's handle"),
+                new AiAgentParameter("senderId", "telegram sender"),
+            ]);
         await using var appGuard = app;
 
         Mock.EnqueueTextMessage(token, chatId: 500, fromUserId: 501, "hello", username: "Alice_42");
         await Mock.WaitUntilAsync(() => Router.Requests.Count >= 1, "the agent run");
 
         var request = Assert.Single(Router.Requests);
-        Assert.Equal("Alice_42", request.Parameters["telegramUserName"]);
-        Assert.Equal("501", request.Parameters["telegramUserIdentifier"]);
+        Assert.Equal("Alice_42", request.Parameters["userHandle"]);
+        Assert.Equal("501", request.Parameters["senderId"]);
 
         await Mock.WaitUntilAsync(() => Mock.SentMessages.Any(m => m.ChatId == 500), "the reply");
 
@@ -135,10 +145,15 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Missing_telegram_username_sends_a_canned_nudge_and_skips_the_agent()
     {
-        var (app, channelId, token) = await ProvisionAsync(declared:
-        [
-            new AiAgentParameter("TelegramUsername", "sender's handle"),
-        ]);
+        var (app, channelId, token) = await ProvisionAsync(
+            bindings: new Dictionary<string, TelegramParameterBinding>
+            {
+                ["handle"] = new() { Source = TelegramParameterSource.Username },
+            },
+            declared:
+            [
+                new AiAgentParameter("handle", "sender's handle"),
+            ]);
         await using var appGuard = app;
 
         const long chatId = 510;
@@ -170,7 +185,10 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
     public async Task Parameter_added_after_provisioning_is_refused_before_the_agent_runs()
     {
         var (app, channelId, token) = await ProvisionAsync(
-            parameters: new Dictionary<string, string> { ["customerId"] = "customers/42" },
+            bindings: new Dictionary<string, TelegramParameterBinding>
+            {
+                ["customerId"] = new() { Source = TelegramParameterSource.Constant, Value = "customers/42" },
+            },
             declared: [new AiAgentParameter("customerId", "scope")]);
         await using var appGuard = app;
 
@@ -533,7 +551,7 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
     }
 
     private async Task<(QuillApp App, string ChannelId, string Token)> ProvisionAsync(
-        Dictionary<string, string>? parameters = null, AiAgentParameter[]? declared = null)
+        Dictionary<string, TelegramParameterBinding>? bindings = null, AiAgentParameter[]? declared = null)
     {
         var app = await NewAppAsync();
         var agentId = "tg-agent-" + Guid.NewGuid().ToString("N")[..8];
@@ -548,7 +566,7 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
 
         var token = NewBotToken();
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
-            ChannelType.Telegram, agentId, null, BotToken: token, Parameters: parameters));
+            ChannelType.Telegram, agentId, null, BotToken: token, ParameterBindings: bindings));
 
         return (app, created.ChannelId, token);
     }
