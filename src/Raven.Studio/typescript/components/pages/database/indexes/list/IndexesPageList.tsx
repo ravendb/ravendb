@@ -26,6 +26,7 @@ export interface IndexesPageListProps {
     confirmDeleteIndexes: (indexes: IndexSharedInfo[]) => Promise<void>;
     toggleSelection: (index: IndexSharedInfo) => void;
     highlightCallback: (node: HTMLElement) => void;
+    fetchExactProgress: (index: IndexSharedInfo, location: databaseLocationSpecifier) => Promise<void>;
 }
 
 export default function IndexesPageList({
@@ -45,6 +46,7 @@ export default function IndexesPageList({
     confirmDeleteIndexes,
     toggleSelection,
     highlightCallback,
+    fetchExactProgress,
 }: IndexesPageListProps) {
     return (
         <>
@@ -60,6 +62,9 @@ export default function IndexesPageList({
                                 resetIndexData.openConfirm([index], mode)
                             }
                             openFaulty={(location: databaseLocationSpecifier) => openFaulty(index, location)}
+                            fetchExactProgress={(location: databaseLocationSpecifier) =>
+                                fetchExactProgress(index, location)
+                            }
                             startIndexing={() => startIndexes([index])}
                             disableIndexing={() => disableIndexes([index])}
                             pauseIndexing={() => pauseIndexes([index])}
@@ -99,6 +104,9 @@ export default function IndexesPageList({
                                     resetIndexData.openConfirm([replacement], mode)
                                 }
                                 openFaulty={(location: databaseLocationSpecifier) => openFaulty(replacement, location)}
+                                fetchExactProgress={(location: databaseLocationSpecifier) =>
+                                    fetchExactProgress(replacement, location)
+                                }
                                 startIndexing={() => startIndexes([replacement])}
                                 disableIndexing={() => disableIndexes([replacement])}
                                 pauseIndexing={() => pauseIndexes([replacement])}

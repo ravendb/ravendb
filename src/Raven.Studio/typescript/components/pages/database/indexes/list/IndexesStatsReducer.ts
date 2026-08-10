@@ -26,6 +26,13 @@ interface ActionProgressLoadError {
     type: "ProgressLoadError";
 }
 
+interface ActionExactProgressLoaded {
+    location: databaseLocationSpecifier;
+    indexName: string;
+    progress: IndexProgress | undefined;
+    type: "ExactProgressLoaded";
+}
+
 interface ActionSetIndexPriority {
     indexName: string;
     priority: IndexPriority;
@@ -93,6 +100,7 @@ type IndexesStatsReducerAction =
     | ActionStatsLoaded
     | ActionProgressLoadError
     | ActionProgressLoaded
+    | ActionExactProgressLoaded
     | ActionSetIndexPriority
     | ActionSetIndexLockMode
     | ActionPauseIndexing
@@ -242,6 +250,36 @@ export const indexesStatsReducer: Reducer<IndexesStatsState, IndexesStatsReducer
                         }
                     }
                 });
+            });
+        }
+        case "ExactProgressLoaded": {
+            return produce(state, (draft) => {
+                const index = draft.indexes.find((x) => x.name === action.indexName);
+                if (!index) {
+                    return;
+                }
+
+                const itemToUpdate = index.nodesInfo.find((x) =>
+                    databaseLocationComparator(x.location, action.location)
+                );
+                if (!itemToUpdate) {
+                    return;
+                }
+
+                if (action.progress) {
+                    itemToUpdate.progress = mapProgress(action.progress);
+                    if (itemToUpdate.details) {
+                        itemToUpdate.details.stale = action.progress.IsStale;
+                    }
+                } else {
+                    // the index is no longer stale on that location
+                    if (itemToUpdate.progress) {
+                        markProgressAsCompleted(itemToUpdate.progress);
+                    }
+                    if (itemToUpdate.details) {
+                        itemToUpdate.details.stale = false;
+                    }
+                }
             });
         }
         case "ProgressLoadError": {

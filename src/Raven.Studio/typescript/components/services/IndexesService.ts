@@ -26,8 +26,13 @@ import getIndexEntriesFieldsCommand from "commands/database/index/getIndexEntrie
 import getIndexTermsCommand from "commands/database/index/getIndexTermsCommand";
 
 export default class IndexesService {
-    async getProgress(databaseName: string, location: databaseLocationSpecifier) {
-        return new getIndexesProgressCommand(databaseName, location).execute();
+    async getProgress(
+        databaseName: string,
+        location: databaseLocationSpecifier,
+        indexNames?: string[],
+        exact?: boolean
+    ) {
+        return new getIndexesProgressCommand(databaseName, location, indexNames, exact).execute();
     }
 
     async setLockMode(indexes: IndexSharedInfo[], lockMode: IndexLockMode, databaseName: string) {

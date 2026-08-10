@@ -161,6 +161,17 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
         }
     };
 
+    const fetchExactProgress = async (index: IndexSharedInfo, location: databaseLocationSpecifier) => {
+        const progress = await indexesService.getProgress(db.name, location, [index.name], true);
+
+        dispatch({
+            type: "ExactProgressLoaded",
+            progress: progress.find((x) => x.Name === index.name),
+            indexName: index.name,
+            location,
+        });
+    };
+
     const fetchStats = useCallback(
         async (location: databaseLocationSpecifier) => {
             const stats = await indexesService.getStats(db.name, location);
@@ -881,6 +892,7 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
         } satisfies SwapSideBySideData,
         openFaulty,
         confirmDeleteIndexes,
+        fetchExactProgress,
         globalIndexingStatus,
         isImportIndexModalOpen,
         toggleIsImportIndexModalOpen,
