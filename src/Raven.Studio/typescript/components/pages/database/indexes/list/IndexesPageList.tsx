@@ -26,7 +26,8 @@ export interface IndexesPageListProps {
     confirmDeleteIndexes: (indexes: IndexSharedInfo[]) => Promise<void>;
     toggleSelection: (index: IndexSharedInfo) => void;
     highlightCallback: (node: HTMLElement) => void;
-    fetchExactProgress: (index: IndexSharedInfo, location: databaseLocationSpecifier) => Promise<void>;
+    indexesWithExactProgress: string[];
+    toggleExactProgress: (index: IndexSharedInfo, location: databaseLocationSpecifier) => Promise<void>;
 }
 
 export default function IndexesPageList({
@@ -46,7 +47,8 @@ export default function IndexesPageList({
     confirmDeleteIndexes,
     toggleSelection,
     highlightCallback,
-    fetchExactProgress,
+    indexesWithExactProgress,
+    toggleExactProgress,
 }: IndexesPageListProps) {
     return (
         <>
@@ -62,8 +64,9 @@ export default function IndexesPageList({
                                 resetIndexData.openConfirm([index], mode)
                             }
                             openFaulty={(location: databaseLocationSpecifier) => openFaulty(index, location)}
-                            fetchExactProgress={(location: databaseLocationSpecifier) =>
-                                fetchExactProgress(index, location)
+                            exactProgress={indexesWithExactProgress.includes(index.name)}
+                            toggleExactProgress={(location: databaseLocationSpecifier) =>
+                                toggleExactProgress(index, location)
                             }
                             startIndexing={() => startIndexes([index])}
                             disableIndexing={() => disableIndexes([index])}
@@ -104,8 +107,9 @@ export default function IndexesPageList({
                                     resetIndexData.openConfirm([replacement], mode)
                                 }
                                 openFaulty={(location: databaseLocationSpecifier) => openFaulty(replacement, location)}
-                                fetchExactProgress={(location: databaseLocationSpecifier) =>
-                                    fetchExactProgress(replacement, location)
+                                exactProgress={indexesWithExactProgress.includes(replacement.name)}
+                                toggleExactProgress={(location: databaseLocationSpecifier) =>
+                                    toggleExactProgress(replacement, location)
                                 }
                                 startIndexing={() => startIndexes([replacement])}
                                 disableIndexing={() => disableIndexes([replacement])}

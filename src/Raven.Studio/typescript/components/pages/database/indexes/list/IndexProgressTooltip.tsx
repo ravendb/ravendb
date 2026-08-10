@@ -27,26 +27,28 @@ interface IndexProgressTooltipProps {
     index: IndexSharedInfo;
     globalIndexingStatus: IndexRunningStatus;
     showStaleReason: (location: databaseLocationSpecifier) => void;
-    fetchExactProgress: (location: databaseLocationSpecifier) => Promise<void>;
+    exactProgress: boolean;
+    toggleExactProgress: (location: databaseLocationSpecifier) => Promise<void>;
 }
 
 export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
-    const { target, nodeInfo, index, globalIndexingStatus, showStaleReason, fetchExactProgress } = props;
+    const { target, nodeInfo, index, globalIndexingStatus, showStaleReason, exactProgress, toggleExactProgress } =
+        props;
 
-    const [loadingExactProgress, setLoadingExactProgress] = useState(false);
+    const [togglingExactProgress, setTogglingExactProgress] = useState(false);
 
-    const loadExactProgress = async () => {
-        if (loadingExactProgress) {
+    const onToggleExactProgress = async () => {
+        if (togglingExactProgress) {
             return;
         }
 
-        setLoadingExactProgress(true);
+        setTogglingExactProgress(true);
         try {
-            await fetchExactProgress(nodeInfo.location);
+            await toggleExactProgress(nodeInfo.location);
         } catch {
             // the (~) marker stays, the user can retry
         } finally {
-            setLoadingExactProgress(false);
+            setTogglingExactProgress(false);
         }
     };
 
@@ -159,15 +161,15 @@ export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
                             </NamedProgress>
                         );
                     })}
-                {nodeInfo.progress?.collections.some((x) => x.estimated) && (
+                {nodeInfo.progress && (exactProgress || nodeInfo.progress.collections.some((x) => x.estimated)) && (
                     <div className="px-3 pb-2">
-                        <a href="#" onClick={withPreventDefault(loadExactProgress)}>
-                            {loadingExactProgress ? (
+                        <a href="#" onClick={withPreventDefault(onToggleExactProgress)}>
+                            {togglingExactProgress ? (
                                 <Spinner size="sm" className="me-1" />
                             ) : (
                                 <Icon icon="refresh" margin="me-1" />
                             )}
-                            show exact counts
+                            {exactProgress ? "show estimated counts" : "show exact counts"}
                         </a>
                     </div>
                 )}

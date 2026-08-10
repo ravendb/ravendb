@@ -143,9 +143,33 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
         return groupedIndexes;
     }, [filter, stats.indexes]);
 
+    const indexesWithExactProgressRef = useRef<Set<string>>(new Set());
+    const [indexesWithExactProgress, setIndexesWithExactProgress] = useState<string[]>([]);
+
+    const indexNamesRef = useRef<string[]>([]);
+    useEffect(() => {
+        indexNamesRef.current = stats.indexes.map((x) => x.name);
+    }, [stats.indexes]);
+
     const fetchProgress = async (location: databaseLocationSpecifier) => {
         try {
-            const progress = await indexesService.getProgress(db.name, location);
+            const exactNames = indexNamesRef.current.filter((x) => indexesWithExactProgressRef.current.has(x));
+
+            let progress: Raven.Client.Documents.Indexes.IndexProgress[];
+            if (exactNames.length === 0) {
+                progress = await indexesService.getProgress(db.name, location);
+            } else {
+                // split into two complementary requests so the expensive exact calculation
+                // runs only for the indexes the user asked for
+                const estimatedNames = indexNamesRef.current.filter((x) => !indexesWithExactProgressRef.current.has(x));
+
+                const requests = [indexesService.getProgress(db.name, location, exactNames, true)];
+                if (estimatedNames.length > 0) {
+                    requests.push(indexesService.getProgress(db.name, location, estimatedNames));
+                }
+
+                progress = (await Promise.all(requests)).flat();
+            }
 
             dispatch({
                 type: "ProgressLoaded",
@@ -161,15 +185,33 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
         }
     };
 
-    const fetchExactProgress = async (index: IndexSharedInfo, location: databaseLocationSpecifier) => {
-        const progress = await indexesService.getProgress(db.name, location, [index.name], true);
+    const fetchSingleIndexProgress = async (
+        index: IndexSharedInfo,
+        location: databaseLocationSpecifier,
+        exact: boolean
+    ) => {
+        const progress = await indexesService.getProgress(db.name, location, [index.name], exact);
 
         dispatch({
-            type: "ExactProgressLoaded",
+            type: "SingleIndexProgressLoaded",
             progress: progress.find((x) => x.Name === index.name),
             indexName: index.name,
             location,
         });
+    };
+
+    const toggleExactProgress = async (index: IndexSharedInfo, location: databaseLocationSpecifier) => {
+        const set = indexesWithExactProgressRef.current;
+        const exact = !set.has(index.name);
+
+        if (exact) {
+            set.add(index.name);
+        } else {
+            set.delete(index.name);
+        }
+        setIndexesWithExactProgress(Array.from(set));
+
+        await fetchSingleIndexProgress(index, location, exact);
     };
 
     const fetchStats = useCallback(
@@ -892,7 +934,8 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
         } satisfies SwapSideBySideData,
         openFaulty,
         confirmDeleteIndexes,
-        fetchExactProgress,
+        indexesWithExactProgress,
+        toggleExactProgress,
         globalIndexingStatus,
         isImportIndexModalOpen,
         toggleIsImportIndexModalOpen,
