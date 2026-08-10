@@ -1,0 +1,389 @@
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.ts-range-picker {
+    // Floor for the body height. The right-hand pane is already mode-independent (both
+    // Start/End slots are always rendered - see `__field--placeholder`), so this only covers
+    // the sidebar, where Before/After list 7 preset shortcuts against Between's 6.
+    &__body {
+        min-height: 352px;
+    }
+
+    // The unused Start/End slot in Before/After mode. Keeps its box in the flow (so the
+    // modal height matches Between) while being invisible, untabbable and unclickable.
+    &__field--placeholder {
+        visibility: hidden;
+        pointer-events: none;
+    }
+
+    // Hard-clamp the width (min + max, not just flex-basis) so it stays identical across
+    // Between / Before / After. Without the clamp a flex item's automatic minimum size lets the
+    // longer Before/After labels widen the column past the short Between one.
+    &__sidebar {
+        flex: 0 0 180px;
+        width: 180px;
+        min-width: 180px;
+        max-width: 180px;
+    }
+
+    // Preset shortcuts render as neutral list items; the applied one gets a subtle
+    // "selected" pill + trailing checkmark (not the primary/purple accent).
+    // Override the Bootstrap button colour variables so the link variant isn't purple.
+    &__preset.btn {
+        --bs-btn-color: #{colors.$text-muted-var};
+        --bs-btn-hover-color: #{colors.$text-color-var};
+        padding: 6px 12px;
+        border-radius: var(--bs-border-radius);
+        // Keep long labels inside the fixed-width sidebar rather than forcing it wider.
+        white-space: normal;
+        text-align: left;
+    }
+
+    &__preset--active.btn {
+        &,
+        &:hover {
+            --bs-btn-color: #{colors.$text-color-var};
+            --bs-btn-hover-color: #{colors.$text-color-var};
+            background-color: colors.$panel-bg-2-var;
+            font-weight: 500;
+        }
+    }
+
+    // Single-input field with the icon rendered *inside* it (like the standalone DatePicker),
+    // so the focus ring is the stock one-box `form-control:focus` ring with no addon seam.
+    &__input-icon {
+        position: relative;
+
+        // Let the datepicker's wrapper fill the field width.
+        .react-datepicker-wrapper,
+        .react-datepicker__input-container {
+            display: block;
+            width: 100%;
+        }
+
+        .form-control {
+            padding-left: 2rem;
+        }
+    }
+
+    &__input-icon-glyph {
+        position: absolute;
+        left: 0.65rem;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 3;
+        pointer-events: none;
+        color: colors.$text-muted-var;
+    }
+
+    // Single-line description of what a Before/After selection filters.
+    &__summary {
+        padding: 8px 12px;
+        border-radius: var(--bs-border-radius);
+        background-color: colors.$panel-bg-2-var;
+        color: colors.$text-color-var;
+        font-size: sizes.$font-size-sm;
+        line-height: 1.5;
+    }
+
+    // Between names two timestamps and wraps to two lines; Before/After name one and fit on a
+    // single line. Reserve the two-line height on a wrapper rather than on the pill itself, so
+    // the pill keeps its snug 8px padding in both cases and the slack falls outside it.
+    // Font-relative (2 lines x line-height + the pill's vertical padding) rather than a pixel guess.
+    &__summary-slot {
+        display: flex;
+        // Pin the pill to the bottom of the reserved space. When the summary is one line
+        // (Before/After) the spare line sits above it, so the pill stays level with the
+        // bottom of the sidebar instead of floating with a gap underneath.
+        flex-direction: column;
+        justify-content: flex-end;
+        min-height: calc(3em + 16px);
+        font-size: sizes.$font-size-sm;
+    }
+
+    // Stretch the Between / Before / After toggle to fill the column, with equal segments.
+    &__mode {
+        .multi-toggle-list {
+            display: flex;
+            width: 100%;
+
+            .flex-horizontal {
+                flex: 1 1 0;
+            }
+
+            .multi-toggle-item {
+                width: 100%;
+
+                label {
+                    width: 100%;
+                    justify-content: center;
+                    background-color: colors.$secondary-var !important;
+                    font-size: sizes.$font-size-sm !important;
+                    font-weight: 400 !important;
+                    letter-spacing: normal !important;
+                }
+            }
+        }
+    }
+}
+
+// Time entry dropdown: three click-to-pick columns (Hour / Minute / Second) below the typed
+// HH:mm:ss.SSS field. Rendered inline inside .ts-range-picker__input-icon (position: relative).
+.ts-time-picker {
+    &__menu {
+        position: absolute;
+        top: calc(100% + 2px);
+        left: 0;
+        right: 0;
+        z-index: 6;
+        overflow: hidden;
+        border: 1px solid colors.$border-color-light-var;
+        border-radius: var(--bs-border-radius-sm);
+        background-color: colors.$panel-bg-1-var;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+    }
+
+    &__columns {
+        display: flex;
+    }
+
+    &__col {
+        flex: 1 1 0;
+        min-width: 0;
+
+        &:not(:last-child) {
+            border-right: 1px solid colors.$border-color-light-var;
+        }
+    }
+
+    &__col &__list {
+        max-height: 160px;
+        margin: 0;
+        padding: 4px;
+        // The browser's default `ul { padding-inline-start: 40px }` is a logical
+        // property, so it wins over the `padding` shorthand above and pushes the
+        // numbers to the right. Reset it explicitly on both sides.
+        padding-inline-start: 4px;
+        padding-inline-end: 4px;
+        overflow-y: auto;
+        list-style: none;
+        text-align: center;
+
+        // Take the scrollbar out of the layout flow so the numbers sit on the
+        // column's true center axis instead of being pushed left by its width.
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+
+        &::-webkit-scrollbar {
+            width: 0;
+            height: 0;
+        }
+    }
+
+    // Styled to match the basic date picker's day cells (see ReactDatepicker.scss).
+    // Nested under &__list to raise specificity above the global `.bs5 button` reset
+    // (which sets border-radius: 0), so the rounded corners actually take effect.
+    &__list &__option {
+        display: block;
+        width: 100%;
+        margin: 0 auto;
+        padding: 4px 0;
+        border: 0;
+        border-radius: sizes.$border-radius-sm;
+        background-color: transparent;
+        color: colors.$text-color-var;
+        text-align: center;
+        cursor: pointer;
+
+        &:hover {
+            background-color: colors.$panel-bg-2-var;
+        }
+    }
+
+    &__list &__option--active {
+        background-color: var(--faded-primary);
+        color: colors.$primary-var;
+
+        &:hover {
+            background-color: colors.$primary-var;
+            color: colors.$white;
+        }
+    }
+
+    &__footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 6px 8px;
+        border-top: 1px solid colors.$border-color-light-var;
+    }
+
+    &__action {
+        padding: 2px 6px;
+        border: 0;
+        border-radius: var(--bs-border-radius-sm);
+        background-color: transparent;
+        color: var(--bs-primary);
+        font-size: sizes.$font-size-sm;
+        cursor: pointer;
+
+        &:hover {
+            text-decoration: underline;
+        }
+    }
+}
+
+// Tuck the calendar closer to the input. Two gaps stack by default: react-datepicker's built-in
+// floating-ui offset(10) (JS, not CSS) plus the app-wide 10px popper padding. Zero the CSS padding
+// and pull the popper up with a negative margin to cancel most of the floating-ui offset, leaving
+// a small ~4px gap. Scoped to this picker via popperClassName so no other datepicker is affected.
+.ts-range-datepicker-popper.react-datepicker-popper[data-placement^="bottom"] {
+    margin-top: -6px;
+    padding-top: 0;
+}
+
+.ts-range-datepicker-popper.react-datepicker-popper[data-placement^="top"] {
+    margin-bottom: -6px;
+    padding-bottom: 0;
+}
+
+// Fixed-width calendar so the popover doesn't resize with the header dropdown contents. The day
+// grid stays its natural size and centres within this width.
+.ts-range-datepicker.react-datepicker {
+    // Wide enough that the longest month name ("September") shows in full in the month dropdown.
+    width: 16.5rem;
+
+    .react-datepicker__month-container {
+        float: none;
+        width: 100%;
+    }
+}
+
+// Custom date-picker header: prev arrow | month select | year select | next arrow, in one flex row.
+// Top level because the calendar renders into the react-datepicker portal, outside .ts-range-picker.
+.ts-dp-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px;
+
+    &__nav {
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        border: 0;
+        border-radius: var(--bs-border-radius);
+        background-color: transparent;
+        color: colors.$text-color-var;
+
+        &:hover {
+            background-color: colors.$secondary-var;
+        }
+
+        &:disabled {
+            color: colors.$text-muted-var;
+            opacity: 0.5;
+            cursor: default;
+            background-color: transparent;
+        }
+    }
+
+    // Month/year dropdowns styled to mirror Studio's react-select control + menu.
+    &__select {
+        position: relative;
+        min-width: 0;
+    }
+
+    // Month gets the room (min-width fits the longest month so it never truncates or jumps);
+    // year only needs four digits, so keep it narrow.
+    &__select--month {
+        flex: 1 1 auto;
+        min-width: 6.5rem;
+    }
+
+    &__select--year {
+        flex: 0 0 5rem;
+    }
+
+    &__control {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 4px;
+        width: 100%;
+        min-height: 32px;
+        padding: 2px 8px;
+        border: 1px solid colors.$border-color-light-var;
+        border-radius: var(--bs-border-radius-sm);
+        background-color: colors.$input-bg-var;
+        color: colors.$text-color-var;
+        cursor: pointer;
+
+        &:hover {
+            box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+        }
+    }
+
+    &__value {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    &__caret {
+        flex: 0 0 auto;
+        font-size: 0.7rem;
+        color: colors.$text-muted-var;
+        opacity: 0.7;
+    }
+
+    &__menu {
+        position: absolute;
+        top: calc(100% + 2px);
+        left: 0;
+        right: 0;
+        z-index: 6;
+        max-height: 220px;
+        margin: 0;
+        padding: 4px;
+        overflow-y: auto;
+        list-style: none;
+        border: 1px solid colors.$border-color-light-var;
+        border-radius: var(--bs-border-radius);
+        background-color: colors.$panel-bg-1-var;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+    }
+
+    // Styled to match the basic date picker's day cells (see ReactDatepicker.scss),
+    // consistent with the time-picker option list above.
+    &__option {
+        display: block;
+        width: 100%;
+        padding: 4px 10px;
+        border: 0;
+        border-radius: sizes.$border-radius-sm;
+        background-color: transparent;
+        color: colors.$text-color-var;
+        text-align: left;
+        white-space: nowrap;
+        cursor: pointer;
+
+        &:hover {
+            background-color: colors.$panel-bg-2-var;
+        }
+    }
+
+    &__option--active {
+        background-color: var(--faded-primary);
+        color: colors.$primary-var;
+
+        &:hover {
+            background-color: colors.$primary-var;
+            color: colors.$white;
+        }
+    }
+}
