@@ -68,6 +68,14 @@ public partial class IndexSearcher
     }
 
     
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public MultiTermMatch PatternQuery(in FieldMetadata field, Slice pattern, bool forward = true, bool streamingEnabled = false, in CancellationToken token = default)
+    {
+        return forward
+            ? MultiTermMatchBuilder<PatternTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>>(field, pattern, streamingEnabled, validatePostfixLen: false, token: token)
+            : MultiTermMatchBuilder<PatternTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>>(field, pattern, streamingEnabled, validatePostfixLen: false, token: token);
+    }
+
     public MultiTermMatch RegexQuery(in FieldMetadata field, Regex regex, bool forward = true, bool streamingEnabled = false, in CancellationToken token = default)
     {
         var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
