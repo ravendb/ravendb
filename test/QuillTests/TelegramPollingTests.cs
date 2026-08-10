@@ -260,6 +260,31 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Unformatted_reply_already_shown_by_the_preview_finalizes_without_an_error()
+    {
+        var (app, channelId, token) = await ProvisionAsync();
+        await using var appGuard = app;
+
+        // a single chunk flushes immediately, so the preview lands the full reply as plain text and the
+        // finalize Markdown edit is the no-op that Telegram refuses as "message is not modified"
+        const long chatId = 15;
+        Router.Chunks = ["A short answer with no formatting."];
+
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 15, "hi");
+        await Mock.WaitUntilAsync(() => Mock.SentMessages.Any(m => m.ChatId == chatId), "the preview send");
+
+        // turns are serialized per chat, so the second run starting means the first turn fully unwound
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 15, "again");
+        await Mock.WaitUntilAsync(() => Router.Requests.Count >= 2, "the second turn");
+
+        Assert.DoesNotContain(Mock.SentMessages, m => m.ChatId == chatId && m.Text.Contains("went wrong"));
+        var health = Assert.Single(await app.GetTelegramHealthAsync());
+        Assert.Equal(0, health.ErrorCount);
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Long_reply_splits_at_a_sentence_boundary_into_follow_up_messages()
     {
         var (app, channelId, token) = await ProvisionAsync();
