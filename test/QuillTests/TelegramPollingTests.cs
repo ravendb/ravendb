@@ -70,8 +70,6 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         await doomedApp.Host.DeleteAppAsync(doomedApp.Slug);
         await doomedApp.DisposeAsync();
 
-        // the deleted app's database is gone, which a pass must treat as a definitive answer for that app
-        // only - the surviving app's bot keeps polling
         var doomedFrozen = await WaitForPollingToSettleAsync(doomedToken);
         var keptBefore = Mock.GetUpdatesCallCount(keptToken);
 
@@ -210,7 +208,6 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         Mock.EnqueueTextMessage(token, chatId: 1, fromUserId: 1, "first");
         await Mock.WaitUntilAsync(() => Router.Requests.Count >= 1, "the first run");
 
-        // the receiver starts from offset 0, so confirmation shows up as the offset advancing past it
         await Mock.WaitUntilAsync(
             () => Mock.LastGetUpdatesOffset(token) > before, "the poll that confirms the first update");
 
@@ -265,15 +262,12 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         var (app, channelId, token) = await ProvisionAsync();
         await using var appGuard = app;
 
-        // a single chunk flushes immediately, so the preview lands the full reply as plain text and the
-        // finalize Markdown edit is the no-op that Telegram refuses as "message is not modified"
         const long chatId = 15;
         Router.Chunks = ["A short answer with no formatting."];
 
         Mock.EnqueueTextMessage(token, chatId, fromUserId: 15, "hi");
         await Mock.WaitUntilAsync(() => Mock.SentMessages.Any(m => m.ChatId == chatId), "the preview send");
 
-        // turns are serialized per chat, so the second run starting means the first turn fully unwound
         Mock.EnqueueTextMessage(token, chatId, fromUserId: 15, "again");
         await Mock.WaitUntilAsync(() => Router.Requests.Count >= 2, "the second turn");
 
@@ -347,7 +341,6 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         Mock.EnqueueTextMessage(token, chatId, fromUserId: 610, "m0");
         await Mock.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "m0"), "the blocking turn to start");
 
-        // one turn in flight plus a queue of TelegramChatQueueCapacity, so the tail cannot be admitted
         for (var i = 1; i <= 12; i++)
             Mock.EnqueueTextMessage(token, chatId, fromUserId: 610, $"m{i}");
 
@@ -361,13 +354,11 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
             "the overload warning");
         await Task.Delay(400);
 
-        // one warning for the saturation episode, not one per dropped message
         var warning = Assert.Single(Mock.SentMessages, m => m.ChatId == chatId && m.Text.Contains("didn't make it"));
         Assert.Null(warning.ParseMode);
 
         gate.SetResult();
 
-        // whatever was admitted still runs, in arrival order
         await Mock.WaitUntilAsync(() => Router.Requests.Count >= 2, "the queued turns");
         var prompts = Router.Requests.Select(r => int.Parse(r.Prompt[1..])).ToArray();
         Assert.Equal(prompts.Order().ToArray(), prompts);

@@ -17,7 +17,6 @@ internal sealed class TelegramChannelHealth
         _lastError = scrubbedMessage;
     }
 
-    /// Only a live runtime owns a health instance, so a snapshot existing at all means the bot is polling.
     public TelegramChannelHealthSnapshot Snapshot()
     {
         var success = Interlocked.Read(ref _lastSuccessfulPollTicks);

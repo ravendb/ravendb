@@ -12,10 +12,6 @@ namespace Raven.Quill.Telegram;
 /// edits), or when the text is unchanged - chunks keep accumulating and the next trigger catches up.
 /// <see cref="FinalizeAsync"/> lands the authoritative reply: it edits the message to the first split part and
 /// sends the 4096-overflow as follow-up messages.
-/// Previews go as plain text, because a half-streamed reply routinely carries unclosed Markdown entities and
-/// every attempt would cost a rejection plus a retry. Only the authoritative reply tries Markdown, falling
-/// back to plain text once when Telegram rejects the entities. An edit Telegram refuses as "message is not
-/// modified" counts as delivered: the message already shows exactly that content.
 internal sealed class TelegramStreamingReply(
     ITelegramBotClient bot,
     long chatId,
@@ -111,9 +107,6 @@ internal sealed class TelegramStreamingReply(
 
     private async Task SendOrEditAsync(string text, bool markdown)
     {
-        // skipping unchanged text keeps Telegram from rejecting a no-op edit as "message is not modified".
-        // the parse mode is part of that comparison, so a reply whose text the last preview already showed
-        // still gets its one Markdown attempt at finalize instead of staying plain.
         if (text.Length == 0 || (text == _lastSentText && markdown == _lastSentMarkdown))
             return;
 
@@ -160,8 +153,6 @@ internal sealed class TelegramStreamingReply(
         }
         catch (ApiRequestException e) when (IsNotModified(e))
         {
-            // an unformatted reply the preview already showed in full: the Markdown parse changes nothing,
-            // so Telegram refuses the no-op edit and the message stands as delivered
         }
         catch (ApiRequestException)
         {
@@ -177,7 +168,6 @@ internal sealed class TelegramStreamingReply(
         }
         catch (ApiRequestException e) when (IsNotModified(e))
         {
-            // reachable when the Markdown attempt failed on entities and the preview already showed this text
         }
     }
 
