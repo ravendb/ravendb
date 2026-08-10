@@ -16,7 +16,12 @@ const noop = () => {
 
 export const Between: StoryObj<typeof TimeSeriesFilterBadge> = {
     render: () => (
-        <TimeSeriesFilterBadge startDate={moment().subtract(30, "days")} endDate={moment()} onEdit={noop} onClear={noop} />
+        <TimeSeriesFilterBadge
+            startDate={moment().subtract(30, "days")}
+            endDate={moment()}
+            onEdit={noop}
+            onClear={noop}
+        />
     ),
 };
 
