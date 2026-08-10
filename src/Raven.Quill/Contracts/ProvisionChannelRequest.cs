@@ -8,4 +8,4 @@ public sealed record ProvisionChannelRequest(
     string[]? AllowedOrigins,
     string? DisplayName = null,
     string? BotToken = null,
-    Dictionary<string, string>? Parameters = null);
+    Dictionary<string, TelegramParameterBinding>? ParameterBindings = null);

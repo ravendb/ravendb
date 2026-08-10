@@ -1536,8 +1536,8 @@ export interface components {
             allowedOrigins: null | string[];
             displayName?: null | string;
             botToken?: null | string;
-            parameters?: null | {
-                [key: string]: string;
+            parameterBindings?: null | {
+                [key: string]: components["schemas"]["TelegramParameterBinding"];
             };
         };
         ProvisionChannelResponse: {
@@ -1651,6 +1651,12 @@ export interface components {
             errorCount: number;
             lastError: null | string;
         };
+        TelegramParameterBinding: {
+            source?: components["schemas"]["TelegramParameterSource"];
+            value?: null | string;
+        };
+        /** @enum {unknown} */
+        TelegramParameterSource: "Constant" | "UserId" | "Username";
         TestMappingRequest: {
             sourceTableName: string;
             /** Format: int32 */
@@ -4019,6 +4025,8 @@ export type SuggestAgentResponse = components["schemas"]["SuggestAgentResponse"]
 export type SuggestCdcRequest = components["schemas"]["SuggestCdcRequest"];
 export type SuggestCdcResponse = components["schemas"]["SuggestCdcResponse"];
 export type TelegramChannelHealthResponse = components["schemas"]["TelegramChannelHealthResponse"];
+export type TelegramParameterBinding = components["schemas"]["TelegramParameterBinding"];
+export type TelegramParameterSource = components["schemas"]["TelegramParameterSource"];
 export type TestMappingRequest = components["schemas"]["TestMappingRequest"];
 export type TestMappingResponse = components["schemas"]["TestMappingResponse"];
 export type TestMappingRowResponse = components["schemas"]["TestMappingRowResponse"];

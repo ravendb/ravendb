@@ -151,8 +151,7 @@ public static class ChannelsEndpoints
         if (TryValidateDisplayName(body.DisplayName, out var nameError) == false)
             return Results.BadRequest(new ApiErrorResponse(nameError!));
 
-        // bind params at provision (mint-time-binding analogue); the Telegram user id is injected per message
-        if (TryResolveTelegramParameters(config, body.Parameters, out var parameters, out var paramError) == false)
+        if (TelegramParameterBindings.TryResolve(config, body.ParameterBindings, out var bindings, out var paramError) == false)
             return Results.BadRequest(new ApiErrorResponse(paramError!, Code: "missing_parameters"));
 
         var botToken = body.BotToken.Trim();
@@ -181,7 +180,7 @@ public static class ChannelsEndpoints
                 BotToken = botToken,
                 BotId = bot.Id,
                 BotUsername = bot.Username ?? "",
-                Parameters = parameters,
+                ParameterBindings = bindings,
             },
         };
 
@@ -198,26 +197,6 @@ public static class ChannelsEndpoints
     }
 
     private static IResult ProvisionWhatsAppAsync() => NotImplementedChannel(ChannelType.WhatsApp);
-
-    /// The agent's declared parameters must be operator-bound now, except the auto-bound Telegram ones;
-    /// the poller fills those from the sender on every message.
-    private static bool TryResolveTelegramParameters(
-        AiAgentConfiguration config,
-        Dictionary<string, string>? supplied,
-        out Dictionary<string, string> resolved,
-        out string? error)
-    {
-        error = null;
-        if (AgentParameters.TryResolve(config, supplied, out resolved, out var missing))
-            return true;
-
-        missing.RemoveAll(TelegramSettings.IsAutoBoundParameter);
-        if (missing.Count == 0)
-            return true;
-
-        error = $"missing agent parameter(s): {string.Join(", ", missing)}";
-        return false;
-    }
 
     private static async Task<IResult> ListChannelsAsync(
         string slug,

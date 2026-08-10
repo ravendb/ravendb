@@ -132,31 +132,33 @@ internal sealed class TelegramChat
     private async Task<Dictionary<string, string>?> BindParametersAsync(
         AiAgentConfiguration config, Message message)
     {
-        var parameters = new Dictionary<string, string>(_context.ChannelDoc.Telegram!.Parameters);
+        var parameters = new Dictionary<string, string>();
 
-        var identifierParameter = config.Parameters?.FirstOrDefault(p =>
-            string.Equals(p.Name, TelegramSettings.TelegramUserIdentifierParameterName, StringComparison.OrdinalIgnoreCase));
-        if (identifierParameter is not null &&
-            parameters.Keys.Any(k => string.Equals(k, identifierParameter.Name, StringComparison.OrdinalIgnoreCase)) == false)
+        foreach (var (name, binding) in _context.ChannelDoc.Telegram!.ParameterBindings)
         {
-            var userId = message.From?.Id ?? _chatId;
-            parameters[identifierParameter.Name] = userId.ToString(CultureInfo.InvariantCulture);
-        }
-
-        var usernameParameter = config.Parameters?.FirstOrDefault(p =>
-            string.Equals(p.Name, TelegramSettings.TelegramUsernameParameterName, StringComparison.OrdinalIgnoreCase));
-        if (usernameParameter is not null &&
-            parameters.Keys.Any(k => string.Equals(k, usernameParameter.Name, StringComparison.OrdinalIgnoreCase)) == false)
-        {
-            var username = message.From?.Username;
-            if (string.IsNullOrEmpty(username))
+            switch (binding.Source)
             {
-                await SendPlainAsync(
-                    "This assistant needs your Telegram username. Set one in Telegram Settings and send your message again.");
-                return null;
-            }
+                case TelegramParameterSource.Constant:
+                    parameters[name] = binding.Value ?? "";
+                    break;
 
-            parameters[usernameParameter.Name] = username;
+                case TelegramParameterSource.UserId:
+                    var userId = message.From?.Id ?? _chatId;
+                    parameters[name] = userId.ToString(CultureInfo.InvariantCulture);
+                    break;
+
+                case TelegramParameterSource.Username:
+                    var username = message.From?.Username;
+                    if (string.IsNullOrEmpty(username))
+                    {
+                        await SendPlainAsync(
+                            "This assistant needs your Telegram username. Set one in Telegram Settings and send your message again.");
+                        return null;
+                    }
+
+                    parameters[name] = username;
+                    break;
+            }
         }
 
         var unbound = (config.Parameters ?? [])
