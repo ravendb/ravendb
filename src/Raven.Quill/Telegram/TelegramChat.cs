@@ -10,9 +10,6 @@ using Telegram.Bot.Types.Enums;
 
 namespace Raven.Quill.Telegram;
 
-/// One per Telegram chat, living as long as its bot. A bounded queue plus a single loop gives one turn at
-/// a time in arrival order; everything below the queue runs on that loop, so the turn state is plain
-/// fields with no synchronization.
 internal sealed class TelegramChat
 {
     private readonly Channel<Message> _queue;
@@ -21,7 +18,6 @@ internal sealed class TelegramChat
     private readonly TelegramChatContext _context;
     private readonly CancellationToken _ct;
 
-    // written by the receiver on a refused post, cleared by the loop once the queue drains
     private int _overloadNotified;
 
     public TelegramChat(long chatId, TelegramBotRuntime bot, TelegramChatContext context, CancellationToken ct)
@@ -35,7 +31,7 @@ internal sealed class TelegramChat
             new BoundedChannelOptions(context.Options.TelegramChatQueueCapacity)
             {
                 SingleReader = true,
-                FullMode = BoundedChannelFullMode.Wait,   // full => TryWrite returns false, the receiver sheds
+                FullMode = BoundedChannelFullMode.Wait,
             });
 
         Completion = Task.Run(RunAsync, CancellationToken.None);
@@ -45,8 +41,6 @@ internal sealed class TelegramChat
 
     public bool TryPost(Message message) => _queue.Writer.TryWrite(message);
 
-    /// Tells the sender their message was shed, at most once per saturation episode, so a hammered chat
-    /// gets one warning instead of one per dropped message.
     public void NotifyOverloadOnce()
     {
         if (Interlocked.Exchange(ref _overloadNotified, 1) != 0)
@@ -71,8 +65,6 @@ internal sealed class TelegramChat
         }
         catch (OperationCanceledException) when (_ct.IsCancellationRequested)
         {
-            // the only way this loop ends: the bot is stopping (disable, delete, token rotation, app
-            // delete, shutdown). the whole subtree goes down together.
         }
     }
 
@@ -123,7 +115,7 @@ internal sealed class TelegramChat
 
         var parameters = await BindParametersAsync(config, message);
         if (parameters is null)
-            return;   // the sender was already told what is missing
+            return;
 
         try
         {
@@ -137,8 +129,6 @@ internal sealed class TelegramChat
         await RunTurnAsync(prompt, conversationId, config, parameters);
     }
 
-    /// The agent's declared parameters come from the channel document, except the auto-bound Telegram ones
-    /// which are read off the sender of this message. Returns null when the sender needs to act first.
     private async Task<Dictionary<string, string>?> BindParametersAsync(
         AiAgentConfiguration config, Message message)
     {
@@ -210,7 +200,6 @@ internal sealed class TelegramChat
         }
     }
 
-    // matches Telegram's "/name[@botUsername] [payload]" command shape
     private bool IsCommand(string text, string name)
     {
         var separator = text.IndexOfAny([' ', '\t', '\r', '\n']);

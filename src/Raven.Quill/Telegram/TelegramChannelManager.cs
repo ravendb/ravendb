@@ -18,16 +18,11 @@ internal interface ITelegramChannelManager
 {
     Task<(TelegramUser? Bot, string? Error)> ValidateBotTokenAsync(string botToken, CancellationToken ct);
 
-    /// Asks for an apply-changes pass now instead of at the next tick. Callers persist their channel
-    /// documents first and never start or stop a bot themselves.
     void Wake();
 
     IReadOnlyDictionary<string, TelegramChannelHealthSnapshot> GetHealth(string database);
 }
 
-/// Converges the running bots to the enabled Telegram channel documents. Desired state lives in the DB;
-/// every pass is a full diff, so a failed pass is retried by the next one and endpoint/delete races
-/// heal themselves.
 internal sealed class TelegramChannelManager(
     IDocumentStore store,
     ITelegramBotClientFactory botFactory,
@@ -49,8 +44,6 @@ internal sealed class TelegramChannelManager(
 
         while (stoppingToken.IsCancellationRequested == false)
         {
-            // reset before the pass: a Set() arriving while it runs lands on the fresh source, so the
-            // next wait returns immediately instead of losing the wakeup
             _wake.Reset();
 
             try
@@ -81,8 +74,6 @@ internal sealed class TelegramChannelManager(
     {
         var desired = new Dictionary<(string Database, string ChannelId), Channel>();
 
-        // apps whose desired state we could not read this pass; their bots are left alone, because a
-        // read blip must never stop a healthy bot
         var unreadable = new HashSet<string>();
 
         List<App> apps;
@@ -93,7 +84,6 @@ internal sealed class TelegramChannelManager(
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
-            // no authority over any app this pass; every bot keeps running and the next tick retries
             logger.LogWarning("Telegram apply-changes could not list apps: {Error}", e.Message);
             return;
         }
@@ -116,8 +106,6 @@ internal sealed class TelegramChannelManager(
             }
             catch (DatabaseDoesNotExistException)
             {
-                // definitive answer: the app's database is gone. leaving it out of `unreadable` is what
-                // lets the sweep below stop its bots.
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {
@@ -126,8 +114,6 @@ internal sealed class TelegramChannelManager(
             }
         }
 
-        // stop whatever should not run: disabled, deleted, app gone, or token rotated. an app whose
-        // document was deleted is absent from `apps`, so its bots have no desired entry and land here.
         foreach (var (key, bot) in _bots)
         {
             if (unreadable.Contains(key.Database))
@@ -144,8 +130,6 @@ internal sealed class TelegramChannelManager(
                 "Telegram bot stopped for channel {ChannelId} on {Database}", key.ChannelId, key.Database);
         }
 
-        // only the token is compared above, so reassigning the agent or editing parameters never
-        // restarts a bot and never kills a live chat
         foreach (var (key, channel) in desired)
         {
             if (_bots.ContainsKey(key))
@@ -195,8 +179,6 @@ internal sealed class TelegramChannelManager(
 
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
-        // unwind the apply-changes loop first: a pass still running here could start a bot after the
-        // sweep below snapshots _bots, and nothing would ever stop it
         await base.StopAsync(cancellationToken);
 
         var bots = _bots.Values.ToArray();

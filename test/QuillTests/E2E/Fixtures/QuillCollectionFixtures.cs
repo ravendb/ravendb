@@ -206,9 +206,6 @@ public abstract class QuillTelegramTestBase(ITestOutputHelper output, QuillTeleg
         Llm.Reset();
     }
 
-    /// Bots are started and stopped by an apply-changes pass, not by the endpoint that saved the document, so
-    /// "polling stopped" is a count that stops moving rather than one sampled the instant a call returned.
-    /// Returns the settled count.
     protected async Task<int> WaitForPollingToSettleAsync(string token, TimeSpan? timeout = null)
     {
         var deadline = DateTime.UtcNow + (timeout ?? TimeSpan.FromSeconds(20));

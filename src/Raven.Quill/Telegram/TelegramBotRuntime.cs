@@ -11,9 +11,6 @@ using Telegram.Bot.Types.Enums;
 
 namespace Raven.Quill.Telegram;
 
-/// Everything one enabled Telegram channel needs at runtime: the bot client, the long-poll receiver, the
-/// chat registry, health counters and the poll-error backoff. Created and destroyed only by
-/// <see cref="TelegramChannelManager"/>; stopping it takes its chats down with it.
 internal sealed class TelegramBotRuntime
 {
     private const string GetUpdatesMethod = "getUpdates";
@@ -55,9 +52,6 @@ internal sealed class TelegramBotRuntime
 
     private void Run()
     {
-        // DropPendingUpdates stays false: messages sent while the bot was down are still delivered, which
-        // is what the hand-rolled loop this replaced did. HandleErrorSource is only reachable through
-        // IUpdateHandler, so the receiver goes through DefaultUpdateHandler rather than the Func overload.
         var handler = new DefaultUpdateHandler(OnUpdate, OnErrorAsync);
         var receiverOptions = new ReceiverOptions
         {
@@ -65,8 +59,6 @@ internal sealed class TelegramBotRuntime
             DropPendingUpdates = false,
         };
 
-        // the receiver reports errors and updates but never a poll that simply came back empty, so the
-        // "still reachable" half of health is read off the HTTP responses instead
         Client.OnApiResponseReceived += OnApiResponseReceived;
 
         _receive = Client.ReceiveAsync(handler, receiverOptions, _cts.Token);
@@ -85,8 +77,6 @@ internal sealed class TelegramBotRuntime
         return default;
     }
 
-    /// The receiver awaits this before issuing the next getUpdates, so it holds a message and therefore
-    /// awaits nothing: it routes or it drops.
     private Task OnUpdate(ITelegramBotClient client, Update update, CancellationToken ct)
     {
         if (update.Message is not { Text.Length: > 0 } message)
@@ -94,8 +84,6 @@ internal sealed class TelegramBotRuntime
 
         if (message.Chat.Type != ChatType.Private)
         {
-            // fire-and-forget: a polite refusal must never delay this bot's intake, and a group chat
-            // gets no queue of its own
             _ = TrySendPlainAsync(message.Chat.Id,
                 "I only work in one-on-one chats. Message me directly to start a conversation.");
             return Task.CompletedTask;
@@ -103,7 +91,6 @@ internal sealed class TelegramBotRuntime
 
         var chat = _chats.GetOrAdd(message.Chat.Id, id => new TelegramChat(id, this, _context, _cts.Token));
 
-        // a chat can never be dead while its bot lives, so a refused post means exactly one thing
         if (chat.TryPost(message) == false)
         {
             Health.RecordError(DateTime.UtcNow, $"chat {message.Chat.Id}: queue full, message dropped");
@@ -127,9 +114,6 @@ internal sealed class TelegramBotRuntime
         if (source != HandleErrorSource.PollingError)
             return;
 
-        // getUpdates itself failed, so no messages are arriving and the library would otherwise re-poll
-        // in a hot loop. this delay is the retry throttle; it blocks nothing, because there is nothing
-        // left to block.
         try
         {
             await Task.Delay(_backoff, ct);
@@ -168,23 +152,18 @@ internal sealed class TelegramBotRuntime
         }
         catch (TimeoutException)
         {
-            // leak the CTS rather than dispose it under a task that still reads its token
             _context.Logger.LogWarning(
                 "Telegram bot {Bot} did not drain within 10s", TelegramSettings.RedactToken(BotToken));
             return;
         }
         catch (Exception)
         {
-            // the receiver unwinds through the cancelled token, and chat loops log their own failures;
-            // either way every task has finished, so the token is free
         }
 
         _cts.Dispose();
     }
 }
 
-/// The per-chat slice of its bot's configuration. The channel document is captured once, so a bot restart
-/// is what picks up an edited AgentId or Parameters.
 internal sealed class TelegramChatContext
 {
     public TelegramChatContext(

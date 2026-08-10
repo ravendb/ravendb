@@ -32,11 +32,8 @@ public sealed class ApplianceOptions
     // min interval between editMessageText calls while streaming a reply
     public TimeSpan TelegramEditDebounce { get; set; } = TimeSpan.FromSeconds(1);
 
-    // upper bound on how long a channel document change takes to reach the running bots; a save
-    // also wakes the manager, so this only backstops changes the wake missed
     public TimeSpan TelegramApplyChangesInterval { get; set; } = TimeSpan.FromSeconds(30);
 
-    // messages held per Telegram chat while a turn runs; the sender is told to wait once the queue fills
     public int TelegramChatQueueCapacity { get; set; } = 8;
 
     public TimeSpan ReadinessInitialDelay { get; set; } = TimeSpan.FromSeconds(15);

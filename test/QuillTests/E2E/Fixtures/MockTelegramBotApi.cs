@@ -272,8 +272,6 @@ public sealed class MockTelegramBotApi : IAsyncDisposable
 
         lock (_lock)
         {
-            // Telegram compares the rendered result, so an edit that changes neither text nor entities is
-            // refused; a parse mode on text with no markup characters renders the same as plain text
             var key = (token, chatId, messageId);
             if (_messageTexts.TryGetValue(key, out var current) && current == text &&
                 (parseMode is null || text.AsSpan().IndexOfAny("*_`[") < 0))
