@@ -108,9 +108,12 @@ COPY docker/quill/ravendb-settings.json /app/ravendb/settings.json
 COPY docker/quill/nginx.conf /etc/nginx/nginx.conf
 
 COPY docker/quill/s6-rc.d/ /etc/s6-overlay/s6-rc.d/
+COPY docker/quill/scripts/proxy-certs.sh /usr/local/bin/proxy-certs
 RUN chmod +x /etc/s6-overlay/s6-rc.d/01-ravendb/run \
              /etc/s6-overlay/s6-rc.d/02-web/run \
-             /etc/s6-overlay/s6-rc.d/03-proxy/run
+             /etc/s6-overlay/s6-rc.d/03-proxy/run \
+             /etc/s6-overlay/s6-rc.d/04-certwatch/run \
+             /usr/local/bin/proxy-certs
 
 EXPOSE 443
 
@@ -125,6 +128,7 @@ ENV RAVEN_QUILL_RAVEN_URL=http://127.0.0.1:8080 \
     RAVEN_QUILL_SETUP_PACKAGE_PATH=/var/lib/quill/setup \
     RAVEN_QUILL_RAVENDB_S6_SERVICE=/run/service/01-ravendb \
     RAVEN_QUILL_RAVENDB_INTERNAL_PORT=8443 \
-    RAVEN_DataDir=/var/lib/quill/ravendb
+    RAVEN_DataDir=/var/lib/quill/ravendb \
+    RAVEN_Logs_Path=/var/lib/quill/ravendb/logs
 
 ENTRYPOINT ["/init"]
