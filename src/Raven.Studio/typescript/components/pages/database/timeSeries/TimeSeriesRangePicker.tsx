@@ -178,13 +178,7 @@ function rangeSummary(
         if (!startValue || !endValue || endValue.isBefore(startValue)) {
             return null;
         }
-        return [
-            { text: "Includes all entries between " },
-            stamp(startValue),
-            { text: " and " },
-            stamp(endValue),
-            zone,
-        ];
+        return [{ text: "Includes all entries between " }, stamp(startValue), { text: " and " }, stamp(endValue), zone];
     }
     if (mode === "before") {
         return endValue ? [{ text: "Includes all entries before " }, stamp(endValue), zone] : null;
@@ -823,4 +817,3 @@ function DatePickerHeader({
         </div>
     );
 }
-
