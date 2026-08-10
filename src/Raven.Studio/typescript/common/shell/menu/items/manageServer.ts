@@ -16,6 +16,7 @@ import Certificates = require("components/pages/resources/manageServer/certifica
 import ServerWideConnectionStrings = require("components/pages/resources/manageServer/serverWideConnectionStrings/ServerWideConnectionStrings");
 import ServerWideTasks = require("components/pages/resources/manageServer/serverWideTasks/ServerWideTasks");
 import AddServerWideTask = require("components/pages/resources/manageServer/serverWideTasks/AddServerWideTask");
+import BackupDecisionLog = require("components/pages/resources/manageServer/backupDecisionLog/BackupDecisionLog");
 
 export = getManageServerMenuItem;
 
@@ -325,6 +326,22 @@ function getManageServerMenuItem() {
                     { name: "Import Stack Traces" },
                 ]
             }
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/backupDecisionLog',
+            moduleId: reactUtils.bridgeToReact(BackupDecisionLog.default, "nonShardedView"),
+            title: 'Backup Decision Log',
+            tooltip: "Shows what the server backup runner decided for every backup task and why",
+            nav: true,
+            css: 'icon-backups',
+            dynamicHash: appUrl.forBackupDecisionLog,
+            requiredAccess: "Operator",
+            search: {
+                alternativeTitles: ["Backup Decisions", "Backup Queue"],
+                innerActions: [
+                    { name: "Filter backup decisions by database" },
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'admin/settings/runningQueries',

@@ -20,8 +20,6 @@ namespace Raven.Server.ServerWide.Backups
 {
     public class DatabaseBackupState
     {
-        public const int MaxDecisionLogSize = 1024; // was 32; raised for richer history during diagnostics
-
         internal readonly string DatabaseName;
 
         public readonly string OriginalDatabaseName;
@@ -44,7 +42,7 @@ namespace Raven.Server.ServerWide.Backups
 
         public MultipleUseFlag Stale { get; } = new();
 
-        private readonly List<(DateTime Time, string Reason)> _decisionLog = new();
+        private readonly List<BackupDecision> _decisionLog = new();
 
         public MultipleUseFlag Running { get; } = new();
 
@@ -139,11 +137,16 @@ namespace Raven.Server.ServerWide.Backups
             return $"'{Configuration.Name} ({Configuration.TaskId})' for database '{DatabaseName}'";
         }
 
-        public void AddToDecisionLog(string reason, DateTime now)
+        public void AddToDecisionLog(string message, DateTime now)
+        {
+            AddToDecisionLog(BackupDecisionKind.Info, detail: null, message, now);
+        }
+
+        public void AddToDecisionLog(BackupDecisionKind kind, string detail, string message, DateTime now)
         {
             lock (_decisionLog)
             {
-                _decisionLog.Insert(0, (now, reason));
+                _decisionLog.Insert(0, new BackupDecision(now, kind, detail, message));
 
                 if (_decisionLog.Count > MaxDecisionLogSize)
                     _decisionLog.RemoveAt(_decisionLog.Count - 1);
@@ -160,7 +163,7 @@ namespace Raven.Server.ServerWide.Backups
             if (runningCancel == null)
                 return;
 
-            AddToDecisionLog($"[CANCELLED:{reason}] Backup task {Configuration.TaskId}", DateTime.UtcNow);
+            AddToDecisionLog(BackupDecisionKind.Cancelled, reason, $"Backup task {Configuration.TaskId}", DateTime.UtcNow);
 
             try
             {
@@ -173,11 +176,28 @@ namespace Raven.Server.ServerWide.Backups
             }
         }
 
-        public List<(DateTime Time, string Reason)> GetDecisionLog()
+        public List<BackupDecision> GetDecisionLog(int take, out int total)
         {
             lock (_decisionLog)
             {
-                return new List<(DateTime Time, string Reason)>(_decisionLog);
+                total = _decisionLog.Count;
+
+                return _decisionLog.GetRange(0, Math.Min(take, total));
+            }
+        }
+
+        public bool TryGetLatestDecision(out BackupDecision decision)
+        {
+            lock (_decisionLog)
+            {
+                if (_decisionLog.Count == 0)
+                {
+                    decision = default;
+                    return false;
+                }
+
+                decision = _decisionLog[0];
+                return true;
             }
         }
     }

@@ -167,6 +167,10 @@ class appUrl {
         return "#admin/settings/adminLogs";
     }
 
+    static forBackupDecisionLog(): string {
+        return "#admin/settings/backupDecisionLog";
+    }
+
     static forDebugAdvancedThreadsRuntime(): string {
         return "#admin/settings/debug/advanced/threadsRuntime";
     }
