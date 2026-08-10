@@ -1,0 +1,18 @@
+#!/command/with-contenv sh
+set -e
+
+CERT_DIR=/var/lib/quill/certs
+
+while [ -z "$(ls "$CERT_DIR"/cluster.server.certificate.*.pfx 2>/dev/null)" ]; do
+    sleep 10
+done
+
+PFX="$(ls "$CERT_DIR"/cluster.server.certificate.*.pfx | head -n1)"
+
+while sleep 60; do
+    if [ "$PFX" -nt /var/lib/quill/proxy/leaf.pem ]; then
+        proxy-certs
+        s6-svc -h /run/service/03-proxy
+        echo "04-certwatch: certificate renewed; nginx reloaded."
+    fi
+done
