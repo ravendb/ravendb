@@ -30,11 +30,13 @@ if [ -f "$SETUP_SETTINGS" ]; then
     RAVENDB_PORT="${RAVEN_QUILL_RAVENDB_INTERNAL_PORT:-8443}"
     sed -i -E "s#(\"ServerUrl\"[[:space:]]*:[[:space:]]*\")https://[^\"]*(\")#\1https://127.0.0.1:${RAVENDB_PORT}\2#" /app/ravendb/settings.json
 
-    # A/settings.json references Security.Certificate.Path as a bare filename
-    # (e.g. "cluster.server.certificate.<slug>.pfx"); RavenDB resolves it
-    # against its working directory (/app/ravendb/), so the matching PFX has
-    # to land next to settings.json.
-    cp "$SETUP_DIR"/A/cluster.server.certificate.*.pfx /app/ravendb/ 2>/dev/null || true
+    CERT_DIR=/var/lib/quill/certs
+    mkdir -p "$CERT_DIR"
+
+    PFX="$(basename "$(ls "$SETUP_DIR"/A/cluster.server.certificate.*.pfx | head -n1)")"
+    [ -f "$CERT_DIR/$PFX" ] || cp "$SETUP_DIR/A/$PFX" "$CERT_DIR/"
+
+    sed -i "s#\"$PFX\"#\"$CERT_DIR/$PFX\"#" /app/ravendb/settings.json
 
     if [ -f "$SETUP_DIR/admin-thumbprint" ]; then
         export RAVEN_Security_WellKnownCertificates_Admin="$(cat "$SETUP_DIR/admin-thumbprint")"
