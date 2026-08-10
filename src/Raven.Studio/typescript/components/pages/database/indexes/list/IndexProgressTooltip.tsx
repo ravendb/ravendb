@@ -2,7 +2,7 @@
 
 import moment = require("moment");
 
-import React from "react";
+import React, { useState } from "react";
 import { PopoverWithHover } from "components/common/PopoverWithHover";
 import classNames from "classnames";
 import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
@@ -19,6 +19,7 @@ import { NamedProgress, NamedProgressItem } from "components/common/NamedProgres
 import { Icon } from "components/common/Icon";
 import copyToClipboard from "common/copyToClipboard";
 import Button from "react-bootstrap/Button";
+import Spinner from "react-bootstrap/Spinner";
 
 interface IndexProgressTooltipProps {
     target: HTMLElement;
@@ -26,10 +27,28 @@ interface IndexProgressTooltipProps {
     index: IndexSharedInfo;
     globalIndexingStatus: IndexRunningStatus;
     showStaleReason: (location: databaseLocationSpecifier) => void;
+    fetchExactProgress: (location: databaseLocationSpecifier) => Promise<void>;
 }
 
 export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
-    const { target, nodeInfo, index, globalIndexingStatus, showStaleReason } = props;
+    const { target, nodeInfo, index, globalIndexingStatus, showStaleReason, fetchExactProgress } = props;
+
+    const [loadingExactProgress, setLoadingExactProgress] = useState(false);
+
+    const loadExactProgress = async () => {
+        if (loadingExactProgress) {
+            return;
+        }
+
+        setLoadingExactProgress(true);
+        try {
+            await fetchExactProgress(nodeInfo.location);
+        } catch {
+            // the (~) marker stays, the user can retry
+        } finally {
+            setLoadingExactProgress(false);
+        }
+    };
 
     if (nodeInfo.status === "failure") {
         return (
@@ -140,6 +159,18 @@ export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
                             </NamedProgress>
                         );
                     })}
+                {nodeInfo.progress?.collections.some((x) => x.estimated) && (
+                    <div className="px-3 pb-2">
+                        <a href="#" onClick={withPreventDefault(loadExactProgress)}>
+                            {loadingExactProgress ? (
+                                <Spinner size="sm" className="me-1" />
+                            ) : (
+                                <Icon icon="refresh" margin="me-1" />
+                            )}
+                            show exact counts
+                        </a>
+                    </div>
+                )}
             </LocationSpecificDetails>
         </PopoverWithHover>
     );
