@@ -64,7 +64,7 @@ public class AgentActionExecutorTests(ITestOutputHelper output) : NoDisposalNeed
 
         var result = await WebhookExecutor().ExecuteAsync(ActionRequest(), Webhook(receiver.WebhookUrl), CancellationToken.None);
 
-        Assert.Contains("\nLocation: https://tickets.example/T-1", result);
+        Assert.Contains(Environment.NewLine + "Location: https://tickets.example/T-1", result);
         Assert.DoesNotContain("X-Powered-By", result);
         Assert.Equal("""{"ticketId":"T-1"}""", BodyOf(result));
     }
@@ -154,12 +154,15 @@ public class AgentActionExecutorTests(ITestOutputHelper output) : NoDisposalNeed
         Assert.Equal("{}", Assert.Single(receiver.Deliveries).Body.GetRawText());
     }
 
-    // mirrors the literal the executor appends; it has no constant to reference
-    private const string TruncationMarker = "\n[truncated]";
+    // mirrors the literals the executor appends; it has no constants to reference.
+    // the executor separates with Environment.NewLine, so a "\n" literal here would only pass on Linux
+    private static readonly string TruncationMarker = Environment.NewLine + "[truncated]";
 
     // the model is handed a status line plus any notable headers, then the body after a blank line
+    private static readonly string BodySeparator = Environment.NewLine + Environment.NewLine;
+
     private static string BodyOf(string result) =>
-        result[(result.IndexOf("\n\n", StringComparison.Ordinal) + 2)..];
+        result[(result.IndexOf(BodySeparator, StringComparison.Ordinal) + BodySeparator.Length)..];
 
     private WebhookActionExecutor WebhookExecutor(TimeSpan? timeout = null) =>
         new(new SingleClientFactory(new HttpClient { Timeout = timeout ?? TimeSpan.FromSeconds(30) }),

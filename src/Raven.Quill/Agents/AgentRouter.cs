@@ -57,10 +57,11 @@ internal sealed class AgentRouter(
             ct);
 
         using var session = store.OpenAsyncSession(request.Database);
-        var bindings = await session.LoadAsync<AgentActionBindings>(AgentActionBindings.IdFor(config.Identifier), ct);
+        var lazyBindings = session.Advanced.Lazily.LoadAsync<AgentActionBindings>(AgentActionBindings.IdFor(config.Identifier), ct);
 
         while (result.Status == AiConversationResult.ActionRequired)
         {
+            var bindings = await lazyBindings.Value;
             await RunActionsAsync(conversation, config, bindings, ct);
 
             result = await conversation.StreamAsync<Dictionary<string, object>>(
