@@ -15,7 +15,7 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
     : QuillTelegramTestBase(output, fixture)
 {
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Disable_stops_polling_within_a_second_and_reenable_resumes()
+    public async Task Disable_stops_polling_and_reenable_resumes()
     {
         var (app, channelId, token) = await ProvisionAsync();
         await using var appGuard = app;
@@ -23,7 +23,7 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         await Mock.WaitUntilAsync(() => Mock.GetUpdatesCallCount(token) >= 1, "polling to start");
 
         await app.UpdateChannelAsync(channelId, new UpdateChannelRequest(null, null, Enabled: false));
-        var frozen = Mock.GetUpdatesCallCount(token);
+        var frozen = await WaitForPollingToSettleAsync(token);
         await Task.Delay(700);
         Assert.Equal(frozen, Mock.GetUpdatesCallCount(token));
 
@@ -31,9 +31,54 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         await Mock.WaitUntilAsync(() => Mock.GetUpdatesCallCount(token) > frozen, "polling to resume");
 
         await app.DeleteChannelAsync(channelId);
-        var afterDelete = Mock.GetUpdatesCallCount(token);
+        var afterDelete = await WaitForPollingToSettleAsync(token);
         await Task.Delay(700);
         Assert.Equal(afterDelete, Mock.GetUpdatesCallCount(token));
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Rotating_the_bot_token_moves_polling_to_the_new_token()
+    {
+        var (app, channelId, oldToken) = await ProvisionAsync();
+        await using var appGuard = app;
+
+        await Mock.WaitUntilAsync(() => Mock.GetUpdatesCallCount(oldToken) >= 1, "polling to start");
+
+        var newToken = NewBotToken();
+        await app.UpdateChannelAsync(channelId, new UpdateChannelRequest(null, null, null, BotToken: newToken));
+
+        await Mock.WaitUntilAsync(() => Mock.GetUpdatesCallCount(newToken) >= 1, "polling on the new token");
+
+        var frozen = await WaitForPollingToSettleAsync(oldToken);
+        await Task.Delay(700);
+        Assert.Equal(frozen, Mock.GetUpdatesCallCount(oldToken));
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Deleting_one_app_leaves_another_apps_bot_polling()
+    {
+        var (keptApp, keptChannelId, keptToken) = await ProvisionAsync();
+        await using var keptGuard = keptApp;
+        var (doomedApp, _, doomedToken) = await ProvisionAsync();
+
+        await Mock.WaitUntilAsync(
+            () => Mock.GetUpdatesCallCount(keptToken) >= 1 && Mock.GetUpdatesCallCount(doomedToken) >= 1,
+            "both bots to start");
+
+        await doomedApp.Host.DeleteAppAsync(doomedApp.Slug);
+        await doomedApp.DisposeAsync();
+
+        // the deleted app's database is gone, which a pass must treat as a definitive answer for that app
+        // only - the surviving app's bot keeps polling
+        var doomedFrozen = await WaitForPollingToSettleAsync(doomedToken);
+        var keptBefore = Mock.GetUpdatesCallCount(keptToken);
+
+        await Mock.WaitUntilAsync(() => Mock.GetUpdatesCallCount(keptToken) > keptBefore, "the surviving bot to poll on");
+        Assert.Equal(doomedFrozen, Mock.GetUpdatesCallCount(doomedToken));
+
+        await keptApp.DeleteChannelAsync(keptChannelId);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -159,9 +204,15 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         var (app, channelId, token) = await ProvisionAsync();
         await using var appGuard = app;
 
+        await Mock.WaitUntilAsync(() => Mock.GetUpdatesCallCount(token) >= 1, "polling to start");
+        var before = Mock.LastGetUpdatesOffset(token) ?? 0;
+
         Mock.EnqueueTextMessage(token, chatId: 1, fromUserId: 1, "first");
         await Mock.WaitUntilAsync(() => Router.Requests.Count >= 1, "the first run");
-        await Mock.WaitUntilAsync(() => Mock.LastGetUpdatesOffset(token) is not null, "the confirming poll");
+
+        // the receiver starts from offset 0, so confirmation shows up as the offset advancing past it
+        await Mock.WaitUntilAsync(
+            () => Mock.LastGetUpdatesOffset(token) > before, "the poll that confirms the first update");
 
         Mock.EnqueueTextMessage(token, chatId: 1, fromUserId: 1, "second");
         await Mock.WaitUntilAsync(() => Router.Requests.Count >= 2, "the second run");
@@ -254,6 +305,47 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
 
         gate.SetResult();
         await Mock.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "a2"), "chat A's second run");
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_flooded_chat_sheds_messages_and_warns_the_sender_once()
+    {
+        var (app, channelId, token) = await ProvisionAsync();
+        await using var appGuard = app;
+
+        const long chatId = 610;
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Router.BeforeRun = request => request.Prompt == "m0" ? gate.Task : Task.CompletedTask;
+
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 610, "m0");
+        await Mock.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "m0"), "the blocking turn to start");
+
+        // one turn in flight plus a queue of TelegramChatQueueCapacity, so the tail cannot be admitted
+        for (var i = 1; i <= 12; i++)
+            Mock.EnqueueTextMessage(token, chatId, fromUserId: 610, $"m{i}");
+
+        await Mock.WaitUntilAsync(
+            () => app.GetTelegramHealthAsync().Result.Single().ErrorCount >= 1, "the shed message");
+        var health = Assert.Single(await app.GetTelegramHealthAsync());
+        Assert.Contains("queue full", health.LastError);
+
+        await Mock.WaitUntilAsync(
+            () => Mock.SentMessages.Any(m => m.ChatId == chatId && m.Text.Contains("didn't make it")),
+            "the overload warning");
+        await Task.Delay(400);
+
+        // one warning for the saturation episode, not one per dropped message
+        var warning = Assert.Single(Mock.SentMessages, m => m.ChatId == chatId && m.Text.Contains("didn't make it"));
+        Assert.Null(warning.ParseMode);
+
+        gate.SetResult();
+
+        // whatever was admitted still runs, in arrival order
+        await Mock.WaitUntilAsync(() => Router.Requests.Count >= 2, "the queued turns");
+        var prompts = Router.Requests.Select(r => int.Parse(r.Prompt[1..])).ToArray();
+        Assert.Equal(prompts.Order().ToArray(), prompts);
 
         await app.DeleteChannelAsync(channelId);
     }
@@ -394,9 +486,10 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
             "a successful poll after recovery");
 
         await app.UpdateChannelAsync(channelId, new UpdateChannelRequest(null, null, Enabled: false));
+        await Mock.WaitUntilAsync(
+            () => app.GetTelegramHealthAsync().Result.Single().IsPolling == false, "the bot to stop");
         var disabled = Assert.Single(await app.GetTelegramHealthAsync());
         Assert.False(disabled.Enabled);
-        Assert.False(disabled.IsPolling);
 
         await app.DeleteChannelAsync(channelId);
         Assert.Empty(await app.GetTelegramHealthAsync());
@@ -418,7 +511,7 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         await Mock.WaitUntilAsync(() => Mock.GetUpdatesCallCount(token) >= 1, "polling to start");
 
         await app.Host.DeleteAppAsync(app.Slug);
-        var frozen = Mock.GetUpdatesCallCount(token);
+        var frozen = await WaitForPollingToSettleAsync(token);
         await Task.Delay(700);
         Assert.Equal(frozen, Mock.GetUpdatesCallCount(token));
     }

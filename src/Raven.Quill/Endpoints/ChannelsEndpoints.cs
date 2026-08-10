@@ -188,7 +188,8 @@ public static class ChannelsEndpoints
         await session.StoreAsync(channel, ct);
         await session.SaveChangesAsync(ct);
 
-        await telegramManager.StartOrRestartAsync(app.Database, channel);
+        // the document is the desired state; the next apply-changes pass starts the bot within milliseconds
+        telegramManager.Wake();
 
         logger.LogInformation(
             "Provisioned Telegram channel slug={Slug} channelId={ChannelId} agentId={AgentId} bot={Bot}",
@@ -345,17 +346,14 @@ public static class ChannelsEndpoints
             tokenRotated = true;
         }
 
-        var wasEnabled = channel.Enabled;
         if (body.Enabled is not null)
             channel.Enabled = body.Enabled.Value;
 
         await session.SaveChangesAsync(ct);
 
-        var runnable = channel is { Enabled: true, Telegram.BotToken.Length: > 0 };
-        if (runnable && (tokenRotated || wasEnabled == false))
-            await telegramManager.StartOrRestartAsync(app.Database, channel);
-        else if (channel.Enabled == false)
-            await telegramManager.StopAsync(app.Database, channelId);
+        // no transition logic here: the pass restarts the bot iff the token changed and stops or starts it
+        // iff Enabled changed, by diffing the saved documents against what is running
+        telegramManager.Wake();
 
         logger.LogInformation(
             "Updated Telegram channel slug={Slug} channelId={ChannelId} enabled={Enabled} tokenRotated={TokenRotated}",
@@ -426,7 +424,8 @@ public static class ChannelsEndpoints
             await session.SaveChangesAsync(ct);
         }
 
-        await telegramManager.StopAsync(app.Database, channelId);
+        // the deleted document has no desired entry, so the next pass stops the bot and drains its chats
+        telegramManager.Wake();
 
         logger.LogInformation("Deleted Telegram channel slug={Slug} channelId={ChannelId}", app.Slug, channelId);
         return Results.NoContent();

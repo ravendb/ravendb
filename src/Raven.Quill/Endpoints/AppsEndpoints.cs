@@ -111,10 +111,12 @@ public static class AppsEndpoints
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
-        await telegramManager.StopAllForDatabaseAsync(app.Database);
-
         await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(slug, true), ct);
         await AppLookup.DeleteAppAsync(store, slug, ct);
+
+        // with the app document gone its channels have no desired entry, so the next pass stops their bots;
+        // a bot that polls into the dropped database in the meantime just records a health error
+        telegramManager.Wake();
 
         return Results.NoContent();
     }

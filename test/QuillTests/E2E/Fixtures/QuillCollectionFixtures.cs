@@ -174,6 +174,7 @@ public abstract class QuillTelegramTestBase(ITestOutputHelper output, QuillTeleg
             {
                 opts.TelegramApiUrl = fixture.Mock.BaseAddress;
                 opts.TelegramEditDebounce = TimeSpan.FromMilliseconds(50);
+                opts.TelegramApplyChangesInterval = TimeSpan.FromMilliseconds(250);
                 configure?.Invoke(opts);
             },
             configureServices: services =>
@@ -193,6 +194,7 @@ public abstract class QuillTelegramTestBase(ITestOutputHelper output, QuillTeleg
             {
                 opts.TelegramApiUrl = fixture.Mock.BaseAddress;
                 opts.TelegramEditDebounce = TimeSpan.FromMilliseconds(50);
+                opts.TelegramApplyChangesInterval = TimeSpan.FromMilliseconds(250);
             },
             seedChatConnectionString: false);
 
@@ -202,6 +204,29 @@ public abstract class QuillTelegramTestBase(ITestOutputHelper output, QuillTeleg
         Mock.Reset();
         Router.Reset();
         Llm.Reset();
+    }
+
+    /// Bots are started and stopped by an apply-changes pass, not by the endpoint that saved the document, so
+    /// "polling stopped" is a count that stops moving rather than one sampled the instant a call returned.
+    /// Returns the settled count.
+    protected async Task<int> WaitForPollingToSettleAsync(string token, TimeSpan? timeout = null)
+    {
+        var deadline = DateTime.UtcNow + (timeout ?? TimeSpan.FromSeconds(20));
+        var last = Mock.GetUpdatesCallCount(token);
+
+        while (true)
+        {
+            await Task.Delay(400);
+
+            var current = Mock.GetUpdatesCallCount(token);
+            if (current == last)
+                return current;
+
+            if (DateTime.UtcNow > deadline)
+                throw new TimeoutException($"Telegram polling never settled; still at {current} calls");
+
+            last = current;
+        }
     }
 
     /// Unique per test so captures/counters on the shared mock never bleed across tests in the collection.
