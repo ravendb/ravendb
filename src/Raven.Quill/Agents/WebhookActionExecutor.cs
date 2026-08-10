@@ -1,6 +1,7 @@
 using System.Buffers;
 using System.Text;
 using Raven.Client.Documents.Operations.AI.Agents;
+using Sparrow;
 
 namespace Raven.Quill.Agents;
 
@@ -29,13 +30,19 @@ internal sealed class WebhookActionExecutor(
         "Location"
     ];
 
+    private static readonly Size ResponseSizeLimit = new(256, SizeUnit.Kilobytes);
+    private static readonly Size DefaultResponseSize = new(4, SizeUnit.Kilobytes);
+
     public async Task<string> ExecuteAsync(AiAgentActionRequest action, WebhookBinding binding, CancellationToken ct)
     {
-        var maxResponseSize = binding.MaxResponseSize ?? 4 * 1024;
-        if (maxResponseSize <= 0)
-            maxResponseSize = 4 * 1024;
-        if (maxResponseSize > 256 * 1024)
-            maxResponseSize = 256 * 1024;
+        var size = binding.MaxResponseSize is > 0
+            ? new Size(binding.MaxResponseSize.Value, SizeUnit.Bytes)
+            : DefaultResponseSize;
+
+        if (size > ResponseSizeLimit)
+            size = ResponseSizeLimit;
+
+        var maxResponseSize = (int)size.GetValue(SizeUnit.Bytes);
 
         var buffer = ArrayPool<byte>.Shared.Rent(maxResponseSize);
         try
@@ -91,15 +98,15 @@ internal sealed class WebhookActionExecutor(
             if (response.Headers.TryGetValues(name, out var values) ||
                 response.Content.Headers.TryGetValues(name, out values))
             {
-                description.Append('\n').Append(name).Append(": ").Append(string.Join(", ", values));
+                description.Append(Environment.NewLine).Append(name).Append(": ").Append(string.Join(", ", values));
             }
         }
 
         if (body.Length > 0)
-            description.Append("\n\n").Append(body);
+            description.Append(Environment.NewLine).Append(Environment.NewLine).Append(body);
 
         if (truncated)
-            description.Append("\n[truncated]");
+            description.Append(Environment.NewLine).Append("[truncated]");
 
         return description.ToString();
     }
