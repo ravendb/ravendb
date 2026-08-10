@@ -9,11 +9,13 @@ public class ServerLowMemoryPolicy : IServerBackupPolicy
 
     public static bool Disabled;
 
-    private const string Reason = "[POLICY:LowMemory] Cannot start any backup(s) because server is in low memory state.";
+    private const string Reason = "Cannot start any backup(s) because server is in low memory state.";
 
     private ServerLowMemoryPolicy()
     {
     }
+
+    public string Name => "LowMemory";
 
     public bool CanDoBackup(ServerStore serverStore, DateTime now, string databaseName, out string reason)
     {

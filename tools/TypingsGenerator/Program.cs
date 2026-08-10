@@ -178,6 +178,7 @@ namespace TypingsGenerator
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(IReadOnlyList<>))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(IReadOnlyCollection<>))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(SortedSet<>))
+                .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(ReadOnlyMemory<>))
                 .WithTypeMapping(new TsInterface(new TsName("Record<Raven.Server.Commercial.ConfigurationStepType, Raven.Server.Commercial.SetupActionInfo>")),
                     typeof(IDictionary<ConfigurationStepType, SetupActionInfo>))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(ISet<>))
@@ -521,6 +522,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(BackupProgress));
             scripter.AddType(typeof(StartBackupOperationResult));
             scripter.AddType(typeof(GetPeriodicBackupStatusOperationResult));
+            scripter.AddType(typeof(Raven.Server.ServerWide.Backups.BackupDecisionLogDetails));
 
             // ongoing tasks - subscription
             scripter.AddType(typeof(OngoingTaskSubscription));

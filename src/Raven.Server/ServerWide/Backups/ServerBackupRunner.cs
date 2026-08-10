@@ -59,7 +59,7 @@ public class ServerBackupRunner : IDisposable
     private readonly RavenLogger _logger;
 
     private readonly RavenAuditLogger _auditLog;
-    private readonly List<(DateTime Time, string Reason)> _decisionLog = new();
+    private readonly List<BackupDecision> _decisionLog = new();
 
     public ServerBackupRunner(ServerStore serverStore)
     {
@@ -106,20 +106,141 @@ public class ServerBackupRunner : IDisposable
         _thread = PoolOfThreads.GlobalRavenThreadPool.LongRunning(Run, null, ThreadNames.ForServerBackupRunner());
     }
 
-    public List<(DateTime Time, string Reason)> GetDecisionLog()
+    public List<BackupDecision> GetDecisionLog(int take, out int total)
     {
         lock (_decisionLog)
         {
-            return new List<(DateTime Time, string Reason)>(_decisionLog);
+            total = _decisionLog.Count;
+
+            return _decisionLog.GetRange(0, Math.Min(take, total));
         }
     }
 
-    public List<(DateTime Time, string Reason)> GetDecisionLogFor(string databaseName, long taskId)
+    public BackupDecisionLogDetails GetDecisionLogDetails(string databaseName, int take)
+    {
+        var limit = Math.Max(take, 0);
+
+        var details = new BackupDecisionLogDetails
+        {
+            NodeTag = _serverStore.NodeTag,
+            MaxEntriesPerLog = MaxDecisionLogSize,
+            Queue = new BackupQueueSummary
+            {
+                QueueLength = _backupQueue.Count,
+                CurrentNumberOfRunningBackups = _serverStore.ConcurrentBackupsCounter.CurrentNumberOfRunningBackups,
+                MaxNumberOfConcurrentBackups = _serverStore.ConcurrentBackupsCounter.MaxNumberOfConcurrentBackups,
+                RunnerFrequencyInSec = _serverStore.Configuration.Backup.BackupRunnerFrequency.AsTimeSpan.TotalSeconds
+            }
+        };
+
+        var newest = new PriorityQueue<DecisionCandidate, DateTime>(Math.Min(limit, MaxDecisionLogSize));
+        var includeAllDatabases = string.IsNullOrEmpty(databaseName);
+
+        // a server-wide decision explains why no backup at all was started, so it's relevant for every database
+        var serverDecisions = GetDecisionLog(limit, out var totalResults);
+        foreach (var decision in serverDecisions)
+            KeepIfNewer(newest, limit, new DecisionCandidate(decision, Database: null, TaskId: 0, TaskName: null));
+
+        foreach (var (name, backupsPerTaskId) in BackupsPerDatabasePerTaskId)
+        {
+            details.Databases.Add(name);
+            details.Queue.TrackedDatabases++;
+
+            var matchesFilter = includeAllDatabases || MatchesDatabase(name, databaseName);
+
+            foreach (var (taskId, backupState) in backupsPerTaskId)
+            {
+                var configuration = backupState.Configuration;
+
+                details.Queue.TrackedTasks++;
+
+                if (backupState.Stale)
+                    details.Queue.StaleTasks++;
+
+                if (backupState.Running)
+                    details.Queue.RunningTasks++;
+
+                var nextBackup = backupState.NextBackup;
+                if (nextBackup != null && (details.Queue.NextBackupUtc == null || nextBackup.DateTime < details.Queue.NextBackupUtc))
+                {
+                    details.Queue.NextBackupUtc = nextBackup.DateTime;
+                    details.Queue.NextBackupDatabase = name;
+                    details.Queue.NextBackupTaskName = configuration.Name;
+                }
+
+                if (backupState.TryGetLatestDecision(out var latest) && latest.Kind == BackupDecisionKind.Policy)
+                    details.Queue.BlockedTasks++;
+
+                if (matchesFilter == false)
+                    continue;
+
+                var taskDecisions = backupState.GetDecisionLog(limit, out var taskTotal);
+                totalResults += taskTotal;
+
+                foreach (var decision in taskDecisions)
+                    KeepIfNewer(newest, limit, new DecisionCandidate(decision, name, taskId, configuration.Name));
+            }
+        }
+
+        details.Databases.Sort(StringComparer.OrdinalIgnoreCase);
+        details.TotalResults = totalResults;
+        details.Entries = DequeueNewestFirst(newest);
+
+        return details;
+    }
+
+    public List<BackupDecision> GetDecisionLogFor(string databaseName, long taskId)
     {
         if (BackupsPerDatabasePerTaskId.TryGetValue(databaseName, out var backupsPerDatabasePerTaskId) && backupsPerDatabasePerTaskId.TryGetValue(taskId, out var backupState))
-            return backupState.GetDecisionLog();
+            return backupState.GetDecisionLog(int.MaxValue, out _);
 
         return null;
+    }
+
+    private static bool MatchesDatabase(string trackedDatabaseName, string databaseName)
+    {
+        if (string.Equals(trackedDatabaseName, databaseName, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return ShardHelper.IsShardName(trackedDatabaseName) &&
+               string.Equals(ShardHelper.ToDatabaseName(trackedDatabaseName), databaseName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void KeepIfNewer(PriorityQueue<DecisionCandidate, DateTime> newest, int limit, DecisionCandidate candidate)
+    {
+        if (limit == 0)
+            return;
+
+        if (newest.Count < limit)
+        {
+            newest.Enqueue(candidate, candidate.Decision.Time);
+            return;
+        }
+
+        // the oldest kept candidate is on top of the queue, so it's the one being evicted
+        newest.EnqueueDequeue(candidate, candidate.Decision.Time);
+    }
+
+    private static List<BackupDecisionLogEntry> DequeueNewestFirst(PriorityQueue<DecisionCandidate, DateTime> newest)
+    {
+        var entries = new List<BackupDecisionLogEntry>(newest.Count);
+
+        while (newest.TryDequeue(out var candidate, out _))
+            entries.Add(candidate.ToEntry());
+
+        entries.Reverse();
+
+        return entries;
+    }
+
+    private readonly record struct DecisionCandidate(BackupDecision Decision, string Database, long TaskId, string TaskName)
+    {
+        public BackupDecisionLogEntry ToEntry()
+        {
+            return Database == null
+                ? BackupDecisionLogEntry.ForServer(Decision)
+                : BackupDecisionLogEntry.ForTask(Decision, Database, TaskId, TaskName);
+        }
     }
 
     public void EnsureDatabaseRegistered(string databaseName)
@@ -208,7 +329,7 @@ public class ServerBackupRunner : IDisposable
 
         _serverStore.ConcurrentBackupsCounter.StartBackup(backupState.OriginalDatabaseName, backupState.Configuration.Name, _logger);
 
-        backupState.AddToDecisionLog($"[STARTED] Backup task {backupState.Configuration.TaskId}", startTimeInUtc);
+        backupState.AddToDecisionLog(BackupDecisionKind.Started, detail: null, $"Backup task {backupState.Configuration.TaskId}", startTimeInUtc);
 
         _ = Task.Factory.StartNew(async () =>
         {
@@ -287,9 +408,10 @@ public class ServerBackupRunner : IDisposable
                 {
                     var completionTime = DateTime.UtcNow;
                     if (t.IsFaulted)
-                        backupState.AddToDecisionLog($"[FAILED] Backup task {backupState.Configuration.TaskId}: {t.Exception?.Flatten().InnerException?.Message ?? "unknown error"}", completionTime);
+                        backupState.AddToDecisionLog(BackupDecisionKind.Failed, detail: null,
+                            $"Backup task {backupState.Configuration.TaskId}: {t.Exception?.Flatten().InnerException?.Message ?? "unknown error"}", completionTime);
                     else if (t.IsCanceled == false)
-                        backupState.AddToDecisionLog($"[COMPLETED] Backup task {backupState.Configuration.TaskId}", completionTime);
+                        backupState.AddToDecisionLog(BackupDecisionKind.Completed, detail: null, $"Backup task {backupState.Configuration.TaskId}", completionTime);
 
                     backupTask.TaskCancelToken.Dispose();
                     FinishBackup(backupState, backupState.DatabaseName);
@@ -305,7 +427,7 @@ public class ServerBackupRunner : IDisposable
             }
             catch (Exception e)
             {
-                backupState.AddToDecisionLog($"[FAILED] Backup task {backupState.Configuration.TaskId}: {e.Message}", DateTime.UtcNow);
+                backupState.AddToDecisionLog(BackupDecisionKind.Failed, detail: null, $"Backup task {backupState.Configuration.TaskId}: {e.Message}", DateTime.UtcNow);
 
                 if (_logger.IsErrorEnabled)
                     _logger.Error($"Could not start backup for {backupState}.", e);
@@ -894,7 +1016,7 @@ public class ServerBackupRunner : IDisposable
                 if (_logger.IsDebugEnabled)
                     _logger.Debug(reason);
 
-                AddToDecisionLog(reason, now);
+                AddToDecisionLog(BackupDecisionKind.Policy, backupPolicy.Name, reason, now);
 
                 if (_forTestingPurposes != null &&
                     _forTestingPurposes.DatabaseTestingStuffInternals.TryGetValue(databaseName, out var serverViolationTestingStuff))
@@ -931,7 +1053,7 @@ public class ServerBackupRunner : IDisposable
                     if (_logger.IsDebugEnabled)
                         _logger.Debug(reason);
 
-                    backupState.AddToDecisionLog(reason, now);
+                    backupState.AddToDecisionLog(BackupDecisionKind.Policy, backupPolicy.Name, reason, now);
 
                     if (_forTestingPurposes != null &&
                         _forTestingPurposes.DatabaseTestingStuffInternals != null &&
@@ -989,11 +1111,11 @@ public class ServerBackupRunner : IDisposable
         };
     }
 
-    public void AddToDecisionLog(string reason, DateTime now)
+    public void AddToDecisionLog(BackupDecisionKind kind, string detail, string message, DateTime now)
     {
         lock (_decisionLog)
         {
-            _decisionLog.Insert(0, (now, reason));
+            _decisionLog.Insert(0, new BackupDecision(now, kind, detail, message));
 
             if (_decisionLog.Count > MaxDecisionLogSize)
                 _decisionLog.RemoveAt(_decisionLog.Count - 1);
