@@ -45,8 +45,6 @@ namespace Raven.Server.Documents
         public readonly ConcurrentDictionary<StringSegment, DateTime> LastRecentlyUsed =
             new ConcurrentDictionary<StringSegment, DateTime>(StringSegmentComparer.OrdinalIgnoreCase);
 
-        private readonly ConcurrentDictionary<string, Lazy<DatabaseWakeupTimer>> _wakeupTimers = new ConcurrentDictionary<string, Lazy<DatabaseWakeupTimer>>();
-
         public readonly ResourceCache<DocumentDatabase> DatabasesCache = new ResourceCache<DocumentDatabase>();
         public readonly ResourceCache<ShardedDatabaseContext> ShardedDatabasesCache = new ResourceCache<ShardedDatabaseContext>();
 
@@ -56,7 +54,6 @@ namespace Raven.Server.Documents
         // used in ServerWideBackupStress
         internal SemaphoreSlim _databaseSemaphore;
         internal TimeSpan _concurrentDatabaseLoadTimeout;
-        internal int _dueTimeOnRetry = 60_000;
 
         public DatabasesLandlord(ServerStore serverStore)
         {
@@ -97,14 +94,11 @@ namespace Raven.Server.Documents
             internal ManualResetEvent DeleteDatabaseWhileItBeingDeleted = null;
             internal Action BeforeActualDelete = null;
             internal Action<DocumentDatabase> OnBeforeDocumentDatabaseInitialization;
-            internal ManualResetEventSlim RescheduleDatabaseWakeupMre = null;
             internal bool SkipIncreasingLastWorkTimeBasedOnDatabaseSize = false;
-            internal Action<Exception, string> OnFailedRescheduleNextScheduledActivity;
             internal bool PreventNodePromotion = false;
             internal Func<ServerStore, Task> BeforeHandleClusterTransactionOnDatabaseChanged;
             internal Action DelayNotifyFeaturesAboutStateChange;
             internal ManualResetEventSlim AfterDatabaseRemovedFromIdle = null;
-            internal bool SkipShouldContinueDisposeCheck = false;
         }
 
         private async Task HandleClusterDatabaseChanged(string databaseName, long index, string type, ClusterDatabaseChangeType changeType, object changeState)
@@ -485,6 +479,7 @@ namespace Raven.Server.Documents
                 DeleteDatabaseNotifications(dbName, throwOnError: true);
                 DeleteDatabaseCachedInfo(dbName, throwOnError: true);
                 DeleteLocalBackupStatuses(dbName, throwOnError: true);
+                _serverStore.ServerBackupRunner.RemoveDatabase(dbName);
             }
             finally
             {
@@ -578,39 +573,6 @@ namespace Raven.Server.Documents
             {
                 if (_logger.IsInfoEnabled)
                     _logger.Info("Failed to dispose resource semaphore", e);
-            }
-
-            // we don't want to wake up database during dispose.
-            var handles = new List<WaitHandle>();
-            foreach (var timer in _wakeupTimers.Values)
-            {
-                if (timer.IsValueCreated == false)
-                    continue;
-
-                var handle = new ManualResetEvent(false);
-                timer.Value.Dispose(handle);
-                handles.Add(handle);
-            }
-
-            if (handles.Count > 0)
-            {
-                var count = handles.Count;
-                var batchSize = Math.Min(64, count);
-
-                var numberOfBatches = count / batchSize;
-                if (count % batchSize != 0)
-                {
-                    // if we have a reminder, we need another batch
-                    numberOfBatches++;
-                }
-
-                var batch = new WaitHandle[batchSize];
-                for (var i = 0; i < numberOfBatches; i++)
-                {
-                    var toCopy = Math.Min(64, count - i * batchSize);
-                    handles.CopyTo(i * batchSize, batch, 0, toCopy);
-                    WaitHandle.WaitAll(batch);
-                }
             }
 
             // shut down all databases in parallel, avoid having to wait for each one
@@ -796,10 +758,6 @@ namespace Raven.Server.Documents
 
         public Task<DocumentDatabase> TryGetOrCreateResourceStore(StringSegment databaseName, DateTime? wakeup = null, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false, bool ignoreNotRelevant = false, Action<string> addToInitLog = null, [CallerMemberName] string caller = null)
         {
-            if (_wakeupTimers.TryRemove(databaseName.Value, out var timer) && timer.IsValueCreated)
-            {
-                timer.Value.Dispose();
-            }
             if (_disposing.TryEnter(out var idx) == false)
                 ThrowServerIsBeingDisposed(databaseName);
             try
@@ -1305,20 +1263,8 @@ namespace Raven.Server.Documents
             PendingClusterTransactions,
         }
 
-        public bool UnloadDirectly(StringSegment databaseName, DateTime? wakeup = null, [CallerMemberName] string caller = null)
+        public bool UnloadDirectly(StringSegment databaseName, [CallerMemberName] string caller = null)
         {
-            var nextScheduledAction = new IdleDatabaseActivity(IdleDatabaseActivityType.WakeUpDatabase);
-            return UnloadDirectly(databaseName, nextScheduledAction, caller);
-        }
-
-        public bool UnloadDirectly(StringSegment databaseName, IdleDatabaseActivity idleDatabaseActivity, [CallerMemberName] string caller = null)
-        {
-            if (ShouldContinueDispose(databaseName.Value, idleDatabaseActivity) == false)
-            {
-                LogUnloadFailureReason(databaseName, $"{nameof(IdleDatabaseActivity.DueTime)} is {idleDatabaseActivity?.DueTime} ms which is less than {TimeSpan.FromMinutes(5).TotalMilliseconds} ms.");
-                return false;
-            }
-
             if (DatabasesCache.TryGetValue(databaseName, out var databaseTask) == false)
             {
                 LogUnloadFailureReason(databaseName, "database was already unloaded or deleted.");
@@ -1342,17 +1288,8 @@ namespace Raven.Server.Documents
                 UnloadDatabaseInternal(databaseName.Value, caller);
                 LastRecentlyUsed.TryRemove(databaseName, out _);
 
-                // DateTime should be only null in tests
-                if (idleDatabaseActivity is { DateTime: not null })
-                {
-                    AddOrUpdateWakeupTimer(databaseName.Value, idleDatabaseActivity);
-                }
-
                 if (_logger.IsDebugEnabled)
-                {
-                    var msg = idleDatabaseActivity == null ? "without setting a wakeup timer." : $"wakeup timer set to: '{idleDatabaseActivity.DateTime.GetValueOrDefault()}', which will happen in '{idleDatabaseActivity.DueTime}' ms.";
-                    _logger.Debug($"Unloading directly database '{databaseName}', {msg}");
-                }
+                    _logger.Debug($"Unloading directly database '{databaseName}'.");
 
                 return true;
             }
@@ -1378,172 +1315,10 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void AddOrUpdateWakeupTimer(string databaseName, IdleDatabaseActivity idleDatabaseActivity)
-        {
-            // in case the DueTime is negative or zero, the callback will be called immediately and database will be loaded.
-            
-            _ = _wakeupTimers.AddOrUpdate(databaseName,
-                _ => new Lazy<DatabaseWakeupTimer>(() => new DatabaseWakeupTimer(databaseName, idleDatabaseActivity, NextScheduledActivityCallback)),
-                (_, timer) =>
-                {
-                    timer.Value.Update(idleDatabaseActivity);
-                    return timer;
-                }).Value;
-        }
-
         private static void LogUnloadFailureReason(StringSegment databaseName, string reason)
         {
             if (_logger.IsDebugEnabled)
                 _logger.Debug($"Could not unload database '{databaseName}', reason: {reason}");
-        }
-
-        public void RescheduleNextIdleDatabaseActivity(string databaseName, IdleDatabaseActivity idleDatabaseActivity)
-        {
-            if (idleDatabaseActivity == null)
-            {
-                if (_wakeupTimers.TryRemove(databaseName, out var oldTimer) && oldTimer.IsValueCreated)
-                    oldTimer.Value.Dispose();
-
-                return;
-            }
-
-            AddOrUpdateWakeupTimer(databaseName, idleDatabaseActivity);
-        }
-
-        private void NextScheduledActivityCallback(string databaseName, IdleDatabaseActivity nextIdleDatabaseActivity)
-        {
-            try
-            {
-                if (_disposing.TryEnter(out var idx) == false)
-                    ThrowServerIsBeingDisposed(databaseName);
-                try
-                {
-                    if (_serverStore.ServerShutdown.IsCancellationRequested)
-                        return;
-
-                    switch (nextIdleDatabaseActivity.Type)
-                    {
-                        case IdleDatabaseActivityType.UpdateBackupStatusOnly:
-
-                            PeriodicBackupStatus backupStatus = _serverStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(databaseName, nextIdleDatabaseActivity.TaskId);
-
-                            backupStatus.LastIncrementalBackup = backupStatus.LastIncrementalBackupInternal = nextIdleDatabaseActivity.DateTime;
-                            backupStatus.LocalBackup.LastIncrementalBackup = nextIdleDatabaseActivity.DateTime;
-                            backupStatus.LocalBackup.IncrementalBackupDurationInMs = 0;
-
-                            var backupResult = new BackupResult();
-                            backupResult.AddMessage($"Skipping incremental backup because no changes were made from last full backup on {backupStatus.LastFullBackup}.");
-                            
-                            BackupUtils.SaveBackupStatus(backupStatus, databaseName, _serverStore, _logger, backupResult);
-
-                            // choose the next backup that will arrive the earliest
-                            nextIdleDatabaseActivity = BackupUtils.GetEarliestIdleDatabaseActivity(new BackupUtils.EarliestIdleDatabaseActivityParameters
-                            {
-                                DatabaseName = databaseName,
-                                LastEtag = nextIdleDatabaseActivity.LastEtag,
-                                Logger = _logger,
-                                ServerStore = _serverStore,
-                                IsIdle = true
-                            });
-
-                            RescheduleNextIdleDatabaseActivity(databaseName, nextIdleDatabaseActivity);
-                            break;
-
-                        case IdleDatabaseActivityType.WakeUpDatabase:
-                            if (_serverStore.ConcurrentBackupsCounter.CanRunBackup(ShardHelper.ToDatabaseName(databaseName)) == false)
-                            {
-                                // reached max concurrent backups
-                                var delayInMs = RescheduleDatabaseWakeup();
-                                if (_logger.IsInfoEnabled)
-                                    _logger.Info($"Delaying the start of the database '{databaseName}' for running a backup because we reached " +
-                                                 $"max concurrent backups ({_serverStore.ConcurrentBackupsCounter.MaxNumberOfConcurrentBackups}), will retry the wakeup in {delayInMs:#,#;;0}ms");
-                                break;
-                            }
-
-                            if (BackupUtils.CanServerRunBackup(_serverStore) == false)
-                            {
-                                // the server cannot run the backup anyway (low memory, low cpu credits or high dirty memory state)
-                                var delayInMs = RescheduleDatabaseWakeup();
-                                if (_logger.IsInfoEnabled)
-                                    _logger.Info($"Delaying the start of the database '{databaseName}' for running a backup because we are in a low memory state, " +
-                                                 $"will retry the wakeup in {delayInMs:#,#;;0}ms");
-                                break;
-                            }
-
-                            var startDatabaseForBackup = _serverStore.ConcurrentBackupsCounter.TryStartDatabaseForBackup();
-                            if (startDatabaseForBackup == null)
-                            {
-                                // reached max concurrent loading of databases for backup
-                                var delayInMs = RescheduleDatabaseWakeup();
-                                if (_logger.IsInfoEnabled)
-                                    _logger.Info($"Delaying the start of the database '{databaseName}' for running a backup because we reached max concurrent loading of databases " +
-                                                 $"for backup ({_serverStore.ConcurrentBackupsCounter.MaxNumberOfConcurrentBackups}), will retry the wakeup in {delayInMs:#,#;;0}ms");
-                            }
-                            else
-                            {
-                            _ = TryGetOrCreateResourceStore(databaseName, nextIdleDatabaseActivity.DateTime).ContinueWith(t =>
-                            {
-                                    startDatabaseForBackup.Dispose();
-
-                                var ex = t.Exception.ExtractSingleInnerException();
-                                if (ex is DatabaseConcurrentLoadTimeoutException e)
-                                {
-                                        // database failed to load
-                                        var delayInMs = RescheduleDatabaseWakeup();
-                                    if (_logger.IsInfoEnabled)
-                                            _logger.Info($"Failed to start database '{databaseName}' for running a backup, will retry the wakeup in {delayInMs:#,#;;0}ms", e);
-                                    }
-                                });
-                            }
-                            break;
-
-                            int RescheduleDatabaseWakeup()
-                            {
-                                    ForTestingPurposes?.RescheduleDatabaseWakeupMre?.Set();
-
-                                var delayInMs = _dueTimeOnRetry + Random.Shared.Next(0, _dueTimeOnRetry);
-                                nextIdleDatabaseActivity.DateTime = DateTime.UtcNow.AddMilliseconds(delayInMs);
-                                    RescheduleNextIdleDatabaseActivity(databaseName, nextIdleDatabaseActivity);
-                                return delayInMs;
-                                }
-                    }
-                }
-                finally
-                {
-                    _disposing.Exit(idx);
-                }
-            }
-            catch (Exception e)
-            {
-                // we have to swallow any exception here.
-
-                if (_logger.IsWarnEnabled)
-                    _logger.Warn($"Failed to schedule the next activity for the idle database '{databaseName}'.", e);
-
-                ForTestingPurposes?.OnFailedRescheduleNextScheduledActivity?.Invoke(e, databaseName);
-            }
-        }
-
-        private bool ShouldContinueDispose(string name, IdleDatabaseActivity idleDatabaseActivity)
-        {
-            if (name == null)
-                return true;
-
-            if (_wakeupTimers.TryRemove(name, out var timer) && timer.IsValueCreated)
-                timer.Value.Dispose();
-
-            if (idleDatabaseActivity == null)
-                return true;
-
-            if (idleDatabaseActivity.DateTime.HasValue == false)
-                return true;
-
-            if (ForTestingPurposes?.SkipShouldContinueDisposeCheck == true)
-                return true;
-
-            // Unloading and then loading a database can use a lot of resources.
-            // Therefore, we don't want to unload the database unless we're sure it will be loaded again soon.
-            return idleDatabaseActivity.DueTime > TimeSpan.FromMinutes(5).TotalMilliseconds;
         }
 
         private void CompleteDatabaseUnloading(DocumentDatabase database)
@@ -1749,80 +1524,5 @@ namespace Raven.Server.Documents
             }
         }
 
-        private sealed class DatabaseWakeupTimer : IDisposable
-        {
-            private IdleDatabaseActivity _activity;
-
-            private readonly string _databaseName;
-            private readonly Action<string, IdleDatabaseActivity> _callback;
-            private readonly Timer _timer;
-
-            public DatabaseWakeupTimer([NotNull] string databaseName, [NotNull] IdleDatabaseActivity activity, [NotNull] Action<string, IdleDatabaseActivity> callback)
-            {
-                _databaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
-                _activity = activity ?? throw new ArgumentNullException(nameof(activity));
-                _callback = callback ?? throw new ArgumentNullException(nameof(callback));
-
-                _timer = new Timer(TimerCallback, null, _activity.DueTime, Timeout.Infinite);
-            }
-
-            public void Update(IdleDatabaseActivity activity)
-            {
-                _activity = activity;
-                _timer.Change(activity.DueTime, Timeout.Infinite);
-            }
-
-            private void TimerCallback(object state)
-            {
-                _callback(_databaseName, _activity);
-            }
-
-            public void Dispose()
-            {
-                _timer?.Dispose();
-            }
-
-            public void Dispose(WaitHandle notifyObject)
-            {
-                _timer?.Dispose(notifyObject);
-            }
-        }
-    }
-
-    public sealed class IdleDatabaseActivity
-    {
-        public long LastEtag { get; }
-        public IdleDatabaseActivityType Type { get; }
-        public DateTime? DateTime { get; internal set; }
-        public long TaskId { get; }
-        public int DueTime => DateTime.HasValue
-            ? (int)Math.Min(int.MaxValue, Math.Max(0, (DateTime.Value - System.DateTime.UtcNow).TotalMilliseconds))
-            : 0;
-
-        public IdleDatabaseActivity(IdleDatabaseActivityType type)
-        {
-            LastEtag = 0;
-            Type = type;
-            TaskId = 0;
-
-            // DateTime should be only null in tests
-            DateTime = null;
-        }
-
-        public IdleDatabaseActivity(IdleDatabaseActivityType type, DateTime timeOfActivity, long taskId = 0, long lastEtag = 0)
-        {
-            LastEtag = lastEtag;
-            Type = type;
-            TaskId = taskId;
-
-            Debug.Assert(timeOfActivity.Kind != DateTimeKind.Unspecified);
-            DateTime = timeOfActivity.ToUniversalTime();
-        }
-    }
-
-    public enum IdleDatabaseActivityType
-    {
-        WakeUpDatabase,
-        UpdateBackupStatusOnly
     }
 }

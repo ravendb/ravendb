@@ -26,12 +26,11 @@ namespace StressTests.Issues
         public async Task DisableOlapOnRestoreWithoutLicense(Options options, BackupType backupType)
         {
             DoNotReuseServer();
-
             var backupPath = NewDataPath(suffix: "BackupFolder");
-
-            using (var store = GetDocumentStore())
+            using var server = GetNewServer();
+            using (var store = GetDocumentStore(new Options(options) { Server = server }))
             {
-                await LicenseHelper.DisableRevisionCompression(Server, store);
+                await LicenseHelper.DisableRevisionCompression(server, store);
 
                 await store.Maintenance.SendAsync(new PutConnectionStringOperation<OlapConnectionString>(new OlapConnectionString
                 {
@@ -48,7 +47,7 @@ namespace StressTests.Issues
 
                 var operation = await store.Maintenance.SendAsync(new BackupOperation(new BackupConfiguration
                 {
-                    BackupType = BackupType.Snapshot,
+                    BackupType = backupType,
                     LocalSettings = new LocalSettings
                     {
                         FolderPath = backupPath
@@ -59,7 +58,7 @@ namespace StressTests.Issues
                 olapEtlConfiguration.Disabled = true;
                 await store.Maintenance.SendAsync(new UpdateEtlOperation<OlapConnectionString>(operationResult.TaskId, olapEtlConfiguration));
 
-                await LicenseHelper.ChangeLicense(Server, LicenseTestBase.RL_COMM);
+                await LicenseHelper.ChangeLicense(server, LicenseTestBase.RL_COMM);
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
                 using (Backup.RestoreDatabase(store,

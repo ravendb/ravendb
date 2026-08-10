@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -18,16 +19,15 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
-using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Documents;
-using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Backups;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
-using Tests.Infrastructure;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests
@@ -60,12 +60,15 @@ namespace FastTests
             public async Task<long> RunBackupAsync(RavenServer server, long taskId, IDocumentStore store, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed, int? timeout = default)
             {
                 var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
+                var serverBackupRunner = documentDatabase.ServerStore.ServerBackupRunner;
+
+                if (documentDatabase.DisableOngoingTasks)
+                    throw new InvalidOperationException($"Backup task is disabled via marker file for database '{documentDatabase.Name}'.");
 
                 long opId;
                 try
                 {
-                    opId = periodicBackupRunner.StartBackupTask(taskId, isFullBackup);
+                    opId = server.ServerStore.ServerBackupRunner.StartBackupTask(documentDatabase.Name, taskId, isFullBackup, documentDatabase.Operations.GetNextOperationId());
                 }
                 catch (BackupAlreadyRunningException alreadyRunningException)
                 {
@@ -81,7 +84,7 @@ namespace FastTests
                            command.StatusCode == HttpStatusCode.OK;
                 }, expectedVal: true, timeout: timeout ?? _reasonableTimeout);
 
-                await CheckBackupOperationStatus(opStatus, command, store, taskId, opId, periodicBackupRunner);
+                await CheckBackupOperationStatus(opStatus, command, store, taskId, opId, serverBackupRunner);
                 Assert.Equal(opStatus, command.Result.Status);
                 return opId;
             }
@@ -199,9 +202,8 @@ namespace FastTests
                 if (expectedEtag != etag.Value)
                 {
                     var backupResult = backupOperation.Result as BackupResult;
-                    var documentDatabase = await ravenServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                    var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
-                    TryGetBackupStatusFromPeriodicBackupAndPrint(OperationStatus.Completed, OperationStatus.Completed, opId, periodicBackupRunner, status, backupResult);
+
+                    TryGetBackupStatusFromPeriodicBackupAndPrint(OperationStatus.Completed, OperationStatus.Completed, opId, ravenServer.ServerStore.ServerBackupRunner, status, store.Database, backupResult);
                 }
             }
             public static string GetCronForFarFuture() => $"* {DateTime.Now.AddHours(12).Hour} * * *"; 
@@ -306,7 +308,7 @@ namespace FastTests
                            command.StatusCode == HttpStatusCode.OK;
                 }, expectedVal: true, timeout: timeout ?? _reasonableTimeout);
 
-                await CheckBackupOperationStatus(opStatus, command, store, taskId, op.Result.OperationId, periodicBackupRunner: null);
+                await CheckBackupOperationStatus(opStatus, command, store, taskId, op.Result.OperationId, serverBackupRunner: null);
                 Assert.Equal(opStatus, command.Result.Status);
             }
 
@@ -558,7 +560,7 @@ namespace FastTests
             }
 
             internal async Task CheckBackupOperationStatus(OperationStatus expected, RavenCommand<OperationState> command, IDocumentStore store, long taskId, long opId,
-                PeriodicBackupRunner periodicBackupRunner)
+                ServerBackupRunner serverBackupRunner)
             {
                 var backupResult = command.Result?.Result as BackupResult;
                 var actual = command.Result?.Status;
@@ -571,7 +573,7 @@ namespace FastTests
                     var operation = new GetPeriodicBackupStatusOperation(taskId);
                     var status = (await store.Maintenance.SendAsync(operation)).Status;
 
-                    TryGetBackupStatusFromPeriodicBackupAndPrint(expected, actual: null, opId, periodicBackupRunner, status, backupResult);
+                    TryGetBackupStatusFromPeriodicBackupAndPrint(expected, actual: null, opId, serverBackupRunner, status, store.Database, backupResult);
 
                     Assert.Fail($"GetOperationStateOperation failed. Expected status: '{expected}', actual: '{actual?.ToString( ) ?? "null"}',{Environment.NewLine}" +
                                 $"HTTP Status Code: {command.StatusCode},{Environment.NewLine}" +
@@ -585,7 +587,7 @@ namespace FastTests
                     var operation = new GetPeriodicBackupStatusOperation(taskId);
                     var status = (await store.Maintenance.SendAsync(operation)).Status;
 
-                    TryGetBackupStatusFromPeriodicBackupAndPrint(expected, actual, opId, periodicBackupRunner, status);
+                    TryGetBackupStatusFromPeriodicBackupAndPrint(expected, actual, opId, serverBackupRunner, status, store.Database);
 
                     Assert.Fail($"Backup operation faulted. Expected status: '{expected}', actual: '{actual}',{Environment.NewLine}" +
                                 $"Backup status from storage for operation id: '{opId}':{Environment.NewLine}" +
@@ -595,7 +597,8 @@ namespace FastTests
                 // Check if backup didn't complete within the timeout period
                 if (expected == OperationStatus.Completed && actual == OperationStatus.InProgress)
                 {
-                    var pb = periodicBackupRunner?.PeriodicBackups.FirstOrDefault(x => x.RunningBackupStatus != null && x.BackupStatus.TaskId == taskId);
+                    serverBackupRunner.BackupsPerDatabasePerTaskId.TryGetValue(store.Database, out ConcurrentDictionary<long, DatabaseBackupState> backupPerDatabase);
+                    var pb = backupPerDatabase?.Values.FirstOrDefault(x => x.RunningBackupStatus != null && x.BackupStatus.TaskId == taskId);
                     if (pb == null)
                     {
                         var operation = new GetPeriodicBackupStatusOperation(taskId);
@@ -612,7 +615,7 @@ namespace FastTests
             }
 
             private static void TryGetBackupStatusFromPeriodicBackupAndPrint(OperationStatus expected, OperationStatus? actual, long opId,
-                PeriodicBackupRunner periodicBackupRunner, PeriodicBackupStatus status, BackupResult result = null)
+                ServerBackupRunner serverBackupRunner, PeriodicBackupStatus status, string databaseName, BackupResult result = null)
             {
                 if (status?.LastOperationId == opId)
                     return;
@@ -620,7 +623,9 @@ namespace FastTests
                 var actualString = actual?.ToString() ?? "null";
 
                 // failed to save backup status, lets fetch it from memory
-                var pb = periodicBackupRunner?.PeriodicBackups.FirstOrDefault(x => x.BackupStatus != null && x.BackupStatus.LastOperationId == opId);
+                serverBackupRunner.BackupsPerDatabasePerTaskId.TryGetValue(databaseName, out ConcurrentDictionary<long, DatabaseBackupState> backupPerDatabase);
+
+                var pb = backupPerDatabase?.FirstOrDefault(x => x.Value.OperationId == opId).Value;
                 if (pb == null)
                 {
                     Assert.Fail($"Backup status expected: '{expected}', actual '{actualString}',{Environment.NewLine}" +
@@ -633,17 +638,19 @@ namespace FastTests
                             PrintBackupStatusAndResult(pb.BackupStatus, result));
             }
 
-            public Task<WaitHandle[]> WaitForBackupToComplete(IDocumentStore store)
+            public Task<WaitHandle[]> WaitForBackupToComplete(IDocumentStore store, RavenServer server = null)
             {
-                return WaitForBackupsToComplete(new List<IDocumentStore> { store });
+                return WaitForBackupsToComplete(new List<IDocumentStore> { store }, server);
             }
 
-            public async Task<WaitHandle[]> WaitForBackupsToComplete(IEnumerable<IDocumentStore> stores)
+            public async Task<WaitHandle[]> WaitForBackupsToComplete(IEnumerable<IDocumentStore> stores, RavenServer server = null)
             {
                 var waitHandles = new List<WaitHandle>();
                 foreach (var store in stores)
                 {
-                    var database = await _parent.GetDocumentDatabaseInstanceFor(store);
+                    var database = server != null
+                        ? await _parent.Databases.GetDocumentDatabaseInstanceFor(server, store)
+                        : await _parent.GetDocumentDatabaseInstanceFor(store);
                     FillBackupCompletionHandles(waitHandles, database);
                 }
 
@@ -655,8 +662,11 @@ namespace FastTests
                 var mre = new ManualResetEventSlim();
                 waitHandles.Add(mre.WaitHandle);
 
-                database.PeriodicBackupRunner._forTestingPurposes ??= new PeriodicBackupRunner.TestingStuff();
-                database.PeriodicBackupRunner._forTestingPurposes.AfterBackupBatchCompleted = () => mre.Set();
+                database.ServerStore.ServerBackupRunner._forTestingPurposes ??= new ServerBackupRunner.TestingStuff();
+
+                var testingStuffInternal = new ServerBackupRunner.TestingStuffInternal { AfterBackupBatchCompleted = () => mre.Set() };
+
+                database.ServerStore.ServerBackupRunner._forTestingPurposes.DatabaseTestingStuffInternals[database.Name] = testingStuffInternal;
             }
 
             public async Task FillDatabaseWithRandomDataAsync(int databaseSizeInMb, IAsyncDocumentSession session, int? timeout = default)
@@ -691,22 +701,39 @@ namespace FastTests
                 }   
             }
 
-            internal async Task HoldBackupExecutionIfNeededAndInvoke(PeriodicBackupRunner.TestingStuff ts, Func<Task> func, TaskCompletionSource<object> tcs)
+            internal async Task HoldBackupExecutionIfNeededAndInvoke(string databaseName, ServerBackupRunner.TestingStuff ts, Func<Task> func, TaskCompletionSource<object> tcs)
             {
-                var shouldThrow = ts?.SimulateFailedBackup == true;
+                if (ts == null)
+                {
+                    try
+                    {
+                        await func.Invoke();
+                    }
+                    finally
+                    {
+                        tcs.TrySetResult(null);
+                    }
+                    return;
+                }
 
-                // hold backup execution 
+                if (ts.DatabaseTestingStuffInternals.TryGetValue(databaseName, out ServerBackupRunner.TestingStuffInternal testingStuffInternal) == false)
+                {
+                    testingStuffInternal = new ServerBackupRunner.TestingStuffInternal();
+                    ts.DatabaseTestingStuffInternals[databaseName] = testingStuffInternal;
+                }
+
+                var shouldThrow = testingStuffInternal.SimulateFailedBackup == true;
+
                 try
                 {
-                    if (ts != null)
-                        ts.OnBackupTaskRunHoldBackupExecution = tcs;
+                    testingStuffInternal.OnBackupTaskRunHoldBackupExecution = tcs;
 
                     await func.Invoke();
                 }
                 finally
                 {
                     if (shouldThrow)
-                        tcs.SetException(new Exception(nameof(ts.SimulateFailedBackup)));
+                        tcs.SetException(new Exception(nameof(testingStuffInternal.SimulateFailedBackup)));
                     else
                         tcs.TrySetResult(null);
                 }
@@ -754,12 +781,12 @@ namespace FastTests
                 WaitHandle[] waitHandles;
                 if (databaseMode == RavenDatabaseMode.Sharded)
                 {
-                    waitHandles = await _parent.Sharding.Backup.WaitForBackupsToComplete(new[] { store });
+                    waitHandles = await _parent.Sharding.Backup.WaitForBackupsToComplete(new[] { store }, server != null ? new List<RavenServer> { server } : null);
                     await _parent.Sharding.Backup.RunBackupAsync(store, taskId.Value, isFullBackup);
                 }
                 else
                 {
-                    waitHandles = await WaitForBackupToComplete(store);
+                    waitHandles = await WaitForBackupToComplete(store, server);
                     await RunBackupAsync(server, taskId.Value, store, isFullBackup);
                 }
 

@@ -325,7 +325,7 @@ namespace SlowTests.Client.Subscriptions
                     var con2Docs = new List<string>();
 
                     var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-                    await Backup.HoldBackupExecutionIfNeededAndInvoke(ts: null, async () =>
+                    await Backup.HoldBackupExecutionIfNeededAndInvoke(store.Database, ts: null, async () =>
                     {
                         var amre = new AsyncManualResetEvent();
 
@@ -497,7 +497,7 @@ namespace SlowTests.Client.Subscriptions
                     var con2Docs = new List<string>();
 
                     var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-                    await Backup.HoldBackupExecutionIfNeededAndInvoke(ts: null, async () =>
+                    await Backup.HoldBackupExecutionIfNeededAndInvoke(store.Database, ts: null, async () =>
                     {
                         var amre = new AsyncManualResetEvent();
 
@@ -596,7 +596,7 @@ namespace SlowTests.Client.Subscriptions
                     var con2Docs = new List<string>();
 
                     var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-                    await Backup.HoldBackupExecutionIfNeededAndInvoke(ts: null, async () =>
+                    await Backup.HoldBackupExecutionIfNeededAndInvoke(store.Database, ts: null, async () =>
                     {
                         var amre = new AsyncManualResetEvent();
 
@@ -695,7 +695,7 @@ namespace SlowTests.Client.Subscriptions
                     var con2Docs = new List<string>();
 
                     var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-                    await Backup.HoldBackupExecutionIfNeededAndInvoke(ts: null, async () =>
+                    await Backup.HoldBackupExecutionIfNeededAndInvoke(store.Database, ts: null, async () =>
                     {
                         var amre = new AsyncManualResetEvent();
 

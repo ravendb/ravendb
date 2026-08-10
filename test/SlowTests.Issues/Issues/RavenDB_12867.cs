@@ -63,12 +63,12 @@ namespace SlowTests.Issues
                 await store.Subscriptions.CreateAsync<User>();
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                
+
                 if (options.DatabaseMode == RavenDatabaseMode.Single)
                     Backup.UpdateConfigAndRunBackup(Server, config, store);
                 else
                 {
-                    var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store);
+                    var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store, Server);
                     await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store, config);
                     Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
                 }

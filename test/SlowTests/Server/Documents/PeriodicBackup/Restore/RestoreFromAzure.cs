@@ -81,9 +81,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 
         private void can_backup_and_restore_internal(BackupUploadMode backupUploadMode, bool oneTimeBackup)
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             using (var holder = new Azure.AzureClientHolder(AzureRetryTheoryAttribute.AzureSettings))
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options { Server = server }))
                 {
                     using (var session = store.OpenSession())
                     {
@@ -98,7 +100,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     if (oneTimeBackup == false)
                     {
                         var config = Backup.CreateBackupConfiguration(azureSettings: holder.Settings, backupUploadMode: backupUploadMode);
-                        backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
+                        backupTaskId = Backup.UpdateConfigAndRunBackup(server, config, store);
                         backupResult = (BackupResult)store.Maintenance.Send(new GetOperationStateOperation(Backup.GetBackupOperationId(store, backupTaskId))).Result;
                         Assert.NotNull(backupResult);
                         Assert.True(backupResult.Counters.Processed, "backupResult.Counters.Processed");
@@ -116,7 +118,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     if (oneTimeBackup == false)
                     {
                         var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                        status = Backup.RunBackupAndReturnStatus(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
+                        status = Backup.RunBackupAndReturnStatus(server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
                     }
 
                     if (oneTimeBackup)
@@ -146,7 +148,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     var restoreOperation = store.Maintenance.Server.Send(googleCloudOperation);
 
                     restoreOperation.WaitForCompletion(TimeSpan.FromSeconds(30));
-                    using (var store2 = GetDocumentStore(new Options() { CreateDatabase = false, ModifyDatabaseName = s => databaseName }))
+                    using (var store2 = GetDocumentStore(new Options() { Server = server, CreateDatabase = false, ModifyDatabaseName = s => databaseName }))
                     {
                         using (var session = store2.OpenSession(databaseName))
                         {
@@ -160,8 +162,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                             Assert.Equal(200, val);
                         }
 
-                        var originalDatabase = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).Result;
-                        var restoredDatabase = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result;
+                        var originalDatabase = server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).Result;
+                        var restoredDatabase = server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result;
                         using (restoredDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                         using (ctx.OpenReadTransaction())
                         {
@@ -179,9 +181,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
         [InlineData(BackupUploadMode.DirectUpload)]
         public async Task can_create_azure_snapshot_and_restore_using_restore_point(BackupUploadMode backupUploadMode)
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             using (var holder = new Azure.AzureClientHolder(AzureRetryFactAttribute.AzureSettings))
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options { Server = server }))
                 {
                     using (var session = store.OpenSession())
                     {
@@ -191,7 +195,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     }
 
                     var config = Backup.CreateBackupConfiguration(backupType: BackupType.Snapshot, azureSettings: holder.Settings, backupUploadMode: backupUploadMode);
-                    var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
+                    var backupTaskId = Backup.UpdateConfigAndRunBackup(server, config, store);
                     var status = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(backupTaskId))).Status;
 
                     var client = store.GetRequestExecutor().HttpClient;
@@ -217,7 +221,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     }));
 
                     await restoreOperation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
-                    using (var store2 = GetDocumentStore(new Options() { CreateDatabase = false, ModifyDatabaseName = s => databaseName }))
+                    using (var store2 = GetDocumentStore(new Options() { Server = server, CreateDatabase = false, ModifyDatabaseName = s => databaseName }))
                     {
                         using (var session = store2.OpenSession(databaseName))
                         {
@@ -228,8 +232,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                             Assert.Equal(100, val);
                         }
 
-                        var originalDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                        var restoredDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+                        var originalDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                        var restoredDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
                         using (restoredDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                         using (ctx.OpenReadTransaction())
                         {

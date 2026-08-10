@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -28,7 +27,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
             if (responsibleNode == ServerStore.NodeTag)
             {
-                var backup = RequestHandler.Database.PeriodicBackupRunner.PeriodicBackups.FirstOrDefault(x => x.Configuration.TaskId == taskId);
+                var backup = ServerStore.ServerBackupRunner.GetDatabaseStateByTaskId(RequestHandler.Database.Name, taskId);
                 if (backup == null)
                 {
                     throw new InvalidOperationException($"Backup task id: {taskId} doesn't exist");

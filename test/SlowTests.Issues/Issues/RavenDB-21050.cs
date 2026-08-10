@@ -70,7 +70,6 @@ public class RavenDB_21050 : RavenTestBase
                     Assert.Null(shouldBeDeleted); //Fails here
                 }
             }
-
         }
     }
 

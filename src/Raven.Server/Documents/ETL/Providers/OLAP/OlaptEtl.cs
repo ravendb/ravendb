@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         public readonly OlapEtlMetricsCountersManager OlapMetrics = new OlapEtlMetricsCountersManager();
 
-        private PeriodicBackup.PeriodicBackup.BackupTimer _timer;
+        private OlapTimer _timer;
         private readonly OperationCancelToken _operationCancelToken;
         private static readonly IEnumerator<ToOlapItem> EmptyEnumerator = Enumerable.Empty<ToOlapItem>().GetEnumerator();
 
@@ -241,7 +241,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
             var timer = new Timer(_ => _waitForChanges.Set(), state: nextRun, dueTime: nextRun.TimeSpan, period: Timeout.InfiniteTimeSpan);
 
-            _timer = new PeriodicBackup.PeriodicBackup.BackupTimer
+            _timer = new OlapTimer
             {
                 Timer = timer,
                 CreatedAt = DateTime.UtcNow,
@@ -365,5 +365,19 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             BackupConfiguration.CanBackupUsing(_uploaderSettings.AzureSettings) || 
             BackupConfiguration.CanBackupUsing(_uploaderSettings.GoogleCloudSettings) || 
             BackupConfiguration.CanBackupUsing(_uploaderSettings.FtpSettings);
+    }
+
+    public sealed class OlapTimer : IDisposable
+    {
+        public Timer Timer { get; set; }
+
+        public NextBackup NextBackup { get; set; }
+
+        public DateTime CreatedAt { get; set; }
+
+        public void Dispose()
+        {
+            Timer?.Dispose();
+        }
     }
 }

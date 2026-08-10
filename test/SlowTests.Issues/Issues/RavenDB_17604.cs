@@ -66,8 +66,7 @@ public class RavenDB_17604 : ReplicationTestBase
     {
         var path = NewDataPath();
         IOExtensions.DeleteDirectory(path);
-
-        using (var store = GetDocumentStore(new Options { RunInMemory = false, Path = path }))
+        using (var store = GetDocumentStore(new Options { RunInMemory = false, Path = path}))
         {
             var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(new PeriodicBackupConfiguration
             {
@@ -79,14 +78,13 @@ public class RavenDB_17604 : ReplicationTestBase
 
             Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
 
-            var database = await GetDatabase(store.Database);
-            Assert.Equal(1, await WaitForValueAsync(() => database.PeriodicBackupRunner.PeriodicBackups.Count, 1));
+            Assert.Equal(1, await WaitForValueAsync(() => Server.ServerStore.ServerBackupRunner.GetDatabaseBackups(store.Database).Count, 1));
             await Backup.RunBackupAsync(Server, result.TaskId, store);
 
             Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
             File.Create(Path.Combine(path, "disable.tasks.marker"));
-            database = await GetDatabase(store.Database);
-            Assert.Equal(1, await WaitForValueAsync(() => database.PeriodicBackupRunner.PeriodicBackups.Count, 1));
+
+            Assert.Equal(1, await WaitForValueAsync(() => Server.ServerStore.ServerBackupRunner.GetDatabaseBackups(store.Database).Count, 1));
 
             var e = await Assert.ThrowsAsync<InvalidOperationException>(() => Backup.RunBackupAsync(Server, result.TaskId, store));
             Assert.Contains("Backup task is disabled via marker file", e.Message);

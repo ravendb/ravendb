@@ -45,7 +45,7 @@ namespace SlowTests.Server.Documents.Attachments
                         await store.Operations.SendAsync(new DeleteAttachmentOperation(attachment.DocumentId, attachment.Name));
                     }
 
-                    var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                    var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                     await database.RemoteAttachmentsSender.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
 
                     await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount);
@@ -70,7 +70,7 @@ namespace SlowTests.Server.Documents.Attachments
                     {
                         await PutRemoteAttachmentsConfiguration(restoredStore, Settings);
 
-                        var restoredDatabase = await Databases.GetDocumentDatabaseInstanceFor(restoredStore);
+                        var restoredDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(restoredStore.Database);
                         using (restoredDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         using (context.OpenReadTransaction())
                         {
@@ -119,7 +119,7 @@ namespace SlowTests.Server.Documents.Attachments
                     {
                         await PutRemoteAttachmentsConfiguration(restoredStore, Settings);
 
-                        var restoredDatabase = await Databases.GetDocumentDatabaseInstanceFor(restoredStore);
+                        var restoredDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(restoredStore.Database);
                         using (restoredDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         using (context.OpenReadTransaction())
                         {
@@ -177,7 +177,7 @@ namespace SlowTests.Server.Documents.Attachments
                     {
                         await PutRemoteAttachmentsConfiguration(restoredStore, Settings);
 
-                        var restoredDatabase = await Databases.GetDocumentDatabaseInstanceFor(restoredStore);
+                        var restoredDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(restoredStore.Database);
                         using (restoredDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         using (context.OpenReadTransaction())
                         {
@@ -235,7 +235,7 @@ namespace SlowTests.Server.Documents.Attachments
                     {
                         await PutRemoteAttachmentsConfiguration(restoredStore, Settings, collections);
 
-                        var restoredDatabase = await Databases.GetDocumentDatabaseInstanceFor(restoredStore);
+                        var restoredDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(restoredStore.Database);
                         using (restoredDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         using (context.OpenReadTransaction())
                         {
@@ -272,7 +272,7 @@ namespace SlowTests.Server.Documents.Attachments
                 }))
                 {
                     var identifier = await CanUploadRemoteAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
-                    var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                    var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     using (context.OpenReadTransaction())
                     using (var documentInfoHelper = new DocumentInfoHelper(context))
@@ -361,7 +361,7 @@ namespace SlowTests.Server.Documents.Attachments
                     {
                         await PutRemoteAttachmentsConfiguration(restoredStore, Settings);
 
-                        var restoredDatabase = await Databases.GetDocumentDatabaseInstanceFor(restoredStore);
+                        var restoredDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(restoredStore.Database);
                         using (restoredDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         using (context.OpenReadTransaction())
                         {
@@ -412,7 +412,7 @@ namespace SlowTests.Server.Documents.Attachments
                     Assert.Equal(attachmentsCount * 2, Attachments.Count);
 
                     // move in time & start remote
-                    var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                    var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                     database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                     await database.RemoteAttachmentsSender.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
                     var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount * 2, 15_000);
@@ -438,7 +438,7 @@ namespace SlowTests.Server.Documents.Attachments
                     {
                         await PutRemoteAttachmentsConfiguration(restoredStore, Settings);
 
-                        var restoredDatabase = await Databases.GetDocumentDatabaseInstanceFor(restoredStore);
+                        var restoredDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(restoredStore.Database);
                         using (restoredDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         using (context.OpenReadTransaction())
                         {
@@ -493,7 +493,7 @@ namespace SlowTests.Server.Documents.Attachments
                         var operation = await importedStore.Smuggler.ImportAsync(new Raven.Client.Documents.Smuggler.DatabaseSmugglerImportOptions(), exportFile);
                         await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
 
-                        var importedDatabase = await Databases.GetDocumentDatabaseInstanceFor(importedStore);
+                        var importedDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(importedStore.Database);
                         using (importedDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         using (context.OpenReadTransaction())
                         {

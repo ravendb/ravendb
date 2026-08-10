@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Commands.OngoingTasks;
 using Raven.Server.Routing;
@@ -11,6 +12,10 @@ namespace Raven.Server.Web.System
 {
     public sealed class BackupDatabaseHandler : ServerRequestHandler
     {
+        private const int DefaultDecisionLogPageSize = 512;
+
+        private const int MaxDecisionLogPageSize = 4096;
+
         [RavenAction("/periodic-backup", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetPeriodicBackup()
         {
@@ -41,8 +46,7 @@ namespace Raven.Server.Web.System
 
                     var database = await task;
 
-                    var backups = database.PeriodicBackupRunner.GetPeriodicBackupsInformation();
-
+                    var backups = database.ServerStore.ServerBackupRunner.GetPeriodicBackupsInformationFor(database.Name);
                     result.Timers.AddRange(backups);
                 }
 
@@ -51,6 +55,21 @@ namespace Raven.Server.Web.System
                 var json = result.ToJson();
 
                 context.Write(writer, json);
+            }
+        }
+
+        [RavenAction("/admin/debug/periodic-backup/decision-log", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
+        public async Task GetBackupDecisionLog()
+        {
+            var databaseName = GetStringQueryString("database", required: false);
+            var take = Math.Clamp(GetIntValueQueryString("take", required: false) ?? DefaultDecisionLogPageSize, 0, MaxDecisionLogPageSize);
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var details = ServerStore.ServerBackupRunner.GetDecisionLogDetails(databaseName, take);
+
+                context.Write(writer, details.ToJson());
             }
         }
     }

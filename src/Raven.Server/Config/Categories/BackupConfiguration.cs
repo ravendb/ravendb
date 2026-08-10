@@ -95,6 +95,18 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Backup.MoveToNewResponsibleNodeGracePeriodInMin", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting MoveToNewResponsibleNodeGracePeriod { get; set; }
 
+        [Description("Interval at which the server backup runner evaluates all scheduled backup tasks.")]
+        [DefaultValue(60)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Backup.BackupRunnerFrequencyInSec", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting BackupRunnerFrequency { get; set; }
+
+        [Description("Grace period after a database is loaded during which scheduled backups are skipped, to allow the database to fully initialize.")]
+        [DefaultValue(60)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Backup.DatabaseLoadedGracePeriodInSec", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting DatabaseLoadedGracePeriod { get; set; }
+
         public override void Initialize(IConfigurationRoot settings, HashSet<string> settingsNames, IConfigurationRoot serverWideSettings, HashSet<string> serverWideSettingsNames, ResourceType type, string resourceName)
         {
             base.Initialize(settings, settingsNames, serverWideSettings, serverWideSettingsNames, type, resourceName);
