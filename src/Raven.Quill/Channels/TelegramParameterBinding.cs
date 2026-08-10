@@ -7,6 +7,7 @@ public enum TelegramParameterSource
     Constant,
     UserId,
     Username,
+    PhoneNumber,
 }
 
 public sealed class TelegramParameterBinding
