@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
@@ -17,11 +16,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
 internal sealed class IndexHandlerProcessorForProgress : AbstractIndexHandlerProcessorForProgress<DatabaseRequestHandler, DocumentsOperationContext>
 {
-    private readonly HashSet<string> _indexesWithExactProgress;
-
-    public IndexHandlerProcessorForProgress([NotNull] DatabaseRequestHandler requestHandler, StringValues indexesWithExactProgress) : base(requestHandler)
+    public IndexHandlerProcessorForProgress([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
-        _indexesWithExactProgress = indexesWithExactProgress.ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
     protected override bool SupportsCurrentNode => true;
@@ -37,6 +33,9 @@ internal sealed class IndexHandlerProcessorForProgress : AbstractIndexHandlerPro
 
     private IEnumerable<IndexProgress> GetIndexesProgress()
     {
+        var names = GetNames().ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var exact = IsExact();
+
         using (var context = QueryOperationContext.Allocate(RequestHandler.Database, needsServerContext: true))
         using (context.OpenReadTransaction())
         {
@@ -44,13 +43,16 @@ internal sealed class IndexHandlerProcessorForProgress : AbstractIndexHandlerPro
 
             foreach (var index in RequestHandler.Database.IndexStore.GetIndexes())
             {
+                if (names.Count > 0 && names.Contains(index.Name) == false)
+                    continue;
+
                 IndexProgress indexProgress = null;
                 try
                 {
                     if (index.DeployedOnAllNodes && index.IsStale(context) == false)
                         continue;
 
-                    indexProgress = index.GetProgress(context, overallDuration, exact: _indexesWithExactProgress.Contains(index.Name));
+                    indexProgress = index.GetProgress(context, overallDuration, exact);
                 }
                 catch (ObjectDisposedException)
                 {

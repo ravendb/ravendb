@@ -9,26 +9,34 @@ namespace Raven.Server.Documents.Commands.Indexes;
 
 internal sealed class GetIndexesProgressCommand : RavenCommand<IndexProgress[]>
 {
-    private readonly string[] _indexesWithExactProgress;
+    private readonly string[] _names;
+    private readonly bool _exact;
 
-    public GetIndexesProgressCommand(string nodeTag, string[] indexesWithExactProgress = null)
+    public GetIndexesProgressCommand(string nodeTag, string[] names = null, bool exact = false)
     {
         SelectedNodeTag = nodeTag;
-        _indexesWithExactProgress = indexesWithExactProgress;
+        _names = names;
+        _exact = exact;
     }
 
     public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
     {
         url = $"{node.Url}/databases/{node.Database}/indexes/progress";
 
-        if (_indexesWithExactProgress is { Length: > 0 })
+        var separator = '?';
+
+        if (_names is { Length: > 0 })
         {
-            var separator = '?';
-            for (var i = 0; i < _indexesWithExactProgress.Length; i++)
+            for (var i = 0; i < _names.Length; i++)
             {
-                url += $"{separator}exact={Uri.EscapeDataString(_indexesWithExactProgress[i])}";
+                url += $"{separator}name={Uri.EscapeDataString(_names[i])}";
                 separator = '&';
             }
+        }
+
+        if (_exact)
+        {
+            url += $"{separator}exact=true";
         }
 
         return new HttpRequestMessage
