@@ -9,10 +9,12 @@ namespace Raven.Quill.Telegram;
 
 /// Per-turn streaming state machine (prototype pattern): the first flush sends a message, later flushes edit it
 /// in place. A flush is skipped while an edit is in flight, inside the debounce window (Telegram rate-limits
-/// edits), or when the text is unchanged — chunks keep accumulating and the next trigger catches up.
+/// edits), or when the text is unchanged - chunks keep accumulating and the next trigger catches up.
 /// <see cref="FinalizeAsync"/> lands the authoritative reply: it edits the message to the first split part and
-/// sends the 4096-overflow as follow-up messages. Every send/edit tries Markdown first and retries plain text
-/// when Telegram rejects the entities.
+/// sends the 4096-overflow as follow-up messages.
+/// Previews go as plain text, because a half-streamed reply routinely carries unclosed Markdown entities and
+/// every attempt would cost a rejection plus a retry. Only the authoritative reply tries Markdown, falling
+/// back to plain text once when Telegram rejects the entities.
 internal sealed class TelegramStreamingReply(
     ITelegramBotClient bot,
     long chatId,
@@ -28,6 +30,7 @@ internal sealed class TelegramStreamingReply(
     private DateTime _lastFlushAt;
     private int _messageId;
     private string _lastSentText = "";
+    private bool _lastSentMarkdown;
 
     /// The streamed text accumulated so far — the fallback reply when the router yields no extracted text.
     public string AccumulatedText
@@ -63,7 +66,7 @@ internal sealed class TelegramStreamingReply(
             if (text.Length > TelegramMessageSplitter.TelegramMessageLimit)
                 text = text[..TelegramMessageSplitter.TelegramMessageLimit];
 
-            await SendOrEditAsync(text);
+            await SendOrEditAsync(text, markdown: false);
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
@@ -100,31 +103,38 @@ internal sealed class TelegramStreamingReply(
             return;   // nothing to land; any streamed preview stays as-is
 
         var parts = TelegramMessageSplitter.Split(fullReply);
-        await SendOrEditAsync(parts[0]);
+        await SendOrEditAsync(parts[0], markdown: true);
         for (var i = 1; i < parts.Count; i++)
-            await SendSafeAsync(parts[i]);
+            await SendSafeAsync(parts[i], markdown: true);
     }
 
-    private async Task SendOrEditAsync(string text)
+    private async Task SendOrEditAsync(string text, bool markdown)
     {
-        if (text.Length == 0 || text == _lastSentText)
+        // skipping unchanged text keeps Telegram from rejecting a no-op edit as "message is not modified".
+        // the parse mode is part of that comparison, so a reply whose text the last preview already showed
+        // still gets its one Markdown attempt at finalize instead of staying plain.
+        if (text.Length == 0 || (text == _lastSentText && markdown == _lastSentMarkdown))
             return;
 
         if (_messageId == 0)
         {
-            var message = await SendSafeAsync(text);
+            var message = await SendSafeAsync(text, markdown);
             _messageId = message.Id;
         }
         else
         {
-            await EditSafeAsync(_messageId, text);
+            await EditSafeAsync(_messageId, text, markdown);
         }
 
         _lastSentText = text;
+        _lastSentMarkdown = markdown;
     }
 
-    private async Task<Message> SendSafeAsync(string text)
+    private async Task<Message> SendSafeAsync(string text, bool markdown)
     {
+        if (markdown == false)
+            return await bot.SendMessage(chatId, text, cancellationToken: ct);
+
         try
         {
             return await bot.SendMessage(chatId, text, parseMode: ParseMode.Markdown, cancellationToken: ct);
@@ -135,8 +145,14 @@ internal sealed class TelegramStreamingReply(
         }
     }
 
-    private async Task EditSafeAsync(int messageId, string text)
+    private async Task EditSafeAsync(int messageId, string text, bool markdown)
     {
+        if (markdown == false)
+        {
+            await bot.EditMessageText(chatId, messageId, text, cancellationToken: ct);
+            return;
+        }
+
         try
         {
             await bot.EditMessageText(chatId, messageId, text, parseMode: ParseMode.Markdown, cancellationToken: ct);
