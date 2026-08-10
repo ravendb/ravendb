@@ -26,11 +26,11 @@ interface ActionProgressLoadError {
     type: "ProgressLoadError";
 }
 
-interface ActionExactProgressLoaded {
+interface ActionSingleIndexProgressLoaded {
     location: databaseLocationSpecifier;
     indexName: string;
     progress: IndexProgress | undefined;
-    type: "ExactProgressLoaded";
+    type: "SingleIndexProgressLoaded";
 }
 
 interface ActionSetIndexPriority {
@@ -100,7 +100,7 @@ type IndexesStatsReducerAction =
     | ActionStatsLoaded
     | ActionProgressLoadError
     | ActionProgressLoaded
-    | ActionExactProgressLoaded
+    | ActionSingleIndexProgressLoaded
     | ActionSetIndexPriority
     | ActionSetIndexLockMode
     | ActionPauseIndexing
@@ -252,7 +252,7 @@ export const indexesStatsReducer: Reducer<IndexesStatsState, IndexesStatsReducer
                 });
             });
         }
-        case "ExactProgressLoaded": {
+        case "SingleIndexProgressLoaded": {
             return produce(state, (draft) => {
                 const index = draft.indexes.find((x) => x.name === action.indexName);
                 if (!index) {

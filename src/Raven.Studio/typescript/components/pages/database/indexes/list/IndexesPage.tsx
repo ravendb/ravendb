@@ -81,7 +81,8 @@ export function IndexesPage({ queryParams }: ReactQueryParamsProps<IndexesPagePr
         openFaulty,
         getSelectedIndexes,
         confirmDeleteIndexes,
-        fetchExactProgress,
+        indexesWithExactProgress,
+        toggleExactProgress,
         globalIndexingStatus,
         isImportIndexModalOpen,
         toggleIsImportIndexModalOpen,
@@ -164,7 +165,8 @@ export function IndexesPage({ queryParams }: ReactQueryParamsProps<IndexesPagePr
         confirmDeleteIndexes,
         toggleSelection,
         highlightCallback,
-        fetchExactProgress,
+        indexesWithExactProgress,
+        toggleExactProgress,
     };
 
     return (
