@@ -6,6 +6,7 @@ using FastTests;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Config;
+using Raven.Server.ServerWide;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -31,13 +32,14 @@ public class RavenDB_18420 : RavenTestBase
                 [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false",
             }
         });
-        server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = true;
+        server.ServerStore.DatabaseIdleManager.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = true;
+        Action<string> onWakeup = null;
         try
         {
             var backupPath = NewDataPath(forceCreateDir: true);
             using (var store = GetDocumentStore(new Options { Server = server, RunInMemory = false }))
             {
-                Assert.Equal(1, WaitForValue(() => server.ServerStore.IdleDatabases.Count, 1, timeout: 60000, interval: 1000));
+                Assert.True(WaitForValue(() => server.ServerStore.DatabaseIdleManager.GetActivityState(store.Database) is DatabaseIdleManager.DatabaseActivityState.Idle, true, timeout: 60000, interval: 1000));
                 var putConfiguration = new ServerWideBackupConfiguration
                 {
                     FullBackupFrequency = "*/1 * * * *",
@@ -63,10 +65,16 @@ public class RavenDB_18420 : RavenTestBase
 
                 // we wait here for UpdateResponsibleNodeForTasksCommand, it won't wake up the database since the db task is faulted with DatabaseConcurrentLoadTimeoutException
                 Backup.WaitForResponsibleNodeUpdate(server.ServerStore, store.Database, putConfiguration.TaskId);
-                Assert.Equal(1, server.ServerStore.IdleDatabases.Count);
+                Assert.Equal(DatabaseIdleManager.DatabaseActivityState.Idle, server.ServerStore.DatabaseIdleManager.GetActivityState(store.Database));
 
                 var idleRemovedSignal = new ManualResetEventSlim(false);
-                server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().AfterDatabaseRemovedFromIdle = idleRemovedSignal;
+                onWakeup = name =>
+                {
+                    if (string.Equals(name, store.Database, StringComparison.OrdinalIgnoreCase))
+                        idleRemovedSignal.Set();
+                };
+
+                server.ServerStore.DatabaseIdleManager.ForTestingPurposesOnly().AfterDatabaseRemovedFromIdle += onWakeup;
 
                 // enable backup and this will set wakeup timer
                 await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(putConfiguration));
@@ -78,7 +86,7 @@ public class RavenDB_18420 : RavenTestBase
 
                 Assert.True(idleRemovedSignal.Wait(TimeSpan.FromSeconds(65)));
                 // db should wake up after dueTimeOnRetry is hit
-                Assert.Equal(0, WaitForValue(() => server.ServerStore.IdleDatabases.Count, 0, interval: 333));
+                Assert.Equal(DatabaseIdleManager.DatabaseActivityState.Active, WaitForValue(() => server.ServerStore.DatabaseIdleManager.GetActivityState(store.Database), DatabaseIdleManager.DatabaseActivityState.Active, interval: 333));
 
                 PeriodicBackupStatus status = null;
                 var val = await WaitForValueAsync(async () =>
@@ -94,7 +102,9 @@ public class RavenDB_18420 : RavenTestBase
         }
         finally
         {
-            server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = false;
+            server.ServerStore.DatabaseIdleManager.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = false;
+            if (onWakeup != null)
+                server.ServerStore.DatabaseIdleManager.ForTestingPurposesOnly().AfterDatabaseRemovedFromIdle -= onWakeup;
         }
     }
 }

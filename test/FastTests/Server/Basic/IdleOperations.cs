@@ -99,7 +99,7 @@ namespace FastTests.Server.Basic
                 }
 
                 var stats = new Dictionary<StringSegment, DatabasesDebugHandler.IdleDatabaseStatistics>();
-                Server.ServerStore.IdleOperations(stats);
+                Server.ServerStore.DatabaseIdleManager.IdleOperations(stats);
 
                 var loadedCount = 0;
                 var unloadedCount = 0;

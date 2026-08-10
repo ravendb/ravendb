@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Extensions;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
@@ -65,21 +66,21 @@ public class RavenDB_20084 : ClusterTestBase
             var expectedTime = onGoingTaskBackup.NextBackup.DateTime;
 
             leaderServer.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipIncreasingLastWorkTimeBasedOnDatabaseSize = true;
-            leaderServer.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = true;
+            leaderServer.ServerStore.DatabaseIdleManager.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = true;
 
             using (leaderServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
             using (serverStoreContext.OpenReadTransaction())
             {
                 // Ensuring the database is in an idle state
-                WaitForValue(() => leaderServer.ServerStore.IdleDatabases.Count,
-                    expectedVal: 1,
+                var state = WaitForValue(() => leaderServer.ServerStore.DatabaseIdleManager.GetActivityState(leaderStore.Database),
+                    expectedVal: DatabaseIdleManager.DatabaseActivityState.Idle,
                     timeout: Convert.ToInt32(TimeSpan.FromMinutes(5).TotalMilliseconds),
                     interval: Convert.ToInt32(TimeSpan.FromSeconds(1).TotalMilliseconds));
-                Assert.Equal(1, leaderServer.ServerStore.IdleDatabases.Count);
+                Assert.Equal(DatabaseIdleManager.DatabaseActivityState.Idle, state);
 
                 // No longer forcing the idle state for the database
                 leaderServer.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipIncreasingLastWorkTimeBasedOnDatabaseSize = false;
-                leaderServer.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = false;
+                leaderServer.ServerStore.DatabaseIdleManager.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = false;
 
                 // Awaiting the next backup event to verify that the '/database' endpoint provides an updated value for the last incremental backup timestamp
                 using var client = new HttpClient().WithConventions(leaderStore.Conventions);

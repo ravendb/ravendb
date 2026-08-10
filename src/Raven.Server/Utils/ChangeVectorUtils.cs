@@ -429,5 +429,90 @@ namespace Raven.Server.Utils
             }
             return stringBuilder.ToString();
         }
+
+        internal static bool TryBase64ToGuid(string base64, out string guidString)
+        {
+            guidString = null;
+            if (string.IsNullOrEmpty(base64) || base64.Length > 24)
+                return false;
+            try
+            {
+                var padded = base64.Length % 4 == 0 ? base64 : base64.PadRight(base64.Length + (4 - base64.Length % 4), '=');
+                var bytes = Convert.FromBase64String(padded);
+                if (bytes.Length != 16)
+                    return false;
+                guidString = new Guid(bytes).ToString();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Classifies incoming Sink CV entries: Hub-known, Sink-origin, or TRXN. No capping (write path).
+        /// Callers apply SINK/TRXN tags to respective buckets and register sinkOriginEntries' DbIds
+        /// in DbIdsToIgnore to preserve Hub's global CV invariant (see <see cref="CleanHubGlobalCv"/>).
+        /// </summary>
+        /// <param name="incomingEntries">Parsed entries from the Sink's incoming change vector.</param>
+        /// <param name="hubKnownDbIds">Hub's authoritative DbIds (Base64-22).
+        /// Write path: all entries from Hub's cleaned global CV are safe — <see cref="CleanHubGlobalCv"/> guarantees no Sink DbIds.
+        /// Idle path: topology ID + DbBase64Id only — using the full CV risks Identity Crisis
+        /// (Sink DbIds in Hub's CV would be misclassified as Hub-origin). See <see cref="DatabaseIdleManager.FilterIrrelevantEntries"/>.</param>
+        /// <param name="clusterTransactionId">Hub's RAFT cluster DbId (Base64-22); null treats all non-Hub entries as Sink-origin.</param>
+        /// <param name="hubKnownEntries">Hub-origin — merge into Hub's global CV as-is.</param>
+        /// <param name="sinkOriginEntries">Sink-origin — caller must SINK-tag and add DbIds to DbIdsToIgnore.</param>
+        /// <param name="trxnEntries">Cluster-transaction — caller must apply TRXN tag.</param>
+        internal static void ClassifyHubIncomingEntries(
+            List<ChangeVectorEntry> incomingEntries,
+            HashSet<string> hubKnownDbIds,
+            string clusterTransactionId,
+            out List<ChangeVectorEntry> hubKnownEntries,
+            out List<ChangeVectorEntry> sinkOriginEntries,
+            out List<ChangeVectorEntry> trxnEntries)
+        {
+            hubKnownEntries = []; sinkOriginEntries = []; trxnEntries = [];
+
+            if (incomingEntries == null || incomingEntries.Count == 0)
+                return;
+
+            foreach (var entry in incomingEntries)
+            {
+                if (hubKnownDbIds?.Contains(entry.DbId) == true)
+                {
+                    hubKnownEntries.Add(entry);
+                }
+                else if (clusterTransactionId != null && entry.DbId == clusterTransactionId)
+                {
+                    trxnEntries.Add(entry);
+                }
+                else
+                {
+                    sinkOriginEntries.Add(entry);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Enforces Hub's global CV invariant: strips SINK/TRXN tags and removes Sink DbIds (dbIdsToIgnore).
+        /// Without this, Sink DbIds would leak into hubKnownDbIds on the next write cycle,
+        /// silently misclassifying incoming Sink entries as Hub-origin.
+        /// </summary>
+        /// <param name="dbIdsToIgnore">Sink DbIds accumulated this transaction (from sinkOriginEntries); null/empty is safe.</param>
+        public static ChangeVector CleanHubGlobalCv(
+            ChangeVector rawCv,
+            IChangeVectorOperationContext context,
+            HashSet<string> dbIdsToIgnore = null)
+        {
+            var value = rawCv.StripSinkTags(context);
+            value = value.StripTrxnTags(context);
+
+            if (dbIdsToIgnore == null || dbIdsToIgnore.Count == 0 || value.IsNullOrEmpty)
+                return value;
+
+            value.TryRemoveIds(dbIdsToIgnore, context, out value);
+            return value;
+        }
     }
 }

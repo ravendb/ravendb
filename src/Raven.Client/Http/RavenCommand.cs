@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -206,6 +207,9 @@ namespace Raven.Client.Http
             cache.Set(url, changeVector, responseJson);
         }
 
+#if !NETSTANDARD2_0
+        [DoesNotReturn]
+#endif
         protected static void ThrowInvalidResponse()
         {
             throw new InvalidDataException("Response is invalid.");

@@ -26,7 +26,7 @@ namespace Raven.Server.Web.System
                     Name = databaseKvp.Key.ToString()
                 };
 
-                statistics.CanCleanup = ServerStore.CanUnloadDatabase(databaseKvp.Key, databaseKvp.Value, statistics, out _);
+                statistics.CanCleanup = ServerStore.DatabasesLandlord.CanUnloadDatabase(databaseKvp.Key, databaseKvp.Value, statistics, out _);
 
                 results.Add(statistics.ToJson());
             }
@@ -79,6 +79,8 @@ namespace Raven.Server.Web.System
 
             public int NumberOfActivePullReplicationAsSinkConnections { get; set; }
 
+            public int NumberOfActiveSinkPullReplicationConfigurations { get; set; }
+
             public bool HasActiveOperations { get; set; }
 
             public List<string> Explanations { get; set; }
@@ -98,6 +100,7 @@ namespace Raven.Server.Web.System
                     [nameof(NumberOfChangesApiConnections)] = NumberOfChangesApiConnections,
                     [nameof(NumberOfSubscriptionConnections)] = NumberOfSubscriptionConnections,
                     [nameof(NumberOfActivePullReplicationAsSinkConnections)] = NumberOfActivePullReplicationAsSinkConnections,
+                    [nameof(NumberOfActiveSinkPullReplicationConfigurations)] = NumberOfActiveSinkPullReplicationConfigurations,
                     [nameof(HasActiveOperations)] = HasActiveOperations,
                     [nameof(Explanations)] = Explanations,
                 };

@@ -8,7 +8,6 @@ using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Replication;
 using Raven.Server.Extensions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -16,11 +15,14 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 
 namespace Raven.Server.Web.System
 {
     public sealed class TcpConnectionInfoHandler : ServerRequestHandler
     {
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<TcpConnectionInfoHandler>("Server");
+
         [RavenAction("/info/tcp", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Get()
         {
@@ -38,15 +40,9 @@ namespace Raven.Server.Web.System
             var database = GetStringQueryString("database");
             var databaseGroupId = GetStringQueryString("groupId");
             var remoteTask = GetStringQueryString("remote-task");
-            var tag = GetStringQueryString("tag", false);
 
             if (await AuthenticateAsync(HttpContext, ServerStore, database, remoteTask) == false)
                 return;
-
-            if (ServerStore.IdleDatabases.TryGetValue(database, out _) && (tag == ReplicationLoader.PullReplicationAsSinkTag || string.IsNullOrEmpty(tag)))
-            {
-                throw new DatabaseIdleException($"Cannot GetRemoteTaskTopology for PullReplicationAsSink connection because database '{database}' currently is idle.");
-            }
 
             List<string> nodes;
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -55,6 +51,9 @@ namespace Raven.Server.Web.System
                 var pullReplication = ServerStore.Cluster.ReadPullReplicationDefinition(database, remoteTask, context);
                 if (pullReplication.Disabled)
                     throw new InvalidOperationException($"The pull replication '{remoteTask}' is disabled.");
+
+                if (TryGetChangeVectorHeadersString(out string sinkChangeVector))
+                    ServerStore.DatabaseIdleManager.ThrowIfIdleAndUpToDate(database, sinkChangeVector, pullReplication, context);
 
                 var topology = ServerStore.Cluster.ReadDatabaseTopology(context, database);
                 nodes = GetResponsibleNodes(topology, databaseGroupId, pullReplication.MentorNode, pullReplication.PinToMentorNode);
@@ -81,17 +80,20 @@ namespace Raven.Server.Web.System
         {
             var remoteTask = GetStringQueryString("remote-task");
             var database = GetStringQueryString("database");
-            var verifyDatabase = GetBoolValueQueryString("verify-database", false);
-            var tag = GetStringQueryString("tag", false);
+            var verifyDatabase = GetBoolValueQueryString("verify-database", required: false);
 
             if (ServerStore.IsPassive())
-            {
                 throw new NodeIsPassiveException($"Can't fetch Tcp info from a passive node in url {this.HttpContext.Request.GetFullUrl()}");
-            }
 
-            if (ServerStore.IdleDatabases.TryGetValue(database, out _) && tag == ReplicationLoader.PullReplicationAsSinkTag)
+            if (TryGetChangeVectorHeadersString(out string sinkChangeVector))
             {
-                throw new DatabaseIdleException($"Cannot GetRemoteTaskTcp for PullReplicationAsSink connection because database '{database}' currently is idle.");
+                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var pullReplication = ServerStore.Cluster.ReadPullReplicationDefinition(database, remoteTask, context);
+                    if (pullReplication.Disabled == false)
+                        ServerStore.DatabaseIdleManager.ThrowIfIdleAndUpToDate(database, sinkChangeVector, pullReplication, context);
+                }
             }
 
             if (verifyDatabase.HasValue && verifyDatabase.Value)

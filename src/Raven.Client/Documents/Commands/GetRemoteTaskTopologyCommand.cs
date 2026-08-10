@@ -10,14 +10,15 @@ namespace Raven.Client.Documents.Commands
         private readonly string _remoteDatabase;
         private readonly string _databaseGroupId;
         private readonly string _remoteTask;
-        private readonly string _tag;
+        private readonly string _changeVector;
 
-        public GetRemoteTaskTopologyCommand(string remoteDatabase, string databaseGroupId, string remoteTask, string tag)
+        public GetRemoteTaskTopologyCommand(string remoteDatabase, string databaseGroupId, string remoteTask, string changeVector = null)
         {
             _remoteDatabase = remoteDatabase ?? throw new ArgumentNullException(nameof(remoteDatabase));
             _databaseGroupId = databaseGroupId ?? throw new ArgumentNullException(nameof(databaseGroupId));
             _remoteTask = remoteTask ?? throw new ArgumentNullException(nameof(remoteTask));
-            _tag = tag;
+            _changeVector = changeVector;
+
             Timeout = TimeSpan.FromSeconds(15);
         }
 
@@ -27,13 +28,17 @@ namespace Raven.Client.Documents.Commands
                   $"database={Uri.EscapeDataString(_remoteDatabase)}" +
                   $"&remote-task={Uri.EscapeDataString(_remoteTask)}" +
                   $"&groupId={Uri.EscapeDataString(_databaseGroupId)}" +
-                  $"&tag={Uri.EscapeDataString(_tag)}";
+                  $"&tag=wakeup"; // for backward compatibility only
 
             RequestedNode = node;
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Get
             };
+
+            if (_changeVector != null)
+                request.Headers.Add("change-vector", _changeVector);
+
             return request;
         }
 
@@ -54,5 +59,4 @@ namespace Raven.Client.Documents.Commands
 
         public override bool IsReadRequest => true;
     }
-
 }

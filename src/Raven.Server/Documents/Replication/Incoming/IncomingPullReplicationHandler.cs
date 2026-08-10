@@ -188,49 +188,34 @@ namespace Raven.Server.Documents.Replication.Incoming
 
             internal static string ReplaceUnknownEntriesWithSinkTag(DocumentsOperationContext context, ref string changeVector)
             {
-                var globalDbIds = context.LastDatabaseChangeVector?.AsString().ToChangeVectorList()?.Select(x => x.DbId).ToList();
-                var incoming = changeVector.ToChangeVectorList();
-                var knownEntries = new List<ChangeVectorEntry>();
-                var newIncoming = new List<ChangeVectorEntry>();
+                HashSet<string> hubKnownDbIds = context.LastDatabaseChangeVector?.AsString().ToChangeVectorList()?.Select(changeVectorEntry => changeVectorEntry.DbId).ToHashSet();
+                List<ChangeVectorEntry> incoming = changeVector.ToChangeVectorList();
 
-                foreach (var entry in incoming)
+                ChangeVectorUtils.ClassifyHubIncomingEntries(
+                    incoming,
+                    hubKnownDbIds,
+                    context.DocumentDatabase.ClusterTransactionId,
+                    out List<ChangeVectorEntry> hubKnownEntries,
+                    out List<ChangeVectorEntry> sinkOriginEntries,
+                    out List<ChangeVectorEntry> trxnEntries);
+
+                var newIncoming = new List<ChangeVectorEntry>(incoming?.Count ?? 0);
+                newIncoming.AddRange(hubKnownEntries);
+
+                foreach (var entry in sinkOriginEntries)
                 {
-                    if (globalDbIds?.Contains(entry.DbId) == true)
-                    {
-                        newIncoming.Add(entry);
-                        knownEntries.Add(entry);
-                    }
-                    else if (entry.DbId == context.DocumentDatabase.ClusterTransactionId)
-                    {
-                        // TRXN
-                        newIncoming.Add(new ChangeVectorEntry
-                        {
-                            DbId = entry.DbId,
-                            Etag = entry.Etag,
-                            NodeTag = ChangeVectorParser.TrxnInt
-                        });
-
-                        continue;
-                    }
-                    else
-                    {
-                        newIncoming.Add(new ChangeVectorEntry
-                        {
-                            DbId = entry.DbId,
-                            Etag = entry.Etag,
-                            NodeTag = ChangeVectorParser.SinkInt
-                        });
-
-                        context.DbIdsToIgnore ??= new HashSet<string>();
-                        context.DbIdsToIgnore.Add(entry.DbId);
-                    }
+                    newIncoming.Add(entry with { NodeTag = ChangeVectorParser.SinkInt });
+                    context.DbIdsToIgnore ??= [];
+                    context.DbIdsToIgnore.Add(entry.DbId);
                 }
+
+                newIncoming.AddRange(trxnEntries.Select(entry => entry with { NodeTag = ChangeVectorParser.TrxnInt }));
 
                 changeVector = newIncoming.SerializeVector();
 
-                return knownEntries.Count > 0 ? 
-                    knownEntries.SerializeVector() : 
-                    null;
+                return hubKnownEntries.Count > 0
+                    ? hubKnownEntries.SerializeVector()
+                    : null;
             }
 
             private static void ReplaceKnownSinkEntries(DocumentsOperationContext context, ref string changeVector)
@@ -306,7 +291,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             }
             protected override bool TryUpdateChangeVector(DocumentsOperationContext context)
             {
-                if (_pullReplicationParams.Mode == PullReplicationMode.SinkToHub)
+                if (_pullReplicationParams.Mode.HasFlag(PullReplicationMode.SinkToHub))
                     return false;
 
                 return base.TryUpdateChangeVector(context);

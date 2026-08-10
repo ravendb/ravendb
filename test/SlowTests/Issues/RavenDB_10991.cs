@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.ServerWide;
@@ -46,11 +46,11 @@ namespace SlowTests.Issues
                     database.LastAccessTime = DateTime.MinValue;
 
                     using (database.PreventFromUnloadingByIdleOperations()) // should prevent from unloading
-                        Server.ServerStore.IdleOperations(null);
+                        Server.ServerStore.DatabaseIdleManager.IdleOperations(null);
 
                     Assert.True(landlord.LastRecentlyUsed.TryGetValue(name, out _));
 
-                    Server.ServerStore.IdleOperations(null); // should unload
+                    Server.ServerStore.DatabaseIdleManager.IdleOperations(null); // should unload
 
                     Assert.False(landlord.LastRecentlyUsed.TryGetValue(name, out _));
                 }

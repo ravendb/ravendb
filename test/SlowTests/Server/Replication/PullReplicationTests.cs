@@ -16,6 +16,7 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
+using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
@@ -796,17 +797,17 @@ namespace SlowTests.Server.Replication
                     Name = hub.Database.ToString()
                 };
 
-                while (now < nextNow && hubServer.ServerStore.IdleDatabases.Count < 1)
+                while (now < nextNow && hubServer.ServerStore.DatabaseIdleManager.GetActivityState(hub.Database) is DatabaseIdleManager.DatabaseActivityState.Active)
                 {
                     await Task.Delay(1000);
                     var hubDb = hubServer.ServerStore.DatabasesLandlord.LastRecentlyUsed.FirstOrDefault();
-                    hubServer.ServerStore.CanUnloadDatabase(hubDb.Key, hubDb.Value, statistics, out _);
+                    hubServer.ServerStore.DatabasesLandlord.CanUnloadDatabase(hubDb.Key, hubDb.Value, statistics, out _);
 
                     now = DateTime.Now;
                 }
 
-                Assert.True(1 == hubServer.ServerStore.IdleDatabases.Count, string.Join(Environment.NewLine, statistics.Explanations));
-                Assert.Equal(0, sinkServer.ServerStore.IdleDatabases.Count);
+                Assert.True(hubServer.ServerStore.DatabaseIdleManager.GetActivityState(hub.Database) is DatabaseIdleManager.DatabaseActivityState.Idle, string.Join(Environment.NewLine, statistics.Explanations));
+                Assert.Equal(DatabaseIdleManager.DatabaseActivityState.Active, sinkServer.ServerStore.DatabaseIdleManager.GetActivityState(sink.Database));
 
                 var sinkDb = await GetDatabase(sinkServer, sink.Database);
 
@@ -826,8 +827,7 @@ namespace SlowTests.Server.Replication
                         {
                             if (error is not DatabaseIdleException idleException)
                                 continue;
-
-                            if (idleException.Message.Contains($"Raven.Client.Exceptions.Database.DatabaseIdleException: Cannot GetRemoteTaskTopology for PullReplicationAsSink connection because database '{hub.Database}' currently is idle."))
+                            if (idleException.Message.Contains($"Raven.Client.Exceptions.Database.DatabaseIdleException: The database '{hub.Database}' is currently idle. The request was rejected to avoid waking up the database unnecessarily"))
                                 return true;
                         }
                     }
@@ -841,7 +841,7 @@ namespace SlowTests.Server.Replication
                     s2.SaveChanges();
                 }
 
-                Assert.Equal(0, WaitForValue(() => sinkServer.ServerStore.IdleDatabases.Count, 0, 60_000, 333));
+                Assert.Equal(DatabaseIdleManager.DatabaseActivityState.Active, WaitForValue(() => sinkServer.ServerStore.DatabaseIdleManager.GetActivityState(sink.Database), DatabaseIdleManager.DatabaseActivityState.Active, 60_000, 333));
                 Assert.True(WaitForDocument(sink, "foo/bar/322", timeout * 5), sink.Identifier);
             }
         }
@@ -927,48 +927,43 @@ namespace SlowTests.Server.Replication
 
                 server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipIncreasingLastWorkTimeBasedOnDatabaseSize = true;
 
-                var dic = new Dictionary<IdleDatabaseStatistics, int>();
-                Assert.True(WaitForValue( () =>
+                // Wait for the Sink to be marked as "Cannot Unload" due to configuration intent.
+                // The Hub is allowed to sleep in this scenario, so we only verify the Sink's state.
+                Assert.True(WaitForValue(() =>
                 {
-                    dic = new Dictionary<IdleDatabaseStatistics, int>();
-                    foreach (var databaseKvp in server.ServerStore.DatabasesLandlord.LastRecentlyUsed.ForceEnumerateInThreadSafeManner())
-                    {
-                        var statistics = new IdleDatabaseStatistics
-                        {
-                            Name = databaseKvp.Key.ToString()
-                        };
+                    var sinkDbKvp = server.ServerStore.DatabasesLandlord.LastRecentlyUsed.FirstOrDefault(x => x.Key.Equals(sink.Database, StringComparison.OrdinalIgnoreCase));
 
-                        server.ServerStore.CanUnloadDatabase(databaseKvp.Key, databaseKvp.Value, statistics, out _);
-
-                        if (statistics.CanUnload == false)
-                            continue;
-
-                        if (statistics.Explanations.Count > 1)
-                        {
-                            continue;
-                        }
-
-                        if (statistics.NumberOfActivePullReplicationAsSinkConnections == 0)
-                            continue;
-
-                        dic.Add(statistics, statistics.NumberOfActivePullReplicationAsSinkConnections);
-                    }
-
-                    if (dic.Count != 2)
+                    // If Sink is not even in LRU, we can't check it. Wait until it is.
+                    if (sinkDbKvp.Key == null)
                         return false;
 
-                    return dic.All(x => x.Value == 1);
-                }, true, 75_000, 1000), string.Join(Environment.NewLine, dic.Keys.Select(x =>
-                {
-                    using (var context = JsonOperationContext.ShortTermSingleUse())
+                    var statistics = new IdleDatabaseStatistics
                     {
-                        return context.ReadObject(x.ToJson(), "json").ToString();
-                    }
-                })));
+                        Name = sinkDbKvp.Key.ToString()
+                    };
 
-                // the hub & sink should be online  
-                Assert.Equal(0, server.ServerStore.IdleDatabases.Count);
-                Assert.All(dic.Keys, x => Assert.Contains($"Cannot unload database because number of active PullReplication as Sink Connections (1) is greater than 0", x.Explanations));
+                    // Calculate the actual decision based on all factors
+                    bool serverSaysCanUnload = server.ServerStore.DatabasesLandlord.CanUnloadDatabase(sinkDbKvp.Key, sinkDbKvp.Value, statistics, out _);
+
+                    // If the server says it CAN unload, then our blocker hasn't kicked in yet.
+                    if (serverSaysCanUnload)
+                        return false;
+
+                    // Verify the specific reason from ServerStore.cs logic
+                    return statistics.Explanations.Any(x => x.Contains("active Sink Pull Replication configuration"));
+
+                }, true, 75_000, 1000));
+
+                // Verify Hub is NOT blocked by replication connections (it might be blocked by time, but not by replication).
+                var hubDbKvp = server.ServerStore.DatabasesLandlord.LastRecentlyUsed.FirstOrDefault(x => x.Key.Equals(hub.Database, StringComparison.OrdinalIgnoreCase));
+                if (hubDbKvp.Key != null)
+                {
+                    var hubStats = new IdleDatabaseStatistics { Name = hubDbKvp.Key.ToString() };
+                    server.ServerStore.DatabasesLandlord.CanUnloadDatabase(hubDbKvp.Key, hubDbKvp.Value, hubStats, out _);
+
+                    // The Hub should NOT have the configuration-based blocking message
+                    Assert.DoesNotContain(hubStats.Explanations, x => x.Contains("active Sink Pull Replication configuration"));
+                }
 
                 using (var s2 = hub.OpenSession())
                 {

@@ -13,6 +13,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Config;
+using Raven.Server.ServerWide;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Voron.Util;
@@ -44,8 +45,8 @@ namespace StressTests.Issues
                     [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false"
                 }
             });
-            using var dispose = new DisposableAction(() => server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = false);
-            server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = true;
+            using var dispose = new DisposableAction(() => server.ServerStore.DatabaseIdleManager.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = false);
+            server.ServerStore.DatabaseIdleManager.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = true;
 
             var dbName = GetDatabaseName();
             var controlgroupDbName = GetDatabaseName() + "controlgroup";
@@ -80,10 +81,8 @@ namespace StressTests.Issues
             for (int i = 0; i < rounds; i++)
             {
                 // let db get idle
-                await WaitForValueAsync(() => Task.FromResult(server.ServerStore.IdleDatabases.Count > 0), true, 180 * 1000, 3000);
-
-                Assert.True(1 == server.ServerStore.IdleDatabases.Count, $"IdleDatabasesCount({server.ServerStore.IdleDatabases.Count}), Round({i})");
-                Assert.True(server.ServerStore.IdleDatabases.ContainsKey(store.Database), $"Round({i})");
+                var state = WaitForValue(() => server.ServerStore.DatabaseIdleManager.GetActivityState(dbName), DatabaseIdleManager.DatabaseActivityState.Idle, 180 * 1000, 3000);
+                Assert.True(DatabaseIdleManager.DatabaseActivityState.Idle == state, $"server.ServerStore.DatabaseIdleManager.GetActivityState(dbName) = '{state})', Round({i})");
 
                 DateTime lastBackup;
                 if (first)

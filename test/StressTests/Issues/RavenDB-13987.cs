@@ -12,6 +12,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server;
 using Raven.Server.Config;
+using Raven.Server.ServerWide;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Voron.Util;
@@ -48,7 +49,7 @@ namespace StressTests.Issues
             {
                 foreach (var server in nodes)
                 {
-                    server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = false;
+                    server.ServerStore.DatabaseIdleManager.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = false;
                     server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipIncreasingLastWorkTimeBasedOnDatabaseSize = false;
                     documentStores[server.ServerStore.NodeTag].Dispose();
                 }
@@ -56,7 +57,7 @@ namespace StressTests.Issues
 
             foreach (var server in nodes)
             {
-                server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = true;
+                server.ServerStore.DatabaseIdleManager.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = true;
                 server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipIncreasingLastWorkTimeBasedOnDatabaseSize = true;
             }
 
@@ -122,7 +123,7 @@ namespace StressTests.Issues
             Assert.Equal(2, IdleCount());
 
             return;
-            int IdleCount() => nodes.Sum(server => server.ServerStore.IdleDatabases.Count);
+            int IdleCount() => nodes.Count(server => server.ServerStore.DatabaseIdleManager.GetActivityState(documentStores[server.ServerStore.NodeTag].Database) is DatabaseIdleManager.DatabaseActivityState.Idle);
             string CollectDiagnostics()
             {
                 var sb = new StringBuilder();
@@ -154,11 +155,11 @@ namespace StressTests.Issues
             using var dispose = new DisposableAction(() =>
             {
                 server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipIncreasingLastWorkTimeBasedOnDatabaseSize = false;
-                server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = false;
+                server.ServerStore.DatabaseIdleManager.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = false;
             });
 
             server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipIncreasingLastWorkTimeBasedOnDatabaseSize = true;
-            server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = true;
+            server.ServerStore.DatabaseIdleManager.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = true;
 
             using var store = GetDocumentStore(new Options { Server = server, RunInMemory = false });
             while (DateTime.Now.Second > 10)
@@ -185,17 +186,15 @@ namespace StressTests.Issues
                 await session.SaveChangesAsync();
             }
 
-            WaitForUserToContinueTheTest(store);
-
             var getPeriodicBackupStatusOperation = new GetPeriodicBackupStatusOperation(backupTaskId);
             Assert.True(1 <= await WaitForGreaterThanAsync(async () =>
             {
-                Assert.Equal(0, server.ServerStore.IdleDatabases.Count);
+                Assert.Equal(DatabaseIdleManager.DatabaseActivityState.Active, server.ServerStore.DatabaseIdleManager.GetActivityState(store.Database));
                 var status = await store.Maintenance.SendAsync(getPeriodicBackupStatusOperation);
                 return status?.Status?.LastEtag ?? 0;
             }, val: 1, timeout: 75000, interval: 300));
 
-            Assert.Equal(1, WaitForValue(() => server.ServerStore.IdleDatabases.Count, 1, timeout: 60_000, interval: 3_000));
+            Assert.Equal(DatabaseIdleManager.DatabaseActivityState.Idle, WaitForValue(() => server.ServerStore.DatabaseIdleManager.GetActivityState(store.Database), DatabaseIdleManager.DatabaseActivityState.Idle , timeout: 60_000, interval: 3_000));
         }
 
         internal static int WaitForCount(TimeSpan seconds, int excepted, Func<int> func)
@@ -212,9 +211,5 @@ namespace StressTests.Issues
 
             return count;
         }
-
-
-
-
     }
 }

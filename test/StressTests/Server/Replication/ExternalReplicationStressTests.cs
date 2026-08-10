@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Server;
 using Raven.Server.Config;
+using Raven.Server.ServerWide;
 using Raven.Tests.Core.Utils.Entities;
 using StressTests.Issues;
 using Tests.Infrastructure;
@@ -59,65 +60,66 @@ namespace StressTests.Server.Replication
                 Assert.True(server.ServerStore.DatabasesLandlord.LastRecentlyUsed.TryGetValue(store1.Database, out _));
                 Assert.True(server.ServerStore.DatabasesLandlord.LastRecentlyUsed.TryGetValue(store2.Database, out _));
 
-                var now = DateTime.Now;
-                var nextNow = now + TimeSpan.FromSeconds(60);
-                while (now < nextNow && server.ServerStore.IdleDatabases.Count < 2)
-                {
-                    await Task.Delay(3000);
-                    now = DateTime.Now;
-                }
-                Assert.Equal(2, server.ServerStore.IdleDatabases.Count);
+                Assert.True(WaitForValue(() =>
+                        server.ServerStore.DatabaseIdleManager.GetActivityState(store1.Database) is DatabaseIdleManager.DatabaseActivityState.Idle &&
+                        server.ServerStore.DatabaseIdleManager.GetActivityState(store2.Database) is DatabaseIdleManager.DatabaseActivityState.Idle,
+                    expectedVal: true,
+                    timeout: (int) TimeSpan.FromSeconds(60).TotalMilliseconds,
+                    interval: (int) TimeSpan.FromSeconds(3).TotalMilliseconds));
 
                 await store1.Maintenance.SendAsync(new CreateSampleDataOperation());
                 Indexes.WaitForIndexing(store1);
 
-                var count = 0;
                 var docs = store1.Maintenance.Send(new GetStatisticsOperation()).CountOfDocuments;
-                var replicatedDocs = store2.Maintenance.Send(new GetStatisticsOperation()).CountOfDocuments;
-                while (docs != replicatedDocs && count < 20)
-                {
-                    await Task.Delay(3000);
-                    replicatedDocs = store2.Maintenance.Send(new GetStatisticsOperation()).CountOfDocuments;
-                    count++;
-                }
-                Assert.Equal(docs, replicatedDocs);
 
-                count = 0;
-                nextNow = DateTime.Now + TimeSpan.FromMinutes(5);
-                while (server.ServerStore.IdleDatabases.Count == 0 && now < nextNow)
-                {
-                    await Task.Delay(500);
-                    if (count % 10 == 0)
+                Assert.True(WaitForValue(() =>
+                    {
+                        var replicatedDocs = store2.Maintenance.Send(new GetStatisticsOperation()).CountOfDocuments;
+                        return docs == replicatedDocs;
+                    },
+                    expectedVal: true,
+                    timeout: (int)TimeSpan.FromSeconds(60).TotalMilliseconds,
+                    interval: (int)TimeSpan.FromSeconds(3).TotalMilliseconds));
+
+                var count = 0;
+                Assert.True(WaitForValue(() =>
+                    {
+                        if (count % 10 == 0)
+                            store1.Maintenance.Send(new GetStatisticsOperation());
+
+                        count++;
+
+                        return server.ServerStore.DatabaseIdleManager.GetActivityState(store1.Database) is DatabaseIdleManager.DatabaseActivityState.Active &&
+                               server.ServerStore.DatabaseIdleManager.GetActivityState(store2.Database) is DatabaseIdleManager.DatabaseActivityState.Idle;
+                    },
+                    expectedVal: true,
+                    timeout: (int)TimeSpan.FromMinutes(5).TotalMilliseconds,
+                    interval: 500));
+
+                Assert.True(WaitForValue(() =>
+                    {
                         store1.Maintenance.Send(new GetStatisticsOperation());
+                        Assert.True(server.ServerStore.DatabaseIdleManager.GetActivityState(store2.Database) is DatabaseIdleManager.DatabaseActivityState.Idle);
 
-                    now = DateTime.Now;
-                    count++;
-                }
-                Assert.Equal(1, server.ServerStore.IdleDatabases.Count);
+                        return server.ServerStore.DatabaseIdleManager.GetActivityState(store1.Database) is DatabaseIdleManager.DatabaseActivityState.Active;
+                    },
+                    expectedVal: true,
+                    timeout: (int)TimeSpan.FromSeconds(15).TotalMilliseconds,
+                    interval: (int)TimeSpan.FromSeconds(2).TotalMilliseconds));
 
-                nextNow = DateTime.Now + TimeSpan.FromSeconds(15);
-                while (now < nextNow)
-                {
-                    await Task.Delay(2000);
-                    store1.Maintenance.Send(new GetStatisticsOperation());
-                    Assert.Equal(1, server.ServerStore.IdleDatabases.Count);
-                    now = DateTime.Now;
-                }
-
-                nextNow = DateTime.Now + TimeSpan.FromMinutes(10);
-                while (now < nextNow && server.ServerStore.IdleDatabases.Count < 2)
-                {
-                    await Task.Delay(3000);
-                    now = DateTime.Now;
-                }
-                Assert.Equal(2, server.ServerStore.IdleDatabases.Count);
+                Assert.True(WaitForValue(() =>
+                        server.ServerStore.DatabaseIdleManager.GetActivityState(store1.Database) is DatabaseIdleManager.DatabaseActivityState.Idle &&
+                        server.ServerStore.DatabaseIdleManager.GetActivityState(store2.Database) is DatabaseIdleManager.DatabaseActivityState.Idle,
+                    expectedVal: true,
+                    timeout: (int) TimeSpan.FromMinutes(10).TotalMilliseconds,
+                    interval: (int) TimeSpan.FromSeconds(3).TotalMilliseconds));
 
                 using (var s = store2.OpenSession())
                 {
                     s.Advanced.RawQuery<dynamic>("from @all_docs")
                         .ToList();
                 }
-                Assert.Equal(1, server.ServerStore.IdleDatabases.Count);
+                Assert.Equal(DatabaseIdleManager.DatabaseActivityState.Active, server.ServerStore.DatabaseIdleManager.GetActivityState(store2.Database));
 
                 var operation = await store2
                     .Operations
@@ -126,34 +128,38 @@ namespace StressTests.Server.Replication
 
                 await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
-                nextNow = DateTime.Now + TimeSpan.FromMinutes(2);
-                while (now < nextNow && server.ServerStore.IdleDatabases.Count > 0)
-                {
-                    await Task.Delay(5000);
-                    now = DateTime.Now;
-                }
-                Assert.Equal(0, server.ServerStore.IdleDatabases.Count);
+                Assert.True(WaitForValue(() =>
+                        server.ServerStore.DatabaseIdleManager.GetActivityState(store1.Database) is DatabaseIdleManager.DatabaseActivityState.Active &&
+                        server.ServerStore.DatabaseIdleManager.GetActivityState(store2.Database) is DatabaseIdleManager.DatabaseActivityState.Active,
+                    expectedVal: true,
+                    timeout: (int) TimeSpan.FromMinutes(2).TotalMilliseconds,
+                    interval: (int) TimeSpan.FromSeconds(5).TotalMilliseconds));
 
-                nextNow = DateTime.Now + TimeSpan.FromMinutes(10);
-                while (server.ServerStore.IdleDatabases.Count == 0 && now < nextNow)
-                {
-                    await Task.Delay(500);
-                    if (count % 10 == 0)
+                count = 0;
+                Assert.True(WaitForValue(() =>
+                    {
+                        if (count % 10 == 0)
+                            store2.Maintenance.Send(new GetStatisticsOperation());
+
+                        count++;
+
+                        return server.ServerStore.DatabaseIdleManager.GetActivityState(store1.Database) is DatabaseIdleManager.DatabaseActivityState.Idle &&
+                               server.ServerStore.DatabaseIdleManager.GetActivityState(store2.Database) is DatabaseIdleManager.DatabaseActivityState.Active;
+                    },
+                    expectedVal: true,
+                    timeout: (int)TimeSpan.FromMinutes(10).TotalMilliseconds,
+                    interval: 500));
+
+                Assert.True(WaitForValue(() =>
+                    {
                         store2.Maintenance.Send(new GetStatisticsOperation());
+                        Assert.True(server.ServerStore.DatabaseIdleManager.GetActivityState(store1.Database) is DatabaseIdleManager.DatabaseActivityState.Idle);
 
-                    now = DateTime.Now;
-                    count++;
-                }
-                Assert.Equal(1, server.ServerStore.IdleDatabases.Count);
-
-                nextNow = DateTime.Now + TimeSpan.FromSeconds(15);
-                while (now < nextNow)
-                {
-                    await Task.Delay(2000);
-                    store2.Maintenance.Send(new GetStatisticsOperation());
-                    Assert.Equal(1, server.ServerStore.IdleDatabases.Count);
-                    now = DateTime.Now;
-                }
+                        return server.ServerStore.DatabaseIdleManager.GetActivityState(store2.Database) is DatabaseIdleManager.DatabaseActivityState.Active;
+                    },
+                    expectedVal: true,
+                    timeout: (int)TimeSpan.FromSeconds(15).TotalMilliseconds,
+                    interval: (int)TimeSpan.FromSeconds(2).TotalMilliseconds));
             }
         }
 
@@ -192,15 +198,12 @@ namespace StressTests.Server.Replication
                 Assert.True(server.ServerStore.DatabasesLandlord.LastRecentlyUsed.TryGetValue(store1.Database, out _));
                 Assert.True(server.ServerStore.DatabasesLandlord.LastRecentlyUsed.TryGetValue(store2.Database, out _));
 
-                var now = DateTime.Now;
-                var nextNow = now + TimeSpan.FromSeconds(60);
-                while (now < nextNow && server.ServerStore.IdleDatabases.Count < 2)
-                {
-                    await Task.Delay(3000);
-                    now = DateTime.Now;
-                }
-
-                Assert.Equal(2, server.ServerStore.IdleDatabases.Count);
+                Assert.True(WaitForValue(() =>
+                        server.ServerStore.DatabaseIdleManager.GetActivityState(store1.Database) is DatabaseIdleManager.DatabaseActivityState.Idle &&
+                        server.ServerStore.DatabaseIdleManager.GetActivityState(store2.Database) is DatabaseIdleManager.DatabaseActivityState.Idle,
+                    expectedVal: true,
+                    timeout: (int) TimeSpan.FromSeconds(60).TotalMilliseconds,
+                    interval: (int) TimeSpan.FromSeconds(3).TotalMilliseconds));
 
                 await store1.Maintenance.SendAsync(new CreateSampleDataOperation());
                 Indexes.WaitForIndexing(store1);
@@ -217,26 +220,30 @@ namespace StressTests.Server.Replication
                 Assert.Equal(docs, replicatedDocs);
 
                 count = 0;
-                nextNow = DateTime.Now + TimeSpan.FromMinutes(5);
-                while (server.ServerStore.IdleDatabases.Count == 0 && now < nextNow)
-                {
-                    await Task.Delay(500);
-                    if (count % 10 == 0)
+                Assert.True(WaitForValue(() =>
+                    {
+                        if (count % 10 == 0)
+                            store1.Maintenance.Send(new GetStatisticsOperation());
+
+                        count++;
+
+                        return server.ServerStore.DatabaseIdleManager.GetActivityState(store1.Database) is DatabaseIdleManager.DatabaseActivityState.Active &&
+                               server.ServerStore.DatabaseIdleManager.GetActivityState(store2.Database) is DatabaseIdleManager.DatabaseActivityState.Idle;
+                    },
+                    expectedVal: true,
+                    timeout: (int)TimeSpan.FromMinutes(5).TotalMilliseconds,
+                    interval: 500));
+
+                Assert.True(WaitForValue(() =>
+                    {
                         store1.Maintenance.Send(new GetStatisticsOperation());
+                        Assert.True(server.ServerStore.DatabaseIdleManager.GetActivityState(store2.Database) is DatabaseIdleManager.DatabaseActivityState.Idle);
 
-                    now = DateTime.Now;
-                    count++;
-                }
-                Assert.Equal(1, server.ServerStore.IdleDatabases.Count);
-
-                nextNow = DateTime.Now + TimeSpan.FromSeconds(15);
-                while (now < nextNow)
-                {
-                    await Task.Delay(2000);
-                    store1.Maintenance.Send(new GetStatisticsOperation());
-                    Assert.Equal(1, server.ServerStore.IdleDatabases.Count);
-                    now = DateTime.Now;
-                }
+                        return server.ServerStore.DatabaseIdleManager.GetActivityState(store1.Database) is DatabaseIdleManager.DatabaseActivityState.Active;
+                    },
+                    expectedVal: true,
+                    timeout: (int)TimeSpan.FromSeconds(15).TotalMilliseconds,
+                    interval: (int)TimeSpan.FromSeconds(2).TotalMilliseconds));
             }
         }
 
@@ -265,7 +272,7 @@ namespace StressTests.Server.Replication
                 foreach (var server in _nodes)
                 {
                     wakeUpReasons.Add(server.ServerStore.NodeTag, new List<string>());
-                    server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = true;
+                    server.ServerStore.DatabaseIdleManager.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = true;
                     server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().AfterDatabaseCreation = tuple =>
                     {
                         var list = wakeUpReasons[tuple.Database.ServerStore.NodeTag];
@@ -282,16 +289,15 @@ namespace StressTests.Server.Replication
                     RunInMemory = false
                 }))
                 {
-                    var count = RavenDB_13987.WaitForCount(TimeSpan.FromSeconds(300), clusterSize, GetIdleCount);
+                    var count = RavenDB_13987.WaitForCount(TimeSpan.FromSeconds(300), clusterSize, () => GetIdleCount(store.Database));
                     Assert.True(clusterSize == count, string.Join(Environment.NewLine, wakeUpReasons.Select(x => string.Join(": ", x.Key, string.Join(", ", x.Value)))));
 
                     foreach (var server in _nodes)
                     {
-                        Assert.Equal(1, server.ServerStore.IdleDatabases.Count);
-                        Assert.True(server.ServerStore.IdleDatabases.TryGetValue(databaseName, out var dictionary));
+                        Assert.True(server.ServerStore.DatabaseIdleManager.TryGetIdleInfo(databaseName, out var idleDatabaseInfo));
 
                         // new incoming replications not saved in IdleDatabases
-                        Assert.Equal(0, dictionary.Count);
+                        Assert.Equal(0, idleDatabaseInfo.ReplicationInfo.Count);
                     }
 
                     var rnd = new Random();
@@ -300,7 +306,7 @@ namespace StressTests.Server.Replication
                     {
                         await store2.Maintenance.SendAsync(new GetStatisticsOperation());
 
-                        Assert.True(2 == GetIdleCount(), string.Join(Environment.NewLine, wakeUpReasons.Select(x => string.Join(": ", x.Key, string.Join(", ", x.Value)))));
+                        Assert.True(2 == GetIdleCount(store.Database), string.Join(Environment.NewLine, wakeUpReasons.Select(x => string.Join(": ", x.Key, string.Join(", ", x.Value)))));
                         using (var s = store2.OpenAsyncSession())
                         {
                             await s.StoreAsync(new User() { Name = "Egor" }, "foo/bar");
@@ -308,7 +314,7 @@ namespace StressTests.Server.Replication
                         }
                     }
 
-                    count = RavenDB_13987.WaitForCount(TimeSpan.FromSeconds(300), 0, GetIdleCount);
+                    count = RavenDB_13987.WaitForCount(TimeSpan.FromSeconds(300), 0, () => GetIdleCount(store.Database));
                     Assert.True(0 == count, string.Join(Environment.NewLine, wakeUpReasons.Select(x => string.Join(": ", x.Key, string.Join(", ", x.Value)))));
 
                     var timeout = 5000;
@@ -325,29 +331,26 @@ namespace StressTests.Server.Replication
                     var now = DateTime.Now;
                     using (var store2 = new DocumentStore { Urls = new[] { _nodes[index].WebUrl }, Conventions = { DisableTopologyUpdates = true }, Database = databaseName }.Initialize())
                     {
-                        while (now < nextNow && GetIdleCount() < 2)
+                        while (now < nextNow && GetIdleCount(store.Database) < 2)
                         {
                             await Task.Delay(2000);
                             await store2.Maintenance.SendAsync(new GetStatisticsOperation());
                             now = DateTime.Now;
                         }
                     }
-                    Assert.True(2 == GetIdleCount(), string.Join(Environment.NewLine, wakeUpReasons.Select(x => string.Join(": ", x.Key, string.Join(", ", x.Value)))));
+                    Assert.True(2 == GetIdleCount(store.Database), string.Join(Environment.NewLine, wakeUpReasons.Select(x => string.Join(": ", x.Key, string.Join(", ", x.Value)))));
                 }
             }
             finally
             {
                 foreach (var server in _nodes)
                 {
-                    server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = false;
+                    server.ServerStore.DatabaseIdleManager.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = false;
                     server.ServerStore.DatabasesLandlord.ForTestingPurposes = null;
                 }
             }
         }
 
-        private int GetIdleCount()
-        {
-            return _nodes.Sum(server => server.ServerStore.IdleDatabases.Count);
-        }
+        private int GetIdleCount(string databaseName) => _nodes.Count(server => server.ServerStore.DatabaseIdleManager.GetActivityState(databaseName) is DatabaseIdleManager.DatabaseActivityState.Idle);
     }
 }

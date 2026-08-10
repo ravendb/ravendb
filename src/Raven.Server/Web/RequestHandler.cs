@@ -408,6 +408,25 @@ namespace Raven.Server.Web
             return value[0];
         }
 
+        internal bool TryGetChangeVectorHeadersString(out string changeVector)
+        {
+            const string key = "change-vector";
+            if (HttpContext.Request.Headers.TryGetValue(key, out var headerChangeVector))
+            {
+                changeVector = headerChangeVector.ToString();
+                return true;
+            }
+
+            if (HttpContext.Request.Query.ContainsKey(key))
+            {
+                changeVector = GetStringQueryString(key, required: false) ?? string.Empty;
+                return true;
+            }
+
+            changeVector = null;
+            return false;
+        }
+
         [DoesNotReturn]
         private static void ThrowSingleCharacterRequired(string name, string value)
         {

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.ServerWide;
@@ -47,7 +47,7 @@ namespace SlowTests.Issues
 
                     await database.TombstoneCleaner.ExecuteCleanup();
 
-                    Server.ServerStore.IdleOperations(null);
+                    Server.ServerStore.DatabaseIdleManager.IdleOperations(null);
 
                     Assert.False(landlord.LastRecentlyUsed.TryGetValue(name, out _));
                 }
