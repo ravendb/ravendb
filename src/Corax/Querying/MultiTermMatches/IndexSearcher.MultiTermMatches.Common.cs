@@ -143,6 +143,12 @@ public partial class IndexSearcher
         if (typeof(TTermProvider) == typeof(ContainsTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>))
             return (TTermProvider)(object)new ContainsTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>(this, termTree, field, term);
         
+        if (typeof(TTermProvider) == typeof(PatternTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>))
+            return (TTermProvider)(object)new PatternTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>(this, termTree, field, term, token);
+
+        if (typeof(TTermProvider) == typeof(PatternTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>))
+            return (TTermProvider)(object)new PatternTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>(this, termTree, field, term, token);
+
         if (typeof(TTermProvider) == typeof(ExistsTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>))
             return (TTermProvider)(object)new ExistsTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>(this, termTree, field);
         

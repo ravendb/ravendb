@@ -1341,6 +1341,60 @@ namespace FastTests.Corax
         }
 
         [RavenFact(RavenTestCategory.Corax)]
+        public void WildcardQueryStatement()
+        {
+            var entries = new[]
+            {
+                new IndexSingleEntry {Id = "entry/1", Content = "a-cat-b"},
+                new IndexSingleEntry {Id = "entry/2", Content = "xa*b"},
+                new IndexSingleEntry {Id = "entry/3", Content = "b-cat-a"},
+                new IndexSingleEntry {Id = "entry/4", Content = "ab-x-cd"},
+                new IndexSingleEntry {Id = "entry/5", Content = "abcd"},
+                new IndexSingleEntry {Id = "entry/6", Content = "a"},
+                new IndexSingleEntry {Id = "entry/7", Content = "b-ab"},
+                new IndexSingleEntry {Id = "entry/8", Content = "x-ab-b"},
+                new IndexSingleEntry {Id = "entry/9", Content = "a\u00e9b"}
+            };
+
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, entries, CreateKnownFields(bsc));
+
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+            var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
+
+            var cases = new (string Pattern, int Expected)[]
+            {
+                ("*a*b", 5),
+                ("**a**b", 5),
+                ("ab*cd", 2),
+                ("ab*x*d", 1),
+                ("abcd", 1),
+                ("a*a", 0),
+                ("*ab*b", 1),
+                ("*a*b*c*d", 2),
+                ("*a*c*b*d", 0),
+                ("*a?b", 2),
+                ("*a??b", 2),
+                ("*?at*", 2),
+                ("a?cd", 1), 
+                ("a?b", 1),
+                ("*\u00e9*", 1),
+                ("*?\u00e9*", 1),
+            };
+
+            Span<long> ids = stackalloc long[16];
+            foreach (var (pattern, expected) in cases)
+            {
+                using var _ = Slice.From(bsc, pattern, out var patternSlice);
+                var match = searcher.PatternQuery(contentMetadata, patternSlice);
+
+                Assert.Equal(expected, match.Fill(ids));
+                if (expected > 0)
+                    Assert.Equal(0, match.Fill(ids));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Corax)]
         public void SimpleBetweenCompareStatement()
         {
             var entry1 = new IndexSingleEntry {Id = "entry/1", Content = "3"};
