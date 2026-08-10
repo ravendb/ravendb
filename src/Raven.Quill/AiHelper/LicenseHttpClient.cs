@@ -1,3 +1,6 @@
+using System.Net;
+using Polly;
+using Polly.Retry;
 using Raven.Server.Commercial;
 
 namespace Raven.Quill.AiHelper;
@@ -13,7 +16,7 @@ public sealed class LicenseHttpClient : ILicenseClient
         HttpResponseMessage response;
         try
         {
-            response = await ApiHttpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, shouldRetry: false, ct);
+            response = await ApiHttpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, SetupPackageRetryPolicy, token: ct);
         }
         catch (HttpRequestException e)
         {
@@ -33,4 +36,16 @@ public sealed class LicenseHttpClient : ILicenseClient
             await SetupPackageDownload.CopyCappedAsync(source, destination, ct);
         }
     }
+
+    private static readonly AsyncRetryPolicy<HttpResponseMessage> SetupPackageRetryPolicy = Policy
+        .HandleResult<HttpResponseMessage>(r => r.StatusCode is HttpStatusCode.ServiceUnavailable && r.Headers.RetryAfter != null)
+        .WaitAndRetryAsync(
+            retryCount: 5,
+            sleepDurationProvider: (_, result, _) => result.Result.Headers.RetryAfter.Delta.Value,
+            onRetryAsync: (outcome, _, _, _) =>
+            {
+                // ResponseHeadersRead holds the connection until the message is disposed
+                using (outcome.Result)
+                    return Task.CompletedTask;
+            });
 }
