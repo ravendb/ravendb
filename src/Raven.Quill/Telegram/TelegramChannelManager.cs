@@ -195,6 +195,10 @@ internal sealed class TelegramChannelManager(
 
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
+        // unwind the apply-changes loop first: a pass still running here could start a bot after the
+        // sweep below snapshots _bots, and nothing would ever stop it
+        await base.StopAsync(cancellationToken);
+
         var bots = _bots.Values.ToArray();
         _bots.Clear();
 
@@ -206,7 +210,5 @@ internal sealed class TelegramChannelManager(
         {
             logger.LogWarning("Telegram runtime did not drain within 10s");
         }
-
-        await base.StopAsync(cancellationToken);
     }
 }
