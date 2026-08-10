@@ -108,7 +108,7 @@ internal sealed class TelegramChannelManager(
         {
             return (null, $"telegram rejected the bot token: {TelegramSettings.ScrubToken(e.Message, botToken)}");
         }
-        catch (HttpRequestException e)
+        catch (RequestException e)
         {
             return (null, $"could not reach telegram: {TelegramSettings.ScrubToken(e.Message, botToken)}");
         }
