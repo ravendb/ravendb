@@ -24,7 +24,8 @@ public sealed class MockTelegramBotApi : IAsyncDisposable
     private long _nextUpdateId = 1;
     private int _nextMessageId = 1000;
 
-    public sealed record SentMessage(string Token, long ChatId, int MessageId, string Text, string? ParseMode);
+    public sealed record SentMessage(
+        string Token, long ChatId, int MessageId, string Text, string? ParseMode, string? ReplyMarkup = null);
 
     public sealed record EditedMessage(string Token, long ChatId, int MessageId, string Text, string? ParseMode);
 
@@ -102,6 +103,44 @@ public sealed class MockTelegramBotApi : IAsyncDisposable
                     },
                     ["date"] = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                     ["text"] = text,
+                },
+            };
+
+            if (_updateQueues.TryGetValue(token, out var queue) == false)
+                _updateQueues[token] = queue = [];
+            queue.Add(update);
+        }
+    }
+
+    public void EnqueueContactMessage(string token, long chatId, long fromUserId, string phoneNumber,
+        long? contactUserId = null, string chatType = "private")
+    {
+        lock (_lock)
+        {
+            var update = new JsonObject
+            {
+                ["update_id"] = _nextUpdateId++,
+                ["message"] = new JsonObject
+                {
+                    ["message_id"] = _nextMessageId++,
+                    ["from"] = new JsonObject
+                    {
+                        ["id"] = fromUserId,
+                        ["is_bot"] = false,
+                        ["first_name"] = "Tester",
+                    },
+                    ["chat"] = new JsonObject
+                    {
+                        ["id"] = chatId,
+                        ["type"] = chatType,
+                    },
+                    ["date"] = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                    ["contact"] = new JsonObject
+                    {
+                        ["phone_number"] = phoneNumber,
+                        ["first_name"] = "Tester",
+                        ["user_id"] = contactUserId ?? fromUserId,
+                    },
                 },
             };
 
@@ -245,6 +284,7 @@ public sealed class MockTelegramBotApi : IAsyncDisposable
         var chatId = (long)body!["chat_id"]!;
         var text = (string)body["text"]!;
         var parseMode = (string?)body["parse_mode"];
+        var replyMarkup = body["reply_markup"]?.ToJsonString();
 
         if (FailParseModeRequests && parseMode is not null)
             return CantParseEntities();
@@ -253,7 +293,7 @@ public sealed class MockTelegramBotApi : IAsyncDisposable
         lock (_lock)
         {
             messageId = _nextMessageId++;
-            _sent.Add(new SentMessage(token, chatId, messageId, text, parseMode));
+            _sent.Add(new SentMessage(token, chatId, messageId, text, parseMode, replyMarkup));
             _messageTexts[(token, chatId, messageId)] = text;
         }
 

@@ -1656,7 +1656,7 @@ export interface components {
             value?: null | string;
         };
         /** @enum {unknown} */
-        TelegramParameterSource: "Constant" | "UserId" | "Username";
+        TelegramParameterSource: "Constant" | "UserId" | "Username" | "PhoneNumber";
         TestMappingRequest: {
             sourceTableName: string;
             /** Format: int32 */

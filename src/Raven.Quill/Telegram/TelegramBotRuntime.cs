@@ -21,6 +21,7 @@ internal sealed class TelegramBotRuntime
     private readonly ConcurrentDictionary<long, TelegramChat> _chats = new();
     private readonly CancellationTokenSource _cts = new();
     private readonly TelegramChatContext _context;
+    private readonly bool _acceptsContactShares;
     private Task _receive = Task.CompletedTask;
     private TimeSpan _backoff = MinBackoff;
 
@@ -30,6 +31,8 @@ internal sealed class TelegramBotRuntime
     {
         Client = client;
         BotToken = channel.Telegram!.BotToken;
+        _acceptsContactShares = channel.Telegram.ParameterBindings.Values
+            .Any(binding => binding.Source == TelegramParameterSource.PhoneNumber);
         _context = new TelegramChatContext(database, channel, store, router, options, logger);
     }
 
@@ -79,7 +82,12 @@ internal sealed class TelegramBotRuntime
 
     private Task OnUpdate(ITelegramBotClient client, Update update, CancellationToken ct)
     {
-        if (update.Message is not { Text.Length: > 0 } message)
+        if (update.Message is not { } message)
+            return Task.CompletedTask;
+
+        var hasText = message.Text is { Length: > 0 };
+        var isContactShare = _acceptsContactShares && message.Contact is not null;
+        if (hasText == false && isContactShare == false)
             return Task.CompletedTask;
 
         if (message.Chat.Type != ChatType.Private)

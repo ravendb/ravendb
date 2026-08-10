@@ -21,12 +21,13 @@ const PARAMETER_SOURCE_OPTIONS: FormSelectOption<TelegramParameterSource>[] = [
     { value: "Constant", label: "Constant value" },
     { value: "UserId", label: "Telegram user id" },
     { value: "Username", label: "Telegram username" },
+    { value: "PhoneNumber", label: "Telegram phone number" },
 ];
 
 const parameterBindingSchema = z
     .object({
         name: z.string(),
-        source: z.enum(["Constant", "UserId", "Username"]),
+        source: z.enum(["Constant", "UserId", "Username", "PhoneNumber"]),
         value: z.string().trim(),
     })
     .superRefine((parameter, ctx) => {

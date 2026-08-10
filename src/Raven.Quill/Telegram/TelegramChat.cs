@@ -7,6 +7,7 @@ using Raven.Quill.Metrics;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.ReplyMarkups;
 
 namespace Raven.Quill.Telegram;
 
@@ -89,6 +90,12 @@ internal sealed class TelegramChat
 
     private async Task HandleMessageAsync(Message message)
     {
+        if (message.Contact is not null)
+        {
+            await HandleContactAsync(message);
+            return;
+        }
+
         var channel = _context.ChannelDoc;
         var prompt = message.Text!.Trim();
         if (prompt.Length == 0)
@@ -133,6 +140,7 @@ internal sealed class TelegramChat
         AiAgentConfiguration config, Message message)
     {
         var parameters = new Dictionary<string, string>();
+        string? phoneNumber = null;
 
         foreach (var (name, binding) in _context.ChannelDoc.Telegram!.ParameterBindings)
         {
@@ -157,6 +165,18 @@ internal sealed class TelegramChat
                     }
 
                     parameters[name] = username;
+                    break;
+
+                case TelegramParameterSource.PhoneNumber:
+                    phoneNumber ??= await LoadPhoneNumberAsync(message);
+                    if (phoneNumber is null)
+                    {
+                        await RequestContactAsync(
+                            "This assistant needs your phone number. Tap the button below to share it, then send your message again.");
+                        return null;
+                    }
+
+                    parameters[name] = phoneNumber;
                     break;
             }
         }
@@ -214,6 +234,52 @@ internal sealed class TelegramChat
         return string.IsNullOrEmpty(username) == false &&
                command.Equals($"/{name}@{username}", StringComparison.OrdinalIgnoreCase);
     }
+
+    private async Task HandleContactAsync(Message message)
+    {
+        var contact = message.Contact!;
+        var senderId = message.From?.Id ?? _chatId;
+
+        if (contact.UserId != senderId || string.IsNullOrEmpty(contact.PhoneNumber))
+        {
+            await RequestContactAsync(
+                "That looks like someone else's contact. Tap the button below to share your own number.");
+            return;
+        }
+
+        using (var session = _context.Store.OpenAsyncSession(_context.Database))
+        {
+            await session.StoreAsync(new TelegramUserPhone
+            {
+                Id = TelegramUserPhone.IdFor(_context.ChannelId, senderId),
+                PhoneNumber = contact.PhoneNumber,
+                SharedAt = DateTime.UtcNow,
+            }, _ct);
+            await session.SaveChangesAsync(_ct);
+        }
+
+        await _bot.Client.SendMessage(_chatId,
+            "Thanks, got your phone number. Now send your message again.",
+            replyMarkup: new ReplyKeyboardRemove(), cancellationToken: _ct);
+    }
+
+    private async Task<string?> LoadPhoneNumberAsync(Message message)
+    {
+        var senderId = message.From?.Id ?? _chatId;
+        using var session = _context.Store.OpenAsyncSession(_context.Database);
+        var stored = await session.LoadAsync<TelegramUserPhone>(
+            TelegramUserPhone.IdFor(_context.ChannelId, senderId), _ct);
+        return string.IsNullOrEmpty(stored?.PhoneNumber) ? null : stored.PhoneNumber;
+    }
+
+    private Task RequestContactAsync(string text) =>
+        _bot.Client.SendMessage(_chatId, text,
+            replyMarkup: new ReplyKeyboardMarkup(KeyboardButton.WithRequestContact("Share phone number"))
+            {
+                ResizeKeyboard = true,
+                OneTimeKeyboard = true,
+            },
+            cancellationToken: _ct);
 
     private async Task ClearConversationAsync(string conversationId)
     {
