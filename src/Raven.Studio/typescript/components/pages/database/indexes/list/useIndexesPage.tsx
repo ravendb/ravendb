@@ -147,8 +147,14 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
     const [indexesWithExactProgress, setIndexesWithExactProgress] = useState<string[]>([]);
 
     const indexNamesRef = useRef<string[]>([]);
+    const staleIndexNamesRef = useRef<string[]>([]);
     useEffect(() => {
         indexNamesRef.current = stats.indexes.map((x) => x.name);
+
+        // staleness can differ between nodes - an index counts as stale when at least one node reports it stale
+        staleIndexNamesRef.current = stats.indexes
+            .filter((x) => x.nodesInfo.some((n) => n.details?.stale))
+            .map((x) => x.name);
     }, [stats.indexes]);
 
     const fetchProgress = async (location: databaseLocationSpecifier) => {
@@ -160,8 +166,11 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
                 progress = await indexesService.getProgress(db.name, location);
             } else {
                 // split into two complementary requests so the expensive exact calculation
-                // runs only for the indexes the user asked for
-                const estimatedNames = indexNamesRef.current.filter((x) => !indexesWithExactProgressRef.current.has(x));
+                // runs only for the indexes the user asked for;
+                // the server skips non-stale indexes anyway, so only the stale ones are sent
+                const estimatedNames = staleIndexNamesRef.current.filter(
+                    (x) => !indexesWithExactProgressRef.current.has(x)
+                );
 
                 const requests = [indexesService.getProgress(db.name, location, exactNames, true)];
                 if (estimatedNames.length > 0) {
