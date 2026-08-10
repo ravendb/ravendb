@@ -1,5 +1,7 @@
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Options;
 using Raven.Client.Documents;
+using Raven.Client.Exceptions.Database;
 using Raven.Quill.Agents;
 using Raven.Quill.Channels;
 using Raven.Quill.Endpoints.Helpers;
@@ -16,15 +18,16 @@ internal interface ITelegramChannelManager
 {
     Task<(TelegramUser? Bot, string? Error)> ValidateBotTokenAsync(string botToken, CancellationToken ct);
 
-    Task StartOrRestartAsync(string database, Channel channel);
-
-    Task StopAsync(string database, string channelId);
-
-    Task StopAllForDatabaseAsync(string database);
+    /// Asks for an apply-changes pass now instead of at the next tick. Callers persist their channel
+    /// documents first and never start or stop a bot themselves.
+    void Wake();
 
     IReadOnlyDictionary<string, TelegramChannelHealthSnapshot> GetHealth(string database);
 }
 
+/// Converges the running bots to the enabled Telegram channel documents. Desired state lives in the DB;
+/// every pass is a full diff, so a failed pass is retried by the next one and endpoint/delete races
+/// heal themselves.
 internal sealed class TelegramChannelManager(
     IDocumentStore store,
     ITelegramBotClientFactory botFactory,
@@ -33,36 +36,71 @@ internal sealed class TelegramChannelManager(
     IServerReady ready,
     ILogger<TelegramChannelManager> logger) : BackgroundService, ITelegramChannelManager
 {
-    private readonly Dictionary<(string Database, string ChannelId), TelegramChannelPoller> _pollers = new();
+    private readonly ConcurrentDictionary<(string Database, string ChannelId), TelegramBotRuntime> _bots = new();
 
-    private readonly SemaphoreSlim _transition = new(1, 1);
+    private readonly AsyncWakeSignal _wake = new();
+
+    public void Wake() => _wake.Set();
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (ready.IsReady == false)
             await Task.Delay(250, stoppingToken);
 
-        await ReconcileAsync(stoppingToken);
+        while (stoppingToken.IsCancellationRequested == false)
+        {
+            // reset before the pass: a Set() arriving while it runs lands on the fresh source, so the
+            // next wait returns immediately instead of losing the wakeup
+            _wake.Reset();
+
+            try
+            {
+                await ApplyChangesAsync(stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                return;
+            }
+            catch (Exception e)
+            {
+                logger.LogWarning("Telegram apply-changes pass failed: {Error}", e.Message);
+            }
+
+            try
+            {
+                await _wake.WaitAsync(options.Value.TelegramApplyChangesInterval, stoppingToken);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+        }
     }
 
-    private async Task ReconcileAsync(CancellationToken ct)
+    private async Task ApplyChangesAsync(CancellationToken ct)
     {
+        var desired = new Dictionary<(string Database, string ChannelId), Channel>();
+
+        // apps whose desired state we could not read this pass; their bots are left alone, because a
+        // read blip must never stop a healthy bot
+        var unreadable = new HashSet<string>();
+
         List<App> apps;
         try
         {
             using var session = store.OpenAsyncSession();
             apps = await session.LoadAllStartingWithAsync<App>(AppLookup.IdPrefix, ct);
         }
-        catch (Exception e)
+        catch (Exception e) when (e is not OperationCanceledException)
         {
-            logger.LogWarning("Telegram reconciliation could not list apps: {Error}", e.Message);
+            // no authority over any app this pass; every bot keeps running and the next tick retries
+            logger.LogWarning("Telegram apply-changes could not list apps: {Error}", e.Message);
             return;
         }
 
         foreach (var app in apps)
         {
-            if (ct.IsCancellationRequested)
-                return;
+            ct.ThrowIfCancellationRequested();
 
             try
             {
@@ -72,17 +110,53 @@ internal sealed class TelegramChannelManager(
 
                 foreach (var channel in channels)
                 {
-                    if (channel is not { Type: ChannelType.Telegram, Enabled: true, Telegram.BotToken.Length: > 0 })
-                        continue;
-
-                    await StartOrRestartAsync(app.Database, channel);
+                    if (channel is { Type: ChannelType.Telegram, Enabled: true, Telegram.BotToken.Length: > 0 })
+                        desired[(app.Database, Channel.StripIdPrefix(channel.Id))] = channel;
                 }
             }
-            catch (Exception e)
+            catch (DatabaseDoesNotExistException)
             {
-                logger.LogWarning(
-                    "Telegram reconciliation skipped app {Slug}: {Error}", app.Slug, e.Message);
+                // definitive answer: the app's database is gone. leaving it out of `unreadable` is what
+                // lets the sweep below stop its bots.
             }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                unreadable.Add(app.Database);
+                logger.LogWarning("Telegram apply-changes skipped app {Slug}: {Error}", app.Slug, e.Message);
+            }
+        }
+
+        // stop whatever should not run: disabled, deleted, app gone, or token rotated. an app whose
+        // document was deleted is absent from `apps`, so its bots have no desired entry and land here.
+        foreach (var (key, bot) in _bots)
+        {
+            if (unreadable.Contains(key.Database))
+                continue;
+
+            if (desired.TryGetValue(key, out var current) && bot.BotToken == current.Telegram!.BotToken)
+                continue;
+
+            if (_bots.TryRemove(key, out _) == false)
+                continue;
+
+            await bot.StopAsync();
+            logger.LogInformation(
+                "Telegram bot stopped for channel {ChannelId} on {Database}", key.ChannelId, key.Database);
+        }
+
+        // only the token is compared above, so reassigning the agent or editing parameters never
+        // restarts a bot and never kills a live chat
+        foreach (var (key, channel) in desired)
+        {
+            if (_bots.ContainsKey(key))
+                continue;
+
+            _bots[key] = TelegramBotRuntime.Start(
+                key.Database, channel, botFactory, store, router, options.Value, logger);
+
+            logger.LogInformation(
+                "Telegram bot started for channel {ChannelId} (bot {Bot}) on {Database}",
+                key.ChannelId, TelegramSettings.RedactToken(channel.Telegram!.BotToken), key.Database);
         }
     }
 
@@ -114,96 +188,23 @@ internal sealed class TelegramChannelManager(
         }
     }
 
-    public async Task StartOrRestartAsync(string database, Channel channel)
-    {
-        var channelId = Channel.StripIdPrefix(channel.Id);
-        var key = (database, channelId);
-
-        await _transition.WaitAsync();
-        try
-        {
-            if (_pollers.Remove(key, out var existing))
-                await existing.StopAsync();
-
-            var bot = botFactory.Create(channel.Telegram!.BotToken);
-            var poller = new TelegramChannelPoller(database, channel, bot, store, router, options.Value, logger);
-            _pollers[key] = poller;
-            poller.Start();
-
-            logger.LogInformation(
-                "Telegram poller started for channel {ChannelId} (bot {Bot}) on {Database}",
-                channelId, TelegramSettings.RedactToken(channel.Telegram.BotToken), database);
-        }
-        finally
-        {
-            _transition.Release();
-        }
-    }
-
-    public async Task StopAsync(string database, string channelId)
-    {
-        await _transition.WaitAsync();
-        try
-        {
-            await StopPollerAsync((database, channelId));
-        }
-        finally
-        {
-            _transition.Release();
-        }
-    }
-
-    public async Task StopAllForDatabaseAsync(string database)
-    {
-        await _transition.WaitAsync();
-        try
-        {
-            foreach (var key in _pollers.Keys.Where(k => k.Database == database).ToArray())
-                await StopPollerAsync(key);
-        }
-        finally
-        {
-            _transition.Release();
-        }
-    }
-
-    private async Task StopPollerAsync((string Database, string ChannelId) key)
-    {
-        if (_pollers.Remove(key, out var poller))
-        {
-            await poller.StopAsync();
-            logger.LogInformation(
-                "Telegram poller stopped for channel {ChannelId} on {Database}", key.ChannelId, key.Database);
-        }
-    }
-
-    public IReadOnlyDictionary<string, TelegramChannelHealthSnapshot> GetHealth(string database)
-    {
-        _transition.Wait();
-        try
-        {
-            return _pollers
-                .Where(kvp => kvp.Key.Database == database)
-                .ToDictionary(kvp => kvp.Key.ChannelId, kvp => kvp.Value.Health.Snapshot(isPolling: true));
-        }
-        finally
-        {
-            _transition.Release();
-        }
-    }
+    public IReadOnlyDictionary<string, TelegramChannelHealthSnapshot> GetHealth(string database) =>
+        _bots
+            .Where(kvp => kvp.Key.Database == database)
+            .ToDictionary(kvp => kvp.Key.ChannelId, kvp => kvp.Value.Health.Snapshot());
 
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
-        await _transition.WaitAsync(cancellationToken);
+        var bots = _bots.Values.ToArray();
+        _bots.Clear();
+
         try
         {
-            foreach (var poller in _pollers.Values.ToArray())
-                await poller.StopAsync();
-            _pollers.Clear();
+            await Task.WhenAll(bots.Select(b => b.StopAsync())).WaitAsync(TimeSpan.FromSeconds(10), cancellationToken);
         }
-        finally
+        catch (Exception e) when (e is TimeoutException or OperationCanceledException)
         {
-            _transition.Release();
+            logger.LogWarning("Telegram runtime did not drain within 10s");
         }
 
         await base.StopAsync(cancellationToken);

@@ -17,12 +17,13 @@ internal sealed class TelegramChannelHealth
         _lastError = scrubbedMessage;
     }
 
-    public TelegramChannelHealthSnapshot Snapshot(bool isPolling)
+    /// Only a live runtime owns a health instance, so a snapshot existing at all means the bot is polling.
+    public TelegramChannelHealthSnapshot Snapshot()
     {
         var success = Interlocked.Read(ref _lastSuccessfulPollTicks);
         var error = Interlocked.Read(ref _lastErrorAtTicks);
         return new TelegramChannelHealthSnapshot(
-            isPolling,
+            IsPolling: true,
             success == 0 ? null : new DateTime(success, DateTimeKind.Utc),
             error == 0 ? null : new DateTime(error, DateTimeKind.Utc),
             Volatile.Read(ref _errorCount),
