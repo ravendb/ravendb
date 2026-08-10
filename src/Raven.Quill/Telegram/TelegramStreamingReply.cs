@@ -14,7 +14,8 @@ namespace Raven.Quill.Telegram;
 /// sends the 4096-overflow as follow-up messages.
 /// Previews go as plain text, because a half-streamed reply routinely carries unclosed Markdown entities and
 /// every attempt would cost a rejection plus a retry. Only the authoritative reply tries Markdown, falling
-/// back to plain text once when Telegram rejects the entities.
+/// back to plain text once when Telegram rejects the entities. An edit Telegram refuses as "message is not
+/// modified" counts as delivered: the message already shows exactly that content.
 internal sealed class TelegramStreamingReply(
     ITelegramBotClient bot,
     long chatId,
@@ -149,7 +150,7 @@ internal sealed class TelegramStreamingReply(
     {
         if (markdown == false)
         {
-            await bot.EditMessageText(chatId, messageId, text, cancellationToken: ct);
+            await EditPlainAsync(messageId, text);
             return;
         }
 
@@ -157,9 +158,29 @@ internal sealed class TelegramStreamingReply(
         {
             await bot.EditMessageText(chatId, messageId, text, parseMode: ParseMode.Markdown, cancellationToken: ct);
         }
+        catch (ApiRequestException e) when (IsNotModified(e))
+        {
+            // an unformatted reply the preview already showed in full: the Markdown parse changes nothing,
+            // so Telegram refuses the no-op edit and the message stands as delivered
+        }
         catch (ApiRequestException)
+        {
+            await EditPlainAsync(messageId, text);
+        }
+    }
+
+    private async Task EditPlainAsync(int messageId, string text)
+    {
+        try
         {
             await bot.EditMessageText(chatId, messageId, text, cancellationToken: ct);
         }
+        catch (ApiRequestException e) when (IsNotModified(e))
+        {
+            // reachable when the Markdown attempt failed on entities and the preview already showed this text
+        }
     }
+
+    private static bool IsNotModified(ApiRequestException e) =>
+        e.Message.Contains("message is not modified", StringComparison.OrdinalIgnoreCase);
 }

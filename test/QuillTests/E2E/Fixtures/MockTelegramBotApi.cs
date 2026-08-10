@@ -20,6 +20,7 @@ public sealed class MockTelegramBotApi : IAsyncDisposable
     private readonly List<SentMessage> _sent = [];
     private readonly List<EditedMessage> _edited = [];
     private readonly List<ChatActionCall> _chatActions = [];
+    private readonly Dictionary<(string Token, long ChatId, int MessageId), string> _messageTexts = new();
     private long _nextUpdateId = 1;
     private int _nextMessageId = 1000;
 
@@ -131,6 +132,7 @@ public sealed class MockTelegramBotApi : IAsyncDisposable
             _sent.Clear();
             _edited.Clear();
             _chatActions.Clear();
+            _messageTexts.Clear();
         }
 
         BotUsername = "quill_test_bot";
@@ -252,6 +254,7 @@ public sealed class MockTelegramBotApi : IAsyncDisposable
         {
             messageId = _nextMessageId++;
             _sent.Add(new SentMessage(token, chatId, messageId, text, parseMode));
+            _messageTexts[(token, chatId, messageId)] = text;
         }
 
         return Ok(MessageJson(messageId, chatId, text));
@@ -268,7 +271,17 @@ public sealed class MockTelegramBotApi : IAsyncDisposable
             return CantParseEntities();
 
         lock (_lock)
+        {
+            // Telegram compares the rendered result, so an edit that changes neither text nor entities is
+            // refused; a parse mode on text with no markup characters renders the same as plain text
+            var key = (token, chatId, messageId);
+            if (_messageTexts.TryGetValue(key, out var current) && current == text &&
+                (parseMode is null || text.AsSpan().IndexOfAny("*_`[") < 0))
+                return MessageNotModified();
+
+            _messageTexts[key] = text;
             _edited.Add(new EditedMessage(token, chatId, messageId, text, parseMode));
+        }
 
         return Ok(MessageJson(messageId, chatId, text));
     }
@@ -292,6 +305,10 @@ public sealed class MockTelegramBotApi : IAsyncDisposable
 
     private static IResult CantParseEntities() => Results.Content(
         """{"ok":false,"error_code":400,"description":"Bad Request: can't parse entities"}""",
+        "application/json", statusCode: 400);
+
+    private static IResult MessageNotModified() => Results.Content(
+        """{"ok":false,"error_code":400,"description":"Bad Request: message is not modified: specified new message content and reply markup are exactly the same as a current content and reply markup of the message"}""",
         "application/json", statusCode: 400);
 
     private static JsonObject MessageJson(int messageId, long chatId, string text) => new()
