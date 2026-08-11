@@ -36,6 +36,9 @@ public sealed class ApplianceOptions
 
     public int TelegramChatQueueCapacity { get; set; } = 8;
 
+    // idle time after which a chat's queue and worker are torn down; the next message re-creates them
+    public TimeSpan TelegramChatIdleTimeout { get; set; } = TimeSpan.FromMinutes(15);
+
     public TimeSpan ReadinessInitialDelay { get; set; } = TimeSpan.FromSeconds(15);
 
     public TimeSpan ReadinessAttemptTimeout { get; set; } = TimeSpan.FromSeconds(2);

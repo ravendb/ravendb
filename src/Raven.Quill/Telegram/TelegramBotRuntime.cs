@@ -104,16 +104,32 @@ internal sealed class TelegramBotRuntime
             return Task.CompletedTask;
         }
 
-        var chat = _chats.GetOrAdd(message.Chat.Id, id => new TelegramChat(id, this, _context, _cts.Token));
-
-        if (chat.TryPost(message) == false)
+        while (true)
         {
+            var chat = _chats.GetOrAdd(message.Chat.Id, id => new TelegramChat(id, this, _context, _cts.Token));
+
+            if (chat.TryPost(message))
+                break;
+
+            if (chat.IsRetired)
+            {
+                // the idle loop retired this instance between lookup and post; replace it and repost
+                _chats.TryRemove(new KeyValuePair<long, TelegramChat>(message.Chat.Id, chat));
+                continue;
+            }
+
             Health.RecordError(DateTime.UtcNow, $"chat {message.Chat.Id}: queue full, message dropped");
             chat.NotifyOverloadOnce();
+            break;
         }
 
         return Task.CompletedTask;
     }
+
+    internal int ActiveChatCount => _chats.Count;
+
+    internal void OnChatRetired(long chatId, TelegramChat chat) =>
+        _chats.TryRemove(new KeyValuePair<long, TelegramChat>(chatId, chat));
 
     private async Task OnErrorAsync(
         ITelegramBotClient client, Exception e, HandleErrorSource source, CancellationToken ct)
