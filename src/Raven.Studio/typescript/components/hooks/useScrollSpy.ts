@@ -1,8 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface UseScrollSpyOptions {
     root?: Element | null;
     rootMargin?: string;
+}
+
+interface UseScrollSpyResult {
+    activeId: string | null;
+    selectSection: (id: string) => void;
 }
 
 // Highlights the section currently near the top of the scroll area. `ids` is the ordered list of
@@ -11,11 +16,12 @@ interface UseScrollSpyOptions {
 // Classic scroll-spy caveat: a short last section can never scroll up far enough to cross the
 // IntersectionObserver's top threshold, so on its own it would never become active. To handle that
 // we also watch the scroll position and force the *last* id active once the scroll area bottoms out.
-export function useScrollSpy(ids: string[], options?: UseScrollSpyOptions): string | null {
+export function useScrollSpy(ids: string[], options?: UseScrollSpyOptions): UseScrollSpyResult {
     const { root = null, rootMargin = "0px 0px -70% 0px" } = options ?? {};
     const idsKey = ids.join("|");
     const [activeId, setActiveId] = useState<string | null>(ids[0] ?? null);
     const visibleRef = useRef<Set<string>>(new Set());
+    const pinnedIdRef = useRef<string | null>(null);
 
     useEffect(() => {
         setActiveId((current) => (current && ids.includes(current) ? current : (ids[0] ?? null)));
@@ -36,6 +42,10 @@ export function useScrollSpy(ids: string[], options?: UseScrollSpyOptions): stri
         };
 
         const recompute = () => {
+            if (pinnedIdRef.current) {
+                setActiveId(pinnedIdRef.current);
+                return;
+            }
             // bottom-of-scroll wins: guarantees the last (possibly short) section can be selected
             if (isAtBottom()) {
                 setActiveId(ids[ids.length - 1]);
@@ -74,15 +84,29 @@ export function useScrollSpy(ids: string[], options?: UseScrollSpyOptions): stri
 
         const scrollTarget: Element | Window = root ?? window;
         scrollTarget.addEventListener("scroll", recompute, { passive: true });
+
+        const releasePin = () => {
+            pinnedIdRef.current = null;
+        };
+        const gestureEvents = ["wheel", "touchmove", "keydown"] as const;
+        gestureEvents.forEach((type) => scrollTarget.addEventListener(type, releasePin, { passive: true }));
+
         recompute();
 
         return () => {
             observer?.disconnect();
             scrollTarget.removeEventListener("scroll", recompute);
+            gestureEvents.forEach((type) => scrollTarget.removeEventListener(type, releasePin));
         };
         // idsKey captures changes to the id set without re-running on array identity churn.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [idsKey, root, rootMargin]);
 
-    return activeId;
+    const selectSection = useCallback((id: string) => {
+        pinnedIdRef.current = id;
+        setActiveId(id);
+        document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, []);
+
+    return { activeId, selectSection };
 }

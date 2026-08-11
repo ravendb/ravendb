@@ -8,6 +8,8 @@ import {
     connectionStringKeys,
     DatabaseSettingKey,
     databaseSettingKeys,
+    DocumentToggleKey,
+    documentToggleKeys,
     OngoingTaskKey,
     ongoingTaskKeys,
 } from "./importFromFileValidation";
@@ -19,8 +21,6 @@ import {
     ongoingTaskRules,
     resolveRestriction,
 } from "./importRestrictions";
-
-export type DocumentToggleKey = "isIncludeArchivedDocuments";
 
 export interface RestrictedImportItem extends ImportRestriction {
     key: string;
@@ -48,11 +48,7 @@ function useComputeImportRestrictions() {
             return map;
         };
 
-        const documentToggles = resolveAll(
-            Object.keys(documentToggleRules) as DocumentToggleKey[],
-            documentToggleRules,
-            recordContext
-        );
+        const documentToggles = resolveAll(documentToggleKeys, documentToggleRules, recordContext);
         const databaseSettings = resolveAll(databaseSettingKeys, databaseSettingRules, recordContext);
         const ongoingTasks = resolveAll(ongoingTaskKeys, ongoingTaskRules, context);
         const connectionStrings = resolveAll(connectionStringKeys, connectionStringRules, recordContext);

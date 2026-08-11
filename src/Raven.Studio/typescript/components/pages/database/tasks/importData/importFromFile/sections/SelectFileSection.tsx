@@ -31,7 +31,7 @@ export default function SelectFileSection() {
     const fileError = formState.errors.file?.message;
 
     return (
-        <ImportSection id="select-file" title="Select file to import">
+        <ImportSection id="select-file" title="Select file to import" errorPaths={["file"]}>
             <div className="card p-4">
                 <div className="small-label mb-1">Select file</div>
                 <FileDropzone
