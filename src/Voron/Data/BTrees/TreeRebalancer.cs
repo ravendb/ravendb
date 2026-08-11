@@ -20,14 +20,17 @@ namespace Voron.Data.BTrees
         private readonly TreeCursor _cursor;
 
         private bool _ancestorsChanged;
+        private readonly long _watchedPageNumber;
+        public bool WatchedPageWasFreed { get; private set; }
 
-        public TreeRebalancer(LowLevelTransaction tx, Tree tree, TreeCursor cursor)
+        public TreeRebalancer(LowLevelTransaction tx, Tree tree, TreeCursor cursor, long watchedPageNumber = -1L)
         {
             _tx = tx;
             _tree = tree;
             _cursor = cursor;
+            _watchedPageNumber = watchedPageNumber;
         }
-
+        
         private FreeSpaceHandlingDisabler DisableFreeSpaceUsageIfSplittingRootTree()
         {
             if (_tree == _tx.RootObjects)
@@ -104,7 +107,7 @@ namespace Voron.Data.BTrees
                         parentPage.RemoveNode(parentPage.LastSearchPositionOrLastEntry);
                     }
 
-                    _tree.FreePage(page);
+                    FreePage(page);
 
                     return parentPage;
                 }
@@ -184,7 +187,7 @@ namespace Voron.Data.BTrees
 
             nodeHeader->PageNumber = pageRefNumber;
 
-            _tree.FreePage(page);
+            FreePage(page);
         }
 
         private bool TryMergePages(TreePage parentPage, TreePage left, TreePage right)
@@ -224,7 +227,7 @@ namespace Voron.Data.BTrees
                     $"About to unlink the wrong node from parent page {parentPage.PageNumber} (node {parentPage.LastSearchPositionOrLastEntry} references {parentPage.GetNode(parentPage.LastSearchPositionOrLastEntry)->PageNumber} instead of the merged right page {right.PageNumber}), tree: {_tree.Name}");
 
             parentPage.RemoveNode(parentPage.LastSearchPositionOrLastEntry); // unlink the right sibling
-            _tree.FreePage(right);
+            FreePage(right);
 
             return true;
         }
@@ -534,6 +537,13 @@ namespace Voron.Data.BTrees
             _cursor.Pop();
             _cursor.Push(rootPage);
 
+            FreePage(page);
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void FreePage(TreePage page)
+        {
+            WatchedPageWasFreed |= page.PageNumber == _watchedPageNumber;
             _tree.FreePage(page);
         }
 
