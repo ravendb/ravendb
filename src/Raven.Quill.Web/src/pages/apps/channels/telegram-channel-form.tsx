@@ -8,6 +8,7 @@ import { api } from "@/api/api";
 import type { TelegramParameterBinding, TelegramParameterSource } from "@/api/generated/server-api";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
+import { FieldDescription } from "@/components/shadcn/ui/field";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { SheetClose, SheetFooter } from "@/components/shadcn/ui/sheet";
 import { ApiState } from "@/components/data/api-state";
@@ -156,25 +157,30 @@ export function TelegramChannelForm({
                                         Map each agent parameter to a constant value bound once for the whole channel,
                                         or to a field of the Telegram user sending each message.
                                     </p>
-                                    {parameterFields.fields.map((field, index) => (
-                                        <div key={field.id} className="grid gap-2 sm:grid-cols-2">
-                                            <FormSelect
-                                                control={form.control}
-                                                name={`parameters.${index}.source`}
-                                                label={field.name}
-                                                options={PARAMETER_SOURCE_OPTIONS}
-                                                description={telegramParameterSourceHint(parameters[index]?.source)}
-                                            />
-                                            {parameters[index]?.source === "Constant" && (
-                                                <FormInput
-                                                    control={form.control}
-                                                    name={`parameters.${index}.value`}
-                                                    label="Value"
-                                                    placeholder="e.g. customers/1"
-                                                />
-                                            )}
-                                        </div>
-                                    ))}
+                                    {parameterFields.fields.map((field, index) => {
+                                        const hint = telegramParameterSourceHint(parameters[index]?.source);
+                                        return (
+                                            <div key={field.id} className="grid gap-2">
+                                                <div className="grid gap-2 sm:grid-cols-2">
+                                                    <FormSelect
+                                                        control={form.control}
+                                                        name={`parameters.${index}.source`}
+                                                        label={field.name}
+                                                        options={PARAMETER_SOURCE_OPTIONS}
+                                                    />
+                                                    {parameters[index]?.source === "Constant" && (
+                                                        <FormInput
+                                                            control={form.control}
+                                                            name={`parameters.${index}.value`}
+                                                            label="Value"
+                                                            placeholder="e.g. customers/1"
+                                                        />
+                                                    )}
+                                                </div>
+                                                {hint && <FieldDescription>{hint}</FieldDescription>}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </>
