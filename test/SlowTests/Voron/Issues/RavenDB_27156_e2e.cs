@@ -100,7 +100,12 @@ public class RavenDB_27156_e2e(ITestOutputHelper output) : RavenTestBase(output)
         Assert.Equal(750, docCount);
         Assert.Equal(3, finalStats.Length);
         Assert.All(finalStats, s => Assert.Equal(IndexState.Normal, s.State));
-        Assert.All(finalStats, s => Assert.Equal(docCount, s.EntriesCount));
+
+        foreach (var name in new[] { "Idx/A", "Idx/B", "Idx/C" })
+        {
+            using var session = store.OpenAsyncSession();
+            Assert.Equal(docCount, await session.Query<Item>(name).Customize(x => x.WaitForNonStaleResults()).CountAsync());
+        }
     }
 
     private static async Task InsertItems(IDocumentStore store, int start, int count)
