@@ -193,9 +193,9 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         await using var appGuard = app;
 
         var agentId = (await app.GetAgentsAsync()).Single().AgentId;
-        var config = await app.GetAgentAsync(agentId);
-        config.Parameters.Add(new AiAgentParameter("region", "added after the channel was provisioned"));
-        await app.EditAgentAsync(config);
+        var details = await app.GetAgentAsync(agentId);
+        details.Configuration.Parameters.Add(new AiAgentParameter("region", "added after the channel was provisioned"));
+        await app.EditAgentAsync(new EditAgentRequest(details.Configuration, details.ActionBindings));
 
         const long chatId = 530;
         Mock.EnqueueTextMessage(token, chatId, fromUserId: 530, "hello");
