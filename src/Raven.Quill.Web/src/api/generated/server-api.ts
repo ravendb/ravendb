@@ -1274,6 +1274,9 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             botUsername?: null | string;
+            parameterBindings?: null | {
+                [key: string]: components["schemas"]["TelegramParameterBinding"];
+            };
         };
         /** @enum {unknown} */
         ChannelType: "IFrame" | "Telegram" | "WhatsApp" | null;

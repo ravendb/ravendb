@@ -15,14 +15,10 @@ import { FormInput } from "@/components/form/form-input";
 import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
 import { withNestedSubmit } from "@/lib/form-utils";
 import { invalidateChannelQueries } from "@/lib/query-invalidation";
+import { TELEGRAM_PARAMETER_SOURCES } from "@/pages/apps/channels/telegram-parameter-sources";
 import type { FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
 
-const PARAMETER_SOURCE_OPTIONS: FormSelectOption<TelegramParameterSource>[] = [
-    { value: "Constant", label: "Constant value" },
-    { value: "UserId", label: "Telegram user id" },
-    { value: "Username", label: "Telegram username" },
-    { value: "PhoneNumber", label: "Telegram phone number" },
-];
+const PARAMETER_SOURCE_OPTIONS: FormSelectOption<TelegramParameterSource>[] = TELEGRAM_PARAMETER_SOURCES;
 
 const parameterBindingSchema = z
     .object({
