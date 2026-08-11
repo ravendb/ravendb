@@ -1,5 +1,6 @@
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
+import { FieldPath } from "react-hook-form";
 
 function getJavaScriptSyntaxError(script: string): string | null {
     try {
@@ -60,23 +61,27 @@ export const connectionStringKeys = [
 
 export type ConnectionStringKey = (typeof connectionStringKeys)[number];
 
-const documentsSchema = yup.object({
-    isIncludeDocuments: yup.boolean(),
-    isIncludeAttachments: yup.boolean(),
-    isIncludeCounters: yup.boolean(),
-    isIncludeRevisions: yup.boolean(),
-    isIncludeTimeSeries: yup.boolean(),
-    isIncludeTimeSeriesDeletedRanges: yup.boolean(),
-    isIncludeArtificialDocuments: yup.boolean(),
-    isIncludeArchivedDocuments: yup.boolean(),
-    isIncludeExpiredDocuments: yup.boolean(),
-    isIncludeConflicts: yup.boolean(),
-    isIncludeCompareExchange: yup.boolean(),
-    isIncludeLegacyAttachments: yup.boolean(),
-    isIncludeDocumentsTombstones: yup.boolean(),
-    isIncludeCompareExchangeTombstones: yup.boolean(),
-    isIncludeSubscriptions: yup.boolean(),
-});
+export const documentToggleKeys = [
+    "isIncludeDocuments",
+    "isIncludeAttachments",
+    "isIncludeCounters",
+    "isIncludeRevisions",
+    "isIncludeTimeSeries",
+    "isIncludeTimeSeriesDeletedRanges",
+    "isIncludeArtificialDocuments",
+    "isIncludeArchivedDocuments",
+    "isIncludeExpiredDocuments",
+    "isIncludeConflicts",
+    "isIncludeCompareExchange",
+    "isIncludeLegacyAttachments",
+    "isIncludeDocumentsTombstones",
+    "isIncludeCompareExchangeTombstones",
+    "isIncludeSubscriptions",
+] as const;
+
+export type DocumentToggleKey = (typeof documentToggleKeys)[number];
+
+const documentsSchema = yup.object(Object.fromEntries(documentToggleKeys.map((key) => [key, yup.boolean()])));
 
 const collectionsSchema = yup.object({
     isImportAllCollections: yup.boolean(),
@@ -147,5 +152,7 @@ export const importFromFileSchema = yup.object({
 });
 
 export type ImportFromFileFormData = yup.InferType<typeof importFromFileSchema>;
+
+export type ImportFromFileFormPath = FieldPath<ImportFromFileFormData>;
 
 export const importFromFileYupResolver = yupResolver(importFromFileSchema);

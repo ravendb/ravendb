@@ -359,15 +359,12 @@ export default class TasksService {
         return new getCdcSinkTaskSchemaCommand(...args).execute();
     }
 
-    async validateSmugglerOptions(
-        options: Raven.Server.Smuggler.Documents.Data.DatabaseSmugglerOptionsServerSide,
-        databaseName: string
-    ) {
-        return new validateSmugglerOptionsCommand(options, databaseName).execute();
+    async validateSmugglerOptions(...args: ConstructorParameters<typeof validateSmugglerOptionsCommand>) {
+        return new validateSmugglerOptionsCommand(...args).execute();
     }
 
-    async getNextOperationId(databaseName: string) {
-        return new getNextOperationIdCommand(databaseName).execute();
+    async getNextOperationId(...args: ConstructorParameters<typeof getNextOperationIdCommand>) {
+        return new getNextOperationIdCommand(...args).execute();
     }
 
     async importDatabaseFromFile(...args: ConstructorParameters<typeof importDatabaseFromFileCommand>) {

@@ -5,12 +5,13 @@ import { accessManagerSelectors } from "components/common/shell/accessManagerSli
 import {
     ConnectionStringKey,
     DatabaseSettingKey,
+    DocumentToggleKey,
     ImportFromFileFormData,
     importFromFileYupResolver,
     OngoingTaskKey,
 } from "./importFromFileValidation";
 import { getDefaultFormData } from "./importFromFileUtils";
-import { DocumentToggleKey, useImportRestrictions } from "./useImportRestrictions";
+import { useImportRestrictions } from "./useImportRestrictions";
 
 export { getDefaultFormData };
 
@@ -161,28 +162,19 @@ export function useImportFromFileForm() {
     // via FormSwitch afterChange in DataToImportSection, matching Knockout's directional
     // subscriptions).
     useEffect(() => {
-        if (!documents.isIncludeDocuments && documents.isIncludeAttachments) {
+        if (!documents.isIncludeDocuments) {
             setValue("documents.isIncludeAttachments", false);
         }
-    }, [documents.isIncludeDocuments, documents.isIncludeAttachments, setValue]);
+    }, [documents.isIncludeDocuments, setValue]);
 
     // Knockout parity: disabling indexes forces analyzer-removal and index-history off (the
     // reverse direction is handled via FormSwitch afterChange in DataToImportSection).
     useEffect(() => {
         if (!configuration.isIncludeIndexes) {
-            if (configuration.isRemoveAnalyzers) {
-                setValue("configuration.isRemoveAnalyzers", false);
-            }
-            if (configuration.isIncludeIndexHistory) {
-                setValue("configuration.isIncludeIndexHistory", false);
-            }
+            setValue("configuration.isRemoveAnalyzers", false);
+            setValue("configuration.isIncludeIndexHistory", false);
         }
-    }, [
-        configuration.isIncludeIndexes,
-        configuration.isRemoveAnalyzers,
-        configuration.isIncludeIndexHistory,
-        setValue,
-    ]);
+    }, [configuration.isIncludeIndexes, setValue]);
 
     useEffect(() => {
         if (isUseTransformScript) {

@@ -6,9 +6,9 @@ import { Icon } from "components/common/Icon";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { FormSwitch } from "components/common/Form";
 import ImportSection from "./ImportSection";
-import { ImportFromFileFormData } from "../importFromFileValidation";
+import { documentToggleKeys, ImportFromFileFormData } from "../importFromFileValidation";
 import { getItemsToWarnAbout } from "../importFromFileUtils";
-import { DocumentToggleKey, useImportRestrictions } from "../useImportRestrictions";
+import { useImportRestrictions } from "../useImportRestrictions";
 import RestrictedSwitch from "./RestrictedSwitch";
 import CollectionsToImportPicker from "./CollectionsToImportPicker";
 import Card from "react-bootstrap/Card";
@@ -29,27 +29,7 @@ export default function DataToImportSection() {
         }
     };
 
-    const documentToggleNames = [
-        "isIncludeDocuments",
-        "isIncludeAttachments",
-        "isIncludeCounters",
-        "isIncludeRevisions",
-        "isIncludeTimeSeries",
-        "isIncludeTimeSeriesDeletedRanges",
-        "isIncludeArtificialDocuments",
-        "isIncludeArchivedDocuments",
-        "isIncludeExpiredDocuments",
-        "isIncludeConflicts",
-        "isIncludeCompareExchange",
-        "isIncludeLegacyAttachments",
-        "isIncludeDocumentsTombstones",
-        "isIncludeCompareExchangeTombstones",
-        "isIncludeSubscriptions",
-    ] as const;
-
-    const selectableDocumentToggleNames = documentToggleNames.filter(
-        (name) => !documentToggleRestrictions[name as DocumentToggleKey]
-    );
+    const selectableDocumentToggleNames = documentToggleKeys.filter((name) => !documentToggleRestrictions[name]);
 
     const areAllDocumentsSelected = selectableDocumentToggleNames.every((name) => documents[name]);
 
