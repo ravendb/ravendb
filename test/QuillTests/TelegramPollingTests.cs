@@ -521,13 +521,15 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Group_chat_messages_get_a_canned_refusal_including_commands()
+    public async Task Group_chat_messages_get_one_canned_refusal_per_chat_including_commands()
     {
         var (app, channelId, token) = await ProvisionAsync();
         await using var appGuard = app;
 
-        const long chatId = -520;
-        var conversationId = TelegramConversationId.For(channelId, chatId, DateTime.UtcNow);
+        const long groupChatId = -520;
+        const long supergroupChatId = -521;
+        const long channelChatId = -522;
+        var conversationId = TelegramConversationId.For(channelId, supergroupChatId, DateTime.UtcNow);
         using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
             await session.StoreAsync(new ConversationPreview { ConversationId = conversationId },
@@ -536,17 +538,32 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
             await session.SaveChangesAsync();
         }
 
-        Mock.EnqueueTextMessage(token, chatId, fromUserId: 520, "hello group", chatType: "group");
-        Mock.EnqueueTextMessage(token, chatId, fromUserId: 520, "/clear", chatType: "supergroup");
-        Mock.EnqueueTextMessage(token, chatId, fromUserId: 520, "/start", chatType: "channel");
+        Mock.EnqueueTextMessage(token, groupChatId, fromUserId: 520, "hello group", chatType: "group");
+        Mock.EnqueueTextMessage(token, supergroupChatId, fromUserId: 520, "/clear", chatType: "supergroup");
+        Mock.EnqueueTextMessage(token, channelChatId, fromUserId: 520, "/start", chatType: "channel");
 
+        long[] chatIds = [groupChatId, supergroupChatId, channelChatId];
         await Mock.WaitUntilAsync(
-            () => Mock.SentMessages.Count(m => m.ChatId == chatId && m.Text.Contains("one-on-one")) == 3,
+            () => chatIds.All(id => Mock.SentMessages.Any(m => m.ChatId == id && m.Text.Contains("one-on-one"))),
             "the refusals");
 
-        Assert.All(Mock.SentMessages.Where(m => m.ChatId == chatId), m => Assert.Null(m.ParseMode));
+        Assert.All(Mock.SentMessages.Where(m => chatIds.Contains(m.ChatId)), m => Assert.Null(m.ParseMode));
         Assert.Empty(Router.Requests);
-        Assert.DoesNotContain(Mock.SentMessages, m => m.ChatId == chatId && m.Text.Contains("Ask me anything"));
+        Assert.DoesNotContain(Mock.SentMessages,
+            m => chatIds.Contains(m.ChatId) && m.Text.Contains("Ask me anything"));
+
+        // later messages in an already-refused chat stay silent; the fresh sentinel chat proves
+        // the repeat was processed because the poller handles updates in order
+        const long sentinelChatId = -523;
+        Mock.EnqueueTextMessage(token, groupChatId, fromUserId: 520, "hello again", chatType: "group");
+        Mock.EnqueueTextMessage(token, sentinelChatId, fromUserId: 520, "hello", chatType: "group");
+        await Mock.WaitUntilAsync(
+            () => Mock.SentMessages.Any(m => m.ChatId == sentinelChatId && m.Text.Contains("one-on-one")),
+            "the sentinel refusal");
+        await Task.Delay(400);
+
+        Assert.All(chatIds, id =>
+            Assert.Single(Mock.SentMessages, m => m.ChatId == id && m.Text.Contains("one-on-one")));
 
         using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
