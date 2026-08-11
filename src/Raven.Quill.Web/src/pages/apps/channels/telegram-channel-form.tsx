@@ -15,7 +15,10 @@ import { FormInput } from "@/components/form/form-input";
 import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
 import { withNestedSubmit } from "@/lib/form-utils";
 import { invalidateChannelQueries } from "@/lib/query-invalidation";
-import { TELEGRAM_PARAMETER_SOURCES } from "@/pages/apps/channels/telegram-parameter-sources";
+import {
+    TELEGRAM_PARAMETER_SOURCES,
+    telegramParameterSourceHint,
+} from "@/pages/apps/channels/telegram-parameter-sources";
 import type { FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
 
 const PARAMETER_SOURCE_OPTIONS: FormSelectOption<TelegramParameterSource>[] = TELEGRAM_PARAMETER_SOURCES;
@@ -160,6 +163,7 @@ export function TelegramChannelForm({
                                                 name={`parameters.${index}.source`}
                                                 label={field.name}
                                                 options={PARAMETER_SOURCE_OPTIONS}
+                                                description={telegramParameterSourceHint(parameters[index]?.source)}
                                             />
                                             {parameters[index]?.source === "Constant" && (
                                                 <FormInput
