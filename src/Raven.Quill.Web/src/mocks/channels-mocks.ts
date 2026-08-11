@@ -55,6 +55,12 @@ export const sampleChannels: ChannelSummaryResponse[] = [
         enabled: false,
         createdAt: "2026-05-09T14:20:00Z",
         botUsername: "acme_faq_bot",
+        parameterBindings: {
+            company: { source: "Constant", value: "Acme Corp" },
+            senderId: { source: "UserId", value: null },
+            userHandle: { source: "Username", value: null },
+            phoneNumber: { source: "PhoneNumber", value: null },
+        },
     },
 ];
 

@@ -11,6 +11,7 @@ import { CHANNEL_TYPE_LABELS } from "@/lib/channel-type-labels";
 import { ChannelActiveLinks } from "@/pages/apps/channels/channel-active-links";
 import { EmbedLinkApiDocs } from "@/pages/apps/channels/embed-link-api-docs";
 import { GenerateEmbedLinkDialog } from "@/pages/apps/channels/generate-embed-link-dialog";
+import { TelegramChannelBindings } from "@/pages/apps/channels/telegram-channel-bindings";
 import { SectionCard } from "@/pages/apps/section-card";
 
 export function AppChannelDetail() {
@@ -61,6 +62,7 @@ export function AppChannelDetail() {
                                     <p className="text-sm text-muted-foreground">
                                         {channel.type ? CHANNEL_TYPE_LABELS[channel.type] : "—"}
                                         {agent?.name ? ` · ${agent.name}` : ""}
+                                        {channel.botUsername ? ` · @${channel.botUsername}` : ""}
                                         <span className="font-mono"> · {channel.channelId}</span>
                                     </p>
                                 </div>
@@ -105,6 +107,8 @@ export function AppChannelDetail() {
                                         <ChannelActiveLinks slug={slug} channelId={channel.channelId} />
                                     </SectionCard>
                                 </>
+                            ) : channel.type === "Telegram" ? (
+                                <TelegramChannelBindings channel={channel} />
                             ) : (
                                 <Alert>Embed links apply to web widget channels only.</Alert>
                             )}
