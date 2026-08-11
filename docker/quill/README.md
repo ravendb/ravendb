@@ -14,10 +14,10 @@ browser ─HTTPS :443─> nginx (routes by SNI, one wildcard cert)
                          └─ db.* / a.*          ─(TLS passthrough, mTLS)─> RavenDB (in-container, secure)
 appliance web ──> RavenDB ──CDC──> PostgreSQL (Northwind) ── mirrors ──> RavenDB collections
 agent turn ──> appliance ──> RavenDB AI ──> OpenAI / Ollama (LLM)
-whatsapp phone <──WhatsApp servers──> bridge (04-whatsapp, Baileys) <──loopback──> appliance web
+whatsapp phone <──WhatsApp servers──> bridge (06-whatsapp, Baileys) <──loopback──> appliance web
 ```
 
-WhatsApp Personal channels are served by the `04-whatsapp` s6 service (`src/Raven.Quill.WhatsAppBridge`):
+WhatsApp Personal channels are served by the `06-whatsapp` s6 service (`src/Raven.Quill.WhatsAppBridge`):
 one linked-device session per channel, credentials under `/var/lib/quill/whatsapp/sessions/`, authenticated
 against the web app with a token the web app mints at `/var/lib/quill/whatsapp/bridge-token`. Those session
 credential files are equivalent to the linked device itself (same trust model as the RavenDB certificate on

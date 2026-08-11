@@ -1,6 +1,6 @@
 # Raven.Quill.WhatsAppBridge
 
-Node service hosting one WhatsApp linked-device session (via [Baileys](https://github.com/WhiskeySockets/Baileys)) per Quill `WhatsAppPersonal` channel. Runs inside the Quill appliance container as the `04-whatsapp` s6 service; the .NET web app is its only client.
+Node service hosting one WhatsApp linked-device session (via [Baileys](https://github.com/WhiskeySockets/Baileys)) per Quill `WhatsAppPersonal` channel. Runs inside the Quill appliance container as the `06-whatsapp` s6 service; the .NET web app is its only client.
 
 ## How it fits together
 

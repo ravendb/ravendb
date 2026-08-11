@@ -1,6 +1,8 @@
 #!/command/with-contenv sh
 set -e
 
+exec 2>&1
+
 DATA_DIR="${RAVEN_QUILL_WHATSAPP_DATA_DIR:-/var/lib/quill/whatsapp}"
 mkdir -p "$DATA_DIR/sessions"
 
