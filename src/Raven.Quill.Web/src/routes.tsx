@@ -2,6 +2,7 @@ import {
     Bot,
     Cable,
     Database,
+    Globe,
     Home,
     KeyRound,
     LayoutGrid,
@@ -33,6 +34,7 @@ import { Login } from "@/pages/auth/login";
 import { DashboardCertificates } from "@/pages/dashboard/certificates";
 import { DashboardConnectionStrings } from "@/pages/dashboard/connection-strings";
 import { DashboardHome } from "@/pages/dashboard/dashboard-home";
+import { DashboardIpConfiguration } from "@/pages/dashboard/ip-configuration";
 import { DashboardLicense } from "@/pages/dashboard/license";
 import { DashboardUsage } from "@/pages/dashboard/usage";
 import { appRoutes as appRouteBuilders, ROUTE_PATTERNS } from "@/lib/app-routes";
@@ -150,6 +152,17 @@ const dashboardPages: AppRouteDefinition[] = [
         },
         isPageTitleHidden: true,
         element: <DashboardCertificates />,
+    },
+    {
+        path: "ip-configuration",
+        title: "IP configuration",
+        navigation: {
+            label: "IP configuration",
+            icon: Globe,
+            section: "settings",
+        },
+        isPageTitleHidden: true,
+        element: <DashboardIpConfiguration />,
     },
 ];
 

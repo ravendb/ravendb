@@ -15,7 +15,7 @@ export function CopyableCode({ code, copyLabel, language, className }: CopyableC
         <div className="relative min-w-0">
             <pre
                 className={cn(
-                    "rounded-lg border bg-muted/50 py-2 pr-10 pl-3 text-xs break-all whitespace-pre-wrap",
+                    "rounded-lg border bg-muted/50 py-2 pr-10 pl-3 text-xs break-all whitespace-pre-wrap [font-variant-ligatures:none]",
                     className,
                 )}
             >

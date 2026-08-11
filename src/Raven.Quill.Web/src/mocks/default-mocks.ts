@@ -6,6 +6,7 @@ import { appsMocks } from "./apps-mocks";
 import { authMocks } from "./auth-mocks";
 import { bootstrapMocks } from "./bootstrap-mocks";
 import { channelsMocks } from "./channels-mocks";
+import { dnsMocks } from "./dns-mocks";
 import { embedLinksMocks } from "./embed-links-mocks";
 import { iframeHandlers } from "./iframe-mocks";
 import { settingsMocks } from "./settings-mocks";
@@ -47,6 +48,7 @@ export const defaultApiMocks = {
     auth: [authMocks.status(), authMocks.login(), authMocks.logout()],
     bootstrap: [bootstrapMocks.status()],
     channels: [channelsMocks.list(), channelsMocks.create(), channelsMocks.update(), channelsMocks.delete()],
+    dns: [dnsMocks.resolve()],
     embedLinks: [embedLinksMocks.list(), embedLinksMocks.mint(), embedLinksMocks.revoke()],
     iframe: iframeHandlers(),
     settings: [
