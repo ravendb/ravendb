@@ -19,6 +19,7 @@ internal sealed class TelegramBotRuntime
     private static readonly TimeSpan MaxBackoff = TimeSpan.FromSeconds(30);
 
     private readonly ConcurrentDictionary<long, TelegramChat> _chats = new();
+    private readonly ConcurrentDictionary<long, bool> _refusedGroupChats = new();
     private readonly CancellationTokenSource _cts = new();
     private readonly TelegramChatContext _context;
     private readonly bool _acceptsContactShares;
@@ -97,7 +98,9 @@ internal sealed class TelegramBotRuntime
 
         if (message.Chat.Type != ChatType.Private)
         {
-            _ = TrySendPlainAsync(message.Chat.Id, _context.Messages.GroupChatRefusal);
+            // one refusal per group chat per bot runtime, so a busy group is never spammed
+            if (_refusedGroupChats.TryAdd(message.Chat.Id, true))
+                _ = TrySendPlainAsync(message.Chat.Id, _context.Messages.GroupChatRefusal);
             return Task.CompletedTask;
         }
 
