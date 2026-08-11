@@ -88,13 +88,13 @@ internal sealed class WhatsAppInboundProcessor(
         if (config is null)
             throw new InvalidOperationException($"agent '{channel.AgentId}' is no longer registered in this app");
 
-        var parameters = new Dictionary<string, string>(channel.WhatsApp?.Parameters ?? new Dictionary<string, string>());
-        var identifierParameter = config.Parameters?.FirstOrDefault(p =>
-            string.Equals(p.Name, WhatsAppSettings.WhatsAppUserIdentifierParameterName, StringComparison.OrdinalIgnoreCase));
-        if (identifierParameter is not null &&
-            parameters.Keys.Any(k => string.Equals(k, identifierParameter.Name, StringComparison.OrdinalIgnoreCase)) == false)
+        var channelBindings = channel.WhatsApp?.ParameterBindings ?? new Dictionary<string, TelegramParameterBinding>();
+        if (WhatsAppParameterBindings.TryBind(
+                config, channelBindings, WhatsAppConversationId.SenderDigits(sender),
+                out var parameters, out var bindError) == false)
         {
-            parameters[identifierParameter.Name] = WhatsAppConversationId.SenderDigits(sender);
+            await TrySendAsync(database, channelId, sender, ErrorReply, ct);
+            throw new InvalidOperationException(bindError);
         }
 
         // WhatsApp has no streaming primitive: chunks only accumulate as a fallback

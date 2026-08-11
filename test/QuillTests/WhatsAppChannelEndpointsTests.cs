@@ -92,30 +92,54 @@ public class WhatsAppChannelEndpointsTests(ITestOutputHelper output, QuillWhatsA
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Provision_requires_values_for_declared_parameters_except_user_identifier()
+    public async Task Provision_requires_a_binding_for_every_declared_parameter()
     {
         await using var app = await NewAppAsync();
         var agentId = await SeedAgentAsync(app,
             new AiAgentParameter("customerId", "the customer to scope queries to"),
-            new AiAgentParameter("WhatsAppUserIdentifier", "the whatsapp sender"));
+            new AiAgentParameter("sender", "the whatsapp sender"));
 
         var e = await Assert.ThrowsAsync<QuillHttpException>(() =>
             app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.WhatsAppPersonal, agentId, null)));
         Assert.Equal(HttpStatusCode.BadRequest, e.StatusCode);
-        Assert.Contains("missing agent parameter(s): customerId", e.Body);
-        Assert.DoesNotContain("WhatsAppUserIdentifier", e.Body);
+        Assert.Contains("missing parameter binding(s) for agent parameter(s): customerId, sender", e.Body);
 
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.WhatsAppPersonal, agentId, null,
-            Parameters: new Dictionary<string, string> { ["customerId"] = "customers/1" }));
+            ParameterBindings: new Dictionary<string, TelegramParameterBinding>
+            {
+                ["customerId"] = new() { Source = TelegramParameterSource.Constant, Value = "customers/1" },
+                ["sender"] = new() { Source = TelegramParameterSource.PhoneNumber },
+            }));
 
         using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
             var channel = await session.LoadAsync<Channel>(Channel.IdPrefix + created.ChannelId);
-            Assert.Equal("customers/1", channel.WhatsApp!.Parameters["customerId"]);
+            Assert.Equal("customers/1", channel.WhatsApp!.ParameterBindings["customerId"].Value);
+            Assert.Equal(TelegramParameterSource.PhoneNumber, channel.WhatsApp!.ParameterBindings["sender"].Source);
         }
 
         await app.DeleteChannelAsync(created.ChannelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Provision_rejects_binding_sources_whatsapp_cannot_bind()
+    {
+        await using var app = await NewAppAsync();
+        var agentId = await SeedAgentAsync(app, new AiAgentParameter("sender", "the whatsapp sender"));
+
+        foreach (var source in new[] { TelegramParameterSource.UserId, TelegramParameterSource.Username })
+        {
+            var e = await Assert.ThrowsAsync<QuillHttpException>(() =>
+                app.ProvisionChannelAsync(new ProvisionChannelRequest(
+                    ChannelType.WhatsAppPersonal, agentId, null,
+                    ParameterBindings: new Dictionary<string, TelegramParameterBinding>
+                    {
+                        ["sender"] = new() { Source = source },
+                    })));
+            Assert.Equal(HttpStatusCode.BadRequest, e.StatusCode);
+            Assert.Contains($"WhatsApp channels cannot bind {source}", e.Body);
+        }
     }
 
     [RavenFact(RavenTestCategory.Quill)]

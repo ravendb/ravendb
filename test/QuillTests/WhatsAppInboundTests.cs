@@ -77,22 +77,26 @@ public class WhatsAppInboundTests(ITestOutputHelper output, QuillWhatsAppFixture
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task User_identifier_parameter_is_bound_from_the_sender()
+    public async Task Phone_number_bound_parameter_is_filled_from_the_sender()
     {
         await using var app = await NewAppAsync();
         var agentId = await SeedAgentAsync(app,
             new AiAgentParameter("customerId", "scope"),
-            new AiAgentParameter("WhatsAppUserIdentifier", "the whatsapp sender"));
+            new AiAgentParameter("sender", "the whatsapp sender"));
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.WhatsAppPersonal, agentId, null,
-            Parameters: new Dictionary<string, string> { ["customerId"] = "customers/1" }));
+            ParameterBindings: new Dictionary<string, TelegramParameterBinding>
+            {
+                ["customerId"] = new() { Source = TelegramParameterSource.Constant, Value = "customers/1" },
+                ["sender"] = new() { Source = TelegramParameterSource.PhoneNumber },
+            }));
         Bridge.SetStatus(app.Slug, created.ChannelId, "connected", phoneNumber: "+48111222333");
 
         await PostInboundAsync(Inbound(app.Slug, created.ChannelId, Sender, "hello"));
         await Bridge.WaitUntilAsync(() => Bridge.SentMessages.Count > 0, "the reply");
 
         var request = Assert.Single(Router.Requests);
-        Assert.Equal("48123456789", request.Parameters["WhatsAppUserIdentifier"]);
+        Assert.Equal("48123456789", request.Parameters["sender"]);
         Assert.Equal("customers/1", request.Parameters["customerId"]);
 
         await app.DeleteChannelAsync(created.ChannelId);

@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { toast } from "sonner";
 import { api } from "@/api/api";
+import type { TelegramParameterBinding, TelegramParameterSource } from "@/api/generated/server-api";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
 import { Spinner } from "@/components/shadcn/ui/spinner";
@@ -17,15 +18,40 @@ import { invalidateChannelQueries } from "@/lib/query-invalidation";
 import { WhatsAppPairingPanel } from "@/pages/apps/channels/whatsapp-pairing-panel";
 import type { FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
 
-const WHATSAPP_USER_IDENTIFIER_PARAMETER = "whatsappuseridentifier";
+// A WhatsApp sender is identified only by its phone number, so Telegram's user id and
+// username sources have nothing to bind to here.
+const WHATSAPP_PARAMETER_SOURCES: FormSelectOption<TelegramParameterSource>[] = [
+    { value: "Constant", label: "Constant value" },
+    { value: "PhoneNumber", label: "Sender phone number" },
+];
+
+const parameterBindingSchema = z
+    .object({
+        name: z.string(),
+        source: z.enum(["Constant", "PhoneNumber"]),
+        value: z.string().trim(),
+    })
+    .superRefine((parameter, ctx) => {
+        if (parameter.source === "Constant" && parameter.value.trim().length === 0) {
+            ctx.addIssue({ code: "custom", message: "Required", path: ["value"] });
+        }
+    });
 
 const whatsAppChannelSchema = z.object({
     agentId: z.string().min(1, "Select an agent to route conversations to"),
     displayName: z.string().trim(),
-    parameters: z.array(z.object({ name: z.string(), value: z.string().trim().min(1, "Required") })),
+    parameters: z.array(parameterBindingSchema),
 });
 
 type WhatsAppChannelFormData = z.infer<typeof whatsAppChannelSchema>;
+
+function toParameterBindings(parameters: WhatsAppChannelFormData["parameters"]) {
+    const bindings: Record<string, TelegramParameterBinding> = {};
+    for (const { name, source, value } of parameters) {
+        bindings[name] = { source, value: source === "Constant" ? value.trim() : null };
+    }
+    return bindings;
+}
 
 // Two phases in one sheet: the create form, then the pairing panel for the freshly
 // provisioned channel — the operator has their phone in hand, so no detour via the
@@ -50,20 +76,15 @@ export function WhatsAppPersonalChannelForm({
 
     const selectedAgentId = useWatch({ control: form.control, name: "agentId" });
     const parameterFields = useFieldArray({ control: form.control, name: "parameters" });
+    const parameters = useWatch({ control: form.control, name: "parameters" }) ?? [];
 
     const agents = agentsQuery.data ?? [];
-    const selectedAgent = agents.find((candidate) => candidate.agentId === selectedAgentId);
-    const hasWhatsAppUserIdentifier = (selectedAgent?.parameters ?? []).some(
-        (name) => name.toLowerCase() === WHATSAPP_USER_IDENTIFIER_PARAMETER,
-    );
 
     const { replace } = parameterFields;
     useEffect(() => {
         const selected = (agentsQuery.data ?? []).find((candidate) => candidate.agentId === selectedAgentId);
-        const names = (selected?.parameters ?? []).filter(
-            (name) => name.toLowerCase() !== WHATSAPP_USER_IDENTIFIER_PARAMETER,
-        );
-        replace(names.map((name) => ({ name, value: "" })));
+        const names = selected?.parameters ?? [];
+        replace(names.map((name) => ({ name, source: "Constant" as const, value: "" })));
     }, [replace, selectedAgentId, agentsQuery.data]);
 
     const createMutation = useMutation({
@@ -73,10 +94,7 @@ export function WhatsAppPersonalChannelForm({
                 agentId: values.agentId,
                 allowedOrigins: null,
                 displayName: values.displayName.trim() || null,
-                parameters:
-                    values.parameters.length > 0
-                        ? Object.fromEntries(values.parameters.map(({ name, value }) => [name, value.trim()]))
-                        : null,
+                parameterBindings: values.parameters.length > 0 ? toParameterBindings(values.parameters) : null,
             }),
         onSuccess: async () => {
             await invalidateChannelQueries(queryClient, slug);
@@ -149,27 +167,29 @@ export function WhatsAppPersonalChannelForm({
                             />
                             {parameterFields.fields.length > 0 && (
                                 <div className="flex flex-col gap-3">
+                                    <p className="text-xs text-muted-foreground">
+                                        Map each agent parameter to a constant value bound once for the whole channel,
+                                        or to the phone number sending each message.
+                                    </p>
                                     {parameterFields.fields.map((field, index) => (
-                                        <FormInput
-                                            key={field.id}
-                                            control={form.control}
-                                            name={`parameters.${index}.value`}
-                                            label={field.name}
-                                            placeholder="e.g. customers/1"
-                                            description={
-                                                index === 0
-                                                    ? "Agent parameters are bound once for the whole channel."
-                                                    : undefined
-                                            }
-                                        />
+                                        <div key={field.id} className="grid gap-2 sm:grid-cols-2">
+                                            <FormSelect
+                                                control={form.control}
+                                                name={`parameters.${index}.source`}
+                                                label={field.name}
+                                                options={WHATSAPP_PARAMETER_SOURCES}
+                                            />
+                                            {parameters[index]?.source === "Constant" && (
+                                                <FormInput
+                                                    control={form.control}
+                                                    name={`parameters.${index}.value`}
+                                                    label="Value"
+                                                    placeholder="e.g. customers/1"
+                                                />
+                                            )}
+                                        </div>
                                     ))}
                                 </div>
-                            )}
-                            {hasWhatsAppUserIdentifier && (
-                                <p className="text-xs text-muted-foreground">
-                                    The agent&apos;s <span className="font-medium">WhatsAppUserIdentifier</span>{" "}
-                                    parameter is bound automatically to the phone number sending each message.
-                                </p>
                             )}
                         </>
                     )}

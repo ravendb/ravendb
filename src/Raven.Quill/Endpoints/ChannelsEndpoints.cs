@@ -231,8 +231,7 @@ public static class ChannelsEndpoints
         if (TryValidateDisplayName(body.DisplayName, out var nameError) == false)
             return Results.BadRequest(new ApiErrorResponse(nameError!));
 
-        if (TryResolveChannelParameters(
-                config, body.Parameters, WhatsAppSettings.IsAutoBoundParameter, out var parameters, out var paramError) == false)
+        if (WhatsAppParameterBindings.TryResolve(config, body.ParameterBindings, out var bindings, out var paramError) == false)
             return Results.BadRequest(new ApiErrorResponse(paramError!, Code: "missing_parameters"));
 
         using var session = store.OpenAsyncSession(app.Database);
@@ -247,7 +246,7 @@ public static class ChannelsEndpoints
             AllowedOrigins = [],
             Enabled = true,
             CreatedAt = DateTime.UtcNow,
-            WhatsApp = new WhatsAppSettings { Parameters = parameters },
+            WhatsApp = new WhatsAppSettings { ParameterBindings = bindings },
         };
 
         await session.StoreAsync(channel, ct);
@@ -270,27 +269,6 @@ public static class ChannelsEndpoints
             app.Slug, channelId, config.Identifier);
 
         return Results.Ok(new ProvisionChannelResponse(channelId));
-    }
-
-    /// The agent's declared parameters must be operator-bound now, except the channel's own auto-bound
-    /// ones; the message pipeline fills those from the sender on every message.
-    private static bool TryResolveChannelParameters(
-        AiAgentConfiguration config,
-        Dictionary<string, string>? supplied,
-        Predicate<string> isAutoBound,
-        out Dictionary<string, string> resolved,
-        out string? error)
-    {
-        error = null;
-        if (AgentParameters.TryResolve(config, supplied, out resolved, out var missing))
-            return true;
-
-        missing.RemoveAll(isAutoBound);
-        if (missing.Count == 0)
-            return true;
-
-        error = $"missing agent parameter(s): {string.Join(", ", missing)}";
-        return false;
     }
 
     private static async Task<IResult> ListChannelsAsync(
