@@ -20,6 +20,11 @@ export default function LicenseRestrictedBadge({ className, licenseRequired }: L
     const iconName = getIconName(licenseRequired, isCloud);
     const popoverMessage = getPopoverMessage(licenseRequired, isCloud);
 
+    // the AI tier is drawn with the shared gradient rather than a flat colour, the same way
+    // FeatureAvailabilitySummary and the chatbot icons mark it - on cloud every tier reads
+    // as Production, so the gradient would misrepresent it there
+    const isAiGradient = !isCloud && licenseRequired === "Enterprise AI";
+
     return (
         <PopoverWithHoverWrapper
             message={popoverMessage}
@@ -31,7 +36,7 @@ export default function LicenseRestrictedBadge({ className, licenseRequired }: L
                 className={classNames("license-restricted-badge", getClassName(licenseRequired, isCloud))}
                 bg="secondary"
             >
-                <Icon icon={iconName} margin="m-0" />
+                <Icon icon={iconName} margin="m-0" className={classNames({ "ai-gradient": isAiGradient })} />
                 {!isCloud && licenseRequired === "Professional +" && "+"}
             </Badge>
         </PopoverWithHoverWrapper>
@@ -58,7 +63,8 @@ function getClassName(licenseBadgeText: LicenseBadgeText, isCloud: boolean): Lic
 }
 
 function getIconName(licenseBadgeText: LicenseBadgeText, isCloud: boolean): IconName {
-    if (isCloud || licenseBadgeText === "Enterprise") {
+    // Enterprise AI shares the Enterprise glyph - its own colour class is what tells them apart
+    if (isCloud || licenseBadgeText === "Enterprise" || licenseBadgeText === "Enterprise AI") {
         return "use-cases";
     }
 
@@ -75,6 +81,9 @@ function getPopoverMessage(licenseBadgeText: LicenseBadgeText, isCloud: boolean)
             return "Available from Professional license and above";
         case "Enterprise":
             return "Available in Enterprise license";
+        case "Enterprise AI":
+            // licenseModel.licenseTypeTextProvider calls this tier "RavenDB AI" to the user
+            return "Available in RavenDB AI license";
         default:
             return "";
     }
