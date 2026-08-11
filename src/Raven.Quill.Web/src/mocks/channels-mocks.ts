@@ -24,6 +24,7 @@ export const channelsMocks = {
                 ...channel,
                 displayName: update.displayName ?? channel.displayName,
                 enabled: update.enabled ?? channel.enabled,
+                messages: update.messages ?? channel.messages,
             });
         }),
     delete: () => apiHttp.delete("/api/apps/{slug}/channels/{channelId}", ({ response }) => response(204).empty()),

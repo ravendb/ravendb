@@ -47,9 +47,7 @@ internal sealed class TelegramChat
         if (Interlocked.Exchange(ref _overloadNotified, 1) != 0)
             return;
 
-        _ = _bot.TrySendPlainAsync(_chatId,
-            "I'm still working through your earlier messages, so that one didn't make it. " +
-            "Please resend it once I've replied.");
+        _ = _bot.TrySendPlainAsync(_chatId, _context.Messages.Overloaded);
     }
 
     private async Task RunAsync()
@@ -106,13 +104,13 @@ internal sealed class TelegramChat
         if (IsCommand(prompt, "clear"))
         {
             await ClearConversationAsync(conversationId);
-            await SendPlainAsync("Conversation cleared. The next message starts a fresh one.");
+            await SendPlainAsync(_context.Messages.ConversationCleared);
             return;
         }
 
         if (IsCommand(prompt, "start"))
         {
-            await SendPlainAsync("Hi! Ask me anything and I'll answer. Send /clear anytime to start a fresh conversation.");
+            await SendPlainAsync(_context.Messages.Greeting);
             return;
         }
 
@@ -159,8 +157,7 @@ internal sealed class TelegramChat
                     var username = message.From?.Username;
                     if (string.IsNullOrEmpty(username))
                     {
-                        await SendPlainAsync(
-                            "This assistant needs your Telegram username. Set one in Telegram Settings and send your message again.");
+                        await SendPlainAsync(_context.Messages.UsernameMissing);
                         return null;
                     }
 
@@ -171,8 +168,7 @@ internal sealed class TelegramChat
                     phoneNumber ??= await LoadPhoneNumberAsync(message);
                     if (phoneNumber is null)
                     {
-                        await RequestContactAsync(
-                            "This assistant needs your phone number. Tap the button below to share it, then send your message again.");
+                        await RequestContactAsync(_context.Messages.PhoneNumberRequest);
                         return null;
                     }
 
@@ -187,7 +183,7 @@ internal sealed class TelegramChat
             .ToArray();
         if (unbound.Length > 0)
         {
-            await SendPlainAsync("This assistant is not fully configured yet. Please contact whoever set up this bot.");
+            await SendPlainAsync(_context.Messages.NotConfigured);
             throw new InvalidOperationException(
                 $"agent '{config.Identifier}' has unbound parameter(s): {string.Join(", ", unbound)}");
         }
@@ -217,7 +213,7 @@ internal sealed class TelegramChat
         }
         catch
         {
-            await _bot.TrySendPlainAsync(_chatId, "Sorry - something went wrong handling that message. Please try again.");
+            await _bot.TrySendPlainAsync(_chatId, _context.Messages.SomethingWentWrong);
             throw;
         }
     }
@@ -242,8 +238,7 @@ internal sealed class TelegramChat
 
         if (contact.UserId != senderId || string.IsNullOrEmpty(contact.PhoneNumber))
         {
-            await RequestContactAsync(
-                "That looks like someone else's contact. Tap the button below to share your own number.");
+            await RequestContactAsync(_context.Messages.OwnContactRequired);
             return;
         }
 
@@ -259,7 +254,7 @@ internal sealed class TelegramChat
         }
 
         await _bot.Client.SendMessage(_chatId,
-            "Thanks, got your phone number. Now send your message again.",
+            _context.Messages.PhoneNumberReceived,
             replyMarkup: new ReplyKeyboardRemove(), cancellationToken: _ct);
     }
 
@@ -274,7 +269,8 @@ internal sealed class TelegramChat
 
     private Task RequestContactAsync(string text) =>
         _bot.Client.SendMessage(_chatId, text,
-            replyMarkup: new ReplyKeyboardMarkup(KeyboardButton.WithRequestContact("Share phone number"))
+            replyMarkup: new ReplyKeyboardMarkup(
+                KeyboardButton.WithRequestContact(_context.Messages.SharePhoneNumberButton))
             {
                 ResizeKeyboard = true,
                 OneTimeKeyboard = true,

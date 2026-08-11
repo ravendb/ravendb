@@ -385,6 +385,46 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Message_overrides_apply_to_a_running_bot()
+    {
+        var (app, channelId, token) = await ProvisionAsync(
+            bindings: new Dictionary<string, TelegramParameterBinding>
+            {
+                ["handle"] = new() { Source = TelegramParameterSource.Username },
+            },
+            declared: [new AiAgentParameter("handle", "sender's handle")]);
+        await using var appGuard = app;
+
+        await Mock.WaitUntilAsync(() => Mock.GetUpdatesCallCount(token) >= 1, "polling to start");
+
+        await app.UpdateChannelAsync(channelId, new UpdateChannelRequest(null, null, null,
+            Messages: new TelegramChannelMessages
+            {
+                Greeting = "Witaj! Zadaj mi pytanie.",
+                UsernameMissing = "Ustaw nazwe uzytkownika w Telegramie i sprobuj ponownie.",
+            }));
+
+        // the restarted poller re-reads the queue from offset 0, so keep nudging until the new bot answers
+        const long chatId = 620;
+        for (var attempt = 0; attempt < 40; attempt++)
+        {
+            Mock.EnqueueTextMessage(token, chatId, fromUserId: 620, "/start");
+            await Task.Delay(250);
+            if (Mock.SentMessages.Any(m => m.ChatId == chatId && m.Text == "Witaj! Zadaj mi pytanie."))
+                break;
+        }
+        Assert.Contains(Mock.SentMessages, m => m.ChatId == chatId && m.Text == "Witaj! Zadaj mi pytanie.");
+
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 620, "hello");
+        await Mock.WaitUntilAsync(
+            () => Mock.SentMessages.Any(m => m.ChatId == chatId && m.Text.StartsWith("Ustaw nazwe")),
+            "the overridden username nudge");
+        Assert.Empty(Router.Requests);
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Clear_command_deletes_the_conversation_and_its_preview()
     {
         var (app, channelId, token) = await ProvisionAsync();

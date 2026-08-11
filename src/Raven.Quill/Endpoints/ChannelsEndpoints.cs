@@ -258,6 +258,9 @@ public static class ChannelsEndpoints
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
+        if (body.Messages is not null)
+            return Results.BadRequest(new ApiErrorResponse("messages apply to Telegram channels only"));
+
         if (body.AllowedOrigins is not null)
         {
             var origins = body.AllowedOrigins;
@@ -322,6 +325,15 @@ public static class ChannelsEndpoints
             channel.Telegram.BotId = bot.Id;
             channel.Telegram.BotUsername = bot.Username ?? "";
             tokenRotated = true;
+        }
+
+        if (body.Messages is not null)
+        {
+            if (body.Messages.TryNormalize(out var messagesError) == false)
+                return Results.BadRequest(new ApiErrorResponse(messagesError!));
+
+            channel.Telegram ??= new TelegramSettings();
+            channel.Telegram.Messages = body.Messages.HasAnyOverride ? body.Messages : null;
         }
 
         if (body.Enabled is not null)

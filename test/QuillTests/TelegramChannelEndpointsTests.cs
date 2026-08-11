@@ -191,6 +191,64 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Message_overrides_are_validated_normalized_and_projected()
+    {
+        await using var app = await NewAppAsync();
+        var agentId = await SeedAgentAsync(app);
+
+        var created = await app.ProvisionChannelAsync(
+            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, BotToken: NewBotToken()));
+
+        var summary = await app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
+            Messages: new TelegramChannelMessages { Greeting = "  Cześć!  ", UsernameMissing = "   " }));
+        Assert.Equal("Cześć!", summary.Messages?.Greeting);
+        Assert.Null(summary.Messages?.UsernameMissing);
+
+        var listed = Assert.Single(await app.GetChannelsAsync(), c => c.ChannelId == created.ChannelId);
+        Assert.Equal("Cześć!", listed.Messages?.Greeting);
+
+        var unchanged = await app.UpdateChannelAsync(created.ChannelId,
+            new UpdateChannelRequest("Renamed", null, null));
+        Assert.Equal("Cześć!", unchanged.Messages?.Greeting);
+
+        var tooLong = await Assert.ThrowsAsync<QuillHttpException>(() =>
+            app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
+                Messages: new TelegramChannelMessages { Greeting = new string('x', 1001) })));
+        Assert.Equal(HttpStatusCode.BadRequest, tooLong.StatusCode);
+        Assert.Contains("messages.greeting exceeds", tooLong.Body);
+
+        var controlChars = await Assert.ThrowsAsync<QuillHttpException>(() =>
+            app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
+                Messages: new TelegramChannelMessages { NotConfigured = "beepbeep" })));
+        Assert.Equal(HttpStatusCode.BadRequest, controlChars.StatusCode);
+        Assert.Contains("messages.notConfigured contains control characters", controlChars.Body);
+
+        var cleared = await app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
+            Messages: new TelegramChannelMessages()));
+        Assert.Null(cleared.Messages);
+
+        await app.DeleteChannelAsync(created.ChannelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Message_overrides_are_rejected_for_iframe_channels()
+    {
+        await using var app = await NewAppAsync();
+        var agentId = await SeedAgentAsync(app);
+
+        var created = await app.ProvisionChannelAsync(
+            new ProvisionChannelRequest(ChannelType.IFrame, agentId, []));
+
+        var e = await Assert.ThrowsAsync<QuillHttpException>(() =>
+            app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
+                Messages: new TelegramChannelMessages { Greeting = "Hello" })));
+        Assert.Equal(HttpStatusCode.BadRequest, e.StatusCode);
+        Assert.Contains("messages apply to Telegram channels only", e.Body);
+
+        await app.DeleteChannelAsync(created.ChannelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Provision_and_list_never_contain_the_bot_token()
     {
         await using var app = await NewAppAsync();

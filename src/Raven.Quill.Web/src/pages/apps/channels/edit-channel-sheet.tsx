@@ -18,13 +18,21 @@ import {
     SheetTitle,
     SheetTrigger,
 } from "@/components/shadcn/ui/sheet";
+import { ChevronDown } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/shadcn/ui/collapsible";
 import { FormInput } from "@/components/form/form-input";
 import { FormStringList } from "@/components/form/form-string-list";
 import { FormSwitch } from "@/components/form/form-switch";
+import { FormTextarea } from "@/components/form/form-textarea";
 import { GuardedSheet } from "@/components/form/unsaved-changes/guarded-overlays";
 import { useFormUnsavedChanges } from "@/components/form/unsaved-changes/use-unsaved-changes";
 import { withNestedSubmit } from "@/lib/form-utils";
 import { invalidateChannelQueries } from "@/lib/query-invalidation";
+import {
+    TELEGRAM_MESSAGE_FIELDS,
+    toMessagesDto,
+    toMessagesFormValues,
+} from "@/pages/apps/channels/telegram-message-defaults";
 
 type EditChannelSheetProps = {
     slug: string;
@@ -49,12 +57,27 @@ export function EditChannelSheet({ slug, channel, trigger }: EditChannelSheetPro
     );
 }
 
+const messageOverrideSchema = z.string().trim().max(1000, "Keep it under 1000 characters");
+
 const editChannelSchema = z.object({
     displayName: z.string().trim().min(1, "Channel name is required"),
     enabled: z.boolean(),
     shouldReplaceAllowedOrigins: z.boolean(),
     allowedOrigins: z.array(z.object({ value: z.string().trim() })),
     botToken: z.string().trim(),
+    messages: z.object({
+        greeting: messageOverrideSchema,
+        conversationCleared: messageOverrideSchema,
+        usernameMissing: messageOverrideSchema,
+        phoneNumberRequest: messageOverrideSchema,
+        sharePhoneNumberButton: messageOverrideSchema,
+        ownContactRequired: messageOverrideSchema,
+        phoneNumberReceived: messageOverrideSchema,
+        notConfigured: messageOverrideSchema,
+        overloaded: messageOverrideSchema,
+        somethingWentWrong: messageOverrideSchema,
+        groupChatRefusal: messageOverrideSchema,
+    }),
 });
 
 type EditChannelFormData = z.infer<typeof editChannelSchema>;
@@ -71,6 +94,7 @@ function EditChannelForm({
     const queryClient = useQueryClient();
 
     const isTelegram = channel.type === "Telegram";
+    const [areMessagesOpen, setAreMessagesOpen] = useState(false);
 
     const form = useForm<EditChannelFormData>({
         mode: "onChange",
@@ -81,6 +105,7 @@ function EditChannelForm({
             shouldReplaceAllowedOrigins: false,
             allowedOrigins: [],
             botToken: "",
+            messages: toMessagesFormValues(channel.messages),
         },
     });
 
@@ -98,6 +123,7 @@ function EditChannelForm({
                         : null,
                 enabled: values.enabled,
                 botToken: isTelegram && values.botToken.trim() ? values.botToken.trim() : null,
+                messages: isTelegram ? toMessagesDto(values.messages) : null,
             }),
         onSuccess: async () => {
             unsavedChanges.markSaved();
@@ -122,14 +148,43 @@ function EditChannelForm({
                 />
                 <FormSwitch control={form.control} name="enabled" label="Enabled" />
                 {isTelegram ? (
-                    <FormInput
-                        control={form.control}
-                        name="botToken"
-                        type="password"
-                        label="Rotate bot token"
-                        placeholder="Leave empty to keep the current token"
-                        description="Paste a new token from @BotFather to rotate it. The current token is never shown."
-                    />
+                    <>
+                        <FormInput
+                            control={form.control}
+                            name="botToken"
+                            type="password"
+                            label="Rotate bot token"
+                            placeholder="Leave empty to keep the current token"
+                            description="Paste a new token from @BotFather to rotate it. The current token is never shown."
+                        />
+                        <Collapsible open={areMessagesOpen} onOpenChange={setAreMessagesOpen} className="grid gap-3">
+                            <CollapsibleTrigger className="group flex w-full items-start justify-between gap-3 text-left">
+                                <div>
+                                    <h3 className="text-sm font-semibold">Bot messages</h3>
+                                    <p className="mt-1 text-xs text-muted-foreground">
+                                        The canned replies this bot sends for commands and parameter prompts. Leave a
+                                        field empty to use the default text.
+                                    </p>
+                                </div>
+                                <ChevronDown
+                                    className="mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180"
+                                    aria-hidden="true"
+                                />
+                            </CollapsibleTrigger>
+                            <CollapsibleContent className="grid gap-3">
+                                {TELEGRAM_MESSAGE_FIELDS.map((field) => (
+                                    <FormTextarea
+                                        key={field.name}
+                                        control={form.control}
+                                        name={`messages.${field.name}`}
+                                        label={field.label}
+                                        placeholder={field.defaultText}
+                                        rows={2}
+                                    />
+                                ))}
+                            </CollapsibleContent>
+                        </Collapsible>
+                    </>
                 ) : (
                     <>
                         <div className="flex flex-col gap-1.5">
