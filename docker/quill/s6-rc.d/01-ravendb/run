@@ -1,6 +1,8 @@
 #!/command/with-contenv sh
 set -e
 
+exec 2>&1
+
 mkdir -p /var/lib/quill/ravendb
 
 # When activation has produced a setup package, overlay its secure settings on

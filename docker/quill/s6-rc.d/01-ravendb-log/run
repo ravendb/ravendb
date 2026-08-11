@@ -1,0 +1,2 @@
+#!/command/with-contenv sh
+exec svc-log ravendb

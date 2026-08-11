@@ -1,6 +1,8 @@
 #!/command/with-contenv sh
 set -e
 
+exec 2>&1
+
 CERT_DIR=/var/lib/quill/certs
 
 while [ -z "$(ls "$CERT_DIR"/cluster.server.certificate.*.pfx 2>/dev/null)" ]; do

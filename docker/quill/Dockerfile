@@ -75,7 +75,7 @@ ARG S6_OVERLAY_VERSION
 ARG TARGETARCH
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends xz-utils curl ca-certificates nginx-full openssl \
+    && apt-get install -y --no-install-recommends xz-utils curl ca-certificates nginx-full openssl jq \
     && rm -rf /var/lib/apt/lists/*
 
 RUN <<EOF
@@ -109,26 +109,30 @@ COPY docker/quill/nginx.conf /etc/nginx/nginx.conf
 
 COPY docker/quill/s6-rc.d/ /etc/s6-overlay/s6-rc.d/
 COPY docker/quill/scripts/proxy-certs.sh /usr/local/bin/proxy-certs
-RUN chmod +x /etc/s6-overlay/s6-rc.d/01-ravendb/run \
-             /etc/s6-overlay/s6-rc.d/02-web/run \
-             /etc/s6-overlay/s6-rc.d/03-proxy/run \
-             /etc/s6-overlay/s6-rc.d/04-certwatch/run \
-             /usr/local/bin/proxy-certs
+COPY docker/quill/scripts/svc-log.sh /usr/local/bin/svc-log
+RUN chmod +x /etc/s6-overlay/s6-rc.d/*/run \
+             /usr/local/bin/proxy-certs \
+             /usr/local/bin/svc-log
 
 EXPOSE 443
 
 VOLUME /var/lib/quill
 
+# --start-period must match RAVEN_QUILL_STARTUP_GRACE_SECONDS below: both are the startup budget,
+# one for Docker, one for 05-console deciding when a slow start counts as stuck.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=180s \
     CMD curl -fsk https://127.0.0.1/healthz && curl -fs http://127.0.0.1:5000/healthz
 
-ENV RAVEN_QUILL_RAVEN_URL=http://127.0.0.1:8080 \
+# S6_VERBOSITY=0 keeps the supervisor's lifecycle chatter off stdout
+ENV S6_VERBOSITY=0 \
+    RAVEN_QUILL_RAVEN_URL=http://127.0.0.1:8080 \
     RAVEN_QUILL_WEB_LISTEN_URL=http://0.0.0.0:5000 \
     RAVEN_QUILL_CONFIG_DB=quill-config \
     RAVEN_QUILL_SETUP_PACKAGE_PATH=/var/lib/quill/setup \
     RAVEN_QUILL_RAVENDB_S6_SERVICE=/run/service/01-ravendb \
     RAVEN_QUILL_RAVENDB_INTERNAL_PORT=8443 \
     RAVEN_DataDir=/var/lib/quill/ravendb \
-    RAVEN_Logs_Path=/var/lib/quill/ravendb/logs
+    RAVEN_Logs_Path=/var/lib/quill/logs/ravendb-server \
+    RAVEN_QUILL_STARTUP_GRACE_SECONDS=180
 
 ENTRYPOINT ["/init"]
