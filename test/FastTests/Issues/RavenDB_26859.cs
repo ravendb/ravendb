@@ -25,9 +25,9 @@ namespace FastTests.Issues
         [RavenTheory(RavenTestCategory.Configuration | RavenTestCategory.Voron)]
         [InlineData("IoRing", "1024")]
         [InlineData("Auto", "-1")]
-        [InlineData("Auto", "0")]
+        [InlineData("Auto", "3")]
         [InlineData("FileIo", "-1")]
-        [InlineData("FileIo", "0")]
+        [InlineData("FileIo", "3")]
         public void ValidIoRingConfigurationInitializes(string writeMode, string queueSize)
         {
             var configuration = RavenConfiguration.CreateForServer(null);
