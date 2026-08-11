@@ -611,6 +611,14 @@ namespace Voron.Impl
             return page;
         }
 
+        // once the page is freed the same memory can be handed out to a different page, and the pointer
+        // stops representing the modification of this one
+        internal bool DirtyPageStillBelongsTo(byte* dirtyPagePointer, long pageNumber)
+        {
+            return _scratchPagesInUse.TryGetValue(pageNumber, out var scratchPage) &&
+                   scratchPage.ReadWritableRawPagePointer(ref PagerTransactionState) == dirtyPagePointer;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private T GetPageHeaderFromDataFile<T>(long pageNumber) where T : unmanaged
         {
