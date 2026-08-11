@@ -34,6 +34,54 @@ public class TelegramPhoneNumberTests(ITestOutputHelper output, QuillTelegramFix
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Start_command_requests_the_contact_without_waiting_for_a_first_message()
+    {
+        var (app, channelId, token) = await ProvisionWithPhoneAsync();
+        await using var appGuard = app;
+
+        const long chatId = 701;
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 701, "/start");
+
+        await Mock.WaitUntilAsync(
+            () => Mock.SentMessages.Any(m => m.ChatId == chatId && m.Text.Contains("phone number")),
+            "the contact request");
+
+        var messages = Mock.SentMessages.Where(m => m.ChatId == chatId).ToList();
+        var greetingIndex = messages.FindIndex(m => m.Text.Contains("Ask me anything"));
+        var contactIndex = messages.FindIndex(m => m.Text.Contains("phone number"));
+        Assert.Contains("request_contact", messages[contactIndex].ReplyMarkup);
+        Assert.True(greetingIndex >= 0 && contactIndex > greetingIndex, "the greeting should come before the contact request");
+
+        Assert.Empty(Router.Requests);
+        Assert.DoesNotContain(Mock.ChatActions, a => a.ChatId == chatId);
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Start_command_stays_quiet_when_the_phone_number_is_already_shared()
+    {
+        var (app, channelId, token) = await ProvisionWithPhoneAsync();
+        await using var appGuard = app;
+
+        const long chatId = 702;
+        Mock.EnqueueContactMessage(token, chatId, fromUserId: 702, "+48123456789");
+        await Mock.WaitUntilAsync(
+            () => Mock.SentMessages.Any(m => m.ChatId == chatId && m.Text.Contains("got your phone number")),
+            "the confirmation");
+
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 702, "/start");
+        await Mock.WaitUntilAsync(
+            () => Mock.SentMessages.Any(m => m.ChatId == chatId && m.Text.Contains("Ask me anything")),
+            "the greeting");
+
+        Assert.DoesNotContain(Mock.SentMessages, m => m.ChatId == chatId && m.Text.Contains("Tap the button below"));
+        Assert.Empty(Router.Requests);
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Shared_contact_is_stored_and_the_next_message_dispatches_with_the_phone_number()
     {
         var (app, channelId, token) = await ProvisionWithPhoneAsync();

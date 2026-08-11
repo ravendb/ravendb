@@ -474,6 +474,53 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Start_command_nudges_for_a_missing_username_without_waiting_for_a_first_message()
+    {
+        var (app, channelId, token) = await ProvisionAsync(
+            bindings: new Dictionary<string, TelegramParameterBinding>
+            {
+                ["userHandle"] = new() { Source = TelegramParameterSource.Username },
+            },
+            declared: [new AiAgentParameter("userHandle", "sender's handle")]);
+        await using var appGuard = app;
+
+        const long chatId = 320;
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 320, "/start");
+
+        await Mock.WaitUntilAsync(
+            () => Mock.SentMessages.Any(m => m.ChatId == chatId && m.Text.Contains("needs your Telegram username")),
+            "the username nudge");
+        Assert.Contains(Mock.SentMessages, m => m.ChatId == chatId && m.Text.Contains("Ask me anything"));
+        Assert.Empty(Router.Requests);
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Start_command_stays_quiet_when_every_binding_can_be_satisfied()
+    {
+        var (app, channelId, token) = await ProvisionAsync(
+            bindings: new Dictionary<string, TelegramParameterBinding>
+            {
+                ["userHandle"] = new() { Source = TelegramParameterSource.Username },
+            },
+            declared: [new AiAgentParameter("userHandle", "sender's handle")]);
+        await using var appGuard = app;
+
+        const long chatId = 321;
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 321, "/start", username: "alice");
+
+        await Mock.WaitUntilAsync(
+            () => Mock.SentMessages.Any(m => m.ChatId == chatId && m.Text.Contains("Ask me anything")),
+            "the greeting");
+
+        Assert.DoesNotContain(Mock.SentMessages, m => m.ChatId == chatId && m.Text.Contains("needs your Telegram"));
+        Assert.Empty(Router.Requests);
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Group_chat_messages_get_a_canned_refusal_including_commands()
     {
         var (app, channelId, token) = await ProvisionAsync();

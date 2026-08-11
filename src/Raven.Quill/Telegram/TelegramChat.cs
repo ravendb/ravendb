@@ -108,15 +108,17 @@ internal sealed class TelegramChat
             return;
         }
 
-        if (IsCommand(prompt, "start"))
-        {
-            await SendPlainAsync(_context.Messages.Greeting);
-            return;
-        }
-
         var config = await AgentLookup.FindAsync(_context.Store, _context.Database, channel.AgentId, _ct);
         if (config is null)
             throw new InvalidOperationException($"agent '{channel.AgentId}' is no longer registered in this app");
+
+        if (IsCommand(prompt, "start"))
+        {
+            await SendPlainAsync(_context.Messages.Greeting);
+            // ask for whatever the bindings need now, so the first real message can be answered
+            await BindParametersAsync(config, message);
+            return;
+        }
 
         var parameters = await BindParametersAsync(config, message);
         if (parameters is null)
