@@ -3,10 +3,11 @@ import { useForm, useFormContext, useFormState, useWatch } from "react-hook-form
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
 import InputGroup from "react-bootstrap/InputGroup";
 import { Icon } from "components/common/Icon";
+import { Switch } from "components/common/Checkbox";
 import { FormInput } from "components/common/Form";
+import InnerForm from "components/common/InnerForm";
 import { ImportFromFileFormData } from "../importFromFileValidation";
 
 /**
@@ -21,18 +22,14 @@ export default function CollectionsToImportPicker() {
 
     // Rows live in local state so deselecting only turns the toggle off - the trash icon removes
     // the row entirely. The picker unmounts whenever "Import all collections" is active, so the
-    // rows are re-seeded from the form's included list on mount - otherwise the selection would
-    // survive in the form while the list showed "No collections added" (deselected-but-kept rows
-    // are the only thing lost across that switch).
+    // rows are re-seeded from the form's included list on mount.
     const [manualCollections, setManualCollections] = useState<string[]>(
         () => getValues("collections.includedCollections") ?? []
     );
-    // bumped on every successful add; drives the refocus effect below
     const [addedCount, setAddedCount] = useState(0);
 
     // A form of its own, separate from the page's import form: its only field is the name being
-    // typed, which is never submitted to the server - it just appends a row. Keeping it local means
-    // the duplicate/blank rules live in a schema and surface as a field error.
+    // typed, which is never submitted to the server - it just appends a row.
     const addCollectionForm = useForm({
         resolver: yupResolver(getAddCollectionSchema(manualCollections)),
         defaultValues: { collectionName: "" },
@@ -59,18 +56,15 @@ export default function CollectionsToImportPicker() {
         setIncludedCollections([...includedCollections, trimmed]);
         setAddedCount((prev) => prev + 1);
         // setValue rather than reset: it clears the field without unregistering it, so the input
-        // keeps the ref that setFocus needs. Validating here would immediately complain the field is
-        // empty, so a stale message from an earlier attempt is dropped explicitly instead.
+        // keeps the ref that setFocus needs.
         setAddValue("collectionName", "");
         clearErrors("collectionName");
     };
 
     // FormInput disables itself while the add form is submitting, and a disabled input silently
-    // ignores focus() - so refocusing is deferred until isSubmitting drops back to false. That flip
-    // re-runs the effect, landing the focus on the re-enabled input regardless of how React batched
-    // the renders. Also covers mount (picker revealed) and failed validation, so a typo can be
-    // corrected without reaching for the mouse. Counting additions rather than watching the list
-    // length keeps the trash icon from pulling focus back into the input.
+    // ignores focus() - so refocusing is deferred until isSubmitting drops back to false. Counting
+    // additions rather than watching the list length keeps the trash icon from pulling focus back
+    // into the input.
     const { isSubmitting: isAddSubmitting } = useFormState({ control: addControl });
 
     useEffect(() => {
@@ -115,9 +109,7 @@ export default function CollectionsToImportPicker() {
 
     return (
         <div className="mt-4">
-            <Form onSubmit={handleSubmit(addCollection)} className="mb-3">
-                {/* one InputGroup for both controls keeps their heights equal, and FormInput's
-                    validation message (w-100) wraps to its own line below the pair */}
+            <InnerForm onSubmit={handleSubmit(addCollection)} className="mb-3">
                 <InputGroup>
                     <FormInput
                         type="text"
@@ -125,13 +117,11 @@ export default function CollectionsToImportPicker() {
                         name="collectionName"
                         placeholder="Type a collection name from the imported file"
                     />
-                    {/* deliberately always enabled: handleSubmit blocks the append and the schema
-                        message explains why, which beats a greyed-out button with no reason */}
-                    <Button type="submit" variant="secondary" className="text-nowrap">
+                    <Button variant="secondary" className="text-nowrap" onClick={handleSubmit(addCollection)}>
                         <Icon icon="plus" /> Add
                     </Button>
                 </InputGroup>
-            </Form>
+            </InnerForm>
             {manualCollections.length > 0 && (
                 <div className="mb-2">
                     <FormInput
@@ -147,14 +137,12 @@ export default function CollectionsToImportPicker() {
                 <span className="flex-grow-1 fw-semibold">Collection name</span>
                 <div className="d-flex align-items-center gap-2">
                     <span>Select all</span>
-                    <Form.Check
-                        type="switch"
+                    <Switch
                         id="select-all-collections"
-                        label=""
                         className="m-0"
                         disabled={filteredCollections.length === 0}
-                        checked={areAllFilteredSelected}
-                        onChange={toggleAllFiltered}
+                        selected={areAllFilteredSelected}
+                        toggleSelection={toggleAllFiltered}
                     />
                 </div>
             </div>
@@ -164,15 +152,13 @@ export default function CollectionsToImportPicker() {
                 )}
                 {filteredCollections.map((name) => (
                     <div key={name} className="import-list-item">
-                        <Form.Check
-                            type="switch"
-                            // without an id react-bootstrap renders a label with no htmlFor,
-                            // making the collection name unclickable
+                        <Switch
                             id={`import-collection-${encodeURIComponent(name)}`}
-                            label={name}
-                            checked={includedCollections.includes(name)}
-                            onChange={(e) => toggleCollection(name, e.target.checked)}
-                        />
+                            selected={includedCollections.includes(name)}
+                            toggleSelection={(e) => toggleCollection(name, e.target.checked)}
+                        >
+                            {name}
+                        </Switch>
                         <Button
                             variant="link"
                             size="sm"

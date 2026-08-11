@@ -148,7 +148,9 @@ function AnalysisBody({ summary }: DebugPackageAnalysisViewProps) {
     const { entries } = useAnalysisSections();
     const contentRef = useRef<HTMLDivElement>(null);
     const sectionIds = useMemo(() => entries.map((e) => e.id), [entries]);
-    const activeSectionId = useScrollSpy(sectionIds, { root: findScrollParent(contentRef.current) });
+    const { activeId: activeSectionId, selectSection } = useScrollSpy(sectionIds, {
+        root: findScrollParent(contentRef.current),
+    });
 
     // reset to the top of the page whenever the scope changes
     useEffect(() => {
@@ -160,9 +162,7 @@ function AnalysisBody({ summary }: DebugPackageAnalysisViewProps) {
         }
     }, [context]);
 
-    const handleSelectSection = (id: string) => {
-        document.getElementById(id)?.scrollIntoView({ block: "start", behavior: "smooth" });
-    };
+    const handleSelectSection = selectSection;
 
     const hasScopeControls =
         (deferredContext === "node" && nodeTags.length > 0) ||

@@ -20,6 +20,10 @@ import Card from "react-bootstrap/Card";
 import { connectionStringLabels, databaseSettingLabels, ongoingTaskLabels } from "../importFromFileLabels";
 import classNames from "classnames";
 
+const missingConnectionStringWarning =
+    "This task is selected without its connection string. It will be imported but won't run until a matching " +
+    "connection string exists in this database.";
+
 export default function ConfigurationToImportSection() {
     const { control, setValue, resetField } = useFormContext<ImportFromFileFormData>();
     const {
@@ -183,6 +187,11 @@ export default function ConfigurationToImportSection() {
                                             control={control}
                                             name={`configuration.ongoingTasks.${key}`}
                                             restriction={ongoingTaskRestrictions[key]}
+                                            warning={
+                                                tasksMissingConnectionStrings.includes(key)
+                                                    ? missingConnectionStringWarning
+                                                    : undefined
+                                            }
                                         >
                                             {ongoingTaskLabels[key]}
                                         </RestrictedSwitch>
@@ -221,13 +230,6 @@ export default function ConfigurationToImportSection() {
                         </div>
                     </div>
                 </Collapse>
-                {tasksMissingConnectionStrings.length > 0 && (
-                    <Alert variant="warning" className="mt-3 mb-0">
-                        <Icon icon="warning" /> The following tasks are selected without their connection strings:{" "}
-                        {tasksMissingConnectionStrings.map((key) => ongoingTaskLabels[key]).join(", ")}. They will be
-                        imported but won&apos;t run until a matching connection string exists in this database.
-                    </Alert>
-                )}
                 {isIncludeTasks && (
                     <Alert variant="info" className="mt-3 mb-0">
                         <Icon icon="info" /> Imported ongoing tasks will be disabled by default.

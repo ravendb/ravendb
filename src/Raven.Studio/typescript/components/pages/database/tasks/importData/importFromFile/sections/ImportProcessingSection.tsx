@@ -17,7 +17,11 @@ export default function ImportProcessingSection() {
     const isEncrypted = useWatch({ control, name: "processing.isEncrypted" });
 
     return (
-        <ImportSection id="import-processing" title="Import processing & security">
+        <ImportSection
+            id="import-processing"
+            title="Import processing & security"
+            errorPaths={["processing.transformScript", "processing.maxReadOpsPerSecond", "processing.encryptionKey"]}
+        >
             <div className="small-label mb-2">Data transformation and integrity</div>
             <div className="card p-4 mb-4">
                 <FormSwitch control={control} name="processing.isUseTransformScript">
