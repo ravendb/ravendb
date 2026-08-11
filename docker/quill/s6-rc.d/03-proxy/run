@@ -1,6 +1,8 @@
 #!/command/with-contenv sh
 set -e
 
+exec 2>&1
+
 # nginx :443 SNI front (Phase 1). It terminates TLS for the web subdomains with the wildcard cert
 # 01-ravendb/run places on the volume, which only exists post-activation. Wait for it; pre-activation
 # the operator reaches the dashboard on the published :5000 (first-run). db.*/a.* are TLS-passthrough.
