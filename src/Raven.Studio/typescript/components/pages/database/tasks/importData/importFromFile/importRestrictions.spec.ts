@@ -4,6 +4,7 @@ import {
     ongoingTaskRules,
     resolveRestriction,
 } from "./importRestrictions";
+import { ongoingTaskKeys } from "./importFromFileValidation";
 
 const fullLicense = {
     HasQueueEtl: true,
@@ -24,6 +25,24 @@ const context = (overrides?: {
     isSharded: overrides?.isSharded ?? false,
     canHandleOperation: () => !overrides?.deniedAccess,
     isShardingChecked: overrides?.isShardingChecked,
+});
+
+describe("rules derived from ongoingTaskCapabilities", () => {
+    it("gates every ongoing task row", () => {
+        expect(ongoingTaskKeys.every((key) => ongoingTaskRules[key].licenseFlags.length > 0)).toBe(true);
+    });
+
+    it("marks a grouped row sharding-supported only when every member task is", () => {
+        // queueEtls covers four brokers, none of which supports sharding
+        expect(ongoingTaskRules.queueEtls.isShardingSupported).toBe(false);
+        expect(ongoingTaskRules.ravenEtls.isShardingSupported).toBe(true);
+    });
+
+    it("collects the licence flags of every task a grouped row covers", () => {
+        expect(connectionStringRules.aiConnectionStrings.licenseFlags).toEqual(
+            expect.arrayContaining(["HasGenAi", "HasAiAgent", "HasEmbeddingsGeneration"])
+        );
+    });
 });
 
 describe("resolveRestriction", () => {
