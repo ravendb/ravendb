@@ -20,6 +20,7 @@ internal sealed class TelegramChat
     private readonly CancellationToken _ct;
 
     private int _overloadNotified;
+    private int _retired;
 
     public TelegramChat(long chatId, TelegramBotRuntime bot, TelegramChatContext context, CancellationToken ct)
     {
@@ -40,6 +41,10 @@ internal sealed class TelegramChat
 
     public Task Completion { get; }
 
+    /// After an idle timeout the chat retires: it leaves the bot's map and rejects posts, and the
+    /// poster re-creates it. TryPost failing on a live chat still means the queue is full.
+    public bool IsRetired => Volatile.Read(ref _retired) == 1;
+
     public bool TryPost(Message message) => _queue.Writer.TryWrite(message);
 
     public void NotifyOverloadOnce()
@@ -54,17 +59,44 @@ internal sealed class TelegramChat
     {
         try
         {
-            await foreach (var message in _queue.Reader.ReadAllAsync(_ct))
+            while (await WaitForMessageAsync())
             {
-                await HandleSafeAsync(message);
+                while (_queue.Reader.TryRead(out var message))
+                {
+                    await HandleSafeAsync(message);
 
-                if (_queue.Reader.Count == 0)
-                    Interlocked.Exchange(ref _overloadNotified, 0);
+                    if (_queue.Reader.Count == 0)
+                        Interlocked.Exchange(ref _overloadNotified, 0);
+                }
             }
         }
         catch (OperationCanceledException) when (_ct.IsCancellationRequested)
         {
         }
+    }
+
+    private async Task<bool> WaitForMessageAsync()
+    {
+        var wait = _queue.Reader.WaitToReadAsync(_ct).AsTask();
+        try
+        {
+            return await wait.WaitAsync(_context.Options.TelegramChatIdleTimeout);
+        }
+        catch (TimeoutException)
+        {
+            Retire();
+            // a message posted before the queue completed still drains below
+            return await wait;
+        }
+    }
+
+    private void Retire()
+    {
+        // publish the retired flag before completing the queue, so a TryPost that fails
+        // against the completed queue always observes IsRetired and re-creates the chat
+        Interlocked.Exchange(ref _retired, 1);
+        _queue.Writer.TryComplete();
+        _bot.OnChatRetired(_chatId, this);
     }
 
     private async Task HandleSafeAsync(Message message)

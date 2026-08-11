@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using QuillTests.E2E.Fixtures;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Quill.Agents;
@@ -380,6 +381,50 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         await Mock.WaitUntilAsync(() => Router.Requests.Count >= 2, "the queued turns");
         var prompts = Router.Requests.Select(r => int.Parse(r.Prompt[1..])).ToArray();
         Assert.Equal(prompts.Order().ToArray(), prompts);
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Idle_chat_is_evicted_and_the_next_message_revives_it()
+    {
+        var host = await NewHostAsync(configure: opts =>
+            opts.TelegramChatIdleTimeout = TimeSpan.FromMilliseconds(700));
+        var app = await NewAppAsync(host);
+        await using var appGuard = app;
+
+        var agentId = "tg-agent-" + Guid.NewGuid().ToString("N")[..8];
+        await app.ProvisionAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = agentId,
+            Name = "Telegram Demo Agent",
+            SystemPrompt = "You are a placeholder demo agent.",
+            ConnectionStringName = app.Host.ConnectionStringName,
+        });
+
+        var token = NewBotToken();
+        var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
+            ChannelType.Telegram, agentId, null, BotToken: token));
+        var channelId = created.ChannelId;
+
+        var manager = host.Services.GetRequiredService<TelegramChannelManager>();
+
+        const long chatId = 800;
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 800, "first");
+        await Mock.WaitUntilAsync(
+            () => manager.GetActiveChatCount(app.Slug, channelId) == 1, "the chat worker");
+
+        await Mock.WaitUntilAsync(
+            () => manager.GetActiveChatCount(app.Slug, channelId) == 0, "the idle eviction");
+
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 800, "second");
+        await Mock.WaitUntilAsync(() => Router.Requests.Count >= 2, "the revived chat's run");
+        Assert.Equal(new[] { "first", "second" }, Router.Requests.Select(r => r.Prompt).ToArray());
+        await Mock.WaitUntilAsync(
+            () => Mock.SentMessages.Count(m => m.ChatId == chatId) >= 2, "the second reply");
+
+        var health = Assert.Single(await app.GetTelegramHealthAsync());
+        Assert.Equal(0, health.ErrorCount);
 
         await app.DeleteChannelAsync(channelId);
     }

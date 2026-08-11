@@ -172,6 +172,9 @@ internal sealed class TelegramChannelManager(
         }
     }
 
+    internal int GetActiveChatCount(string database, string channelId) =>
+        _bots.TryGetValue((database, channelId), out var bot) ? bot.ActiveChatCount : 0;
+
     public IReadOnlyDictionary<string, TelegramChannelHealthSnapshot> GetHealth(string database) =>
         _bots
             .Where(kvp => kvp.Key.Database == database)
