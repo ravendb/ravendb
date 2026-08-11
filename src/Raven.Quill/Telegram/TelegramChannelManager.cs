@@ -72,7 +72,7 @@ internal sealed class TelegramChannelManager(
 
     private async Task ApplyChangesAsync(CancellationToken ct)
     {
-        var desired = new Dictionary<(string Database, string ChannelId), Channel>();
+        var desired = new Dictionary<(string Database, string ChannelId), (Channel Channel, string? ChangeVector)>();
 
         var unreadable = new HashSet<string>();
 
@@ -94,14 +94,14 @@ internal sealed class TelegramChannelManager(
 
             try
             {
-                List<Channel> channels;
-                using (var session = store.OpenAsyncSession(app.Database))
-                    channels = await session.LoadAllStartingWithAsync<Channel>(Channel.IdPrefix, ct);
+                using var session = store.OpenAsyncSession(app.Database);
+                var channels = await session.LoadAllStartingWithAsync<Channel>(Channel.IdPrefix, ct);
 
                 foreach (var channel in channels)
                 {
                     if (channel is { Type: ChannelType.Telegram, Enabled: true, Telegram.BotToken.Length: > 0 })
-                        desired[(app.Database, Channel.StripIdPrefix(channel.Id))] = channel;
+                        desired[(app.Database, Channel.StripIdPrefix(channel.Id))] =
+                            (channel, session.Advanced.GetChangeVectorFor(channel));
                 }
             }
             catch (DatabaseDoesNotExistException)
@@ -119,7 +119,7 @@ internal sealed class TelegramChannelManager(
             if (unreadable.Contains(key.Database))
                 continue;
 
-            if (desired.TryGetValue(key, out var current) && bot.BotToken == current.Telegram!.BotToken)
+            if (desired.TryGetValue(key, out var current) && bot.ChannelChangeVector == current.ChangeVector)
                 continue;
 
             if (_bots.TryRemove(key, out _) == false)
@@ -130,17 +130,17 @@ internal sealed class TelegramChannelManager(
                 "Telegram bot stopped for channel {ChannelId} on {Database}", key.ChannelId, key.Database);
         }
 
-        foreach (var (key, channel) in desired)
+        foreach (var (key, entry) in desired)
         {
             if (_bots.ContainsKey(key))
                 continue;
 
             _bots[key] = TelegramBotRuntime.Start(
-                key.Database, channel, botFactory, store, router, options.Value, logger);
+                key.Database, entry.Channel, entry.ChangeVector, botFactory, store, router, options.Value, logger);
 
             logger.LogInformation(
                 "Telegram bot started for channel {ChannelId} (bot {Bot}) on {Database}",
-                key.ChannelId, TelegramSettings.RedactToken(channel.Telegram!.BotToken), key.Database);
+                key.ChannelId, TelegramSettings.RedactToken(entry.Channel.Telegram!.BotToken), key.Database);
         }
     }
 

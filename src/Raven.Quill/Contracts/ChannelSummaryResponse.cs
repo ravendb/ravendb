@@ -11,7 +11,8 @@ public sealed record ChannelSummaryResponse(
     bool Enabled,
     DateTime CreatedAt,
     string? BotUsername = null,
-    Dictionary<string, TelegramParameterBinding>? ParameterBindings = null)
+    Dictionary<string, TelegramParameterBinding>? ParameterBindings = null,
+    TelegramChannelMessages? Messages = null)
 {
     internal static ChannelSummaryResponse From(Channel channel) => new(
         Channel.StripIdPrefix(channel.Id),
@@ -21,5 +22,6 @@ public sealed record ChannelSummaryResponse(
         channel.Enabled,
         channel.CreatedAt,
         channel.Telegram?.BotUsername,
-        channel.Telegram?.ParameterBindings);
+        channel.Telegram?.ParameterBindings,
+        channel.Telegram?.Messages);
 }

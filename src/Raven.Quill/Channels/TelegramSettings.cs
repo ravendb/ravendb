@@ -21,4 +21,6 @@ internal sealed class TelegramSettings
     public string BotUsername { get; set; } = "";
 
     public Dictionary<string, TelegramParameterBinding> ParameterBindings { get; set; } = new();
+
+    public TelegramChannelMessages? Messages { get; set; }
 }

@@ -1277,6 +1277,7 @@ export interface components {
             parameterBindings?: null | {
                 [key: string]: components["schemas"]["TelegramParameterBinding"];
             };
+            messages?: null | components["schemas"]["TelegramChannelMessages"];
         };
         /** @enum {unknown} */
         ChannelType: "IFrame" | "Telegram" | "WhatsApp" | null;
@@ -1654,6 +1655,19 @@ export interface components {
             errorCount: number;
             lastError: null | string;
         };
+        TelegramChannelMessages: {
+            greeting?: null | string;
+            conversationCleared?: null | string;
+            usernameMissing?: null | string;
+            phoneNumberRequest?: null | string;
+            sharePhoneNumberButton?: null | string;
+            ownContactRequired?: null | string;
+            phoneNumberReceived?: null | string;
+            notConfigured?: null | string;
+            overloaded?: null | string;
+            somethingWentWrong?: null | string;
+            groupChatRefusal?: null | string;
+        };
         TelegramParameterBinding: {
             source?: components["schemas"]["TelegramParameterSource"];
             value?: null | string;
@@ -1701,6 +1715,7 @@ export interface components {
             allowedOrigins: null | string[];
             enabled: null | boolean;
             botToken?: null | string;
+            messages?: null | components["schemas"]["TelegramChannelMessages"];
         };
         UpdateWidgetThemeRequest: {
             theme: null | components["schemas"]["WidgetTheme"];
@@ -4028,6 +4043,7 @@ export type SuggestAgentResponse = components["schemas"]["SuggestAgentResponse"]
 export type SuggestCdcRequest = components["schemas"]["SuggestCdcRequest"];
 export type SuggestCdcResponse = components["schemas"]["SuggestCdcResponse"];
 export type TelegramChannelHealthResponse = components["schemas"]["TelegramChannelHealthResponse"];
+export type TelegramChannelMessages = components["schemas"]["TelegramChannelMessages"];
 export type TelegramParameterBinding = components["schemas"]["TelegramParameterBinding"];
 export type TelegramParameterSource = components["schemas"]["TelegramParameterSource"];
 export type TestMappingRequest = components["schemas"]["TestMappingRequest"];

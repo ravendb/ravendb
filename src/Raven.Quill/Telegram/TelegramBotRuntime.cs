@@ -26,11 +26,12 @@ internal sealed class TelegramBotRuntime
     private TimeSpan _backoff = MinBackoff;
 
     private TelegramBotRuntime(
-        string database, Channel channel, ITelegramBotClient client,
+        string database, Channel channel, string? channelChangeVector, ITelegramBotClient client,
         IDocumentStore store, IAgentRouter router, ApplianceOptions options, ILogger logger)
     {
         Client = client;
         BotToken = channel.Telegram!.BotToken;
+        ChannelChangeVector = channelChangeVector;
         _acceptsContactShares = channel.Telegram.ParameterBindings.Values
             .Any(binding => binding.Source == TelegramParameterSource.PhoneNumber);
         _context = new TelegramChatContext(database, channel, store, router, options, logger);
@@ -40,14 +41,18 @@ internal sealed class TelegramBotRuntime
 
     public string BotToken { get; }
 
+    /// The channel document's change vector at start; the manager restarts the bot when it moves.
+    public string? ChannelChangeVector { get; }
+
     public TelegramChannelHealth Health { get; } = new();
 
     public static TelegramBotRuntime Start(
-        string database, Channel channel, ITelegramBotClientFactory botFactory,
+        string database, Channel channel, string? channelChangeVector, ITelegramBotClientFactory botFactory,
         IDocumentStore store, IAgentRouter router, ApplianceOptions options, ILogger logger)
     {
         var runtime = new TelegramBotRuntime(
-            database, channel, botFactory.Create(channel.Telegram!.BotToken), store, router, options, logger);
+            database, channel, channelChangeVector, botFactory.Create(channel.Telegram!.BotToken),
+            store, router, options, logger);
 
         runtime.Run();
         return runtime;
@@ -92,8 +97,7 @@ internal sealed class TelegramBotRuntime
 
         if (message.Chat.Type != ChatType.Private)
         {
-            _ = TrySendPlainAsync(message.Chat.Id,
-                "I only work in one-on-one chats. Message me directly to start a conversation.");
+            _ = TrySendPlainAsync(message.Chat.Id, _context.Messages.GroupChatRefusal);
             return Task.CompletedTask;
         }
 
@@ -181,6 +185,7 @@ internal sealed class TelegramChatContext
         Database = database;
         ChannelDoc = channel;
         ChannelId = Channel.StripIdPrefix(channel.Id);
+        Messages = ResolvedTelegramMessages.Resolve(channel.Telegram?.Messages);
         Store = store;
         Router = router;
         Options = options;
@@ -192,6 +197,8 @@ internal sealed class TelegramChatContext
     public Channel ChannelDoc { get; }
 
     public string ChannelId { get; }
+
+    public ResolvedTelegramMessages Messages { get; }
 
     public IDocumentStore Store { get; }
 
