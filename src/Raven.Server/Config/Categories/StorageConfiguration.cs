@@ -181,7 +181,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Storage.LowPriorityFlushAndSync", ConfigurationEntryScope.ServerWideOnly)]
         public bool LowPriorityFlushAndSync { get; set; }
         
-        [Description("EXPERT: The queue size to use for I/O ring operations. Use -1 to disable I/O ring entirely, which is only honored when Storage.WriteMode=Auto.")]
+        [Description("EXPERT: The queue size to use for I/O ring operations, minimum 3. Use -1 to disable I/O ring entirely, which is only honored when Storage.WriteMode=Auto.")]
         [DefaultValue(1024)]
         [ConfigurationEntry("Storage.IoRingQueueSize", ConfigurationEntryScope.ServerWideOnly)]
         public int IoRingQueueSize { get; set; }
@@ -209,14 +209,22 @@ namespace Raven.Server.Config.Categories
 
         private void ValidateIoRingConfiguration()
         {
+            var sizeKey = RavenConfiguration.GetKey(x => x.Storage.IoRingQueueSize);
+            var modeKey = RavenConfiguration.GetKey(x => x.Storage.WriteMode);
+
+            if (IoRingQueueSize != -1 && IoRingQueueSize < 3)
+            {
+                throw new InvalidOperationException(
+                    $"'{sizeKey}' is set to {IoRingQueueSize}, which is not a valid I/O ring queue size. " +
+                    $"Use -1 to disable I/O ring (only supported with '{modeKey}={Pal.RvnWriteMode.Auto}') or a value of at least 3.");
+            }
+
             if (WriteMode == Pal.RvnWriteMode.IoRing && IoRingQueueSize == -1)
             {
-                var sizeKey = RavenConfiguration.GetKey(x => x.Storage.IoRingQueueSize);
-                var modeKey = RavenConfiguration.GetKey(x => x.Storage.WriteMode);
                 throw new InvalidOperationException(
                     $"'{modeKey}' is set to '{Pal.RvnWriteMode.IoRing}' but '{sizeKey}' is -1, which disables I/O ring. " +
                     $"Disabling I/O ring is only supported with '{modeKey}={Pal.RvnWriteMode.Auto}'. " +
-                    $"Either set '{modeKey}={Pal.RvnWriteMode.Auto}' or use a positive '{sizeKey}'.");
+                    $"Either set '{modeKey}={Pal.RvnWriteMode.Auto}' or use a '{sizeKey}' of at least 3.");
             }
         }
     }
