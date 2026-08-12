@@ -722,7 +722,12 @@ public static class QueryBuilderHelper
         ticksFirst = -1;
         ticksSecond = -1;
 
-        if (exact || index == null || valueFirst == null || valueSecond == null || index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.TimeTicks)
+        if (index == null || valueFirst == null || valueSecond == null || index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.TimeTicks)
+            return false;
+
+        // exact matching on a date field means "the same instant"; match via ticks like the non-exact path.
+        // Older indexes preserve the legacy literal-string behavior for exact until they are reindexed.
+        if (exact && IndexDefinitionBaseServerSide.IndexVersion.IsLuceneExactDatesUseTimeTicksSupported(index.Definition.Version) == false)
             return false;
 
         if (index.IndexFieldsPersistence.HasTimeValues(fieldName) && TryGetTime(index, valueFirst, out ticksFirst) && TryGetTime(index, valueSecond, out ticksSecond))
@@ -735,7 +740,12 @@ public static class QueryBuilderHelper
     {
         ticks = -1;
 
-        if (exact || index == null || value == null || index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.TimeTicks)
+        if (index == null || value == null || index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.TimeTicks)
+            return false;
+
+        // exact matching on a date field means "the same instant"; match via ticks like the non-exact path.
+        // Older indexes preserve the legacy literal-string behavior for exact until they are reindexed.
+        if (exact && IndexDefinitionBaseServerSide.IndexVersion.IsLuceneExactDatesUseTimeTicksSupported(index.Definition.Version) == false)
             return false;
 
         if (index.IndexFieldsPersistence.HasTimeValues(fieldName) && TryGetTime(index, value, out ticks))
