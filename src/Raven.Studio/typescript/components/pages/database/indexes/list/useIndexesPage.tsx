@@ -158,40 +158,60 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
     }, [stats.indexes]);
 
     const fetchProgress = async (location: databaseLocationSpecifier) => {
-        try {
-            const exactNames = indexNamesRef.current.filter((x) => indexesWithExactProgressRef.current.has(x));
+        const exactNames = indexNamesRef.current.filter((x) => indexesWithExactProgressRef.current.has(x));
 
-            let progress: Raven.Client.Documents.Indexes.IndexProgress[];
-            if (exactNames.length === 0) {
-                progress = await indexesService.getProgress(db.name, location);
-            } else {
-                // split into two complementary requests so the expensive exact calculation
-                // runs only for the indexes the user asked for;
-                // the server skips non-stale indexes anyway, so only the stale ones are sent
-                const estimatedNames = staleIndexNamesRef.current.filter(
-                    (x) => !indexesWithExactProgressRef.current.has(x)
-                );
+        if (exactNames.length === 0) {
+            try {
+                const progress = await indexesService.getProgress(db.name, location);
 
-                const requests = [indexesService.getProgress(db.name, location, exactNames, true)];
-                if (estimatedNames.length > 0) {
-                    requests.push(indexesService.getProgress(db.name, location, estimatedNames));
-                }
-
-                progress = (await Promise.all(requests)).flat();
+                dispatch({
+                    type: "ProgressLoaded",
+                    progress,
+                    location,
+                });
+            } catch (e) {
+                dispatch({
+                    type: "ProgressLoadError",
+                    error: e,
+                    location,
+                });
             }
+            return;
+        }
 
-            dispatch({
-                type: "ProgressLoaded",
-                progress,
-                location,
-            });
-        } catch (e) {
+        // split into two complementary requests so the expensive exact calculation
+        // runs only for the indexes the user asked for;
+        // the server skips non-stale indexes anyway, so only the stale ones are sent
+        const estimatedNames = staleIndexNamesRef.current.filter((x) => !indexesWithExactProgressRef.current.has(x));
+
+        const scopes = [{ names: exactNames, exact: true }];
+        if (estimatedNames.length > 0) {
+            scopes.push({ names: estimatedNames, exact: false });
+        }
+
+        const results = await Promise.allSettled(
+            scopes.map((x) => indexesService.getProgress(db.name, location, x.names, x.exact))
+        );
+
+        if (results.every((x) => x.status === "rejected")) {
             dispatch({
                 type: "ProgressLoadError",
-                error: e,
+                error: (results[0] as PromiseRejectedResult).reason,
                 location,
             });
+            return;
         }
+
+        results.forEach((result, i) => {
+            if (result.status === "fulfilled") {
+                dispatch({
+                    type: "ProgressLoaded",
+                    progress: result.value,
+                    location,
+                    scope: scopes[i].names,
+                });
+            }
+        });
     };
 
     const fetchSingleIndexProgress = async (
