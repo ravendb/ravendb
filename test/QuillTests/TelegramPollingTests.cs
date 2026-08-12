@@ -389,7 +389,7 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
     public async Task Idle_chat_is_evicted_and_the_next_message_revives_it()
     {
         var host = await NewHostAsync(configure: opts =>
-            opts.TelegramChatIdleTimeout = TimeSpan.FromMilliseconds(700));
+            opts.Telegram.ChatIdleTimeout = TimeSpan.FromMilliseconds(700));
         var app = await NewAppAsync(host);
         await using var appGuard = app;
 

@@ -63,7 +63,7 @@ internal sealed class TelegramChannelManager(
                 logger.LogWarning("Telegram apply-changes pass failed: {Error}", e.Message);
             }
 
-            await wake.WaitAsync(options.Value.TelegramApplyChangesInterval);
+            await wake.WaitAsync(options.Value.Telegram.ApplyChangesInterval);
         }
     }
 

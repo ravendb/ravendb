@@ -7,7 +7,7 @@ using Xunit;
 
 namespace QuillTests.E2E;
 
-/// Runs against the real api.telegram.org with a real bot token (no mock, no ApplianceOptions.TelegramApiUrl
+/// Runs against the real api.telegram.org with a real bot token (no mock, no ApplianceOptions.Telegram.ApiUrl
 /// override). Covers what MockTelegramBotApi cannot: real getMe validation, real long-poll wire format, and a
 /// clean disable/delete against a live bot. The reply loop itself needs a human: message the bot from a real
 /// Telegram account while the poller runs (see the comment in the test body).
