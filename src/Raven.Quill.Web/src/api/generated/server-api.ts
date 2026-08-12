@@ -348,7 +348,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Per-bot polling health for the app's Telegram channels: last successful poll, last error (token-scrubbed) and error count. Counters live in the polling service, so they reset on restart. */
+        /** @description Per-bot polling health for the app's Telegram channels: last successful poll, last error and error count. Counters live in the polling service, so they reset on restart. */
         get: operations["telegram.health"];
         put?: never;
         post?: never;
@@ -1273,11 +1273,7 @@ export interface components {
             enabled: boolean;
             /** Format: date-time */
             createdAt: string;
-            botUsername?: null | string;
-            parameterBindings?: null | {
-                [key: string]: components["schemas"]["TelegramParameterBinding"];
-            };
-            messages?: null | components["schemas"]["TelegramChannelMessages"];
+            telegram?: null | components["schemas"]["TelegramSummaryResponse"];
         };
         /** @enum {unknown} */
         ChannelType: "IFrame" | "Telegram" | "WhatsApp" | null;
@@ -1539,10 +1535,7 @@ export interface components {
             agentId: string;
             allowedOrigins: null | string[];
             displayName?: null | string;
-            botToken?: null | string;
-            parameterBindings?: null | {
-                [key: string]: components["schemas"]["TelegramParameterBinding"];
-            };
+            telegram?: null | components["schemas"]["TelegramProvisionRequest"];
         };
         ProvisionChannelResponse: {
             channelId: string;
@@ -1674,6 +1667,23 @@ export interface components {
         };
         /** @enum {unknown} */
         TelegramParameterSource: "Constant" | "UserId" | "Username" | "PhoneNumber";
+        TelegramProvisionRequest: {
+            botToken: null | string;
+            parameterBindings?: null | {
+                [key: string]: components["schemas"]["TelegramParameterBinding"];
+            };
+        };
+        TelegramSummaryResponse: {
+            botUsername: string;
+            parameterBindings: {
+                [key: string]: components["schemas"]["TelegramParameterBinding"];
+            };
+            messages: null | components["schemas"]["TelegramChannelMessages"];
+        };
+        TelegramUpdateRequest: {
+            botToken?: null | string;
+            messages?: null | components["schemas"]["TelegramChannelMessages"];
+        };
         TestMappingRequest: {
             sourceTableName: string;
             /** Format: int32 */
@@ -1714,8 +1724,7 @@ export interface components {
             displayName: null | string;
             allowedOrigins: null | string[];
             enabled: null | boolean;
-            botToken?: null | string;
-            messages?: null | components["schemas"]["TelegramChannelMessages"];
+            telegram?: null | components["schemas"]["TelegramUpdateRequest"];
         };
         UpdateWidgetThemeRequest: {
             theme: null | components["schemas"]["WidgetTheme"];
@@ -4046,6 +4055,9 @@ export type TelegramChannelHealthResponse = components["schemas"]["TelegramChann
 export type TelegramChannelMessages = components["schemas"]["TelegramChannelMessages"];
 export type TelegramParameterBinding = components["schemas"]["TelegramParameterBinding"];
 export type TelegramParameterSource = components["schemas"]["TelegramParameterSource"];
+export type TelegramProvisionRequest = components["schemas"]["TelegramProvisionRequest"];
+export type TelegramSummaryResponse = components["schemas"]["TelegramSummaryResponse"];
+export type TelegramUpdateRequest = components["schemas"]["TelegramUpdateRequest"];
 export type TestMappingRequest = components["schemas"]["TestMappingRequest"];
 export type TestMappingResponse = components["schemas"]["TestMappingResponse"];
 export type TestMappingRowResponse = components["schemas"]["TestMappingRowResponse"];

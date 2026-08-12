@@ -164,8 +164,10 @@ function ChannelCard({
                     >
                         {channel.displayName}
                     </Link>
-                    {channel.botUsername && (
-                        <div className="truncate text-xs font-normal text-muted-foreground">@{channel.botUsername}</div>
+                    {channel.telegram?.botUsername && (
+                        <div className="truncate text-xs font-normal text-muted-foreground">
+                            @{channel.telegram.botUsername}
+                        </div>
                     )}
                 </CardTitle>
                 <CardAction>

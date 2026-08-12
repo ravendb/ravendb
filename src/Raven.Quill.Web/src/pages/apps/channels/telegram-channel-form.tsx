@@ -91,8 +91,10 @@ export function TelegramChannelForm({
                 agentId: values.agentId,
                 allowedOrigins: null,
                 displayName: values.displayName.trim() || null,
-                botToken: values.botToken.trim(),
-                parameterBindings: values.parameters.length > 0 ? toParameterBindings(values.parameters) : null,
+                telegram: {
+                    botToken: values.botToken.trim(),
+                    parameterBindings: values.parameters.length > 0 ? toParameterBindings(values.parameters) : null,
+                },
             }),
         onSuccess: async () => {
             await invalidateChannelQueries(queryClient, slug);

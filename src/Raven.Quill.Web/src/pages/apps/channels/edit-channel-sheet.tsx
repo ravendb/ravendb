@@ -57,7 +57,7 @@ export function EditChannelSheet({ slug, channel, trigger }: EditChannelSheetPro
     );
 }
 
-const messageOverrideSchema = z.string().trim().max(1000, "Keep it under 1000 characters");
+const messageOverrideSchema = z.string().trim().max(4096, "Keep it under 4096 characters");
 
 const editChannelSchema = z.object({
     displayName: z.string().trim().min(1, "Channel name is required"),
@@ -105,7 +105,7 @@ function EditChannelForm({
             shouldReplaceAllowedOrigins: false,
             allowedOrigins: [],
             botToken: "",
-            messages: toMessagesFormValues(channel.messages),
+            messages: toMessagesFormValues(channel.telegram?.messages),
         },
     });
 
@@ -122,8 +122,12 @@ function EditChannelForm({
                         ? values.allowedOrigins.map((origin) => origin.value.trim()).filter(Boolean)
                         : null,
                 enabled: values.enabled,
-                botToken: isTelegram && values.botToken.trim() ? values.botToken.trim() : null,
-                messages: isTelegram ? toMessagesDto(values.messages) : null,
+                telegram: isTelegram
+                    ? {
+                          botToken: values.botToken.trim() || null,
+                          messages: toMessagesDto(values.messages),
+                      }
+                    : null,
             }),
         onSuccess: async () => {
             unsavedChanges.markSaved();
