@@ -38,6 +38,9 @@ export const useCapabilitySteps = (): WizardSteps<AgentStepId, AgentFormData> =>
             description: "Choose the AI provider connection string your agent will use.",
             bodyComponent: ConnectProviderStep,
             validate: "connection",
+            // Only the AI Agent capability exists today, so there's nothing else to pick on the
+            // previous step; hide Back so users can't land on it and get stuck.
+            canGoBack: false,
             badge: ({ isComplete }: WizardBadgeContext<AgentFormData>) => {
                 if (!isComplete) {
                     return null;
