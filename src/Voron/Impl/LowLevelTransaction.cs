@@ -77,10 +77,6 @@ namespace Voron.Impl
         public Pager.PagerTransactionState PagerTransactionState;
         private readonly WriteAheadJournal _journal;
         public ImmutableDictionary<long, PageFromScratchBuffer> ModifiedPagesInTransaction;
-
-        // The set of scratch pages this transaction started from - the last committed state. The transaction's own
-        // builder is created from it, so discarding the builder (on rollback) leaves that state untouched, and it is
-        // also what we compare against to detect a rollback that would resurrect a scratch page freed by a journal flush.
         private ImmutableDictionary<long, PageFromScratchBuffer> _scratchPagesAtTxStart;
         private bool _rollbackWouldKeepFreedScratchPagesMapped;
         internal sealed class WriteTransactionPool
@@ -285,8 +281,6 @@ namespace Voron.Impl
             DataPagerState = _envRecord.DataPagerState;
             DataPager = env.DataPager;
 
-            // read off _envRecord rather than the environment, so the pages we start from are the ones
-            // belonging to the state record this transaction runs against
             _scratchPagesAtTxStart = _envRecord.ScratchPagesTable;
 
             _env = env;
@@ -582,9 +576,6 @@ namespace Voron.Impl
             }
         }
 
-        /// <summary>
-        /// The scratch pages this write transaction sees - the last committed state plus its own, not yet published, modifications.
-        /// </summary>
         internal bool TryGetScratchPage(long pageNumber, out PageFromScratchBuffer page) => _scratchPagesInUse.TryGetValue(pageNumber, out page);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
