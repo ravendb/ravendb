@@ -205,7 +205,7 @@ internal sealed class TelegramChatContext
     {
         Database = database;
         ChannelDoc = channel;
-        ChannelId = Channel.StripIdPrefix(channel.Id);
+        ChannelId = channel.ShortId;
         Messages = ResolvedTelegramMessages.Resolve(channel.Telegram?.Messages);
         Store = store;
         Router = router;

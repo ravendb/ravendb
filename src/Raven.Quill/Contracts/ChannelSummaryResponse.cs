@@ -15,7 +15,7 @@ public sealed record ChannelSummaryResponse(
     TelegramChannelMessages? Messages = null)
 {
     internal static ChannelSummaryResponse From(Channel channel) => new(
-        Channel.StripIdPrefix(channel.Id),
+        channel.ShortId,
         channel.Type,
         channel.AgentId,
         channel.DisplayName,

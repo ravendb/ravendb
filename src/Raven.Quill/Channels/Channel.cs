@@ -4,12 +4,14 @@ internal sealed class Channel
 {
     internal const string IdPrefix = "channels/";
 
-    internal static string StripIdPrefix(string? id) =>
-        id is not null && id.StartsWith(IdPrefix, StringComparison.Ordinal)
-            ? id[IdPrefix.Length..]
-            : id ?? "";
-
     public string? Id { get; set; }
+
+    /// The API-facing channel id: the document id without the collection prefix. Internal so it is
+    /// never persisted into the document.
+    internal string ShortId =>
+        Id is not null && Id.StartsWith(IdPrefix, StringComparison.Ordinal)
+            ? Id[IdPrefix.Length..]
+            : Id ?? "";
 
     public ChannelType Type { get; set; }
 
