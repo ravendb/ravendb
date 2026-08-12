@@ -19,7 +19,7 @@ export const CAPABILITY_OPTIONS: RadioCardOption<"agent" | "embeddings" | "genai
     {
         value: "genai",
         label: "GenAI",
-        description: "Conversational agent grounded in live CDC data. System prompt + RQL tools.",
+        description: "Analyze and enrich your documents using an LLM.",
         disabled: true,
         icon: <Sparkle className="size-5" />,
     },
