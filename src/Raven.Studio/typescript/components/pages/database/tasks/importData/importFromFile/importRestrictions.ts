@@ -7,11 +7,16 @@ import {
     OngoingTaskKey,
     ongoingTaskKeys,
 } from "./importFromFileValidation";
-import { connectionStringLabels, databaseSettingLabels, ongoingTaskLabels } from "./importFromFileLabels";
 import {
-    mergeCapabilities,
-    OngoingTaskTarget,
-} from "components/pages/database/tasks/shared/ongoingTaskCapabilities";
+    connectionStringIcons,
+    connectionStringLabels,
+    databaseSettingIcons,
+    databaseSettingLabels,
+    ongoingTaskIcons,
+    ongoingTaskLabels,
+} from "./importFromFileLabels";
+import IconName from "../../../../../../../typings/server/icons";
+import { mergeCapabilities, OngoingTaskTarget } from "components/pages/database/tasks/shared/ongoingTaskCapabilities";
 
 type LicenseStatusKey = keyof LicenseStatus;
 
@@ -26,6 +31,8 @@ export interface ImportRestriction {
     reason: ImportRestrictionReason;
     /** Human-readable feature name, used in chips and tooltips. */
     label: string;
+    /** The feature's own icon, so a chip matches how the feature looks in its own view. */
+    icon: IconName;
     /** Only set when reason === "license". */
     licenseRequired?: LicenseBadgeText;
     tooltip: string;
@@ -45,6 +52,7 @@ export interface ImportRestriction {
  */
 interface ImportRestrictionRule {
     label: string;
+    icon: IconName;
     licenseFlags?: LicenseStatusKey[];
     licenseRequired?: LicenseBadgeText;
     /**
@@ -60,6 +68,7 @@ interface ImportRestrictionRule {
 export const documentToggleRules: Partial<Record<DocumentToggleKey, ImportRestrictionRule>> = {
     isIncludeArchivedDocuments: {
         label: "Archived Documents",
+        icon: "data-archival",
         licenseFlags: ["HasDataArchival"],
         licenseRequired: "Enterprise",
     },
@@ -70,36 +79,43 @@ export const databaseSettingRules: Partial<Record<DatabaseSettingKey, ImportRest
     // configuration and the licence forbids one, so this row has to be gated like the rest.
     revisions: {
         label: databaseSettingLabels.revisions,
+        icon: databaseSettingIcons.revisions,
         licenseFlags: ["CanSetupDefaultRevisionsConfiguration"],
         licenseRequired: "Professional +",
     },
     documentsCompression: {
         label: databaseSettingLabels.documentsCompression,
+        icon: databaseSettingIcons.documentsCompression,
         licenseFlags: ["HasDocumentsCompression"],
         licenseRequired: "Enterprise",
     },
     dataArchival: {
         label: databaseSettingLabels.dataArchival,
+        icon: databaseSettingIcons.dataArchival,
         licenseFlags: ["HasDataArchival"],
         licenseRequired: "Enterprise",
     },
     timeSeries: {
         label: databaseSettingLabels.timeSeries,
+        icon: databaseSettingIcons.timeSeries,
         licenseFlags: ["HasTimeSeriesRollupsAndRetention"],
         licenseRequired: "Professional +",
     },
     postgreSqlIntegration: {
         label: databaseSettingLabels.postgreSqlIntegration,
+        icon: databaseSettingIcons.postgreSqlIntegration,
         licenseFlags: ["HasPostgreSqlIntegration"],
         licenseRequired: "Enterprise",
     },
     client: {
         label: databaseSettingLabels.client,
+        icon: databaseSettingIcons.client,
         licenseFlags: ["HasClientConfiguration"],
         licenseRequired: "Professional +",
     },
     schemaValidation: {
         label: databaseSettingLabels.schemaValidation,
+        icon: databaseSettingIcons.schemaValidation,
         licenseFlags: ["HasSchemaValidation"],
         licenseRequired: "Professional +",
     },
@@ -138,6 +154,7 @@ export const ongoingTaskRules: Record<OngoingTaskKey, ImportRestrictionRule> = O
             key,
             {
                 label: ongoingTaskLabels[key],
+                icon: ongoingTaskIcons[key],
                 licenseFlags,
                 licenseRequired: licenseBadge,
                 isShardingSupported,
@@ -166,6 +183,7 @@ export const connectionStringRules: Record<ConnectionStringKey, ImportRestrictio
             key,
             {
                 label: connectionStringLabels[key],
+                icon: connectionStringIcons[key],
                 licenseFlags,
                 licenseRequired: licenseBadge,
                 accessRequired,
@@ -213,6 +231,7 @@ export function resolveRestriction(
         return {
             reason: "license",
             label: rule.label,
+            icon: rule.icon,
             licenseRequired: rule.licenseRequired,
             tooltip: getLicenseRestrictionTooltip(rule.label),
         };
@@ -222,6 +241,7 @@ export function resolveRestriction(
         return {
             reason: "sharding",
             label: rule.label,
+            icon: rule.icon,
             tooltip: getShardingRestrictionTooltip(rule.label),
         };
     }
@@ -230,6 +250,7 @@ export function resolveRestriction(
         return {
             reason: "access",
             label: rule.label,
+            icon: rule.icon,
             tooltip: getAccessRestrictionTooltip(rule.label),
         };
     }
