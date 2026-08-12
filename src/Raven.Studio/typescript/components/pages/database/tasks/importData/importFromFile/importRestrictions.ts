@@ -29,38 +29,17 @@ export type ImportRestrictionReason = "license" | "sharding" | "access";
 
 export interface ImportRestriction {
     reason: ImportRestrictionReason;
-    /** Human-readable feature name, used in chips and tooltips. */
     label: string;
-    /** The feature's own icon, so a chip matches how the feature looks in its own view. */
     icon: IconName;
-    /** Only set when reason === "license". */
     licenseRequired?: LicenseBadgeText;
     tooltip: string;
 }
 
-/**
- * Single source of truth for every gated import entry.
- *
- * `licenseFlags` holds the license flags that enable the entry. An entry counts as
- * license-restricted only when EVERY listed flag is missing: some entries (AI / queue connection
- * strings) back more than one feature, so a license that has any one of them can still make use
- * of the entry. Single-flag entries behave exactly as before.
- *
- * For ongoing tasks and connection strings the licence / sharding / access facts are not declared
- * here at all - they come from tasks/shared/ongoingTaskCapabilities, shared with the
- * "Add new ongoing task" cards.
- */
 interface ImportRestrictionRule {
     label: string;
     icon: IconName;
     licenseFlags?: LicenseStatusKey[];
     licenseRequired?: LicenseBadgeText;
-    /**
-     * Only meaningful for ongoing tasks, where support is opt-in (an omitted flag means the task
-     * cannot run on a sharded database). Entries that are sharding-agnostic - database settings and
-     * connection strings, which are database-record data rather than running tasks - set
-     * `isShardingChecked: false` on their group instead of repeating `isShardingSupported: true`.
-     */
     isShardingSupported?: boolean;
     accessRequired?: accessLevel;
 }
@@ -75,8 +54,6 @@ export const documentToggleRules: Partial<Record<DocumentToggleKey, ImportRestri
 };
 
 export const databaseSettingRules: Partial<Record<DatabaseSettingKey, ImportRestrictionRule>> = {
-    // The server rejects the whole import when a dump carries an enabled default revisions
-    // configuration and the licence forbids one, so this row has to be gated like the rest.
     revisions: {
         label: databaseSettingLabels.revisions,
         icon: databaseSettingIcons.revisions,
@@ -121,11 +98,6 @@ export const databaseSettingRules: Partial<Record<DatabaseSettingKey, ImportRest
     },
 };
 
-/**
- * Which ongoing-task types each import row covers. Most rows map to a single task, but a few group
- * several - one "Queue ETLs" row covers every broker. Licence, sharding and access all come from
- * ongoingTaskCapabilities, so adding a task means declaring it there and listing it here.
- */
 const ongoingTaskTargets: Record<OngoingTaskKey, OngoingTaskTarget[]> = {
     periodicBackups: ["PeriodicBackup"],
     externalReplications: ["ExternalReplication"],

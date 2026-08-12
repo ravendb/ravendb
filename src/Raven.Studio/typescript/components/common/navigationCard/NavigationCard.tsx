@@ -22,14 +22,14 @@ interface NavigationCardBaseProps<TVariant extends string = string> {
     target: string;
     counterBadge?: ReactNode;
     isShardingSupported?: boolean;
-    accessRequired: databaseAccessLevel;
+    accessRequired: accessLevel;
     customDisabledReason?: ReactNode;
     compact?: boolean;
 }
 
 // A shown badge always needs its tier: rendering LicenseRestrictedBadge without one produces an
 // unstyled badge with an empty tooltip, so the two props travel together.
-type NavigationCardLicenseProps =
+export type NavigationCardLicenseProps =
     | { showLicenseBadge: true; licenseBadge: LicenseBadgeText }
     | { showLicenseBadge?: false; licenseBadge?: LicenseBadgeText };
 

@@ -9,7 +9,6 @@ import { ImportFromFileFormData, ImportFromFileFormPath } from "../importFromFil
 interface ImportSectionProps {
     id: string;
     title: string;
-    /** Fields whose errors expand this section and flag it with a warning icon. */
     errorPaths?: ImportFromFileFormPath[];
     children: ReactNode;
 }
