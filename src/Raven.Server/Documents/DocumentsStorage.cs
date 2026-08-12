@@ -337,16 +337,24 @@ namespace Raven.Server.Documents
             return new DocumentPutAction(this, DocumentDatabase);
         }
 
+        // invoked from Environment.NewTransactionCreated, i.e. once for every new transaction (read and write)
         private void SetTransactionCache(LowLevelTransaction tx)
         {
             if (tx.Flags != TransactionFlags.ReadWrite)
             {
+                // read transactions only ever consume the cache, so hand them the last published one
                 tx.ImmutableExternalState = _documentsMetadataCache;
                 return;
             }
 
-            // a write transaction created by an async commit already inherited the cache computed by
-            // the committing transaction, which is ahead of the published one until that commit completes
+            // for a write transaction ImmutableExternalState is now the *input* to the incremental compute.
+            // before this PR it was effectively write-only on a write tx (every reader is behind
+            // IsWriteTransaction == false, and the old full-scan compute overwrote it rather than reading it),
+            // so an unconditional assignment was harmless; now it would discard the base the compute builds on.
+            // NewTransactionCreated fires *after* the async-commit clone ctor, which has already copied the
+            // committing transaction's freshly computed cache - and that is ahead of _documentsMetadataCache
+            // until the async commit completes. so we must keep an already-inherited value, and only seed the
+            // published cache for a normal fresh write tx, which has null here.
             tx.ImmutableExternalState ??= _documentsMetadataCache;
 
             tx.LastChanceToReadFromWriteTransactionBeforeCommit += ComputeTransactionCache_BeforeCommit;
