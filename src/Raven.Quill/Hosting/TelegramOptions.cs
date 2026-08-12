@@ -1,3 +1,5 @@
+using Raven.Quill.Telegram;
+
 namespace Raven.Quill.Hosting;
 
 public sealed class TelegramOptions
@@ -5,6 +7,9 @@ public sealed class TelegramOptions
     public string? ApiUrl { get; set; }
 
     public TimeSpan EditDebounce { get; set; } = TimeSpan.FromSeconds(1);
+
+    /// Upper bound per outgoing message; capped by the Telegram API limit of 4096 chars.
+    public int MessageLimit { get; set; } = TelegramMessageSplitter.TelegramApiMessageLimit;
 
     public TimeSpan ApplyChangesInterval { get; set; } = TimeSpan.FromSeconds(30);
 

@@ -62,7 +62,7 @@ public class TelegramMessageSplitterTests(ITestOutputHelper output) : NoDisposal
     [RavenFact(RavenTestCategory.Quill)]
     public void Short_text_is_returned_unchanged()
     {
-        var parts = TelegramMessageSplitter.Split("hello world");
+        var parts = TelegramMessageSplitter.Split("hello world", TelegramMessageSplitter.TelegramApiMessageLimit);
 
         Assert.Equal(["hello world"], parts);
     }
@@ -72,7 +72,7 @@ public class TelegramMessageSplitterTests(ITestOutputHelper output) : NoDisposal
     {
         var text = new string('a', 4096);
 
-        Assert.Equal([text], TelegramMessageSplitter.Split(text));
+        Assert.Equal([text], TelegramMessageSplitter.Split(text, TelegramMessageSplitter.TelegramApiMessageLimit));
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -105,10 +105,22 @@ public class TelegramMessageSplitterTests(ITestOutputHelper output) : NoDisposal
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public void Hard_split_never_tears_a_surrogate_pair()
+    {
+        var text = string.Concat(Enumerable.Repeat("\U0001F600", 20)); // 40 UTF-16 chars
+        var parts = TelegramMessageSplitter.Split(text, limit: 15);
+
+        Assert.All(parts, part => Assert.True(part.Length <= 15));
+        Assert.All(parts, part => Assert.False(char.IsHighSurrogate(part[^1])));
+        Assert.All(parts, part => Assert.False(char.IsLowSurrogate(part[0])));
+        Assert.Equal(text, string.Concat(parts));
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public void Every_part_stays_within_the_limit()
     {
         var text = string.Join(" ", Enumerable.Range(0, 300).Select(i => $"Sentence number {i} ends here."));
-        var parts = TelegramMessageSplitter.Split(text);
+        var parts = TelegramMessageSplitter.Split(text, TelegramMessageSplitter.TelegramApiMessageLimit);
 
         Assert.True(parts.Count > 1);
         Assert.All(parts, part => Assert.True(part.Length <= 4096));

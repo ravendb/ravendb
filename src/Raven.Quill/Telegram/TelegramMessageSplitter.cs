@@ -1,10 +1,14 @@
+using System.Buffers;
+using System.Text;
+
 namespace Raven.Quill.Telegram;
 
 internal static class TelegramMessageSplitter
 {
-    internal const int TelegramMessageLimit = 4096;
+    /// Hard cap on message text imposed by the Telegram Bot API, in UTF-16 chars.
+    internal const int TelegramApiMessageLimit = 4096;
 
-    internal static IReadOnlyList<string> Split(string text, int limit = TelegramMessageLimit)
+    internal static IReadOnlyList<string> Split(string text, int limit)
     {
         if (text.Length <= limit)
             return [text];
@@ -14,9 +18,7 @@ internal static class TelegramMessageSplitter
 
         while (remaining.Length > limit)
         {
-            var cut = LastSentenceBoundary(remaining[..limit]);
-            if (cut <= 0)
-                cut = limit;
+            var cut = CutPoint(remaining, limit);
 
             var part = remaining[..cut].TrimEnd();
             if (part.Length > 0)
@@ -29,6 +31,23 @@ internal static class TelegramMessageSplitter
             parts.Add(remaining.ToString());
 
         return parts;
+    }
+
+    /// Cut at the last sentence boundary within limit, else hard-cut without splitting a surrogate pair.
+    internal static int CutPoint(ReadOnlySpan<char> text, int limit)
+    {
+        if (text.Length <= limit)
+            return text.Length;
+
+        var cut = LastSentenceBoundary(text[..limit]);
+        if (cut > 0)
+            return cut;
+
+        cut = limit;
+        if (Rune.DecodeLastFromUtf16(text[..cut], out _, out _) != OperationStatus.Done)
+            cut--;
+
+        return Math.Max(1, cut);
     }
 
     private static int LastSentenceBoundary(ReadOnlySpan<char> window)
