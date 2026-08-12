@@ -1,9 +1,12 @@
+using Raven.Quill.Telegram;
+
 namespace Raven.Quill.Channels;
 
 /// Per-channel overrides for the bot's canned replies; a null field falls back to the default text.
 public sealed class TelegramChannelMessages
 {
-    internal const int MaxLength = 1000;
+    // canned replies are sent as a single message, so the Telegram API cap is the bound
+    internal const int MaxLength = TelegramMessageSplitter.TelegramApiMessageLimit;
 
     public string? Greeting { get; set; }
 
