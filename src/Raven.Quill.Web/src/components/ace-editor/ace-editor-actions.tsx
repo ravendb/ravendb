@@ -138,7 +138,7 @@ export function AceEditorHelpAction({
                 </AceEditorIconButton>
             </Dialog.Trigger>
             <Dialog.Portal>
-                <Dialog.Overlay className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm" />
+                <Dialog.Overlay className="fixed inset-0 z-50 bg-background/80" />
                 <Dialog.Content className="fixed top-1/2 left-1/2 z-50 grid max-h-[85vh] w-[min(42rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-auto rounded-lg border bg-popover p-5 text-popover-foreground shadow-lg">
                     <div className="flex items-start justify-between gap-4">
                         <Dialog.Title className="text-base font-semibold">{title}</Dialog.Title>

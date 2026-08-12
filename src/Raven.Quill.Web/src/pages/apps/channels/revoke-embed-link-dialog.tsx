@@ -2,19 +2,7 @@ import { useState, type ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api } from "@/api/api";
-import { Alert } from "@/components/shadcn/ui/alert";
-import { Button } from "@/components/shadcn/ui/button";
-import { Spinner } from "@/components/shadcn/ui/spinner";
-import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/components/shadcn/ui/dialog";
+import { DestructiveConfirmDialog } from "@/components/shadcn/ui/destructive-confirm-dialog";
 
 type RevokeEmbedLinkDialogProps = {
     slug: string;
@@ -36,50 +24,27 @@ export function RevokeEmbedLinkDialog({ slug, token, trigger }: RevokeEmbedLinkD
     });
 
     return (
-        <Dialog
-            open={isOpen}
+        <DestructiveConfirmDialog
+            trigger={trigger}
+            title="Revoke this link?"
+            description="The embedded widget using this link will stop working immediately — it can’t be undone. The channel and any other links keep working."
+            confirmLabel="Revoke link"
+            isOpen={isOpen}
             onOpenChange={(open) => {
                 setIsOpen(open);
                 if (!open) {
                     revokeMutation.reset();
                 }
             }}
-        >
-            <DialogTrigger asChild>{trigger}</DialogTrigger>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Revoke this link?</DialogTitle>
-                    <DialogDescription>
-                        The embedded widget using this link will stop working immediately — it can’t be undone. The
-                        channel and any other links keep working.
-                    </DialogDescription>
-                </DialogHeader>
-
-                {revokeMutation.isError && (
-                    <Alert variant="destructive">
-                        {revokeMutation.error instanceof Error
-                            ? revokeMutation.error.message
-                            : "Could not revoke link."}
-                    </Alert>
-                )}
-
-                <DialogFooter>
-                    <DialogClose asChild>
-                        <Button type="button" variant="outline">
-                            Cancel
-                        </Button>
-                    </DialogClose>
-                    <Button
-                        type="button"
-                        variant="destructive"
-                        disabled={revokeMutation.isPending}
-                        onClick={() => revokeMutation.mutate()}
-                    >
-                        {revokeMutation.isPending && <Spinner />}
-                        Revoke link
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+            onConfirm={() => revokeMutation.mutate()}
+            isPending={revokeMutation.isPending}
+            error={
+                revokeMutation.isError
+                    ? revokeMutation.error instanceof Error
+                        ? revokeMutation.error.message
+                        : "Could not revoke link."
+                    : undefined
+            }
+        />
     );
 }

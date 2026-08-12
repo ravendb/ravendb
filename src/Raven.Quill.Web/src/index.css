@@ -10,6 +10,14 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* The shadcn components use `data-open:`/`data-closed:` throughout, which Tailwind compiles to
+   the bare `[data-open]`/`[data-closed]` attributes Base UI sets (Autocomplete, Combobox). The
+   Radix-based components (Dialog, AlertDialog, Sheet, DropdownMenu, Select, Popover, Tooltip)
+   set `data-state="open"|"closed"` instead, so their transition utilities never matched and the
+   open/close animations silently did nothing. Match both conventions. */
+@custom-variant data-open (&:is([data-open], [data-state="open"]));
+@custom-variant data-closed (&:is([data-closed], [data-state="closed"]));
+
 :root {
     --brand-50: oklch(0.97 0.014 280.6);
     --brand-100: oklch(0.94 0.029 280.6);

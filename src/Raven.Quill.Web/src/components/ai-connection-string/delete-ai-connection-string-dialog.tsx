@@ -5,19 +5,7 @@ import { api } from "@/api/api";
 import type { AiConnectionStringDeleteConflictResponse } from "@/api/generated/server-api";
 import { isApiError } from "@/api/http-client";
 import { invalidateAiConnectionStringQueries } from "@/lib/query-invalidation";
-import { Alert } from "@/components/shadcn/ui/alert";
-import { Button } from "@/components/shadcn/ui/button";
-import { Spinner } from "@/components/shadcn/ui/spinner";
-import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/components/shadcn/ui/dialog";
+import { DestructiveConfirmDialog } from "@/components/shadcn/ui/destructive-confirm-dialog";
 
 type DeleteAiConnectionStringDialogProps = {
     name: string;
@@ -36,6 +24,30 @@ function getDeleteConflict(error: unknown): AiConnectionStringDeleteConflictResp
         return error.details;
     }
     return null;
+}
+
+function renderDeleteError(error: unknown, conflict: AiConnectionStringDeleteConflictResponse | null): ReactNode {
+    if (conflict) {
+        const isSingle = conflict.referencingAgentIds.length === 1;
+
+        return (
+            <>
+                <p>
+                    This connection string is still used by {isSingle ? "an agent" : "agents"}. Remove{" "}
+                    {isSingle ? "it" : "them"} first:
+                </p>
+                <ul className="mt-1 list-disc pl-5">
+                    {conflict.referencingAgentIds.map((agentId) => (
+                        <li key={agentId} className="font-mono text-xs break-all">
+                            {agentId}
+                        </li>
+                    ))}
+                </ul>
+            </>
+        );
+    }
+
+    return error instanceof Error ? error.message : "Could not delete connection string.";
 }
 
 export function DeleteAiConnectionStringDialog({ name, trigger }: DeleteAiConnectionStringDialogProps) {
@@ -60,63 +72,21 @@ export function DeleteAiConnectionStringDialog({ name, trigger }: DeleteAiConnec
     const conflict = getDeleteConflict(deleteMutation.error);
 
     return (
-        <Dialog
-            open={isOpen}
+        <DestructiveConfirmDialog
+            trigger={trigger}
+            title="Delete connection string?"
+            description={`“${name}” will be permanently removed. This can’t be undone.`}
+            confirmLabel="Delete"
+            isOpen={isOpen}
             onOpenChange={(open) => {
                 setIsOpen(open);
                 if (!open) {
                     deleteMutation.reset();
                 }
             }}
-        >
-            <DialogTrigger asChild>{trigger}</DialogTrigger>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Delete connection string?</DialogTitle>
-                    <DialogDescription>“{name}” will be permanently removed. This can’t be undone.</DialogDescription>
-                </DialogHeader>
-
-                {deleteMutation.isError &&
-                    (conflict ? (
-                        <Alert variant="destructive">
-                            <p>
-                                This connection string is still used by{" "}
-                                {conflict.referencingAgentIds.length === 1 ? "an agent" : "agents"}. Remove{" "}
-                                {conflict.referencingAgentIds.length === 1 ? "it" : "them"} first:
-                            </p>
-                            <ul className="mt-1 list-disc pl-5">
-                                {conflict.referencingAgentIds.map((agentId) => (
-                                    <li key={agentId} className="font-mono text-xs break-all">
-                                        {agentId}
-                                    </li>
-                                ))}
-                            </ul>
-                        </Alert>
-                    ) : (
-                        <Alert variant="destructive">
-                            {deleteMutation.error instanceof Error
-                                ? deleteMutation.error.message
-                                : "Could not delete connection string."}
-                        </Alert>
-                    ))}
-
-                <DialogFooter>
-                    <DialogClose asChild>
-                        <Button type="button" variant="outline">
-                            Cancel
-                        </Button>
-                    </DialogClose>
-                    <Button
-                        type="button"
-                        variant="destructive"
-                        disabled={deleteMutation.isPending}
-                        onClick={() => deleteMutation.mutate()}
-                    >
-                        {deleteMutation.isPending && <Spinner />}
-                        Delete
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+            onConfirm={() => deleteMutation.mutate()}
+            isPending={deleteMutation.isPending}
+            error={deleteMutation.isError ? renderDeleteError(deleteMutation.error, conflict) : undefined}
+        />
     );
 }
