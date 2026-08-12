@@ -303,7 +303,8 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         var (app, channelId, token) = await ProvisionAsync();
         await using var appGuard = app;
 
-        var reply = string.Join(" ", Enumerable.Range(0, 160).Select(i => $"Sentence number {i} is here."));
+        // the *bold* tail keeps the finalize markdown edit observable (identical plain text would be a no-op)
+        var reply = string.Join(" ", Enumerable.Range(0, 160).Select(i => $"Sentence number {i} is here.")) + " The *end* of it.";
         Assert.True(reply.Length > 4096);
         Router.Chunks = [reply];
 
