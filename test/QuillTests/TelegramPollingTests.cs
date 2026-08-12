@@ -307,17 +307,20 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         Assert.True(reply.Length > 4096);
         Router.Chunks = [reply];
 
-        var parts = TelegramMessageSplitter.Split(reply);
+        var parts = TelegramMessageSplitter.Split(reply, TelegramMessageSplitter.TelegramApiMessageLimit);
         Assert.Equal(2, parts.Count);
 
         Mock.EnqueueTextMessage(token, chatId: 11, fromUserId: 11, "long please");
         await Mock.WaitUntilAsync(
-            () => Mock.SentMessages.Count(m => m.ChatId == 11) == 2, "the rolled preview message");
+            () => Mock.SentMessages.Count(m => m.ChatId == 11) == 2, "the rolled preview messages");
+
+        Assert.Contains(Mock.SentMessages, m => m.ChatId == 11 && m.Text == parts[0]);
 
         await Mock.WaitUntilAsync(
-            () => Mock.EditedMessages.Any(e => e.ChatId == 11 && e.Text == parts[0]), "the boundary edit");
-        await Mock.WaitUntilAsync(
-            () => Mock.EditedMessages.Any(e => e.ChatId == 11 && e.Text == parts[1]), "the overflow edit");
+            () => Mock.EditedMessages.Any(e => e.ChatId == 11 && e.Text == parts[1]), "the finalize edit of the tail");
+
+        // the rolled message stays as sent; finalize only re-renders the live tail
+        Assert.DoesNotContain(Mock.EditedMessages, e => e.ChatId == 11 && e.Text == parts[0]);
 
         await app.DeleteChannelAsync(channelId);
     }

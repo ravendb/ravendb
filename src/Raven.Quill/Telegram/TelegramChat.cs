@@ -229,17 +229,16 @@ internal sealed class TelegramChat
         string prompt, string conversationId, AiAgentConfiguration config, Dictionary<string, string> parameters)
     {
         var reply = new TelegramStreamingReply(
-            _bot.Client, _chatId, _context.Options.Telegram.EditDebounce, _bot.BotToken, _context.Logger, _ct);
+            _bot.Client, _chatId, _context.Options.Telegram, _context.Logger, _ct);
 
         try
         {
-            var result = await _context.Router.RunAsync(
+            await _context.Router.RunAsync(
                 new AgentRequest(
                     _context.Database, config.Identifier, conversationId, prompt, _context.ChannelDoc.Id!, parameters),
                 reply.OnChunkAsync, config, _ct);
 
-            var fullReply = string.IsNullOrWhiteSpace(result.Reply) ? reply.AccumulatedText : result.Reply;
-            await reply.FinalizeAsync(fullReply);
+            await reply.FinalizeAsync();
         }
         catch (OperationCanceledException)
         {

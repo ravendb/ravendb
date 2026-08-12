@@ -98,6 +98,8 @@ builder.Services.AddOptions<ApplianceOptions>()
                    Uri.TryCreate(o.Telegram.ApiUrl, UriKind.Absolute, out var u) &&
                    (u.Scheme == Uri.UriSchemeHttp || u.Scheme == Uri.UriSchemeHttps),
         "Telegram ApiUrl must be an absolute http(s) URL")
+    .Validate(o => o.Telegram.MessageLimit is > 0 and <= TelegramMessageSplitter.TelegramApiMessageLimit,
+        $"Telegram MessageLimit must be between 1 and {TelegramMessageSplitter.TelegramApiMessageLimit}")
     .ValidateOnStart();
 
 builder.Services.AddSingleton<IDocumentStore>(sp =>

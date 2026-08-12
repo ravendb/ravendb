@@ -1,5 +1,5 @@
 using System.Text;
-using Raven.Quill.Channels;
+using Raven.Quill.Hosting;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types.Enums;
@@ -9,19 +9,15 @@ namespace Raven.Quill.Telegram;
 internal sealed class TelegramStreamingReply(
     ITelegramBotClient bot,
     long chatId,
-    TimeSpan editDebounce,
-    string botToken,
+    TelegramOptions options,
     ILogger logger,
     CancellationToken ct)
 {
     private readonly StringBuilder _buffer = new();
-    private readonly List<int> _messageIds = [];
     private int _currentMessageId;
     private int _flushedUpTo;
     private string _lastPreviewText = "";
     private DateTime _lastFlushAt;
-
-    public string AccumulatedText => _buffer.ToString();
 
     private int PendingLength => _buffer.Length - _flushedUpTo;
 
@@ -29,8 +25,8 @@ internal sealed class TelegramStreamingReply(
     {
         _buffer.Append(chunk);
 
-        if (PendingLength <= TelegramMessageSplitter.TelegramMessageLimit &&
-            DateTime.UtcNow - _lastFlushAt < editDebounce)
+        if (PendingLength <= options.MessageLimit &&
+            DateTime.UtcNow - _lastFlushAt < options.EditDebounce)
             return;
 
         try
@@ -39,8 +35,7 @@ internal sealed class TelegramStreamingReply(
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
-            logger.LogDebug("Telegram streaming flush failed for chat {ChatId}: {Error}",
-                chatId, TelegramSettings.ScrubToken(e.Message, botToken));
+            logger.LogDebug("Telegram streaming flush failed for chat {ChatId}: {Error}", chatId, e.Message);
         }
         finally
         {
@@ -50,14 +45,16 @@ internal sealed class TelegramStreamingReply(
 
     private async Task FlushPreviewAsync()
     {
-        while (PendingLength > TelegramMessageSplitter.TelegramMessageLimit)
+        while (PendingLength > options.MessageLimit)
         {
-            var cut = TelegramMessageSplitter.TelegramMessageLimit;
-            if (char.IsHighSurrogate(_buffer[_flushedUpTo + cut - 1]))
-                cut--;
+            var pending = _buffer.ToString(_flushedUpTo, PendingLength);
+            var cut = TelegramMessageSplitter.CutPoint(pending, options.MessageLimit);
 
-            await ShowPreviewAsync(_buffer.ToString(_flushedUpTo, cut));
+            await ShowPreviewAsync(pending[..cut].TrimEnd());
             _flushedUpTo += cut;
+            while (PendingLength > 0 && char.IsWhiteSpace(_buffer[_flushedUpTo]))
+                _flushedUpTo++;
+
             _currentMessageId = 0;
             _lastPreviewText = "";
         }
@@ -74,7 +71,6 @@ internal sealed class TelegramStreamingReply(
         {
             var message = await bot.SendMessage(chatId, text, cancellationToken: ct);
             _currentMessageId = message.Id;
-            _messageIds.Add(message.Id);
         }
         else
         {
@@ -84,23 +80,21 @@ internal sealed class TelegramStreamingReply(
         _lastPreviewText = text;
     }
 
-    public async Task FinalizeAsync(string fullReply)
+    /// Messages already rolled during streaming stay as sent; only the live tail is re-rendered.
+    public async Task FinalizeAsync()
     {
-        if (string.IsNullOrWhiteSpace(fullReply))
+        var pending = _buffer.ToString(_flushedUpTo, PendingLength);
+        if (string.IsNullOrWhiteSpace(pending))
             return;
 
-        var parts = TelegramMessageSplitter.Split(fullReply);
-
+        var parts = TelegramMessageSplitter.Split(pending, options.MessageLimit);
         for (var i = 0; i < parts.Count; i++)
         {
-            if (i < _messageIds.Count)
-                await EditSafeAsync(_messageIds[i], parts[i]);
+            if (i == 0 && _currentMessageId != 0)
+                await EditSafeAsync(_currentMessageId, parts[i]);
             else
                 await SendSafeAsync(parts[i]);
         }
-
-        for (var i = parts.Count; i < _messageIds.Count; i++)
-            await DeleteSafeAsync(_messageIds[i]);
     }
 
     private async Task SendSafeAsync(string text)
@@ -138,19 +132,6 @@ internal sealed class TelegramStreamingReply(
         }
         catch (ApiRequestException e) when (IsNotModified(e))
         {
-        }
-    }
-
-    private async Task DeleteSafeAsync(int messageId)
-    {
-        try
-        {
-            await bot.DeleteMessage(chatId, messageId, ct);
-        }
-        catch (Exception e) when (e is not OperationCanceledException)
-        {
-            logger.LogDebug("Telegram preview delete failed for chat {ChatId}: {Error}",
-                chatId, TelegramSettings.ScrubToken(e.Message, botToken));
         }
     }
 
