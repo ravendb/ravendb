@@ -6,19 +6,11 @@ import { DatabaseSettingKey, ImportFromFileFormData, databaseSettingKeys } from 
 import { useMinPeriodWarning } from "../useMinPeriodWarning";
 import { useImportRestrictions } from "../useImportRestrictions";
 
-/**
- * Warns that importing Document Refresh / Expiration can fail the whole import: the server enforces
- * a minimum frequency, and the frequency lives inside the dump, which the Studio never reads. So
- * unlike the neighbouring restriction alerts this one cannot be resolved up front - it offers a
- * switch per affected setting to drop it from the import.
- */
 export default function MinPeriodWarningAlert() {
     const { control, setValue } = useFormContext<ImportFromFileFormData>();
     const { databaseSettings: settingRestrictions } = useImportRestrictions();
     const warnings = useMinPeriodWarning();
 
-    // No file picked yet means nothing to exclude from: the configuration fieldset is disabled at
-    // that point, so toggling here would silently change values the user cannot see.
     const file = useWatch({ control, name: "file" });
     const isImportAllSettings = useWatch({ control, name: "configuration.isImportAllSettings" });
     const databaseSettings = useWatch({ control, name: "configuration.databaseSettings" });
@@ -33,8 +25,6 @@ export default function MinPeriodWarningAlert() {
             return;
         }
 
-        // "Import all settings" would keep re-including the row, so switch to the customize view
-        // and materialise what "all" meant: every non-gated setting on, this one as requested.
         setValue("configuration.isImportAllSettings", false, { shouldDirty: true });
         databaseSettingKeys.forEach((key) => {
             if (settingRestrictions[key]) {
@@ -63,7 +53,6 @@ export default function MinPeriodWarningAlert() {
                         id={`min-period-${key}`}
                         className="m-0"
                         disabled={!file}
-                        // "Import all settings" includes the row regardless of its own field value
                         checked={isImportAllSettings || !!databaseSettings?.[key]}
                         onChange={(e) => setSettingIncluded(key, e.target.checked)}
                         label={`${label} (min. ${minPeriodInHours} hours)`}

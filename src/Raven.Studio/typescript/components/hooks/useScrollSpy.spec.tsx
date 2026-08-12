@@ -84,7 +84,6 @@ describe("useScrollSpy", () => {
         act(() => screen.getByTestId("select-c").click());
         expect(screen.getByTestId("active")).toHaveTextContent("c");
 
-        // the smooth scroll towards "c" crosses "b" - without pinning this would steal the highlight
         act(() => lastObserver!.fire([{ id: "b", isIntersecting: true }]));
         expect(screen.getByTestId("active")).toHaveTextContent("c");
     });

@@ -22,9 +22,7 @@ export default {
 interface ImportFromFileStoryArgs {
     databaseAccess: databaseAccessLevel;
     licenseType: Raven.Server.Commercial.LicenseType;
-    /** Every licence flag on, so no import row is licence-restricted. */
     hasAllLicenseFeatures: boolean;
-    /** 0 documents + 0 indexes = empty database, so the overwrite warning is not shown */
     isEmptyDatabase: boolean;
 }
 
