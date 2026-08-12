@@ -75,6 +75,26 @@ public unsafe partial class Hnsw
     }
 
     /// <summary>
+    /// Translates a minimum similarity on the [0, 1] scale into the maximum distance the similarity method reports for
+    /// it. Cosine distance is <c>1 - cos</c> over [0, 2] and similarity is <c>(cos + 1) / 2</c>, so the bound is
+    /// <c>2 * (1 - minimumSimilarity)</c>. Hamming distance counts differing bits and similarity is the fraction of
+    /// matching bits, so the bound is the number of bits that may differ: <c>numberOfBits * (1 - minimumSimilarity)</c>.
+    /// </summary>
+    internal static float MinimumSimilarityToDistance(SimilarityMethod similarityMethod, int vectorSizeBytes, float minimumSimilarity)
+    {
+        switch (similarityMethod)
+        {
+            case SimilarityMethod.CosineSimilaritySingles:
+            case SimilarityMethod.CosineSimilarityI8:
+                return 2f * (1.0f - minimumSimilarity);
+            case SimilarityMethod.HammingDistance:
+                return vectorSizeBytes * 8 * (1f - minimumSimilarity); // number_of_bits * (1 - minimum_similarity) = allowed differing bits
+            default:
+                throw new InvalidDataException($"Unknown similarity method {similarityMethod}");
+        }
+    }
+
+    /// <summary>
     /// Returns the distance kernel to use for a given HNSW <see cref="Options"/>. For
     /// <see cref="SimilarityMethod.CosineSimilaritySingles"/> the kernel depends on the on-disk
     /// version: at or above <see cref="Constants.Graphs.HnswVersion.SinglesWithL2Norm"/> the
@@ -257,20 +277,6 @@ public unsafe partial class Hnsw
         }
 
         private const int InitialNodesCapacityWithCache = 256;
-
-        public float MinimumSimilarityToDistance(float minimumSimilarity)
-        {
-            switch (Options.SimilarityMethod)
-            {
-                case SimilarityMethod.CosineSimilaritySingles:
-                case SimilarityMethod.CosineSimilarityI8:
-                    return 2f * (1.0f - minimumSimilarity);
-                case SimilarityMethod.HammingDistance:
-                    return Options.VectorSizeBytes * 8 * (1f - minimumSimilarity); // number_of_bits * minimum_similarity
-                default:
-                    throw new InvalidDataException($"Unknown similarity method {Options.SimilarityMethod}");
-            }
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float DistanceToScore(float score)

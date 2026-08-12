@@ -288,6 +288,12 @@ namespace Raven.Server.Integrations.PostgreSQL
                     }
                     catch (PgErrorException e)
                     {
+                        // An inner exception means Message.Handle converted an unexpected failure; that
+                        // is a server-side defect, not a client mistake, so it must be visible above Info.
+                        if (e.InnerException != null && Logger.IsErrorEnabled)
+                            Logger.Error($"Unexpected error while handling a '{message.GetType().Name}' message; " +
+                                         $"reported to the client as pg error code {e.ErrorCode} and the session kept alive. {GetSourceConnectionDetails(username)}", e.InnerException);
+
                         if (TrafficWatchManager.HasRegisteredClients && message is Query queryMessage)
                             DispatchPostgresQueryMessageToTrafficWatch(queryMessage, e);
                         await message.HandleError(e, transaction, messageBuilder, writer, _token);
@@ -307,8 +313,8 @@ namespace Raven.Server.Integrations.PostgreSQL
             }
             catch (PgErrorException e)
             {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"{e.Message} (pg error code {e.ErrorCode}). {GetSourceConnectionDetails(username)}", e);
+                if (Logger.IsErrorEnabled)
+                    Logger.Error($"{e.Message} (pg error code {e.ErrorCode}). {GetSourceConnectionDetails(username)}", e);
 
                 // Shouldn't get to this point, PgErrorExceptions shouldn't be fatal
                 await writer.WriteAsync(messageBuilder.ErrorResponse(
@@ -323,8 +329,8 @@ namespace Raven.Server.Integrations.PostgreSQL
             }
             catch (QueryParser.ParseException e)
             {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info("Invalid RQL query", e);
+                if (Logger.IsWarnEnabled)
+                    Logger.Warn("Invalid RQL query, terminating the session", e);
 
                 try
                 {
@@ -340,8 +346,8 @@ namespace Raven.Server.Integrations.PostgreSQL
             }
             catch (Exception e)
             {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Unexpected internal pg error. {GetSourceConnectionDetails(username)}", e);
+                if (Logger.IsErrorEnabled)
+                    Logger.Error($"Unexpected internal pg error, terminating the session. {GetSourceConnectionDetails(username)}", e);
 
                 try
                 {
