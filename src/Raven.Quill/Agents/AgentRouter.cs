@@ -13,7 +13,7 @@ public sealed record AgentRequest(
     string ChannelId,
     IReadOnlyDictionary<string, string> Parameters);
 
-public sealed record AgentRunResult(string Reply, string ConversationId);
+public sealed record AgentRunResult(object Answer, string ConversationId);
 
 public interface IAgentRouter
 {
@@ -74,7 +74,7 @@ internal sealed class AgentRouter(
 
         await UpsertPreviewAsync(store, request, config.Identifier, conversation.Id, reply, DateTime.UtcNow, ct);
 
-        return new AgentRunResult(reply, conversation.Id);
+        return new AgentRunResult(new { reply }, conversation.Id);
     }
 
     private async Task RunActionsAsync(
