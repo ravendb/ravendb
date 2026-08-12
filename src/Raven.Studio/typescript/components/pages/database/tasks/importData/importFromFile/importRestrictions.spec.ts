@@ -33,7 +33,6 @@ describe("rules derived from ongoingTaskCapabilities", () => {
     });
 
     it("marks a grouped row sharding-supported only when every member task is", () => {
-        // queueEtls covers four brokers, none of which supports sharding
         expect(ongoingTaskRules.queueEtls.isShardingSupported).toBe(false);
         expect(ongoingTaskRules.ravenEtls.isShardingSupported).toBe(true);
     });

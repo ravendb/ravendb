@@ -19,12 +19,8 @@ interface RestrictedSwitchProps {
 }
 
 export default function RestrictedSwitch({ control, name, restriction, warning, children }: RestrictedSwitchProps) {
-    // The badge sits outside ConditionalPopover: it carries its own hover popover, and nesting the
-    // two makes hovering it show both tooltips at once.
     return (
         <div className="d-flex align-items-center gap-2">
-            {/* a disabled input swallows mouse events, so a plain title attribute on it never
-                shows - the popover listens on the wrapper instead */}
             <ConditionalPopover conditions={{ isActive: !!restriction, message: restriction?.tooltip }}>
                 <div className={classNames({ "item-disabled": !!restriction })}>
                     <FormSwitch control={control} name={name} disabled={!!restriction}>

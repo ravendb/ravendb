@@ -50,11 +50,6 @@ export const connectionStringLabels: Record<ConnectionStringKey, string> = {
     aiConnectionStrings: "AI Connection Strings",
 };
 
-/**
- * Feature icons for the restriction chips, reusing the icon each feature already carries in its own
- * view (settings menu entries, "Add new ongoing task" cards) so an entry looks the same everywhere.
- */
-
 export const databaseSettingIcons: Record<DatabaseSettingKey, IconName> = {
     settings: "database-settings",
     conflictSolverConfig: "conflicts-resolution",

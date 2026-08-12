@@ -63,7 +63,6 @@ function getClassName(licenseBadgeText: LicenseBadgeText, isCloud: boolean): Lic
 }
 
 function getIconName(licenseBadgeText: LicenseBadgeText, isCloud: boolean): IconName {
-    // Enterprise AI shares the Enterprise glyph - its own colour class is what tells them apart
     if (isCloud || licenseBadgeText === "Enterprise" || licenseBadgeText === "Enterprise AI") {
         return "use-cases";
     }
@@ -82,7 +81,6 @@ function getPopoverMessage(licenseBadgeText: LicenseBadgeText, isCloud: boolean)
         case "Enterprise":
             return "Available in Enterprise license";
         case "Enterprise AI":
-            // licenseModel.licenseTypeTextProvider calls this tier "RavenDB AI" to the user
             return "Available in RavenDB AI license";
         default:
             return "";

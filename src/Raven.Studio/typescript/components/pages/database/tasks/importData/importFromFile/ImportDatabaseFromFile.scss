@@ -1,3 +1,5 @@
+@use "sass:map";
+@use "Content/scss/bs5variables";
 @use "Content/scss/colors";
 @use "Content/scss/sizes";
 
@@ -98,12 +100,12 @@
 }
 
 .import-side-nav {
-    width: 280px;
+    // narrow viewports need the space for the section content, not the nav labels
+    width: 200px;
     flex-shrink: 0;
 
-    // narrow viewports need the space for the section content, not the nav labels
-    @media (max-width: 1399.98px) {
-        width: 200px;
+    @media (min-width: map.get(bs5variables.$grid-breakpoints, "xxl")) {
+        width: 280px;
     }
 
     hr {

@@ -142,8 +142,6 @@ describe("importFromFileUtils", () => {
         });
 
         it("never emits Revisions when the license forbids a default revisions configuration", () => {
-            // the server rejects the whole import otherwise, so this has to hold in
-            // "import all settings" mode too - where the row is not individually checked
             const data = createDefaultFormData();
             data.configuration.isImportAllSettings = true;
             expect(getDatabaseRecordTypes(data, ["revisions"])).not.toContain("Revisions");

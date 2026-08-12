@@ -65,14 +65,11 @@ function ImportDatabaseFromFileContent() {
 
     const importOptionsUrl = forCurrentDatabase.importDataOptionsUrl();
 
-    // Switching databases briefly re-renders this view without an active database - firing the
-    // request then would hit a database-less /stats/essential and report a handler error.
     const asyncEssentialStats = useAsync(
         async () => (databaseName ? databasesService.getEssentialStats(databaseName) : null),
         [databaseName]
     );
-    // Only a successful response with zero counts proves the database is empty; anything else
-    // (still loading, failed, or a response we cannot read) keeps the warning visible.
+
     const hasExistingData =
         !asyncEssentialStats.result ||
         asyncEssentialStats.result.CountOfDocuments > 0 ||
@@ -89,14 +86,9 @@ function ImportDatabaseFromFileContent() {
             return;
         }
 
-        // every conditional field can only carry an error while its enabling toggle is on
-        // (yup .when), so its Collapse is already expanded and the section can be scrolled to
-        // directly
         selectSection(sectionId);
     };
 
-    // only these two groups feed hasAnyInclude - watching the whole form here would re-render every
-    // section on each keystroke in the transform-script editor
     const watchedDocuments = useWatch({ control, name: "documents" });
     const watchedConfiguration = useWatch({ control, name: "configuration" });
 
@@ -142,8 +134,6 @@ function ImportDatabaseFromFileContent() {
                         <Icon icon="code" /> Use import command
                     </Button>
                 </div>
-                {/* Knockout parity: striped upload bar under the action buttons, percent only for
-                    screen readers - server-side progress lives in the result modal */}
                 {isUploading && (
                     <ProgressBar
                         now={uploadPercent}
