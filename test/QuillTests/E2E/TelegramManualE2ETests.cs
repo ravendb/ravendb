@@ -34,11 +34,11 @@ public class TelegramManualE2ETests(ITestOutputHelper output) : QuillTestBase(ou
 
         // real getMe: a bad token fails here with telegram's reason
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
-            ChannelType.Telegram, agentId, null, BotToken: botToken));
+            ChannelType.Telegram, agentId, null, Telegram: new(botToken)));
 
         var summary = Assert.Single(await app.GetChannelsAsync(), c => c.ChannelId == created.ChannelId);
-        Assert.NotNull(summary.BotUsername);
-        Assert.NotEmpty(summary.BotUsername);
+        Assert.NotNull(summary.Telegram);
+        Assert.NotEmpty(summary.Telegram!.BotUsername);
 
         // the first successful long poll against the live API lands within seconds
         var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(30);
