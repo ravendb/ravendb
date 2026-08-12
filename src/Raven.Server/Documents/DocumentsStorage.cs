@@ -175,6 +175,8 @@ namespace Raven.Server.Documents
             exceptionAggregator.Execute(() =>
             {
                 _collectionTablesContext?.Dispose();
+                _collectionTablesReverse.Clear();
+                _modifiedCollectionsScratch.Clear();
             });
 
             exceptionAggregator.ThrowIfNeeded();
