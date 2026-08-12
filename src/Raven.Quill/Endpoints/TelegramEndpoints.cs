@@ -43,7 +43,7 @@ public static class TelegramEndpoints
             .OrderByDescending(c => c.CreatedAt)
             .Select(c =>
             {
-                var channelId = Channel.StripIdPrefix(c.Id);
+                var channelId = c.ShortId;
                 var snapshot = health.GetValueOrDefault(channelId);
                 return new TelegramChannelHealthResponse(
                     channelId,

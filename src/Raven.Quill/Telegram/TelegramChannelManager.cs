@@ -97,7 +97,7 @@ internal sealed class TelegramChannelManager(
                 foreach (var channel in channels)
                 {
                     if (channel is { Type: ChannelType.Telegram, Enabled: true, Telegram.BotToken.Length: > 0 })
-                        desired[(app.Database, Channel.StripIdPrefix(channel.Id))] =
+                        desired[(app.Database, channel.ShortId)] =
                             (channel, session.Advanced.GetChangeVectorFor(channel));
                 }
             }
