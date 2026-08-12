@@ -60,6 +60,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         internal PeriodicBackupRunner.TestingStuff _forTestingPurposes;
         private readonly DateTime _startTimeUtc;
         protected Action OnBackupException;
+        protected void RegisterOnBackupException(Action handler) => OnBackupException += handler;
 
         public BackupTask(DocumentDatabase database, BackupParameters backupParameters, BackupConfiguration configuration, OperationCancelToken token, Logger logger, PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
         {
@@ -811,10 +812,11 @@ namespace Raven.Server.Documents.PeriodicBackup
                     currentBackupResults = AsyncHelpers.RunSyncWithSynchronization(async () =>
                     {
                         var stream = GetStreamForBackupDestination(backupFilePath, folderName, fileName);
-                        var outputStream = GetOutputStream(stream);
+                        Stream outputStream = null;
 
                         try
                         {
+                            outputStream = GetOutputStream(stream);
                             var smugglerSource = Database.Smuggler.CreateSource(startDocumentEtag.Value, startRaftIndex.Value, _logger);
                             var smugglerDestination = new StreamDestination(outputStream, context, smugglerSource, Database.Configuration.Backup.CompressionAlgorithm.ToExportCompressionAlgorithm(), Database.Configuration.Backup.CompressionLevel);
                             var smuggler = Database.Smuggler.Create(
@@ -863,7 +865,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         }
                         finally
                         {
-                            await outputStream.DisposeAsync();
+                            await (outputStream ?? stream).DisposeAsync();
                         }
                     });
                 }

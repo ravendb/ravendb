@@ -44,19 +44,7 @@ namespace FastTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public void DirectUpload_stream_finalization_must_not_hang_when_disposed_inside_the_backup_pump()
         {
-            var uploader = new ContextCapturingMultiPartUploader();
-
-            var parameters = new DirectUploadStream<FakeDirectUploader>.Parameters
-            {
-                ClientFactory = _ => new FakeDirectUploader(uploader),
-                Key = "key",
-                Metadata = new Dictionary<string, string>(),
-                IsFullBackup = true,
-                RetentionPolicyParameters = null,
-                CloudUploadStatus = new UploadToS3(),
-                OnBackupException = null,
-                OnProgress = _ => { }
-            };
+            var parameters = CreateParameters(new ContextCapturingMultiPartUploader(), new UploadToS3());
 
             var pump = new PumpingSynchronizationContext();
 
@@ -93,19 +81,7 @@ namespace FastTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task Encrypted_backup_path_disposes_DirectUploadStream_asynchronously_not_synchronously()
         {
-            var uploader = new ContextCapturingMultiPartUploader();
-
-            var parameters = new DirectUploadStream<FakeDirectUploader>.Parameters
-            {
-                ClientFactory = _ => new FakeDirectUploader(uploader),
-                Key = "key",
-                Metadata = new Dictionary<string, string>(),
-                IsFullBackup = true,
-                RetentionPolicyParameters = null,
-                CloudUploadStatus = new UploadToS3(),
-                OnBackupException = null,
-                OnProgress = _ => { }
-            };
+            var parameters = CreateParameters(new ContextCapturingMultiPartUploader(), new UploadToS3());
 
             var inner = new DisposeTrackingDirectUploadStream(parameters);
 
@@ -123,6 +99,209 @@ namespace FastTests.Issues
                 "DirectUploadStream.DisposeAsync must be invoked through the encrypting stream on the backup path.");
             Assert.False(inner.SyncDisposeCalled,
                 "The synchronous DirectUploadStream.Dispose must NOT run on the backup path - it is the blocking path that hangs.");
+        }
+
+        // Drives the abort path end to end, THROUGH the task-level delegate, because the subscription itself was silently
+        // broken: Parameters used to carry the task's 'Action OnBackupException' by value and the stream did
+        // 'parameters.OnBackupException += handler'. Delegates are immutable, so that only rebound the copy sitting in
+        // Parameters - BackupTask's own field stayed null, its OnBackupException?.Invoke() on failure was a no-op, and
+        // _abortUpload could never become true. Registration therefore has to mutate the TASK's field, which is what
+        // going through FakeBackupTask (a stand-in shaped exactly like BackupTask.RegisterOnBackupException) pins here.
+        //
+        // The consequence of the broken wiring is what the assertions below rule out: a FAILED backup used to take the
+        // success path on disposal, uploading its tail and calling CompleteUpload - which commits a TRUNCATED object at
+        // the destination as a valid backup and then runs the retention policy against it, so a corrupt backup could
+        // evict good ones.
+        [RavenFact(RavenTestCategory.BackupExportImport)]
+        public async Task Aborted_upload_aborts_the_multipart_upload_and_never_completes_it()
+        {
+            var task = new FakeBackupTask();
+            var uploader = new TrackingMultiPartUploader();
+            var status = new UploadToS3();
+
+            var stream = new TestDirectUploadStream(CreateParameters(uploader, status, task.RegisterOnBackupException));
+
+            // exactly what BackupTask.CreateBackup does from its catch block
+            task.SignalBackupException();
+
+            await stream.DisposeAsync();
+
+            Assert.True(uploader.AbortAsyncCalled,
+                "the failure notification must reach the stream through the task's own delegate field and abort the in-progress upload");
+            Assert.False(uploader.CompleteUploadAsyncCalled,
+                "a failed backup must never be committed at the destination - that would publish a truncated object as a valid backup");
+            Assert.Equal(UploadState.Aborted, status.UploadProgress.UploadState);
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport)]
+        public async Task Successful_upload_completes_the_multipart_upload_and_marks_Done()
+        {
+            var uploader = new TrackingMultiPartUploader();
+            var status = new UploadToS3();
+
+            var stream = new TestDirectUploadStream(CreateParameters(uploader, status, new FakeBackupTask().RegisterOnBackupException));
+
+            await stream.DisposeAsync();
+
+            Assert.True(uploader.CompleteUploadAsyncCalled, "a successful upload must be completed");
+            Assert.False(uploader.AbortAsyncCalled, "a successful upload must not be aborted");
+            Assert.Equal(UploadState.Done, status.UploadProgress.UploadState);
+        }
+
+        // Same guarantees on the synchronous Dispose path, still used by the snapshot direct-upload backup.
+        [RavenFact(RavenTestCategory.BackupExportImport)]
+        public void Aborted_upload_on_sync_dispose_aborts_the_multipart_upload_and_never_completes_it()
+        {
+            var task = new FakeBackupTask();
+            var uploader = new TrackingMultiPartUploader();
+            var status = new UploadToS3();
+
+            var stream = new TestDirectUploadStream(CreateParameters(uploader, status, task.RegisterOnBackupException));
+
+            task.SignalBackupException();
+
+            stream.Dispose();
+
+            Assert.True(uploader.AbortCalled, "the in-progress multipart upload must be aborted on failure");
+            Assert.False(uploader.CompleteUploadCalled, "a failed backup must never be committed at the destination");
+            Assert.Equal(UploadState.Aborted, status.UploadProgress.UploadState);
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport)]
+        public void Successful_upload_on_sync_dispose_completes_the_multipart_upload_and_marks_Done()
+        {
+            var uploader = new TrackingMultiPartUploader();
+            var status = new UploadToS3();
+
+            var stream = new TestDirectUploadStream(CreateParameters(uploader, status, new FakeBackupTask().RegisterOnBackupException));
+
+            stream.Dispose();
+
+            Assert.True(uploader.CompleteUploadCalled, "a successful upload must be completed");
+            Assert.False(uploader.AbortCalled, "a successful upload must not be aborted");
+            Assert.Equal(UploadState.Done, status.UploadProgress.UploadState);
+        }
+
+        // Finalization can fail on its own (the tail part or CompleteUpload), with no prior backup failure to have set
+        // _abortUpload. The multipart upload is then neither completed nor aborted unless disposal cleans up after
+        // itself - and orphaned parts keep accruing storage costs at the destination indefinitely.
+        [RavenFact(RavenTestCategory.BackupExportImport)]
+        public async Task Finalization_failure_aborts_the_multipart_upload_and_rethrows()
+        {
+            var uploader = new TrackingMultiPartUploader { CompleteUploadFailure = new IOException("cloud is down") };
+            var status = new UploadToS3();
+
+            var stream = new TestDirectUploadStream(CreateParameters(uploader, status));
+
+            var error = await Assert.ThrowsAsync<IOException>(async () => await stream.DisposeAsync());
+
+            Assert.Equal("cloud is down", error.Message);
+            Assert.True(uploader.AbortAsyncCalled, "a multipart upload that could not be completed must be aborted, not left orphaned");
+            Assert.Equal(UploadState.Aborted, status.UploadProgress.UploadState);
+        }
+
+        // Abort runs precisely when the destination is already unhealthy, so it is the likeliest thing to fail second.
+        // It is a cleanup step and must never become the exception the caller sees, or it would routinely hide the real
+        // reason the backup failed.
+        [RavenFact(RavenTestCategory.BackupExportImport)]
+        public async Task Abort_failure_is_reported_but_does_not_mask_the_original_failure()
+        {
+            var uploader = new TrackingMultiPartUploader
+            {
+                CompleteUploadFailure = new IOException("cloud is down"),
+                AbortFailure = new IOException("abort failed too")
+            };
+
+            var progress = new List<string>();
+            var stream = new TestDirectUploadStream(CreateParameters(uploader, new UploadToS3(), onProgress: progress.Add));
+
+            var error = await Assert.ThrowsAsync<IOException>(async () => await stream.DisposeAsync());
+
+            Assert.Equal("cloud is down", error.Message);
+            Assert.Contains(progress, message => message.Contains("Failed to abort the multipart upload"));
+        }
+
+        private static DirectUploadStream<FakeDirectUploader>.Parameters CreateParameters(
+            IMultiPartUploader uploader,
+            CloudUploadStatus cloudUploadStatus,
+            Action<Action> registerOnBackupException = null,
+            Action<string> onProgress = null) =>
+            new()
+            {
+                ClientFactory = _ => new FakeDirectUploader(uploader),
+                Key = "key",
+                Metadata = new Dictionary<string, string>(),
+                IsFullBackup = true,
+                RetentionPolicyParameters = null,
+                CloudUploadStatus = cloudUploadStatus,
+                RegisterOnBackupException = registerOnBackupException,
+                OnProgress = onProgress ?? (_ => { })
+            };
+
+        // Stand-in for the BackupTask side of the subscription, shaped exactly like BackupTask.RegisterOnBackupException /
+        // OnBackupException?.Invoke(). Registration must reach _onBackupException here, not a copy held elsewhere.
+        private sealed class FakeBackupTask
+        {
+            private Action _onBackupException;
+
+            public void RegisterOnBackupException(Action handler) => _onBackupException += handler;
+
+            public void SignalBackupException() => _onBackupException?.Invoke();
+        }
+
+        // Records which terminal operation the stream drove (complete vs abort), for both the sync and async paths, and
+        // can inject failures into either.
+        private sealed class TrackingMultiPartUploader : IMultiPartUploader
+        {
+            public bool CompleteUploadCalled;
+            public bool CompleteUploadAsyncCalled;
+            public bool AbortCalled;
+            public bool AbortAsyncCalled;
+
+            public Exception CompleteUploadFailure;
+            public Exception AbortFailure;
+
+            public void Initialize()
+            {
+            }
+
+            public Task InitializeAsync() => Task.CompletedTask;
+
+            public void UploadPart(Stream stream)
+            {
+            }
+
+            public Task UploadPartAsync(Stream stream) => Task.CompletedTask;
+
+            public void CompleteUpload()
+            {
+                CompleteUploadCalled = true;
+
+                if (CompleteUploadFailure != null)
+                    throw CompleteUploadFailure;
+            }
+
+            public Task CompleteUploadAsync()
+            {
+                CompleteUploadAsyncCalled = true;
+
+                return CompleteUploadFailure != null ? Task.FromException(CompleteUploadFailure) : Task.CompletedTask;
+            }
+
+            public void Abort()
+            {
+                AbortCalled = true;
+
+                if (AbortFailure != null)
+                    throw AbortFailure;
+            }
+
+            public Task AbortAsync()
+            {
+                AbortAsyncCalled = true;
+
+                return AbortFailure != null ? Task.FromException(AbortFailure) : Task.CompletedTask;
+            }
         }
 
         private sealed class DisposeTrackingDirectUploadStream : DirectUploadStream<FakeDirectUploader>

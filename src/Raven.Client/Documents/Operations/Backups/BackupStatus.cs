@@ -157,6 +157,7 @@ namespace Raven.Client.Documents.Operations.Backups
                     _sw.Restart();
                     break;
                 case UploadState.Done:
+                case UploadState.Aborted:
                     _sw.Stop();
                     break;
             }

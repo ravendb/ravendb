@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup.Retention;
 using Sparrow;
@@ -42,7 +43,7 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
         _multiPartUploader = Client.GetUploader(parameters.Key, parameters.Metadata);
         _multiPartUploader.Initialize();
 
-        parameters.OnBackupException += () => _abortUpload = true;
+        parameters.RegisterOnBackupException?.Invoke(() => _abortUpload = true);
     }
 
     public override void Flush()
@@ -74,7 +75,7 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
         if (_writeStream.Position <= MinOnePartUploadSizeInBytes)
             return;
 
-        if (_uploadTask != null && (_uploadTask.IsCompleted == false || _uploadTask.IsCompletedSuccessfully == false))
+        if (_uploadTask is { IsCompletedSuccessfully: false })
         {
             _onProgress.Invoke("Waiting for previous upload task to finish");
             AsyncHelpers.RunSync(() => _uploadTask);
@@ -92,7 +93,7 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
         if (_writeStream.Position <= MinOnePartUploadSizeInBytes)
             return;
 
-        if (_uploadTask != null && (_uploadTask.IsCompleted == false || _uploadTask.IsCompletedSuccessfully == false))
+        if (_uploadTask is { IsCompletedSuccessfully: false })
         {
             _onProgress.Invoke("Waiting for previous upload task to finish");
             await _uploadTask;
@@ -109,6 +110,8 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
         _uploadTask = _multiPartUploader.UploadPartAsync(_uploadStream);
     }
 
+    // Dispose and DisposeAsync are mirror images and must be kept in sync - neither can delegate to the other: the document
+    // backup path disposes us from inside its pump, where a sync wait on _uploadTask would deadlock on it (RavenDB-26912).
     protected override void Dispose(bool disposing)
     {
         if (_disposed)
@@ -119,31 +122,38 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
         using (Client)
         using (_backupStatusIDisposable)
         {
-            using (_uploadStream)
-            using (_writeStream)
+            try
             {
-                if (_abortUpload)
+                using (_uploadStream)
+                using (_writeStream)
                 {
-                    _cloudUploadStatus.UploadProgress.ChangeState(UploadState.Aborted);
-                    _multiPartUploader.Abort();
-                    return;
+                    if (_abortUpload)
+                    {
+                        AbortUpload();
+                        return;
+                    }
+
+                    if (_uploadTask is { IsCompletedSuccessfully: false })
+                    {
+                        _onProgress.Invoke("Waiting for previous upload task to finish");
+                        AsyncHelpers.RunSync(() => _uploadTask);
+                    }
+
+                    var toUpload = _writeStream.Position;
+                    if (toUpload > 0)
+                    {
+                        _writeStream.Position = 0;
+                        _multiPartUploader.UploadPart(_writeStream);
+                    }
                 }
 
-                if (_uploadTask != null && (_uploadTask.IsCompleted == false || _uploadTask.IsCompletedSuccessfully == false))
-                {
-                    _onProgress.Invoke("Waiting for previous upload task to finish");
-                    AsyncHelpers.RunSync(() => _uploadTask);
-                }
-
-                var toUpload = _writeStream.Position;
-                if (toUpload > 0)
-                {
-                    _writeStream.Position = 0;
-                    _multiPartUploader.UploadPart(_writeStream);
-                }
+                _multiPartUploader.CompleteUpload();
             }
-
-            _multiPartUploader.CompleteUpload();
+            catch
+            {
+                AbortUpload();
+                throw;
+            }
 
             _cloudUploadStatus.UploadProgress.SetUploaded(_position);
             _cloudUploadStatus.UploadProgress.SetTotal(_position);
@@ -167,31 +177,38 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
         using (Client)
         using (_backupStatusIDisposable)
         {
-            using (_uploadStream)
-            using (_writeStream)
+            try
             {
-                if (_abortUpload)
+                using (_uploadStream)
+                using (_writeStream)
                 {
-                    _cloudUploadStatus.UploadProgress.ChangeState(UploadState.Aborted);
-                    await _multiPartUploader.AbortAsync().ConfigureAwait(false);
-                    return;
+                    if (_abortUpload)
+                    {
+                        await AbortUploadAsync().ConfigureAwait(false);
+                        return;
+                    }
+
+                    if (_uploadTask is { IsCompletedSuccessfully: false })
+                    {
+                        _onProgress.Invoke("Waiting for previous upload task to finish");
+                        await _uploadTask.ConfigureAwait(false);
+                    }
+
+                    var toUpload = _writeStream.Position;
+                    if (toUpload > 0)
+                    {
+                        _writeStream.Position = 0;
+                        await _multiPartUploader.UploadPartAsync(_writeStream).ConfigureAwait(false);
+                    }
                 }
 
-                if (_uploadTask != null && (_uploadTask.IsCompleted == false || _uploadTask.IsCompletedSuccessfully == false))
-                {
-                    _onProgress.Invoke("Waiting for previous upload task to finish");
-                    await _uploadTask.ConfigureAwait(false);
-                }
-
-                var toUpload = _writeStream.Position;
-                if (toUpload > 0)
-                {
-                    _writeStream.Position = 0;
-                    await _multiPartUploader.UploadPartAsync(_writeStream).ConfigureAwait(false);
-                }
+                await _multiPartUploader.CompleteUploadAsync().ConfigureAwait(false);
             }
-
-            await _multiPartUploader.CompleteUploadAsync().ConfigureAwait(false);
+            catch
+            {
+                await AbortUploadAsync().ConfigureAwait(false);
+                throw;
+            }
 
             _cloudUploadStatus.UploadProgress.SetUploaded(_position);
             _cloudUploadStatus.UploadProgress.SetTotal(_position);
@@ -201,6 +218,45 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
 
             OnCompleteUpload();
         }
+    }
+
+    private void AbortUpload()
+    {
+        PrepareForAbort();
+
+        try
+        {
+            _multiPartUploader.Abort();
+        }
+        catch (Exception e)
+        {
+            ReportAbortFailure(e);
+        }
+    }
+
+    private async Task AbortUploadAsync()
+    {
+        PrepareForAbort();
+
+        try
+        {
+            await _multiPartUploader.AbortAsync().ConfigureAwait(false);
+        }
+        catch (Exception e)
+        {
+            ReportAbortFailure(e);
+        }
+    }
+
+    private void PrepareForAbort()
+    {
+        _cloudUploadStatus.UploadProgress.ChangeState(UploadState.Aborted);
+        _uploadTask?.IgnoreUnobservedExceptions();
+    }
+
+    private void ReportAbortFailure(Exception e)
+    {
+        _onProgress.Invoke($"Failed to abort the multipart upload, incomplete parts may remain at the destination: {e}");
     }
 
     protected abstract void OnCompleteUpload();
@@ -233,7 +289,7 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
 
         public CloudUploadStatus CloudUploadStatus { get; set; }
 
-        public Action OnBackupException { get; set; }
+        public Action<Action> RegisterOnBackupException { get; set; }
 
         public Action<string> OnProgress { get; set; }
     }
