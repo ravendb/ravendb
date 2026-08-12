@@ -5,7 +5,7 @@ import type { ConversationDto } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
 import { TablePagination } from "@/components/table/table-pagination";
 import type { DatePeriod } from "@/lib/date-period";
-import { DashboardStatCards, type DashboardStatCard } from "@/pages/dashboard/dashboard-stat-cards";
+import { StatCardsSection, type DashboardStatCard } from "@/pages/dashboard/dashboard-stat-cards";
 import { ConversationsTable } from "@/pages/apps/conversations/conversations-table";
 import {
     ConversationsToolbar,
@@ -29,11 +29,7 @@ export function ConversationStatsCards({ slug, period }: ConversationsSectionPro
         { label: "Tokens", value: stats?.tokens, isLoading: conversationStatsQuery.isPending },
     ];
 
-    return (
-        <SectionCard title="Activity">
-            <DashboardStatCards cards={cards} />
-        </SectionCard>
-    );
+    return <StatCardsSection cards={cards} />;
 }
 
 const EMPTY_CONVERSATIONS: ConversationDto[] = [];

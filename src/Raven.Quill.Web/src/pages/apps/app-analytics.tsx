@@ -8,9 +8,10 @@ import { SeriesBarChart } from "@/components/data/charts";
 import { DatePeriodPicker } from "@/components/data/date-period-picker";
 import { PagePanel } from "@/components/data/page-panel";
 import { canDrillInto, drillInto, getDefaultDatePeriod } from "@/lib/date-period";
+import { useSetupStartDate } from "@/lib/use-setup-start-date";
 import { TableCell, TableRow } from "@/components/shadcn/ui/table";
 import { formatCompact } from "@/lib/format";
-import { DashboardStatCards, type DashboardStatCard } from "@/pages/dashboard/dashboard-stat-cards";
+import { StatCardsSection, type DashboardStatCard } from "@/pages/dashboard/dashboard-stat-cards";
 import { SectionCard, SectionTable } from "@/pages/apps/section-card";
 
 type BarClickHandler = (entry: Record<string, unknown>) => void;
@@ -18,6 +19,7 @@ type BarClickHandler = (entry: Record<string, unknown>) => void;
 export function AppAnalytics() {
     const { slug = "" } = useParams();
     const [period, setPeriod] = useState(getDefaultDatePeriod);
+    const setupStartDate = useSetupStartDate();
 
     // Keep the previous charts on screen while the finer-grained period loads, so
     // drilling in reads as a zoom rather than the page blanking out and back in.
@@ -27,7 +29,7 @@ export function AppAnalytics() {
     // any of them drills the whole page from its `t` label.
     const drillFromBar: BarClickHandler | undefined = canDrillInto(period)
         ? (entry) => {
-              const next = drillInto(period, entry.t as string);
+              const next = drillInto(period, entry.t as string, setupStartDate);
               if (next) setPeriod(next);
           }
         : undefined;
@@ -83,7 +85,7 @@ function AnalyticsMetricCards({ usage }: { usage: AppUsageResponse }) {
         { label: "Tokens", value: tokens.value, isLoading: false, delta: tokens.delta, series: tokens.sparkline },
     ];
 
-    return <DashboardStatCards cards={cards} />;
+    return <StatCardsSection cards={cards} />;
 }
 
 function AnalyticsSeriesSection({

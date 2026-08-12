@@ -5,7 +5,7 @@ import { ApiState } from "@/components/data/api-state";
 import { DatePeriodPicker } from "@/components/data/date-period-picker";
 import { getDefaultDatePeriod } from "@/lib/date-period";
 import { DashboardAppsTable } from "@/pages/dashboard/dashboard-apps-table";
-import { DashboardStatCards } from "@/pages/dashboard/dashboard-stat-cards";
+import { StatCardsSection } from "@/pages/dashboard/dashboard-stat-cards";
 import { buildUsageStatCards } from "@/pages/dashboard/usage-stat-cards";
 
 export function DashboardHome() {
@@ -23,11 +23,12 @@ export function DashboardHome() {
             </header>
 
             {appsQuery.data && appsQuery.data.length > 0 && (
+                // The period also drives the apps table below, so the picker stays at page level.
                 <div className="space-y-4">
                     <div className="flex justify-end">
                         <DatePeriodPicker value={period} onChange={setPeriod} />
                     </div>
-                    <DashboardStatCards cards={cards} />
+                    <StatCardsSection cards={cards} />
                 </div>
             )}
 
