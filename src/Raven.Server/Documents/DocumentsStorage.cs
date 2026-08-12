@@ -366,10 +366,15 @@ namespace Raven.Server.Documents
                 ConflictsCount = ConflictsStorage.GetNumberOfConflicts(tx)
             };
 
-            // the previous cache is inherited by this write transaction through the client state (a fresh write tx
-            // gets the last committed one, an async-commit clone gets the committing tx's freshly computed one).
-            // when it is fully computed we start a builder from its immutable dictionary (O(1), no copy) and
-            // recompute only the modified collections; otherwise (first commit after startup) we full-scan to seed it.
+            // note the role change: before this the DocumentTransactionCache client state was effectively write-only
+            // on a write tx (every reader is behind IsWriteTransaction == false, and the old full-scan compute
+            // overwrote it rather than reading it), so writing it was harmless; now it is the *input* to the
+            // incremental compute. we read the previous cache from the client state - a fresh write tx inherits the
+            // last committed one, an async-commit clone inherits the committing tx's freshly computed one (Voron
+            // propagates client state through the immutable env record, so unlike a manual publish there is no
+            // overwrite to guard against here). when it is fully computed we start a builder from its immutable
+            // dictionary (O(1), no copy) and recompute only the modified collections; otherwise (first commit after
+            // startup) we full-scan to seed it.
             ImmutableDictionary<string, DocumentTransactionCache.CollectionCache>.Builder builder;
             if (llt.TryGetClientState(out DocumentTransactionCache previousCache) && previousCache.FullyComputed)
             {
