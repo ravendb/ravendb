@@ -8,6 +8,7 @@ using Raven.Quill.Endpoints.Helpers;
 using Raven.Quill.Hosting;
 using Raven.Quill.Raven;
 using Raven.Quill.Wizard;
+using Sparrow.Server;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using TelegramUser = Telegram.Bot.Types.User;
@@ -33,18 +34,21 @@ internal sealed class TelegramChannelManager(
 {
     private readonly ConcurrentDictionary<(string Database, string ChannelId), TelegramBotRuntime> _bots = new();
 
-    private readonly AsyncWakeSignal _wake = new();
+    private volatile AsyncManualResetEvent? _wake;
 
-    public void Wake() => _wake.Set();
+    public void Wake() => _wake?.Set();
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        using var wake = new AsyncManualResetEvent(stoppingToken);
+        _wake = wake;
+
         while (ready.IsReady == false)
             await Task.Delay(250, stoppingToken);
 
         while (stoppingToken.IsCancellationRequested == false)
         {
-            _wake.Reset();
+            wake.Reset();
 
             try
             {
@@ -59,14 +63,7 @@ internal sealed class TelegramChannelManager(
                 logger.LogWarning("Telegram apply-changes pass failed: {Error}", e.Message);
             }
 
-            try
-            {
-                await _wake.WaitAsync(options.Value.TelegramApplyChangesInterval, stoppingToken);
-            }
-            catch (OperationCanceledException)
-            {
-                return;
-            }
+            await wake.WaitAsync(options.Value.TelegramApplyChangesInterval);
         }
     }
 
