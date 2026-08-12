@@ -19,6 +19,7 @@ public sealed class MockTelegramBotApi : IAsyncDisposable
     private readonly Dictionary<string, long?> _lastOffsets = new();
     private readonly List<SentMessage> _sent = [];
     private readonly List<EditedMessage> _edited = [];
+    private readonly List<DeletedMessage> _deleted = [];
     private readonly List<ChatActionCall> _chatActions = [];
     private readonly Dictionary<(string Token, long ChatId, int MessageId), string> _messageTexts = new();
     private long _nextUpdateId = 1;
@@ -28,6 +29,8 @@ public sealed class MockTelegramBotApi : IAsyncDisposable
         string Token, long ChatId, int MessageId, string Text, string? ParseMode, string? ReplyMarkup = null);
 
     public sealed record EditedMessage(string Token, long ChatId, int MessageId, string Text, string? ParseMode);
+
+    public sealed record DeletedMessage(string Token, long ChatId, int MessageId);
 
     public sealed record ChatActionCall(string Token, long ChatId, string Action);
 
@@ -58,6 +61,11 @@ public sealed class MockTelegramBotApi : IAsyncDisposable
     public IReadOnlyList<EditedMessage> EditedMessages
     {
         get { lock (_lock) return _edited.ToArray(); }
+    }
+
+    public IReadOnlyList<DeletedMessage> DeletedMessages
+    {
+        get { lock (_lock) return _deleted.ToArray(); }
     }
 
     public IReadOnlyList<ChatActionCall> ChatActions
@@ -170,6 +178,7 @@ public sealed class MockTelegramBotApi : IAsyncDisposable
             _lastOffsets.Clear();
             _sent.Clear();
             _edited.Clear();
+            _deleted.Clear();
             _chatActions.Clear();
             _messageTexts.Clear();
         }
@@ -202,6 +211,7 @@ public sealed class MockTelegramBotApi : IAsyncDisposable
                 "getUpdates" => await instance.HandleGetUpdatesAsync(token, body, ctx.RequestAborted),
                 "sendMessage" => instance.HandleSendMessage(token, body),
                 "editMessageText" => instance.HandleEditMessageText(token, body),
+                "deleteMessage" => instance.HandleDeleteMessage(token, body),
                 "sendChatAction" => instance.HandleSendChatAction(token, body),
                 _ => Results.Content(
                     $$"""{"ok":false,"error_code":404,"description":"Not Found: method '{{method}}' is not mocked"}""",
@@ -322,6 +332,20 @@ public sealed class MockTelegramBotApi : IAsyncDisposable
         }
 
         return Ok(MessageJson(messageId, chatId, text));
+    }
+
+    private IResult HandleDeleteMessage(string token, JsonNode? body)
+    {
+        var chatId = (long)body!["chat_id"]!;
+        var messageId = (int)body["message_id"]!;
+
+        lock (_lock)
+        {
+            _messageTexts.Remove((token, chatId, messageId));
+            _deleted.Add(new DeletedMessage(token, chatId, messageId));
+        }
+
+        return Ok(JsonValue.Create(true));
     }
 
     private IResult HandleSendChatAction(string token, JsonNode? body)

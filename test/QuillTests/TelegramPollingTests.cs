@@ -312,12 +312,12 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
 
         Mock.EnqueueTextMessage(token, chatId: 11, fromUserId: 11, "long please");
         await Mock.WaitUntilAsync(
-            () => Mock.SentMessages.Count(m => m.ChatId == 11) == 2, "the overflow follow-up message");
+            () => Mock.SentMessages.Count(m => m.ChatId == 11) == 2, "the rolled preview message");
 
-        var sends = Mock.SentMessages.Where(m => m.ChatId == 11).ToArray();
-        Assert.Equal(parts[1], sends[1].Text);
         await Mock.WaitUntilAsync(
             () => Mock.EditedMessages.Any(e => e.ChatId == 11 && e.Text == parts[0]), "the boundary edit");
+        await Mock.WaitUntilAsync(
+            () => Mock.EditedMessages.Any(e => e.ChatId == 11 && e.Text == parts[1]), "the overflow edit");
 
         await app.DeleteChannelAsync(channelId);
     }
@@ -636,7 +636,9 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         Router.Failure = null;
         Mock.EnqueueTextMessage(token, chatId: 400, fromUserId: 400, "again");
         await Mock.WaitUntilAsync(
-            () => Mock.SentMessages.Any(m => m.ChatId == 400 && m.Text.Contains("fake agent")), "the recovery reply");
+            () => Mock.SentMessages.Any(m => m.ChatId == 400 && m.Text.Contains("fake agent")) ||
+                  Mock.EditedMessages.Any(e => e.ChatId == 400 && e.Text.Contains("fake agent")),
+            "the recovery reply");
 
         await app.DeleteChannelAsync(channelId);
     }
