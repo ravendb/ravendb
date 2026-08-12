@@ -213,7 +213,7 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
 
         var tooLong = await Assert.ThrowsAsync<QuillHttpException>(() =>
             app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
-                Messages: new TelegramChannelMessages { Greeting = new string('x', 1001) })));
+                Messages: new TelegramChannelMessages { Greeting = new string('x', 4097) })));
         Assert.Equal(HttpStatusCode.BadRequest, tooLong.StatusCode);
         Assert.Contains("messages.greeting exceeds", tooLong.Body);
 
