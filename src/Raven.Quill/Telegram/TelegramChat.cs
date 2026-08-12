@@ -278,9 +278,9 @@ internal sealed class TelegramChat
 
         using (var session = _context.Store.OpenAsyncSession(_context.Database))
         {
-            await session.StoreAsync(new TelegramUserPhone
+            await session.StoreAsync(new TelegramLink
             {
-                Id = TelegramUserPhone.IdFor(_context.ChannelId, senderId),
+                Id = TelegramLink.IdFor(_context.ChannelId, senderId),
                 PhoneNumber = contact.PhoneNumber,
                 SharedAt = DateTime.UtcNow,
             }, _ct);
@@ -296,8 +296,8 @@ internal sealed class TelegramChat
     {
         var senderId = message.From?.Id ?? _chatId;
         using var session = _context.Store.OpenAsyncSession(_context.Database);
-        var stored = await session.LoadAsync<TelegramUserPhone>(
-            TelegramUserPhone.IdFor(_context.ChannelId, senderId), _ct);
+        var stored = await session.LoadAsync<TelegramLink>(
+            TelegramLink.IdFor(_context.ChannelId, senderId), _ct);
         return string.IsNullOrEmpty(stored?.PhoneNumber) ? null : stored.PhoneNumber;
     }
 

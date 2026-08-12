@@ -98,7 +98,7 @@ public class TelegramPhoneNumberTests(ITestOutputHelper output, QuillTelegramFix
 
         using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
-            var stored = await session.LoadAsync<TelegramUserPhone>(TelegramUserPhone.IdFor(channelId, 710));
+            var stored = await session.LoadAsync<TelegramLink>(TelegramLink.IdFor(channelId, 710));
             Assert.Equal("+48123456789", stored.PhoneNumber);
         }
 
@@ -127,7 +127,7 @@ public class TelegramPhoneNumberTests(ITestOutputHelper output, QuillTelegramFix
         Assert.Contains("request_contact", rejection.ReplyMarkup);
 
         using (var session = app.Store.OpenAsyncSession(app.Slug))
-            Assert.Null(await session.LoadAsync<TelegramUserPhone>(TelegramUserPhone.IdFor(channelId, 720)));
+            Assert.Null(await session.LoadAsync<TelegramLink>(TelegramLink.IdFor(channelId, 720)));
 
         Assert.Empty(Router.Requests);
 
