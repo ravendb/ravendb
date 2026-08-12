@@ -245,6 +245,9 @@ namespace Voron.Data.BTrees
 
         public void AddStream(Slice key, Stream stream, Slice? tag = null, int? initialNumberOfPagesPerChunk = null)
         {
+            if (tag is { Size: > MaxStreamTagSize })
+                throw new ArgumentException($"Stream tag of {tag.Value.Size} bytes exceeds the maximum of {MaxStreamTagSize} bytes", nameof(tag));
+
             if ((State.Header.Flags & TreeFlags.Streams) != TreeFlags.Streams)
             {
                 ref var state = ref State.Modify();

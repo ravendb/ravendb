@@ -502,7 +502,7 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
         var serializer = (JsonSerializer)store.Conventions.Serialization.CreateSerializer();
         {
             using var session = store.OpenAsyncSession();
-            var coraxQuery = await GetCoraxQuery(self, query(session), index, context, serializer, mapping, factories, hasMultipleValues);
+            var coraxQuery = await GetCoraxQuery(self, query(session), index, context, serializer, mapping, factories, hasMultipleValues, bitmapAndFillMode);
 
             if (hasMultipleValues == false)
                 Assert.IsType<TExpectedForSingleValues>(coraxQuery);

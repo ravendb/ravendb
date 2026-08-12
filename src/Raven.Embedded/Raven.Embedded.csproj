@@ -31,7 +31,7 @@
     <Compile Include="..\CommonAssemblyInfo.Linux.cs" Link="Properties\CommonAssemblyInfo.Linux.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="README.md" Pack="true" PackagePath="" />
+    <None Include="README.md" Pack="true" PackagePath=""/>
     <None Include="..\..\LICENSE.txt" Pack="true" Visible="false" PackagePath="" />
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
@@ -46,9 +46,5 @@
   </ItemGroup>
   <ItemGroup Condition="$(TargetFramework) == 'netstandard2.0'">
     <PackageReference Include="System.Runtime.Loader" />
-  </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)' == 'net6.0'">
-    <PackageReference Include="System.Collections.Immutable" VersionOverride="8.0.0" />
-    <PackageReference Include="System.IO.Hashing" VersionOverride="8.0.0" />
   </ItemGroup>
 </Project>

@@ -557,9 +557,15 @@ public static partial class CoraxQueryBuilder
         // Enumerating the complement instead would drop the documents that have no term for the
         // field at all, which is what `A and not (startsWith(field, x))` used to do.
         IQueryMatch left = ToCoraxQuery(builderParameters, leftExpr, ref builderParameters.StreamingDisabled, exact);
+        if (left is CoraxWhenQuery)
+            left = builderParameters.AllEntries.Replay();
+
         IQueryMatch right = ToCoraxQuery(builderParameters, rightExpr.Expression, ref builderParameters.StreamingDisabled, exact);
         Materialize(builderParameters, ref left, ref right, ref builderParameters.StreamingDisabled);
-        return indexSearcher.AndNot(left, right, token: builderParameters.Token);
+
+        return right is CoraxWhenQuery
+            ? left
+            : indexSearcher.AndNot(left, right, token: builderParameters.Token);
     }
     
     private static IQueryMatch HandleIn(Parameters builderParameters, InExpression ie, bool exact)

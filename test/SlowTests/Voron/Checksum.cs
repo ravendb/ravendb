@@ -9,7 +9,6 @@ using Voron;
 using Xunit;
 using Voron.Impl.Paging;
 using Voron.Global;
-using Xunit.Abstractions;
 
 namespace SlowTests.Voron
 {

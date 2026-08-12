@@ -14,7 +14,6 @@ using Spatial4n.Context;
 using Spatial4n.Util;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Corax.Bugs;
 
