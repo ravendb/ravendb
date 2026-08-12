@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.IO;
 using System.IO.Compression;
@@ -279,6 +279,20 @@ namespace Sparrow.Utils
 
         protected override void Dispose(bool disposing)
         {
+            DisposeInternal(flush: true);
+        }
+
+        /// <summary>
+        /// Use this when the transport underneath is already gone, so there is no point to try to write to the inner stream,
+        /// and we'll skip flushing.
+        /// </summary>
+        internal void DisposeWithoutFlushing()
+        {
+            DisposeInternal(flush: false);
+        }
+
+        private void DisposeInternal(bool flush)
+        {
             if (_disposed)
                 return;
 
@@ -289,7 +303,7 @@ namespace Sparrow.Utils
 
                 _disposed = true;
 
-                if (_compressContext != null)
+                if (flush && _compressContext != null)
                 {
                     if (_compression)
                         FlushInternal();

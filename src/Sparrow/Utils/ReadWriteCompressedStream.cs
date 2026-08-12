@@ -193,11 +193,22 @@ namespace Sparrow.Utils
         private bool _disposing;
         private void DisposeInternal()
         {
-            Flush();
             base.Dispose(_disposing);
-            _output?.Dispose();
-            _inner?.Dispose();
-            _input?.Dispose();
+
+            // Callers are expected to call Flush() before Dispose(), if they don't, that is on them.
+            // We first dispose the inner stream, (typically a network one), so any pending operations on that will
+            // fail, and then we dispose the compression streams, without flushing, so we won't try to write to the
+            // inner stream (which was already disposed).
+            try
+            {
+                _inner?.Dispose();
+            }
+            finally
+            {
+                // We explicitly dispose the inner stream first, so we cannot flush
+                _output?.DisposeWithoutFlushing();
+                _input?.Dispose();
+            }
         }
 
         protected override void Dispose(bool disposing)
