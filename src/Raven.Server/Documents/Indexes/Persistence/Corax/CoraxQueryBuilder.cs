@@ -616,31 +616,6 @@ public static partial class CoraxQueryBuilder
         return builderParameters.IndexSearcher.InQuery(fieldMetadata, matches);
     }
 
-    private static bool TryUseNegatedQuery(Parameters builderParameters, NegatedExpression ne1, out IQueryMatch match, bool exact)
-    {
-        if (ne1.Expression is not MethodExpression inner)
-            goto NoOpt;
-
-        var methodName = inner.Name.Value;
-        var methodType = QueryMethod.GetMethodType(methodName);
-
-        switch (methodType)
-        {
-            case MethodType.StartsWith:
-                match = HandleStartsWith(builderParameters, inner, exact, ref builderParameters.StreamingDisabled, negated: true);
-                return true;
-            case MethodType.EndsWith:
-                match = HandleEndsWith(builderParameters, inner, exact, ref builderParameters.StreamingDisabled, negated: true);
-                return true;
-            default:
-                goto NoOpt;
-        }
-
-    NoOpt:
-        match = null;
-        return false;
-    }
-
     public static MoreLikeThisQuery.MoreLikeThisQuery BuildMoreLikeThisQuery(Parameters builderParameters, QueryExpression whereExpression)
     {
         using (CultureHelper.EnsureInvariantCulture())
@@ -779,8 +754,7 @@ public static partial class CoraxQueryBuilder
             : builderParameters.IndexSearcher.ExistsQuery(fieldMetadata);
     }
 
-    private static IQueryMatch HandleStartsWith(Parameters builderParameters, MethodExpression expression, bool exact, ref StreamingOptimization streamingOptimization,
-        bool negated = false)
+    private static IQueryMatch HandleStartsWith(Parameters builderParameters, MethodExpression expression, bool exact, ref StreamingOptimization streamingOptimization)
     {
         var metadata = builderParameters.Metadata;
         var queryParameters = builderParameters.QueryParameters;
@@ -817,12 +791,11 @@ public static partial class CoraxQueryBuilder
             builderParameters.DynamicFields, exact: exact, hasBoost: builderParameters.HasBoost);
 
         return streamingOptimization.TrySetMultiTermMatchAsStreamingField(fieldMetadata, MethodType.StartsWith)
-            ? builderParameters.IndexSearcher.StartWithQuery(fieldMetadata, valueAsString, forward: streamingOptimization.Forward, streamingEnabled: true, isNegated: negated)
-            : builderParameters.IndexSearcher.StartWithQuery(fieldMetadata, valueAsString, isNegated: negated);
+            ? builderParameters.IndexSearcher.StartWithQuery(fieldMetadata, valueAsString, forward: streamingOptimization.Forward, streamingEnabled: true)
+            : builderParameters.IndexSearcher.StartWithQuery(fieldMetadata, valueAsString);
     }
 
-    private static MultiTermMatch HandleEndsWith(Parameters builderParameters, MethodExpression expression, bool exact, ref StreamingOptimization streamingOptimization,
-        bool negated = false)
+    private static MultiTermMatch HandleEndsWith(Parameters builderParameters, MethodExpression expression, bool exact, ref StreamingOptimization streamingOptimization)
     {
         var metadata = builderParameters.Metadata;
         var queryParameters = builderParameters.QueryParameters;
@@ -861,8 +834,8 @@ public static partial class CoraxQueryBuilder
             builderParameters.DynamicFields, exact: exact, hasBoost: builderParameters.HasBoost);
 
         return streamingOptimization.TrySetMultiTermMatchAsStreamingField(fieldMetadata, MethodType.EndsWith)
-            ? builderParameters.IndexSearcher.EndsWithQuery(fieldMetadata, valueAsString, forward: streamingOptimization.Forward, streamingEnabled: true, isNegated: negated)
-            : builderParameters.IndexSearcher.EndsWithQuery(fieldMetadata, valueAsString, isNegated: negated);
+            ? builderParameters.IndexSearcher.EndsWithQuery(fieldMetadata, valueAsString, forward: streamingOptimization.Forward, streamingEnabled: true)
+            : builderParameters.IndexSearcher.EndsWithQuery(fieldMetadata, valueAsString);
     }
 
     private static IQueryMatch HandleBoost(Parameters builderParameters, MethodExpression expression, bool exact)

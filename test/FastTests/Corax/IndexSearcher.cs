@@ -202,8 +202,10 @@ namespace FastTests.Corax
             }
         }
 
-        [RavenFact(RavenTestCategory.Corax)]
-        public void EmptyAnd()
+        [RavenTheory(RavenTestCategory.Corax)]
+        [InlineData(BitmapAndFillMode.Off)]
+        [InlineData(BitmapAndFillMode.Force)]
+        public void EmptyAnd(BitmapAndFillMode bitmapAndFillMode)
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
             var entry2 = new IndexEntry {Id = "entry/2", Content = new string[] {"road", "mountain"},};
@@ -212,7 +214,7 @@ namespace FastTests.Corax
             IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
 
             {
-                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
                 var match1 = searcher.TermQuery("Id", "entry/1");
                 var match2 = searcher.TermQuery("Content", "mountain");
                 var andMatch = searcher.And(in match1, in match2);
@@ -222,8 +224,10 @@ namespace FastTests.Corax
             }
         }
 
-        [RavenFact(RavenTestCategory.Corax)]
-        public void SingleAndNoDuplication()
+        [RavenTheory(RavenTestCategory.Corax)]
+        [InlineData(BitmapAndFillMode.Off)]
+        [InlineData(BitmapAndFillMode.Force)]
+        public void SingleAndNoDuplication(BitmapAndFillMode bitmapAndFillMode)
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
             var entry2 = new IndexEntry {Id = "entry/2", Content = new string[] {"road", "mountain"},};
@@ -233,7 +237,7 @@ namespace FastTests.Corax
             IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
 
             {
-                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
                 var match1 = searcher.InQuery("Content", new List<string>() {"road", "lake"});
                 var match2 = searcher.ExistsQuery(searcher.FieldMetadataBuilder("Content"));
                 var andMatch = searcher.And(in match1, in match2);
@@ -244,8 +248,10 @@ namespace FastTests.Corax
             }
         }
 
-        [RavenFact(RavenTestCategory.Corax)]
-        public void SingleAnd()
+        [RavenTheory(RavenTestCategory.Corax)]
+        [InlineData(BitmapAndFillMode.Off)]
+        [InlineData(BitmapAndFillMode.Force)]
+        public void SingleAnd(BitmapAndFillMode bitmapAndFillMode)
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
             var entry2 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "mountain"},};
@@ -254,7 +260,7 @@ namespace FastTests.Corax
             IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
 
             {
-                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
                 var match1 = searcher.TermQuery("Id", "entry/1");
                 var match2 = searcher.TermQuery("Content", "mountain");
                 var andMatch = searcher.And(in match1, in match2);
@@ -265,8 +271,10 @@ namespace FastTests.Corax
             }
         }
 
-        [RavenFact(RavenTestCategory.Corax)]
-        public void AllAnd()
+        [RavenTheory(RavenTestCategory.Corax)]
+        [InlineData(BitmapAndFillMode.Off)]
+        [InlineData(BitmapAndFillMode.Force)]
+        public void AllAnd(BitmapAndFillMode bitmapAndFillMode)
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake", "mountain"},};
             var entry2 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "mountain"},};
@@ -275,7 +283,7 @@ namespace FastTests.Corax
             IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
 
             {
-                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
                 var match1 = searcher.TermQuery("Id", "entry/1");
                 var match2 = searcher.TermQuery("Content", "mountain");
                 var andMatch = searcher.And(in match1, in match2);
@@ -286,8 +294,10 @@ namespace FastTests.Corax
             }
         }
 
-        [RavenFact(RavenTestCategory.Corax)]
-        public void AllAndWithEmpty()
+        [RavenTheory(RavenTestCategory.Corax)]
+        [InlineData(BitmapAndFillMode.Off)]
+        [InlineData(BitmapAndFillMode.Force)]
+        public void AllAndWithEmpty(BitmapAndFillMode bitmapAndFillMode)
         {
             var entries = Enumerable.Range(1, 10_000).Select(i => new IndexEntry {Id = $"entry/{i}", Content = new string[] {"road", "lake", "mountain"}}).ToArray();
 
@@ -296,7 +306,7 @@ namespace FastTests.Corax
             IndexEntries(bsc, entries, CreateKnownFields(bsc));
 
             {
-                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
                 var match1 = searcher.AllEntries();
                 var match2 = searcher.TermQuery("Id", "Maciej");
                 var andMatch = searcher.And(in match1, in match2);
@@ -306,8 +316,10 @@ namespace FastTests.Corax
             }
         }
 
-        [RavenFact(RavenTestCategory.Corax)]
-        public void AllAndMemoized()
+        [RavenTheory(RavenTestCategory.Corax)]
+        [InlineData(BitmapAndFillMode.Off)]
+        [InlineData(BitmapAndFillMode.Force)]
+        public void AllAndMemoized(BitmapAndFillMode bitmapAndFillMode)
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake", "mountain"},};
             var entry2 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "mountain"},};
@@ -316,7 +328,7 @@ namespace FastTests.Corax
             IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
 
             {
-                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
 
                 var match1 = searcher.Memoize(searcher.TermQuery("Id", "entry/1"));
                 var match2 = searcher.Memoize(searcher.TermQuery("Content", "mountain"));
@@ -333,8 +345,10 @@ namespace FastTests.Corax
             }
         }
 
-        [RavenFact(RavenTestCategory.Corax)]
-        public void EmptyOr()
+        [RavenTheory(RavenTestCategory.Corax)]
+        [InlineData(BitmapAndFillMode.Off)]
+        [InlineData(BitmapAndFillMode.Force)]
+        public void EmptyOr(BitmapAndFillMode bitmapAndFillMode)
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
             var entry2 = new IndexEntry {Id = "entry/2", Content = new string[] {"road", "mountain"},};
@@ -343,7 +357,7 @@ namespace FastTests.Corax
             IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
 
             {
-                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
                 var match1 = searcher.TermQuery("Id", "entry/3");
                 var match2 = searcher.TermQuery("Content", "highway");
                 var orMatch = searcher.Or(in match1, in match2);
@@ -354,8 +368,10 @@ namespace FastTests.Corax
             }
         }
 
-        [RavenFact(RavenTestCategory.Corax)]
-        public void SingleOr()
+        [RavenTheory(RavenTestCategory.Corax)]
+        [InlineData(BitmapAndFillMode.Off)]
+        [InlineData(BitmapAndFillMode.Force)]
+        public void SingleOr(BitmapAndFillMode bitmapAndFillMode)
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
             var entry2 = new IndexEntry {Id = "entry/2", Content = new string[] {"road", "mountain"},};
@@ -366,7 +382,7 @@ namespace FastTests.Corax
             {
                 Span<long> ids = stackalloc long[16];
 
-                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
                 var match1 = searcher.TermQuery("Id", "entry/1");
                 var match2 = searcher.TermQuery("Content", "highway");
                 var orMatch = searcher.Or(in match1, in match2);
@@ -383,8 +399,10 @@ namespace FastTests.Corax
             }
         }
 
-        [RavenFact(RavenTestCategory.Corax)]
-        public void AllOr()
+        [RavenTheory(RavenTestCategory.Corax)]
+        [InlineData(BitmapAndFillMode.Off)]
+        [InlineData(BitmapAndFillMode.Force)]
+        public void AllOr(BitmapAndFillMode bitmapAndFillMode)
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
             var entry2 = new IndexEntry {Id = "entry/2", Content = new string[] {"road", "mountain"},};
@@ -393,7 +411,7 @@ namespace FastTests.Corax
             IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
 
             {
-                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
                 var match1 = searcher.TermQuery("Id", "entry/1");
                 var match2 = searcher.TermQuery("Content", "mountain");
                 var orMatch = searcher.Or(in match1, in match2);
@@ -405,8 +423,10 @@ namespace FastTests.Corax
             }
         }
 
-        [RavenFact(RavenTestCategory.Corax)]
-        public void AllOrInBatches()
+        [RavenTheory(RavenTestCategory.Corax)]
+        [InlineData(BitmapAndFillMode.Off)]
+        [InlineData(BitmapAndFillMode.Force)]
+        public void AllOrInBatches(BitmapAndFillMode bitmapAndFillMode)
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
             var entry2 = new IndexEntry {Id = "entry/2", Content = new string[] {"road", "mountain"},};
@@ -416,7 +436,7 @@ namespace FastTests.Corax
             IndexEntries(bsc, new[] {entry1, entry2, entry3}, CreateKnownFields(bsc));
 
             {
-                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
                 var match1 = searcher.TermQuery("Id", "entry/1");
                 var match2 = searcher.TermQuery("Content", "mountain");
                 var orMatch = searcher.Or(in match1, in match2);
@@ -428,8 +448,10 @@ namespace FastTests.Corax
             }
         }
 
-        [RavenFact(RavenTestCategory.Corax)]
-        public void SimpleAndOr()
+        [RavenTheory(RavenTestCategory.Corax)]
+        [InlineData(BitmapAndFillMode.Off)]
+        [InlineData(BitmapAndFillMode.Force)]
+        public void SimpleAndOr(BitmapAndFillMode bitmapAndFillMode)
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake", "mountain"},};
             var entry2 = new IndexEntry {Id = "entry/2", Content = new string[] {"road", "mountain"},};
@@ -439,7 +461,7 @@ namespace FastTests.Corax
             IndexEntries(bsc, new[] {entry1, entry2, entry3}, CreateKnownFields(bsc));
 
             {
-                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
                 var match1 = searcher.TermQuery("Id", "entry/1");
                 var match2 = searcher.TermQuery("Content", "mountain");
                 var andMatch = searcher.And(in match1, in match2);
@@ -453,7 +475,7 @@ namespace FastTests.Corax
             }
 
             {
-                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
                 var match1 = searcher.TermQuery("Id", "entry/1");
                 var match2 = searcher.TermQuery("Content", "mountain");
                 var andMatch = searcher.And(in match1, in match2);
@@ -468,12 +490,17 @@ namespace FastTests.Corax
 
 
         [RavenTheory(RavenTestCategory.Corax)]
-        [InlineData(new object[] {10, 3})]
-        [InlineData(new object[] {8000, 18})]
-        [InlineData(new object[] {1000, 8})]
-        [InlineData(new object[] {1020, 7})]
-        [InlineData(new object[] {201, 128})]
-        public void SimpleAndOrForBiggerSet(int setSize, int stackSize)
+        [InlineData(10, 3, BitmapAndFillMode.Off)]
+        [InlineData(8000, 18, BitmapAndFillMode.Off)]
+        [InlineData(1000, 8, BitmapAndFillMode.Off)]
+        [InlineData(1020, 7, BitmapAndFillMode.Off)]
+        [InlineData(201, 128, BitmapAndFillMode.Off)]
+        [InlineData(10, 3, BitmapAndFillMode.Force)]
+        [InlineData(8000, 18, BitmapAndFillMode.Force)]
+        [InlineData(1000, 8, BitmapAndFillMode.Force)]
+        [InlineData(1020, 7, BitmapAndFillMode.Force)]
+        [InlineData(201, 128, BitmapAndFillMode.Force)]
+        public void SimpleAndOrForBiggerSet(int setSize, int stackSize, BitmapAndFillMode bitmapAndFillMode)
         {
             setSize = setSize - (setSize % 3);
             var matches = new List<IndexEntry>();
@@ -507,7 +534,7 @@ namespace FastTests.Corax
             var matchesId = matches.Select(x => x.IndexEntryId).ToList();
             matchesId.Sort();
             {
-                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
                 var match1 = searcher.TermQuery("Content", "lake");
                 var match2 = searcher.TermQuery("Content", "mountain");
                 var andMatch = searcher.And(in match1, in match2);
@@ -588,10 +615,13 @@ namespace FastTests.Corax
         }
 
         [RavenTheory(RavenTestCategory.Corax)]
-        [InlineData(new object[] {1000, 8})]
-        [InlineData(new object[] {300, 128})]
-        [InlineData(new object[] {10000, 128})]
-        public void AndInStatement(int setSize, int stackSize)
+        [InlineData(1000, 8, BitmapAndFillMode.Off)]
+        [InlineData(300, 128, BitmapAndFillMode.Off)]
+        [InlineData(10000, 128, BitmapAndFillMode.Off)]
+        [InlineData(1000, 8, BitmapAndFillMode.Force)]
+        [InlineData(300, 128, BitmapAndFillMode.Force)]
+        [InlineData(10000, 128, BitmapAndFillMode.Force)]
+        public void AndInStatement(int setSize, int stackSize, BitmapAndFillMode bitmapAndFillMode)
         {
             setSize = setSize - (setSize % 3);
 
@@ -623,7 +653,7 @@ namespace FastTests.Corax
 
             var matchIds = matches.Select(x => x.IndexEntryId).ToArray();
 
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
             {
                 var match1 = searcher.InQuery("Content", new() {"lake", "mountain"});
                 var match2 = searcher.TermQuery("Content", "sky");
@@ -1268,16 +1298,7 @@ namespace FastTests.Corax
             }
 
             {
-                var match = searcher.StartWithQuery(contentMetadata, "Run", true);
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(1, match.Fill(ids));
-                long id = ids[0];
-                Assert.Equal("entry/1", searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
-            }
-
-            {
-                var match = searcher.EndsWithQuery(contentMetadata, "ing", false);
+                var match = searcher.EndsWithQuery(contentMetadata, "ing");
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(2, match.Fill(ids));
@@ -1287,15 +1308,6 @@ namespace FastTests.Corax
                 Array.Sort(results);
                 Assert.Equal("entry/1", results[0]);
                 Assert.Equal("entry/2", results[1]);
-            }
-
-            {
-                var match = searcher.EndsWithQuery(contentMetadata, "ing", true);
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(1, match.Fill(ids));
-                long id = ids[0];
-                Assert.Equal("entry/3", searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
             }
 
             {
@@ -1447,8 +1459,9 @@ namespace FastTests.Corax
         }
         
         [RavenTheory(RavenTestCategory.Corax)]
-        [InlineData(new object[] {1000, 8})]
-        public void AndInStatementWithLowercaseAnalyzer(int setSize, int stackSize)
+        [InlineData(1000, 8, BitmapAndFillMode.Off)]
+        [InlineData(1000, 8, BitmapAndFillMode.Force)]
+        public void AndInStatementWithLowercaseAnalyzer(int setSize, int stackSize, BitmapAndFillMode bitmapAndFillMode)
         {
             setSize = setSize - (setSize % 3);
             var entries = new List<IndexEntry>();
@@ -1480,7 +1493,7 @@ namespace FastTests.Corax
             IndexEntries(bsc, entriesToIndex, CreateKnownFields(bsc, analyzer));
 
 
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
             {
                 var match1 = searcher.InQuery("Content", new() {"lake", "mountain"});
                 var match2 = searcher.TermQuery("Content", "sky");
@@ -1524,8 +1537,9 @@ namespace FastTests.Corax
         }
 
         [RavenTheory(RavenTestCategory.Corax)]
-        [InlineData(new object[] {1000, 8})]
-        public void AndInStatementAndWhitespaceTokenizer(int setSize, int stackSize)
+        [InlineData(1000, 8, BitmapAndFillMode.Off)]
+        [InlineData(1000, 8, BitmapAndFillMode.Force)]
+        public void AndInStatementAndWhitespaceTokenizer(int setSize, int stackSize, BitmapAndFillMode bitmapAndFillMode)
         {
             setSize = setSize - (setSize % 3);
 
@@ -1559,7 +1573,7 @@ namespace FastTests.Corax
 
             IndexEntries(ctx, entriesToIndex, mapping);
 
-            using var searcher = new IndexSearcher(Env, mapping);
+            using var searcher = new IndexSearcher(Env, mapping) { BitmapAndFillMode = bitmapAndFillMode };
             {
                 var match1 = searcher.InQuery("Content", new() {"lake", "mountain"});
                 var match2 = searcher.TermQuery("Content", "sky");
@@ -1626,8 +1640,10 @@ namespace FastTests.Corax
             }
         }
 
-        [RavenFact(RavenTestCategory.Corax)]
-        public void NotInTest()
+        [RavenTheory(RavenTestCategory.Corax)]
+        [InlineData(BitmapAndFillMode.Off)]
+        [InlineData(BitmapAndFillMode.Force)]
+        public void NotInTest(BitmapAndFillMode bitmapAndFillMode)
         {
             var listToIndex = Enumerable.Range(000000, 1000).Select(i => new IndexSingleEntry {Id = $"entry/{i}", Content = i.ToString("000000")}).ToList();
             var listForNotIn = listToIndex.Where(p => p.Content.EndsWith("1")).ToList();
@@ -1637,7 +1653,7 @@ namespace FastTests.Corax
             Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
             Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
 
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
             {
                 Span<long> ids = stackalloc long[1024];
                 var match = searcher.AndNot(searcher.AllEntries(), searcher.InQuery(searcher.FieldMetadataBuilder("Content", ContentIndex), listForNotIn.Select(l => l.Content).ToList()));
@@ -1645,8 +1661,10 @@ namespace FastTests.Corax
             }
         }
 
-        [RavenFact(RavenTestCategory.Corax)]
-        public void SimpleAndNot()
+        [RavenTheory(RavenTestCategory.Corax)]
+        [InlineData(BitmapAndFillMode.Off)]
+        [InlineData(BitmapAndFillMode.Force)]
+        public void SimpleAndNot(BitmapAndFillMode bitmapAndFillMode)
         {
             var entry1 = new IndexSingleEntry {Id = "entry/1", Content = "Testing"};
             var entry2 = new IndexSingleEntry {Id = "entry/2", Content = "Running"};
@@ -1661,7 +1679,7 @@ namespace FastTests.Corax
             Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
             Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
 
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
 
             {
                 var andNotMatch = searcher.AndNot(searcher.AllEntries(), searcher.StartWithQuery("Content", "Run"));
@@ -1693,8 +1711,10 @@ namespace FastTests.Corax
             }
         }
 
-        [RavenFact(RavenTestCategory.Corax)]
-        public void NotEqualWithList()
+        [RavenTheory(RavenTestCategory.Corax)]
+        [InlineData(BitmapAndFillMode.Off)]
+        [InlineData(BitmapAndFillMode.Force)]
+        public void NotEqualWithList(BitmapAndFillMode bitmapAndFillMode)
         {
             var entries = new List<IndexEntry>();
             var entriesToIndex = new IndexEntry[7];
@@ -1727,7 +1747,7 @@ namespace FastTests.Corax
             //":{"p0":"8 9 10"}}
             IndexEntries(bsc, entriesToIndex, CreateKnownFields(bsc));
 
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
             var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
             {
                 var match0 = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), [new MultiUnaryItem(searcher, contentMetadata, "8", UnaryMatchOperation.NotEquals)]);
@@ -1783,13 +1803,19 @@ namespace FastTests.Corax
         }
 
         [RavenTheory(RavenTestCategory.Corax)]
-        [InlineData(100, 16)]
-        [InlineData(1000, 128)]
-        [InlineData(10_000, 128)]
-        [InlineData(10_000, 256)]
-        [InlineData(10_000, 512)]
-        [InlineData(10_000, 1028)]
-        public void MultiTermMatchWithBinaryOperations(int setSize, int stackSize)
+        [InlineData(100, 16, BitmapAndFillMode.Off)]
+        [InlineData(1000, 128, BitmapAndFillMode.Off)]
+        [InlineData(10_000, 128, BitmapAndFillMode.Off)]
+        [InlineData(10_000, 256, BitmapAndFillMode.Off)]
+        [InlineData(10_000, 512, BitmapAndFillMode.Off)]
+        [InlineData(10_000, 1028, BitmapAndFillMode.Off)]
+        [InlineData(100, 16, BitmapAndFillMode.Force)]
+        [InlineData(1000, 128, BitmapAndFillMode.Force)]
+        [InlineData(10_000, 128, BitmapAndFillMode.Force)]
+        [InlineData(10_000, 256, BitmapAndFillMode.Force)]
+        [InlineData(10_000, 512, BitmapAndFillMode.Force)]
+        [InlineData(10_000, 1028, BitmapAndFillMode.Force)]
+        public void MultiTermMatchWithBinaryOperations(int setSize, int stackSize, BitmapAndFillMode bitmapAndFillMode)
         {
             var words = new[]
             {
@@ -1806,7 +1832,7 @@ namespace FastTests.Corax
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             IndexEntries(bsc, entries.ToArray(), CreateKnownFields(bsc));
 
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
             {
                 //MultiTermMatch And TermMatch
                 var match0 = searcher.InQuery("Content", new List<string>() {"maciej", "poland"});
