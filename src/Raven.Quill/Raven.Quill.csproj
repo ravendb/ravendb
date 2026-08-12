@@ -35,6 +35,8 @@
     <Compile Include="..\..\src\Raven.Server\Utils\RavenHttpClient.cs" Link="Raven\Linked\RavenHttpClient.cs" />
     <Compile Include="..\..\src\Raven.Server\ServerWide\ServerVersion.cs" Link="Raven\Linked\ServerVersion.cs" />
     <Compile Include="..\..\src\Raven.Server\Smuggler\Documents\Processors\BuildVersion.cs" Link="Raven\Linked\BuildVersion.cs" />
+    <Compile Include="..\Sparrow.Server\AsyncManualResetEvent.cs" Link="Hosting\Linked\AsyncManualResetEvent.cs" />
+    <Compile Include="..\Sparrow\Utils\TimeoutManager.cs" Link="Hosting\Linked\TimeoutManager.cs" />
   </ItemGroup>
 
   <ItemGroup>
