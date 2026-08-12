@@ -215,7 +215,7 @@ public static class EmbedEndpoints
             await NdjsonStream.WriteLineAsync(ctx, new
             {
                 type = "done",
-                answer = new { reply = result.Reply },
+                answer = result.Answer,
             });
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)

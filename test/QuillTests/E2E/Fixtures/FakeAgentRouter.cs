@@ -43,7 +43,7 @@ internal sealed class FakeAgentRouter : IAgentRouter
         }
 
         var reply = Reply ?? string.Concat(Chunks);
-        return new AgentRunResult(reply, request.ConversationId);
+        return new AgentRunResult(new { reply }, request.ConversationId);
     }
 
     public void Reset()
