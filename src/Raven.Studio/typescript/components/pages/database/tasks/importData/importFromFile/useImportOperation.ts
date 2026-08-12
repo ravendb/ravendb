@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useServices } from "components/hooks/useServices";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
+import { useIsMounted } from "components/hooks/useIsMounted";
 import notificationCenter from "common/notifications/notificationCenter";
 import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
 import collectionsTracker from "common/helpers/database/collectionsTracker";
@@ -21,10 +22,6 @@ export interface OperationState {
     endTime: Date | null;
 }
 
-/**
- * Owns everything that happens after the user hits Import: option validation, operation id,
- * progress monitoring and the upload itself.
- */
 export function useImportOperation() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { tasksService } = useServices();
@@ -38,15 +35,8 @@ export function useImportOperation() {
 
     const isUploading = uploadPercent != null;
 
-    // monitorOperation gives no way to detach its callbacks, so guard them manually - otherwise
-    // navigating away mid-import keeps calling setState on the unmounted view
-    const isUnmountedRef = useRef(false);
-    useEffect(() => {
-        isUnmountedRef.current = false;
-        return () => {
-            isUnmountedRef.current = true;
-        };
-    }, []);
+    // the import outlives the view: every async callback below has to check before touching state
+    const isMounted = useIsMounted();
 
     const startImport = async (formData: ImportFromFileFormData) => {
         if (
@@ -105,7 +95,7 @@ export function useImportOperation() {
             databaseName,
             operationId,
             (progress) => {
-                if (!isUnmountedRef.current) {
+                if (isMounted()) {
                     setOperationState((prev) => (prev ? { ...prev, progress } : prev));
                 }
             }
@@ -113,14 +103,14 @@ export function useImportOperation() {
 
         monitor
             .done((result: SmugglerProgress) => {
-                if (!isUnmountedRef.current) {
+                if (isMounted()) {
                     setOperationState((prev) =>
                         prev ? { ...prev, progress: result, status: "Completed", endTime: new Date() } : prev
                     );
                 }
             })
             .fail(() => {
-                if (!isUnmountedRef.current) {
+                if (isMounted()) {
                     setOperationState((prev) => (prev ? { ...prev, status: "Faulted", endTime: new Date() } : prev));
                 }
             });
@@ -129,7 +119,7 @@ export function useImportOperation() {
 
         try {
             await tasksService.importDatabaseFromFile(databaseName, operationId, formData.file, dto, (percent) => {
-                if (isUnmountedRef.current) {
+                if (!isMounted()) {
                     return;
                 }
                 setUploadPercent(Math.round(percent));
@@ -137,7 +127,7 @@ export function useImportOperation() {
                 // request stays open until the server-side import finishes, which can take minutes
                 if (percent === 100) {
                     setTimeout(() => {
-                        if (!isUnmountedRef.current) {
+                        if (isMounted()) {
                             setUploadPercent(null);
                         }
                     }, 700);
@@ -146,7 +136,7 @@ export function useImportOperation() {
         } catch {
             // the command reports the upload error itself; if the upload died before the server
             // registered any progress, monitorOperation will never settle - mark Faulted ourselves
-            if (!isUnmountedRef.current) {
+            if (isMounted()) {
                 setOperationState((prev) =>
                     prev && prev.status === "InProgress" && !prev.progress
                         ? { ...prev, status: "Faulted", endTime: new Date() }
@@ -154,7 +144,7 @@ export function useImportOperation() {
                 );
             }
         } finally {
-            if (!isUnmountedRef.current) {
+            if (isMounted()) {
                 setUploadPercent(null);
             }
         }
