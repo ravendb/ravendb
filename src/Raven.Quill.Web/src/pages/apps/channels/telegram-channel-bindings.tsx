@@ -4,7 +4,7 @@ import { telegramParameterSourceLabel } from "@/pages/apps/channels/telegram-par
 import { SectionCard, SectionTable } from "@/pages/apps/section-card";
 
 export function TelegramChannelBindings({ channel }: { channel: ChannelSummaryResponse }) {
-    const bindings = Object.entries(channel.parameterBindings ?? {});
+    const bindings = Object.entries(channel.telegram?.parameterBindings ?? {});
 
     return (
         <SectionCard

@@ -24,7 +24,9 @@ export const channelsMocks = {
                 ...channel,
                 displayName: update.displayName ?? channel.displayName,
                 enabled: update.enabled ?? channel.enabled,
-                messages: update.messages ?? channel.messages,
+                telegram: channel.telegram
+                    ? { ...channel.telegram, messages: update.telegram?.messages ?? channel.telegram.messages }
+                    : channel.telegram,
             });
         }),
     delete: () => apiHttp.delete("/api/apps/{slug}/channels/{channelId}", ({ response }) => response(204).empty()),
@@ -55,12 +57,15 @@ export const sampleChannels: ChannelSummaryResponse[] = [
         displayName: "Telegram bot",
         enabled: false,
         createdAt: "2026-05-09T14:20:00Z",
-        botUsername: "acme_faq_bot",
-        parameterBindings: {
-            company: { source: "Constant", value: "Acme Corp" },
-            senderId: { source: "UserId", value: null },
-            userHandle: { source: "Username", value: null },
-            phoneNumber: { source: "PhoneNumber", value: null },
+        telegram: {
+            botUsername: "acme_faq_bot",
+            parameterBindings: {
+                company: { source: "Constant", value: "Acme Corp" },
+                senderId: { source: "UserId", value: null },
+                userHandle: { source: "Username", value: null },
+                phoneNumber: { source: "PhoneNumber", value: null },
+            },
+            messages: null,
         },
     },
 ];

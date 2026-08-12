@@ -62,7 +62,7 @@ export function AppChannelDetail() {
                                     <p className="text-sm text-muted-foreground">
                                         {channel.type ? CHANNEL_TYPE_LABELS[channel.type] : "—"}
                                         {agent?.name ? ` · ${agent.name}` : ""}
-                                        {channel.botUsername ? ` · @${channel.botUsername}` : ""}
+                                        {channel.telegram?.botUsername ? ` · @${channel.telegram.botUsername}` : ""}
                                         <span className="font-mono"> · {channel.channelId}</span>
                                     </p>
                                 </div>
