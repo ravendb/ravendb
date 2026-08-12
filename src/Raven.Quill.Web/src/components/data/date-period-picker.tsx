@@ -9,13 +9,15 @@ import {
     canStepDayUp,
     canStepMonthUp,
     canStepYearUp,
-    clampToToday,
+    clampPeriod,
     formatPeriodLabel,
+    isSameDatePeriod,
     stepDay,
     stepMonth,
     stepYear,
     type DatePeriod,
 } from "@/lib/date-period";
+import { useSetupStartDate } from "@/lib/use-setup-start-date";
 
 type Granularity = "year" | "month" | "day";
 
@@ -27,28 +29,37 @@ function getGranularity(period: DatePeriod): Granularity {
 
 // Switching to a finer granularity lands on the latest selectable bucket via
 // clamping (month 12 / day 31 pulled back to today).
-function withGranularity(period: DatePeriod, granularity: Granularity): DatePeriod {
-    if (granularity === "year") return { year: period.year, month: null, day: null };
-    if (granularity === "month") return clampToToday({ year: period.year, month: period.month ?? 12, day: null });
-    return clampToToday({ year: period.year, month: period.month ?? 12, day: period.day ?? 31 });
+function withGranularity(period: DatePeriod, granularity: Granularity, earliest: Date | undefined): DatePeriod {
+    if (granularity === "year") return clampPeriod({ year: period.year, month: null, day: null }, earliest);
+    if (granularity === "month")
+        return clampPeriod({ year: period.year, month: period.month ?? 12, day: null }, earliest);
+    return clampPeriod({ year: period.year, month: period.month ?? 12, day: period.day ?? 31 }, earliest);
 }
 
 function PickerNav({
     label,
     unit,
+    canGoPrev,
     canGoNext,
     onPrev,
     onNext,
 }: {
     label: string;
     unit: string;
+    canGoPrev: boolean;
     canGoNext: boolean;
     onPrev: () => void;
     onNext: () => void;
 }) {
     return (
         <div className="flex items-center justify-between">
-            <Button variant="ghost" size="icon-sm" aria-label={`Previous ${unit}`} onClick={onPrev}>
+            <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={`Previous ${unit}`}
+                disabled={!canGoPrev}
+                onClick={onPrev}
+            >
                 <ChevronLeft aria-hidden="true" />
             </Button>
             <span className="text-sm font-medium">{label}</span>
@@ -61,8 +72,15 @@ function PickerNav({
 
 const YEAR_PAGE_SIZE = 12;
 
-function YearPickerGrid({ value, onSelect }: { value: DatePeriod; onSelect: (period: DatePeriod) => void }) {
+type PickerGridProps = {
+    value: DatePeriod;
+    earliest: Date | undefined;
+    onSelect: (period: DatePeriod) => void;
+};
+
+function YearPickerGrid({ value, earliest, onSelect }: PickerGridProps) {
     const currentYear = new Date().getFullYear();
+    const earliestYear = earliest?.getFullYear();
     const [pageStart, setPageStart] = useState(Math.floor(value.year / YEAR_PAGE_SIZE) * YEAR_PAGE_SIZE);
 
     return (
@@ -70,6 +88,7 @@ function YearPickerGrid({ value, onSelect }: { value: DatePeriod; onSelect: (per
             <PickerNav
                 label={`${pageStart} – ${pageStart + YEAR_PAGE_SIZE - 1}`}
                 unit="years"
+                canGoPrev={earliestYear === undefined || pageStart > earliestYear}
                 canGoNext={pageStart + YEAR_PAGE_SIZE <= currentYear}
                 onPrev={() => setPageStart(pageStart - YEAR_PAGE_SIZE)}
                 onNext={() => setPageStart(pageStart + YEAR_PAGE_SIZE)}
@@ -80,7 +99,7 @@ function YearPickerGrid({ value, onSelect }: { value: DatePeriod; onSelect: (per
                         key={year}
                         variant={year === value.year ? "default" : "ghost"}
                         size="sm"
-                        disabled={year > currentYear}
+                        disabled={year > currentYear || (earliestYear !== undefined && year < earliestYear)}
                         onClick={() => onSelect({ year, month: null, day: null })}
                     >
                         {year}
@@ -91,15 +110,21 @@ function YearPickerGrid({ value, onSelect }: { value: DatePeriod; onSelect: (per
     );
 }
 
-function MonthPickerGrid({ value, onSelect }: { value: DatePeriod; onSelect: (period: DatePeriod) => void }) {
+function MonthPickerGrid({ value, earliest, onSelect }: PickerGridProps) {
     const now = new Date();
     const [viewYear, setViewYear] = useState(value.year);
+
+    const isBeforeSetup = (monthIndex: number) =>
+        earliest !== undefined &&
+        (viewYear < earliest.getFullYear() ||
+            (viewYear === earliest.getFullYear() && monthIndex < earliest.getMonth()));
 
     return (
         <div className="flex w-56 flex-col gap-2 p-2">
             <PickerNav
                 label={String(viewYear)}
                 unit="year"
+                canGoPrev={earliest === undefined || viewYear > earliest.getFullYear()}
                 canGoNext={viewYear < now.getFullYear()}
                 onPrev={() => setViewYear(viewYear - 1)}
                 onNext={() => setViewYear(viewYear + 1)}
@@ -110,7 +135,9 @@ function MonthPickerGrid({ value, onSelect }: { value: DatePeriod; onSelect: (pe
                         key={monthIndex}
                         variant={viewYear === value.year && monthIndex + 1 === value.month ? "default" : "ghost"}
                         size="sm"
-                        disabled={viewYear === now.getFullYear() && monthIndex > now.getMonth()}
+                        disabled={
+                            (viewYear === now.getFullYear() && monthIndex > now.getMonth()) || isBeforeSetup(monthIndex)
+                        }
                         onClick={() => onSelect({ year: viewYear, month: monthIndex + 1, day: null })}
                     >
                         {format(new Date(viewYear, monthIndex, 1), "MMM")}
@@ -121,7 +148,7 @@ function MonthPickerGrid({ value, onSelect }: { value: DatePeriod; onSelect: (pe
     );
 }
 
-function DayPickerCalendar({ value, onSelect }: { value: DatePeriod; onSelect: (period: DatePeriod) => void }) {
+function DayPickerCalendar({ value, earliest, onSelect }: PickerGridProps) {
     const selected = new Date(value.year, (value.month ?? 1) - 1, value.day ?? 1);
 
     return (
@@ -130,17 +157,21 @@ function DayPickerCalendar({ value, onSelect }: { value: DatePeriod; onSelect: (
             required
             selected={selected}
             defaultMonth={selected}
-            disabled={{ after: new Date() }}
+            startMonth={earliest}
+            // Two matchers rather than one { before, after }, which day-picker reads as the
+            // interval between the two dates instead of everything outside it.
+            disabled={earliest ? [{ before: earliest }, { after: new Date() }] : { after: new Date() }}
             onSelect={(date) => onSelect({ year: date.getFullYear(), month: date.getMonth() + 1, day: date.getDate() })}
         />
     );
 }
 
-// Pages through year/month/day periods one step at a time, capped at today:
-// pick the granularity, then one pair of chevrons steps by that unit. Clicking
-// the period label opens a picker matching the granularity (years, months, or
-// a day calendar).
+// Pages through year/month/day periods one step at a time, bounded by the setup's
+// first day and today: pick the granularity, then one pair of chevrons steps by that
+// unit. Clicking the period label opens a picker matching the granularity (years,
+// months, or a day calendar).
 export function DatePeriodPicker({ value, onChange }: { value: DatePeriod; onChange: (value: DatePeriod) => void }) {
+    const earliest = useSetupStartDate();
     const granularity = getGranularity(value);
     const [isPickerOpen, setIsPickerOpen] = useState(false);
     const step = granularity === "day" ? stepDay : granularity === "month" ? stepMonth : stepYear;
@@ -150,9 +181,12 @@ export function DatePeriodPicker({ value, onChange }: { value: DatePeriod; onCha
             : granularity === "month"
               ? canStepMonthUp(value)
               : canStepYearUp(value);
+    // Stepping down clamps back onto the same period once the bound is reached, which is
+    // exactly when the chevron has nothing left to do.
+    const canStepDown = !isSameDatePeriod(step(value, -1, earliest), value);
 
     const handlePickerSelect = (period: DatePeriod) => {
-        onChange(clampToToday(period));
+        onChange(clampPeriod(period, earliest));
         setIsPickerOpen(false);
     };
 
@@ -163,7 +197,7 @@ export function DatePeriodPicker({ value, onChange }: { value: DatePeriod; onCha
                 variant="outline"
                 value={granularity}
                 onValueChange={(next) => {
-                    if (next !== "") onChange(withGranularity(value, next as Granularity));
+                    if (next !== "") onChange(withGranularity(value, next as Granularity, earliest));
                 }}
             >
                 <ToggleGroupItem value="year">Year</ToggleGroupItem>
@@ -175,7 +209,8 @@ export function DatePeriodPicker({ value, onChange }: { value: DatePeriod; onCha
                     variant="ghost"
                     size="icon-sm"
                     aria-label={`Previous ${granularity}`}
-                    onClick={() => onChange(step(value, -1))}
+                    disabled={!canStepDown}
+                    onClick={() => onChange(step(value, -1, earliest))}
                 >
                     <ChevronLeft aria-hidden="true" />
                 </Button>
@@ -187,11 +222,11 @@ export function DatePeriodPicker({ value, onChange }: { value: DatePeriod; onCha
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="center">
                         {granularity === "day" ? (
-                            <DayPickerCalendar value={value} onSelect={handlePickerSelect} />
+                            <DayPickerCalendar value={value} earliest={earliest} onSelect={handlePickerSelect} />
                         ) : granularity === "month" ? (
-                            <MonthPickerGrid value={value} onSelect={handlePickerSelect} />
+                            <MonthPickerGrid value={value} earliest={earliest} onSelect={handlePickerSelect} />
                         ) : (
-                            <YearPickerGrid value={value} onSelect={handlePickerSelect} />
+                            <YearPickerGrid value={value} earliest={earliest} onSelect={handlePickerSelect} />
                         )}
                     </PopoverContent>
                 </Popover>

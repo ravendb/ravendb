@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useId, type ReactNode } from "react";
 import { TrendingDown, TrendingUp } from "lucide-react";
 import { Area, AreaChart, YAxis } from "recharts";
 import { ZERO_SAFE_Y_DOMAIN } from "@/lib/chart-domain";
@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/shadcn/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/shadcn/ui/chart";
 import { Skeleton } from "@/components/shadcn/ui/skeleton";
 import { formatCompact } from "@/lib/format";
+import { SectionCard } from "@/pages/apps/section-card";
 
 export type DashboardStatCard = {
     label: string;
@@ -21,9 +22,21 @@ export type DashboardStatCard = {
     seriesDates?: string[];
     // Preformatted value, used when formatCompact isn't enough (e.g. currency).
     valueLabel?: string;
-    // Period-over-period change as a percent (12.5 -> +12.5%). Renders a trend badge.
+    // Period-over-period change as a percent (12.5 -> +12.5%). Renders a trend badge, except
+    // for a flat 0, which carries no trend to show.
     delta?: number;
 };
+
+// Every view that shows stat tiles renders them through this section, so the heading,
+// its name and the tile grid stay the same on the dashboard, the app overview, the
+// conversations view and analytics.
+export function StatCardsSection({ cards, action }: { cards: DashboardStatCard[]; action?: ReactNode }) {
+    return (
+        <SectionCard title="Activity" action={action}>
+            <DashboardStatCards cards={cards} />
+        </SectionCard>
+    );
+}
 
 export function DashboardStatCards({ cards }: { cards: DashboardStatCard[] }) {
     return (
@@ -47,7 +60,9 @@ function StatCard({ card }: { card: DashboardStatCard }) {
                         {card.label}
                         {card.labelInfo && <InfoHint content={card.labelInfo} />}
                     </span>
-                    {card.delta !== undefined && !card.isLoading && <DeltaBadge delta={card.delta} />}
+                    {card.delta !== undefined && card.delta !== 0 && !card.isLoading && (
+                        <DeltaBadge delta={card.delta} />
+                    )}
                 </div>
                 {card.isLoading ? (
                     <Skeleton className="h-9 w-20" />

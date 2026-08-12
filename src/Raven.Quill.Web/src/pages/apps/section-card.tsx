@@ -14,10 +14,10 @@ export function SectionCard({
 }) {
     return (
         <section className="min-w-0">
-            <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="mb-2 flex items-center justify-between gap-3">
                 <div className="space-y-0.5">
-                    <h2 className="text-sm font-semibold">{title}</h2>
-                    {description && <p className="text-xs text-muted-foreground">{description}</p>}
+                    <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+                    {description && <p className="text-sm text-muted-foreground">{description}</p>}
                 </div>
                 {action}
             </div>

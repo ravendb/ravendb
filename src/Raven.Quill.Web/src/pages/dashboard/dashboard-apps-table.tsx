@@ -55,7 +55,7 @@ export function DashboardAppsTable({
         <div className="space-y-4">
             <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                    <h2 className="text-sm font-semibold">Apps</h2>
+                    <h2 className="text-lg font-semibold tracking-tight">Apps</h2>
                     <Badge variant="secondary" className="font-mono">
                         {apps.length}
                     </Badge>
