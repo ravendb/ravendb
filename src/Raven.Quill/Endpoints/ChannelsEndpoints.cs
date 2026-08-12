@@ -189,7 +189,6 @@ public static class ChannelsEndpoints
         };
 
         await session.StoreAsync(channel, ct);
-        // empty change vector: fails if a concurrent request reserved this bot meanwhile
         await session.StoreAsync(new TelegramBotReservation { ChannelId = channel.Id! }, string.Empty, reservationId, ct);
 
         try

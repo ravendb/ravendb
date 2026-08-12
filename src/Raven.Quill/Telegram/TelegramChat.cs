@@ -65,7 +65,6 @@ internal sealed class TelegramChat
                 {
                     await HandleSafeAsync(message);
 
-                    // the dequeue freed a slot, so a future overflow warrants a fresh notice
                     Interlocked.Exchange(ref _overloadNotified, 0);
                 }
             }

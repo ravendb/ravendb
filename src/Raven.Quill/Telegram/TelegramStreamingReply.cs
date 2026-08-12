@@ -80,7 +80,6 @@ internal sealed class TelegramStreamingReply(
         _lastPreviewText = text;
     }
 
-    /// Messages already rolled during streaming stay as sent; only the live tail is re-rendered.
     public async Task FinalizeAsync()
     {
         var pending = _buffer.ToString(_flushedUpTo, PendingLength);
