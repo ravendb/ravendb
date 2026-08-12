@@ -1,6 +1,7 @@
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
 using Raven.Quill.Agents;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
@@ -164,8 +165,8 @@ public static class ChannelsEndpoints
 
         using var session = store.OpenAsyncSession(app.Database);
 
-        var existing = await session.LoadAllStartingWithAsync<Channel>(Channel.IdPrefix, ct);
-        if (existing.Any(c => c.Type == ChannelType.Telegram && c.Telegram?.BotId == bot.Id))
+        var reservationId = TelegramBotReservation.IdFor(bot.Id);
+        if (await session.LoadAsync<TelegramBotReservation>(reservationId, ct) is not null)
             return Results.BadRequest(new ApiErrorResponse($"bot @{bot.Username} is already connected in this app"));
 
         var channelId = Guid.NewGuid().ToString("N");
@@ -188,7 +189,17 @@ public static class ChannelsEndpoints
         };
 
         await session.StoreAsync(channel, ct);
-        await session.SaveChangesAsync(ct);
+        // empty change vector: fails if a concurrent request reserved this bot meanwhile
+        await session.StoreAsync(new TelegramBotReservation { ChannelId = channel.Id! }, string.Empty, reservationId, ct);
+
+        try
+        {
+            await session.SaveChangesAsync(ct);
+        }
+        catch (ConcurrencyException)
+        {
+            return Results.BadRequest(new ApiErrorResponse($"bot @{bot.Username} is already connected in this app"));
+        }
 
         telegramManager.Wake();
 
@@ -319,9 +330,19 @@ public static class ChannelsEndpoints
             if (bot is null)
                 return Results.BadRequest(new ApiErrorResponse(botError!));
 
-            var existing = await session.LoadAllStartingWithAsync<Channel>(Channel.IdPrefix, ct);
-            if (existing.Any(c => c.Id != channel.Id && c.Type == ChannelType.Telegram && c.Telegram?.BotId == bot.Id))
-                return Results.BadRequest(new ApiErrorResponse($"bot @{bot.Username} is already connected in this app"));
+            if (bot.Id != channel.Telegram?.BotId)
+            {
+                var reservationId = TelegramBotReservation.IdFor(bot.Id);
+                var reservation = await session.LoadAsync<TelegramBotReservation>(reservationId, ct);
+                if (reservation is not null && reservation.ChannelId != channel.Id)
+                    return Results.BadRequest(new ApiErrorResponse($"bot @{bot.Username} is already connected in this app"));
+
+                if (channel.Telegram?.BotId is > 0)
+                    session.Delete(TelegramBotReservation.IdFor(channel.Telegram.BotId));
+
+                if (reservation is null)
+                    await session.StoreAsync(new TelegramBotReservation { ChannelId = channel.Id! }, string.Empty, reservationId, ct);
+            }
 
             channel.Telegram ??= new TelegramSettings();
             channel.Telegram.BotToken = botToken;
@@ -342,7 +363,14 @@ public static class ChannelsEndpoints
         if (body.Enabled is not null)
             channel.Enabled = body.Enabled.Value;
 
-        await session.SaveChangesAsync(ct);
+        try
+        {
+            await session.SaveChangesAsync(ct);
+        }
+        catch (ConcurrencyException)
+        {
+            return Results.BadRequest(new ApiErrorResponse("the bot is already connected in this app"));
+        }
 
         telegramManager.Wake();
 
@@ -378,7 +406,7 @@ public static class ChannelsEndpoints
         return channel.Type switch
         {
             ChannelType.IFrame => await DeleteIFrameChannelAsync(store, app, channelId, logger, ct),
-            ChannelType.Telegram => await DeleteTelegramChannelAsync(store, app, channelId, telegramManager, logger, ct),
+            ChannelType.Telegram => await DeleteTelegramChannelAsync(store, app, channel, channelId, telegramManager, logger, ct),
             ChannelType.WhatsApp => DeleteWhatsAppChannelAsync(),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{channel.Type}'")),
         };
@@ -404,6 +432,7 @@ public static class ChannelsEndpoints
     private static async Task<IResult> DeleteTelegramChannelAsync(
         IDocumentStore store,
         App app,
+        Channel channel,
         string channelId,
         ITelegramChannelManager telegramManager,
         ILogger<ChannelsLogger> logger,
@@ -412,6 +441,8 @@ public static class ChannelsEndpoints
         using (var session = store.OpenAsyncSession(app.Database))
         {
             session.Delete(Channel.IdPrefix + channelId);
+            if (channel.Telegram?.BotId is > 0)
+                session.Delete(TelegramBotReservation.IdFor(channel.Telegram.BotId));
             await session.SaveChangesAsync(ct);
         }
 
