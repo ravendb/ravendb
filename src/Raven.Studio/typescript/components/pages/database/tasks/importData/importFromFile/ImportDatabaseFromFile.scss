@@ -58,12 +58,18 @@
     }
 }
 
+.import-info-panel {
+    padding: sizes.$gutter-sm;
+    background: var(--panel-bg-2);
+    border: sizes.$border-width solid colors.$border-color-light-var;
+    border-radius: sizes.$border-radius;
+}
+
 .import-collections-list {
     max-height: 450px;
     overflow-y: auto;
 }
 
-// header bar for switch lists - same look as .gather-debug-info-db-header (Gather Debug Info)
 .import-list-header {
     display: flex;
     align-items: center;
@@ -92,7 +98,13 @@
 }
 
 .import-side-nav {
-    width: 225px;
+    width: 280px;
+    flex-shrink: 0;
+
+    // narrow viewports need the space for the section content, not the nav labels
+    @media (max-width: 1399.98px) {
+        width: 200px;
+    }
 
     hr {
         margin: sizes.$gutter-xxs 0;

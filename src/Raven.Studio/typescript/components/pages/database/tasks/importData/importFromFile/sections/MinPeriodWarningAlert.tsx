@@ -1,7 +1,7 @@
 import React from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import Form from "react-bootstrap/Form";
-import RichAlert from "components/common/RichAlert";
+import { Icon } from "components/common/Icon";
 import { DatabaseSettingKey, ImportFromFileFormData, databaseSettingKeys } from "../importFromFileValidation";
 import { useMinPeriodWarning } from "../useMinPeriodWarning";
 import { useImportRestrictions } from "../useImportRestrictions";
@@ -47,10 +47,13 @@ export default function MinPeriodWarningAlert() {
     };
 
     return (
-        <RichAlert variant="warning" title="Frequency limited by your license" className="mt-3 mb-0">
+        <div className="import-info-panel mt-3">
+            <h4 className="hstack gap-1 mb-1">
+                <Icon icon="license" margin="m-0" /> Frequency limited by your license
+            </h4>
             <div>
-                Your license limits the frequency of the following settings. If this file carries a shorter
-                frequency, the whole import will fail - turn a setting off to leave it out of the import.
+                Your license limits the frequency of the following settings. If this file carries a shorter frequency,
+                the whole import will fail - turn a setting off to leave it out of the import.
             </div>
             <div className="d-flex flex-column gap-1 mt-2">
                 {warnings.map(({ key, label, minPeriodInHours }) => (
@@ -67,6 +70,6 @@ export default function MinPeriodWarningAlert() {
                     />
                 ))}
             </div>
-        </RichAlert>
+        </div>
     );
 }
