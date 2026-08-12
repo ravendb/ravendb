@@ -115,7 +115,7 @@ namespace SlowTests.Voron
         {
             // 1 MB data file = 128 pages, an exact multiple of 64, so the last 64 pages
             // share the final bitmap word that the constructor pads with "validated" bits.
-            var options = StorageEnvironmentOptions.ForPath(DataDir);
+            var options = StorageEnvironmentOptions.ForPathForTests(DataDir);
             options.InitialFileSize = 1024 * 1024;
             options.ManualFlushing = true;
 
@@ -145,7 +145,7 @@ namespace SlowTests.Voron
                 fileStream.Write(new byte[] { 0, 1, 2, 3, 4, 5, 6, 7 }, 0, 8);
             }
 
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPathForTests(DataDir)))
             {
                 using (var tx = env.ReadTransaction())
                 {
@@ -182,7 +182,7 @@ namespace SlowTests.Voron
         {
             // 1 MB file = 128 pages, so page 40 lives in the first bitmap word,
             // which never carries padding bits.
-            var options = StorageEnvironmentOptions.ForPath(DataDir);
+            var options = StorageEnvironmentOptions.ForPathForTests(DataDir);
             options.InitialFileSize = 1024 * 1024;
 
             const long pageNumber = 40;
@@ -242,7 +242,7 @@ namespace SlowTests.Voron
 
         private static StorageEnvironment CreateEnvironment(string path, long initialFileSize)
         {
-            var options = StorageEnvironmentOptions.ForPath(path);
+            var options = StorageEnvironmentOptions.ForPathForTests(path);
             options.InitialFileSize = initialFileSize;
             return new StorageEnvironment(options);
         }

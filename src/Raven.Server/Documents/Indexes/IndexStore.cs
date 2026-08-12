@@ -1698,12 +1698,12 @@ namespace Raven.Server.Documents.Indexes
                 if (Directory.Exists(replacementPath) == false)
                     continue;
 
-                addToInitLog(LogMode.Information, $"Initializing side-by-side reset replacement index: `{replacementName}`");
+                addToInitLog(LogLevel.Debug, $"Initializing side-by-side reset replacement index: `{replacementName}`");
                 OpenIndex(path, replacementPath, exceptions, replacementName, startIndex, definition);
             }
 
-            addToInitLog(LogMode.Information, $"Started {startedIndexes} new index{(startedIndexes > 1 ? "es" : string.Empty)}, took: {startIndexSp.ElapsedMilliseconds}ms");
-            addToInitLog(LogMode.Information, $"IndexStore initialization is completed, took: {totalSp.ElapsedMilliseconds:#,#;;0}ms");
+            addToInitLog(LogLevel.Debug, $"Started {startedIndexes} new index{(startedIndexes > 1 ? "es" : string.Empty)}, took: {startIndexSp.ElapsedMilliseconds}ms");
+            addToInitLog(LogLevel.Debug, $"IndexStore initialization is completed, took: {totalSp.ElapsedMilliseconds:#,#;;0}ms");
 
             if (exceptions != null && exceptions.Count > 0)
                 throw new AggregateException("Could not load some of the indexes", exceptions);

@@ -534,25 +534,13 @@ public static partial class CoraxQueryBuilder
     private static IQueryMatch HandleNegatedAnd(CoraxQueryBuilder.Parameters builderParameters, QueryExpression leftExpr, NegatedExpression rightExpr, bool exact)
     {
         var indexSearcher = builderParameters.IndexSearcher;
+        // The negation is always applied by subtracting the positive match from the left-hand set.
+        // Enumerating the complement instead would drop the documents that have no term for the
+        // field at all, which is what `A and not (startsWith(field, x))` used to do.
         IQueryMatch left = ToCoraxQuery(builderParameters, leftExpr, ref builderParameters.StreamingDisabled, exact);
-        // Corax does support internal negation of some primitives. Let's check if we can use it.
-        if (TryUseNegatedQuery(builderParameters, rightExpr, out var right, exact) == false)
-        {
-            right = ToCoraxQuery(builderParameters, rightExpr.Expression, ref builderParameters.StreamingDisabled, exact);
-            Materialize(builderParameters, ref left, ref right, ref builderParameters.StreamingDisabled);
-            return indexSearcher.AndNot(left, right, token: builderParameters.Token);
-        }
-
-        // We internally negated the right expression. If we find a pattern true and (NOT EXPR) we can skip the true, since it's noop. 
-        if (leftExpr is TrueExpression)
-            return right; // true and not... optimization
-
-        // Materialize the query
-        if (TryAndMergeOrMaterialize(builderParameters, ref left, ref right, out var merged, ref builderParameters.StreamingDisabled))
-            return merged;
-
-        // The right side is already negated, so we are using standard .And() method.
-        return indexSearcher.And(left, right);
+        IQueryMatch right = ToCoraxQuery(builderParameters, rightExpr.Expression, ref builderParameters.StreamingDisabled, exact);
+        Materialize(builderParameters, ref left, ref right, ref builderParameters.StreamingDisabled);
+        return indexSearcher.AndNot(left, right, token: builderParameters.Token);
     }
     
     private static IQueryMatch HandleIn(Parameters builderParameters, InExpression ie, bool exact)
