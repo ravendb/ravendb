@@ -6,8 +6,6 @@ internal sealed class Channel
 
     public string? Id { get; set; }
 
-    /// The API-facing channel id: the document id without the collection prefix. Internal so it is
-    /// never persisted into the document.
     internal string ShortId =>
         Id is not null && Id.StartsWith(IdPrefix, StringComparison.Ordinal)
             ? Id[IdPrefix.Length..]

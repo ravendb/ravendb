@@ -303,7 +303,6 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         var (app, channelId, token) = await ProvisionAsync();
         await using var appGuard = app;
 
-        // the *bold* tail keeps the finalize markdown edit observable (identical plain text would be a no-op)
         var reply = string.Join(" ", Enumerable.Range(0, 160).Select(i => $"Sentence number {i} is here.")) + " The *end* of it.";
         Assert.True(reply.Length > 4096);
         Router.Chunks = [reply];
@@ -320,7 +319,6 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         await Mock.WaitUntilAsync(
             () => Mock.EditedMessages.Any(e => e.ChatId == 11 && e.Text == parts[1]), "the finalize edit of the tail");
 
-        // the rolled message stays as sent; finalize only re-renders the live tail
         Assert.DoesNotContain(Mock.EditedMessages, e => e.ChatId == 11 && e.Text == parts[0]);
 
         await app.DeleteChannelAsync(channelId);

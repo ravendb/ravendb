@@ -107,7 +107,7 @@ public class TelegramMessageSplitterTests(ITestOutputHelper output) : NoDisposal
     [RavenFact(RavenTestCategory.Quill)]
     public void Hard_split_never_tears_a_surrogate_pair()
     {
-        var text = string.Concat(Enumerable.Repeat("\U0001F600", 20)); // 40 UTF-16 chars
+        var text = string.Concat(Enumerable.Repeat("\U0001F600", 20));
         var parts = TelegramMessageSplitter.Split(text, limit: 15);
 
         Assert.All(parts, part => Assert.True(part.Length <= 15));

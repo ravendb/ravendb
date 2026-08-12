@@ -8,7 +8,6 @@ public sealed class TelegramOptions
 
     public TimeSpan EditDebounce { get; set; } = TimeSpan.FromSeconds(1);
 
-    /// Upper bound per outgoing message; capped by the Telegram API limit of 4096 chars.
     public int MessageLimit { get; set; } = TelegramMessageSplitter.TelegramApiMessageLimit;
 
     public TimeSpan ApplyChangesInterval { get; set; } = TimeSpan.FromSeconds(30);

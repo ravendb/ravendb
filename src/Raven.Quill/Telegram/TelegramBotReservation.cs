@@ -1,7 +1,5 @@
 namespace Raven.Quill.Telegram;
 
-/// One doc per connected bot; storing it with an empty change vector makes the
-/// bot-to-channel assignment unique per app even under concurrent requests.
 internal sealed class TelegramBotReservation
 {
     internal const string IdPrefix = "telegram-bots/";
