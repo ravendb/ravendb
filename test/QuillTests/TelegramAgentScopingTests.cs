@@ -109,11 +109,11 @@ public class TelegramAgentScopingTests(ITestOutputHelper output, QuillTelegramFi
 
         var token = NewBotToken();
         await app.ProvisionChannelAsync(new ProvisionChannelRequest(
-            ChannelType.Telegram, agentId, null, BotToken: token,
-            ParameterBindings: new Dictionary<string, TelegramParameterBinding>
+            ChannelType.Telegram, agentId, null,
+            Telegram: new(token, new Dictionary<string, TelegramParameterBinding>
             {
                 ["TelegramUsername"] = new() { Source = TelegramParameterSource.Username },
-            }));
+            })));
 
         return (app, token);
     }

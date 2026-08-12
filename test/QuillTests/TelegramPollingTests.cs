@@ -46,7 +46,7 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         await Mock.WaitUntilAsync(() => Mock.GetUpdatesCallCount(oldToken) >= 1, "polling to start");
 
         var newToken = NewBotToken();
-        await app.UpdateChannelAsync(channelId, new UpdateChannelRequest(null, null, null, BotToken: newToken));
+        await app.UpdateChannelAsync(channelId, new UpdateChannelRequest(null, null, null, new(newToken)));
 
         await Mock.WaitUntilAsync(() => Mock.GetUpdatesCallCount(newToken) >= 1, "polling on the new token");
 
@@ -407,7 +407,7 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
 
         var token = NewBotToken();
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
-            ChannelType.Telegram, agentId, null, BotToken: token));
+            ChannelType.Telegram, agentId, null, Telegram: new(token)));
         var channelId = created.ChannelId;
 
         var manager = host.Services.GetRequiredService<TelegramChannelManager>();
@@ -446,11 +446,11 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         await Mock.WaitUntilAsync(() => Mock.GetUpdatesCallCount(token) >= 1, "polling to start");
 
         await app.UpdateChannelAsync(channelId, new UpdateChannelRequest(null, null, null,
-            Messages: new TelegramChannelMessages
+            new(Messages: new TelegramChannelMessages
             {
                 Greeting = "Witaj! Zadaj mi pytanie.",
                 UsernameMissing = "Ustaw nazwe uzytkownika w Telegramie i sprobuj ponownie.",
-            }));
+            })));
 
         // the restarted poller re-reads the queue from offset 0, so keep nudging until the new bot answers
         const long chatId = 620;
@@ -720,7 +720,7 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
 
         var token = NewBotToken();
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
-            ChannelType.Telegram, agentId, null, BotToken: token, ParameterBindings: bindings));
+            ChannelType.Telegram, agentId, null, Telegram: new(token, bindings)));
 
         return (app, created.ChannelId, token);
     }

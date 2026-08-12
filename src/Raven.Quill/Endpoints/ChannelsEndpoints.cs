@@ -94,6 +94,9 @@ public static class ChannelsEndpoints
         if (config is null)
             return Results.BadRequest(new ApiErrorResponse($"unknown agentId '{body.AgentId}'"));
 
+        if (body.Telegram is not null)
+            return Results.BadRequest(new ApiErrorResponse("telegram settings apply to Telegram channels only"));
+
         // open embed must be explicit (allowedOrigins: []); an omitted list => 400
         if (body.AllowedOrigins is null)
             return Results.BadRequest(new ApiErrorResponse(
@@ -142,8 +145,8 @@ public static class ChannelsEndpoints
         if (config is null)
             return Results.BadRequest(new ApiErrorResponse($"unknown agentId '{body.AgentId}'"));
 
-        if (string.IsNullOrWhiteSpace(body.BotToken))
-            return Results.BadRequest(new ApiErrorResponse("botToken is required for a Telegram channel"));
+        if (string.IsNullOrWhiteSpace(body.Telegram?.BotToken))
+            return Results.BadRequest(new ApiErrorResponse("telegram.botToken is required for a Telegram channel"));
 
         if (body.AllowedOrigins is { Length: > 0 })
             return Results.BadRequest(new ApiErrorResponse("allowedOrigins does not apply to Telegram channels"));
@@ -151,10 +154,10 @@ public static class ChannelsEndpoints
         if (TryValidateDisplayName(body.DisplayName, out var nameError) == false)
             return Results.BadRequest(new ApiErrorResponse(nameError!));
 
-        if (TelegramParameterBindings.TryResolve(config, body.ParameterBindings, out var bindings, out var paramError) == false)
+        if (TelegramParameterBindings.TryResolve(config, body.Telegram.ParameterBindings, out var bindings, out var paramError) == false)
             return Results.BadRequest(new ApiErrorResponse(paramError!, Code: "missing_parameters"));
 
-        var botToken = body.BotToken.Trim();
+        var botToken = body.Telegram.BotToken.Trim();
         var (bot, botError) = await telegramManager.ValidateBotTokenAsync(botToken, ct);
         if (bot is null)
             return Results.BadRequest(new ApiErrorResponse(botError!));
@@ -258,8 +261,8 @@ public static class ChannelsEndpoints
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
-        if (body.Messages is not null)
-            return Results.BadRequest(new ApiErrorResponse("messages apply to Telegram channels only"));
+        if (body.Telegram is not null)
+            return Results.BadRequest(new ApiErrorResponse("telegram settings apply to Telegram channels only"));
 
         if (body.AllowedOrigins is not null)
         {
@@ -309,9 +312,9 @@ public static class ChannelsEndpoints
         }
 
         var tokenRotated = false;
-        if (string.IsNullOrWhiteSpace(body.BotToken) == false)
+        if (string.IsNullOrWhiteSpace(body.Telegram?.BotToken) == false)
         {
-            var botToken = body.BotToken.Trim();
+            var botToken = body.Telegram.BotToken.Trim();
             var (bot, botError) = await telegramManager.ValidateBotTokenAsync(botToken, ct);
             if (bot is null)
                 return Results.BadRequest(new ApiErrorResponse(botError!));
@@ -327,13 +330,13 @@ public static class ChannelsEndpoints
             tokenRotated = true;
         }
 
-        if (body.Messages is not null)
+        if (body.Telegram?.Messages is { } messages)
         {
-            if (body.Messages.TryNormalize(out var messagesError) == false)
+            if (messages.TryNormalize(out var messagesError) == false)
                 return Results.BadRequest(new ApiErrorResponse(messagesError!));
 
             channel.Telegram ??= new TelegramSettings();
-            channel.Telegram.Messages = body.Messages.HasAnyOverride ? body.Messages : null;
+            channel.Telegram.Messages = messages.HasAnyOverride ? messages : null;
         }
 
         if (body.Enabled is not null)
