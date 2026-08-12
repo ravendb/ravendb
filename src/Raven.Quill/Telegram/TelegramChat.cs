@@ -110,11 +110,10 @@ internal sealed class TelegramChat
         }
         catch (Exception e)
         {
-            var scrubbed = TelegramSettings.ScrubToken(e.Message, _bot.BotToken);
-            _bot.Health.RecordError(DateTime.UtcNow, scrubbed);
+            _bot.Health.RecordError(DateTime.UtcNow, e.Message);
             _context.Logger.LogWarning(
                 "Telegram message handling failed for channel {ChannelId} chat {ChatId}: {Error}",
-                _context.ChannelDoc.Id, _chatId, scrubbed);
+                _context.ChannelDoc.Id, _chatId, e.Message);
         }
     }
 

@@ -190,8 +190,8 @@ public static class ChannelsEndpoints
         telegramManager.Wake();
 
         logger.LogInformation(
-            "Provisioned Telegram channel slug={Slug} channelId={ChannelId} agentId={AgentId} bot={Bot}",
-            app.Slug, channelId, config.Identifier, TelegramSettings.RedactToken(botToken));
+            "Provisioned Telegram channel slug={Slug} channelId={ChannelId} agentId={AgentId} bot=@{Bot}",
+            app.Slug, channelId, config.Identifier, bot.Username);
 
         return Results.Ok(new ProvisionChannelResponse(channelId));
     }

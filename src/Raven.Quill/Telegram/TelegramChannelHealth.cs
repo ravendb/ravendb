@@ -10,11 +10,11 @@ internal sealed class TelegramChannelHealth
     public void RecordSuccess(DateTime utcNow) =>
         Interlocked.Exchange(ref _lastSuccessfulPollTicks, utcNow.Ticks);
 
-    public void RecordError(DateTime utcNow, string scrubbedMessage)
+    public void RecordError(DateTime utcNow, string message)
     {
         Interlocked.Exchange(ref _lastErrorAtTicks, utcNow.Ticks);
         Interlocked.Increment(ref _errorCount);
-        _lastError = scrubbedMessage;
+        _lastError = message;
     }
 
     public TelegramChannelHealthSnapshot Snapshot()
