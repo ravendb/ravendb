@@ -82,15 +82,15 @@ function LicenseRestrictionsAlert({ items }: RestrictionsAlertProps) {
     }
 
     return (
-        <RichAlert variant="warning" title="Some data may not be imported" className="mt-3 mb-0">
+        <RichAlert variant="warning" title="Some data may not be imported" titleTag="h4" className="mt-3 mb-0">
             <div>
                 Your license doesn&apos;t include the following features. Any related data in this file will be skipped
                 automatically.
             </div>
             <div className="d-flex gap-2 flex-wrap mt-2">
-                {items.map((item) => (
-                    <Badge key={item.key} bg="secondary">
-                        <Icon icon="license" /> {item.label}
+                {items.map(({ key, tooltip, icon, label }) => (
+                    <Badge key={key} bg="secondary" title={tooltip}>
+                        <Icon icon={icon} addon="license" /> {label}
                     </Badge>
                 ))}
             </div>
@@ -110,15 +110,15 @@ function OtherRestrictionsAlert({ items }: RestrictionsAlertProps) {
     }
 
     return (
-        <RichAlert variant="warning" title="Some data cannot be imported" className="mt-3 mb-0">
+        <RichAlert variant="warning" title="Some data cannot be imported" titleTag="h4" className="mt-3 mb-0">
             <div>
                 The following features are unavailable for this database or for your certificate. Any related data in
                 this file will be skipped automatically.
             </div>
             <div className="d-flex gap-2 flex-wrap mt-2">
-                {items.map((item) => (
-                    <Badge key={item.key} bg="secondary" title={item.tooltip}>
-                        <Icon icon={item.reason === "sharding" ? "sharding" : "certificate"} /> {item.label}
+                {items.map(({ key, icon, reason, tooltip, label }) => (
+                    <Badge key={key} bg="secondary" title={tooltip}>
+                        <Icon icon={icon} addon={reason === "sharding" ? "sharding" : "certificate"} /> {label}
                     </Badge>
                 ))}
             </div>
