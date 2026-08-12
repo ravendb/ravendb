@@ -17,7 +17,7 @@ public static class TelegramEndpoints
             .WithName("telegram.health")
             .WithDescription(
                 "Per-bot polling health for the app's Telegram channels: last successful poll, last error " +
-                "(token-scrubbed) and error count. Counters live in the polling service, so they reset on restart.")
+                "and error count. Counters live in the polling service, so they reset on restart.")
             .Produces<TelegramChannelHealthResponse[]>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
     }

@@ -23,7 +23,6 @@ internal sealed class TelegramBotRuntime
     private readonly CancellationTokenSource _cts = new();
     private readonly TelegramChatContext _context;
     private readonly bool _acceptsContactShares;
-    private readonly string _redactedBotToken;
     private Task _receive = Task.CompletedTask;
     private TimeSpan _backoff = MinBackoff;
 
@@ -32,17 +31,13 @@ internal sealed class TelegramBotRuntime
         IDocumentStore store, IAgentRouter router, ApplianceOptions options, ILogger logger)
     {
         Client = client;
-        BotToken = channel.Telegram!.BotToken;
-        _redactedBotToken = TelegramSettings.RedactToken(BotToken);
         ChannelChangeVector = channelChangeVector;
-        _acceptsContactShares = channel.Telegram.ParameterBindings.Values
+        _acceptsContactShares = channel.Telegram!.ParameterBindings.Values
             .Any(binding => binding.Source == TelegramParameterSource.PhoneNumber);
         _context = new TelegramChatContext(database, channel, store, router, options, logger);
     }
 
     public ITelegramBotClient Client { get; }
-
-    public string BotToken { get; }
 
     /// The channel document's change vector at start; the manager restarts the bot when it moves.
     public string? ChannelChangeVector { get; }
@@ -137,12 +132,11 @@ internal sealed class TelegramBotRuntime
         ITelegramBotClient client, Exception e, HandleErrorSource source, CancellationToken ct)
     {
         var message = e.InnerException is null ? e.Message : $"{e.Message}: {e.InnerException.Message}";
-        var scrubbed = TelegramSettings.ScrubToken(message, BotToken);
 
-        Health.RecordError(DateTime.UtcNow, scrubbed);
+        Health.RecordError(DateTime.UtcNow, message);
         _context.Logger.LogWarning(
-            "Telegram poll failed for channel {ChannelId} (bot {Bot}): {Error}",
-            _context.ChannelDoc.Id, _redactedBotToken, scrubbed);
+            "Telegram poll failed for channel {ChannelId} (bot @{Bot}): {Error}",
+            _context.ChannelDoc.Id, _context.ChannelDoc.Telegram?.BotUsername, message);
 
         if (source != HandleErrorSource.PollingError)
             return;
@@ -168,7 +162,7 @@ internal sealed class TelegramBotRuntime
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
-            Health.RecordError(DateTime.UtcNow, TelegramSettings.ScrubToken(e.Message, BotToken));
+            Health.RecordError(DateTime.UtcNow, e.Message);
         }
     }
 
@@ -186,7 +180,7 @@ internal sealed class TelegramBotRuntime
         catch (TimeoutException)
         {
             _context.Logger.LogWarning(
-                "Telegram bot {Bot} did not drain within 10s", _redactedBotToken);
+                "Telegram bot for channel {ChannelId} did not drain within 10s", _context.ChannelDoc.Id);
             return;
         }
         catch (Exception)

@@ -136,8 +136,8 @@ internal sealed class TelegramChannelManager(
                 key.Database, entry.Channel, entry.ChangeVector, botFactory, store, router, options.Value, logger);
 
             logger.LogInformation(
-                "Telegram bot started for channel {ChannelId} (bot {Bot}) on {Database}",
-                key.ChannelId, TelegramSettings.RedactToken(entry.Channel.Telegram!.BotToken), key.Database);
+                "Telegram bot started for channel {ChannelId} (bot @{Bot}) on {Database}",
+                key.ChannelId, entry.Channel.Telegram!.BotUsername, key.Database);
         }
     }
 
@@ -161,11 +161,11 @@ internal sealed class TelegramChannelManager(
         }
         catch (ApiRequestException e)
         {
-            return (null, $"telegram rejected the bot token: {TelegramSettings.ScrubToken(e.Message, botToken)}");
+            return (null, $"telegram rejected the bot token: {e.Message}");
         }
         catch (RequestException e)
         {
-            return (null, $"could not reach telegram: {TelegramSettings.ScrubToken(e.Message, botToken)}");
+            return (null, $"could not reach telegram: {e.Message}");
         }
     }
 

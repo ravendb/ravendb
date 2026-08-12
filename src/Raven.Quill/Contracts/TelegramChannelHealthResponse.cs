@@ -1,6 +1,6 @@
 namespace Raven.Quill.Contracts;
 
-// no secrets: the bot token never appears here; LastError is token-scrubbed at the source
+// no secrets: the bot token never appears here
 public sealed record TelegramChannelHealthResponse(
     string ChannelId,
     string? BotUsername,
