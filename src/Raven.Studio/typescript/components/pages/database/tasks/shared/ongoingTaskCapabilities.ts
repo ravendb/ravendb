@@ -2,9 +2,6 @@ import { LicenseBadgeText } from "components/common/LicenseRestrictedBadge";
 
 type LicenseStatusKey = keyof LicenseStatus;
 
-/**
- * Every ongoing-task type the studio can create, keyed by its navigation-card target.
- */
 export type OngoingTaskTarget =
     | "GenAi"
     | "AiAgent"
@@ -29,22 +26,9 @@ export type OngoingTaskTarget =
     | "CdcSink"
     | "RemoteAttachments";
 
-/**
- * What a licence, a sharded database and a certificate's access level allow for one task type.
- *
- * Single source of truth for the two places that gate on it: the "Add new ongoing task" cards
- * (tasks/shared/shared.tsx) and the import-from-file restrictions (importData/importFromFile).
- */
 export interface OngoingTaskCapabilities {
-    /**
-     * Licence flags that enable the task. It counts as licence-restricted only when EVERY listed
-     * flag is missing - a few entries back more than one feature, so a licence holding any one of
-     * them still enables the task.
-     */
     licenseFlags: LicenseStatusKey[];
-    /** Omitted for tasks that every licence includes. */
     licenseBadge?: LicenseBadgeText;
-    /** Omitted means the task cannot run on a sharded database. */
     isShardingSupported?: boolean;
     accessRequired: databaseAccessLevel;
 }
@@ -170,12 +154,6 @@ export const ongoingTaskCapabilities: Record<OngoingTaskTarget, OngoingTaskCapab
     },
 };
 
-/**
- * Merges the capabilities of several task types into one entry - the import view gates whole
- * groups (e.g. one "Queue ETLs" row covering Kafka, RabbitMQ, Azure Queue Storage and Amazon SQS).
- * A group is licence-restricted only when every member is, and sharded only when every member is
- * sharding-supported.
- */
 export function mergeCapabilities(targets: OngoingTaskTarget[]): OngoingTaskCapabilities {
     const entries = targets.map((target) => ongoingTaskCapabilities[target]);
 
