@@ -17,6 +17,8 @@ interface ActionStatsLoaded {
 interface ActionProgressLoaded {
     location: databaseLocationSpecifier;
     progress: IndexProgress[];
+    // when set, only the listed indexes are updated (the response covers just a subset of the indexes)
+    scope?: string[];
     type: "ProgressLoaded";
 }
 
@@ -231,6 +233,10 @@ export const indexesStatsReducer: Reducer<IndexesStatsState, IndexesStatsReducer
 
             return produce(state, (draft) => {
                 draft.indexes.forEach((index) => {
+                    if (action.scope && !action.scope.includes(index.name)) {
+                        return;
+                    }
+
                     const itemToUpdate = index.nodesInfo.find((x) =>
                         databaseLocationComparator(x.location, incomingLocation)
                     );

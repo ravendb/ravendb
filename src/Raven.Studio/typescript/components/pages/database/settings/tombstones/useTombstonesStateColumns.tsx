@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Getter, ColumnDef } from "@tanstack/react-table";
-import { CellValueWrapper } from "components/common/virtualTable/cells/CellValue";
+import CellValue, { CellValueWrapper } from "components/common/virtualTable/cells/CellValue";
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
 import SubscriptionInfoExtended = Raven.Server.Documents.TombstoneCleaner.TombstonesState.SubscriptionInfoExtended;
 
@@ -126,7 +126,7 @@ function formatTombstoneTypes(
         return "";
     }
 
-    const fmt = (n: number) => (estimated ? `~${n}` : String(n));
+    const fmt = (n: number) => (estimated ? `~${n.toLocaleString()}` : n.toLocaleString());
 
     if (process === "Index") {
         return `Documents: ${fmt(types.Documents)}`;
@@ -149,7 +149,7 @@ function getEtagTitle(etagValue: number) {
 
 function CellEtagWrapper({ getValue }: { getValue: Getter<number> }) {
     const value = getValue();
-    return <CellValue value={formatEtag(value)} title={getEtagTitle(value)} />;
+    return <CellEtagValue value={formatEtag(value)} title={getEtagTitle(value)} />;
 }
 
 function CellTombstoneCountWrapper({
@@ -160,13 +160,19 @@ function CellTombstoneCountWrapper({
     row: { original: SubscriptionInfoExtended };
 }) {
     const value = getValue();
-    const estimated = row.original.Estimated;
-    const display = estimated ? `~${value}` : String(value);
-    const title = estimated ? "This value is estimated due to time constraints during calculation" : undefined;
-    return <CellValue value={display} title={title} />;
+
+    return row.original.Estimated ? (
+        <CellValue
+            value={`~${value.toLocaleString()}`}
+            className="value-number"
+            title="This value is estimated due to time constraints during calculation"
+        />
+    ) : (
+        <CellValue value={value} />
+    );
 }
 
-function CellValue({ value, title }: { value: unknown; title?: string }) {
+function CellEtagValue({ value, title }: { value: unknown; title?: string }) {
     return (
         <span title={title} className={`value-${typeof value}`}>
             {String(value)}

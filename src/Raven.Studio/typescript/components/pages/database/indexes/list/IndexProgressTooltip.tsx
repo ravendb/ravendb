@@ -18,6 +18,7 @@ import {
 import { NamedProgress, NamedProgressItem } from "components/common/NamedProgress";
 import { Icon } from "components/common/Icon";
 import copyToClipboard from "common/copyToClipboard";
+import messagePublisher from "common/messagePublisher";
 import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
 
@@ -45,8 +46,8 @@ export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
         setTogglingExactProgress(true);
         try {
             await toggleExactProgress(nodeInfo.location);
-        } catch {
-            // the (~) marker stays, the user can retry
+        } catch (e) {
+            messagePublisher.reportError("Failed to get index progress", e.responseText);
         } finally {
             setTogglingExactProgress(false);
         }

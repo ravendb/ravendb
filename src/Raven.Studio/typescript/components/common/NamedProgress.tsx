@@ -23,7 +23,6 @@ export function NamedProgressItem(props: {
     const progressValue = formatPercentage(progress, incomplete);
     const completed = !incomplete && progress.total === progress.processed;
     const remaining = progress.total - progress.processed;
-    const estimatedSuffix = progress.estimated ? " — estimated" : "";
     const title = completed
         ? "Processed all items (" + progress.processed.toLocaleString() + ")"
         : "Processed " +
@@ -32,12 +31,10 @@ export function NamedProgressItem(props: {
           progress.total.toLocaleString() +
           " (" +
           remaining.toLocaleString() +
-          " left)" +
-          estimatedSuffix;
-    const displayValue = progress.estimated ? `~${progressValue}` : `${progressValue}`;
+          " left)";
     return (
         <div className="progress-item" title={title}>
-            <strong className="progress-percentage">{displayValue}%</strong>{" "}
+            <strong className="progress-percentage">{progressValue}%</strong>{" "}
             <div className="progress-label">{children}</div>
             <div className="progress">
                 <div className={classNames("progress-bar", { completed })} style={{ width: progressValue + "%" }} />

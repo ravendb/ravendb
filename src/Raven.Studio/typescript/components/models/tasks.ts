@@ -12,7 +12,6 @@ export interface OngoingTaskHubDefinitionSharedInfo extends OngoingTaskSharedInf
 interface Progress {
     total: number;
     processed: number;
-    estimated?: boolean;
 }
 
 export interface OngoingTaskNodeEtlProgressDetails {
