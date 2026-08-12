@@ -396,41 +396,10 @@ public static class QueryBuilderHelper
         }
     }
 
-    internal static unsafe bool TryGetTime(Index index, object value, out long ticks)
+    internal static bool TryGetTime(Index index, object value, out long ticks)
     {
         ticks = -1;
-        DateTime dt = default;
-        DateTimeOffset dto = default;
-        DateOnly @do = default;
-        TimeOnly to = default;
-        LazyStringParser.Result result = LazyStringParser.Result.Failed;
-
-        switch (value)
-        {
-            case LazyStringValue lsv:
-                result = LazyStringParser.TryParseTimeForQuery(lsv.Buffer, lsv.Size, out dt, out dto, out @do, out to,
-                    index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.ProperlyParseThreeDigitsMillisecondsDates);
-                break;
-            case string valueAsString:
-                fixed (char* buffer = valueAsString)
-                {
-                    result = LazyStringParser.TryParseTimeForQuery(buffer, valueAsString.Length, out dt, out dto, out @do, out to,
-                        index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.ProperlyParseThreeDigitsMillisecondsDates);
-                }
-
-                break;
-            default:
-                var otherAsString = value.ToString();
-                fixed (char* buffer = otherAsString)
-                {
-                    result = LazyStringParser.TryParseTimeForQuery(buffer, otherAsString.Length, out dt, out dto, out @do, out to,
-                        index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.ProperlyParseThreeDigitsMillisecondsDates);
-                }
-
-                break;
-        }
-
-        switch (result)
+        switch (TryParseTimeValue(index, value, out var dt, out var dto, out var @do, out var to))
         {
             case LazyStringParser.Result.Failed:
                 return false;
@@ -448,6 +417,67 @@ public static class QueryBuilderHelper
                 return true;
             default:
                 throw new InvalidOperationException("Should not happen!");
+        }
+    }
+
+    // `in` matches terms as strings while `==`/`between` compare ticks, so the literal has to be rendered the way the converters
+    // wrote it ('.770' -> '.7700000'). One instant can have two spellings: a DateTime carries a trailing 'Z' only when its Kind is
+    // Utc, and a TimeOnly ('07:28:42') is also a valid TimeSpan term, which is written verbatim - hence alternateTerm. Only `in` may
+    // use it, being a disjunction; `all in` is a conjunction and must stick to term. Returns true for every value TryGetTime accepts,
+    // so callers take isTime from this same parse; term is null when the literal already is the indexed spelling.
+    internal static bool TryGetTimeTermsForInQuery(Index index, object value, out string term, out string alternateTerm)
+    {
+        term = null;
+        alternateTerm = null;
+
+        switch (TryParseTimeValue(index, value, out var dt, out var dto, out _, out var to))
+        {
+            case LazyStringParser.Result.DateTime:
+                term = dt.GetDefaultRavenFormat();
+                alternateTerm = dt.Kind == DateTimeKind.Utc ? term[..^1] : term + "Z";
+                return true;
+            case LazyStringParser.Result.DateTimeOffset:
+                term = dto.UtcDateTime.GetDefaultRavenFormat(isUtc: true);
+                alternateTerm = term[..^1];
+                return true;
+            case LazyStringParser.Result.TimeOnly:
+                alternateTerm = to.ToString(DefaultFormat.TimeOnlyFormatToWrite, CultureInfo.InvariantCulture);
+                return true;
+            case LazyStringParser.Result.DateOnly:
+                // nothing to render: the parser accepts 'yyyy-MM-dd' only, which already is what the converters write
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private static unsafe LazyStringParser.Result TryParseTimeValue(Index index, object value, out DateTime dt, out DateTimeOffset dto, out DateOnly @do, out TimeOnly to)
+    {
+        dt = default;
+        dto = default;
+        @do = default;
+        to = default;
+
+        if (value == null) // `in` accepts nulls - GetValues yields (null, String) for ValueTokenType.Null
+            return LazyStringParser.Result.Failed;
+
+        var properlyParseThreeDigitsMilliseconds = index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.ProperlyParseThreeDigitsMillisecondsDates;
+
+        switch (value)
+        {
+            case LazyStringValue lsv:
+                return LazyStringParser.TryParseTimeForQuery(lsv.Buffer, lsv.Size, out dt, out dto, out @do, out to, properlyParseThreeDigitsMilliseconds);
+            case string valueAsString:
+                fixed (char* buffer = valueAsString)
+                {
+                    return LazyStringParser.TryParseTimeForQuery(buffer, valueAsString.Length, out dt, out dto, out @do, out to, properlyParseThreeDigitsMilliseconds);
+                }
+            default:
+                var otherAsString = value.ToString();
+                fixed (char* buffer = otherAsString)
+                {
+                    return LazyStringParser.TryParseTimeForQuery(buffer, otherAsString.Length, out dt, out dto, out @do, out to, properlyParseThreeDigitsMilliseconds);
+                }
         }
     }
 

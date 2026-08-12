@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Exceptions;
+using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Integrations.PostgreSQL.Exceptions;
 using Raven.Server.Integrations.PostgreSQL.Types;
 
@@ -101,6 +104,9 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
         public List<PgColumn> Columns;
         public List<PgDataRow> Data;
 
+        // Null means the default "SELECT <rowcount>".
+        public string CommandTag;
+
         public PgTable()
         {
             Columns = new List<PgColumn>();
@@ -159,7 +165,34 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
 
         public virtual async Task Handle(PgTransaction transaction, MessageBuilder messageBuilder, PipeReader reader, PipeWriter writer, CancellationToken token)
         {
-            await HandleMessage(transaction, messageBuilder, writer, token);
+            try
+            {
+                await HandleMessage(transaction, messageBuilder, writer, token);
+            }
+            catch (Exception e) when (IsRecoverable(e))
+            {
+                // Without this the failure escapes PgSession's per-message handler, which only knows
+                // PgErrorException, and the session is torn down without a ReadyForQuery - the client
+                // sees a dropped connection instead of an error it can read.
+                throw AsPgError(e);
+            }
+        }
+
+        private static bool IsRecoverable(Exception e)
+        {
+            return e is not PgErrorException
+                   && e is not PgFatalException
+                   && e is not PgTerminateReceivedException
+                   && e is not OperationCanceledException
+                   && e is not IOException
+                   && e is not OutOfMemoryException;
+        }
+
+        private static PgErrorException AsPgError(Exception e)
+        {
+            return e is InvalidQueryException or QueryParser.ParseException
+                ? new PgErrorException(PgErrorCodes.SyntaxErrorOrAccessRuleViolation, e.Message, e)
+                : new PgErrorException(PgErrorCodes.InternalError, e.Message, e);
         }
 
         public virtual async Task HandleError(PgErrorException e, PgTransaction transaction, MessageBuilder messageBuilder, PipeWriter writer, CancellationToken token)

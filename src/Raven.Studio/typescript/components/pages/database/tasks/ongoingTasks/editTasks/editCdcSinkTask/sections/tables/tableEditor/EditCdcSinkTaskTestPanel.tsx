@@ -25,10 +25,9 @@ import * as yup from "yup";
 import ExpandableListContainer from "components/common/ExpandableListContainer";
 import FormStringValueList from "components/common/formFields/FormStringValueList";
 import { connectionStringSelectors } from "components/pages/database/settings/connectionStrings/store/connectionStringsSlice";
-import { mapConnectionStringToDto } from "components/pages/database/settings/connectionStrings/store/connectionStringsMapsToDto";
+import { mapSqlConnectionStringToDto } from "components/pages/database/settings/connectionStrings/store/connectionStringsMapsToDto";
 
 type TestCdcSinkRowSelector = Raven.Client.Documents.Operations.CdcSink.Test.TestCdcSinkRowSelector;
-type SqlConnectionString = Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString;
 
 interface EditCdcSinkTaskTestPanelProps {
     editForm: UseFormReturn<EditCdcSinkTaskFormData>;
@@ -50,10 +49,8 @@ export default function EditCdcSinkTaskTestPanel({ editForm, path }: EditCdcSink
         config.Name ||= "Test-CDC";
 
         const connection = sqlConnections.find((x) => x.name === formValues.connectionStringName);
-        const connectionDto = mapConnectionStringToDto(connection) as SqlConnectionString;
-
         return await tasksService.testCdcSink(databaseName, {
-            Connection: connectionDto,
+            Connection: mapSqlConnectionStringToDto(connection),
             Configuration: config,
             Operation: formData.isSimulateOnDelete ? "Delete" : "Upsert",
             MaxRows: formData.rowSelector === "First" ? formData.maxRows : 1,

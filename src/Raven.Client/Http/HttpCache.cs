@@ -165,7 +165,7 @@ namespace Raven.Client.Http
             old?.ReleaseRefInternal();
         }
 
-        public void SetNotFound(string url, bool aggressivelyCached)
+        public unsafe void SetNotFound(string url, bool aggressivelyCached)
         {
             var flag = aggressivelyCached ? ItemFlags.AggressivelyCached : ItemFlags.None;
             var httpCacheItem = new HttpCacheItem

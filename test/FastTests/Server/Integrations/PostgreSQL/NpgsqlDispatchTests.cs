@@ -41,7 +41,6 @@ namespace FastTests.Server.Integrations.PostgreSQL
         [RavenFact(RavenTestCategory.PostgreSql)]
         public void Npgsql5_composite_types_probe_returns_empty_rowset()
         {
-            // pg_attribute is empty → no rows. Three projected columns.
             Assert.True(PgVirtualInterpreter.TryExecute(Npgsql5CompositeTypesQuery, new VirtualQueryContext(), out var table));
             Assert.Equal(3, table.Columns.Count);
             Assert.Empty(table.Data);

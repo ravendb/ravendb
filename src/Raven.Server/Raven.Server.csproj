@@ -3,7 +3,7 @@
     <Description>Raven.Server is the database server for RavenDB</Description>
     <Authors>RavenDB</Authors>
     <TargetFramework>net10.0</TargetFramework>
-    <RuntimeFrameworkVersion>10.0.10</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>10.0.11</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Raven.Server</AssemblyName>
     <OutputType>Exe</OutputType>
@@ -33,7 +33,6 @@
     <EmbeddedResource Include="Integrations\PostgreSQL\Npgsql\current_setting_query.csv" />
     <EmbeddedResource Include="Integrations\PostgreSQL\VirtualCatalog\Tables\Data\pg_type.csv" />
     <EmbeddedResource Include="Integrations\PostgreSQL\VirtualCatalog\Tables\Data\pg_proc.csv" />
-    <EmbeddedResource Include="Integrations\PostgreSQL\VirtualCatalog\Tables\Data\pg_class.csv" />
     <EmbeddedResource Include="Integrations\PostgreSQL\VirtualCatalog\Tables\Data\pg_namespace.csv" />
     <EmbeddedResource Include="Integrations\PostgreSQL\VirtualCatalog\Tables\Data\pg_range.csv" />
     <EmbeddedResource Include="Web\Assets\Unsafe.html" />
@@ -53,7 +52,6 @@
     <None Remove="Integrations\PostgreSQL\Npgsql\current_setting_query.csv" />
     <None Remove="Integrations\PostgreSQL\VirtualCatalog\Tables\Data\pg_type.csv" />
     <None Remove="Integrations\PostgreSQL\VirtualCatalog\Tables\Data\pg_proc.csv" />
-    <None Remove="Integrations\PostgreSQL\VirtualCatalog\Tables\Data\pg_class.csv" />
     <None Remove="Integrations\PostgreSQL\VirtualCatalog\Tables\Data\pg_namespace.csv" />
     <None Remove="Integrations\PostgreSQL\VirtualCatalog\Tables\Data\pg_range.csv" />
   </ItemGroup>
