@@ -682,8 +682,11 @@ namespace Corax.Indexing
                     longTermLocation = newIndex;
                 }
 
+                // Even though reader.Frequency comes from the textual term, we deliberately apply it to the numerical terms as well.
+                // This is important because older indexes (pre RavenDB-27171) wrote the frequency into the numerical entry ids, so the removal must carry the same frequency to match them.
+                // For newer indexes this is a no-op, since we will override the frequency to 1 anyway.
                 term = ref field.Storage.GetAsRef(longTermLocation);
-                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, freq: 1, InserterMode.Numerical);
+                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, reader.Frequency, InserterMode.Numerical);
 
                 // RavenDB-25907: Sentinel value pattern for atomic Dictionary+Storage update.
                 ref var doubleTermLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Doubles, reader.CurrentDouble, out exists);
@@ -696,7 +699,7 @@ namespace Corax.Indexing
                 }
 
                 term = ref field.Storage.GetAsRef(doubleTermLocation);
-                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, freq: 1, InserterMode.Numerical);
+                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, reader.Frequency, InserterMode.Numerical);
             }
         }
 

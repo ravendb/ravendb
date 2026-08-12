@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using Corax;
 using Corax.Analyzers;
+using Corax.Querying;
 using Corax.Mappings;
 using FastTests.Voron;
 using Sparrow.Server;
@@ -72,8 +73,10 @@ public class IndexSearcherTest : StorageTest
     {
     }
 
-    [RavenFact(RavenTestCategory.Corax)]
-    public void BigAndNotMemoized()
+    [RavenTheory(RavenTestCategory.Corax)]
+    [InlineData(BitmapAndFillMode.Off)]
+    [InlineData(BitmapAndFillMode.Force)]
+    public void BigAndNotMemoized(BitmapAndFillMode bitmapAndFillMode)
     {
         int total = 100000;
 
@@ -95,7 +98,7 @@ public class IndexSearcherTest : StorageTest
         Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
         Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
 
-        using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+        using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
 
         var allEntries = searcher.AllEntries();
         var allEntriesMemoized = searcher.Memoize(allEntries);
@@ -179,8 +182,10 @@ public class IndexSearcherTest : StorageTest
         }
     }
 
-    [RavenFact(RavenTestCategory.Corax)]
-    public void BigAndNot()
+    [RavenTheory(RavenTestCategory.Corax)]
+    [InlineData(BitmapAndFillMode.Off)]
+    [InlineData(BitmapAndFillMode.Force)]
+    public void BigAndNot(BitmapAndFillMode bitmapAndFillMode)
     {
         int total = 100_000;
 
@@ -202,7 +207,7 @@ public class IndexSearcherTest : StorageTest
         Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
         Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
 
-        using var searcher = new IndexSearcher(base.Env, CreateKnownFields(bsc));
+        using var searcher = new IndexSearcher(base.Env, CreateKnownFields(bsc)) { BitmapAndFillMode = bitmapAndFillMode };
 
         {
             var andNotMatch = searcher.AndNot(searcher.AllEntries(), searcher.AllEntries());

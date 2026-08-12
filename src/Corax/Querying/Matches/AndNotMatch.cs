@@ -4,7 +4,9 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Corax.Querying.Matches.Meta;
+using Corax.Utils;
 using Sparrow.Server;
+using Sparrow.Server.Collections;
 using Sparrow.Server.Utils;
 
 namespace Corax.Querying.Matches
@@ -36,6 +38,15 @@ namespace Corax.Querying.Matches
 
         private bool _doNotSortResults;
 
+        private readonly bool _useBitmap;
+        private readonly bool _useBitmapForAndWith;
+        private readonly long _lastEntryId;
+        private GrowableBitArray _excludedBitmap;
+        private bool _excludedBitmapInitialized;
+        private bool _excludedBitmapIsEmpty;
+        private bool _bitmapExhausted;
+        private const int AndWithDrainBufferSize = 4096;
+
         public SkipSortingResult AttemptToSkipSorting()
         {
             var r = _inner.AttemptToSkipSorting();
@@ -48,7 +59,8 @@ namespace Corax.Querying.Matches
 
         private AndNotMatch(ByteStringContext context, 
             in TInner inner, in TOuter outer,
-            long totalResults, QueryCountConfidence confidence, CancellationToken token)
+            long totalResults, QueryCountConfidence confidence, CancellationToken token,
+            bool useBitmap, bool useBitmapForAndWith, long lastEntryId)
         {
             _totalResults = totalResults;
 
@@ -59,6 +71,13 @@ namespace Corax.Querying.Matches
 
             _context = context;
             _isAndWithBuffer = false;
+            _useBitmap = useBitmap;
+            _useBitmapForAndWith = useBitmapForAndWith;
+            _lastEntryId = lastEntryId;
+            _excludedBitmap = default;
+            _excludedBitmapInitialized = false;
+            _excludedBitmapIsEmpty = false;
+            _bitmapExhausted = false;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -66,6 +85,10 @@ namespace Corax.Querying.Matches
         {
             if (_isAndWithBuffer)
                 throw new InvalidOperationException($"We cannot execute `{nameof(Fill)}` after initiating a `{nameof(AndWith)}` operation.");
+
+            if (_useBitmap)
+                return FillViaBitmap(matches);
+
             // Check if this is the second time we enter or not. 
             if (_buffer.IsInitialized == false)
             {
@@ -148,6 +171,9 @@ namespace Corax.Querying.Matches
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int AndWith(Span<long> buffer, int matches)
         {
+            if (_useBitmapForAndWith)
+                return AndWithViaBitmap(buffer, matches);
+
             // This is not an AndWith memoized buffer, therefore we need to acquire a buffer to store the results
             // before continuing.   
             if (_isAndWithBuffer == false)
@@ -197,6 +223,110 @@ namespace Corax.Querying.Matches
         }
 
 
+        private int FillViaBitmap(Span<long> matches)
+        {
+            if (_bitmapExhausted)
+                return 0;
+
+            if (_excludedBitmapInitialized == false)
+                MaterializeExcludedBitmap(matches);
+
+            if (_excludedBitmapIsEmpty)
+            {
+                var read = _inner.Fill(matches);
+                _bitmapExhausted = read == 0;
+                return read;
+            }
+
+            while (true)
+            {
+                int totalResults = 0;
+                int iterations = 0;
+
+                var resultsSpan = matches;
+                while (resultsSpan.Length > 0)
+                {
+                    // RavenDB-17750: We have to fill everything possible UNTIL there are no more matches available.
+                    var results = _inner.Fill(resultsSpan);
+                    if (results == 0)
+                        break;
+
+                    totalResults += results;
+                    iterations++;
+
+                    resultsSpan = resultsSpan.Slice(results);
+                }
+
+                if (_doNotSortResults == false && iterations > 1)
+                {
+                    _token.ThrowIfCancellationRequested();
+                    totalResults = Sorting.SortAndRemoveDuplicates(matches.Slice(0, totalResults));
+                }
+
+                if (totalResults == 0)
+                {
+                    _bitmapExhausted = true;
+                    _excludedBitmap.Dispose();
+                    return 0;
+                }
+
+                _token.ThrowIfCancellationRequested();
+                totalResults = _excludedBitmap.Subtract(matches.Slice(0, totalResults));
+
+                // Since we would require to sort again if we dont return, we return what we have instead.
+                if (totalResults != 0)
+                    return totalResults;
+
+                // Everything got filtered out - keep pulling until the inner runs dry.
+            }
+        }
+
+        //Q1 ∧ (Q2 ∧ ¬Q3)  =  Q1 ∧ Q2 ∧ ¬Q3
+        private int AndWithViaBitmap(Span<long> buffer, int matches)
+        {
+            if (_bitmapExhausted)
+                throw new InvalidOperationException($"We cannot execute `{nameof(AndWith)}` after `{nameof(Fill)}` was fully drained.");
+
+            _isAndWithBuffer = true;
+            _token.ThrowIfCancellationRequested();
+
+            var results = _inner.AndWith(buffer, matches);
+            if (results == 0)
+                return 0;
+
+            if (_excludedBitmapInitialized == false)
+                MaterializeExcludedBitmapForAndWith();
+
+            if (_excludedBitmapIsEmpty)
+                return results;
+
+            _token.ThrowIfCancellationRequested();
+            return _excludedBitmap.Subtract(buffer.Slice(0, results));
+        }
+
+        private void MaterializeExcludedBitmap(Span<long> drainBuffer)
+        {
+            _excludedBitmapInitialized = true;
+            _excludedBitmap = new GrowableBitArray(_context, _lastEntryId);
+
+            while (_outer.Fill(drainBuffer) is var read and > 0)
+            {
+                _excludedBitmap.AddRange(drainBuffer.Slice(0, read));
+                _token.ThrowIfCancellationRequested();
+            }
+
+            if (_excludedBitmap.MaxSetBit == GrowableBitArray.DefaultMaxSetBit)
+            {
+                _excludedBitmapIsEmpty = true;
+                _excludedBitmap.Dispose();
+            }
+        }
+
+        private void MaterializeExcludedBitmapForAndWith()
+        {
+            using (_context.Allocate(AndWithDrainBufferSize, out Span<long> buffer))
+                MaterializeExcludedBitmap(buffer);
+        }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Score(Span<long> matches, Span<float> scores, float boostFactor)
         {
@@ -229,7 +359,22 @@ namespace Corax.Querying.Matches
             else
                 confidence = inner.Confidence.Min(outer.Confidence);
 
-            return new AndNotMatch<TInner, TOuter>(searcher.Allocator, in inner, in outer, inner.Count, confidence, token);
+            var useBitmap = searcher.BitmapAndFillMode switch
+            {
+                BitmapAndFillMode.Force => true,
+                BitmapAndFillMode.Auto => searcher.BitmapMemoryFits(bitmaps: 1) &&
+                                          searcher.BitmapSideQualifies(outer.Count, outer.Confidence),
+                _ => false
+            };
+
+            var useBitmapForAndWith = searcher.BitmapAndFillMode switch
+            {
+                BitmapAndFillMode.Force => true,
+                BitmapAndFillMode.Auto => searcher.BitmapMemoryFits(bitmaps: 1),
+                _ => false
+            };
+
+            return new AndNotMatch<TInner, TOuter>(searcher.Allocator, in inner, in outer, inner.Count, confidence, token, useBitmap, useBitmapForAndWith, searcher.LastEntryId);
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 
@@ -6,14 +6,40 @@ namespace Voron.Util
 {
 
     /// <summary>
-    /// Assumptions:
-    /// * Only single writer 
-    /// * Write operations can be very long ( involves I/O )
-    /// * Many readers
-    /// * Writer waiting should stop additional readers from entering
-    /// * Entering & exiting the read lock can happen in different threads (no thread affinity)
-    /// * Write lock is always on the same thread
+    /// Do not use this type in new code. The name says reader/writer lock, and the behaviour is
+    /// not one. It is kept because the journal flush depends on the behaviour described below.
+    /// The transaction lock rework in 8.0 replaces it, and it is removed there.
+    ///
+    /// A gate that blocks new readers while a writer is active. This is not a mutual-exclusion
+    /// reader/writer lock: EnterWriteLock returns without waiting for readers that are already in.
+    ///
+    /// The read side and the write side have different thread rules. Only the read side can
+    /// move between threads:
+    /// * Read side: the lock counts the readers. It does not record which threads they are.
+    ///   A read lock can be entered on one thread and exited on a different thread, for
+    ///   example before and after an await.
+    /// * Write side: the writer stays on one thread. The lock records the thread id of the
+    ///   writer, IsWriteLockHeld is true only on that thread, and ExitWriteLock must run on
+    ///   the thread that called EnterWriteLock, or it throws. Caution: an await between the
+    ///   two calls can move the code to a different thread. A writer that must move between
+    ///   threads needs a different ownership token than a thread id.
+    ///
+    /// Rules for callers:
+    /// * Only one writer can be active at a time. EnterWriteLock waits for the active writer
+    ///   to exit, and throws a TimeoutException when the timeout expires.
+    /// * A thread must not call EnterWriteLock while it holds the write lock. The call throws.
+    ///   This check reads the thread id, so it can only see a caller that stayed on the
+    ///   entering thread. The timeout is what bounds every other case.
+    /// * There is no drain. EnterWriteLock does not wait for the readers that are already
+    ///   inside, and it does not stop them. It blocks new readers and returns immediately,
+    ///   while the earlier readers keep running. Code that runs under the write lock runs
+    ///   at the same time as those readers and must be safe to do so.
+    /// * Each successful TryEnterReadLock must be paired with exactly one ExitReadLock.
+    ///   The number of concurrent readers must stay below 2^23.
+    /// * Where writer/reader mutual exclusion is necessary, callers must supply it with a
+    ///   different mechanism.
     /// </summary>
+    [Obsolete("Do not use in new code. The journal flush depends on this type, it is replaced by the transaction lock rework in 8.0.")]
     public sealed class ThreadHoppingReaderWriterLock
     {
         private const uint ReaderMask = 0x00FFFFFF;

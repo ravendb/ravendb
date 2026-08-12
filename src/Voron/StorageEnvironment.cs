@@ -98,7 +98,9 @@ namespace Voron
         internal readonly SemaphoreSlim _transactionWriter = new SemaphoreSlim(1, 1);
         internal NativeMemory.ThreadStats _currentWriteTransactionHolder;
         private readonly AsyncManualResetEvent _writeTransactionRunning = new AsyncManualResetEvent();
+#pragma warning disable CS0618 // the journal flush is the one remaining user of this lock
         internal readonly ThreadHoppingReaderWriterLock FlushInProgressLock = new ThreadHoppingReaderWriterLock();
+#pragma warning restore CS0618
         private readonly ReaderWriterLockSlim _txCreation = new ReaderWriterLockSlim();
         private readonly CountdownEvent _envDispose = new CountdownEvent(1);
 
@@ -156,7 +158,10 @@ namespace Voron
                 var remainingBits = _lastValidPageAfterLoad % (8 * sizeof(long));
 
                 _validPagesAfterLoad = new long[_lastValidPageAfterLoad / (8 * sizeof(long)) + (remainingBits == 0 ? 0 : 1)];
-                _validPagesAfterLoad[^1] |= unchecked(((long)ulong.MaxValue << (int)remainingBits));
+                // Pad only the high bits of the last word that do not cover real pages.
+                // When the page count is a multiple of 64 the last word holds only real pages.
+                if (remainingBits != 0)
+                    _validPagesAfterLoad[^1] |= unchecked(((long)ulong.MaxValue << (int)remainingBits));
 
                 _decompressionBuffers = new DecompressionBuffersPool(options);
 

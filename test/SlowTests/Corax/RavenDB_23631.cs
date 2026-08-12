@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using Corax;
 using Corax.Indexing;
@@ -13,8 +13,10 @@ namespace SlowTests.Corax;
 
 public class RavenDB_23631(ITestOutputHelper output) : StorageTest(output)
 {
-    [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Corax)]
-    public void MultiTermMatchDoesNotReturnDuplicatesWhenPerformingAndWith()
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
+    [InlineData(BitmapAndFillMode.Off)]
+    [InlineData(BitmapAndFillMode.Force)]
+    public void MultiTermMatchDoesNotReturnDuplicatesWhenPerformingAndWith(BitmapAndFillMode bitmapAndFillMode)
     {
         using var mapping = IndexFieldsMappingBuilder.CreateForWriter(false)
             .AddBinding(0, "id()")
@@ -39,7 +41,7 @@ public class RavenDB_23631(ITestOutputHelper output) : StorageTest(output)
             writer.Commit();
         }
 
-        using (var searcher = new IndexSearcher(Env, mapping))
+        using (var searcher = new IndexSearcher(Env, mapping) { BitmapAndFillMode = bitmapAndFillMode })
         {
             var @in = searcher.InQuery("id()", ["id/0", "id/10"]);
             var mtm = searcher.ExistsQuery(mapping.GetByFieldId(1).Metadata);
@@ -54,8 +56,10 @@ public class RavenDB_23631(ITestOutputHelper output) : StorageTest(output)
         }
     }
     
-    [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Corax)]
-    public void MultiTermMatchProperlyHandlesDuplicatesWhenPerformingAndWith()
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
+    [InlineData(BitmapAndFillMode.Off)]
+    [InlineData(BitmapAndFillMode.Force)]
+    public void MultiTermMatchProperlyHandlesDuplicatesWhenPerformingAndWith(BitmapAndFillMode bitmapAndFillMode)
     {
         using var mapping = IndexFieldsMappingBuilder.CreateForWriter(false)
             .AddBinding(0, "id()")
@@ -80,7 +84,7 @@ public class RavenDB_23631(ITestOutputHelper output) : StorageTest(output)
             writer.Commit();
         }
 
-        using (var searcher = new IndexSearcher(Env, mapping))
+        using (var searcher = new IndexSearcher(Env, mapping) { BitmapAndFillMode = bitmapAndFillMode })
         {
             var inTerms = Enumerable.Range(0, 10)
                 .Select(i => $"id/{i}")

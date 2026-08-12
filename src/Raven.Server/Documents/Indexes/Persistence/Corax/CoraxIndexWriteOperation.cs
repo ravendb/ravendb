@@ -51,7 +51,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 _indexWriter = new IndexWriter(writeTransaction, knownFields, new SupportedFeatures(
                     isPhraseQuerySupported: index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.PhraseQuerySupportInCoraxIndexes,
                     isStoreOnlySupported: index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.StoreOnlySupportInCoraxIndexes,
-                    isPaginationBasedOnEntryIdSupported: index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.CoraxPagingBasedOnEntriesId_62))
+                    isPaginationBasedOnEntryIdSupported: index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.CoraxPagingBasedOnEntriesId_62,
+                    isNumericalValuesWithoutFrequenciesSupported: IndexDefinitionBaseServerSide.IndexVersion.IsNumericTreesWithoutFrequenciesSupported(index.Definition.Version)))
                 {
                     MaximumConcurrentBatchesForHnswAcceleration = index.Configuration.MaximumConcurrentBatchesForHnswAcceleration
                 };
