@@ -172,9 +172,9 @@ public abstract class QuillTelegramTestBase(ITestOutputHelper output, QuillTeleg
         base.NewHostAsync(
             configure: opts =>
             {
-                opts.TelegramApiUrl = fixture.Mock.BaseAddress;
-                opts.TelegramEditDebounce = TimeSpan.FromMilliseconds(50);
-                opts.TelegramApplyChangesInterval = TimeSpan.FromMilliseconds(250);
+                opts.Telegram.ApiUrl = fixture.Mock.BaseAddress;
+                opts.Telegram.EditDebounce = TimeSpan.FromMilliseconds(50);
+                opts.Telegram.ApplyChangesInterval = TimeSpan.FromMilliseconds(250);
                 configure?.Invoke(opts);
             },
             configureServices: services =>
@@ -192,9 +192,9 @@ public abstract class QuillTelegramTestBase(ITestOutputHelper output, QuillTeleg
         base.NewHostAsync(
             configure: opts =>
             {
-                opts.TelegramApiUrl = fixture.Mock.BaseAddress;
-                opts.TelegramEditDebounce = TimeSpan.FromMilliseconds(50);
-                opts.TelegramApplyChangesInterval = TimeSpan.FromMilliseconds(250);
+                opts.Telegram.ApiUrl = fixture.Mock.BaseAddress;
+                opts.Telegram.EditDebounce = TimeSpan.FromMilliseconds(50);
+                opts.Telegram.ApplyChangesInterval = TimeSpan.FromMilliseconds(250);
             },
             seedChatConnectionString: false);
 

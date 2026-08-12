@@ -17,7 +17,7 @@ internal sealed class TelegramBotClientFactory(
 
     public ITelegramBotClient Create(string botToken)
     {
-        var clientOptions = new TelegramBotClientOptions(botToken, baseUrl: options.Value.TelegramApiUrl);
+        var clientOptions = new TelegramBotClientOptions(botToken, baseUrl: options.Value.Telegram.ApiUrl);
         return new TelegramBotClient(clientOptions, httpClientFactory.CreateClient(HttpClientName));
     }
 }

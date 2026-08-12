@@ -26,18 +26,7 @@ public sealed class ApplianceOptions
     [Url]
     public string? AiApiUrl { get; set; }
 
-    [Url]
-    public string? TelegramApiUrl { get; set; }
-
-    // min interval between editMessageText calls while streaming a reply
-    public TimeSpan TelegramEditDebounce { get; set; } = TimeSpan.FromSeconds(1);
-
-    public TimeSpan TelegramApplyChangesInterval { get; set; } = TimeSpan.FromSeconds(30);
-
-    public int TelegramChatQueueCapacity { get; set; } = 8;
-
-    // idle time after which a chat's queue and worker are torn down; the next message re-creates them
-    public TimeSpan TelegramChatIdleTimeout { get; set; } = TimeSpan.FromMinutes(15);
+    public TelegramOptions Telegram { get; set; } = new();
 
     public TimeSpan ReadinessInitialDelay { get; set; } = TimeSpan.FromSeconds(15);
 

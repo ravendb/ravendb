@@ -75,7 +75,7 @@ builder.Services.AddOptions<ApplianceOptions>()
         ReadEnv("RAVEN_QUILL_SETUP_PACKAGE_PATH", v => options.SetupPackagePath = v);
         ReadEnv("RAVEN_QUILL_RAVENDB_S6_SERVICE", v => options.RavenDbS6Service = v);
         ReadEnv("RAVEN_QUILL_API_URL", v => options.AiApiUrl = v);
-        ReadEnv("RAVEN_QUILL_TELEGRAM_API_URL", v => options.TelegramApiUrl = v);
+        ReadEnv("RAVEN_QUILL_TELEGRAM_API_URL", v => options.Telegram.ApiUrl = v);
         ReadEnv("QUILL_LICENSE_KEY", v => options.LicenseKey = v);
         ReadEnv("QUILL_API_KEY", v => options.ApiKey = v);
         ReadEnv("RAVEN_QUILL_RAVENDB_INTERNAL_PORT", v =>
@@ -94,6 +94,10 @@ builder.Services.AddOptions<ApplianceOptions>()
             options.ReadinessOverallTimeout = ParsePositiveSeconds("RAVEN_QUILL_READINESS_OVERALL_TIMEOUT_SECONDS", v));
     })
     .ValidateDataAnnotations()
+    .Validate(o => string.IsNullOrEmpty(o.Telegram.ApiUrl) ||
+                   Uri.TryCreate(o.Telegram.ApiUrl, UriKind.Absolute, out var u) &&
+                   (u.Scheme == Uri.UriSchemeHttp || u.Scheme == Uri.UriSchemeHttps),
+        "Telegram ApiUrl must be an absolute http(s) URL")
     .ValidateOnStart();
 
 builder.Services.AddSingleton<IDocumentStore>(sp =>

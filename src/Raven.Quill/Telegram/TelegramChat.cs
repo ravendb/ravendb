@@ -30,7 +30,7 @@ internal sealed class TelegramChat
         _ct = ct;
 
         _queue = System.Threading.Channels.Channel.CreateBounded<Message>(
-            new BoundedChannelOptions(context.Options.TelegramChatQueueCapacity)
+            new BoundedChannelOptions(context.Options.Telegram.ChatQueueCapacity)
             {
                 SingleReader = true,
                 FullMode = BoundedChannelFullMode.Wait,
@@ -80,7 +80,7 @@ internal sealed class TelegramChat
         var wait = _queue.Reader.WaitToReadAsync(_ct).AsTask();
         try
         {
-            return await wait.WaitAsync(_context.Options.TelegramChatIdleTimeout);
+            return await wait.WaitAsync(_context.Options.Telegram.ChatIdleTimeout);
         }
         catch (TimeoutException)
         {
@@ -229,7 +229,7 @@ internal sealed class TelegramChat
         string prompt, string conversationId, AiAgentConfiguration config, Dictionary<string, string> parameters)
     {
         var reply = new TelegramStreamingReply(
-            _bot.Client, _chatId, _context.Options.TelegramEditDebounce, _bot.BotToken, _context.Logger, _ct);
+            _bot.Client, _chatId, _context.Options.Telegram.EditDebounce, _bot.BotToken, _context.Logger, _ct);
 
         try
         {
