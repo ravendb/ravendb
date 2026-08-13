@@ -166,7 +166,8 @@ public static class ChannelsEndpoints
         using var session = store.OpenAsyncSession(app.Database);
 
         var reservationId = TelegramBotReservation.IdFor(bot.Id);
-        if (await session.LoadAsync<TelegramBotReservation>(reservationId, ct) is not null)
+        var reservation = await session.LoadAsync<TelegramBotReservation>(reservationId, ct);
+        if (reservation is not null && await session.LoadAsync<Channel>(reservation.ChannelId, ct) is not null)
             return Results.BadRequest(new ApiErrorResponse($"bot @{bot.Username} is already connected in this app"));
 
         var channelId = Guid.NewGuid().ToString("N");
@@ -189,7 +190,16 @@ public static class ChannelsEndpoints
         };
 
         await session.StoreAsync(channel, ct);
-        await session.StoreAsync(new TelegramBotReservation { ChannelId = channel.Id! }, string.Empty, reservationId, ct);
+        if (reservation is null)
+        {
+            await session.StoreAsync(new TelegramBotReservation { ChannelId = channel.Id! }, string.Empty, reservationId, ct);
+        }
+        else
+        {
+            // a reservation without a live channel is an orphan; reclaim it under its change vector
+            reservation.ChannelId = channel.Id!;
+            await session.StoreAsync(reservation, session.Advanced.GetChangeVectorFor(reservation), reservationId, ct);
+        }
 
         try
         {
@@ -335,7 +345,14 @@ public static class ChannelsEndpoints
                 var reservationId = TelegramBotReservation.IdFor(bot.Id);
                 var reservation = await session.LoadAsync<TelegramBotReservation>(reservationId, ct);
                 if (reservation is not null && reservation.ChannelId != channel.Id)
-                    return Results.BadRequest(new ApiErrorResponse($"bot @{bot.Username} is already connected in this app"));
+                {
+                    if (await session.LoadAsync<Channel>(reservation.ChannelId, ct) is not null)
+                        return Results.BadRequest(new ApiErrorResponse($"bot @{bot.Username} is already connected in this app"));
+
+                    // a reservation without a live channel is an orphan; reclaim it under its change vector
+                    reservation.ChannelId = channel.Id!;
+                    await session.StoreAsync(reservation, session.Advanced.GetChangeVectorFor(reservation), reservationId, ct);
+                }
 
                 if (channel.Telegram?.BotId is > 0)
                     session.Delete(TelegramBotReservation.IdFor(channel.Telegram.BotId));
