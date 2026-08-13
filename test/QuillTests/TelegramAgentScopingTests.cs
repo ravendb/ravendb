@@ -17,6 +17,7 @@ public class TelegramAgentScopingTests(ITestOutputHelper output, QuillTelegramFi
     public async Task Telegram_sender_only_reaches_their_own_documents_even_when_the_model_asks_for_another_handle()
     {
         var (app, token) = await ProvisionScopedAgentAsync();
+        await using var hostGuard = app.Host;
         await using var appGuard = app;
 
         Llm.ToolCall = ("MyTickets", "{\"TelegramUsername\":\"victim99\"}");
@@ -34,6 +35,7 @@ public class TelegramAgentScopingTests(ITestOutputHelper output, QuillTelegramFi
     public async Task Telegram_sender_reaches_their_own_documents_on_the_happy_path()
     {
         var (app, token) = await ProvisionScopedAgentAsync();
+        await using var hostGuard = app.Host;
         await using var appGuard = app;
 
         Llm.ToolCall = ("MyTickets", "{}");
