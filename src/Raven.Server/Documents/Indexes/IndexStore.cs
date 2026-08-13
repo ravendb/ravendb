@@ -610,6 +610,10 @@ namespace Raven.Server.Documents.Indexes
 
                     if (replacementIndex != null)
                     {
+                        creationOptions = GetIndexCreationOptions(definition, replacementIndex.ToIndexInformationHolder(), _documentDatabase.Configuration, out _);
+                        if (creationOptions == IndexCreationOptions.Noop)
+                            return null;
+
                         if (replacementIndex is MapReduceIndex replacementMapReduceIndex && replacementMapReduceIndex.OutputReduceToCollection != null)
                         {
                             if (replacementMapReduceIndex.Definition.ReduceOutputIndex != null &&
@@ -1671,6 +1675,32 @@ namespace Raven.Server.Documents.Indexes
             addToInitLog(LogLevel.Debug, "Starting new indexes");
             startIndex = _documentDatabase.Configuration.Indexing.IndexStartupBehavior != IndexingConfiguration.IndexStartupBehaviorType.Pause;
             var startedIndexes = HandleDatabaseRecordChange(record, raftIndex, startIndex);
+
+            // A side-by-side reset replacement (ReplacementOf/...) is created through a local-only path and is not
+            // persisted in the database record, so it isn't opened from the record above. A definition-change
+            // side-by-side, on the other hand, was already recreated by HandleDatabaseRecordChange (its original
+            // differs from the record). So here we open only the replacement directories that are still orphaned -
+            // the in-progress side-by-side resets - so they survive the restart instead of being left on disk unused.
+            foreach (var kvp in record.Indexes)
+            {
+                if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
+                    return;
+
+                var name = kvp.Key;
+                var definition = kvp.Value;
+
+                var replacementName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + name;
+                if (_indexes.TryGetByName(replacementName, out _))
+                    continue;
+
+                var replacementSafeName = IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(replacementName);
+                var replacementPath = path.Combine(replacementSafeName).FullPath;
+                if (Directory.Exists(replacementPath) == false)
+                    continue;
+
+                addToInitLog(LogLevel.Debug, $"Initializing side-by-side reset replacement index: `{replacementName}`");
+                OpenIndex(path, replacementPath, exceptions, replacementName, startIndex, definition);
+            }
 
             addToInitLog(LogLevel.Debug, $"Started {startedIndexes} new index{(startedIndexes > 1 ? "es" : string.Empty)}, took: {startIndexSp.ElapsedMilliseconds}ms");
             addToInitLog(LogLevel.Debug, $"IndexStore initialization is completed, took: {totalSp.ElapsedMilliseconds:#,#;;0}ms");

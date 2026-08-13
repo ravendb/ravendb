@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -51,8 +51,10 @@ namespace FastTests.Corax
             }
         }
 
-        [RavenFact(RavenTestCategory.Corax)]
-        public void OrBoosting()
+        [RavenTheory(RavenTestCategory.Corax)]
+        [InlineData(BitmapAndFillMode.Off)]
+        [InlineData(BitmapAndFillMode.Force)]
+        public void OrBoosting(BitmapAndFillMode bitmapAndFillMode)
         {
             longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/1", Content1 = 1}); //  2 * 10
             longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/11", Content1 = 0}); //  2 
@@ -62,7 +64,7 @@ namespace FastTests.Corax
             longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/3", Content1 = 2});
 
             IndexEntries();
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
             {
                 var startWithMatch = searcher.StartWithQuery(searcher.FieldMetadataBuilder("Id", hasBoost: true), "list/1");
                 var boostedStartWithMatch = searcher.Boost(startWithMatch, 2);
@@ -126,8 +128,10 @@ namespace FastTests.Corax
             }
         }
         
-        [RavenFact(RavenTestCategory.Corax)]
-        public void OrderByBoosting()
+        [RavenTheory(RavenTestCategory.Corax)]
+        [InlineData(BitmapAndFillMode.Off)]
+        [InlineData(BitmapAndFillMode.Force)]
+        public void OrderByBoosting(BitmapAndFillMode bitmapAndFillMode)
         {
             longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/1", Content1 = 1}); // 2 * 10
             longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/11", Content1 = 0}); // 2 * 10
@@ -137,7 +141,7 @@ namespace FastTests.Corax
             longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/3", Content1 = 2}); //      0
 
             IndexEntries();
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
             {
                 var startWithMatch = searcher.StartWithQuery("Id", "list/1", hasBoost: true);
                 var boostedStartWithMatch = searcher.Boost(startWithMatch, 2);
@@ -165,8 +169,10 @@ namespace FastTests.Corax
         }
 
 
-        [RavenFact(RavenTestCategory.Corax)]
-        public void OrderByBoostingTake4()
+        [RavenTheory(RavenTestCategory.Corax)]
+        [InlineData(BitmapAndFillMode.Off)]
+        [InlineData(BitmapAndFillMode.Force)]
+        public void OrderByBoostingTake4(BitmapAndFillMode bitmapAndFillMode)
         {
             longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/1", Content1 = 1}); // 2 * 10
             longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/11", Content1 = 0}); // 2 * 10
@@ -176,7 +182,7 @@ namespace FastTests.Corax
             longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/3", Content1 = 2}); //      0
 
             IndexEntries();
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
             {
                 var startWithMatch = searcher.StartWithQuery("Id", "list/1", hasBoost: true);
                 var boostedStartWithMatch = searcher.Boost(startWithMatch, 2);
@@ -209,8 +215,10 @@ namespace FastTests.Corax
             return value1.Content1.CompareTo(value2.Content1);
         }
 
-        [RavenFact(RavenTestCategory.Corax)]
-        public void OrderByBoostingTermFrequency()
+        [RavenTheory(RavenTestCategory.Corax)]
+        [InlineData(BitmapAndFillMode.Off)]
+        [InlineData(BitmapAndFillMode.Force)]
+        public void OrderByBoostingTermFrequency(BitmapAndFillMode bitmapAndFillMode)
         {
             longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/1", Content1 = 0}); // 1/2
             longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/2", Content1 = 0}); // 1/2
@@ -220,7 +228,7 @@ namespace FastTests.Corax
             longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/6", Content1 = 1}); // 1/4            
 
             IndexEntries();
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
             {
                 var content0Match = searcher.TermQuery("Content1", "0", hasBoost: true);
                 var boostedContent0 = searcher.Boost(content0Match, 1);

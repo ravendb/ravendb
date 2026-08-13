@@ -3,7 +3,9 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Corax.Querying.Matches.Meta;
+using Corax.Utils;
 using Sparrow.Server;
+using Sparrow.Server.Collections;
 
 namespace Corax.Querying.Matches
 {
@@ -29,6 +31,14 @@ namespace Corax.Querying.Matches
         private SkipSortingResult _skipSortingResult;
 
         private int _fillCallCounter;
+        private readonly DuplicatesOccurrence _duplicatesOccurrence;
+
+        private bool _materialized;
+        private GrowableBitArray _innerBitmap;
+        private GrowableBitArray _outerBitmap;
+        private long _lastReturnedId;
+        private bool _finished;
+
         public SkipSortingResult AttemptToSkipSorting() => _skipSortingResult;
 
         public bool IsBoosting => _inner.IsBoosting || _outer.IsBoosting;
@@ -46,6 +56,7 @@ namespace Corax.Querying.Matches
             long totalResults,
             QueryCountConfidence confidence,
             SkipSortingResult skipSortingResult,
+            DuplicatesOccurrence duplicatesOccurrence,
             in CancellationToken token)
         {
             _indexSearcher = indexSearcher;
@@ -59,9 +70,15 @@ namespace Corax.Querying.Matches
             _outer = outer;
             _confidence = confidence;
             _skipSortingResult = skipSortingResult;
+            _duplicatesOccurrence = duplicatesOccurrence;
             _token = token;
             _ctx = indexSearcher.Allocator;
             _fillCallCounter = 0;
+            _materialized = false;
+            _innerBitmap = default;
+            _outerBitmap = default;
+            _lastReturnedId = 0;
+            _finished = false;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -133,6 +150,6 @@ namespace Corax.Querying.Matches
         }
 
         string DebugView => Inspect().ToString();
-        public DuplicatesOccurrence DuplicatesOccurrenceStatus => DuplicatesOccurrence.Possible;
+        public DuplicatesOccurrence DuplicatesOccurrenceStatus => _duplicatesOccurrence;
     }
 }
