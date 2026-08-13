@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
-ARG SDK_IMAGE=mcr.microsoft.com/dotnet/sdk:10.0.302
-ARG RUNTIME_IMAGE=mcr.microsoft.com/dotnet/aspnet:10.0.10-noble
+ARG SDK_IMAGE=mcr.microsoft.com/dotnet/sdk:10.0.400
+ARG RUNTIME_IMAGE=mcr.microsoft.com/dotnet/aspnet:10.0.11-noble
 ARG NODE_IMAGE=node:24-bookworm-slim
 ARG RAVENDB_IMAGE=ravendb/ravendb-nightly:7.2-latest
 ARG PNPM_VERSION=11.2.2

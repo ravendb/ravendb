@@ -36,7 +36,7 @@ public class RavenDB_26721 : RavenTestBase
         public string Body { get; set; }
     }
 
-    [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Encryption | RavenTestCategory.Indexes)]
+    [RavenMultiplatformFact(RavenTestCategory.Querying | RavenTestCategory.Encryption | RavenTestCategory.Indexes, RavenArchitecture.AllX64)]
     public async Task Streaming_Projection_Query_On_Encrypted_Db_Aborted_MidStream_Does_Not_Throw()
     {
         // Repro for RavenDB-26721: during a streaming projection query over an encrypted database, the index read
