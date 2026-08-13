@@ -39,7 +39,6 @@ import { DashboardLicense } from "@/pages/dashboard/license";
 import { DashboardUsage } from "@/pages/dashboard/usage";
 import { appRoutes as appRouteBuilders, ROUTE_PATTERNS } from "@/lib/app-routes";
 import { RequireApp } from "@/pages/apps/require-app";
-import { AiPage } from "@/pages/utility/ai-page";
 import { AppScopedNotFoundPage, NotFoundPage } from "@/pages/utility/not-found-page";
 import { RouteErrorBoundary } from "@/pages/utility/route-error-boundary";
 import { SimpleInfoPage } from "@/pages/utility/simple-info-page";
@@ -382,13 +381,6 @@ const utilityRoutes: RouteObject[] = [
         element: <SimpleInfoPage title="Docs" description="Open RavenDB documentation from the top navigation." />,
         handle: {
             title: "Docs",
-        } satisfies AppRouteHandle,
-    },
-    {
-        path: "ai",
-        element: <AiPage />,
-        handle: {
-            title: "AI",
         } satisfies AppRouteHandle,
     },
 ];
