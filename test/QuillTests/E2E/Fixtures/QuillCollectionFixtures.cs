@@ -172,9 +172,7 @@ public abstract class QuillTelegramTestBase(ITestOutputHelper output, QuillTeleg
         base.NewHostAsync(
             configure: opts =>
             {
-                opts.Telegram.ApiUrl = fixture.Mock.BaseAddress;
-                opts.Telegram.EditDebounce = TimeSpan.FromMilliseconds(50);
-                opts.Telegram.ApplyChangesInterval = TimeSpan.FromMilliseconds(250);
+                ApplyTelegramOptions(opts);
                 configure?.Invoke(opts);
             },
             configureServices: services =>
@@ -189,14 +187,14 @@ public abstract class QuillTelegramTestBase(ITestOutputHelper output, QuillTeleg
     protected MockOpenAiApi Llm => fixture.Llm;
 
     protected Task<QuillHost> NewRealRouterHostAsync() =>
-        base.NewHostAsync(
-            configure: opts =>
-            {
-                opts.Telegram.ApiUrl = fixture.Mock.BaseAddress;
-                opts.Telegram.EditDebounce = TimeSpan.FromMilliseconds(50);
-                opts.Telegram.ApplyChangesInterval = TimeSpan.FromMilliseconds(250);
-            },
-            seedChatConnectionString: false);
+        base.NewHostAsync(configure: ApplyTelegramOptions, seedChatConnectionString: false);
+
+    private void ApplyTelegramOptions(ApplianceOptions opts)
+    {
+        opts.Telegram.ApiUrl = fixture.Mock.BaseAddress;
+        opts.Telegram.EditDebounce = TimeSpan.FromMilliseconds(50);
+        opts.Telegram.ApplyChangesInterval = TimeSpan.FromMilliseconds(250);
+    }
 
     public override async ValueTask InitializeAsync()
     {
