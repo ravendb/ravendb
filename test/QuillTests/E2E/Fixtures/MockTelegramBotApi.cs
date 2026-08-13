@@ -253,10 +253,11 @@ public sealed class MockTelegramBotApi : IAsyncDisposable
             {
                 if (_updateQueues.TryGetValue(token, out var queue))
                 {
-                    var pending = queue
-                        .Where(u => offset is null || (long)u["update_id"]! >= offset)
-                        .Take(100)
-                        .ToArray();
+                    // like real Telegram, an offset permanently discards every update below it
+                    if (offset is { } confirmed)
+                        queue.RemoveAll(u => (long)u["update_id"]! < confirmed);
+
+                    var pending = queue.Take(100).ToArray();
                     if (pending.Length > 0)
                     {
                         var result = new JsonArray(pending.Select(u => (JsonNode)u.DeepClone()).ToArray());

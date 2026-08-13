@@ -433,7 +433,8 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
                 UsernameMissing = "Ustaw nazwe uzytkownika w Telegramie i sprobuj ponownie.",
             })));
 
-        // the restarted poller re-reads the queue from offset 0, so keep nudging until the new bot answers
+        // a /start may still land on the outgoing bot until the manager swaps runtimes,
+        // so keep nudging until the new greeting appears
         const long chatId = 620;
         for (var attempt = 0; attempt < 40; attempt++)
         {
