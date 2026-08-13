@@ -2130,14 +2130,22 @@ public class RavenDB_21192_Multinode : ClusterTestBase
             Assert.Empty(otherItemErrors);
         }
         
+        await WaitAndAssertForValueAsync(() =>
+        {
+            var state = EtlProcess.GetProcessState(mentorDatabase, etlName, transformationName);
+            return state.LastProcessedEtagPerDbId.Count > 0;
+        }, true, timeout: 30_000);
+
         var newMentorTag = nodes[1].ServerStore.NodeTag;
         configuration.MentorNode = newMentorTag;
         src.Maintenance.Send(new UpdateEtlOperation<RavenConnectionString>(addResult.TaskId, configuration));
 
         var newMentorNode = nodes[1];
         var newMentorDatabase = await GetDatabase(newMentorNode, srcDatabaseName);
-        
+
         await WaitAndAssertForValueAsync(() => newMentorDatabase.EtlLoader.Processes.Any(x => x.Name == $"{etlName}/{transformationName}"), true, timeout: 30_000);
+
+        await WaitAndAssertForValueAsync(() => mentorDatabase.EtlLoader.Processes.Any(x => x.Name == $"{etlName}/{transformationName}"), false, timeout: 30_000);
 
         using (var session = src.OpenSession())
         {
@@ -2278,6 +2286,8 @@ public class RavenDB_21192_Multinode : ClusterTestBase
         var newMentorDatabase = await GetDatabase(newMentorNode, databaseName);
 
         await WaitAndAssertForValueAsync(() => newMentorDatabase.EtlLoader.Processes.Any(x => x.Name == processName), true, timeout: 30_000);
+
+        await WaitAndAssertForValueAsync(() => mentorDatabase.EtlLoader.Processes.Any(x => x.Name == processName), false, timeout: 30_000);
 
         using (var session = store.OpenSession())
         {

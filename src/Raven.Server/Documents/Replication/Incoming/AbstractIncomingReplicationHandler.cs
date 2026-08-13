@@ -147,7 +147,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 {
                     var configuration = GetConfiguration();
                     var readTimeout = (int)configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalMilliseconds;
-                    
+
                     var sinceLastReceive = Stopwatch.StartNew(); // time since the last REAL read
                     long lastTotalBytesRead = 0;
 

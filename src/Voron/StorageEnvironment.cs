@@ -174,6 +174,9 @@ namespace Voron
                 var remainingBits = _lastValidPageAfterLoad % (8 * sizeof(long));
 
                 _validPagesAfterLoad = new long[_lastValidPageAfterLoad / (8 * sizeof(long)) + (remainingBits == 0 ? 0 : 1)];
+                // Pad only the high bits of the last word that do not cover real pages.
+                // When the page count is a multiple of 64 the last word holds only real pages.
+                if (remainingBits != 0)
                 _validPagesAfterLoad[^1] |= unchecked(((long)ulong.MaxValue << (int)remainingBits));
 
                 options.InvokeOnDirectoryInitialize();

@@ -7,6 +7,7 @@ using Corax.Mappings;
 using Corax.Querying.Matches.Meta;
 using Corax.Utils.Spatial;
 using Sparrow.Server;
+using Sparrow.Server.Utils;
 using Spatial4n.Context;
 using Spatial4n.Shapes;
 using Voron;
@@ -94,6 +95,7 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
 
     public int Fill(Span<long> matches)
     {
+        int iterations = 1;
         int currentIdx = 0;
         do
         {
@@ -105,6 +107,7 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
                     break;
                 }
 
+                iterations++;
                 continue;
             }
 
@@ -125,6 +128,10 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
             }
         } while (currentIdx != matches.Length);
 
+        
+        if (iterations > 1)
+            currentIdx = Sorting.SortAndRemoveDuplicates(matches.Slice(0, currentIdx));
+        
         return currentIdx;
     }
 

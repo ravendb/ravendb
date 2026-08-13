@@ -51,6 +51,10 @@ public static class EmbeddingsHelper
         return Convert.ToBase64String(hashBuffer);
     }
     
+    // '@'-prefixed so it lives in the reserved namespace (like @quantization) and can never collide with a
+    // user embedding field path written as a sibling into the same per-task object.
+    public const string ChunkTextPropertyName = "@chunk-text";
+
     public static string GetEmbeddingDocumentId(string documentId)
     {
         return $"embeddings/{documentId}";

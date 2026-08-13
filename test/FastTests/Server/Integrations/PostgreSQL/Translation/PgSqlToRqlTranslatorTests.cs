@@ -427,13 +427,11 @@ namespace FastTests.Server.Integrations.PostgreSQL.Translation
             Assert.Equal(expected, Translate(sql));
         }
 
-        // PowerBI's Top-N visual fires this shape: alias-qualified projection + alias-qualified
-        // count argument, both needing the `rows.` fromAlias stripped to match the GROUP BY key.
-        // The SQL alias on the aggregate must be preserved too: RQL's implicit alias for
-        // count(Freight) would be `Freight`, colliding with the sibling group-by-key projection
-        // (`Duplicate alias 'Freight'`), so we emit `count(Freight) as a0`.
+        // RQL's count() ignores its argument, so emitting count(Freight) returned the group's row
+        // count while PG counts non-null values only. The PowerBI dispatch path normalises the same
+        // shape to count() on purpose (see PowerBIAstTests); the generic SQL path must not guess.
         [RavenFact(RavenTestCategory.PostgreSql)]
-        public void GroupBy_WithFromAlias_QualifiedProjectionAndAggregateArg_StripsAliasAndPreservesAggregateAlias()
+        public void GroupBy_CountOverAliasQualifiedColumn_IsRejected()
         {
             var sql = """
                 select "rows"."Freight" as "Freight", count("rows"."Freight") as "a0"
@@ -441,9 +439,9 @@ namespace FastTests.Server.Integrations.PostgreSQL.Translation
                 group by "Freight"
                 limit 1000001
                 """;
-            var expected = "from 'Orders' group by Freight select Freight, count(Freight) as a0 limit 0, 1000001";
 
-            Assert.Equal(expected, Translate(sql));
+            Assert.False(Raven.Server.Integrations.PostgreSQL.Translation.PgSqlToRqlTranslator.TryParse(
+                sql, Array.Empty<int>(), out _));
         }
 
         [RavenFact(RavenTestCategory.PostgreSql)]
@@ -490,9 +488,72 @@ namespace FastTests.Server.Integrations.PostgreSQL.Translation
         public void GroupByCountOrderByCountDesc()
         {
             var sql = "SELECT status, COUNT(*) FROM orders GROUP BY status ORDER BY COUNT(*) DESC";
-            var expected = "from 'orders' group by status order by 'count()' desc select status, count()";
+            var expected = "from 'orders' group by status order by Count as long desc select status, count()";
 
             Assert.Equal(expected, Translate(sql));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void GroupByCountOrderByCountAsc()
+        {
+            var sql = "SELECT status, COUNT(*) FROM orders GROUP BY status ORDER BY COUNT(*)";
+            var expected = "from 'orders' group by status order by Count as long select status, count()";
+
+            Assert.Equal(expected, Translate(sql));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void GroupByCountOrderByAggregateAlias()
+        {
+            var sql = "SELECT \"Company\" AS \"Company\", COUNT(*) AS count FROM public.\"Orders\" GROUP BY \"Company\" ORDER BY count DESC LIMIT 10000";
+            var expected = "from 'Orders' group by Company order by Count as long desc select Company, count() as count limit 0, 10000";
+
+            Assert.Equal(expected, Translate(sql));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void GroupBySumOrderBySumDesc()
+        {
+            var sql = "SELECT \"Company\", sum(\"Freight\") AS \"a0\" FROM public.\"Orders\" GROUP BY \"Company\" ORDER BY sum(\"Freight\") DESC";
+            var expected = "from 'Orders' group by Company order by Freight as double desc select Company, sum(Freight) as a0";
+
+            Assert.Equal(expected, Translate(sql));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void GroupBySumOrderByAggregateAlias()
+        {
+            var sql = "SELECT \"Company\", sum(\"Freight\") AS \"a0\" FROM public.\"Orders\" GROUP BY \"Company\" ORDER BY \"a0\"";
+            var expected = "from 'Orders' group by Company order by Freight as double select Company, sum(Freight) as a0";
+
+            Assert.Equal(expected, Translate(sql));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void GroupByCountOrderByGroupKey()
+        {
+            var sql = "SELECT status, COUNT(*) FROM orders GROUP BY status ORDER BY status DESC";
+            var expected = "from 'orders' group by status order by status desc select status, count()";
+
+            Assert.Equal(expected, Translate(sql));
+        }
+
+        // sum() over the group key resolves to the key's own RQL field name, so ordering by it
+        // would sort by the key instead of the aggregate.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void GroupByOrderBySumOfGroupKey_IsRejected()
+        {
+            var sql = "SELECT \"Freight\", sum(\"Freight\") AS \"a0\" FROM public.\"Orders\" GROUP BY \"Freight\" ORDER BY \"a0\" DESC";
+
+            Assert.False(Raven.Server.Integrations.PostgreSQL.Translation.PgSqlToRqlTranslator.TryParse(sql, Array.Empty<int>(), out _));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void GroupByOrderByAggregateNotInSelect_IsRejected()
+        {
+            var sql = "SELECT status, COUNT(*) FROM orders GROUP BY status ORDER BY sum(amount) DESC";
+
+            Assert.False(Raven.Server.Integrations.PostgreSQL.Translation.PgSqlToRqlTranslator.TryParse(sql, Array.Empty<int>(), out _));
         }
 
         [RavenFact(RavenTestCategory.PostgreSql)]
@@ -665,6 +726,298 @@ namespace FastTests.Server.Integrations.PostgreSQL.Translation
             // inlined as literals we don't have yet.
             Assert.Contains("$1", rql, StringComparison.Ordinal);
             Assert.Contains("$2", rql, StringComparison.Ordinal);
+        }
+
+        // LIKE is case-sensitive, so it needs exact() to reach the auto index's unanalyzed companion
+        // field; ILIKE is what the analyzed field already does.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Like_Prefix_TranslatesToExactStartsWith()
+        {
+            Assert.Equal("from 'orders' where exact(startsWith(company, 'Choc'))",
+                Translate("SELECT * FROM orders WHERE company LIKE 'Choc%'"));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Ilike_Prefix_TranslatesToStartsWith()
+        {
+            Assert.Equal("from 'orders' where startsWith(company, 'Choc')",
+                Translate("SELECT * FROM orders WHERE company ILIKE 'Choc%'"));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Like_Suffix_TranslatesToExactEndsWith()
+        {
+            Assert.Equal("from 'orders' where exact(endsWith(company, 'ade'))",
+                Translate("SELECT * FROM orders WHERE company LIKE '%ade'"));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Like_WithoutWildcards_TranslatesToExactEquality()
+        {
+            Assert.Equal("from 'orders' where exact(company = 'Chocolade')",
+                Translate("SELECT * FROM orders WHERE company LIKE 'Chocolade'"));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void NotLike_GuardsAgainstNull()
+        {
+            Assert.Equal("from 'orders' where (company != null and not exact(startsWith(company, 'Choc')))",
+                Translate("SELECT * FROM orders WHERE company NOT LIKE 'Choc%'"));
+        }
+
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("SELECT * FROM orders WHERE company LIKE '%Choc%'")]
+        [InlineData("SELECT * FROM orders WHERE company ILIKE '%Choc%'")]
+        [InlineData("SELECT * FROM orders WHERE company LIKE 'C_ocolade'")]
+        [InlineData("SELECT * FROM orders WHERE company LIKE 'Choc%ade'")]
+        [InlineData("SELECT * FROM orders WHERE company LIKE 'Choc\\%ade'")]
+        [InlineData("SELECT * FROM orders WHERE company LIKE '%'")]
+        [InlineData("SELECT * FROM orders WHERE company LIKE '!%Choc%' ESCAPE '!'")]
+        [InlineData("SELECT * FROM orders WHERE company LIKE $1")]
+        public void UnsupportedLikePattern_FallsThrough(string sql)
+        {
+            Assert.False(Raven.Server.Integrations.PostgreSQL.Translation.PgSqlToRqlTranslator.TryParse(
+                sql, Array.Empty<int>(), out _));
+        }
+
+        // DISTINCT / FILTER / OVER and count(<column>) all used to translate to the plain aggregate,
+        // which RQL computes over every row in the group - the same number as count(*)/sum(*).
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("SELECT \"Company\", count(distinct \"ShipVia\") FROM \"Orders\" GROUP BY \"Company\"")]
+        [InlineData("SELECT \"Company\", count(\"ShipVia\") FROM \"Orders\" GROUP BY \"Company\"")]
+        [InlineData("SELECT \"Company\", sum(distinct \"Freight\") FROM \"Orders\" GROUP BY \"Company\"")]
+        [InlineData("SELECT \"Company\", count(*) FILTER (WHERE \"Freight\" > 10) FROM \"Orders\" GROUP BY \"Company\"")]
+        [InlineData("SELECT \"Company\", count(*) OVER () FROM \"Orders\" GROUP BY \"Company\"")]
+        [InlineData("SELECT \"Company\", count(*) FROM \"Orders\" GROUP BY \"Company\" ORDER BY count(distinct \"ShipVia\") DESC")]
+        public void GroupByAggregate_WithUnsupportedModifierOrColumnArg_IsRejected(string sql)
+        {
+            Assert.False(Raven.Server.Integrations.PostgreSQL.Translation.PgSqlToRqlTranslator.TryParse(
+                sql, Array.Empty<int>(), out _));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void GroupByCountStar_AndGroupBySum_StillTranslate()
+        {
+            Assert.Equal("from 'Orders' group by Company select Company, count()",
+                Translate("SELECT \"Company\", count(*) FROM \"Orders\" GROUP BY \"Company\""));
+
+            Assert.Equal("from 'Orders' group by Company select Company, sum(Freight)",
+                Translate("SELECT \"Company\", sum(\"Freight\") FROM \"Orders\" GROUP BY \"Company\""));
+        }
+
+        // count(1) counts every row, so it stays equivalent to count(*).
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void GroupByCountOverConstant_StillTranslatesToCountStar()
+        {
+            Assert.Equal("from 'Orders' group by Company select Company, count()",
+                Translate("SELECT \"Company\", count(1) FROM \"Orders\" GROUP BY \"Company\""));
+        }
+
+        // PG builds IS [NOT] DISTINCT FROM and NULLIF with a literal "=" operator name, so before the
+        // A_Expr kind was checked they became a plain equality - the inverse of IS DISTINCT FROM.
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("SELECT * FROM \"Orders\" WHERE \"Company\" IS DISTINCT FROM 'companies/85-A'")]
+        [InlineData("SELECT * FROM \"Orders\" WHERE \"Company\" IS NOT DISTINCT FROM 'companies/85-A'")]
+        [InlineData("SELECT * FROM \"Orders\" WHERE NULLIF(\"Company\", 'companies/85-A')")]
+        public void DistinctFromPredicate_IsRejected(string sql)
+        {
+            Assert.False(Raven.Server.Integrations.PostgreSQL.Translation.PgSqlToRqlTranslator.TryParse(
+                sql, Array.Empty<int>(), out _));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void EqualityAndInequality_StillTranslate()
+        {
+            Assert.Equal("from 'Orders' where Company = 'companies/85-A'",
+                Translate("SELECT * FROM \"Orders\" WHERE \"Company\" = 'companies/85-A'"));
+
+            Assert.Equal("from 'Orders' where Company != 'companies/85-A'",
+                Translate("SELECT * FROM \"Orders\" WHERE \"Company\" != 'companies/85-A'"));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void GroupByKey_WithAlias_KeepsTheAlias()
+        {
+            Assert.Equal("from 'Orders' group by Company select Company as grp, count() as c",
+                Translate("SELECT \"Company\" AS grp, COUNT(*) AS c FROM \"Orders\" GROUP BY \"Company\""));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void GroupByKey_WithAlias_OrderByTheKeyStillResolves()
+        {
+            Assert.Equal("from 'Orders' group by Company order by Company desc select Company as grp, count() as c",
+                Translate("SELECT \"Company\" AS grp, COUNT(*) AS c FROM \"Orders\" GROUP BY \"Company\" ORDER BY \"Company\" DESC"));
+        }
+
+        // An alias equal to the key adds nothing and would make RQL reject the duplicate alias.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void GroupByKey_WithAliasEqualToTheKey_OmitsTheAsClause()
+        {
+            Assert.Equal("from 'Orders' group by Company select Company, count() as c",
+                Translate("SELECT \"Company\" AS \"Company\", COUNT(*) AS c FROM \"Orders\" GROUP BY \"Company\""));
+        }
+
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("TO_TIMESTAMP('1996-07-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS')", "'1996-07-01 00:00:00'::timestamp")]
+        [InlineData("TO_TIMESTAMP('1996-07-01 13:45:30', 'YYYY-MM-DD HH24:MI:SS')", "'1996-07-01 13:45:30'::timestamp")]
+        [InlineData("TO_TIMESTAMP('1996-07-01 13:45:30.123456', 'YYYY-MM-DD HH24:MI:SS.US')", "'1996-07-01 13:45:30.123456'::timestamp")]
+        [InlineData("TO_TIMESTAMP('1996-07-01', 'YYYY-MM-DD')", "'1996-07-01'::timestamp")]
+        [InlineData("TO_DATE('1996-07-01', 'YYYY-MM-DD')", "'1996-07-01'::timestamp")]
+        public void TimestampFunctionBound_FoldsToTheSameValueAsTheCast(string bound, string cast)
+        {
+            Assert.Equal(
+                Translate($"SELECT * FROM \"Orders\" WHERE \"OrderedAt\" >= {cast}"),
+                Translate($"SELECT * FROM \"Orders\" WHERE \"OrderedAt\" >= {bound}"));
+        }
+
+        // PG's to_date discards the time component even when the format parses one.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void ToDateBound_DropsTheTimeComponent()
+        {
+            Assert.Equal(
+                Translate("SELECT * FROM \"Orders\" WHERE \"OrderedAt\" >= '1996-07-01'::timestamp"),
+                Translate("SELECT * FROM \"Orders\" WHERE \"OrderedAt\" >= TO_DATE('1996-07-01 13:45:30', 'YYYY-MM-DD HH24:MI:SS')"));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void TimestampFunctionBound_TranslatesBothEndsOfAHalfOpenWindow()
+        {
+            var rql = Translate(
+                """
+                SELECT * FROM "Orders"
+                WHERE "OrderedAt" >= TO_TIMESTAMP('1996-07-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS')
+                  AND "OrderedAt" < TO_TIMESTAMP('1996-10-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS')
+                """);
+
+            Assert.Contains("1996-07-01", rql, StringComparison.Ordinal);
+            Assert.Contains("1996-10-01", rql, StringComparison.Ordinal);
+        }
+
+        // A format token that isn't translated must fail the whole bound; passing it through as a
+        // literal would silently shift the date.
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("TO_TIMESTAMP('1996-Jul-01', 'YYYY-Mon-DD')")]
+        [InlineData("TO_TIMESTAMP('1996-07-01', 'FMYYYY-FMMM-FMDD')")]
+        [InlineData("TO_TIMESTAMP('01/07/1996 01:00 PM', 'DD/MM/YYYY HH12:MI AM')")]
+        [InlineData("TO_DATE('1996 182', 'YYYY DDD')")]
+        [InlineData("TO_TIMESTAMP('1996-07-01', '')")]
+        public void TimestampFunctionBound_WithUnrecognisedFormat_IsRejected(string bound)
+        {
+            AssertRejected($"SELECT * FROM \"Orders\" WHERE \"OrderedAt\" >= {bound}");
+        }
+
+        // Neither argument can be resolved at translate time unless it is a string literal.
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("TO_TIMESTAMP(\"RequireAt\", 'YYYY-MM-DD')")]
+        [InlineData("TO_TIMESTAMP('1996-07-01', $1)")]
+        [InlineData("TO_TIMESTAMP($1, 'YYYY-MM-DD')")]
+        [InlineData("TO_TIMESTAMP(820454400)")]
+        [InlineData("TO_TIMESTAMP('1996-07-01')")]
+        public void TimestampFunctionBound_WithNonLiteralArgument_IsRejected(string bound)
+        {
+            AssertRejected($"SELECT * FROM \"Orders\" WHERE \"OrderedAt\" >= {bound}");
+        }
+
+        // The format is recognised but the value does not match it.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void TimestampFunctionBound_WithValueNotMatchingTheFormat_IsRejected()
+        {
+            AssertRejected("SELECT * FROM \"Orders\" WHERE \"OrderedAt\" >= TO_TIMESTAMP('not-a-date', 'YYYY-MM-DD')");
+        }
+
+        // to_timestamp is a WHERE-bound shape only.
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("SELECT TO_TIMESTAMP('1996-07-01', 'YYYY-MM-DD') FROM \"Orders\"")]
+        [InlineData("SELECT \"Company\", COUNT(*) FROM \"Orders\" GROUP BY TO_TIMESTAMP('1996-07-01', 'YYYY-MM-DD')")]
+        public void TimestampFunction_OutsideAWhereBound_IsRejected(string sql)
+        {
+            AssertRejected(sql);
+        }
+
+        // The distinct-rows path (GROUP BY used as a DISTINCT, no aggregate) is a separate projection
+        // path from the aggregate one and used to drop the SELECT alias.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void GroupByKeyWithoutAggregate_KeepsTheAlias()
+        {
+            Assert.Equal("from 'Orders' select distinct Company as grp",
+                Translate("SELECT \"Company\" AS grp FROM \"Orders\" GROUP BY \"Company\""));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void GroupByKeysWithoutAggregate_KeepEachAlias()
+        {
+            Assert.Equal("from 'Orders' group by Company, Freight select Company as grp, Freight as f",
+                Translate("SELECT \"Company\" AS grp, \"Freight\" AS f FROM \"Orders\" GROUP BY \"Company\", \"Freight\""));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void GroupByKeyWithoutAggregate_NonIdentifierAliasIsQuoted()
+        {
+            Assert.Equal("from 'Orders' select distinct Company as 'the company'",
+                Translate("SELECT \"Company\" AS \"the company\" FROM \"Orders\" GROUP BY \"Company\""));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void GroupByKeyWithoutAggregate_AliasEqualToTheKeyOmitsTheAsClause()
+        {
+            Assert.Equal("from 'Orders' select distinct Company",
+                Translate("SELECT \"Company\" AS \"Company\" FROM \"Orders\" GROUP BY \"Company\""));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void OrderBySelectAlias_ResolvesToTheUnderlyingField()
+        {
+            Assert.Equal("from 'Orders' order by Freight select Freight as f",
+                Translate("SELECT \"Freight\" AS f FROM \"Orders\" ORDER BY f"));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void OrderByQuotedSelectAlias_ResolvesToTheUnderlyingField()
+        {
+            Assert.Equal("from 'Orders' order by Freight desc select Freight as 'the freight'",
+                Translate("SELECT \"Freight\" AS \"the freight\" FROM \"Orders\" ORDER BY \"the freight\" DESC"));
+        }
+
+        // A sort key that is a real field rather than an alias keeps resolving as a field.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void OrderByRealFieldAlongsideAnAlias_IsUnchanged()
+        {
+            Assert.Equal("from 'Orders' order by Company select Freight as f",
+                Translate("SELECT \"Freight\" AS f FROM \"Orders\" ORDER BY \"Company\""));
+        }
+
+        // An alias over a constant or id() has no document field behind it, so there is nothing to
+        // sort on - reject instead of emitting a sort on a field that does not exist.
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("SELECT 1 AS c0 FROM \"Orders\" ORDER BY c0")]
+        [InlineData("SELECT \"id\" AS docid FROM \"Orders\" ORDER BY docid")]
+        public void OrderByAliasOverANonField_IsRejected(string sql)
+        {
+            AssertRejected(sql);
+        }
+
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("SELECT \"Freight\" FROM \"Orders\" ORDER BY \"Freight\" DESC NULLS LAST")]
+        [InlineData("SELECT \"Freight\" FROM \"Orders\" ORDER BY \"Freight\" NULLS FIRST")]
+        [InlineData("SELECT \"Freight\" FROM \"Orders\" ORDER BY \"Freight\" USING >")]
+        [InlineData("SELECT \"Company\", COUNT(*) FROM \"Orders\" GROUP BY \"Company\" ORDER BY \"Company\" NULLS LAST")]
+        public void OrderByWithAnUnsupportedSortModifier_IsRejected(string sql)
+        {
+            AssertRejected(sql);
+        }
+
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("SELECT \"Freight\" FROM \"Orders\" ORDER BY \"Freight\" DESC", "from 'Orders' order by Freight desc select Freight")]
+        [InlineData("SELECT \"Freight\" FROM \"Orders\" ORDER BY \"Freight\" ASC", "from 'Orders' order by Freight select Freight")]
+        public void OrderByWithoutASortModifier_IsUnchanged(string sql, string expected)
+        {
+            Assert.Equal(expected, Translate(sql));
+        }
+
+        private static void AssertRejected(string sql)
+        {
+            Assert.False(Raven.Server.Integrations.PostgreSQL.Translation.PgSqlToRqlTranslator.TryParse(
+                sql, Array.Empty<int>(), out _));
         }
     }
 }

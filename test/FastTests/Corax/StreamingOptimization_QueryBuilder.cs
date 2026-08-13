@@ -85,15 +85,25 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
             .GetIndexQuery());
 
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
-    [InlineData(true)]
-    [InlineData(false)] // where Name = X and Field < 1 order by Name => where Name = x and Field < 1
-    public async Task SortingMatchIsSkippedWhenIsAndBinaryMatch(bool hasMultipleValues) => await TestQueryBuilder<DeduplicationMatch<BinaryMatch>>(hasMultipleValues, session =>
-        session.Advanced.AsyncDocumentQuery<Dto, DtoIndexSingleValues>()
-            .WhereEquals(p => p.Name, "maciej")
-            .AndAlso()
-            .WhereLessThan(p => p.First, 10)
-            .OrderBy(x => x.Name)
-            .GetIndexQuery());
+    [InlineData(true, BitmapAndFillMode.Off)]
+    [InlineData(false, BitmapAndFillMode.Off)]
+    [InlineData(true, BitmapAndFillMode.Force)]
+    [InlineData(false, BitmapAndFillMode.Force)]
+    public async Task SortingMatchIsSkippedWhenIsAndBinaryMatch(bool hasMultipleValues, BitmapAndFillMode mode) // where Name = X and Field < 1 order by Name => where Name = x and Field < 1
+    {
+        Func<IAsyncDocumentSession, IndexQuery> query = session =>
+            session.Advanced.AsyncDocumentQuery<Dto, DtoIndexSingleValues>()
+                .WhereEquals(p => p.Name, "maciej")
+                .AndAlso()
+                .WhereLessThan(p => p.First, 10)
+                .OrderBy(x => x.Name)
+                .GetIndexQuery();
+
+        if (mode == BitmapAndFillMode.Off)
+            await TestQueryBuilder<DeduplicationMatch<BinaryMatch>>(hasMultipleValues, query, mode);
+        else
+            await TestQueryBuilder<BinaryMatch>(hasMultipleValues, query, mode);
+    }
 
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
     [InlineData(true)]
@@ -107,23 +117,33 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
             .GetIndexQuery());
 
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
-    [InlineData(true)]
-    [InlineData(false)] // where (Name = x and F < 1) and (S = 2 and F < 2 ) order by Name => skip order by
-    public async Task BinaryMatchOfBinaryMatchAnd(bool hasMultipleValues) => await TestQueryBuilder<DeduplicationMatch<BinaryMatch>>(hasMultipleValues, session =>
-        session.Advanced.AsyncDocumentQuery<Dto, DtoIndexSingleValues>()
-            .OpenSubclause()
-            .WhereEquals(p => p.Name, "maciej")
-            .AndAlso()
-            .WhereLessThan(p => p.First, 10)
-            .CloseSubclause()
-            .AndAlso()
-            .OpenSubclause()
-            .WhereEquals(p => p.Second, 2)
-            .AndAlso()
-            .WhereLessThan(p => p.First, 10)
-            .CloseSubclause()
-            .OrderBy(x => x.Name)
-            .GetIndexQuery());
+    [InlineData(true, BitmapAndFillMode.Off)]
+    [InlineData(false, BitmapAndFillMode.Off)]
+    [InlineData(true, BitmapAndFillMode.Force)]
+    [InlineData(false, BitmapAndFillMode.Force)]
+    public async Task BinaryMatchOfBinaryMatchAnd(bool hasMultipleValues, BitmapAndFillMode mode) // where (Name = x and F < 1) and (S = 2 and F < 2 ) order by Name => skip order by
+    {
+        Func<IAsyncDocumentSession, IndexQuery> query = session =>
+            session.Advanced.AsyncDocumentQuery<Dto, DtoIndexSingleValues>()
+                .OpenSubclause()
+                .WhereEquals(p => p.Name, "maciej")
+                .AndAlso()
+                .WhereLessThan(p => p.First, 10)
+                .CloseSubclause()
+                .AndAlso()
+                .OpenSubclause()
+                .WhereEquals(p => p.Second, 2)
+                .AndAlso()
+                .WhereLessThan(p => p.First, 10)
+                .CloseSubclause()
+                .OrderBy(x => x.Name)
+                .GetIndexQuery();
+
+        if (mode == BitmapAndFillMode.Off)
+            await TestQueryBuilder<DeduplicationMatch<BinaryMatch>>(hasMultipleValues, query, mode);
+        else
+            await TestQueryBuilder<BinaryMatch>(hasMultipleValues, query, mode);
+    }
 
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
     [InlineData(true)]
@@ -468,12 +488,12 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
                     }
     }
 
-    private Task TestQueryBuilder<TExpectedForSingleValues>(bool hasMultipleValues, Func<IAsyncDocumentSession, IndexQuery> query)
+    private Task TestQueryBuilder<TExpectedForSingleValues>(bool hasMultipleValues, Func<IAsyncDocumentSession, IndexQuery> query, BitmapAndFillMode bitmapAndFillMode = BitmapAndFillMode.Auto)
     {
-        return TestQueryBuilder<TExpectedForSingleValues, DtoIndexSingleValues>(this, hasMultipleValues, query);
+        return TestQueryBuilder<TExpectedForSingleValues, DtoIndexSingleValues>(this, hasMultipleValues, query, bitmapAndFillMode);
     }
 
-    public static async Task TestQueryBuilder<TExpectedForSingleValues, TIndex>(RavenTestBase self, bool hasMultipleValues, Func<IAsyncDocumentSession, IndexQuery> query)
+    public static async Task TestQueryBuilder<TExpectedForSingleValues, TIndex>(RavenTestBase self, bool hasMultipleValues, Func<IAsyncDocumentSession, IndexQuery> query, BitmapAndFillMode bitmapAndFillMode = BitmapAndFillMode.Auto)
         where TIndex : AbstractIndexCreationTask, new()
     {
         var (store, index, mapping, factories) = await GetDatabaseWithIndex<TIndex>(self);
@@ -482,7 +502,7 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
         var serializer = (JsonSerializer)store.Conventions.Serialization.CreateSerializer();
         {
             using var session = store.OpenAsyncSession();
-            var coraxQuery = await GetCoraxQuery(self, query(session), index, context, serializer, mapping, factories, hasMultipleValues);
+            var coraxQuery = await GetCoraxQuery(self, query(session), index, context, serializer, mapping, factories, hasMultipleValues, bitmapAndFillMode);
 
             if (hasMultipleValues == false)
                 Assert.IsType<TExpectedForSingleValues>(coraxQuery);
@@ -582,7 +602,7 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
 
     private static async Task<IQueryMatch> GetCoraxQuery(RavenTestBase self,
         IndexQuery indexQuery, Index index, JsonOperationContext context, JsonSerializer jsonSerializer, IndexFieldsMapping mapping,
-        QueryBuilderFactories queryBuilderFactories, bool hasMultipleTermsInField)
+        QueryBuilderFactories queryBuilderFactories, bool hasMultipleTermsInField, BitmapAndFillMode bitmapAndFillMode = BitmapAndFillMode.Auto)
     {
         await using var env = new EnvTest(TestContext.Current?.TestOutputHelper);
         env.Init(mapping, hasMultipleTermsInField);
@@ -590,7 +610,7 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
         {
             jsonSerializer.Serialize(writer, indexQuery.QueryParameters);
             writer.FinalizeDocument();
-            using var indexSearcher = new IndexSearcher(env.Env, mapping);
+            using var indexSearcher = new IndexSearcher(env.Env, mapping) { BitmapAndFillMode = bitmapAndFillMode };
             using (var blittableParameters = writer.CreateReader())
             {
                 var indexQueryServerSide = new IndexQueryServerSide(indexQuery.Query, blittableParameters);

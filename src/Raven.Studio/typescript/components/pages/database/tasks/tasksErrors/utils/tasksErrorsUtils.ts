@@ -12,8 +12,6 @@ export type EtlHealthStatus = Raven.Server.Documents.TasksErrors.OngoingTaskHeal
 
 export type GroupByType = "task" | "none";
 
-export type Direction = 1 | -1;
-
 export function getEtlEditLink(databaseName: string, taskId: number, etlType: StudioEtlType): string | null {
     if (taskId == null || etlType == null) {
         return null;

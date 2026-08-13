@@ -5,6 +5,8 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Corax.Querying.Matches.Meta;
+using Corax.Utils;
+using Sparrow.Server.Collections;
 using Sparrow.Server.Utils;
 
 namespace Corax.Querying.Matches
@@ -14,6 +16,53 @@ namespace Corax.Querying.Matches
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static BinaryMatch<TInner, TOuter, TBinaryOperationMarker> YieldAnd(Querying.IndexSearcher searcher, in TInner inner, in TOuter outer, in CancellationToken token)
         {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static int FillViaBitmapAnd(ref BinaryMatch<TInner, TOuter, TBinaryOperationMarker> match, Span<long> matches)
+            {
+                if (match._finished || matches.Length == 0)
+                    return 0;
+
+                match._token.ThrowIfCancellationRequested();
+                if (match._materialized == false)
+                {
+                    match._materialized = true;
+                    var innerBitmap = new GrowableBitArray(match._indexSearcher.Allocator, match._indexSearcher.LastEntryId);
+                    var outerBitmap = new GrowableBitArray(match._indexSearcher.Allocator, match._indexSearcher.LastEntryId);
+                    
+                    ref var inner = ref match._inner;
+                    ref var outer = ref match._outer;
+                    while (inner.Fill(matches) is var read and > 0)
+                    {
+                        innerBitmap.AddRange(matches.Slice(0, read));
+                        match._token.ThrowIfCancellationRequested();
+                    }
+
+                    while (outer.Fill(matches) is var read and > 0)
+                    {
+                        outerBitmap.AddRange(matches.Slice(0, read));
+                        match._token.ThrowIfCancellationRequested();
+                    }
+                    
+                    match._innerBitmap = innerBitmap;
+                    match._outerBitmap = outerBitmap;
+                }
+
+                int count = match._innerBitmap.FillAnd(in match._outerBitmap, matches, match._lastReturnedId + 1);
+
+                if (count == matches.Length)
+                {
+                    match._lastReturnedId = matches[count - 1];
+                }
+                else
+                {
+                    match._finished = true;
+                    match._innerBitmap.Dispose();
+                    match._outerBitmap.Dispose();
+                }
+
+                return count;
+            }
+
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int FillFunc(ref BinaryMatch<TInner, TOuter, TBinaryOperationMarker> match, Span<long> matches)
             {
@@ -120,11 +169,74 @@ namespace Corax.Querying.Matches
             else
                 confidence = inner.Confidence.Min(outer.Confidence);
 
-            return new BinaryMatch<TInner, TOuter, TBinaryOperationMarker>(searcher, in inner, in outer, &FillFunc, &AndWith, &InspectFunc, Math.Min(inner.Count, outer.Count), confidence, SkipSortingResult.ResultsNativelySorted, token);
+
+            var viaBitmap = false;
+            if (searcher.BitmapAndFillMode == BitmapAndFillMode.Force)
+            {
+                viaBitmap = true;
+            }
+            else if (searcher.BitmapAndFillMode == BitmapAndFillMode.Auto)
+            {
+                var outerIsAndNot = typeof(TOuter) == typeof(AndNotMatch) ||
+                                    (typeof(TOuter).IsGenericType && typeof(TOuter).GetGenericTypeDefinition() == typeof(AndNotMatch<,>));
+                var innerIsSingleBatch = inner.Confidence == QueryCountConfidence.High &&
+                                         inner.Count < Querying.IndexSearcher.BitmapAndFillSingleBatchThreshold;
+
+                viaBitmap = (outerIsAndNot && innerIsSingleBatch) == false &&
+                            searcher.BitmapMemoryFits(bitmaps: 2) &&
+                            (searcher.BitmapSideQualifies(inner.Count, inner.Confidence) ||
+                             searcher.BitmapSideQualifies(outer.Count, outer.Confidence));
+            }
+
+            var duplicates = viaBitmap ? DuplicatesOccurrence.NotPossible : DuplicatesOccurrence.Possible;
+            return new BinaryMatch<TInner, TOuter, TBinaryOperationMarker>(searcher, in inner, in outer, viaBitmap ? &FillViaBitmapAnd : &FillFunc, &AndWith, &InspectFunc, Math.Min(inner.Count, outer.Count), confidence, SkipSortingResult.ResultsNativelySorted, duplicates, token);
         }
 
         public static BinaryMatch<TInner, TOuter, TBinaryOperationMarker> YieldOr(Querying.IndexSearcher indexSearcher, in TInner inner, in TOuter outer, in CancellationToken token)
         {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static int FillViaBitmapOr(ref BinaryMatch<TInner, TOuter, TBinaryOperationMarker> match, Span<long> matches)
+            {
+                if (match._finished || matches.Length == 0)
+                    return 0;
+
+                match._token.ThrowIfCancellationRequested();
+                if (match._materialized == false)
+                {
+                    match._materialized = true;
+                    var unionBitmap = new GrowableBitArray(match._indexSearcher.Allocator, match._indexSearcher.LastEntryId);
+                    ref var inner = ref match._inner;
+                    ref var outer = ref match._outer;
+                    while (inner.Fill(matches) is var read and > 0)
+                    {
+                        unionBitmap.AddRange(matches.Slice(0, read));
+                        match._token.ThrowIfCancellationRequested();
+                    }
+
+                    while (outer.Fill(matches) is var read and > 0)
+                    {
+                        unionBitmap.AddRange(matches.Slice(0, read));
+                        match._token.ThrowIfCancellationRequested();
+                    }
+
+                    match._innerBitmap = unionBitmap;
+                }
+
+                int count = match._innerBitmap.Fill(matches, match._lastReturnedId + 1);
+
+                if (count == matches.Length)
+                {
+                    match._lastReturnedId = matches[count - 1];
+                }
+                else
+                {
+                    match._finished = true;
+                    match._innerBitmap.Dispose();
+                }
+
+                return count;
+            }
+
 #if !DEBUG
             [SkipLocalsInit]
 #endif
@@ -320,12 +432,17 @@ namespace Corax.Querying.Matches
             else
                 confidence = inner.Confidence.Min(outer.Confidence);
 
-            return new BinaryMatch<TInner, TOuter, TBinaryOperationMarker>(indexSearcher, in inner, in outer, &FillFunc, &AndWith, &InspectFunc, inner.Count + outer.Count, confidence,
-                // For OR, assume (Name = 'Mario' or endsWith(Name, 'o') 
+            var viaBitmap = indexSearcher.BitmapAndFillMode == BitmapAndFillMode.Force ||
+                            (indexSearcher.BitmapAndFillMode == BitmapAndFillMode.Auto &&
+                             indexSearcher.BitmapMemoryFits(bitmaps: 1) &&
+                             indexSearcher.BitmapOrQualifies(inner.Count, inner.Confidence, outer.Count, outer.Confidence));
+
+            var duplicates = viaBitmap ? DuplicatesOccurrence.NotPossible : DuplicatesOccurrence.Possible;
+            return new BinaryMatch<TInner, TOuter, TBinaryOperationMarker>(indexSearcher, in inner, in outer, viaBitmap ? &FillViaBitmapOr : &FillFunc, &AndWith, &InspectFunc, inner.Count + outer.Count, confidence,
                 // We get Mario from the left, and get Arlo, Enzo and Nico from the right in one Fill()
                 // and in the next, we get nothing from the left and Mario from the right. 
                 // We _cannot_ ensure sorting for OR
-                SkipSortingResult.SortingIsRequired, token);
+                SkipSortingResult.SortingIsRequired, duplicates, token);
         }
     }
 }

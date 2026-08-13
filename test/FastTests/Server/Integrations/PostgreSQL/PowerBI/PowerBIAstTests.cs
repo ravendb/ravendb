@@ -7,6 +7,7 @@ using Raven.Server.Integrations.PostgreSQL.Translation;
 using Sparrow.Extensions;
 using Tests.Infrastructure;
 using Xunit;
+using static Tests.Infrastructure.PostgreSqlHelper;
 
 namespace FastTests.Server.Integrations.PostgreSQL.PowerBI
 {
@@ -1618,20 +1619,6 @@ SELECT {
                 """;
 
             Assert.False(PowerBIQuery.TryParse(sql, Array.Empty<int>(), documentDatabase: null, out _));
-        }
-
-        private static string GetQueryString(PgQuery pgQuery)
-        {
-            return (string)typeof(PgQuery)
-                .GetField("QueryString", BindingFlags.Instance | BindingFlags.NonPublic)
-                ?.GetValue(pgQuery);
-        }
-
-        private static int? GetLimit(PgQuery pgQuery)
-        {
-            return (int?)typeof(RqlQuery)
-                .GetField("_limit", BindingFlags.Instance | BindingFlags.NonPublic)
-                ?.GetValue(pgQuery);
         }
 
         private static Dictionary<string, ReplaceColumnValue> GetReplaces(PgQuery pgQuery)

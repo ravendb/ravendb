@@ -357,6 +357,7 @@ namespace Raven.Server.Documents.Queries
                 
                 var termType = LuceneTermType.Null;
                 var hasGotTheRealType = false;
+                var fieldHasTime = index.IndexFieldsPersistence.HasTimeValues(fieldName);
 
                 if (ie.All)
                 {
@@ -370,7 +371,15 @@ namespace Raven.Server.Documents.Queries
                             hasGotTheRealType = true;
                         }
                         
-                        allInQuery.Add(LuceneQueryHelper.Equal(fieldName, termType, value.Value, exact), Occur.MUST);
+                        // `all in` is a conjunction, so only the primary spelling can be used here - see TryGetTimeTermsForInQuery.
+                        string timeTerm = null;
+                        if (fieldHasTime)
+                            QueryBuilderHelper.TryGetTimeTermsForInQuery(index, value.Value, out timeTerm, out _);
+
+                        // the term already is what the converters wrote, so it is passed through as exact
+                        allInQuery.Add(timeTerm != null
+                                ? LuceneQueryHelper.Equal(fieldName, LuceneTermType.String, timeTerm, exact: true)
+                                : LuceneQueryHelper.Equal(fieldName, termType, value.Value, exact), Occur.MUST);
                     }
 
                     return allInQuery;
@@ -386,7 +395,15 @@ namespace Raven.Server.Documents.Queries
                         hasGotTheRealType = true;
                     }
 
-                    matches.Add(LuceneQueryHelper.GetTermValue(tuple.Value, termType, exact || tuple.Type == ValueTokenType.Parameter));
+                    string timeTerm = null, alternateTimeTerm = null;
+                    if (fieldHasTime)
+                        QueryBuilderHelper.TryGetTimeTermsForInQuery(index, tuple.Value, out timeTerm, out alternateTimeTerm);
+
+                    var term = timeTerm ?? LuceneQueryHelper.GetTermValue(tuple.Value, termType, exact || tuple.Type == ValueTokenType.Parameter);
+                    matches.Add(term);
+
+                    if (alternateTimeTerm != null && alternateTimeTerm.Equals(term, StringComparison.Ordinal) == false)
+                        matches.Add(alternateTimeTerm);
                 }
 
                 return new InQuery(fieldName, matches);

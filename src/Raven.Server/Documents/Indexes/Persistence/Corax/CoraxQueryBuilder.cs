@@ -553,34 +553,19 @@ public static partial class CoraxQueryBuilder
     private static IQueryMatch HandleNegatedAnd(CoraxQueryBuilder.Parameters builderParameters, QueryExpression leftExpr, NegatedExpression rightExpr, bool exact)
     {
         var indexSearcher = builderParameters.IndexSearcher;
+        // The negation is always applied by subtracting the positive match from the left-hand set.
+        // Enumerating the complement instead would drop the documents that have no term for the
+        // field at all, which is what `A and not (startsWith(field, x))` used to do.
         IQueryMatch left = ToCoraxQuery(builderParameters, leftExpr, ref builderParameters.StreamingDisabled, exact);
-        
-        // Corax does support internal negation of some primitives. Let's check if we can use it.
-        if (TryUseNegatedQuery(builderParameters, rightExpr, out var right, exact) == false)
-        {
-            if (left is CoraxWhenQuery)
-                left = builderParameters.AllEntries.Replay();
-            
-            right = ToCoraxQuery(builderParameters, rightExpr.Expression, ref builderParameters.StreamingDisabled, exact);
-            Materialize(builderParameters, ref left, ref right, ref builderParameters.StreamingDisabled);
-            
-            return right is CoraxWhenQuery 
-                ? left 
-                : indexSearcher.AndNot(left, right, token: builderParameters.Token);
-        }
+        if (left is CoraxWhenQuery)
+            left = builderParameters.AllEntries.Replay();
 
-        // We internally negated the right expression. If we find a pattern true and (NOT EXPR) we can skip the true, since it's noop. 
-        if (leftExpr is TrueExpression || left is CoraxWhenQuery)
-            return right; // true and not... optimization
+        IQueryMatch right = ToCoraxQuery(builderParameters, rightExpr.Expression, ref builderParameters.StreamingDisabled, exact);
+        Materialize(builderParameters, ref left, ref right, ref builderParameters.StreamingDisabled);
 
-        Debug.Assert(right is not CoraxWhenQuery, "TryUseNegatedQuery should not return CoraxWhenQuery as right side of the expression.");
-        
-        // Materialize the query
-        if (TryAndMergeOrMaterialize(builderParameters, ref left, ref right, out var merged, ref builderParameters.StreamingDisabled))
-            return merged;
-
-        // The right side is already negated, so we are using standard .And() method.
-        return indexSearcher.And(left, right);
+        return right is CoraxWhenQuery
+            ? left
+            : indexSearcher.AndNot(left, right, token: builderParameters.Token);
     }
     
     private static IQueryMatch HandleIn(Parameters builderParameters, InExpression ie, bool exact)
@@ -624,8 +609,10 @@ public static partial class CoraxQueryBuilder
                 if (exact && builderParameters.Metadata.IsDynamic)
                     fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
 
-                bool isTime = hasTime && tuple.Value != null && QueryBuilderHelper.TryGetTime(builderParameters.Index, tuple.Value, out var _);
-                uniqueMatches.Add((QueryBuilderHelper.CoraxGetValueAsString(tuple.Value), isTime));
+                // `all in` is a conjunction, so only the primary spelling can be used here - see TryGetTimeTermsForInQuery.
+                string term = null;
+                bool isTime = hasTime && QueryBuilderHelper.TryGetTimeTermsForInQuery(builderParameters.Index, tuple.Value, out term, out _);
+                uniqueMatches.Add((term ?? QueryBuilderHelper.CoraxGetValueAsString(tuple.Value), isTime));
             }
 
             return builderParameters.IndexSearcher.AllInQuery(fieldMetadata, uniqueMatches);
@@ -634,39 +621,20 @@ public static partial class CoraxQueryBuilder
         var matches = new List<(string Term, bool Exact)>();
         foreach (var tuple in QueryBuilderHelper.GetValuesForIn(metadata.Query, ie, metadata, queryParameters))
         {
-            bool isTime = hasTime && tuple.Value != null && QueryBuilderHelper.TryGetTime(builderParameters.Index, tuple.Value, out var _);
-            matches.Add((QueryBuilderHelper.CoraxGetValueAsString(tuple.Value), isTime));
+            string term = null, alternateTerm = null;
+            bool isTime = hasTime && QueryBuilderHelper.TryGetTimeTermsForInQuery(builderParameters.Index, tuple.Value, out term, out alternateTerm);
+
+            var termValue = term ?? QueryBuilderHelper.CoraxGetValueAsString(tuple.Value);
+            matches.Add((termValue, isTime));
+
+            if (alternateTerm != null && alternateTerm.Equals(termValue, StringComparison.Ordinal) == false)
+                matches.Add((alternateTerm, isTime));
         }
 
         if (highlightingTerm != null)
             highlightingTerm.Values = matches;
 
         return builderParameters.IndexSearcher.InQuery(fieldMetadata, matches);
-    }
-
-    private static bool TryUseNegatedQuery(Parameters builderParameters, NegatedExpression ne1, out IQueryMatch match, bool exact)
-    {
-        if (ne1.Expression is not MethodExpression inner)
-            goto NoOpt;
-
-        var methodName = inner.Name.Value;
-        var methodType = QueryMethod.GetMethodType(methodName);
-
-        switch (methodType)
-        {
-            case MethodType.StartsWith:
-                match = HandleStartsWith(builderParameters, inner, exact, ref builderParameters.StreamingDisabled, negated: true);
-                return true;
-            case MethodType.EndsWith:
-                match = HandleEndsWith(builderParameters, inner, exact, ref builderParameters.StreamingDisabled, negated: true);
-                return true;
-            default:
-                goto NoOpt;
-        }
-
-    NoOpt:
-        match = null;
-        return false;
     }
 
     public static MoreLikeThisQuery.MoreLikeThisQuery BuildMoreLikeThisQuery(Parameters builderParameters, QueryExpression whereExpression)
@@ -818,8 +786,7 @@ public static partial class CoraxQueryBuilder
             : builderParameters.IndexSearcher.ExistsQuery(fieldMetadata);
     }
 
-    private static IQueryMatch HandleStartsWith(Parameters builderParameters, MethodExpression expression, bool exact, ref StreamingOptimization streamingOptimization,
-        bool negated = false)
+    private static IQueryMatch HandleStartsWith(Parameters builderParameters, MethodExpression expression, bool exact, ref StreamingOptimization streamingOptimization)
     {
         var metadata = builderParameters.Metadata;
         var queryParameters = builderParameters.QueryParameters;
@@ -856,12 +823,11 @@ public static partial class CoraxQueryBuilder
             builderParameters.DynamicFields, exact: exact, hasBoost: builderParameters.HasBoost);
 
         return streamingOptimization.TrySetMultiTermMatchAsStreamingField(fieldMetadata, MethodType.StartsWith)
-            ? builderParameters.IndexSearcher.StartWithQuery(fieldMetadata, valueAsString, forward: streamingOptimization.Forward, streamingEnabled: true, isNegated: negated)
-            : builderParameters.IndexSearcher.StartWithQuery(fieldMetadata, valueAsString, isNegated: negated);
+            ? builderParameters.IndexSearcher.StartWithQuery(fieldMetadata, valueAsString, forward: streamingOptimization.Forward, streamingEnabled: true)
+            : builderParameters.IndexSearcher.StartWithQuery(fieldMetadata, valueAsString);
     }
 
-    private static MultiTermMatch HandleEndsWith(Parameters builderParameters, MethodExpression expression, bool exact, ref StreamingOptimization streamingOptimization,
-        bool negated = false)
+    private static MultiTermMatch HandleEndsWith(Parameters builderParameters, MethodExpression expression, bool exact, ref StreamingOptimization streamingOptimization)
     {
         var metadata = builderParameters.Metadata;
         var queryParameters = builderParameters.QueryParameters;
@@ -900,8 +866,8 @@ public static partial class CoraxQueryBuilder
             builderParameters.DynamicFields, exact: exact, hasBoost: builderParameters.HasBoost);
 
         return streamingOptimization.TrySetMultiTermMatchAsStreamingField(fieldMetadata, MethodType.EndsWith)
-            ? builderParameters.IndexSearcher.EndsWithQuery(fieldMetadata, valueAsString, forward: streamingOptimization.Forward, streamingEnabled: true, isNegated: negated)
-            : builderParameters.IndexSearcher.EndsWithQuery(fieldMetadata, valueAsString, isNegated: negated);
+            ? builderParameters.IndexSearcher.EndsWithQuery(fieldMetadata, valueAsString, forward: streamingOptimization.Forward, streamingEnabled: true)
+            : builderParameters.IndexSearcher.EndsWithQuery(fieldMetadata, valueAsString);
     }
 
     private static IQueryMatch HandleBoost(Parameters builderParameters, MethodExpression expression, bool exact)
