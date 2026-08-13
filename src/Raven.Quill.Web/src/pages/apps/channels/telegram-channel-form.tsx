@@ -5,11 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { toast } from "sonner";
 import { api } from "@/api/api";
-import type {
-    AgentSummaryResponse,
-    TelegramParameterBinding,
-    TelegramParameterSource,
-} from "@/api/generated/server-api";
+import type { AgentSummaryResponse, TelegramParameterBinding } from "@/api/generated/server-api";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
 import { FieldDescription } from "@/components/shadcn/ui/field";
@@ -26,8 +22,6 @@ import {
     telegramParameterSourceHint,
 } from "@/pages/apps/channels/telegram-parameter-sources";
 import type { FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
-
-const PARAMETER_SOURCE_OPTIONS: FormSelectOption<TelegramParameterSource>[] = TELEGRAM_PARAMETER_SOURCES;
 
 const parameterBindingSchema = z
     .object({
@@ -214,7 +208,7 @@ function LoadedTelegramChannelForm({
                                                     control={form.control}
                                                     name={`parameters.${index}.source`}
                                                     label={field.name}
-                                                    options={PARAMETER_SOURCE_OPTIONS}
+                                                    options={TELEGRAM_PARAMETER_SOURCES}
                                                 />
                                                 {parameters[index]?.source === "Constant" && (
                                                     <FormInput
