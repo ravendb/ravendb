@@ -16,8 +16,9 @@ import {
     type LucideIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { createBrowserRouter, type RouteObject } from "react-router";
+import { createBrowserRouter, Outlet, type RouteObject } from "react-router";
 import App from "@/app";
+import { UnsavedChangesProvider } from "@/components/form/unsaved-changes/unsaved-changes-provider";
 import { RedirectAuthenticated, RequireAuth } from "@/components/auth/auth-routes";
 import { AppAgentEdit } from "@/pages/apps/app-agent-edit";
 import { AppAgents } from "@/pages/apps/app-agents";
@@ -400,6 +401,11 @@ export function isAppRouteHandle(handle: unknown): handle is AppRouteHandle {
 export const router = createBrowserRouter([
     {
         errorElement: <RouteErrorBoundary />,
+        element: (
+            <UnsavedChangesProvider>
+                <Outlet />
+            </UnsavedChangesProvider>
+        ),
         children: [
             {
                 path: "/login",

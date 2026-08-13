@@ -46,6 +46,8 @@ export function AppWizard({ defaultValues, editedApp }: AppWizardProps) {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const [createdApp, setCreatedApp] = useState<CreatedApp | null>(null);
+    // The wizard hands over to a dialog after creating, so the draft outlives the submit that saved it.
+    const [isSaved, setIsSaved] = useState(false);
     // Seeded once: a later prop identity change must not discard the operator's work.
     const [editedAppSeed] = useState(() => editedApp);
     const isEditing = editedAppSeed !== undefined;
@@ -87,6 +89,8 @@ export function AppWizard({ defaultValues, editedApp }: AppWizardProps) {
             });
         },
         onSuccess: async (result, formValues) => {
+            setIsSaved(true);
+
             if (editedAppSeed) {
                 await invalidateAppQueries(queryClient, result.slug);
                 toast.success(`App ${result.slug} updated`);
@@ -120,6 +124,7 @@ export function AppWizard({ defaultValues, editedApp }: AppWizardProps) {
                     cancel={() => navigate(editedAppSeed ? appRoutes.app(editedAppSeed.slug) : appRoutes.dashboard())}
                     completion={isEditing ? EDIT_COMPLETION : CREATE_COMPLETION}
                     isEditing={isEditing}
+                    isSaved={isSaved}
                 />
             </form>
             <AppCreatedDialog
@@ -173,10 +178,12 @@ function AppWizardBody({
     cancel,
     completion,
     isEditing,
+    isSaved,
 }: {
     cancel: () => void;
     completion: WizardCompletion;
     isEditing: boolean;
+    isSaved: boolean;
 }) {
     const steps = useAppSteps();
     const { control } = useFormContext<AppFormData>();
@@ -188,5 +195,5 @@ function AppWizardBody({
 
     const flow = getAppFlow({ dataSource, isEditing });
 
-    return <FormWizard steps={steps} flow={flow} cancel={cancel} completion={completion} />;
+    return <FormWizard steps={steps} flow={flow} cancel={cancel} completion={completion} isSaved={isSaved} />;
 }

@@ -12,7 +12,6 @@ import { FormSelect } from "@/components/form/form-select";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
 import {
-    Dialog,
     DialogClose,
     DialogContent,
     DialogDescription,
@@ -21,6 +20,8 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/shadcn/ui/dialog";
+import { GuardedDialog } from "@/components/form/unsaved-changes/guarded-overlays";
+import { useFormUnsavedChanges } from "@/components/form/unsaved-changes/use-unsaved-changes";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import {
     CLEARANCE_OPTIONS,
@@ -65,6 +66,27 @@ function downloadBlob(blob: Blob, filename: string) {
 
 export function GenerateCertificateDialog({ apps, trigger }: { apps: AppResponse[]; trigger: ReactNode }) {
     const [isOpen, setIsOpen] = useState(false);
+
+    return (
+        <GuardedDialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>{trigger}</DialogTrigger>
+            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>Generate client certificate</DialogTitle>
+                    <DialogDescription>
+                        Create a client certificate for authenticating against the underlying RavenDB server. The
+                        certificate downloads as a zip archive — the private key inside is not stored on the server, so
+                        keep it safe.
+                    </DialogDescription>
+                </DialogHeader>
+                {/* Rendered only while open, so a discarded draft resets on the next open. */}
+                <GenerateCertificateForm apps={apps} onGenerated={() => setIsOpen(false)} />
+            </DialogContent>
+        </GuardedDialog>
+    );
+}
+
+function GenerateCertificateForm({ apps, onGenerated }: { apps: AppResponse[]; onGenerated: () => void }) {
     const queryClient = useQueryClient();
 
     const form = useForm<GenerateCertificateFormData>({
@@ -78,6 +100,7 @@ export function GenerateCertificateDialog({ apps, trigger }: { apps: AppResponse
     });
     const permissionRows = useFieldArray({ control: form.control, name: "permissions" });
     const clearance = useWatch({ control: form.control, name: "clearance" });
+    const unsavedChanges = useFormUnsavedChanges(form);
 
     const generateMutation = useMutation({
         mutationFn: (values: GenerateCertificateFormData) =>
@@ -90,122 +113,94 @@ export function GenerateCertificateDialog({ apps, trigger }: { apps: AppResponse
                 },
             ),
         onSuccess: async (zip, values) => {
+            unsavedChanges.markSaved();
             // Same filename the server sets in its Content-Disposition header.
             downloadBlob(zip, `${values.name}_certificates.zip`);
             toast.success(`Certificate “${values.name}” downloaded.`);
             await queryClient.invalidateQueries({ queryKey: api.queries.certificates.list().queryKey });
-            handleOpenChange(false);
+            onGenerated();
         },
     });
 
     const submit = form.handleSubmit((values) => generateMutation.mutate(values));
-
-    const handleOpenChange = (open: boolean) => {
-        setIsOpen(open);
-        if (!open) {
-            form.reset();
-            generateMutation.reset();
-        }
-    };
 
     const databaseOptions = apps.map((app) => toDatabaseOption(app.database, apps));
     const permissionsError = form.formState.errors.permissions;
     const permissionsErrorMessage = permissionsError?.root?.message ?? permissionsError?.message;
 
     return (
-        <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-            <DialogTrigger asChild>{trigger}</DialogTrigger>
-            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-                <DialogHeader>
-                    <DialogTitle>Generate client certificate</DialogTitle>
-                    <DialogDescription>
-                        Create a client certificate for authenticating against the underlying RavenDB server. The
-                        certificate downloads as a zip archive — the private key inside is not stored on the server, so
-                        keep it safe.
-                    </DialogDescription>
-                </DialogHeader>
+        <form className="grid gap-4" onSubmit={submit}>
+            <FormInput control={form.control} name="name" label="Certificate name" placeholder="e.g. backups" />
+            <FormInput control={form.control} name="password" type="password" label="Certificate password (optional)" />
+            <FormSelect
+                control={form.control}
+                name="clearance"
+                label="Security clearance"
+                options={CLEARANCE_OPTIONS}
+            />
 
-                <form className="grid gap-4" onSubmit={submit}>
-                    <FormInput control={form.control} name="name" label="Certificate name" placeholder="e.g. backups" />
-                    <FormInput
-                        control={form.control}
-                        name="password"
-                        type="password"
-                        label="Certificate password (optional)"
-                    />
-                    <FormSelect
-                        control={form.control}
-                        name="clearance"
-                        label="Security clearance"
-                        options={CLEARANCE_OPTIONS}
-                    />
-
-                    {clearance === "ValidUser" && (
-                        <div className="grid gap-3">
-                            <div className="text-sm font-medium">App access</div>
-                            {permissionRows.fields.map((row, index) => (
-                                <div key={row.id} className="flex items-start gap-2">
-                                    <FormSelect
-                                        control={form.control}
-                                        name={`permissions.${index}.database`}
-                                        placeholder="Select an app"
-                                        options={databaseOptions}
-                                        className="flex-1"
-                                    />
-                                    <FormSelect
-                                        control={form.control}
-                                        name={`permissions.${index}.access`}
-                                        options={DATABASE_ACCESS_OPTIONS}
-                                        className="w-32 shrink-0"
-                                    />
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        aria-label="Remove access"
-                                        onClick={() => permissionRows.remove(index)}
-                                    >
-                                        <Trash2 className="size-4" aria-hidden="true" />
-                                    </Button>
-                                </div>
-                            ))}
-                            {permissionsErrorMessage && (
-                                <p className="text-sm text-destructive">{permissionsErrorMessage}</p>
-                            )}
+            {clearance === "ValidUser" && (
+                <div className="grid gap-3">
+                    <div className="text-sm font-medium">App access</div>
+                    {permissionRows.fields.map((row, index) => (
+                        <div key={row.id} className="flex items-start gap-2">
+                            <FormSelect
+                                control={form.control}
+                                name={`permissions.${index}.database`}
+                                placeholder="Select an app"
+                                options={databaseOptions}
+                                className="flex-1"
+                            />
+                            <FormSelect
+                                control={form.control}
+                                name={`permissions.${index}.access`}
+                                options={DATABASE_ACCESS_OPTIONS}
+                                className="w-32 shrink-0"
+                            />
                             <Button
                                 type="button"
-                                variant="outline"
-                                size="sm"
-                                className="w-fit"
-                                onClick={() => permissionRows.append({ database: "", access: "Read" })}
+                                variant="ghost"
+                                size="icon"
+                                aria-label="Remove access"
+                                onClick={() => permissionRows.remove(index)}
                             >
-                                <Plus className="size-3.5" aria-hidden="true" />
-                                Add access
+                                <Trash2 className="size-4" aria-hidden="true" />
                             </Button>
                         </div>
-                    )}
+                    ))}
+                    {permissionsErrorMessage && <p className="text-sm text-destructive">{permissionsErrorMessage}</p>}
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-fit"
+                        onClick={() => permissionRows.append({ database: "", access: "Read" })}
+                    >
+                        <Plus className="size-3.5" aria-hidden="true" />
+                        Add access
+                    </Button>
+                </div>
+            )}
 
-                    {generateMutation.isError && (
-                        <Alert variant="destructive">
-                            {generateMutation.error instanceof Error
-                                ? generateMutation.error.message
-                                : "Could not generate the certificate."}
-                        </Alert>
-                    )}
+            {generateMutation.isError && (
+                <Alert variant="destructive">
+                    {generateMutation.error instanceof Error
+                        ? generateMutation.error.message
+                        : "Could not generate the certificate."}
+                </Alert>
+            )}
 
-                    <DialogFooter>
-                        <DialogClose asChild>
-                            <Button type="button" variant="outline">
-                                Cancel
-                            </Button>
-                        </DialogClose>
-                        <Button type="submit" disabled={generateMutation.isPending}>
-                            {generateMutation.isPending && <Spinner />}
-                            Generate & download
-                        </Button>
-                    </DialogFooter>
-                </form>
-            </DialogContent>
-        </Dialog>
+            <DialogFooter>
+                <DialogClose asChild>
+                    <Button type="button" variant="outline">
+                        Cancel
+                    </Button>
+                </DialogClose>
+                <Button type="submit" disabled={generateMutation.isPending}>
+                    {generateMutation.isPending && <Spinner />}
+                    Generate & download
+                </Button>
+            </DialogFooter>
+        </form>
     );
 }

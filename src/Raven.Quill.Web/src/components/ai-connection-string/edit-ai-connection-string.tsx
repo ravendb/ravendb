@@ -3,14 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
 import type { AiModelType } from "@/api/generated/server-api";
 import { Button } from "@/components/shadcn/ui/button";
-import {
-    Sheet,
-    SheetContent,
-    SheetDescription,
-    SheetHeader,
-    SheetTitle,
-    SheetTrigger,
-} from "@/components/shadcn/ui/sheet";
+import { SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/shadcn/ui/sheet";
+import { GuardedSheet } from "@/components/form/unsaved-changes/guarded-overlays";
 import { AiConnectionStringForm } from "@/components/ai-connection-string/ai-connection-string-form";
 import { mapDtoToFormData } from "@/components/ai-connection-string/ai-connection-string-utils";
 
@@ -28,7 +22,7 @@ export function EditAiConnectionString({ name, modelType, trigger, onSaved }: Ed
     const detailQuery = useQuery({ ...api.queries.aiConnectionStrings.detail(name), enabled: isOpen });
 
     return (
-        <Sheet open={isOpen} onOpenChange={setIsOpen}>
+        <GuardedSheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>{trigger}</SheetTrigger>
             <SheetContent className="w-full gap-0 sm:max-w-lg data-[side=right]:sm:max-w-lg">
                 <SheetHeader className="border-b">
@@ -58,6 +52,6 @@ export function EditAiConnectionString({ name, modelType, trigger, onSaved }: Ed
                     />
                 )}
             </SheetContent>
-        </Sheet>
+        </GuardedSheet>
     );
 }

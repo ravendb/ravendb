@@ -7,6 +7,7 @@ import AceEditor from "@/components/ace-editor/ace-editor";
 import { formatCss } from "@/components/ace-editor/ace-editor-action-utils";
 import { FormAceEditor } from "@/components/form/form-ace-editor";
 import { FormRadioCards, type RadioCardOption } from "@/components/form/form-radio-cards";
+import { useUnsavedChanges } from "@/components/form/unsaved-changes/use-unsaved-changes";
 import { Button } from "@/components/shadcn/ui/button";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { WebWidgetStylePreview } from "@/pages/apps/channels/web-widget-style-preview";
@@ -111,6 +112,9 @@ export function WebWidgetStyleEditor({
     const hasThemeChanges = Object.keys(themeChanges).length > 0;
 
     const previewCss = hasThemeChanges ? `${baseThemeCss}\n${buildThemeCss(themeChanges)}` : baseThemeCss;
+
+    // A save re-syncs the initial values and drops the pending tweaks, so both flags clear on their own.
+    useUnsavedChanges((form.formState.isDirty || hasThemeChanges) && !isSaving);
 
     const setThemeVariable = (name: ThemeVariableName, value: string) => {
         if (isCustom) return;

@@ -12,6 +12,7 @@ import { ApiState } from "@/components/data/api-state";
 import { FormInput } from "@/components/form/form-input";
 import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
 import { FormStringList } from "@/components/form/form-string-list";
+import { useFormUnsavedChanges } from "@/components/form/unsaved-changes/use-unsaved-changes";
 import { withNestedSubmit } from "@/lib/form-utils";
 import { invalidateChannelQueries } from "@/lib/query-invalidation";
 
@@ -52,6 +53,8 @@ export function WebWidgetChannelForm({
         defaultValues: { ...DEFAULT_VALUES, agentId: agent?.agentId ?? "" },
     });
 
+    const unsavedChanges = useFormUnsavedChanges(form);
+
     const createMutation = useMutation({
         mutationFn: (values: WebWidgetChannelFormData) =>
             api.services.channels.create(slug, {
@@ -61,6 +64,7 @@ export function WebWidgetChannelForm({
                 allowedOrigins: values.allowedOrigins.map((origin) => origin.value.trim()).filter(Boolean),
             }),
         onSuccess: async () => {
+            unsavedChanges.markSaved();
             await invalidateChannelQueries(queryClient, slug);
             toast.success("Web widget channel created");
             onCreated();

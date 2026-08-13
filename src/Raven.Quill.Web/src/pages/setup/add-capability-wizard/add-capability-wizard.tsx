@@ -64,6 +64,8 @@ function AddCapabilityWizardBody() {
             flow={CAPABILITY_FLOW}
             initialStep={isAgentPreselected ? "connection" : undefined}
             cancel={() => navigate(appRoutes.app(slug))}
+            // The agent is provisioned mid-flow, so from then on the draft is already persisted.
+            isSaved={createdAgent !== null}
             completion={{
                 type: "action",
                 label: hasChannels ? "Finish" : "Skip for now",

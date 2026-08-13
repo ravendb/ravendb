@@ -1,8 +1,9 @@
-import { useState, type ReactNode } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 import type { Decorator } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter, Route, Routes } from "react-router";
+import { createMemoryRouter, RouterProvider } from "react-router";
 import { AuthProvider } from "@/components/auth/auth-provider";
+import { UnsavedChangesProvider } from "@/components/form/unsaved-changes/unsaved-changes-provider";
 import { ThemeProvider, type Theme } from "@/components/shadcn/theme-provider";
 import { Toaster } from "@/components/shadcn/ui/sonner";
 import { cn } from "@/lib/utils";
@@ -73,20 +74,41 @@ function StoryPageLayout({ children, page }: { children: ReactNode; page: PagePa
     );
 }
 
+// The story flows in through context: baked into the route element, it would be frozen at its first args.
+const StoryContentContext = createContext<ReactNode>(null);
+
+function StoryContent() {
+    return useContext(StoryContentContext);
+}
+
 function StoryProviders({ children, theme, router }: { children: ReactNode; theme: Theme; router?: RouterParameter }) {
     const [queryClient] = useState(createStoryQueryClient);
+    // A data router, because the unsaved-changes guard's useBlocker needs one.
+    const [storyRouter] = useState(() =>
+        createMemoryRouter(
+            [
+                {
+                    path: router?.path ?? "*",
+                    element: (
+                        <UnsavedChangesProvider>
+                            <StoryContent />
+                        </UnsavedChangesProvider>
+                    ),
+                },
+            ],
+            { initialEntries: [router?.initialPath ?? "/"] },
+        ),
+    );
 
     return (
         <QueryClientProvider client={queryClient}>
             <ThemeProvider key={theme} defaultTheme={theme}>
-                <MemoryRouter initialEntries={[router?.initialPath ?? "/"]}>
-                    <AuthProvider>
-                        <Routes>
-                            <Route path={router?.path ?? "*"} element={children} />
-                        </Routes>
-                        <Toaster />
-                    </AuthProvider>
-                </MemoryRouter>
+                <AuthProvider>
+                    <StoryContentContext.Provider value={children}>
+                        <RouterProvider router={storyRouter} />
+                    </StoryContentContext.Provider>
+                    <Toaster />
+                </AuthProvider>
             </ThemeProvider>
         </QueryClientProvider>
     );
