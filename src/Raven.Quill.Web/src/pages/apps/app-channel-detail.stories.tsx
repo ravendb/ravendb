@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { SAMPLE_CHANNEL_ID } from "@/mocks/channels-mocks";
+import { SAMPLE_CHANNEL_ID, SAMPLE_TELEGRAM_CHANNEL_ID } from "@/mocks/channels-mocks";
 import { embedLinksMocks } from "@/mocks/embed-links-mocks";
 import { AppChannelDetail } from "./app-channel-detail";
 
@@ -34,7 +34,7 @@ export const NoLinks: Story = {
 export const Telegram: Story = {
     parameters: {
         router: {
-            initialPath: "/apps/demo/channels/tlg_2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e",
+            initialPath: `/apps/demo/channels/${SAMPLE_TELEGRAM_CHANNEL_ID}`,
             path: "/apps/:slug/channels/:channelId",
         },
     },

@@ -31,6 +31,7 @@ export const channelsMocks = {
 // Realistic, URL-safe channel ids (provisioning mints a 32-hex id); the web
 // id is shared with the embed-links mocks so the channel detail route resolves.
 export const SAMPLE_CHANNEL_ID = "4a1f9c2b7d8e4f6a9b0c1d2e3f405162";
+export const SAMPLE_TELEGRAM_CHANNEL_ID = "tlg_2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e";
 
 export const sampleChannels: ChannelSummaryResponse[] = [
     {
@@ -42,7 +43,7 @@ export const sampleChannels: ChannelSummaryResponse[] = [
         createdAt: "2026-05-03T09:00:00Z",
     },
     {
-        channelId: "tlg_2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e",
+        channelId: SAMPLE_TELEGRAM_CHANNEL_ID,
         type: "Telegram",
         agentId: "agents/faq",
         displayName: "Telegram bot",
