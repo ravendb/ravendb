@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import { AppWindow, BookOpen, Plus, Search, Sparkles } from "lucide-react";
+import { AppWindow, BookOpen, Plus, Search } from "lucide-react";
 import { api } from "@/api/api";
 import { useTheme } from "@/components/shadcn/theme-provider";
 import {
@@ -18,7 +18,7 @@ import { appRoutes } from "@/lib/app-routes";
 import { THEME_OPTIONS } from "@/lib/theme-options";
 
 const IS_MAC = typeof navigator !== "undefined" && navigator.platform.toUpperCase().includes("MAC");
-const DOCS_URL = "https://docs.ravendb.net/";
+const DOCS_URL = "https://docs.ravendb.net/quill";
 
 type CommandPaletteProps = {
     slug?: string;
@@ -29,10 +29,7 @@ export function CommandPalette({ slug, appName }: CommandPaletteProps) {
     // Built in render, not at module scope: this module is part of the
     // routes -> app -> command-palette import cycle, and the routes exports
     // are still in their temporal dead zone while the cycle initializes.
-    const navigationCommands: NavigationItem[] = [
-        ...navigationItems,
-        { label: "AI assistant", to: "/ai", icon: Sparkles },
-    ];
+    const navigationCommands: NavigationItem[] = [...navigationItems];
     const appPageCommands = appNavigationSections.flatMap((section) =>
         section.items.filter((item) => !item.isComingSoon),
     );

@@ -1,4 +1,4 @@
-import { Link, Outlet, useLocation, useMatches, useParams } from "react-router";
+import { Link, Outlet, useMatches, useParams } from "react-router";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MessageCircle, Sparkles } from "lucide-react";
@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { RavenLogo } from "@/components/brand/raven-logo";
 import { ContactSheet } from "@/components/layout/contact-sheet";
 import { Button } from "@/components/shadcn/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
 
 const compactSidebarMediaQuery = "(max-width: 63.999rem)";
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "sidebar-collapsed";
@@ -24,7 +25,6 @@ function readStoredSidebarCollapsed() {
 
 function App() {
     const { slug } = useParams();
-    const { pathname } = useLocation();
     const isCompactSidebarViewport = useMediaQuery(compactSidebarMediaQuery);
     const activeRoute = [...useMatches()]
         .reverse()
@@ -96,19 +96,8 @@ function App() {
                 <CommandPalette slug={slug} appName={activeAppLabel} />
 
                 <nav className="ml-4 flex shrink-0 items-center gap-4 text-sm" aria-label="Top navigation">
-                    <Link
-                        to={appRoutes.dashboard()}
-                        className={cn(
-                            "transition-colors",
-                            pathname === appRoutes.dashboard()
-                                ? "font-semibold text-foreground"
-                                : "text-muted-foreground hover:text-foreground",
-                        )}
-                    >
-                        Dashboard
-                    </Link>
                     <a
-                        href="https://docs.ravendb.net/"
+                        href="https://docs.ravendb.net/quill"
                         target="_blank"
                         rel="noreferrer"
                         className="text-muted-foreground transition-colors hover:text-foreground"
@@ -123,13 +112,20 @@ function App() {
                             </Button>
                         }
                     />
-                    <Link
-                        to="/ai"
-                        className="text-primary [filter:drop-shadow(0_0_6px_var(--brand-400))] transition-colors hover:text-primary/80"
-                        aria-label="AI assistant"
-                    >
-                        <Sparkles className="size-4" aria-hidden="true" />
-                    </Link>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <span
+                                    aria-disabled="true"
+                                    aria-label="AI assistant (coming soon)"
+                                    className="cursor-default text-primary/50 [filter:drop-shadow(0_0_6px_var(--brand-400))]"
+                                >
+                                    <Sparkles className="size-4" aria-hidden="true" />
+                                </span>
+                            </TooltipTrigger>
+                            <TooltipContent>AI assistant (coming soon)</TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                     <UserMenu />
                 </nav>
             </header>
