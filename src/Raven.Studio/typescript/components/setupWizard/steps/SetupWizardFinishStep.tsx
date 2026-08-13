@@ -3,7 +3,7 @@ import { SetupWizardFormData } from "../setupWizardValidation";
 import { Switch } from "components/common/Checkbox";
 import { FormGroup } from "components/common/Form";
 import useBoolean from "components/hooks/useBoolean";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useServices } from "components/hooks/useServices";
 import serverNotificationCenterClient from "common/serverNotificationCenterClient";
 import { ThemeColor } from "components/models/common";
@@ -37,6 +37,11 @@ interface Logs {
     color?: ThemeColor;
 }
 
+const webSocketConnectionTimeoutMs = 5000;
+const operationStatePollIntervalMs = 2000;
+
+const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
 export function SetupWizardFinishStep() {
     const { control, setValue } = useFormContext<SetupWizardFormData>();
     const { reportEvent } = useEventsCollector();
@@ -46,8 +51,6 @@ export function SetupWizardFinishStep() {
 
     const { setupMethodStep, usePackageStep, finishStep } = useWatch({ control });
 
-    const websocket = useMemo(() => new serverNotificationCenterClient(), []);
-
     const { databasesService, setupWizardService } = useServices();
 
     const [logs, setLogs] = useState<Logs[]>([]);
@@ -55,61 +58,70 @@ export function SetupWizardFinishStep() {
     const [configurationProcess, setConfigurationProcess] =
         useState<Raven.Server.Commercial.SetupProgressAndResult>(null);
 
+    const lastStatusRef = useRef<OperationStatus>(null);
+    const isOperationFinishedRef = useRef(false);
+
     const handleSetFinishStatus = (status: OperationStatus) => {
         dispatch(setupWizardActions.finishStepStatusSet(status));
         setValue("finishStep.finishingStatus", status);
         reportEvent(setupWizardGA4Prefixes.finalStep, "status", status);
     };
 
+    const applyOperationState = (state: Raven.Client.Documents.Operations.OperationState) => {
+        if (isOperationFinishedRef.current) {
+            return;
+        }
+
+        let dto: Raven.Server.Commercial.SetupProgressAndResult = state.Progress;
+
+        switch (state.Status) {
+            case "Completed":
+                dto = state.Result as Raven.Server.Commercial.SetupProgressAndResult;
+                setConfigurationProcess(dto);
+                break;
+            case "InProgress":
+                dto = state.Progress as Raven.Server.Commercial.SetupProgressAndResult;
+                setConfigurationProcess(dto);
+                break;
+            case "Faulted": {
+                setConfigurationProcess(state.Progress);
+                const failure = state.Result as Raven.Client.Documents.Operations.OperationExceptionResult;
+
+                setLogs((prev) => [...prev, { message: failure.Message, color: "danger" }]);
+                setLogs((prev) => [...prev, { message: state.Result.Error, color: "danger" }]);
+                setErrorLogs((prev) => [...prev, { message: failure.Error, color: "danger" }]);
+                break;
+            }
+            case "Canceled":
+                dto = state.Result as Raven.Server.Commercial.SetupProgressAndResult;
+                setConfigurationProcess(dto);
+                break;
+        }
+
+        if (dto?.Messages) {
+            setLogs(dto.Messages.map((message) => ({ message })));
+        }
+
+        if (lastStatusRef.current !== state.Status) {
+            lastStatusRef.current = state.Status;
+            handleSetFinishStatus(state.Status);
+        }
+
+        if (state.Status !== "InProgress") {
+            isOperationFinishedRef.current = true;
+        }
+    };
+
     const handleWebSocketOperation = (operation: Raven.Server.NotificationCenter.Notifications.OperationChanged) => {
         if (operation.TaskType === "Setup") {
-            let dto: Raven.Server.Commercial.SetupProgressAndResult = operation.State.Progress;
-
-            switch (operation.State.Status) {
-                case "Completed":
-                    dto = operation.State.Result as Raven.Server.Commercial.SetupProgressAndResult;
-                    setConfigurationProcess(operation.State.Result);
-                    handleSetFinishStatus("Completed");
-                    break;
-                case "InProgress":
-                    dto = operation.State.Progress as Raven.Server.Commercial.SetupProgressAndResult;
-                    setConfigurationProcess(operation.State.Progress);
-                    handleSetFinishStatus("InProgress");
-                    break;
-                case "Faulted": {
-                    setConfigurationProcess(operation.State.Progress);
-                    const failure = operation.State
-                        .Result as Raven.Client.Documents.Operations.OperationExceptionResult;
-
-                    setLogs((prev) => [...prev, { message: failure.Message, color: "danger" }]);
-                    setLogs((prev) => [...prev, { message: operation.State.Result.Error, color: "danger" }]);
-                    setErrorLogs((prev) => [...prev, { message: failure.Error, color: "danger" }]);
-
-                    handleSetFinishStatus("Faulted");
-                    break;
-                }
-                case "Canceled":
-                    dto = operation.State.Result as Raven.Server.Commercial.SetupProgressAndResult;
-                    setConfigurationProcess(operation.State.Result);
-                    handleSetFinishStatus("Canceled");
-                    break;
-            }
-
-            if (dto) {
-                switch (operation.TaskType) {
-                    case "Setup":
-                        setLogs(dto.Messages.map((message) => ({ message })));
-                        break;
-                }
-            }
+            applyOperationState(operation.State);
         }
     };
 
     const { getRegularDto, getContinueWithPackageDto, getSubmitUrlBase, downloadConfigurationLog } =
         useSetupWizardFinishUtils();
 
-    const regularFinish = async () => {
-        const operationId = await databasesService.getNextOperationId(null);
+    const regularFinish = (operationId: number) => {
         const operationPart = "?operationId=" + operationId;
         const urlBase = getSubmitUrlBase();
 
@@ -121,15 +133,9 @@ export function SetupWizardFinishStep() {
         form.action = urlBase + operationPart;
         optionsInput.value = JSON.stringify(dto);
         form.submit();
-
-        websocket.watchOperation(operationId, handleWebSocketOperation);
     };
 
-    const continueWithPackageFinish = async () => {
-        const operationId = await databasesService.getNextOperationId(null);
-
-        websocket.watchOperation(operationId, handleWebSocketOperation);
-
+    const continueWithPackageFinish = async (operationId: number) => {
         const dto = getContinueWithPackageDto();
 
         if (usePackageStep.isZipSecure) {
@@ -140,20 +146,62 @@ export function SetupWizardFinishStep() {
     };
 
     useEffect(() => {
+        let disposed = false;
+        const websocket = new serverNotificationCenterClient();
+
+        const waitForWebSocketConnection = (): Promise<void> =>
+            Promise.race([
+                new Promise<void>((resolve) => websocket.connectToWebSocketTask.always(() => resolve())),
+                delay(webSocketConnectionTimeoutMs),
+            ]);
+
+        const pollOperationState = async (operationId: number) => {
+            while (!disposed && !isOperationFinishedRef.current) {
+                await delay(operationStatePollIntervalMs);
+
+                if (disposed || isOperationFinishedRef.current) {
+                    return;
+                }
+
+                try {
+                    applyOperationState(await setupWizardService.getOperationState(operationId));
+                } catch {
+
+                }
+            }
+        };
+
         const finish = async () => {
             reportEvent(
                 setupWizardGA4Prefixes.finalStep,
                 "start-setup",
                 setupMethodStep.method === "usePackage" ? "usePackage" : "regular"
             );
-            if (setupMethodStep.method === "usePackage") {
-                await continueWithPackageFinish();
-            } else {
-                await regularFinish();
+
+            const operationId = await databasesService.getNextOperationId(null);
+
+            websocket.watchOperation(operationId, handleWebSocketOperation);
+            await waitForWebSocketConnection();
+
+            if (disposed) {
+                return;
             }
+
+            if (setupMethodStep.method === "usePackage") {
+                await continueWithPackageFinish(operationId);
+            } else {
+                regularFinish(operationId);
+            }
+
+            pollOperationState(operationId);
         };
 
         finish();
+
+        return () => {
+            disposed = true;
+            websocket.dispose();
+        };
     }, []);
 
     return (
