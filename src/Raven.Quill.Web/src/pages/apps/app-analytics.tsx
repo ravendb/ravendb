@@ -8,7 +8,7 @@ import { SeriesBarChart } from "@/components/data/charts";
 import { DatePeriodPicker } from "@/components/data/date-period-picker";
 import { PagePanel } from "@/components/data/page-panel";
 import { canDrillInto, drillInto, getDefaultDatePeriod } from "@/lib/date-period";
-import { useSetupStartDate } from "@/lib/use-setup-start-date";
+import { useAppStartDate } from "@/lib/use-start-date";
 import { TableCell, TableRow } from "@/components/shadcn/ui/table";
 import { formatCompact } from "@/lib/format";
 import { StatCardsSection, type DashboardStatCard } from "@/pages/dashboard/dashboard-stat-cards";
@@ -19,7 +19,7 @@ type BarClickHandler = (entry: Record<string, unknown>) => void;
 export function AppAnalytics() {
     const { slug = "" } = useParams();
     const [period, setPeriod] = useState(getDefaultDatePeriod);
-    const setupStartDate = useSetupStartDate();
+    const appStartDate = useAppStartDate(slug);
 
     // Keep the previous charts on screen while the finer-grained period loads, so
     // drilling in reads as a zoom rather than the page blanking out and back in.
@@ -29,7 +29,7 @@ export function AppAnalytics() {
     // any of them drills the whole page from its `t` label.
     const drillFromBar: BarClickHandler | undefined = canDrillInto(period)
         ? (entry) => {
-              const next = drillInto(period, entry.t as string, setupStartDate);
+              const next = drillInto(period, entry.t as string, appStartDate);
               if (next) setPeriod(next);
           }
         : undefined;
@@ -37,7 +37,7 @@ export function AppAnalytics() {
     return (
         <PagePanel>
             <div className="mb-6 flex items-center justify-end">
-                <DatePeriodPicker value={period} onChange={setPeriod} />
+                <DatePeriodPicker value={period} earliest={appStartDate} onChange={setPeriod} />
             </div>
             <ApiState
                 isLoading={appUsageQuery.isPending}

@@ -17,7 +17,6 @@ import {
     stepYear,
     type DatePeriod,
 } from "@/lib/date-period";
-import { useSetupStartDate } from "@/lib/use-setup-start-date";
 
 type Granularity = "year" | "month" | "day";
 
@@ -166,12 +165,21 @@ function DayPickerCalendar({ value, earliest, onSelect }: PickerGridProps) {
     );
 }
 
-// Pages through year/month/day periods one step at a time, bounded by the setup's
-// first day and today: pick the granularity, then one pair of chevrons steps by that
-// unit. Clicking the period label opens a picker matching the granularity (years,
-// months, or a day calendar).
-export function DatePeriodPicker({ value, onChange }: { value: DatePeriod; onChange: (value: DatePeriod) => void }) {
-    const earliest = useSetupStartDate();
+// Pages through year/month/day periods one step at a time, bounded by `earliest` and
+// today: pick the granularity, then one pair of chevrons steps by that unit. Clicking the
+// period label opens a picker matching the granularity (years, months, or a day calendar).
+// Callers own the lower bound, because it differs per view: useSetupStartDate() for
+// server-wide views, useAppStartDate(slug) for a single app's.
+export function DatePeriodPicker({
+    value,
+    earliest,
+    onChange,
+}: {
+    value: DatePeriod;
+    /** Earliest selectable date; undefined leaves the picker capped only at today. */
+    earliest: Date | undefined;
+    onChange: (value: DatePeriod) => void;
+}) {
     const granularity = getGranularity(value);
     const [isPickerOpen, setIsPickerOpen] = useState(false);
     const step = granularity === "day" ? stepDay : granularity === "month" ? stepMonth : stepYear;

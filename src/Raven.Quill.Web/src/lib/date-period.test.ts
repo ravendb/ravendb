@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { clampPeriod, drillInto, isSameDatePeriod, stepDay, stepMonth, stepYear } from "@/lib/date-period";
+import {
+    clampPeriod,
+    drillInto,
+    isSameDatePeriod,
+    parseStartDate,
+    stepDay,
+    stepMonth,
+    stepYear,
+} from "@/lib/date-period";
 import { getSetupStartDate } from "@/lib/license";
 import type { ServerLicenseResponse } from "@/api/generated/server-api";
 
@@ -98,6 +106,25 @@ describe("drillInto", () => {
 
     it("ignores a bucket that is not a date", () => {
         expect(drillInto({ year: 2026, month: 6, day: null }, "not-a-date")).toBeNull();
+    });
+});
+
+// The lower bound on per-app views: the app's createdAt, as the server reports it.
+describe("parseStartDate", () => {
+    it("returns the start of the reported day", () => {
+        expect(parseStartDate("2026-07-21T08:12:45Z")).toEqual(new Date(2026, 6, 21));
+    });
+
+    it("returns undefined when the server reports no date", () => {
+        expect(parseStartDate(undefined)).toBeUndefined();
+        expect(parseStartDate(null)).toBeUndefined();
+        expect(parseStartDate("")).toBeUndefined();
+    });
+
+    it("returns undefined for a date no server could have reported", () => {
+        expect(parseStartDate("0001-01-01T00:00:00")).toBeUndefined();
+        expect(parseStartDate("not-a-date")).toBeUndefined();
+        expect(parseStartDate("2027-01-01T00:00:00")).toBeUndefined();
     });
 });
 
