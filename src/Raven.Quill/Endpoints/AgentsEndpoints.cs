@@ -199,11 +199,8 @@ public static class AgentsEndpoints
     {
         using var session = store.OpenAsyncSession(database);
 
-        var channels = await session.Advanced.LoadStartingWithAsync<Channel>(
-            Channel.IdPrefix, token: ct);
-
-        var count = channels.Count(c => string.Equals(c.AgentId, agentId, StringComparison.OrdinalIgnoreCase));
-        return count;
+        var channels = await session.LoadAllStartingWithAsync<Channel>(Channel.IdPrefix, ct);
+        return channels.Count(c => string.Equals(c.AgentId, agentId, StringComparison.OrdinalIgnoreCase));
     }
 
     internal sealed class AgentsLogger;

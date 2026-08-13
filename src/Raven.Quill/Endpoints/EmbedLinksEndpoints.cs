@@ -6,6 +6,7 @@ using Raven.Quill.Agents;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints.Helpers;
+using Raven.Quill.Raven;
 
 namespace Raven.Quill.Endpoints;
 
@@ -57,17 +58,8 @@ public static class EmbedLinksEndpoints
 
         using var session = store.OpenAsyncSession(app.Database);
 
-        const int pageSize = 1024;
         var now = DateTime.UtcNow;
-        var links = new List<EmbedLink>();
-        for (var start = 0;; start += pageSize)
-        {
-            var page = (await session.Advanced.LoadStartingWithAsync<EmbedLink>(
-                EmbedLink.IdPrefix, start: start, pageSize: pageSize, token: ct)).ToArray();
-            links.AddRange(page);
-            if (page.Length < pageSize)
-                break;
-        }
+        var links = await session.LoadAllStartingWithAsync<EmbedLink>(EmbedLink.IdPrefix, ct);
 
         var items = links
             .Where(l => l.Revoked == false && l.ExpiresAt > now)
