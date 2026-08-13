@@ -5,7 +5,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { toast } from "sonner";
 import { api } from "@/api/api";
-import type { TelegramParameterBinding, TelegramParameterSource } from "@/api/generated/server-api";
+import type {
+    AgentSummaryResponse,
+    TelegramParameterBinding,
+    TelegramParameterSource,
+} from "@/api/generated/server-api";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
 import { FieldDescription } from "@/components/shadcn/ui/field";
@@ -14,6 +18,7 @@ import { SheetClose, SheetFooter } from "@/components/shadcn/ui/sheet";
 import { ApiState } from "@/components/data/api-state";
 import { FormInput } from "@/components/form/form-input";
 import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
+import { useFormUnsavedChanges } from "@/components/form/unsaved-changes/use-unsaved-changes";
 import { withNestedSubmit } from "@/lib/form-utils";
 import { invalidateChannelQueries } from "@/lib/query-invalidation";
 import {
@@ -53,6 +58,11 @@ function toParameterBindings(parameters: TelegramChannelFormData["parameters"]) 
     return bindings;
 }
 
+function seedParameterRows(agents: AgentSummaryResponse[], agentId: string): TelegramChannelFormData["parameters"] {
+    const selected = agents.find((candidate) => candidate.agentId === agentId);
+    return (selected?.parameters ?? []).map((name) => ({ name, source: "Constant" as const, value: "" }));
+}
+
 export function TelegramChannelForm({
     slug,
     agent,
@@ -62,27 +72,69 @@ export function TelegramChannelForm({
     agent?: FixedAgent;
     onCreated: () => void;
 }) {
-    const queryClient = useQueryClient();
     const agentsQuery = useQuery(api.queries.agents.list(slug));
+
+    if (!agentsQuery.data) {
+        return (
+            <div className="flex min-h-0 flex-1 flex-col">
+                <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
+                    <ApiState
+                        isLoading={agentsQuery.isPending}
+                        isError={agentsQuery.isError}
+                        errorTitle="Could not load agents"
+                        onRetry={() => void agentsQuery.refetch()}
+                        loadingLabel="Loading agents..."
+                    >
+                        {null}
+                    </ApiState>
+                </div>
+            </div>
+        );
+    }
+
+    return <LoadedTelegramChannelForm slug={slug} agent={agent} agents={agentsQuery.data} onCreated={onCreated} />;
+}
+
+function LoadedTelegramChannelForm({
+    slug,
+    agent,
+    agents,
+    onCreated,
+}: {
+    slug: string;
+    agent?: FixedAgent;
+    agents: AgentSummaryResponse[];
+    onCreated: () => void;
+}) {
+    const queryClient = useQueryClient();
 
     const form = useForm<TelegramChannelFormData>({
         mode: "onChange",
         resolver: zodResolver(telegramChannelSchema),
-        defaultValues: { agentId: agent?.agentId ?? "", displayName: "", botToken: "", parameters: [] },
+        defaultValues: {
+            agentId: agent?.agentId ?? "",
+            displayName: "",
+            botToken: "",
+            parameters: seedParameterRows(agents, agent?.agentId ?? ""),
+        },
     });
+
+    const unsavedChanges = useFormUnsavedChanges(form);
 
     const selectedAgentId = useWatch({ control: form.control, name: "agentId" });
     const parameterFields = useFieldArray({ control: form.control, name: "parameters" });
     const parameters = useWatch({ control: form.control, name: "parameters" }) ?? [];
 
-    const agents = agentsQuery.data ?? [];
-
     const { replace } = parameterFields;
+    const { getValues } = form;
     useEffect(() => {
-        const selected = (agentsQuery.data ?? []).find((candidate) => candidate.agentId === selectedAgentId);
-        const names = selected?.parameters ?? [];
-        replace(names.map((name) => ({ name, source: "Constant" as const, value: "" })));
-    }, [replace, selectedAgentId, agentsQuery.data]);
+        const seeded = seedParameterRows(agents, selectedAgentId);
+        const rows = getValues("parameters") ?? [];
+        if (rows.length === seeded.length && seeded.every((row, index) => rows[index]?.name === row.name)) {
+            return;
+        }
+        replace(seeded);
+    }, [replace, getValues, selectedAgentId, agents]);
 
     const createMutation = useMutation({
         mutationFn: (values: TelegramChannelFormData) =>
@@ -97,6 +149,7 @@ export function TelegramChannelForm({
                 },
             }),
         onSuccess: async () => {
+            unsavedChanges.markSaved();
             await invalidateChannelQueries(queryClient, slug);
             toast.success("Telegram channel created");
             onCreated();
@@ -115,87 +168,79 @@ export function TelegramChannelForm({
             onSubmit={withNestedSubmit(form.handleSubmit((values) => createMutation.mutate(values)))}
         >
             <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
-                <ApiState
-                    isLoading={agentsQuery.isPending}
-                    isError={agentsQuery.isError}
-                    errorTitle="Could not load agents"
-                    onRetry={() => void agentsQuery.refetch()}
-                    loadingLabel="Loading agents..."
-                >
-                    {!hasAgentTarget ? (
-                        <Alert>
-                            Create an agent first — a channel routes conversations to one of the app&apos;s agents.
-                        </Alert>
-                    ) : (
-                        <>
-                            {!agent && (
-                                <FormSelect
-                                    control={form.control}
-                                    name="agentId"
-                                    label="Agent"
-                                    placeholder="Select an agent"
-                                    options={agentOptions}
-                                    description="Messages to this bot are answered by this agent."
-                                />
-                            )}
-                            <FormInput
+                {!hasAgentTarget ? (
+                    <Alert>
+                        Create an agent first — a channel routes conversations to one of the app&apos;s agents.
+                    </Alert>
+                ) : (
+                    <>
+                        {!agent && (
+                            <FormSelect
                                 control={form.control}
-                                name="botToken"
-                                type="password"
-                                label="Bot token"
-                                placeholder="123456789:AA..."
-                                description="Create a bot with @BotFather and paste its token. It is validated with Telegram and never shown again."
+                                name="agentId"
+                                label="Agent"
+                                placeholder="Select an agent"
+                                options={agentOptions}
+                                description="Messages to this bot are answered by this agent."
                             />
-                            <FormInput
-                                control={form.control}
-                                name="displayName"
-                                label="Channel name"
-                                placeholder="Defaults to the bot's username"
-                                description="Shown in the channels list. Optional."
-                            />
-                            {parameterFields.fields.length > 0 && (
-                                <div className="flex flex-col gap-3">
-                                    <p className="text-xs text-muted-foreground">
-                                        Map each agent parameter to a constant value bound once for the whole channel,
-                                        or to a field of the Telegram user sending each message.
-                                    </p>
-                                    {parameterFields.fields.map((field, index) => {
-                                        const hint = telegramParameterSourceHint(parameters[index]?.source);
-                                        return (
-                                            <div key={field.id} className="grid gap-2">
-                                                <div className="grid gap-2 sm:grid-cols-2">
-                                                    <FormSelect
+                        )}
+                        <FormInput
+                            control={form.control}
+                            name="botToken"
+                            type="password"
+                            label="Bot token"
+                            placeholder="123456789:AA..."
+                            description="Create a bot with @BotFather and paste its token. It is validated with Telegram and never shown again."
+                        />
+                        <FormInput
+                            control={form.control}
+                            name="displayName"
+                            label="Channel name"
+                            placeholder="Defaults to the bot's username"
+                            description="Shown in the channels list. Optional."
+                        />
+                        {parameterFields.fields.length > 0 && (
+                            <div className="flex flex-col gap-3">
+                                <p className="text-xs text-muted-foreground">
+                                    Map each agent parameter to a constant value bound once for the whole channel, or to
+                                    a field of the Telegram user sending each message.
+                                </p>
+                                {parameterFields.fields.map((field, index) => {
+                                    const hint = telegramParameterSourceHint(parameters[index]?.source);
+                                    return (
+                                        <div key={field.id} className="grid gap-2">
+                                            <div className="grid gap-2 sm:grid-cols-2">
+                                                <FormSelect
+                                                    control={form.control}
+                                                    name={`parameters.${index}.source`}
+                                                    label={field.name}
+                                                    options={PARAMETER_SOURCE_OPTIONS}
+                                                />
+                                                {parameters[index]?.source === "Constant" && (
+                                                    <FormInput
                                                         control={form.control}
-                                                        name={`parameters.${index}.source`}
-                                                        label={field.name}
-                                                        options={PARAMETER_SOURCE_OPTIONS}
+                                                        name={`parameters.${index}.value`}
+                                                        label="Value"
+                                                        placeholder="e.g. customers/1"
                                                     />
-                                                    {parameters[index]?.source === "Constant" && (
-                                                        <FormInput
-                                                            control={form.control}
-                                                            name={`parameters.${index}.value`}
-                                                            label="Value"
-                                                            placeholder="e.g. customers/1"
-                                                        />
-                                                    )}
-                                                </div>
-                                                {hint && <FieldDescription>{hint}</FieldDescription>}
+                                                )}
                                             </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </>
-                    )}
+                                            {hint && <FieldDescription>{hint}</FieldDescription>}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </>
+                )}
 
-                    {createMutation.isError && (
-                        <Alert variant="destructive">
-                            {createMutation.error instanceof Error
-                                ? createMutation.error.message.split("\n")[0]
-                                : "Could not create channel."}
-                        </Alert>
-                    )}
-                </ApiState>
+                {createMutation.isError && (
+                    <Alert variant="destructive">
+                        {createMutation.error instanceof Error
+                            ? createMutation.error.message.split("\n")[0]
+                            : "Could not create channel."}
+                    </Alert>
+                )}
             </div>
 
             <SheetFooter className="flex-row justify-end border-t">
