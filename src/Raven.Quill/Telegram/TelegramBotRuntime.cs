@@ -183,7 +183,7 @@ internal sealed class TelegramBotRuntime
                 "Telegram bot for channel {ChannelId} did not drain within 10s", _context.ChannelDoc.Id);
             return;
         }
-        catch (Exception)
+        catch (OperationCanceledException)
         {
         }
 
