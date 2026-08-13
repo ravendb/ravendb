@@ -10,7 +10,6 @@ import { Alert } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import {
-    Sheet,
     SheetClose,
     SheetContent,
     SheetDescription,
@@ -22,6 +21,8 @@ import {
 import { FormInput } from "@/components/form/form-input";
 import { FormStringList } from "@/components/form/form-string-list";
 import { FormSwitch } from "@/components/form/form-switch";
+import { GuardedSheet } from "@/components/form/unsaved-changes/guarded-overlays";
+import { useFormUnsavedChanges } from "@/components/form/unsaved-changes/use-unsaved-changes";
 import { withNestedSubmit } from "@/lib/form-utils";
 import { invalidateChannelQueries } from "@/lib/query-invalidation";
 
@@ -35,7 +36,7 @@ export function EditChannelSheet({ slug, channel, trigger }: EditChannelSheetPro
     const [isOpen, setIsOpen] = useState(false);
 
     return (
-        <Sheet open={isOpen} onOpenChange={setIsOpen}>
+        <GuardedSheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>{trigger}</SheetTrigger>
             <SheetContent className="w-full gap-0 sm:max-w-lg data-[side=right]:sm:max-w-lg">
                 <SheetHeader className="border-b">
@@ -44,7 +45,7 @@ export function EditChannelSheet({ slug, channel, trigger }: EditChannelSheetPro
                 </SheetHeader>
                 <EditChannelForm slug={slug} channel={channel} onSaved={() => setIsOpen(false)} />
             </SheetContent>
-        </Sheet>
+        </GuardedSheet>
     );
 }
 
@@ -80,6 +81,7 @@ function EditChannelForm({
     });
 
     const shouldReplaceAllowedOrigins = useWatch({ control: form.control, name: "shouldReplaceAllowedOrigins" });
+    const unsavedChanges = useFormUnsavedChanges(form);
 
     const updateMutation = useMutation({
         mutationFn: (values: EditChannelFormData) =>
@@ -92,6 +94,7 @@ function EditChannelForm({
                 enabled: values.enabled,
             }),
         onSuccess: async () => {
+            unsavedChanges.markSaved();
             await invalidateChannelQueries(queryClient, slug);
             toast.success("Channel updated");
             onSaved();

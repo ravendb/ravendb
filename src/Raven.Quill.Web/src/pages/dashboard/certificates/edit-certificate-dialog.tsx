@@ -14,7 +14,6 @@ import { FormSwitch } from "@/components/form/form-switch";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
 import {
-    Dialog,
     DialogClose,
     DialogContent,
     DialogDescription,
@@ -23,6 +22,8 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/shadcn/ui/dialog";
+import { GuardedDialog } from "@/components/form/unsaved-changes/guarded-overlays";
+import { useFormUnsavedChanges } from "@/components/form/unsaved-changes/use-unsaved-changes";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import {
     CLEARANCE_OPTIONS,
@@ -60,6 +61,34 @@ export function EditCertificateDialog({
     trigger: ReactNode;
 }) {
     const [isOpen, setIsOpen] = useState(false);
+
+    return (
+        <GuardedDialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>{trigger}</DialogTrigger>
+            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>Edit certificate</DialogTitle>
+                    <DialogDescription>
+                        Rename the certificate, enable or disable it, change its security clearance, and manage which
+                        apps it can access.
+                    </DialogDescription>
+                </DialogHeader>
+                {/* Rendered only while open: each open seeds fresh and a discarded draft doesn't linger. */}
+                <EditCertificateForm certificate={certificate} apps={apps} onSaved={() => setIsOpen(false)} />
+            </DialogContent>
+        </GuardedDialog>
+    );
+}
+
+function EditCertificateForm({
+    certificate,
+    apps,
+    onSaved,
+}: {
+    certificate: CertificateItem;
+    apps: AppResponse[];
+    onSaved: () => void;
+}) {
     const queryClient = useQueryClient();
 
     const form = useForm<EditCertificateFormData>({
@@ -68,6 +97,7 @@ export function EditCertificateDialog({
     });
     const permissionRows = useFieldArray({ control: form.control, name: "permissions" });
     const clearance = useWatch({ control: form.control, name: "clearance" });
+    const unsavedChanges = useFormUnsavedChanges(form);
 
     const editMutation = useMutation({
         mutationFn: (values: EditCertificateFormData) =>
@@ -81,22 +111,14 @@ export function EditCertificateDialog({
                 },
             ),
         onSuccess: async (_, values) => {
+            unsavedChanges.markSaved();
             toast.success(`Certificate “${values.name}” updated.`);
             await queryClient.invalidateQueries({ queryKey: api.queries.certificates.list().queryKey });
-            handleOpenChange(false);
+            onSaved();
         },
     });
 
     const submit = form.handleSubmit((values) => editMutation.mutate(values));
-
-    const handleOpenChange = (open: boolean) => {
-        setIsOpen(open);
-        if (open) {
-            form.reset(toFormData(certificate));
-        } else {
-            editMutation.reset();
-        }
-    };
 
     // Databases the certificate already references stay selectable even when they
     // don't match a current app (e.g. the app was removed).
@@ -106,96 +128,83 @@ export function EditCertificateDialog({
     const databaseOptions = knownDatabases.map((database) => toDatabaseOption(database, apps));
 
     return (
-        <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-            <DialogTrigger asChild>{trigger}</DialogTrigger>
-            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-                <DialogHeader>
-                    <DialogTitle>Edit certificate</DialogTitle>
-                    <DialogDescription>
-                        Rename the certificate, enable or disable it, change its security clearance, and manage which
-                        apps it can access.
-                    </DialogDescription>
-                </DialogHeader>
+        <form className="grid gap-4" onSubmit={submit}>
+            <FormInput control={form.control} name="name" label="Certificate name" />
+            <FormSwitch control={form.control} name="isEnabled" label="Enabled" />
+            <FormSelect
+                control={form.control}
+                name="clearance"
+                label="Security clearance"
+                options={CLEARANCE_OPTIONS}
+            />
 
-                <form className="grid gap-4" onSubmit={submit}>
-                    <FormInput control={form.control} name="name" label="Certificate name" />
-                    <FormSwitch control={form.control} name="isEnabled" label="Enabled" />
-                    <FormSelect
-                        control={form.control}
-                        name="clearance"
-                        label="Security clearance"
-                        options={CLEARANCE_OPTIONS}
-                    />
-
-                    {clearance === "ValidUser" && (
-                        <div className="grid gap-3">
-                            <div className="text-sm font-medium">App access</div>
-                            {permissionRows.fields.length === 0 && (
-                                <p className="text-sm text-muted-foreground">
-                                    No access granted — this certificate cannot reach any app.
-                                </p>
-                            )}
-                            {permissionRows.fields.map((row, index) => (
-                                <div key={row.id} className="flex items-start gap-2">
-                                    <FormSelect
-                                        control={form.control}
-                                        name={`permissions.${index}.database`}
-                                        placeholder="Select an app"
-                                        options={databaseOptions}
-                                        className="flex-1"
-                                    />
-                                    <FormSelect
-                                        control={form.control}
-                                        name={`permissions.${index}.access`}
-                                        options={DATABASE_ACCESS_OPTIONS}
-                                        className="w-32 shrink-0"
-                                    />
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        aria-label="Remove access"
-                                        onClick={() => permissionRows.remove(index)}
-                                    >
-                                        <Trash2 className="size-4" aria-hidden="true" />
-                                    </Button>
-                                </div>
-                            ))}
+            {clearance === "ValidUser" && (
+                <div className="grid gap-3">
+                    <div className="text-sm font-medium">App access</div>
+                    {permissionRows.fields.length === 0 && (
+                        <p className="text-sm text-muted-foreground">
+                            No access granted — this certificate cannot reach any app.
+                        </p>
+                    )}
+                    {permissionRows.fields.map((row, index) => (
+                        <div key={row.id} className="flex items-start gap-2">
+                            <FormSelect
+                                control={form.control}
+                                name={`permissions.${index}.database`}
+                                placeholder="Select an app"
+                                options={databaseOptions}
+                                className="flex-1"
+                            />
+                            <FormSelect
+                                control={form.control}
+                                name={`permissions.${index}.access`}
+                                options={DATABASE_ACCESS_OPTIONS}
+                                className="w-32 shrink-0"
+                            />
                             <Button
                                 type="button"
-                                variant="outline"
-                                size="sm"
-                                className="w-fit"
-                                onClick={() => permissionRows.append({ database: "", access: "Read" })}
+                                variant="ghost"
+                                size="icon"
+                                aria-label="Remove access"
+                                onClick={() => permissionRows.remove(index)}
                             >
-                                <Plus className="size-3.5" aria-hidden="true" />
-                                Add access
+                                <Trash2 className="size-4" aria-hidden="true" />
                             </Button>
                         </div>
-                    )}
+                    ))}
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-fit"
+                        onClick={() => permissionRows.append({ database: "", access: "Read" })}
+                    >
+                        <Plus className="size-3.5" aria-hidden="true" />
+                        Add access
+                    </Button>
+                </div>
+            )}
 
-                    {editMutation.isError && (
-                        <Alert variant="destructive">
-                            {editMutation.error instanceof Error
-                                ? editMutation.error.message
-                                : "Could not update the certificate."}
-                        </Alert>
-                    )}
+            {editMutation.isError && (
+                <Alert variant="destructive">
+                    {editMutation.error instanceof Error
+                        ? editMutation.error.message
+                        : "Could not update the certificate."}
+                </Alert>
+            )}
 
-                    <DialogFooter>
-                        <DialogClose asChild>
-                            <Button type="button" variant="outline">
-                                Cancel
-                            </Button>
-                        </DialogClose>
-                        <Button type="submit" disabled={editMutation.isPending}>
-                            {editMutation.isPending && <Spinner />}
-                            Save changes
-                        </Button>
-                    </DialogFooter>
-                </form>
-            </DialogContent>
-        </Dialog>
+            <DialogFooter>
+                <DialogClose asChild>
+                    <Button type="button" variant="outline">
+                        Cancel
+                    </Button>
+                </DialogClose>
+                <Button type="submit" disabled={editMutation.isPending}>
+                    {editMutation.isPending && <Spinner />}
+                    Save changes
+                </Button>
+            </DialogFooter>
+        </form>
     );
 }
 

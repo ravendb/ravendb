@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
     useFormContext,
+    useFormState,
     useWatch,
     type Control,
     type FieldValues,
@@ -10,6 +11,7 @@ import {
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { Button } from "@/components/shadcn/ui/button";
 import { Spinner } from "@/components/shadcn/ui/spinner";
+import { useUnsavedChanges } from "@/components/form/unsaved-changes/use-unsaved-changes";
 import { WizardErrorAlert } from "@/components/form/wizard/wizard-error-alert";
 import { toError, WizardHandledError } from "@/components/form/wizard/wizard-step-error";
 import { cn } from "@/lib/utils";
@@ -82,6 +84,8 @@ type FormWizardProps<StepId extends string, Values extends FieldValues> = {
     initialStep?: StepId;
     cancel: () => void;
     completion?: WizardCompletion;
+    /** The work is already persisted, so leaving loses nothing (for wizards that save before their last step). */
+    isSaved?: boolean;
 };
 
 export function FormWizard<StepId extends string, Values extends FieldValues>({
@@ -90,8 +94,11 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
     initialStep,
     cancel,
     completion = { type: "submit" },
+    isSaved = false,
 }: FormWizardProps<StepId, Values>) {
-    const { trigger, control, getValues, formState, subscribe } = useFormContext<Values>();
+    const { trigger, control, getValues, subscribe } = useFormContext<Values>();
+    // Not the context's formState proxy - it never re-renders this component, so these would go stale.
+    const { isDirty, isSubmitting } = useFormState({ control });
 
     if (flow.length === 0) {
         throw new Error("FormWizard requires at least one step in the flow.");
@@ -116,7 +123,10 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
     const currentStep = steps[currentStepIdInFlow];
     const stepPosition: WizardStepPosition =
         currentIndex === 0 ? "first" : currentIndex === flow.length - 1 ? "last" : "middle";
-    const isBusy = isAdvancing || formState.isSubmitting;
+    const isBusy = isAdvancing || isSubmitting;
+
+    // Every exit from a wizard is a route change, so registering is all the app-level guard needs.
+    useUnsavedChanges(isDirty && !isSubmitting && !isSaved);
 
     const setActiveStepIndex = (index: number) => {
         setLastKnownIndex(index);

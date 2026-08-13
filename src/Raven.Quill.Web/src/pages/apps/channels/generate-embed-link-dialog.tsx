@@ -10,7 +10,6 @@ import { Alert } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import {
-    Dialog,
     DialogClose,
     DialogContent,
     DialogDescription,
@@ -19,6 +18,8 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/shadcn/ui/dialog";
+import { GuardedDialog } from "@/components/form/unsaved-changes/guarded-overlays";
+import { useFormUnsavedChanges } from "@/components/form/unsaved-changes/use-unsaved-changes";
 import { FormInput } from "@/components/form/form-input";
 import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
 import { EmbedLinkPreview } from "@/pages/apps/channels/embed-link-preview";
@@ -92,22 +93,28 @@ export function GenerateEmbedLinkDialog({
 }: GenerateEmbedLinkDialogProps) {
     const [isOpen, setIsOpen] = useState(false);
 
+    const getDefaultValues = (): GenerateEmbedLinkFormData => ({
+        parameters: parameterNames.map((name) => ({ name, value: "" })),
+        ttlPreset: DEFAULT_TTL_PRESET,
+        customTtlSeconds: null,
+        maxInvocations: DEFAULT_MAX_INVOCATIONS,
+    });
+
     const form = useForm<GenerateEmbedLinkFormData>({
         resolver: zodResolver(generateEmbedLinkSchema),
-        defaultValues: {
-            parameters: parameterNames.map((name) => ({ name, value: "" })),
-            ttlPreset: DEFAULT_TTL_PRESET,
-            customTtlSeconds: null,
-            maxInvocations: DEFAULT_MAX_INVOCATIONS,
-        },
+        defaultValues: getDefaultValues(),
     });
 
     const ttlPreset = useWatch({ control: form.control, name: "ttlPreset" });
     const queryClient = useQueryClient();
 
+    const unsavedChanges = useFormUnsavedChanges(form);
+
     const mintMutation = useMutation({
         mutationFn: (request: MintEmbedLinkRequest) => api.services.embedLinks.mint(slug, request),
         onSuccess: async () => {
+            // The minted link replaces the form, so its inputs are spent rather than unsaved.
+            unsavedChanges.markSaved();
             await queryClient.invalidateQueries({ queryKey: api.queries.embedLinks.list(slug).queryKey });
         },
     });
@@ -138,13 +145,20 @@ export function GenerateEmbedLinkDialog({
                 queryClient.invalidateQueries({ queryKey: api.queries.embedLinks.list(slug).queryKey });
                 queryClient.invalidateQueries({ queryKey: ["stats", "usage"] });
             }
-            form.reset();
+            // Explicit defaults: markSaved made the minted values the baseline, so a bare reset() would restore them.
+            form.reset(getDefaultValues());
             mintMutation.reset();
         }
     };
 
     return (
-        <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+        // The form lives beside the overlay so "Generate another" can reuse its values - hence the
+        // explicit hasUnsavedChanges and the reset on close.
+        <GuardedDialog
+            open={isOpen}
+            onOpenChange={handleOpenChange}
+            hasUnsavedChanges={unsavedChanges.hasUnsavedChanges}
+        >
             <DialogTrigger asChild>{trigger}</DialogTrigger>
             <DialogContent className={cn("sm:max-w-md", result && "max-h-[90vh] overflow-y-auto sm:max-w-lg")}>
                 <DialogHeader>
@@ -223,7 +237,7 @@ export function GenerateEmbedLinkDialog({
                     </form>
                 )}
             </DialogContent>
-        </Dialog>
+        </GuardedDialog>
     );
 }
 

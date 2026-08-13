@@ -2,7 +2,7 @@ import { useForm } from "react-hook-form";
 import { SearchIcon } from "lucide-react";
 import { Button } from "@/components/shadcn/ui/button";
 import {
-    Sheet,
+    SheetClose,
     SheetContent,
     SheetDescription,
     SheetFooter,
@@ -11,6 +11,8 @@ import {
 } from "@/components/shadcn/ui/sheet";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { FormStringList } from "@/components/form/form-string-list";
+import { GuardedSheet } from "@/components/form/unsaved-changes/guarded-overlays";
+import { useFormUnsavedChanges } from "@/components/form/unsaved-changes/use-unsaved-changes";
 import { toStringValueItems, toStringValues, type StringValueItem } from "@/lib/form-utils";
 import { normalizeDiscoverSchemas } from "@/pages/setup/add-app-wizard/steps/verify/use-discover-tables";
 
@@ -31,17 +33,12 @@ export function DefineSchemasSheet({
     onSave,
 }: DefineSchemasSheetProps) {
     return (
-        <Sheet open={isOpen} onOpenChange={onOpenChange}>
+        <GuardedSheet open={isOpen} onOpenChange={onOpenChange}>
             <SheetContent side="right">
                 {/* Rendered only while open, so the draft form resets on each open. */}
-                <DefineSchemasSheetBody
-                    initialSchemas={initialSchemas}
-                    isDiscovering={isDiscovering}
-                    onSave={onSave}
-                    onClose={() => onOpenChange(false)}
-                />
+                <DefineSchemasSheetBody initialSchemas={initialSchemas} isDiscovering={isDiscovering} onSave={onSave} />
             </SheetContent>
-        </Sheet>
+        </GuardedSheet>
     );
 }
 
@@ -53,13 +50,15 @@ function DefineSchemasSheetBody({
     initialSchemas,
     isDiscovering,
     onSave,
-    onClose,
-}: Omit<DefineSchemasSheetProps, "isOpen" | "onOpenChange"> & { onClose: () => void }) {
-    const { control, handleSubmit } = useForm<DefineSchemasFormData>({
+}: Omit<DefineSchemasSheetProps, "isOpen" | "onOpenChange">) {
+    const form = useForm<DefineSchemasFormData>({
         defaultValues: { schemas: toStringValueItems(initialSchemas) },
     });
 
-    const handleSave = handleSubmit(({ schemas }) => onSave(normalizeDiscoverSchemas(toStringValues(schemas))));
+    // No markSaved needed: the caller closes the sheet while the save is still in flight.
+    useFormUnsavedChanges(form);
+
+    const handleSave = form.handleSubmit(({ schemas }) => onSave(normalizeDiscoverSchemas(toStringValues(schemas))));
 
     return (
         <>
@@ -72,7 +71,7 @@ function DefineSchemasSheetBody({
             </SheetHeader>
             <div className="flex-1 overflow-y-auto px-4">
                 <FormStringList
-                    control={control}
+                    control={form.control}
                     name="schemas"
                     fieldName={(index) => `schemas.${index}.value`}
                     defaultValue={{ value: "" }}
@@ -87,9 +86,12 @@ function DefineSchemasSheetBody({
                     {isDiscovering ? <Spinner /> : <SearchIcon aria-hidden="true" />}
                     Save & discover
                 </Button>
-                <Button type="button" variant="outline" onClick={onClose} disabled={isDiscovering}>
-                    Close
-                </Button>
+                {/* SheetClose, so the close goes through the guard. */}
+                <SheetClose asChild>
+                    <Button type="button" variant="outline" disabled={isDiscovering}>
+                        Close
+                    </Button>
+                </SheetClose>
             </SheetFooter>
         </>
     );

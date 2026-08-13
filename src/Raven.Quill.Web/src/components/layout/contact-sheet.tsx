@@ -9,7 +9,6 @@ import { api } from "@/api/api";
 import { Button } from "@/components/shadcn/ui/button";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import {
-    Sheet,
     SheetClose,
     SheetContent,
     SheetDescription,
@@ -18,6 +17,8 @@ import {
     SheetTitle,
     SheetTrigger,
 } from "@/components/shadcn/ui/sheet";
+import { GuardedSheet } from "@/components/form/unsaved-changes/guarded-overlays";
+import { useFormUnsavedChanges } from "@/components/form/unsaved-changes/use-unsaved-changes";
 import { FormInput } from "@/components/form/form-input";
 import { FormTextarea } from "@/components/form/form-textarea";
 import { FormToggleGroup, type FormToggleGroupOption } from "@/components/form/form-toggle-group";
@@ -40,7 +41,7 @@ export function ContactSheet({ trigger, open, onOpenChange }: ContactSheetProps)
     const setIsOpen = onOpenChange ?? setInternalIsOpen;
 
     return (
-        <Sheet open={isOpen} onOpenChange={setIsOpen}>
+        <GuardedSheet open={isOpen} onOpenChange={setIsOpen}>
             {trigger && <SheetTrigger asChild>{trigger}</SheetTrigger>}
             <SheetContent className="w-full gap-0 sm:max-w-md data-[side=right]:sm:max-w-md">
                 <SheetHeader className="border-b">
@@ -51,7 +52,7 @@ export function ContactSheet({ trigger, open, onOpenChange }: ContactSheetProps)
                 </SheetHeader>
                 <ContactForm onSent={() => setIsOpen(false)} />
             </SheetContent>
-        </Sheet>
+        </GuardedSheet>
     );
 }
 
@@ -79,11 +80,14 @@ function ContactForm({ onSent }: { onSent: () => void }) {
         },
     });
 
+    const unsavedChanges = useFormUnsavedChanges(form);
+
     const submitMutation = useMutation({
         mutationFn: (values: ContactFormData) => api.services.settings.feedback({ ...values, studioView: STUDIO_VIEW }),
         onSuccess: () => {
             toast.success("Feedback sent. Thank you.");
             form.reset();
+            unsavedChanges.markSaved();
             onSent();
         },
         onError: (error) => {

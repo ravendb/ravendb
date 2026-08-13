@@ -9,6 +9,7 @@ import { Spinner } from "@/components/shadcn/ui/spinner";
 import { SheetClose, SheetFooter } from "@/components/shadcn/ui/sheet";
 import { FormInput } from "@/components/form/form-input";
 import { FormSelect } from "@/components/form/form-select";
+import { useFormUnsavedChanges } from "@/components/form/unsaved-changes/use-unsaved-changes";
 import { withNestedSubmit } from "@/lib/form-utils";
 import { invalidateAiConnectionStringQueries } from "@/lib/query-invalidation";
 import {
@@ -85,6 +86,7 @@ export function AiConnectionStringForm({
     const provider = useWatch({ control: form.control, name: "provider" });
 
     const connectionTest = useAiConnectionTest(modelType, form);
+    const unsavedChanges = useFormUnsavedChanges(form);
 
     const saveMutation = useMutation({
         mutationFn: async (values: ConnectionStringFormData) => {
@@ -97,6 +99,7 @@ export function AiConnectionStringForm({
             return result.name;
         },
         onSuccess: async (name) => {
+            unsavedChanges.markSaved();
             await Promise.all([
                 invalidateAiConnectionStringQueries(queryClient),
                 // Refresh the cached detail so reopening the edit sheet shows the saved values.

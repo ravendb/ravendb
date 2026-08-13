@@ -21,6 +21,7 @@ import { FormCombobox } from "@/components/form/form-combobox";
 import { FormErrorIcon } from "@/components/form/form-error-icon";
 import { FormInput } from "@/components/form/form-input";
 import { FormTextarea } from "@/components/form/form-textarea";
+import { useFormUnsavedChanges } from "@/components/form/unsaved-changes/use-unsaved-changes";
 import { appRoutes } from "@/lib/app-routes";
 import { invalidateAgentQueries } from "@/lib/query-invalidation";
 import {
@@ -75,6 +76,8 @@ export function EditAgentForm({ slug, agentId, config, actionBindings, connectio
         },
     });
 
+    const unsavedChanges = useFormUnsavedChanges(form);
+
     const updateMutation = useMutation({
         mutationFn: (values: EditAgentFormData) =>
             // The edit endpoint replaces the whole configuration, so start from the fetched
@@ -91,6 +94,7 @@ export function EditAgentForm({ slug, agentId, config, actionBindings, connectio
                 actionBindings: buildActionBindings(values),
             }),
         onSuccess: async (_result, values) => {
+            unsavedChanges.markSaved();
             await Promise.all([
                 invalidateAgentQueries(queryClient, slug),
                 queryClient.invalidateQueries({
