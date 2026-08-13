@@ -100,6 +100,10 @@ builder.Services.AddOptions<ApplianceOptions>()
         "Telegram ApiUrl must be an absolute http(s) URL")
     .Validate(o => o.Telegram.MessageLimit is > 0 and <= TelegramMessageSplitter.TelegramApiMessageLimit,
         $"Telegram MessageLimit must be between 1 and {TelegramMessageSplitter.TelegramApiMessageLimit}")
+    .Validate(o => o.Telegram.ChatQueueCapacity > 0, "Telegram ChatQueueCapacity must be positive")
+    .Validate(o => o.Telegram.EditDebounce > TimeSpan.Zero, "Telegram EditDebounce must be positive")
+    .Validate(o => o.Telegram.ApplyChangesInterval > TimeSpan.Zero, "Telegram ApplyChangesInterval must be positive")
+    .Validate(o => o.Telegram.ChatIdleTimeout > TimeSpan.Zero, "Telegram ChatIdleTimeout must be positive")
     .ValidateOnStart();
 
 builder.Services.AddSingleton<IDocumentStore>(sp =>
