@@ -13,7 +13,7 @@ import {
     CommandItem,
     CommandList,
 } from "@/components/shadcn/ui/command";
-import { appNavigationSections, navigationItems, type NavigationItem } from "@/routes";
+import { appNavigationSections, navigationItems } from "@/routes";
 import { appRoutes } from "@/lib/app-routes";
 import { THEME_OPTIONS } from "@/lib/theme-options";
 
@@ -26,10 +26,9 @@ type CommandPaletteProps = {
 };
 
 export function CommandPalette({ slug, appName }: CommandPaletteProps) {
-    // Built in render, not at module scope: this module is part of the
+    // Read in render, not at module scope: this module is part of the
     // routes -> app -> command-palette import cycle, and the routes exports
     // are still in their temporal dead zone while the cycle initializes.
-    const navigationCommands: NavigationItem[] = [...navigationItems];
     const appPageCommands = appNavigationSections.flatMap((section) =>
         section.items.filter((item) => !item.isComingSoon),
     );
@@ -103,7 +102,7 @@ export function CommandPalette({ slug, appName }: CommandPaletteProps) {
                             </CommandGroup>
                         )}
                         <CommandGroup heading="Navigation">
-                            {navigationCommands.map((item) => (
+                            {navigationItems.map((item) => (
                                 <CommandItem key={item.label} onSelect={() => runCommand(() => navigate(item.to))}>
                                     <item.icon aria-hidden="true" />
                                     <span>{item.label}</span>
