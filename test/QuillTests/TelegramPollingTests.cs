@@ -176,9 +176,6 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
             Assert.Null(await session.LoadAsync<object>(ConversationPreview.IdFor(conversationId)));
         }
 
-        var health = Assert.Single(await app.GetTelegramHealthAsync());
-        Assert.Equal(0, health.ErrorCount);
-
         await app.DeleteChannelAsync(channelId);
     }
 
@@ -206,11 +203,6 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
 
         Assert.Empty(Router.Requests);
         Assert.DoesNotContain(Mock.ChatActions, a => a.ChatId == chatId);
-
-        await Mock.WaitUntilAsync(
-            () => app.GetTelegramHealthAsync().Result.Single().ErrorCount >= 1, "the health error");
-        var health = Assert.Single(await app.GetTelegramHealthAsync());
-        Assert.Contains("region", health.LastError);
 
         await app.DeleteChannelAsync(channelId);
     }
@@ -291,8 +283,6 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         await Mock.WaitUntilAsync(() => Router.Requests.Count >= 2, "the second turn");
 
         Assert.DoesNotContain(Mock.SentMessages, m => m.ChatId == chatId && m.Text.Contains("went wrong"));
-        var health = Assert.Single(await app.GetTelegramHealthAsync());
-        Assert.Equal(0, health.ErrorCount);
 
         await app.DeleteChannelAsync(channelId);
     }
@@ -366,11 +356,6 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
             Mock.EnqueueTextMessage(token, chatId, fromUserId: 610, $"m{i}");
 
         await Mock.WaitUntilAsync(
-            () => app.GetTelegramHealthAsync().Result.Single().ErrorCount >= 1, "the shed message");
-        var health = Assert.Single(await app.GetTelegramHealthAsync());
-        Assert.Contains("queue full", health.LastError);
-
-        await Mock.WaitUntilAsync(
             () => Mock.SentMessages.Any(m => m.ChatId == chatId && m.Text.Contains("didn't make it")),
             "the overload warning");
         await Task.Delay(400);
@@ -424,9 +409,6 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         Assert.Equal(new[] { "first", "second" }, Router.Requests.Select(r => r.Prompt).ToArray());
         await Mock.WaitUntilAsync(
             () => Mock.SentMessages.Count(m => m.ChatId == chatId) >= 2, "the second reply");
-
-        var health = Assert.Single(await app.GetTelegramHealthAsync());
-        Assert.Equal(0, health.ErrorCount);
 
         await app.DeleteChannelAsync(channelId);
     }
@@ -618,9 +600,6 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
             Assert.NotNull(await session.LoadAsync<object>(ConversationPreview.IdFor(conversationId)));
         }
 
-        var health = Assert.Single(await app.GetTelegramHealthAsync());
-        Assert.Equal(0, health.ErrorCount);
-
         await app.DeleteChannelAsync(channelId);
     }
 
@@ -646,47 +625,22 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Health_reports_polls_errors_and_recovery()
+    public async Task Polling_recovers_after_a_transient_getUpdates_failure()
     {
         var (app, channelId, token) = await ProvisionAsync();
         await using var appGuard = app;
 
         await Mock.WaitUntilAsync(() => Mock.GetUpdatesCallCount(token) >= 1, "polling to start");
 
-        var healthy = Assert.Single(await app.GetTelegramHealthAsync());
-        Assert.Equal(channelId, healthy.ChannelId);
-        Assert.Equal("quill_test_bot", healthy.BotUsername);
-        Assert.True(healthy.Enabled);
-        Assert.True(healthy.IsPolling);
-
         Mock.GetUpdatesFailure = MockTelegramBotApi.Unauthorized;
-        await Mock.WaitUntilAsync(
-            () => app.GetTelegramHealthAsync().Result.Single().ErrorCount >= 1, "the error counter");
-        var failing = Assert.Single(await app.GetTelegramHealthAsync());
-        Assert.NotNull(failing.LastErrorAt);
-        Assert.Contains("Unauthorized", failing.LastError);
+        var failing = Mock.GetUpdatesCallCount(token);
+        await Mock.WaitUntilAsync(() => Mock.GetUpdatesCallCount(token) > failing, "a failing poll");
 
         Mock.GetUpdatesFailure = null;
-        await Mock.WaitUntilAsync(
-            () => app.GetTelegramHealthAsync().Result.Single() is { LastSuccessfulPoll: not null } h &&
-                  h.LastSuccessfulPoll > failing.LastErrorAt,
-            "a successful poll after recovery");
-
-        await app.UpdateChannelAsync(channelId, new UpdateChannelRequest(null, null, Enabled: false));
-        await Mock.WaitUntilAsync(
-            () => app.GetTelegramHealthAsync().Result.Single().IsPolling == false, "the bot to stop");
-        var disabled = Assert.Single(await app.GetTelegramHealthAsync());
-        Assert.False(disabled.Enabled);
+        Mock.EnqueueTextMessage(token, chatId: 640, fromUserId: 640, "after recovery");
+        await Mock.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "after recovery"), "the recovered run");
 
         await app.DeleteChannelAsync(channelId);
-        Assert.Empty(await app.GetTelegramHealthAsync());
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
-    public async Task Health_returns_404_for_unknown_slug()
-    {
-        var e = await Assert.ThrowsAsync<QuillHttpException>(() => Host.GetTelegramHealthAsync("no-such-app"));
-        Assert.Equal(System.Net.HttpStatusCode.NotFound, e.StatusCode);
     }
 
     [RavenFact(RavenTestCategory.Quill)]

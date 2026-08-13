@@ -147,7 +147,6 @@ internal static class QuillRoutes
 
     public static string Channels(string slug) => $"/api/apps/{slug}/channels";
     public static string Channel(string slug, string channelId) => $"/api/apps/{slug}/channels/{channelId}";
-    public static string TelegramHealth(string slug) => $"/api/apps/{slug}/telegram/health";
     public static string SetupChannel(string slug) => $"/api/apps/{slug}/setup/channel";
     public static string SetupTry(string slug) => $"/api/apps/{slug}/setup/try";
     public static string CdcProgress(string slug) => $"/api/apps/{slug}/cdc/progress";

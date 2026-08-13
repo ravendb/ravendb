@@ -42,8 +42,6 @@ internal sealed class TelegramBotRuntime
     /// The channel document's change vector at start; the manager restarts the bot when it moves.
     public string? ChannelChangeVector { get; }
 
-    public TelegramChannelHealth Health { get; } = new();
-
     public static TelegramBotRuntime Start(
         string database, Channel channel, string? channelChangeVector, ITelegramBotClientFactory botFactory,
         IDocumentStore store, IAgentRouter router, ApplianceOptions options, ILogger logger)
@@ -76,7 +74,6 @@ internal sealed class TelegramBotRuntime
         if (args.ApiRequestEventArgs.Request.MethodName == GetUpdatesMethod &&
             args.ResponseMessage.IsSuccessStatusCode)
         {
-            Health.RecordSuccess(DateTime.UtcNow);
             _backoff = MinBackoff;
         }
 
@@ -115,7 +112,9 @@ internal sealed class TelegramBotRuntime
                 continue;
             }
 
-            Health.RecordError(DateTime.UtcNow, $"chat {message.Chat.Id}: queue full, message dropped");
+            _context.Logger.LogWarning(
+                "Telegram chat {ChatId} on channel {ChannelId} dropped a message: queue full",
+                message.Chat.Id, _context.ChannelDoc.Id);
             chat.NotifyOverloadOnce();
             break;
         }
@@ -133,7 +132,6 @@ internal sealed class TelegramBotRuntime
     {
         var message = e.InnerException is null ? e.Message : $"{e.Message}: {e.InnerException.Message}";
 
-        Health.RecordError(DateTime.UtcNow, message);
         _context.Logger.LogWarning(
             "Telegram poll failed for channel {ChannelId} (bot @{Bot}): {Error}",
             _context.ChannelDoc.Id, _context.ChannelDoc.Telegram?.BotUsername, message);
@@ -162,7 +160,9 @@ internal sealed class TelegramBotRuntime
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
-            Health.RecordError(DateTime.UtcNow, e.Message);
+            _context.Logger.LogDebug(
+                "Telegram send failed for chat {ChatId} on channel {ChannelId}: {Error}",
+                chatId, _context.ChannelDoc.Id, e.Message);
         }
     }
 

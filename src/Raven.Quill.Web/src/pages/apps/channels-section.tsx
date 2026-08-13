@@ -2,10 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Eye, Link2, Pencil, Trash2 } from "lucide-react";
 import { Link } from "react-router";
 import { api } from "@/api/api";
-import type { TelegramChannelHealthResponse } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
-import { EnabledStatus, StatusIndicator } from "@/components/data/status-indicator";
-import { Badge } from "@/components/shadcn/ui/badge";
+import { EnabledStatus } from "@/components/data/status-indicator";
 import { Button } from "@/components/shadcn/ui/button";
 import { Skeleton } from "@/components/shadcn/ui/skeleton";
 import { TableCell, TableRow } from "@/components/shadcn/ui/table";
@@ -27,17 +25,11 @@ export function ChannelsSection({ slug, agent: fixedAgent }: { slug: string; age
     // Active-link counts are supplementary — kept out of the ApiState gate so a
     // links hiccup never blocks the channels table.
     const embedLinksQuery = useQuery(api.queries.embedLinks.list(slug));
-    const hasTelegramChannel = (channelsQuery.data ?? []).some((channel) => channel.type === "Telegram");
-    const telegramHealthQuery = useQuery({ ...api.queries.telegram.health(slug), enabled: hasTelegramChannel });
 
     const activeLinkCounts = new Map<string, number>();
     for (const link of embedLinksQuery.data ?? []) {
         activeLinkCounts.set(link.channelId, (activeLinkCounts.get(link.channelId) ?? 0) + 1);
     }
-
-    const telegramHealthByChannel = new Map(
-        (telegramHealthQuery.data ?? []).map((health) => [health.channelId, health]),
-    );
 
     const onRetry = async () => {
         if (channelsQuery.isError) {
@@ -98,14 +90,7 @@ export function ChannelsSection({ slug, agent: fixedAgent }: { slug: string; age
                                     </TableCell>
                                     {!fixedAgent && <TableCell className="font-medium">{agent?.name}</TableCell>}
                                     <TableCell>
-                                        {channel.type === "Telegram" ? (
-                                            <TelegramStatusBadge
-                                                enabled={channel.enabled}
-                                                health={telegramHealthByChannel.get(channel.channelId)}
-                                            />
-                                        ) : (
-                                            <EnabledStatus isEnabled={channel.enabled} />
-                                        )}
+                                        <EnabledStatus isEnabled={channel.enabled} />
                                     </TableCell>
                                     <TableCell>{channel.type ? CHANNEL_TYPE_LABELS[channel.type] : "—"}</TableCell>
                                     <TableCell className="text-muted-foreground tabular-nums">
@@ -188,24 +173,4 @@ export function ChannelsSection({ slug, agent: fixedAgent }: { slug: string; age
             </ApiState>
         </SectionCard>
     );
-}
-
-function TelegramStatusBadge({
-    enabled,
-    health,
-}: {
-    enabled: boolean;
-    health: TelegramChannelHealthResponse | undefined;
-}) {
-    if (!enabled) {
-        return <StatusIndicator tone="muted" label="Disabled" />;
-    }
-    if (health && health.errorCount > 0) {
-        return (
-            <Badge variant="warning" title={health.lastError ?? undefined}>
-                {`Errors (${health.errorCount.toLocaleString()})`}
-            </Badge>
-        );
-    }
-    return <StatusIndicator tone="positive" label={health?.isPolling ? "Polling" : "Connected"} />;
 }

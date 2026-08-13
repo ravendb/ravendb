@@ -20,8 +20,6 @@ internal interface ITelegramChannelManager
     Task<(TelegramUser? Bot, string? Error)> ValidateBotTokenAsync(string botToken, CancellationToken ct);
 
     void Wake();
-
-    IReadOnlyDictionary<string, TelegramChannelHealthSnapshot> GetHealth(string database);
 }
 
 internal sealed class TelegramChannelManager(
@@ -171,11 +169,6 @@ internal sealed class TelegramChannelManager(
 
     internal int GetActiveChatCount(string database, string channelId) =>
         _bots.TryGetValue((database, channelId), out var bot) ? bot.ActiveChatCount : 0;
-
-    public IReadOnlyDictionary<string, TelegramChannelHealthSnapshot> GetHealth(string database) =>
-        _bots
-            .Where(kvp => kvp.Key.Database == database)
-            .ToDictionary(kvp => kvp.Key.ChannelId, kvp => kvp.Value.Health.Snapshot());
 
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
