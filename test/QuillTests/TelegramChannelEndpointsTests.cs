@@ -191,6 +191,28 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Provision_rejects_the_same_bot_in_another_app()
+    {
+        await using var app = await NewAppAsync();
+        await using var other = await NewAppAsync();
+        var agentId = await SeedAgentAsync(app);
+        var otherAgentId = await SeedAgentAsync(other);
+        var token = NewBotToken();
+
+        var created = await app.ProvisionChannelAsync(
+            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, Telegram: new(token)));
+
+        var e = await Assert.ThrowsAsync<QuillHttpException>(() =>
+            other.ProvisionChannelAsync(new ProvisionChannelRequest(
+                ChannelType.Telegram, otherAgentId, null, Telegram: new(token))));
+        Assert.Equal(HttpStatusCode.BadRequest, e.StatusCode);
+        Assert.Contains("already connected in app", e.Body);
+        Assert.Contains(app.Slug, e.Body);
+
+        await app.DeleteChannelAsync(created.ChannelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Provision_reclaims_an_orphaned_bot_reservation()
     {
         await using var app = await NewAppAsync();
