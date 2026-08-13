@@ -53,6 +53,20 @@ public class AgentDeleteEndpointTests(ITestOutputHelper output) : QuillTestBase(
         Assert.Single(agents.AiAgents);
     }
 
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Delete_conflict_counts_channels_past_the_first_load_page()
+    {
+        await using var app = await NewAppAsync();
+        var agentId = await ProvisionAgentAsync(app);
+
+        for (var i = 0; i < 30; i++)
+            await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, agentId, Array.Empty<string>()));
+
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.DeleteAgentAsync(agentId));
+        Assert.Equal(HttpStatusCode.Conflict, ex.StatusCode);
+        Assert.Contains("30 channel(s)", ex.Body);
+    }
+
     private static async Task<string> ProvisionAgentAsync(QuillApp app)
     {
         var resp = await app.ProvisionAgentAsync(new AiAgentConfiguration
