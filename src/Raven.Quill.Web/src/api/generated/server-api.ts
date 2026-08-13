@@ -1653,6 +1653,9 @@ export interface components {
         TelegramUpdateRequest: {
             botToken?: null | string;
             messages?: null | components["schemas"]["TelegramChannelMessages"];
+            parameterBindings?: null | {
+                [key: string]: components["schemas"]["TelegramParameterBinding"];
+            };
         };
         TestMappingRequest: {
             sourceTableName: string;

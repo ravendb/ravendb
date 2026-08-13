@@ -10,4 +10,5 @@ public sealed record UpdateChannelRequest(
 
 public sealed record TelegramUpdateRequest(
     string? BotToken = null,
-    TelegramChannelMessages? Messages = null);
+    TelegramChannelMessages? Messages = null,
+    Dictionary<string, TelegramParameterBinding>? ParameterBindings = null);
