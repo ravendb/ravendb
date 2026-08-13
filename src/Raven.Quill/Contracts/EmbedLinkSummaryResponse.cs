@@ -13,7 +13,7 @@ public sealed record EmbedLinkSummaryResponse(
     int InvocationCount)
 {
     internal static EmbedLinkSummaryResponse From(EmbedLink link) => new(
-        StripPrefix(link.Id),
+        link.ShortId,
         link.ChannelId,
         link.AgentId,
         link.Parameters,
@@ -21,9 +21,4 @@ public sealed record EmbedLinkSummaryResponse(
         link.ExpiresAt,
         link.MaxInvocations,
         link.InvocationCount);
-
-    private static string StripPrefix(string? id) =>
-        id is not null && id.StartsWith(EmbedLink.IdPrefix, StringComparison.Ordinal)
-            ? id[EmbedLink.IdPrefix.Length..]
-            : id ?? "";
 }
