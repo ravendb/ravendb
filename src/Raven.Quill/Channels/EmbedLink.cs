@@ -26,6 +26,11 @@ internal sealed class EmbedLink
 
     public string? Id { get; set; }
 
+    internal string ShortId =>
+        Id is not null && Id.StartsWith(IdPrefix, StringComparison.Ordinal)
+            ? Id[IdPrefix.Length..]
+            : Id ?? "";
+
     public string ChannelId { get; set; } = "";
 
     public string AgentId { get; set; } = "";
