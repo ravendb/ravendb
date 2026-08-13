@@ -12,6 +12,7 @@ using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints.Helpers;
 using Raven.Quill.Licensing;
+using Raven.Quill.Raven;
 using Raven.Quill.Wizard;
 
 namespace Raven.Quill.Metrics;
@@ -21,7 +22,6 @@ internal static class MetricsReadService
     private const int ChannelPageSize = 1024;
 
     private const string AppIdPrefix = "apps/";
-    private const int AppPageSize = 1024;
 
     private const string ConversationIdPrefix = "chats/";
 
@@ -351,7 +351,7 @@ internal static class MetricsReadService
 
         List<Channel> channels;
         using (var session = store.OpenAsyncSession(app.Database))
-            channels = await LoadAllByPrefixAsync<Channel>(session, Channel.IdPrefix, ChannelPageSize, ct);
+            channels = await session.LoadAllStartingWithAsync<Channel>(Channel.IdPrefix, ct);
         var enabledChannels = channels.Count(c => c.Enabled);
         var channelsLabel = channels.Count == 0
             ? null
@@ -433,24 +433,8 @@ internal static class MetricsReadService
     {
         using var session = store.OpenAsyncSession(database);
 
-        var total = 0;
-        var active = 0;
-        var offset = 0;
-        while (true)
-        {
-            var page = (await session.Advanced.LoadStartingWithAsync<Channel>(
-                Channel.IdPrefix, start: offset, pageSize: ChannelPageSize, token: ct)).ToList();
-            foreach (var channel in page)
-            {
-                total++;
-                if (channel.Enabled) active++;
-            }
-
-            if (page.Count < ChannelPageSize) break;
-            offset += ChannelPageSize;
-        }
-
-        return new ChannelStatsResponse(total, active);
+        var channels = await session.LoadAllStartingWithAsync<Channel>(Channel.IdPrefix, ct);
+        return new ChannelStatsResponse(channels.Count, channels.Count(c => c.Enabled));
     }
 
     public static async Task<ConversationStatsResponse> GetConversationStatsAsync(
@@ -659,24 +643,7 @@ internal static class MetricsReadService
     internal static async Task<List<App>> LoadAllAppsAsync(IDocumentStore store, CancellationToken ct)
     {
         using var configSession = store.OpenAsyncSession();
-        return await LoadAllByPrefixAsync<App>(configSession, AppIdPrefix, AppPageSize, ct);
-    }
-
-    private static async Task<List<T>> LoadAllByPrefixAsync<T>(
-        IAsyncDocumentSession session, string prefix, int pageSize, CancellationToken ct) where T : class
-    {
-        var all = new List<T>();
-        var offset = 0;
-        while (true)
-        {
-            var page = (await session.Advanced.LoadStartingWithAsync<T>(
-                prefix, start: offset, pageSize: pageSize, token: ct)).ToList();
-            all.AddRange(page);
-            if (page.Count < pageSize) break;
-            offset += pageSize;
-        }
-
-        return all;
+        return await configSession.LoadAllStartingWithAsync<App>(AppIdPrefix, ct);
     }
 
     private static DateTime Utc(DateTime d) => d.Kind switch
