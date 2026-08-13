@@ -14,8 +14,6 @@ namespace QuillTests.E2E.Fixtures;
 public sealed class MockOpenAiApi : IAsyncDisposable
 {
     private readonly WebApplication _app;
-    private readonly object _lock = new();
-    private readonly List<string> _requests = [];
 
     public string BaseAddress { get; }
 
@@ -27,14 +25,8 @@ public sealed class MockOpenAiApi : IAsyncDisposable
         BaseAddress = baseAddress;
     }
 
-    public IReadOnlyList<string> Requests
-    {
-        get { lock (_lock) return _requests.ToArray(); }
-    }
-
     public void Reset()
     {
-        lock (_lock) _requests.Clear();
         ToolCall = null;
     }
 
@@ -54,7 +46,6 @@ public sealed class MockOpenAiApi : IAsyncDisposable
             {
                 using var reader = new StreamReader(ctx.Request.Body, leaveOpen: true);
                 var body = await reader.ReadToEndAsync(ctx.RequestAborted);
-                lock (instance._lock) instance._requests.Add(body);
 
                 ctx.Response.ContentType = "text/event-stream";
                 await WriteEventAsync(ctx, instance.BuildChunk(body));
