@@ -108,7 +108,7 @@ internal sealed class TelegramBotRuntime
             if (chat.IsRetired)
             {
                 // the idle loop retired this instance between lookup and post; replace it and repost
-                _chats.TryRemove(new KeyValuePair<long, TelegramChat>(message.Chat.Id, chat));
+                OnChatRetired(message.Chat.Id, chat);
                 continue;
             }
 
@@ -199,7 +199,6 @@ internal sealed class TelegramChatContext
     {
         Database = database;
         ChannelDoc = channel;
-        ChannelId = channel.ShortId;
         Messages = ResolvedTelegramMessages.Resolve(channel.Telegram?.Messages);
         Store = store;
         Router = router;
@@ -210,8 +209,6 @@ internal sealed class TelegramChatContext
     public string Database { get; }
 
     public Channel ChannelDoc { get; }
-
-    public string ChannelId { get; }
 
     public ResolvedTelegramMessages Messages { get; }
 
