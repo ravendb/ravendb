@@ -341,23 +341,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/apps/{slug}/telegram/health": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description Per-bot polling health for the app's Telegram channels: last successful poll, last error and error count. Counters live in the polling service, so they reset on restart. */
-        get: operations["telegram.health"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/apps/{slug}/iframe/{channelId}/theme": {
         parameters: {
             query?: never;
@@ -1635,19 +1618,6 @@ export interface components {
             rationale: string[];
             status: string;
         };
-        TelegramChannelHealthResponse: {
-            channelId: string;
-            botUsername: null | string;
-            enabled: boolean;
-            isPolling: boolean;
-            /** Format: date-time */
-            lastSuccessfulPoll: null | string;
-            /** Format: date-time */
-            lastErrorAt: null | string;
-            /** Format: int32 */
-            errorCount: number;
-            lastError: null | string;
-        };
         TelegramChannelMessages: {
             greeting?: null | string;
             conversationCleared?: null | string;
@@ -2581,37 +2551,6 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    "telegram.health": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TelegramChannelHealthResponse"][];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
                 };
             };
         };
@@ -4051,7 +3990,6 @@ export type SuggestAgentRequest = components["schemas"]["SuggestAgentRequest"];
 export type SuggestAgentResponse = components["schemas"]["SuggestAgentResponse"];
 export type SuggestCdcRequest = components["schemas"]["SuggestCdcRequest"];
 export type SuggestCdcResponse = components["schemas"]["SuggestCdcResponse"];
-export type TelegramChannelHealthResponse = components["schemas"]["TelegramChannelHealthResponse"];
 export type TelegramChannelMessages = components["schemas"]["TelegramChannelMessages"];
 export type TelegramParameterBinding = components["schemas"]["TelegramParameterBinding"];
 export type TelegramParameterSource = components["schemas"]["TelegramParameterSource"];
@@ -4172,9 +4110,6 @@ export const API_ENDPOINTS = {
         tokensByApp: "/usage/by-app",
         usage: "/usage",
     },
-    telegram: {
-        health: (slug: string) => `/apps/${encodeURIComponent(slug)}/telegram/health`,
-    },
 } as const;
 
 export function createServerApi(client: ApiClient) {
@@ -4265,9 +4200,6 @@ export function createServerApi(client: ApiClient) {
             overview: (slug: string) => client.get<AppOverviewResponse, ApiErrorResponse>(API_ENDPOINTS.stats.overview(slug)),
             tokensByApp: () => client.get<TokensByAppResponse>(API_ENDPOINTS.stats.tokensByApp),
             usage: (searchParams: { app?: string; day?: string; month?: string; year: string; }) => client.get<UsageResponse>(API_ENDPOINTS.stats.usage, { searchParams }),
-        },
-        telegram: {
-            health: (slug: string) => client.get<TelegramChannelHealthResponse[], ApiErrorResponse>(API_ENDPOINTS.telegram.health(slug)),
         },
     };
 }

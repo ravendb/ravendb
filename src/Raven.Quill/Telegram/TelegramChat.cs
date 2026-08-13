@@ -109,7 +109,6 @@ internal sealed class TelegramChat
         }
         catch (Exception e)
         {
-            _bot.Health.RecordError(DateTime.UtcNow, e.Message);
             _context.Logger.LogWarning(
                 "Telegram message handling failed for channel {ChannelId} chat {ChatId}: {Error}",
                 _context.ChannelDoc.Id, _chatId, e.Message);

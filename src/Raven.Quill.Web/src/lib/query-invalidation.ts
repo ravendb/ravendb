@@ -40,6 +40,5 @@ export function invalidateChannelQueries(queryClient: QueryClient, slug: string)
         queryClient.invalidateQueries({ queryKey: api.queries.channels.list(slug).queryKey }),
         queryClient.invalidateQueries({ queryKey: api.queries.stats.channels(slug).queryKey }),
         queryClient.invalidateQueries({ queryKey: api.queries.stats.dashboardApps().queryKey }),
-        queryClient.invalidateQueries({ queryKey: api.queries.telegram.health(slug).queryKey }),
     ]);
 }

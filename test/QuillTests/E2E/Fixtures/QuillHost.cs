@@ -208,9 +208,6 @@ public sealed class QuillHost : IAsyncDisposable
     public Task DeleteChannelAsync(string slug, string channelId) =>
         QuillHttp.DeleteAsync(Client, QuillRoutes.Channel(slug, channelId));
 
-    public Task<IReadOnlyList<TelegramChannelHealthResponse>> GetTelegramHealthAsync(string slug) =>
-        QuillHttp.GetAsync<IReadOnlyList<TelegramChannelHealthResponse>>(Client, QuillRoutes.TelegramHealth(slug));
-
     public Task<IReadOnlyList<EmbedLinkSummaryResponse>> GetEmbedLinksAsync(string slug) =>
         QuillHttp.GetAsync<IReadOnlyList<EmbedLinkSummaryResponse>>(Client, QuillRoutes.EmbedLinks(slug));
 

@@ -15,7 +15,6 @@ import { createAiConnectionStringsQueries } from "@/api/queries/ai-connection-st
 import { createAiModelsQueries } from "@/api/queries/ai-models-queries";
 import { createStatsQueries } from "@/api/queries/stats-queries";
 import { createSettingsQueries } from "@/api/queries/settings-queries";
-import { createTelegramQueries } from "@/api/queries/telegram-queries";
 
 export type ApiServices = ServerApi & {
     agentTest: ReturnType<typeof createAgentTestService>;
@@ -36,7 +35,6 @@ export type ApiQueries = {
     stats: ReturnType<typeof createStatsQueries>;
     settings: ReturnType<typeof createSettingsQueries>;
     certificates: ReturnType<typeof createCertificatesQueries>;
-    telegram: ReturnType<typeof createTelegramQueries>;
 };
 
 export type Api = {
@@ -71,7 +69,6 @@ export function createApi(options?: ApiClientOptions): Api {
             stats: createStatsQueries(services.stats),
             settings: createSettingsQueries(services.settings),
             certificates: createCertificatesQueries(services.certificates),
-            telegram: createTelegramQueries(services.telegram),
         },
     };
 }

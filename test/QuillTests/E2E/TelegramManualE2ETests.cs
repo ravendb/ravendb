@@ -40,26 +40,12 @@ public class TelegramManualE2ETests(ITestOutputHelper output) : QuillTestBase(ou
         Assert.NotNull(summary.Telegram);
         Assert.NotEmpty(summary.Telegram!.BotUsername);
 
-        // the first successful long poll against the live API lands within seconds
-        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(30);
-        while (true)
-        {
-            var health = Assert.Single(await app.GetTelegramHealthAsync());
-            if (health.LastSuccessfulPoll is not null)
-                break;
-            Assert.True(DateTime.UtcNow < deadline,
-                $"no successful poll within 30s; lastError: {health.LastError}");
-            await Task.Delay(500);
-        }
-
         // To exercise the full reply loop manually: put a breakpoint (or a long Task.Delay) here,
         // message the bot from a real Telegram account, and expect a streamed agent reply. The
         // seeded LLM connection string in QuillHost is unreachable, so a real reply additionally
         // needs the agent pointed at a live model.
 
         await app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, Enabled: false));
-        var disabled = Assert.Single(await app.GetTelegramHealthAsync());
-        Assert.False(disabled.IsPolling);
 
         await app.DeleteChannelAsync(created.ChannelId);
         Assert.Empty(await app.GetChannelsAsync());
