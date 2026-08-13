@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Sparrow;
 using Sparrow.Server;
@@ -29,6 +30,13 @@ namespace Voron.Data.Compression
 
         public DecompressionUsage Usage;
 
+        private bool _invalidated = false;
+        public void Invalidate() => _invalidated = true;
+        
+#if DEBUG
+        public bool IsInvalidated => _invalidated;
+#endif
+        
         public void Dispose()
         {
             if (Cached)
@@ -39,15 +47,12 @@ namespace Voron.Data.Compression
 
         public void CopyToOriginal(LowLevelTransaction tx, bool defragRequired, bool wasModified, Tree tree)
         {
-#if DEBUG
-            if (tx.DirtyPageStillBelongsTo(Original.Base, PageNumber) == false)
+            if (_invalidated)
             {
-                VoronUnrecoverableErrorException.Raise(tx,
-                    $"Attempt to write decompressed page #{PageNumber} back into scratch memory that no longer belongs to it - " +
-                    $"the page was freed and its scratch slot re-issued (the slot's header now claims page #{Original.PageNumber}). " +
-                    $"Writing would corrupt the new owner's writable copy, tree: {tree.Name}");
+                tree.DecompressionsCache.Invalidate(PageNumber, DecompressionUsage.Write);
+                return;
             }
-#endif
+            
             if (CalcSizeUsed() < Original.PageMaxSpace)
             {
                 // no need to compress
@@ -97,6 +102,7 @@ namespace Voron.Data.Compression
 
         private void SplitPage(LowLevelTransaction tx, Tree tree)
         {
+            Debug.Assert(_invalidated == false);
             // let's take a node from the middle and add it again with the page splitting
             // this way we'll copy half of the page to a new page
 
