@@ -191,6 +191,54 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Provision_reclaims_an_orphaned_bot_reservation()
+    {
+        await using var app = await NewAppAsync();
+        var agentId = await SeedAgentAsync(app);
+        var token = NewBotToken();
+
+        var first = await app.ProvisionChannelAsync(
+            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, Telegram: new(token)));
+
+        // deleting the channel doc out of band leaves the reservation orphaned
+        using (var session = app.Store.OpenAsyncSession(app.Slug))
+        {
+            session.Delete(Channel.IdPrefix + first.ChannelId);
+            await session.SaveChangesAsync();
+        }
+
+        var second = await app.ProvisionChannelAsync(
+            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, Telegram: new(token)));
+        Assert.NotEqual(first.ChannelId, second.ChannelId);
+
+        await app.DeleteChannelAsync(second.ChannelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Rotation_reclaims_an_orphaned_bot_reservation()
+    {
+        await using var app = await NewAppAsync();
+        var agentId = await SeedAgentAsync(app);
+        var orphanToken = NewBotToken();
+
+        var doomed = await app.ProvisionChannelAsync(
+            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, Telegram: new(orphanToken)));
+        using (var session = app.Store.OpenAsyncSession(app.Slug))
+        {
+            session.Delete(Channel.IdPrefix + doomed.ChannelId);
+            await session.SaveChangesAsync();
+        }
+
+        var kept = await app.ProvisionChannelAsync(
+            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, Telegram: new(NewBotToken())));
+        var summary = await app.UpdateChannelAsync(kept.ChannelId,
+            new UpdateChannelRequest(null, null, null, new(orphanToken)));
+        Assert.Equal("quill_test_bot", summary.Telegram?.BotUsername);
+
+        await app.DeleteChannelAsync(kept.ChannelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Parameter_bindings_are_replaceable_and_validated_after_provision()
     {
         await using var app = await NewAppAsync();
