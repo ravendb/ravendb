@@ -341,17 +341,17 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/apps/{slug}/iframe/{channelId}/customization": {
+    "/api/apps/{slug}/iframe/{channelId}/theme": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** @description Returns a web-widget channel's own embed style plus the resolved app default, for the styling editor. */
-        get: operations["iframe.getCustomization"];
-        /** @description Saves a web-widget channel's embed style: a built-in preset, custom CSS, or (with a null style) follow the app default. */
-        put: operations["iframe.updateCustomization"];
+        /** @description Returns a web-widget channel's own theme plus the resolved app default, for the theme editor. A null theme means the channel follows the app default. */
+        get: operations["iframe.getTheme"];
+        /** @description Saves a web-widget channel's theme. A null theme clears the channel's choice so it follows the app default. */
+        put: operations["iframe.updateTheme"];
         post?: never;
         delete?: never;
         options?: never;
@@ -359,51 +359,17 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/apps/{slug}/iframe/default-customization": {
+    "/api/apps/{slug}/iframe/default-theme": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** @description Returns the resolved app-level default web-widget embed style applied to channels that make no choice of their own. */
-        get: operations["iframe.getDefaultCustomization"];
-        /** @description Saves the app-level default web-widget embed style: a built-in preset or custom CSS. A null style resets to the Light preset. */
-        put: operations["iframe.updateDefaultCustomization"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/apps/{slug}/iframe/preview": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description Returns the inert web-widget preview document (base styles + sample bubbles) the dashboard frames to live-preview CSS edits. */
-        get: operations["iframe.preview"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/apps/{slug}/iframe/style-guide": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description Returns the web-widget embed page's base CSS, used as the styling editor's starter template and "reset to default" content. */
-        get: operations["iframe.getStyleGuide"];
-        put?: never;
+        /** @description Returns the app-level default web-widget theme applied to channels that make no choice of their own. */
+        get: operations["iframe.getDefaultTheme"];
+        /** @description Saves the app-level default web-widget theme. A null theme resets it to the built-in default. */
+        put: operations["iframe.updateDefaultTheme"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1444,26 +1410,6 @@ export interface components {
             /** Format: int32 */
             embeddingsMaxConcurrentBatches?: null | number;
         };
-        IFrameCustomizationResponse: {
-            style: null | components["schemas"]["IFrameStyle"];
-            css: null | string;
-            defaultStyle: components["schemas"]["IFrameStyle"];
-            defaultCss: null | string;
-        };
-        IFrameDefaultCustomizationResponse: {
-            style: components["schemas"]["IFrameStyle"];
-            css: null | string;
-        };
-        IFramePreviewResponse: {
-            html: string;
-        };
-        /** @enum {unknown} */
-        IFrameStyle: "Light" | "Dark" | "Custom" | null;
-        IFrameStyleGuideResponse: {
-            baseCss: string;
-            lightThemeCss: string;
-            darkThemeCss: string;
-        };
         JsonElement: unknown;
         LicensePlan: {
             slug: string;
@@ -1711,9 +1657,8 @@ export interface components {
             allowedOrigins: null | string[];
             enabled: null | boolean;
         };
-        UpdateIFrameCustomizationRequest: {
-            style: null | components["schemas"]["IFrameStyle"];
-            css: null | string;
+        UpdateWidgetThemeRequest: {
+            theme: null | components["schemas"]["WidgetTheme"];
         };
         UsagePoint: {
             /** Format: date-time */
@@ -1761,6 +1706,40 @@ export interface components {
             secret?: null | string;
             /** Format: int32 */
             maxResponseSize?: null | number;
+        };
+        /** @enum {unknown} */
+        WidgetAppearance: "Light" | "Dark" | "System";
+        WidgetDefaultThemeResponse: {
+            theme: components["schemas"]["WidgetTheme"];
+            fontOptions: components["schemas"]["WidgetFontOption"][];
+        };
+        /** @enum {unknown} */
+        WidgetDensity: "Comfortable" | "Compact";
+        WidgetFontOption: {
+            label: string;
+            stack: string;
+        };
+        WidgetTheme: {
+            appearance: components["schemas"]["WidgetAppearance"];
+            accentColor: string;
+            /** Format: int32 */
+            radius: number;
+            fontFamily: string;
+            density: components["schemas"]["WidgetDensity"];
+            headerTitle: string;
+            headerSubtitle: null | string;
+            avatarInitials: null | string;
+            showHeader: boolean;
+            greetingTitle: null | string;
+            greetingBody: null | string;
+            suggestedPrompts: string[];
+            inputPlaceholder: string;
+            disclaimer: null | string;
+        };
+        WidgetThemeResponse: {
+            theme: null | components["schemas"]["WidgetTheme"];
+            defaultTheme: components["schemas"]["WidgetTheme"];
+            fontOptions: components["schemas"]["WidgetFontOption"][];
         };
         WizardError: {
             message: string;
@@ -2524,7 +2503,7 @@ export interface operations {
             };
         };
     };
-    "iframe.getCustomization": {
+    "iframe.getTheme": {
         parameters: {
             query?: never;
             header?: never;
@@ -2542,7 +2521,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["IFrameCustomizationResponse"];
+                    "application/json": components["schemas"]["WidgetThemeResponse"];
                 };
             };
             /** @description Not Found */
@@ -2556,7 +2535,7 @@ export interface operations {
             };
         };
     };
-    "iframe.updateCustomization": {
+    "iframe.updateTheme": {
         parameters: {
             query?: never;
             header?: never;
@@ -2568,7 +2547,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UpdateIFrameCustomizationRequest"];
+                "application/json": components["schemas"]["UpdateWidgetThemeRequest"];
             };
         };
         responses: {
@@ -2578,7 +2557,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["IFrameCustomizationResponse"];
+                    "application/json": components["schemas"]["WidgetThemeResponse"];
                 };
             };
             /** @description Bad Request */
@@ -2601,7 +2580,7 @@ export interface operations {
             };
         };
     };
-    "iframe.getDefaultCustomization": {
+    "iframe.getDefaultTheme": {
         parameters: {
             query?: never;
             header?: never;
@@ -2618,7 +2597,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["IFrameDefaultCustomizationResponse"];
+                    "application/json": components["schemas"]["WidgetDefaultThemeResponse"];
                 };
             };
             /** @description Not Found */
@@ -2632,7 +2611,7 @@ export interface operations {
             };
         };
     };
-    "iframe.updateDefaultCustomization": {
+    "iframe.updateDefaultTheme": {
         parameters: {
             query?: never;
             header?: never;
@@ -2643,7 +2622,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UpdateIFrameCustomizationRequest"];
+                "application/json": components["schemas"]["UpdateWidgetThemeRequest"];
             };
         };
         responses: {
@@ -2653,7 +2632,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["IFrameDefaultCustomizationResponse"];
+                    "application/json": components["schemas"]["WidgetDefaultThemeResponse"];
                 };
             };
             /** @description Bad Request */
@@ -2663,70 +2642,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    "iframe.preview": {
-        parameters: {
-            query?: {
-                title?: string;
-            };
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["IFramePreviewResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    "iframe.getStyleGuide": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["IFrameStyleGuideResponse"];
                 };
             };
             /** @description Not Found */
@@ -3990,11 +3905,6 @@ export type EmbedLinkSummaryResponse = components["schemas"]["EmbedLinkSummaryRe
 export type GoogleAIVersion = components["schemas"]["GoogleAIVersion"];
 export type GoogleSettings = components["schemas"]["GoogleSettings"];
 export type HuggingFaceSettings = components["schemas"]["HuggingFaceSettings"];
-export type IFrameCustomizationResponse = components["schemas"]["IFrameCustomizationResponse"];
-export type IFrameDefaultCustomizationResponse = components["schemas"]["IFrameDefaultCustomizationResponse"];
-export type IFramePreviewResponse = components["schemas"]["IFramePreviewResponse"];
-export type IFrameStyle = components["schemas"]["IFrameStyle"];
-export type IFrameStyleGuideResponse = components["schemas"]["IFrameStyleGuideResponse"];
 export type JsonElement = components["schemas"]["JsonElement"];
 export type LicensePlan = components["schemas"]["LicensePlan"];
 export type LicenseResponse = components["schemas"]["LicenseResponse"];
@@ -4034,7 +3944,7 @@ export type TestMappingRowResponse = components["schemas"]["TestMappingRowRespon
 export type TokensByAppResponse = components["schemas"]["TokensByAppResponse"];
 export type TopCapability = components["schemas"]["TopCapability"];
 export type UpdateChannelRequest = components["schemas"]["UpdateChannelRequest"];
-export type UpdateIFrameCustomizationRequest = components["schemas"]["UpdateIFrameCustomizationRequest"];
+export type UpdateWidgetThemeRequest = components["schemas"]["UpdateWidgetThemeRequest"];
 export type UsagePoint = components["schemas"]["UsagePoint"];
 export type UsageResponse = components["schemas"]["UsageResponse"];
 export type VerifyCdcRequest = components["schemas"]["VerifyCdcRequest"];
@@ -4043,6 +3953,12 @@ export type VerifyCdcTableRequest = components["schemas"]["VerifyCdcTableRequest
 export type VertexAIVersion = components["schemas"]["VertexAIVersion"];
 export type VertexSettings = components["schemas"]["VertexSettings"];
 export type WebhookBinding = components["schemas"]["WebhookBinding"];
+export type WidgetAppearance = components["schemas"]["WidgetAppearance"];
+export type WidgetDefaultThemeResponse = components["schemas"]["WidgetDefaultThemeResponse"];
+export type WidgetDensity = components["schemas"]["WidgetDensity"];
+export type WidgetFontOption = components["schemas"]["WidgetFontOption"];
+export type WidgetTheme = components["schemas"]["WidgetTheme"];
+export type WidgetThemeResponse = components["schemas"]["WidgetThemeResponse"];
 export type WizardError = components["schemas"]["WizardError"];
 
 export const API_ENDPOINTS = {
@@ -4097,12 +4013,10 @@ export const API_ENDPOINTS = {
         revoke: (slug: string, token: string) => `/apps/${encodeURIComponent(slug)}/embed-links/${encodeURIComponent(token)}`,
     },
     iframe: {
-        getCustomization: (slug: string, channelId: string) => `/apps/${encodeURIComponent(slug)}/iframe/${encodeURIComponent(channelId)}/customization`,
-        getDefaultCustomization: (slug: string) => `/apps/${encodeURIComponent(slug)}/iframe/default-customization`,
-        getStyleGuide: (slug: string) => `/apps/${encodeURIComponent(slug)}/iframe/style-guide`,
-        preview: (slug: string) => `/apps/${encodeURIComponent(slug)}/iframe/preview`,
-        updateCustomization: (slug: string, channelId: string) => `/apps/${encodeURIComponent(slug)}/iframe/${encodeURIComponent(channelId)}/customization`,
-        updateDefaultCustomization: (slug: string) => `/apps/${encodeURIComponent(slug)}/iframe/default-customization`,
+        getDefaultTheme: (slug: string) => `/apps/${encodeURIComponent(slug)}/iframe/default-theme`,
+        getTheme: (slug: string, channelId: string) => `/apps/${encodeURIComponent(slug)}/iframe/${encodeURIComponent(channelId)}/theme`,
+        updateDefaultTheme: (slug: string) => `/apps/${encodeURIComponent(slug)}/iframe/default-theme`,
+        updateTheme: (slug: string, channelId: string) => `/apps/${encodeURIComponent(slug)}/iframe/${encodeURIComponent(channelId)}/theme`,
     },
     settings: {
         certificates: "/settings/certificates/get",
@@ -4190,12 +4104,10 @@ export function createServerApi(client: ApiClient) {
             revoke: (slug: string, token: string) => client.delete<void, ApiErrorResponse>(API_ENDPOINTS.embedLinks.revoke(slug, token)),
         },
         iframe: {
-            getCustomization: (slug: string, channelId: string) => client.get<IFrameCustomizationResponse, ApiErrorResponse>(API_ENDPOINTS.iframe.getCustomization(slug, channelId)),
-            getDefaultCustomization: (slug: string) => client.get<IFrameDefaultCustomizationResponse, ApiErrorResponse>(API_ENDPOINTS.iframe.getDefaultCustomization(slug)),
-            getStyleGuide: (slug: string) => client.get<IFrameStyleGuideResponse, ApiErrorResponse>(API_ENDPOINTS.iframe.getStyleGuide(slug)),
-            preview: (slug: string, searchParams?: { title?: string; }) => client.get<IFramePreviewResponse, ApiErrorResponse>(API_ENDPOINTS.iframe.preview(slug), { searchParams }),
-            updateCustomization: (slug: string, channelId: string, request: UpdateIFrameCustomizationRequest) => client.put<IFrameCustomizationResponse, ApiErrorResponse>(API_ENDPOINTS.iframe.updateCustomization(slug, channelId), request),
-            updateDefaultCustomization: (slug: string, request: UpdateIFrameCustomizationRequest) => client.put<IFrameDefaultCustomizationResponse, ApiErrorResponse>(API_ENDPOINTS.iframe.updateDefaultCustomization(slug), request),
+            getDefaultTheme: (slug: string) => client.get<WidgetDefaultThemeResponse, ApiErrorResponse>(API_ENDPOINTS.iframe.getDefaultTheme(slug)),
+            getTheme: (slug: string, channelId: string) => client.get<WidgetThemeResponse, ApiErrorResponse>(API_ENDPOINTS.iframe.getTheme(slug, channelId)),
+            updateDefaultTheme: (slug: string, request: UpdateWidgetThemeRequest) => client.put<WidgetDefaultThemeResponse, ApiErrorResponse>(API_ENDPOINTS.iframe.updateDefaultTheme(slug), request),
+            updateTheme: (slug: string, channelId: string, request: UpdateWidgetThemeRequest) => client.put<WidgetThemeResponse, ApiErrorResponse>(API_ENDPOINTS.iframe.updateTheme(slug, channelId), request),
         },
         settings: {
             certificates: (searchParams: { pageSize: string; start: string; }) => client.get<CertificateItem[], ApiErrorResponse>(API_ENDPOINTS.settings.certificates, { searchParams }),

@@ -13,6 +13,7 @@ using Raven.Client.Exceptions;
 using Raven.Quill.Agents;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
+using Raven.Quill.Embed;
 using Raven.Quill.Endpoints.Helpers;
 using Raven.Quill.Metrics;
 using Raven.Quill.Wizard;
@@ -22,11 +23,6 @@ namespace Raven.Quill.Endpoints;
 public static class EmbedEndpoints
 {
     public const string ChatRateLimitPolicy = "embed-chat";
-
-    // default-deny CSP contains operator CSS (no @import/url exfil)
-    internal const string BaseCsp =
-        "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; " +
-        "img-src 'self' data:; font-src 'self' data:; connect-src 'self'; base-uri 'none'";
 
     public static void Map(WebApplication app)
     {
@@ -45,28 +41,35 @@ public static class EmbedEndpoints
         string slug,
         string token,
         IDocumentStore store,
+        WidgetAssets assets,
         HttpContext ctx)
     {
         var ct = ctx.RequestAborted;
 
-        var resolved = await TryResolveLiveLinkAsync(ctx, store, slug, token, resolveStyle: true, ct);
+        var resolved = await TryResolveLiveLinkAsync(ctx, store, slug, token, resolveTheme: true, ct);
         if (resolved is null)
             return;
 
-        var (app, link, channel, style) = resolved.Value;
+        var (app, link, channel, theme) = resolved.Value;
 
-        var csp = BaseCsp;
-        if (channel.AllowedOrigins.Length > 0)
+        if (assets.IsAvailable == false)
         {
-            var dashboardOrigin = $"{ctx.Request.Scheme}://{ApplianceHost.WithSubdomain(ctx.Request.Host, "dashboard").ToUriComponent()}";
-            var head = Array.IndexOf(channel.AllowedOrigins, dashboardOrigin) >= 0 ? "'self'" : $"'self' {dashboardOrigin}";
-            csp += $"; frame-ancestors {head} {string.Join(' ', channel.AllowedOrigins)}";
+            ctx.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+            await ctx.Response.WriteAsJsonAsync(
+                new ApiErrorResponse("the embeddable widget bundle is not available on this server",
+                    Code: "widget_unavailable"), ct);
+            return;
         }
 
-        ctx.Response.Headers["Content-Security-Policy"] = csp;
+        var nonce = WidgetShell.CreateNonce();
+        ctx.Response.Headers["Content-Security-Policy"] = WidgetShell.BuildCsp(nonce, FrameAncestors(ctx, channel));
 
         // keep the bearer token out of cross-origin referer logs
         ctx.Response.Headers["Referrer-Policy"] = "no-referrer";
+        ctx.Response.Headers["X-Content-Type-Options"] = "nosniff";
+
+        // the shell embeds the link's bearer token, so it must never sit in a shared cache
+        ctx.Response.Headers.CacheControl = "no-store";
 
         var agent = await AgentLookup.FindAsync(store, app.Database, channel.AgentId, ct);
         var replyField = AgentOutputShape.ResolveReplyField(agent) ?? AgentOutputShape.DefaultReplyField;
@@ -74,11 +77,33 @@ public static class EmbedEndpoints
         var serializerOptions = ctx.RequestServices
             .GetRequiredService<IOptions<Microsoft.AspNetCore.Http.Json.JsonOptions>>().Value.SerializerOptions;
 
-        var historyJson = await BuildHistoryJsonAsync(store, app.Database, link.ConversationId, replyField,
-            serializerOptions, ct);
+        var history = await BuildHistoryAsync(store, app.Database, link.ConversationId, replyField, ct);
+        var configJson = WidgetShell.SerializeConfig(
+            new EmbedWidgetConfig("live", $"/apps/{app.Slug}/embed/{token}/chat", theme, history),
+            serializerOptions);
 
         ctx.Response.ContentType = "text/html; charset=utf-8";
-        await ctx.Response.WriteAsync(BuildEmbedHtml(app.Slug, token, channel.DisplayName, style, historyJson), ct);
+        await ctx.Response.WriteAsync(
+            WidgetShell.BuildHtml(assets, nonce, theme.HeaderTitle, theme, configJson), ct);
+    }
+
+    /// A channel with no configured origins is the operator's explicit opt-in to open embedding (the create
+    /// endpoint rejects an omitted list precisely so the choice is deliberate), so no directive is emitted
+    /// and any site may frame the page. Once origins exist the page is restricted to them, plus the
+    /// appliance itself and the dashboard for the operator's own preview.
+    private static string[] FrameAncestors(HttpContext ctx, Channel channel)
+    {
+        if (channel.AllowedOrigins.Length == 0)
+            return [];
+
+        var dashboardOrigin =
+            $"{ctx.Request.Scheme}://{ApplianceHost.WithSubdomain(ctx.Request.Host, "dashboard").ToUriComponent()}";
+
+        var ancestors = new List<string> { "'self'" };
+        if (Array.IndexOf(channel.AllowedOrigins, dashboardOrigin) < 0)
+            ancestors.Add(dashboardOrigin);
+        ancestors.AddRange(channel.AllowedOrigins);
+        return ancestors.ToArray();
     }
 
     private static async Task StreamEmbedChatAsync(
@@ -99,7 +124,7 @@ public static class EmbedEndpoints
             return;
         }
 
-        var resolved = await TryResolveLiveLinkAsync(ctx, store, slug, token, resolveStyle: false, ct);
+        var resolved = await TryResolveLiveLinkAsync(ctx, store, slug, token, resolveTheme: false, ct);
         if (resolved is null)
             return;
 
@@ -270,8 +295,8 @@ public static class EmbedEndpoints
         return string.Equals(origin, self, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static async Task<(App app, EmbedLink link, Channel channel, ResolvedIFrameStyle style)?> TryResolveLiveLinkAsync(
-        HttpContext ctx, IDocumentStore store, string slug, string token, bool resolveStyle, CancellationToken ct)
+    private static async Task<(App app, EmbedLink link, Channel channel, WidgetTheme theme)?> TryResolveLiveLinkAsync(
+        HttpContext ctx, IDocumentStore store, string slug, string token, bool resolveTheme, CancellationToken ct)
     {
         if (EmbedLink.IsWellFormedToken(token) == false)
         {
@@ -285,7 +310,7 @@ public static class EmbedEndpoints
             return null;
         }
 
-        var resolved = await ResolveAsync(store, slug, token, resolveStyle, ct);
+        var resolved = await ResolveAsync(store, slug, token, resolveTheme, ct);
         if (resolved is null)
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
@@ -303,8 +328,8 @@ public static class EmbedEndpoints
         return resolved;
     }
 
-    private static async Task<(App app, EmbedLink link, Channel channel, ResolvedIFrameStyle style)?> ResolveAsync(
-        IDocumentStore store, string slug, string token, bool resolveStyle, CancellationToken ct)
+    private static async Task<(App app, EmbedLink link, Channel channel, WidgetTheme theme)?> ResolveAsync(
+        IDocumentStore store, string slug, string token, bool resolveTheme, CancellationToken ct)
     {
         App? app;
         using (var cfg = store.OpenAsyncSession())
@@ -315,7 +340,7 @@ public static class EmbedEndpoints
 
         EmbedLink? link;
         Channel? channel;
-        ResolvedIFrameStyle style = default;
+        var theme = WidgetTheme.Default;
         using (var session = store.OpenAsyncSession(app.Database))
         {
             link = await session.LoadAsync<EmbedLink>(EmbedLink.IdPrefix + token, ct);
@@ -324,40 +349,26 @@ public static class EmbedEndpoints
 
             channel = await session.LoadAsync<Channel>(Channel.IdPrefix + link.ChannelId, ct);
 
-            if (resolveStyle && channel is { Type: ChannelType.IFrame })
+            if (resolveTheme && channel is { Type: ChannelType.IFrame })
             {
-                var defaults = IFrameStyleResolution.OwnStyle(channel) is null
-                    ? await session.LoadAsync<IFrameStyleDefaults>(IFrameStyleDefaults.DocumentId, ct)
+                var defaults = channel.Theme is null
+                    ? await session.LoadAsync<WidgetThemeDefaults>(WidgetThemeDefaults.DocumentId, ct)
                     : null;
-                style = IFrameStyleResolution.ForChannel(channel, defaults);
+                theme = WidgetThemeResolution.ForChannel(channel, defaults);
             }
         }
 
         if (channel is null || channel.Type != ChannelType.IFrame)
             return null;
 
-        return (app, link, channel, style);
+        return (app, link, channel, theme);
     }
 
-    private static string BuildEmbedHtml(string slug, string token, string displayName, ResolvedIFrameStyle style, string historyJson)
-    {
-        var title = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(displayName) ? "AI Assistant" : displayName);
-        // substitute trusted placeholders first so the token can't leak into title/history
-        return EmbedHtmlTemplate
-            .Replace("__SLUG__", slug)
-            .Replace("__TOKEN__", token)
-            .Replace("__BASE_CSS__", BuildWidgetBaseCss(style.Style))
-            .Replace("__CUSTOM_CSS__", IFrameCss.Sanitize(style.CustomCss))
-            .Replace("__TITLE__", title)
-            .Replace("__HISTORY__", historyJson);
-    }
-
-    private static async Task<string> BuildHistoryJsonAsync(
-        IDocumentStore store, string database, string conversationId, string replyField,
-        JsonSerializerOptions serializerOptions, CancellationToken ct)
+    private static async Task<AiConversationMessage[]> BuildHistoryAsync(
+        IDocumentStore store, string database, string? conversationId, string replyField, CancellationToken ct)
     {
         if (string.IsNullOrEmpty(conversationId))
-            return "[]";
+            return [];
         try
         {
             var result = await store.AI.ForDatabase(database).GetConversationMessagesAsync(new GetConversationMessagesOptions
@@ -366,165 +377,14 @@ public static class EmbedEndpoints
                 DetailLevel = AiConversationDetailLevel.Simple,
             }, ct);
             if (result is null)
-                return "[]";
-            var turns = MetricsReadService.MapTranscript(result.Messages, replyField);
-            return JsonSerializer.Serialize(turns, serializerOptions);
+                return [];
+            return MetricsReadService.MapTranscript(result.Messages, replyField);
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
-            return "[]";
+            return [];
         }
     }
 
-    internal static string BuildPreviewHtml(string? displayName)
-    {
-        var title = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(displayName) ? "AI Assistant" : displayName);
-        return PreviewHtmlTemplate
-            .Replace("__TITLE__", title)
-            .Replace("__BASE_CSS__", WidgetBaseCss);
-    }
-
     internal sealed class EmbedLogger;
-
-    internal static string BuildWidgetBaseCss(IFrameStyle style) =>
-        IFrameStyleVariables.BuildRootBlock(style) + "\n" + WidgetBaseCssRules;
-
-    internal static readonly string WidgetBaseCss = BuildWidgetBaseCss(IFrameStyle.Light);
-
-    private const string WidgetBaseCssRules = """
-                                                * { box-sizing: border-box; }
-                                                html, body { height: 100%; margin: 0; background: var(--ai-bg); color: var(--ai-fg); font-family: var(--ai-font-family); }
-                                                #ai-chat { display: flex; flex-direction: column; height: 100%; }
-                                                #ai-chat-header { padding: 12px 16px; font-weight: 600; border-bottom: 1px solid var(--ai-border-color); }
-                                                #ai-chat-feed { flex: 1; overflow-y: auto; padding: 12px 16px; }
-                                                .row { margin: 6px 0; padding: 8px 12px; border-radius: var(--ai-radius-bubble); max-width: 80%; white-space: pre-wrap; }
-                                                .row.user { background: var(--ai-user-bg); color: var(--ai-user-fg); margin-left: auto; }
-                                                .row.assistant { background: var(--ai-bubble-agent-bg); }
-                                                #ai-chat-form { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--ai-border-color); }
-                                                #ai-chat-input { flex: 1; padding: 10px 12px; border: 1px solid var(--ai-input-border-color); border-radius: var(--ai-radius-control); background: var(--ai-input-bg); color: var(--ai-fg); font-size: 14px; }
-                                                #ai-chat-form button { padding: 10px 16px; border: 0; border-radius: var(--ai-radius-control); background: var(--ai-user-bg); color: var(--ai-user-fg); cursor: pointer; }
-                                              """;
-
-    private const string EmbedHtmlTemplate = """
-                                             <!DOCTYPE html>
-                                             <html lang="en">
-                                             <head>
-                                             <meta charset="utf-8">
-                                             <meta name="viewport" content="width=device-width, initial-scale=1">
-                                             <meta name="referrer" content="no-referrer">
-                                             <title>__TITLE__</title>
-                                             <style>
-                                             __BASE_CSS__
-                                             </style>
-                                             <style id="raven-custom">__CUSTOM_CSS__</style>
-                                             </head>
-                                             <body>
-                                             <div id="ai-chat">
-                                               <div id="ai-chat-header">__TITLE__</div>
-                                               <div id="ai-chat-feed"></div>
-                                               <form id="ai-chat-form">
-                                                 <input id="ai-chat-input" autocomplete="off" placeholder="Ask a question..." aria-label="Ask a question">
-                                                 <button type="submit">Send</button>
-                                               </form>
-                                             </div>
-                                             <script>
-                                             const chatUrl = "/apps/__SLUG__/embed/__TOKEN__/chat";
-                                             const feed = document.getElementById("ai-chat-feed");
-                                             const form = document.getElementById("ai-chat-form");
-                                             const input = document.getElementById("ai-chat-input");
-                                             const button = form.querySelector('button[type="submit"]');
-                                             let submitting = false;
-                                             
-                                             function addRow(cls, text) {
-                                               const div = document.createElement("div");
-                                               div.className = "row " + cls;
-                                               div.textContent = text;
-                                               feed.appendChild(div);
-                                               feed.scrollTop = feed.scrollHeight;
-                                               return div;
-                                             }
-
-                                             for (const turn of __HISTORY__) addRow(turn.role, turn.content);
-
-                                             form.addEventListener("submit", async (e) => {
-                                               e.preventDefault();
-                                               if (submitting) return;
-                                             
-                                               const prompt = input.value.trim();
-                                               if (!prompt) return;
-
-                                               submitting = true;
-                                               button.disabled = true;
-                                               input.value = "";
-                                               addRow("user", prompt);
-                                               const agentRow = addRow("assistant", "");
-                                               try {
-                                                 const resp = await fetch(chatUrl, {
-                                                   method: "POST",
-                                                   headers: { "Content-Type": "application/json" },
-                                                   body: JSON.stringify({ prompt })
-                                                 });
-                                                 if (resp.status === 410 || resp.status === 404) { agentRow.textContent = "[this link is no longer active]"; return; }
-                                                 if (resp.status === 429) { agentRow.textContent = "[this link has reached its usage limit]"; return; }
-                                                 if (!resp.ok || !resp.body) { agentRow.textContent = "[error] HTTP " + resp.status; return; }
-                                                 const reader = resp.body.getReader();
-                                                 const decoder = new TextDecoder();
-                                                 let buf = "";
-                                                 while (true) {
-                                                   const { value, done } = await reader.read();
-                                                   if (done) break;
-                                                   buf += decoder.decode(value, { stream: true });
-                                                   let nl;
-                                                   while ((nl = buf.indexOf("\n")) >= 0) {
-                                                     const line = buf.slice(0, nl).trim();
-                                                     buf = buf.slice(nl + 1);
-                                                     if (!line) continue;
-                                                     const msg = JSON.parse(line);
-                                                     if (msg.type === "chunk") agentRow.textContent += msg.text;
-                                                     else if (msg.type === "done") {
-                                                       if (!agentRow.textContent && msg.answer && msg.answer.reply) agentRow.textContent = msg.answer.reply;
-                                                     }
-                                                     else if (msg.type === "error") agentRow.textContent = "[error] " + msg.message;
-                                                   }
-                                                 }
-                                               } catch (err) {
-                                                 agentRow.textContent = "[error] " + err;
-                                               } finally {
-                                                 submitting = false;
-                                                 button.disabled = false;
-                                               }
-                                             });
-                                             </script>
-                                             </body>
-                                             </html>
-                                             """;
-
-    private const string PreviewHtmlTemplate = """
-                                               <!DOCTYPE html>
-                                               <html lang="en">
-                                               <head>
-                                               <meta charset="utf-8">
-                                               <meta name="viewport" content="width=device-width, initial-scale=1">
-                                               <title>__TITLE__</title>
-                                               <style>
-                                               __BASE_CSS__
-                                               </style>
-                                               <style id="raven-custom"></style>
-                                               </head>
-                                               <body>
-                                               <div id="ai-chat">
-                                                 <div id="ai-chat-header">__TITLE__</div>
-                                                 <div id="ai-chat-feed">
-                                                   <div class="row assistant">Hi! I'm your AI assistant. How can I help you today?</div>
-                                                   <div class="row user">What can you do?</div>
-                                                   <div class="row assistant">I can answer questions about your data and help you get things done — just ask.</div>
-                                                 </div>
-                                                 <form id="ai-chat-form" onsubmit="return false">
-                                                   <input id="ai-chat-input" autocomplete="off" placeholder="Ask a question..." aria-label="Ask a question">
-                                                   <button type="submit">Send</button>
-                                                 </form>
-                                               </div>
-                                               </body>
-                                               </html>
-                                               """;
 }

@@ -135,6 +135,8 @@ internal static class QuillRoutes
     public static string AppChannelStats(string slug) => $"/api/apps/{slug}/channels/stats";
     public static string AppConversations(string slug) => $"/api/apps/{slug}/conversations";
     public static string AppConversationStats(string slug) => $"/api/apps/{slug}/conversations/stats";
+    public static string WidgetTheme(string slug, string channelId) => $"/api/apps/{slug}/iframe/{channelId}/theme";
+    public static string WidgetDefaultTheme(string slug) => $"/api/apps/{slug}/iframe/default-theme";
     public static string EmbedPage(string slug, string token) => $"/apps/{slug}/embed/{token}";
     public static string EmbedChat(string slug, string token) => $"{EmbedPage(slug, token)}/chat";
     public static string Agents(string slug) => $"/api/apps/{slug}/agents";

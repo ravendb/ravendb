@@ -5,41 +5,30 @@ import { api } from "@/api/api";
 import { ApiState } from "@/components/data/api-state";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { appRoutes } from "@/lib/app-routes";
-import { useWebWidgetStyleSave } from "@/pages/apps/channels/use-web-widget-style-save";
-import { WebWidgetStyleEditor } from "@/pages/apps/channels/web-widget-style-editor";
+import { useWebWidgetThemeSave } from "@/pages/apps/channels/use-web-widget-theme-save";
+import { WebWidgetThemeEditor } from "@/pages/apps/channels/web-widget-theme-editor";
 
 export function AppWebWidgetCustomize() {
     const { slug = "", channelId = "" } = useParams();
 
     const channelsQuery = useQuery(api.queries.channels.list(slug));
     const channel = channelsQuery.data?.find((candidate) => candidate.channelId === channelId);
-    // Customization is web-widget-only, and the widget-scoped endpoints 404 for anything else. Gate the
-    // widget-scoped queries on the channel being an iFrame so an unknown or non-iFrame channelId resolves
-    // to the not-found alert below instead of a generic "could not load" error from a request bound to fail.
+    // Theming is web-widget-only, and the widget-scoped endpoints 404 for anything else. Gate the widget-scoped
+    // query on the channel being an iFrame so an unknown or non-iFrame channelId resolves to the not-found alert
+    // below instead of a generic "could not load" error from a request bound to fail.
     const isWebWidget = channel?.type === "IFrame";
 
-    const customizationQuery = useQuery({
-        ...api.queries.webWidget.customization(slug, channelId),
-        enabled: isWebWidget,
-    });
-    const styleGuideQuery = useQuery({ ...api.queries.webWidget.styleGuide(slug), enabled: isWebWidget });
-    // Fetch the preview once we know the widget name so its header matches the live widget.
-    const previewQuery = useQuery({
-        ...api.queries.webWidget.preview(slug, channel?.displayName),
-        enabled: isWebWidget,
-    });
+    const themeQuery = useQuery({ ...api.queries.webWidget.theme(slug, channelId), enabled: isWebWidget });
 
-    const saveMutation = useWebWidgetStyleSave({
-        save: (update) => api.services.iframe.updateCustomization(slug, channelId, update),
-        invalidateKeys: [api.queries.webWidget.customization(slug, channelId).queryKey],
-        successMessage: "Customization saved",
+    const saveMutation = useWebWidgetThemeSave({
+        save: (theme) => api.services.iframe.updateTheme(slug, channelId, { theme }),
+        invalidateKeys: [api.queries.webWidget.theme(slug, channelId).queryKey],
+        successMessage: "Theme saved",
     });
 
     const onRetry = async () => {
         if (channelsQuery.isError) await channelsQuery.refetch();
-        if (customizationQuery.isError) await customizationQuery.refetch();
-        if (styleGuideQuery.isError) await styleGuideQuery.refetch();
-        if (previewQuery.isError) await previewQuery.refetch();
+        if (themeQuery.isError) await themeQuery.refetch();
     };
 
     return (
@@ -53,47 +42,32 @@ export function AppWebWidgetCustomize() {
             </Link>
 
             <ApiState
-                isLoading={
-                    channelsQuery.isPending ||
-                    (isWebWidget &&
-                        (customizationQuery.isPending || styleGuideQuery.isPending || previewQuery.isPending))
-                }
-                isError={
-                    channelsQuery.isError ||
-                    customizationQuery.isError ||
-                    styleGuideQuery.isError ||
-                    previewQuery.isError
-                }
-                errorTitle="Could not load customization"
+                isLoading={channelsQuery.isPending || (isWebWidget && themeQuery.isPending)}
+                isError={channelsQuery.isError || themeQuery.isError}
+                errorTitle="Could not load the theme"
                 onRetry={onRetry}
-                loadingLabel="Loading customization..."
+                loadingLabel="Loading theme..."
             >
                 {!isWebWidget ? (
-                    <Alert variant="destructive">No web widget “{channelId}” in this app.</Alert>
+                    <Alert variant="destructive">No web widget &ldquo;{channelId}&rdquo; in this app.</Alert>
                 ) : (
                     <>
                         <div className="grid gap-1">
                             <h2 className="text-lg font-semibold">{channel.displayName}</h2>
                             <p className="text-sm text-muted-foreground">
-                                Choose how this web widget&rsquo;s embed page looks: follow the app default, pick one of
-                                the built-in styles, or write custom CSS over the widget&rsquo;s base styles.
+                                Choose how this web widget looks and reads. Pick an accent colour and the rest of the
+                                palette is derived from it, so light and dark both stay coherent.
                             </p>
                         </div>
 
-                        {customizationQuery.data && styleGuideQuery.data && (
-                            <WebWidgetStyleEditor
-                                initialStyle={customizationQuery.data.style ?? null}
-                                initialCss={customizationQuery.data.css ?? ""}
-                                appDefault={{
-                                    style: customizationQuery.data.defaultStyle ?? "Light",
-                                    css: customizationQuery.data.defaultCss ?? "",
-                                }}
-                                baseCss={styleGuideQuery.data.baseCss}
-                                lightThemeCss={styleGuideQuery.data.lightThemeCss}
-                                darkThemeCss={styleGuideQuery.data.darkThemeCss}
-                                previewHtml={previewQuery.data?.html ?? ""}
+                        {themeQuery.data && (
+                            <WebWidgetThemeEditor
+                                theme={themeQuery.data.theme}
+                                defaultTheme={themeQuery.data.defaultTheme}
+                                fontOptions={themeQuery.data.fontOptions}
+                                canFollowAppDefault
                                 isSaving={saveMutation.isPending}
-                                onSave={(update) => saveMutation.mutate(update)}
+                                onSave={(theme) => saveMutation.mutate(theme)}
                             />
                         )}
 
@@ -101,7 +75,7 @@ export function AppWebWidgetCustomize() {
                             <Alert variant="destructive">
                                 {saveMutation.error instanceof Error
                                     ? saveMutation.error.message
-                                    : "Could not save customization."}
+                                    : "Could not save the theme."}
                             </Alert>
                         )}
                     </>

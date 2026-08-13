@@ -15,48 +15,36 @@ public static class IFrameCustomizationEndpoints
     {
         var group = app.MapGroup("/api/apps/{slug}/iframe").WithTags("iframe").RequireAuthorization();
 
-        group.MapGet("/{channelId}/customization", GetCustomizationAsync)
-            .WithName("iframe.getCustomization")
-            .WithDescription("Returns a web-widget channel's own embed style plus the resolved app default, for the styling editor.")
-            .Produces<IFrameCustomizationResponse>()
+        group.MapGet("/{channelId}/theme", GetThemeAsync)
+            .WithName("iframe.getTheme")
+            .WithDescription("Returns a web-widget channel's own theme plus the resolved app default, for the theme editor. A null theme means the channel follows the app default.")
+            .Produces<WidgetThemeResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
-        group.MapPut("/{channelId}/customization", UpdateCustomizationAsync)
-            .WithName("iframe.updateCustomization")
-            .WithDescription("Saves a web-widget channel's embed style: a built-in preset, custom CSS, or (with a null style) follow the app default.")
-            .Accepts<UpdateIFrameCustomizationRequest>("application/json")
-            .Produces<IFrameCustomizationResponse>()
+        group.MapPut("/{channelId}/theme", UpdateThemeAsync)
+            .WithName("iframe.updateTheme")
+            .WithDescription("Saves a web-widget channel's theme. A null theme clears the channel's choice so it follows the app default.")
+            .Accepts<UpdateWidgetThemeRequest>("application/json")
+            .Produces<WidgetThemeResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
-        group.MapGet("/default-customization", GetDefaultCustomizationAsync)
-            .WithName("iframe.getDefaultCustomization")
-            .WithDescription("Returns the resolved app-level default web-widget embed style applied to channels that make no choice of their own.")
-            .Produces<IFrameDefaultCustomizationResponse>()
+        group.MapGet("/default-theme", GetDefaultThemeAsync)
+            .WithName("iframe.getDefaultTheme")
+            .WithDescription("Returns the app-level default web-widget theme applied to channels that make no choice of their own.")
+            .Produces<WidgetDefaultThemeResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
-        group.MapPut("/default-customization", UpdateDefaultCustomizationAsync)
-            .WithName("iframe.updateDefaultCustomization")
-            .WithDescription("Saves the app-level default web-widget embed style: a built-in preset or custom CSS. A null style resets to the Light preset.")
-            .Accepts<UpdateIFrameCustomizationRequest>("application/json")
-            .Produces<IFrameDefaultCustomizationResponse>()
+        group.MapPut("/default-theme", UpdateDefaultThemeAsync)
+            .WithName("iframe.updateDefaultTheme")
+            .WithDescription("Saves the app-level default web-widget theme. A null theme resets it to the built-in default.")
+            .Accepts<UpdateWidgetThemeRequest>("application/json")
+            .Produces<WidgetDefaultThemeResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
-            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
-
-        group.MapGet("/preview", GetPreviewAsync)
-            .WithName("iframe.preview")
-            .WithDescription("Returns the inert web-widget preview document (base styles + sample bubbles) the dashboard frames to live-preview CSS edits.")
-            .Produces<IFramePreviewResponse>()
-            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
-
-        group.MapGet("/style-guide", GetStyleGuideAsync)
-            .WithName("iframe.getStyleGuide")
-            .WithDescription("Returns the web-widget embed page's base CSS, used as the styling editor's starter template and \"reset to default\" content.")
-            .Produces<IFrameStyleGuideResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
     }
 
-    private static async Task<IResult> GetCustomizationAsync(
+    private static async Task<IResult> GetThemeAsync(
         string slug,
         string channelId,
         IDocumentStore store,
@@ -71,22 +59,23 @@ public static class IFrameCustomizationEndpoints
         if (channel is null)
             return Results.NotFound(new ApiErrorResponse($"no iFrame channel '{channelId}' in app '{slug}'"));
 
-        var defaults = await session.LoadAsync<IFrameStyleDefaults>(IFrameStyleDefaults.DocumentId, ct);
-        return Results.Ok(BuildCustomizationResponse(channel, defaults));
+        var defaults = await session.LoadAsync<WidgetThemeDefaults>(WidgetThemeDefaults.DocumentId, ct);
+        return Results.Ok(BuildThemeResponse(channel, defaults));
     }
 
-    private static async Task<IResult> UpdateCustomizationAsync(
+    private static async Task<IResult> UpdateThemeAsync(
         string slug,
         string channelId,
-        UpdateIFrameCustomizationRequest body,
+        UpdateWidgetThemeRequest body,
         IDocumentStore store,
         ILogger<IFrameCustomizationLogger> logger,
         CancellationToken ct)
     {
         if (body is null)
             return Results.BadRequest(new ApiErrorResponse("request body is required"));
-        if (TryValidateStyle(body, out var styleError) == false)
-            return Results.BadRequest(new ApiErrorResponse(styleError!));
+
+        if (TryNormalizeTheme(body.Theme, out var theme, out var error) == false)
+            return Results.BadRequest(new ApiErrorResponse(error!));
 
         var app = await AppLookup.LoadAppAsync(store, slug, ct);
         if (app is null)
@@ -97,18 +86,17 @@ public static class IFrameCustomizationEndpoints
         if (channel is null)
             return Results.NotFound(new ApiErrorResponse($"no iFrame channel '{channelId}' in app '{slug}'"));
 
-        channel.Style = body.Style;
-        channel.CustomCss = body.Style == IFrameStyle.Custom ? body.Css : null;
+        channel.Theme = theme;
         await session.SaveChangesAsync(ct);
 
-        var defaults = await session.LoadAsync<IFrameStyleDefaults>(IFrameStyleDefaults.DocumentId, ct);
+        var defaults = await session.LoadAsync<WidgetThemeDefaults>(WidgetThemeDefaults.DocumentId, ct);
         logger.LogInformation(
-            "Updated iFrame customization slug={Slug} channelId={ChannelId} style={Style}",
-            app.Slug, channelId, channel.Style?.ToString() ?? "(app default)");
-        return Results.Ok(BuildCustomizationResponse(channel, defaults));
+            "Updated web widget theme slug={Slug} channelId={ChannelId} follows={FollowsAppDefault}",
+            app.Slug, channelId, theme is null);
+        return Results.Ok(BuildThemeResponse(channel, defaults));
     }
 
-    private static async Task<IResult> GetDefaultCustomizationAsync(
+    private static async Task<IResult> GetDefaultThemeAsync(
         string slug,
         IDocumentStore store,
         CancellationToken ct)
@@ -118,100 +106,68 @@ public static class IFrameCustomizationEndpoints
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
         using var session = store.OpenAsyncSession(app.Database);
-        var defaults = await session.LoadAsync<IFrameStyleDefaults>(IFrameStyleDefaults.DocumentId, ct);
-        var resolved = IFrameStyleResolution.ForDefaults(defaults);
-        return Results.Ok(new IFrameDefaultCustomizationResponse(resolved.Style, resolved.CustomCss));
+        var defaults = await session.LoadAsync<WidgetThemeDefaults>(WidgetThemeDefaults.DocumentId, ct);
+        return Results.Ok(new WidgetDefaultThemeResponse(WidgetThemeResolution.ForDefaults(defaults), WidgetFonts.Curated));
     }
 
-    private static async Task<IResult> UpdateDefaultCustomizationAsync(
+    private static async Task<IResult> UpdateDefaultThemeAsync(
         string slug,
-        UpdateIFrameCustomizationRequest body,
+        UpdateWidgetThemeRequest body,
         IDocumentStore store,
         ILogger<IFrameCustomizationLogger> logger,
         CancellationToken ct)
     {
         if (body is null)
             return Results.BadRequest(new ApiErrorResponse("request body is required"));
-        if (TryValidateStyle(body, out var styleError) == false)
-            return Results.BadRequest(new ApiErrorResponse(styleError!));
+
+        if (TryNormalizeTheme(body.Theme, out var theme, out var error) == false)
+            return Results.BadRequest(new ApiErrorResponse(error!));
 
         var app = await AppLookup.LoadAppAsync(store, slug, ct);
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
-        var style = body.Style ?? IFrameStyle.Light;
-
         using var session = store.OpenAsyncSession(app.Database);
-        var defaults = await session.LoadAsync<IFrameStyleDefaults>(IFrameStyleDefaults.DocumentId, ct);
+        var defaults = await session.LoadAsync<WidgetThemeDefaults>(WidgetThemeDefaults.DocumentId, ct);
         if (defaults is null)
         {
-            defaults = new IFrameStyleDefaults { Id = IFrameStyleDefaults.DocumentId };
+            defaults = new WidgetThemeDefaults { Id = WidgetThemeDefaults.DocumentId };
             await session.StoreAsync(defaults, ct);
         }
 
-        defaults.Style = style;
-        defaults.Css = style == IFrameStyle.Custom ? body.Css : null;
+        // A cleared app default means "back to the built-in", which is stored explicitly so the resolved
+        // default never depends on which fields the built-in happened to have when the document was written.
+        defaults.Theme = theme ?? WidgetTheme.Default;
         defaults.UpdatedAt = DateTime.UtcNow;
         await session.SaveChangesAsync(ct);
 
-        logger.LogInformation("Updated iFrame default customization slug={Slug} style={Style}", app.Slug, style);
-        return Results.Ok(new IFrameDefaultCustomizationResponse(style, defaults.Css));
+        logger.LogInformation("Updated default web widget theme slug={Slug}", app.Slug);
+        return Results.Ok(new WidgetDefaultThemeResponse(defaults.Theme, WidgetFonts.Curated));
     }
 
-    private static async Task<IResult> GetPreviewAsync(
-        string slug,
-        string? title,
-        IDocumentStore store,
-        CancellationToken ct)
+    private static bool TryNormalizeTheme(WidgetTheme? theme, out WidgetTheme? normalized, out string? error)
     {
-        var app = await AppLookup.LoadAppAsync(store, slug, ct);
-        if (app is null)
-            return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
-
-        return Results.Ok(new IFramePreviewResponse(EmbedEndpoints.BuildPreviewHtml(title)));
-    }
-
-    private static async Task<IResult> GetStyleGuideAsync(
-        string slug,
-        IDocumentStore store,
-        CancellationToken ct)
-    {
-        var app = await AppLookup.LoadAppAsync(store, slug, ct);
-        if (app is null)
-            return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
-
-        return Results.Ok(new IFrameStyleGuideResponse(
-            EmbedEndpoints.WidgetBaseCss,
-            IFrameStyleVariables.BuildRootBlock(IFrameStyle.Light),
-            IFrameStyleVariables.BuildRootBlock(IFrameStyle.Dark)));
-    }
-
-    private static bool TryValidateStyle(UpdateIFrameCustomizationRequest body, out string? error)
-    {
-        if (body.Style != IFrameStyle.Custom)
+        if (theme is null)
         {
+            normalized = null;
             error = null;
             return true;
         }
 
-        if (string.IsNullOrWhiteSpace(body.Css))
+        // Normalize first so a trimmed value is what gets validated: "  #2F6F4F " is a legitimate accent.
+        var candidate = WidgetThemeValidation.Normalize(theme);
+        if (WidgetThemeValidation.TryValidate(candidate, out error) == false)
         {
-            error = "css is required when style is 'Custom'";
+            normalized = null;
             return false;
         }
 
-        return IFrameCss.TryValidate(body.Css, out error);
+        normalized = candidate;
+        return true;
     }
 
-    private static IFrameCustomizationResponse BuildCustomizationResponse(Channel channel, IFrameStyleDefaults? defaults)
-    {
-        var resolvedDefault = IFrameStyleResolution.ForDefaults(defaults);
-        return new IFrameCustomizationResponse(
-            IFrameStyleResolution.OwnStyle(channel),
-            channel.CustomCss,
-            resolvedDefault.Style,
-            resolvedDefault.CustomCss);
-    }
+    private static WidgetThemeResponse BuildThemeResponse(Channel channel, WidgetThemeDefaults? defaults) =>
+        new(channel.Theme, WidgetThemeResolution.ForDefaults(defaults), WidgetFonts.Curated);
 
     private static async Task<Channel?> LoadIFrameChannelAsync(
         IAsyncDocumentSession session, string channelId, CancellationToken ct)

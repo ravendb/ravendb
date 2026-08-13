@@ -74,6 +74,8 @@ COPY src/Raven.Quill.Web/package.json \
      src/Raven.Quill.Web/pnpm-lock.yaml \
      src/Raven.Quill.Web/pnpm-workspace.yaml \
     ./src/Raven.Quill.Web/
+# The embeddable widget is its own workspace package, so its manifest belongs in the cached install layer too.
+COPY src/Raven.Quill.Web/packages/widget/package.json ./src/Raven.Quill.Web/packages/widget/
 
 WORKDIR /workspace/src/Raven.Quill.Web
 

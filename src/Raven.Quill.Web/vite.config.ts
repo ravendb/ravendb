@@ -22,6 +22,9 @@ export default defineConfig(({ mode }) => {
                 "/healthz": apiProxyTarget,
                 // Public embed page, iframed by the channel widget preview.
                 "/embed": apiProxyTarget,
+                // The embeddable widget bundle, which the theme editor frames in preview mode. Served from
+                // the backend's wwwroot, so `pnpm build:widget` has to have run at least once.
+                "/widget": apiProxyTarget,
             },
         },
     };
