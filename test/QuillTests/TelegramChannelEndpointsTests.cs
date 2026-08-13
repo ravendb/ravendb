@@ -191,6 +191,78 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Parameter_bindings_are_replaceable_and_validated_after_provision()
+    {
+        await using var app = await NewAppAsync();
+        var agentId = await SeedAgentAsync(app,
+            new AiAgentParameter("customerId", "the customer to scope queries to"));
+
+        var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
+            ChannelType.Telegram, agentId, null,
+            Telegram: new(NewBotToken(), new Dictionary<string, TelegramParameterBinding>
+            {
+                ["customerId"] = new() { Source = TelegramParameterSource.Constant, Value = "customers/1" },
+            })));
+
+        var summary = await app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
+            new(ParameterBindings: new Dictionary<string, TelegramParameterBinding>
+            {
+                ["customerId"] = new() { Source = TelegramParameterSource.Username },
+            })));
+        Assert.Equal(TelegramParameterSource.Username, summary.Telegram!.ParameterBindings["customerId"].Source);
+        Assert.Null(summary.Telegram.ParameterBindings["customerId"].Value);
+
+        var unchanged = await app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest("Renamed", null, null));
+        Assert.Equal(TelegramParameterSource.Username, unchanged.Telegram!.ParameterBindings["customerId"].Source);
+
+        var undeclared = await Assert.ThrowsAsync<QuillHttpException>(() =>
+            app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
+                new(ParameterBindings: new Dictionary<string, TelegramParameterBinding>
+                {
+                    ["customerId"] = new() { Source = TelegramParameterSource.Username },
+                    ["region"] = new() { Source = TelegramParameterSource.Constant, Value = "eu" },
+                }))));
+        Assert.Equal(HttpStatusCode.BadRequest, undeclared.StatusCode);
+        Assert.Contains("undeclared agent parameter(s): region", undeclared.Body);
+
+        await app.DeleteChannelAsync(created.ChannelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Binding_update_covers_an_agent_that_gained_a_parameter()
+    {
+        await using var app = await NewAppAsync();
+        var agentId = await SeedAgentAsync(app);
+
+        var created = await app.ProvisionChannelAsync(
+            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, Telegram: new(NewBotToken())));
+
+        await app.EditAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = agentId,
+            Name = "Telegram Demo Agent",
+            SystemPrompt = "You are a placeholder demo agent.",
+            ConnectionStringName = app.Host.ConnectionStringName,
+            Parameters = [new AiAgentParameter("customerId", "the customer to scope queries to")],
+        });
+
+        var missing = await Assert.ThrowsAsync<QuillHttpException>(() =>
+            app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
+                new(ParameterBindings: new Dictionary<string, TelegramParameterBinding>()))));
+        Assert.Equal(HttpStatusCode.BadRequest, missing.StatusCode);
+        Assert.Contains("missing parameter binding(s) for agent parameter(s): customerId", missing.Body);
+
+        var summary = await app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
+            new(ParameterBindings: new Dictionary<string, TelegramParameterBinding>
+            {
+                ["customerId"] = new() { Source = TelegramParameterSource.UserId },
+            })));
+        Assert.Equal(TelegramParameterSource.UserId, summary.Telegram!.ParameterBindings["customerId"].Source);
+
+        await app.DeleteChannelAsync(created.ChannelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Message_overrides_are_validated_normalized_and_projected()
     {
         await using var app = await NewAppAsync();

@@ -256,7 +256,7 @@ public static class ChannelsEndpoints
         return channel.Type switch
         {
             ChannelType.IFrame => await UpdateIFrameChannelAsync(session, channel, body, app.Slug, channelId, logger, ct),
-            ChannelType.Telegram => await UpdateTelegramChannelAsync(session, channel, body, app, channelId, telegramManager, logger, ct),
+            ChannelType.Telegram => await UpdateTelegramChannelAsync(session, channel, body, app, channelId, store, telegramManager, logger, ct),
             ChannelType.WhatsApp => UpdateWhatsAppChannelAsync(),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{channel.Type}'")),
         };
@@ -307,6 +307,7 @@ public static class ChannelsEndpoints
         UpdateChannelRequest body,
         App app,
         string channelId,
+        IDocumentStore store,
         ITelegramChannelManager telegramManager,
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
@@ -357,6 +358,19 @@ public static class ChannelsEndpoints
 
             channel.Telegram ??= new TelegramSettings();
             channel.Telegram.Messages = messages.HasAnyOverride ? messages : null;
+        }
+
+        if (body.Telegram?.ParameterBindings is { } suppliedBindings)
+        {
+            var config = await AgentLookup.FindAsync(store, app.Database, channel.AgentId, ct);
+            if (config is null)
+                return Results.BadRequest(new ApiErrorResponse($"unknown agentId '{channel.AgentId}'"));
+
+            if (TelegramParameterBindings.TryResolve(config, suppliedBindings, out var bindings, out var paramError) == false)
+                return Results.BadRequest(new ApiErrorResponse(paramError!, Code: "missing_parameters"));
+
+            channel.Telegram ??= new TelegramSettings();
+            channel.Telegram.ParameterBindings = bindings;
         }
 
         if (body.Enabled is not null)
