@@ -403,9 +403,13 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
         var created = await app.ProvisionChannelAsync(
             new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, Telegram: new(NewBotToken())));
         var update = await Assert.ThrowsAsync<QuillHttpException>(() =>
-            app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, [], null)));
+            app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, ["http://localhost"], null)));
         Assert.Equal(HttpStatusCode.BadRequest, update.StatusCode);
         Assert.Contains("allowedOrigins does not apply", update.Body);
+
+        // an empty array is accepted on both arms, matching provision
+        var emptyOrigins = await app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, [], null));
+        Assert.Equal(ChannelType.Telegram, emptyOrigins.Type);
 
         await app.DeleteChannelAsync(created.ChannelId);
     }
