@@ -12,6 +12,7 @@ using Polly;
 using Raven.Quill.Agents;
 using Raven.Quill.AiHelper;
 using Raven.Quill.Auth;
+using Raven.Quill.Embed;
 using Raven.Quill.Endpoints;
 using Raven.Quill.Feedback;
 using Raven.Quill.Hosting;
@@ -101,6 +102,12 @@ builder.Services.AddSingleton<IBootstrapState, BootstrapStateFlag>();
 builder.Services.AddSingleton<IAgentRouter, AgentRouter>();
 builder.Services.AddSingleton<WebhookActionExecutor>();
 builder.Services.AddSingleton<IApiKeyStore, ApiKeyStore>();
+
+// Read once at startup: the widget manifest only changes when the image is rebuilt, and a missing one is
+// worth logging loudly the moment the process starts rather than on the first visitor's request.
+builder.Services.AddSingleton(sp => WidgetAssets.Load(
+    sp.GetRequiredService<IWebHostEnvironment>(),
+    sp.GetRequiredService<ILoggerFactory>().CreateLogger<WidgetAssets>()));
 builder.Services.AddTransient<IFeedbackSender, FeedbackSender>();
 builder.Services.AddTransient<ILicenseStatsProvider, LicenseStatsProvider>();
 if (!isOpenApiDocumentGeneration)

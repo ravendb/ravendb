@@ -3,32 +3,22 @@ import type { ServerApi } from "@/api/generated/server-api";
 
 const baseKey = "web-widget";
 
-// Prefix matching every web widget's customization in an app. `customization` is built from it so
-// the two can't drift, letting a default-styles save invalidate all channels at once (see below).
-const customizationsKey = (slug: string) => [baseKey, "customization", slug];
+// Prefix matching every web widget's theme in an app. `theme` is built from it so the two can't drift,
+// letting a default-theme save invalidate all widgets at once (see below).
+const themesKey = (slug: string) => [baseKey, "theme", slug];
 
 export function createWebWidgetQueries(api: ServerApi["iframe"]) {
     return {
-        customizationsKey,
-        customization: (slug: string, channelId: string) =>
+        themesKey,
+        theme: (slug: string, channelId: string) =>
             queryOptions({
-                queryKey: [...customizationsKey(slug), channelId],
-                queryFn: () => api.getCustomization(slug, channelId),
+                queryKey: [...themesKey(slug), channelId],
+                queryFn: () => api.getTheme(slug, channelId),
             }),
-        defaultCustomization: (slug: string) =>
+        defaultTheme: (slug: string) =>
             queryOptions({
-                queryKey: [baseKey, "default-customization", slug],
-                queryFn: () => api.getDefaultCustomization(slug),
-            }),
-        preview: (slug: string, title?: string) =>
-            queryOptions({
-                queryKey: [baseKey, "preview", slug, title ?? ""],
-                queryFn: () => api.preview(slug, title ? { title } : undefined),
-            }),
-        styleGuide: (slug: string) =>
-            queryOptions({
-                queryKey: [baseKey, "style-guide", slug],
-                queryFn: () => api.getStyleGuide(slug),
+                queryKey: [baseKey, "default-theme", slug],
+                queryFn: () => api.getDefaultTheme(slug),
             }),
     };
 }

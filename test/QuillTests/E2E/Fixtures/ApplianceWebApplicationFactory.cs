@@ -2,8 +2,10 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging.Abstractions;
 using Raven.Client.Documents;
 using Raven.Quill.Auth;
+using Raven.Quill.Embed;
 using Raven.Quill.Hosting;
 
 namespace QuillTests.E2E.Fixtures;
@@ -14,6 +16,28 @@ namespace QuillTests.E2E.Fixtures;
 public sealed class ApplianceWebApplicationFactory : WebApplicationFactory<Program>
 {
     public const string TestApiKey = "test-api-key";
+
+    /// The shape `vite build` emits for the widget package. Tests run against the project's wwwroot, which
+    /// carries no build output, so the bundle is stubbed here to keep the embed page's happy path testable.
+    public const string StubWidgetManifestJson = """
+                                                 {
+                                                   "index.html": {
+                                                     "file": "assets/widget-test123.js",
+                                                     "name": "index",
+                                                     "src": "index.html",
+                                                     "isEntry": true,
+                                                     "css": ["assets/widget-test123.css"],
+                                                     "imports": ["_vendor-test456.js"]
+                                                   },
+                                                   "_vendor-test456.js": {
+                                                     "file": "assets/vendor-test456.js",
+                                                     "name": "vendor"
+                                                   }
+                                                 }
+                                                 """;
+
+    public static WidgetAssets StubWidgetAssets { get; } =
+        WidgetAssets.FromManifestJson(StubWidgetManifestJson, NullLogger.Instance);
 
     private readonly string _setupPackagePath;
     private readonly IDocumentStore _applianceStore;
@@ -45,6 +69,9 @@ public sealed class ApplianceWebApplicationFactory : WebApplicationFactory<Progr
 
             services.RemoveAll<IDocumentStore>();
             services.AddSingleton(_applianceStore);
+
+            services.RemoveAll<WidgetAssets>();
+            services.AddSingleton(StubWidgetAssets);
 
             var toRemove = services
                 .Where(d => d.ImplementationType == typeof(RavenReadinessService))

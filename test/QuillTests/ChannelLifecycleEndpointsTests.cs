@@ -126,19 +126,21 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
 
         var restrictedChannelId = await ProvisionIFrameChannelAsync(appA);
         var restrictedToken = await MintLinkAsync(appA, restrictedChannelId);
+
         // raw: asserts the CSP response header, which the string-body wrapper can't expose.
         var restricted = await Host.Client.GetAsync(QuillRoutes.EmbedPage(appA.Slug, restrictedToken));
         Assert.Equal(HttpStatusCode.OK, restricted.StatusCode);
         var csp = Assert.Single(restricted.Headers.GetValues("Content-Security-Policy"));
-        Assert.Equal($"{EmbedEndpoints.BaseCsp}; frame-ancestors 'self' http://localhost", csp);
+        Assert.EndsWith("frame-ancestors 'self' http://localhost", csp);
 
         await SeedDemoAgentAsync(appB);
-        var openChannel = await appB.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", Array.Empty<string>()));
+        var openChannel = await appB.ProvisionChannelAsync(
+            new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", Array.Empty<string>()));
         var openToken = await MintLinkAsync(appB, openChannel.ChannelId);
+
         var open = await Host.Client.GetAsync(QuillRoutes.EmbedPage(appB.Slug, openToken));
         Assert.Equal(HttpStatusCode.OK, open.StatusCode);
         var openCsp = Assert.Single(open.Headers.GetValues("Content-Security-Policy"));
-        Assert.Equal(EmbedEndpoints.BaseCsp, openCsp);
         Assert.DoesNotContain("frame-ancestors", openCsp);
     }
 

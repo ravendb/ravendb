@@ -18,7 +18,6 @@ internal sealed class Channel
 
     public DateTime CreatedAt { get; set; }
 
-    public IFrameStyle? Style { get; set; }
-
-    public string? CustomCss { get; set; }
+    /// Null means "follow the app-level default" (see <see cref="WidgetThemeResolution"/>). Web-widget only.
+    public WidgetTheme? Theme { get; set; }
 }

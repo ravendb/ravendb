@@ -220,6 +220,18 @@ public sealed class QuillHost : IAsyncDisposable
     public Task<string> GetEmbedPageAsync(string slug, string token) =>
         QuillHttp.GetAsync<string>(Client, QuillRoutes.EmbedPage(slug, token));
 
+    public Task<WidgetThemeResponse> GetWidgetThemeAsync(string slug, string channelId) =>
+        QuillHttp.GetAsync<WidgetThemeResponse>(Client, QuillRoutes.WidgetTheme(slug, channelId));
+
+    public Task<WidgetThemeResponse> UpdateWidgetThemeAsync(string slug, string channelId, UpdateWidgetThemeRequest body) =>
+        QuillHttp.PutAsync<WidgetThemeResponse>(Client, QuillRoutes.WidgetTheme(slug, channelId), body);
+
+    public Task<WidgetDefaultThemeResponse> GetWidgetDefaultThemeAsync(string slug) =>
+        QuillHttp.GetAsync<WidgetDefaultThemeResponse>(Client, QuillRoutes.WidgetDefaultTheme(slug));
+
+    public Task<WidgetDefaultThemeResponse> UpdateWidgetDefaultThemeAsync(string slug, UpdateWidgetThemeRequest body) =>
+        QuillHttp.PutAsync<WidgetDefaultThemeResponse>(Client, QuillRoutes.WidgetDefaultTheme(slug), body);
+
     /// T=string returns the raw NDJSON body. Optional <paramref name="origin"/> exercises the per-link origin gate.
     public Task<string> SendEmbedChatAsync(string slug, string token, string prompt, string? origin = null, CancellationToken ct = default) =>
         QuillHttp.PostAsync<string>(Client, QuillRoutes.EmbedChat(slug, token), new EmbedChatRequest(prompt),

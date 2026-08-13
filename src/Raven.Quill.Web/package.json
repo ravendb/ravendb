@@ -6,9 +6,10 @@
     "packageManager": "pnpm@11.2.2",
     "scripts": {
         "dev": "pnpm generate:api && vite",
-        "build": "pnpm generate:api && tsc -b && vite build",
+        "build": "pnpm generate:api && tsc -b && vite build && pnpm build:widget",
+        "build:widget": "pnpm --filter @raven-quill/widget build && node ./scripts/copy-widget-dist.mjs",
         "generate:api": "node ./scripts/generate-api.mjs",
-        "typecheck": "tsc -b",
+        "typecheck": "tsc -b && pnpm --filter @raven-quill/widget typecheck",
         "lint": "eslint .",
         "lint:fix": "eslint . --fix",
         "format:check": "prettier . --check",
@@ -16,8 +17,8 @@
         "preview": "vite preview",
         "storybook": "storybook dev -p 6006",
         "build-storybook": "storybook build",
-        "test:storybook": "vitest run --project=storybook",
-        "test:unit": "vitest run --project=unit"
+        "test:storybook": "vitest run --project=storybook && pnpm --filter @raven-quill/widget test:storybook",
+        "test:unit": "vitest run --project=unit && pnpm --filter @raven-quill/widget test:unit"
     },
     "dependencies": {
         "@base-ui/react": "^1.5.0",

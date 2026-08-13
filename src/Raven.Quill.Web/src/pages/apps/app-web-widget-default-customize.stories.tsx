@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { iframeHandlers, iframeMocks, SAMPLE_DEFAULT_CSS } from "@/mocks/iframe-mocks";
+import { iframeHandlers, iframeMocks, SAMPLE_CHANNEL_THEME, SAMPLE_FONT_OPTIONS } from "@/mocks/iframe-mocks";
 import { AppWebWidgetDefaultCustomize } from "./app-web-widget-default-customize";
 
 const meta = {
@@ -18,16 +18,19 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-// Nothing saved yet (the common first visit): the Light preset is selected.
+// Nothing saved yet (the common first visit): the built-in default.
 export const Default: Story = {};
 
-// A custom-CSS default has been saved: the "Custom CSS" card is selected and the editor shows it.
-export const WithSavedCss: Story = {
+// An app-wide default the operator has already tailored.
+export const WithSavedTheme: Story = {
     parameters: {
         msw: {
             handlers: {
                 iframe: [
-                    iframeMocks.getDefaultCustomization({ style: "Custom", css: SAMPLE_DEFAULT_CSS }),
+                    iframeMocks.getDefaultTheme({
+                        theme: SAMPLE_CHANNEL_THEME,
+                        fontOptions: SAMPLE_FONT_OPTIONS,
+                    }),
                     ...iframeHandlers(),
                 ],
             },
@@ -35,12 +38,18 @@ export const WithSavedCss: Story = {
     },
 };
 
-// The Dark preset has been saved as the app-wide default.
-export const DarkPreset: Story = {
+// A dark app-wide default.
+export const DarkTheme: Story = {
     parameters: {
         msw: {
             handlers: {
-                iframe: [iframeMocks.getDefaultCustomization({ style: "Dark", css: null }), ...iframeHandlers()],
+                iframe: [
+                    iframeMocks.getDefaultTheme({
+                        theme: { ...SAMPLE_CHANNEL_THEME, appearance: "Dark", accentColor: "#0f766e" },
+                        fontOptions: SAMPLE_FONT_OPTIONS,
+                    }),
+                    ...iframeHandlers(),
+                ],
             },
         },
     },

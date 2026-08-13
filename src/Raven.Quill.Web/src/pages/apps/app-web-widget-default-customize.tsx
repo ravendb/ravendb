@@ -5,32 +5,24 @@ import { api } from "@/api/api";
 import { ApiState } from "@/components/data/api-state";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { appRoutes } from "@/lib/app-routes";
-import { useWebWidgetStyleSave } from "@/pages/apps/channels/use-web-widget-style-save";
-import { WebWidgetStyleEditor } from "@/pages/apps/channels/web-widget-style-editor";
+import { useWebWidgetThemeSave } from "@/pages/apps/channels/use-web-widget-theme-save";
+import { WebWidgetThemeEditor } from "@/pages/apps/channels/web-widget-theme-editor";
 
 export function AppWebWidgetDefaultCustomize() {
     const { slug = "" } = useParams();
 
-    const defaultQuery = useQuery(api.queries.webWidget.defaultCustomization(slug));
-    const styleGuideQuery = useQuery(api.queries.webWidget.styleGuide(slug));
-    const previewQuery = useQuery(api.queries.webWidget.preview(slug));
+    const defaultQuery = useQuery(api.queries.webWidget.defaultTheme(slug));
 
-    const saveMutation = useWebWidgetStyleSave({
-        save: (update) => api.services.iframe.updateDefaultCustomization(slug, update),
+    const saveMutation = useWebWidgetThemeSave({
+        save: (theme) => api.services.iframe.updateDefaultTheme(slug, { theme }),
         invalidateKeys: [
-            api.queries.webWidget.defaultCustomization(slug).queryKey,
-            // Each channel's customization embeds this default as its fallback (defaultCss), so the
-            // saved default must also refresh their cached customizations, not just this page's query.
-            api.queries.webWidget.customizationsKey(slug),
+            api.queries.webWidget.defaultTheme(slug).queryKey,
+            // Each widget's theme response embeds this default as its fallback (defaultTheme), so the saved
+            // default must also refresh their cached responses, not just this page's query.
+            api.queries.webWidget.themesKey(slug),
         ],
-        successMessage: "Default styles saved",
+        successMessage: "Default theme saved",
     });
-
-    const onRetry = async () => {
-        if (defaultQuery.isError) await defaultQuery.refetch();
-        if (styleGuideQuery.isError) await styleGuideQuery.refetch();
-        if (previewQuery.isError) await previewQuery.refetch();
-    };
 
     return (
         <div className="grid gap-5">
@@ -43,27 +35,23 @@ export function AppWebWidgetDefaultCustomize() {
             </Link>
 
             <ApiState
-                isLoading={defaultQuery.isPending || styleGuideQuery.isPending || previewQuery.isPending}
-                isError={defaultQuery.isError || styleGuideQuery.isError || previewQuery.isError}
-                errorTitle="Could not load default styles"
-                onRetry={onRetry}
-                loadingLabel="Loading default styles..."
+                isLoading={defaultQuery.isPending}
+                isError={defaultQuery.isError}
+                errorTitle="Could not load the default theme"
+                onRetry={() => defaultQuery.refetch()}
+                loadingLabel="Loading default theme..."
             >
                 <p className="text-sm text-muted-foreground">
-                    This style applies to every web widget that doesn&rsquo;t choose a style of its own. Pick one of the
-                    built-in styles, or write custom CSS over the widget&rsquo;s base styles.
+                    This theme applies to every web widget that doesn&rsquo;t have one of its own.
                 </p>
 
-                {defaultQuery.data && styleGuideQuery.data && (
-                    <WebWidgetStyleEditor
-                        initialStyle={defaultQuery.data.style ?? "Light"}
-                        initialCss={defaultQuery.data.css ?? ""}
-                        baseCss={styleGuideQuery.data.baseCss}
-                        lightThemeCss={styleGuideQuery.data.lightThemeCss}
-                        darkThemeCss={styleGuideQuery.data.darkThemeCss}
-                        previewHtml={previewQuery.data?.html ?? ""}
+                {defaultQuery.data && (
+                    <WebWidgetThemeEditor
+                        theme={defaultQuery.data.theme}
+                        defaultTheme={defaultQuery.data.theme}
+                        fontOptions={defaultQuery.data.fontOptions}
                         isSaving={saveMutation.isPending}
-                        onSave={(update) => saveMutation.mutate(update)}
+                        onSave={(theme) => saveMutation.mutate(theme)}
                     />
                 )}
 
@@ -71,7 +59,7 @@ export function AppWebWidgetDefaultCustomize() {
                     <Alert variant="destructive">
                         {saveMutation.error instanceof Error
                             ? saveMutation.error.message
-                            : "Could not save default styles."}
+                            : "Could not save the default theme."}
                     </Alert>
                 )}
             </ApiState>
