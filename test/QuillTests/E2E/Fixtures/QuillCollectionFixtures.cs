@@ -208,6 +208,7 @@ public abstract class QuillTelegramTestBase(ITestOutputHelper output, QuillTeleg
     {
         var deadline = DateTime.UtcNow + (timeout ?? TimeSpan.FromSeconds(20));
         var last = Mock.GetUpdatesCallCount(token);
+        var quietWindows = 0;
 
         while (true)
         {
@@ -215,11 +216,17 @@ public abstract class QuillTelegramTestBase(ITestOutputHelper output, QuillTeleg
 
             var current = Mock.GetUpdatesCallCount(token);
             if (current == last)
-                return current;
+            {
+                // one quiet window can be a scheduler stall on a loaded runner; require two in a row
+                if (++quietWindows >= 2)
+                    return current;
+                continue;
+            }
 
             if (DateTime.UtcNow > deadline)
                 throw new TimeoutException($"Telegram polling never settled; still at {current} calls");
 
+            quietWindows = 0;
             last = current;
         }
     }
