@@ -13,6 +13,19 @@ export type DatePeriod = {
     day: number | null;
 };
 
+// The lower bound a view can select, read from a server timestamp. Returns undefined for
+// the values a server reports when it has none (missing, unparsable, the 0001-01-01
+// default, or a clock-skewed future date), because a bogus bound would block more of the
+// calendar than it should.
+export function parseStartDate(value: string | null | undefined): Date | undefined {
+    if (!value) return undefined;
+    const startDate = new Date(value);
+    if (Number.isNaN(startDate.getTime()) || startDate.getFullYear() < 2000 || startDate > new Date()) {
+        return undefined;
+    }
+    return startOfDay(startDate);
+}
+
 export function getDefaultDatePeriod(): DatePeriod {
     const now = new Date();
     return { year: now.getFullYear(), month: now.getMonth() + 1, day: null };

@@ -9,7 +9,7 @@ import { DatePeriodPicker } from "@/components/data/date-period-picker";
 import { WruLabel } from "@/components/data/wru-label";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/shadcn/ui/card";
 import { canDrillInto, drillInto, formatPeriodLabel, getDefaultDatePeriod, type DatePeriod } from "@/lib/date-period";
-import { useSetupStartDate } from "@/lib/use-setup-start-date";
+import { useSetupStartDate } from "@/lib/use-start-date";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/ui/table";
 import { formatCompact } from "@/lib/format";
 
@@ -35,7 +35,7 @@ export function DashboardUsage() {
         <div className="space-y-5">
             <div className="flex items-center justify-between gap-3">
                 <h1 className="text-2xl font-semibold tracking-tight">Usage</h1>
-                <DatePeriodPicker value={period} onChange={setPeriod} />
+                <DatePeriodPicker value={period} earliest={setupStartDate} onChange={setPeriod} />
             </div>
 
             <Card>

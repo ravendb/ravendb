@@ -4,12 +4,14 @@ import { api } from "@/api/api";
 import { ApiState } from "@/components/data/api-state";
 import { DatePeriodPicker } from "@/components/data/date-period-picker";
 import { getDefaultDatePeriod } from "@/lib/date-period";
+import { useSetupStartDate } from "@/lib/use-start-date";
 import { DashboardAppsTable } from "@/pages/dashboard/dashboard-apps-table";
 import { StatCardsSection } from "@/pages/dashboard/dashboard-stat-cards";
 import { buildUsageStatCards } from "@/pages/dashboard/usage-stat-cards";
 
 export function DashboardHome() {
     const [period, setPeriod] = useState(getDefaultDatePeriod);
+    const setupStartDate = useSetupStartDate();
 
     const usageQuery = useQuery(api.queries.stats.usage(period));
     const appsQuery = useQuery(api.queries.stats.dashboardApps());
@@ -26,7 +28,7 @@ export function DashboardHome() {
                 // The period also drives the apps table below, so the picker stays at page level.
                 <div className="space-y-4">
                     <div className="flex justify-end">
-                        <DatePeriodPicker value={period} onChange={setPeriod} />
+                        <DatePeriodPicker value={period} earliest={setupStartDate} onChange={setPeriod} />
                     </div>
                     <StatCardsSection cards={cards} />
                 </div>
