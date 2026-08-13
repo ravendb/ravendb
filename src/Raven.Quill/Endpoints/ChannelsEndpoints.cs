@@ -322,7 +322,7 @@ public static class ChannelsEndpoints
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
-        if (body.AllowedOrigins is not null)
+        if (body.AllowedOrigins is { Length: > 0 })
             return Results.BadRequest(new ApiErrorResponse("allowedOrigins does not apply to Telegram channels"));
 
         if (body.DisplayName is not null)
