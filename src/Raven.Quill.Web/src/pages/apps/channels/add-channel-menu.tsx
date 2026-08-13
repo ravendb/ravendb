@@ -16,12 +16,10 @@ import { WebWidgetChannelForm, type FixedAgent } from "@/pages/apps/channels/web
 type ChannelOptionId = "web-widget" | "telegram";
 
 type ChannelOption = {
-    id: string;
     label: string;
     description: string;
     icon: LucideIcon;
-    enabled: boolean;
-};
+} & ({ id: ChannelOptionId; enabled: true } | { id: string; enabled: false });
 
 // The web widget and Telegram are backed by the channels API today; the rest are previewed as disabled.
 const CHANNEL_OPTIONS: ChannelOption[] = [
@@ -83,7 +81,7 @@ export function AddChannelMenu({
                             key={option.id}
                             className="items-start gap-2.5 py-2"
                             disabled={!option.enabled}
-                            onSelect={option.enabled ? () => setOpenOption(option.id as ChannelOptionId) : undefined}
+                            onSelect={option.enabled ? () => setOpenOption(option.id) : undefined}
                         >
                             <option.icon className="mt-0.5 size-4 text-muted-foreground" aria-hidden="true" />
                             <div className="flex flex-col gap-0.5">
