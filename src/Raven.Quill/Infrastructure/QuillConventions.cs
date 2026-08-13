@@ -15,6 +15,7 @@ public static class QuillConventions
         type == typeof(Channel) ? "@channels"
         : type == typeof(EmbedLink) ? "@embed-links"
         : type == typeof(TelegramLink) ? "@telegram-links"
+        : type == typeof(TelegramBotReservation) ? "@telegram-bots"
         : type == typeof(ConversationPreview) ? ConversationPreview.Collection // "@ConversationPreviews"
         : type == typeof(AgentActionBindings) ? "@agent-actions"
         : DocumentConventions.DefaultGetCollectionName(type);
