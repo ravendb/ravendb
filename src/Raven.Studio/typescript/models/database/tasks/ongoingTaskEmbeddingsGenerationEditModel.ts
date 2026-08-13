@@ -50,6 +50,7 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
     queryingMaxTokensPerChunk = ko.observable<number>(null);
     queryingOverlapTokens = ko.observable<number>(null);
     embeddingsCacheForQueryingExpiration = ko.observable<number>(defaultEmbeddingsCacheForQueryingExpiration);
+    storeChunkText = ko.observable<boolean>(false);
 
     quantizationType = ko.observable<Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType>("Single");
     quantizationTypeOptions: valueAndLabelItem<Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType, string>[] = [
@@ -443,6 +444,7 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
             if (configuration.EmbeddingsCacheForQueryingExpiration) {
                 this.embeddingsCacheForQueryingExpiration(genUtils.timeSpanToSeconds(configuration.EmbeddingsCacheForQueryingExpiration));
             }
+            this.storeChunkText(configuration.StoreChunkText ?? false);
             if (configuration.EmbeddingsPathConfigurations) {
                 this.embeddingPathConfigurations(configuration.EmbeddingsPathConfigurations);
             }
@@ -493,6 +495,7 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
                 ContextPrefix: null
             },
             Quantization: this.quantizationType(),
+            StoreChunkText: this.storeChunkText(),
             EmbeddingsTransformation: this.embeddingsSource() === "script" ? {
                 Script: this.script(), ChunkingOptions: { OverlapTokens: this.transformationOverlapTokens() ?? 0, MaxTokensPerChunk: this.transformationMaxTokensPerChunk() ?? this.maxTokensPerChunkDefaultValue(), ChunkingMethod: this.transformationChunkingMethod(), ContextPrefix: null }
             } : null,

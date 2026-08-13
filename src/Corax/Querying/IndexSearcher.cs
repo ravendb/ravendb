@@ -31,6 +31,11 @@ namespace Corax.Querying;
 public sealed unsafe partial class IndexSearcher : IDisposable
 {
     internal static readonly long BitmapMemoryRequiredThresholdInBytes = new Size(32, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
+
+    private const long BitmapAndFillDensityDivisor = 256;
+    private const long BitmapOrFillDensityDivisor = 32;
+    internal const int BitmapAndFillSingleBatchThreshold = 4096;
+    
     internal readonly Transaction _transaction;
     private Dictionary<string, Slice> _dynamicFieldNameMapping;
 
@@ -115,7 +120,39 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     public bool DocumentsAreBoosted => GetDocumentBoostTree().NumberOfEntries > 0;
 
-    
+    public BitmapAndFillMode BitmapAndFillMode = BitmapAndFillMode.Auto;
+
+    // Heuristic: we will use streaming mechanism when one side is small. However, when we don't know - we will risk it and use bitmap
+    // because penalty for using bitmap is constant, and if inner is big we can pay a lot of more in term of performance.
+    internal bool BitmapSideQualifies(long count, QueryCountConfidence confidence)
+    {
+        return confidence != QueryCountConfidence.High || count >= (LastEntryId + 1) / BitmapAndFillDensityDivisor;
+    }
+
+    internal bool BitmapOrQualifies(long innerCount, QueryCountConfidence innerConfidence, long outerCount, QueryCountConfidence outerConfidence)
+    {
+        var trusted = 0L;
+        if (innerConfidence == QueryCountConfidence.High)
+            trusted += innerCount;
+        if (outerConfidence == QueryCountConfidence.High)
+            trusted += outerCount;
+
+        var anyUnknown = innerConfidence != QueryCountConfidence.High || outerConfidence != QueryCountConfidence.High;
+        var divisor = anyUnknown ? BitmapOrFillDensityDivisor * 2 : BitmapOrFillDensityDivisor;
+        return trusted >= (LastEntryId + 1) / divisor;
+    }
+
+    internal bool BitmapMemoryFits(int bitmaps)
+    {
+        // The budget is the memoization limit ('Indexing.Corax.MaxMemoizationSizeInMb', scales with
+        // the machine): the bitmap route replaces what the classic fill would otherwise memoize, and
+        // a node's bitmaps (id-space-sized, LastEntryId/8 bytes each, known upfront) are usually
+        // smaller than that result-sized buffer. Over budget nothing fails - unlike memoization -
+        // the query just stays on the classic fill.
+        var wordsPerBitmap = (LastEntryId + 1 + 63) / 64;
+        return bitmaps * wordsPerBitmap * sizeof(ulong) <= MaxMemoizationSizeInBytes;
+    }
+
     // The reason why we want to have the transaction open for us is so that we avoid having
     // to explicitly provide the index searcher with opening semantics and also every new
     // searcher becomes essentially a unit of work which makes reusing assets tracking more explicit.

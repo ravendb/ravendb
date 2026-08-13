@@ -1,20 +1,12 @@
 import { ReactNode, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
 import { ViewSheet } from "components/common/splitView/ViewSheet";
+import { SheetSlideDirection, SheetSlideTransition } from "components/common/splitView/SheetSlideNavigation";
 import { Icon } from "components/common/Icon";
 import { NodeLocationTabs } from "components/pages/database/tasks/ongoingTasks/partials/NodeLocationSelect";
 
-type Direction = 1 | -1;
-
-const slideVariants = {
-    enter: (d: Direction) => ({ x: `${d * 100}%` }),
-    center: { x: 0 },
-    exit: (d: Direction) => ({ x: `${d * -100}%` }),
-};
-
 export function useNodeSlider(initialNodeIndex: number, onNodeChange?: (index: number) => void) {
     const [selectedIndex, setSelectedIndex] = useState(initialNodeIndex);
-    const [direction, setDirection] = useState<Direction>(1);
+    const [direction, setDirection] = useState<SheetSlideDirection>(1);
     const [prevInitialNodeIndex, setPrevInitialNodeIndex] = useState(initialNodeIndex);
 
     if (initialNodeIndex !== prevInitialNodeIndex) {
@@ -37,7 +29,7 @@ interface ProgressDetailsSheetShellProps {
     title: ReactNode;
     locations: { nodeTag: string; shardNumber?: number }[];
     selectedIndex: number;
-    direction: Direction;
+    direction: SheetSlideDirection;
     onNodeChange: (index: number) => void;
     children: ReactNode;
 }
@@ -71,21 +63,9 @@ export function ProgressDetailsSheetShell({
                 </div>
             </ViewSheet.Header>
             <ViewSheet.Body className="p-3">
-                <div style={{ overflow: "hidden", position: "relative" }}>
-                    <AnimatePresence mode="popLayout" custom={direction} initial={false}>
-                        <motion.div
-                            key={selectedIndex}
-                            custom={direction}
-                            variants={slideVariants}
-                            initial="enter"
-                            animate="center"
-                            exit="exit"
-                            transition={{ duration: 0.3, ease: "easeInOut" }}
-                        >
-                            {children}
-                        </motion.div>
-                    </AnimatePresence>
-                </div>
+                <SheetSlideTransition currentIndex={selectedIndex} direction={direction}>
+                    {children}
+                </SheetSlideTransition>
             </ViewSheet.Body>
         </ViewSheet>
     );

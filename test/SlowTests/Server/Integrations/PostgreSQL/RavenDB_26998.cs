@@ -1,9 +1,6 @@
 using System;
-using System.Buffers.Binary;
-using System.IO;
 using System.IO.Pipelines;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -12,6 +9,7 @@ using Raven.Server.Integrations.PostgreSQL.Messages;
 using Raven.Server.Integrations.PostgreSQL.PowerBI;
 using Tests.Infrastructure;
 using Xunit;
+using static Tests.Infrastructure.PostgreSqlHelper;
 
 namespace SlowTests.Server.Integrations.PostgreSQL;
 
@@ -148,43 +146,16 @@ public class RavenDB_26998 : RavenTestBase
         }
     }
 
-    private static async Task<byte[]> ReadAllAsync(PipeReader reader, CancellationToken token)
-    {
-        var ms = new MemoryStream();
-        while (true)
-        {
-            var result = await reader.ReadAsync(token);
-            foreach (var segment in result.Buffer)
-                ms.Write(segment.Span);
-            reader.AdvanceTo(result.Buffer.End);
-            if (result.IsCompleted)
-                break;
-        }
-        await reader.CompleteAsync();
-        return ms.ToArray();
-    }
-    
     private static int ParseCommandCompleteRowCount(byte[] buffer)
     {
-        int i = 0;
-        while (i + 5 <= buffer.Length)
+        foreach (var message in ParseMessages(buffer))
         {
-            var type = buffer[i];
-            int length = BinaryPrimitives.ReadInt32BigEndian(buffer.AsSpan(i + 1, 4));
-            int payloadStart = i + 5;
-            int payloadLength = length - 4;
-            if (payloadLength < 0 || payloadStart + payloadLength > buffer.Length)
-                break;
+            if (message.Type != MessageType.CommandComplete)
+                continue;
 
-            if (type == (byte)'C')
-            {
-                var tag = Encoding.ASCII.GetString(buffer, payloadStart, payloadLength).TrimEnd('\0');
-                var parts = tag.Split(' ');
-                if (parts.Length == 2 && parts[0] == "SELECT" && int.TryParse(parts[1], out var n))
-                    return n;
-            }
-
-            i = payloadStart + payloadLength;
+            var parts = message.AsCommandCompleteTag().Split(' ');
+            if (parts.Length == 2 && parts[0] == "SELECT" && int.TryParse(parts[1], out var n))
+                return n;
         }
 
         throw new InvalidOperationException("No CommandComplete 'SELECT N' tag found in Execute output.");

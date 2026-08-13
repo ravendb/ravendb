@@ -15,7 +15,7 @@ import React from "react";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 const indexErrorsSheetConfig: Pick<OpenSheetOptions, "initialWidth" | "minWidth" | "maxWidth"> = {
-    initialWidth: "40%",
+    initialWidth: "60%",
     minWidth: "25%",
     maxWidth: "60%",
 };
@@ -125,17 +125,13 @@ const HyperlinkIndexCellValue = ({ getValue, table }: HyperlinkIndexCellValuePro
     const editIndexLink = disableLinks ? null : getLinkToIndex(getValue());
     if (editIndexLink) {
         return (
-            <CellWithCopy value={getValue()}>
+            <div className="cell-value">
                 <a href={editIndexLink}>{String(getValue())}</a>
-            </CellWithCopy>
+            </div>
         );
     }
 
-    return (
-        <CellWithCopy value={getValue()}>
-            <CellValue value={getValue()} />
-        </CellWithCopy>
-    );
+    return <CellValue value={getValue()} />;
 };
 
 type CellValueButtonWrapperProps = CellContext<IndexErrorPerDocument, unknown>;
@@ -186,7 +182,13 @@ const IndexErrorsCellWithCopyWrapper = ({ getValue, row, table }: IndexErrorsCel
     );
 
     return (
-        <CellWithCopy additionalButtons={additionalButtons} value={getValue()}>
+        <CellWithCopy
+            additionalButtons={additionalButtons}
+            value={getValue()}
+            previewCode={String(getValue() ?? "")}
+            previewLanguage="csharp"
+            popoverMaxWidth="800px"
+        >
             <CellValue value={getValue()} />
         </CellWithCopy>
     );
