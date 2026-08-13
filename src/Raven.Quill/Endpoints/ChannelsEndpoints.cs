@@ -2,6 +2,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Database;
 using Raven.Quill.Agents;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
@@ -9,6 +10,7 @@ using Raven.Quill.Endpoints.Helpers;
 using Raven.Quill.Raven;
 using Raven.Quill.Telegram;
 using Raven.Quill.Wizard;
+using TelegramUser = Telegram.Bot.Types.User;
 
 namespace Raven.Quill.Endpoints;
 
@@ -163,13 +165,6 @@ public static class ChannelsEndpoints
         if (bot is null)
             return Results.BadRequest(new ApiErrorResponse(botError!));
 
-        using var session = store.OpenAsyncSession(app.Database);
-
-        var reservationId = TelegramBotReservation.IdFor(bot.Id);
-        var reservation = await session.LoadAsync<TelegramBotReservation>(reservationId, ct);
-        if (reservation is not null && await session.LoadAsync<Channel>(reservation.ChannelId, ct) is not null)
-            return Results.BadRequest(new ApiErrorResponse($"bot @{bot.Username} is already connected in this app"));
-
         var channelId = Guid.NewGuid().ToString("N");
         var channel = new Channel
         {
@@ -189,25 +184,21 @@ public static class ChannelsEndpoints
             },
         };
 
-        await session.StoreAsync(channel, ct);
-        if (reservation is null)
-        {
-            await session.StoreAsync(new TelegramBotReservation { ChannelId = channel.Id! }, string.Empty, reservationId, ct);
-        }
-        else
-        {
-            // a reservation without a live channel is an orphan; reclaim it under its change vector
-            reservation.ChannelId = channel.Id!;
-            await session.StoreAsync(reservation, session.Advanced.GetChangeVectorFor(reservation), reservationId, ct);
-        }
+        var (reserved, owner) = await TryReserveBotAsync(store, bot.Id, app.Database, channel.Id!, ct);
+        if (reserved == false)
+            return Results.BadRequest(new ApiErrorResponse(AlreadyConnected(bot.Username, owner)));
 
+        // reserved before the channel exists: a crash here leaves an orphan the next attempt reclaims
         try
         {
+            using var session = store.OpenAsyncSession(app.Database);
+            await session.StoreAsync(channel, ct);
             await session.SaveChangesAsync(ct);
         }
-        catch (ConcurrencyException)
+        catch
         {
-            return Results.BadRequest(new ApiErrorResponse($"bot @{bot.Username} is already connected in this app"));
+            await TryReleaseBotAsync(store, bot.Id, app.Database, channel.Id!, logger);
+            throw;
         }
 
         telegramManager.Wake();
@@ -333,6 +324,8 @@ public static class ChannelsEndpoints
         }
 
         var tokenRotated = false;
+        TelegramUser? rotatedBot = null;
+        var previousBotId = 0L;
         if (string.IsNullOrWhiteSpace(body.Telegram?.BotToken) == false)
         {
             var botToken = body.Telegram.BotToken.Trim();
@@ -342,23 +335,8 @@ public static class ChannelsEndpoints
 
             if (bot.Id != channel.Telegram?.BotId)
             {
-                var reservationId = TelegramBotReservation.IdFor(bot.Id);
-                var reservation = await session.LoadAsync<TelegramBotReservation>(reservationId, ct);
-                if (reservation is not null && reservation.ChannelId != channel.Id)
-                {
-                    if (await session.LoadAsync<Channel>(reservation.ChannelId, ct) is not null)
-                        return Results.BadRequest(new ApiErrorResponse($"bot @{bot.Username} is already connected in this app"));
-
-                    // a reservation without a live channel is an orphan; reclaim it under its change vector
-                    reservation.ChannelId = channel.Id!;
-                    await session.StoreAsync(reservation, session.Advanced.GetChangeVectorFor(reservation), reservationId, ct);
-                }
-
-                if (channel.Telegram?.BotId is > 0)
-                    session.Delete(TelegramBotReservation.IdFor(channel.Telegram.BotId));
-
-                if (reservation is null)
-                    await session.StoreAsync(new TelegramBotReservation { ChannelId = channel.Id! }, string.Empty, reservationId, ct);
+                rotatedBot = bot;
+                previousBotId = channel.Telegram?.BotId ?? 0;
             }
 
             channel.Telegram ??= new TelegramSettings();
@@ -393,14 +371,27 @@ public static class ChannelsEndpoints
         if (body.Enabled is not null)
             channel.Enabled = body.Enabled.Value;
 
+        if (rotatedBot is not null)
+        {
+            var (reserved, owner) = await TryReserveBotAsync(store, rotatedBot.Id, app.Database, channel.Id!, ct);
+            if (reserved == false)
+                return Results.BadRequest(new ApiErrorResponse(AlreadyConnected(rotatedBot.Username, owner)));
+        }
+
         try
         {
             await session.SaveChangesAsync(ct);
         }
-        catch (ConcurrencyException)
+        catch
         {
-            return Results.BadRequest(new ApiErrorResponse("the bot is already connected in this app"));
+            if (rotatedBot is not null)
+                await TryReleaseBotAsync(store, rotatedBot.Id, app.Database, channel.Id!, logger);
+            throw;
         }
+
+        // the old token stays reserved until the rotate is durable
+        if (rotatedBot is not null && previousBotId > 0)
+            await TryReleaseBotAsync(store, previousBotId, app.Database, channel.Id!, logger);
 
         telegramManager.Wake();
 
@@ -434,7 +425,7 @@ public static class ChannelsEndpoints
         return channel.Type switch
         {
             ChannelType.IFrame => await DeleteIFrameChannelAsync(session, channel, app.Slug, channelId, logger, ct),
-            ChannelType.Telegram => await DeleteTelegramChannelAsync(session, channel, app.Slug, channelId, telegramManager, logger, ct),
+            ChannelType.Telegram => await DeleteTelegramChannelAsync(session, channel, app, channelId, store, telegramManager, logger, ct),
             ChannelType.WhatsApp => DeleteWhatsAppChannelAsync(),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{channel.Type}'")),
         };
@@ -458,24 +449,107 @@ public static class ChannelsEndpoints
     private static async Task<IResult> DeleteTelegramChannelAsync(
         IAsyncDocumentSession session,
         Channel channel,
-        string slug,
+        App app,
         string channelId,
+        IDocumentStore store,
         ITelegramChannelManager telegramManager,
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
         session.Delete(channel);
-        if (channel.Telegram?.BotId is > 0)
-            session.Delete(TelegramBotReservation.IdFor(channel.Telegram.BotId));
         await session.SaveChangesAsync(ct);
+
+        if (channel.Telegram?.BotId is > 0)
+            await TryReleaseBotAsync(store, channel.Telegram.BotId, app.Database, channel.Id!, logger);
 
         telegramManager.Wake();
 
-        logger.LogInformation("Deleted Telegram channel slug={Slug} channelId={ChannelId}", slug, channelId);
+        logger.LogInformation("Deleted Telegram channel slug={Slug} channelId={ChannelId}", app.Slug, channelId);
         return Results.NoContent();
     }
 
     private static IResult DeleteWhatsAppChannelAsync() => NotImplementedChannel(ChannelType.WhatsApp);
+
+    private static string AlreadyConnected(string? botUsername, string? ownerDatabase) =>
+        ownerDatabase is null
+            ? $"bot @{botUsername} is already connected"
+            : $"bot @{botUsername} is already connected in app '{ownerDatabase}'";
+
+    private static async Task<(bool Reserved, string? OwnerDatabase)> TryReserveBotAsync(
+        IDocumentStore store, long botId, string database, string channelId, CancellationToken ct)
+    {
+        using var configSession = store.OpenAsyncSession();
+
+        var reservationId = TelegramBotReservation.IdFor(botId);
+        var reservation = await configSession.LoadAsync<TelegramBotReservation>(reservationId, ct);
+        if (reservation is not null && reservation.Database == database && reservation.ChannelId == channelId)
+            return (true, null);
+
+        if (reservation is null)
+        {
+            await configSession.StoreAsync(
+                new TelegramBotReservation { Database = database, ChannelId = channelId },
+                string.Empty, reservationId, ct);
+        }
+        else
+        {
+            if (await IsReservationLiveAsync(store, reservation, botId, ct))
+                return (false, reservation.Database);
+
+            // a reservation without a live matching channel is an orphan; reclaim it under its change vector
+            reservation.Database = database;
+            reservation.ChannelId = channelId;
+            await configSession.StoreAsync(
+                reservation, configSession.Advanced.GetChangeVectorFor(reservation), reservationId, ct);
+        }
+
+        try
+        {
+            await configSession.SaveChangesAsync(ct);
+            return (true, null);
+        }
+        catch (ConcurrencyException)
+        {
+            return (false, null);
+        }
+    }
+
+    // live = the reserved channel still exists and still uses this bot
+    private static async Task<bool> IsReservationLiveAsync(
+        IDocumentStore store, TelegramBotReservation reservation, long botId, CancellationToken ct)
+    {
+        try
+        {
+            using var session = store.OpenAsyncSession(reservation.Database);
+            var channel = await session.LoadAsync<Channel>(reservation.ChannelId, ct);
+            return channel?.Telegram?.BotId == botId;
+        }
+        catch (DatabaseDoesNotExistException)
+        {
+            return false;
+        }
+    }
+
+    private static async Task TryReleaseBotAsync(
+        IDocumentStore store, long botId, string database, string channelId, ILogger<ChannelsLogger> logger)
+    {
+        var reservationId = TelegramBotReservation.IdFor(botId);
+        try
+        {
+            using var configSession = store.OpenAsyncSession();
+            var reservation = await configSession.LoadAsync<TelegramBotReservation>(reservationId);
+            if (reservation is null || reservation.Database != database || reservation.ChannelId != channelId)
+                return;
+
+            configSession.Delete(reservation);
+            await configSession.SaveChangesAsync();
+        }
+        catch (Exception e)
+        {
+            // an unreleased reservation is an orphan the next reserve attempt reclaims
+            logger.LogWarning("Telegram bot reservation {ReservationId} was not released: {Error}", reservationId, e.Message);
+        }
+    }
 
     private static IResult NotImplementedChannel(ChannelType type) =>
         Results.Problem(
