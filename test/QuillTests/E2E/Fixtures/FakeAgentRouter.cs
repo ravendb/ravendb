@@ -15,8 +15,6 @@ internal sealed class FakeAgentRouter : IAgentRouter
 
     public string[] Chunks { get; set; } = ["Hello ", "from the fake agent."];
 
-    public string? Reply { get; set; }
-
     public TimeSpan ChunkDelay { get; set; }
 
     public Func<AgentRequest, Task>? BeforeRun { get; set; }
@@ -42,7 +40,7 @@ internal sealed class FakeAgentRouter : IAgentRouter
                 await Task.Delay(ChunkDelay, ct);
         }
 
-        var reply = Reply ?? string.Concat(Chunks);
+        var reply = string.Concat(Chunks);
         return new AgentRunResult(new { reply }, request.ConversationId);
     }
 
@@ -51,7 +49,6 @@ internal sealed class FakeAgentRouter : IAgentRouter
         lock (_lock)
             _requests.Clear();
         Chunks = ["Hello ", "from the fake agent."];
-        Reply = null;
         ChunkDelay = TimeSpan.Zero;
         BeforeRun = null;
         Failure = null;
