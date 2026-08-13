@@ -120,7 +120,18 @@ internal sealed class TelegramChannelManager(
             if (_bots.TryRemove(key, out _) == false)
                 continue;
 
-            await bot.StopAsync();
+            try
+            {
+                await bot.StopAsync();
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                logger.LogWarning(
+                    "Telegram bot stop failed for channel {ChannelId} on {Database}: {Error}",
+                    key.ChannelId, key.Database, e.Message);
+                continue;
+            }
+
             logger.LogInformation(
                 "Telegram bot stopped for channel {ChannelId} on {Database}", key.ChannelId, key.Database);
         }
@@ -130,8 +141,19 @@ internal sealed class TelegramChannelManager(
             if (_bots.ContainsKey(key))
                 continue;
 
-            _bots[key] = TelegramBotRuntime.Start(
-                key.Database, entry.Channel, entry.ChangeVector, botFactory, store, router, options.Value, logger);
+            try
+            {
+                _bots[key] = TelegramBotRuntime.Start(
+                    key.Database, entry.Channel, entry.ChangeVector, botFactory, store, router, options.Value, logger);
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                // an unstartable channel doc must not starve the entries after it
+                logger.LogWarning(
+                    "Telegram bot failed to start for channel {ChannelId} on {Database}: {Error}",
+                    key.ChannelId, key.Database, e.Message);
+                continue;
+            }
 
             logger.LogInformation(
                 "Telegram bot started for channel {ChannelId} (bot @{Bot}) on {Database}",

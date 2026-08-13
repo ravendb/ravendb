@@ -414,6 +414,46 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_channel_doc_that_cannot_start_does_not_starve_other_channels()
+    {
+        await using var host = await NewHostAsync();
+        var app = await NewAppAsync(host);
+        await using var appGuard = app;
+
+        // sorts before every provisioned channel, so the apply pass visits it first
+        using (var session = app.Store.OpenAsyncSession(app.Slug))
+        {
+            await session.StoreAsync(new Channel
+            {
+                Id = Channel.IdPrefix + "!poisoned",
+                Type = ChannelType.Telegram,
+                AgentId = "missing",
+                Enabled = true,
+                CreatedAt = DateTime.UtcNow,
+                Telegram = new TelegramSettings { BotToken = "not-a-token" },
+            });
+            await session.SaveChangesAsync();
+        }
+
+        var agentId = "tg-agent-" + Guid.NewGuid().ToString("N")[..8];
+        await app.ProvisionAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = agentId,
+            Name = "Telegram Demo Agent",
+            SystemPrompt = "You are a placeholder demo agent.",
+            ConnectionStringName = app.Host.ConnectionStringName,
+        });
+
+        var token = NewBotToken();
+        var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
+            ChannelType.Telegram, agentId, null, Telegram: new(token)));
+
+        await Mock.WaitUntilAsync(() => Mock.GetUpdatesCallCount(token) >= 1, "the healthy channel's poller");
+
+        await app.DeleteChannelAsync(created.ChannelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Message_overrides_apply_to_a_running_bot()
     {
         var (app, channelId, token) = await ProvisionAsync(
