@@ -395,59 +395,52 @@ public static class ChannelsEndpoints
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
-        Channel? channel;
-        using (var session = store.OpenAsyncSession(app.Database))
-            channel = await session.LoadAsync<Channel>(Channel.IdPrefix + channelId, ct);
-
+        using var session = store.OpenAsyncSession(app.Database);
+        var channel = await session.LoadAsync<Channel>(Channel.IdPrefix + channelId, ct);
         if (channel is null)
             return Results.NotFound(new ApiErrorResponse($"no channel '{channelId}' in app '{slug}'"));
 
         return channel.Type switch
         {
-            ChannelType.IFrame => await DeleteIFrameChannelAsync(store, app, channelId, logger, ct),
-            ChannelType.Telegram => await DeleteTelegramChannelAsync(store, app, channel, channelId, telegramManager, logger, ct),
+            ChannelType.IFrame => await DeleteIFrameChannelAsync(session, channel, app.Slug, channelId, logger, ct),
+            ChannelType.Telegram => await DeleteTelegramChannelAsync(session, channel, app.Slug, channelId, telegramManager, logger, ct),
             ChannelType.WhatsApp => DeleteWhatsAppChannelAsync(),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{channel.Type}'")),
         };
     }
 
     private static async Task<IResult> DeleteIFrameChannelAsync(
-        IDocumentStore store,
-        App app,
+        IAsyncDocumentSession session,
+        Channel channel,
+        string slug,
         string channelId,
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
-        using (var session = store.OpenAsyncSession(app.Database))
-        {
-            session.Delete(Channel.IdPrefix + channelId);
-            await session.SaveChangesAsync(ct);
-        }
+        session.Delete(channel);
+        await session.SaveChangesAsync(ct);
 
-        logger.LogInformation("Deleted iFrame channel slug={Slug} channelId={ChannelId}", app.Slug, channelId);
+        logger.LogInformation("Deleted iFrame channel slug={Slug} channelId={ChannelId}", slug, channelId);
         return Results.NoContent();
     }
 
     private static async Task<IResult> DeleteTelegramChannelAsync(
-        IDocumentStore store,
-        App app,
+        IAsyncDocumentSession session,
         Channel channel,
+        string slug,
         string channelId,
         ITelegramChannelManager telegramManager,
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
-        using (var session = store.OpenAsyncSession(app.Database))
-        {
-            session.Delete(Channel.IdPrefix + channelId);
-            if (channel.Telegram?.BotId is > 0)
-                session.Delete(TelegramBotReservation.IdFor(channel.Telegram.BotId));
-            await session.SaveChangesAsync(ct);
-        }
+        session.Delete(channel);
+        if (channel.Telegram?.BotId is > 0)
+            session.Delete(TelegramBotReservation.IdFor(channel.Telegram.BotId));
+        await session.SaveChangesAsync(ct);
 
         telegramManager.Wake();
 
-        logger.LogInformation("Deleted Telegram channel slug={Slug} channelId={ChannelId}", app.Slug, channelId);
+        logger.LogInformation("Deleted Telegram channel slug={Slug} channelId={ChannelId}", slug, channelId);
         return Results.NoContent();
     }
 
