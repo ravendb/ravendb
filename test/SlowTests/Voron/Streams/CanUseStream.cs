@@ -3,6 +3,7 @@ using System.IO;
 using FastTests.Voron.FixedSize;
 using Tests.Infrastructure;
 using Voron;
+using Voron.Data.BTrees;
 using Xunit;
 
 namespace SlowTests.Voron.Streams
@@ -203,6 +204,25 @@ namespace SlowTests.Voron.Streams
                 {
                     Assert.Equal(tree.State.Header.OverflowPages + tree.State.Header.BranchPages + tree.State.Header.LeafPages, tree.AllPages().Count);
                 }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Voron)]
+        public void StreamTagLargerThanInfoPageIsRejected()
+        {
+            using (var tx = Env.WriteTransaction())
+            {
+                var tree = tx.CreateTree("Files");
+
+                Assert.Throws<ArgumentException>(() =>
+                    tree.AddStream("key", new MemoryStream(new byte[128]), tag: new string('x', Tree.MaxStreamTagSize + 1)));
+
+                // The cap, not a blanket rejection: the largest tag that fits still round-trips.
+                var maxTag = new string('x', Tree.MaxStreamTagSize);
+                tree.AddStream("key", new MemoryStream(new byte[128]), tag: maxTag);
+                Assert.Equal(maxTag, tree.GetStreamTag("key"));
+
+                tx.Commit();
             }
         }
     }
