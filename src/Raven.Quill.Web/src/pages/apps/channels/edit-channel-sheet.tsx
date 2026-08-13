@@ -30,6 +30,7 @@ import { withNestedSubmit } from "@/lib/form-utils";
 import { invalidateChannelQueries } from "@/lib/query-invalidation";
 import {
     TELEGRAM_MESSAGE_FIELDS,
+    telegramMessagesSchema,
     toMessagesDto,
     toMessagesFormValues,
 } from "@/pages/apps/channels/telegram-message-defaults";
@@ -57,27 +58,13 @@ export function EditChannelSheet({ slug, channel, trigger }: EditChannelSheetPro
     );
 }
 
-const messageOverrideSchema = z.string().trim().max(4096, "Keep it under 4096 characters");
-
 const editChannelSchema = z.object({
     displayName: z.string().trim().min(1, "Channel name is required"),
     enabled: z.boolean(),
     shouldReplaceAllowedOrigins: z.boolean(),
     allowedOrigins: z.array(z.object({ value: z.string().trim() })),
     botToken: z.string().trim(),
-    messages: z.object({
-        greeting: messageOverrideSchema,
-        conversationCleared: messageOverrideSchema,
-        usernameMissing: messageOverrideSchema,
-        phoneNumberRequest: messageOverrideSchema,
-        sharePhoneNumberButton: messageOverrideSchema,
-        ownContactRequired: messageOverrideSchema,
-        phoneNumberReceived: messageOverrideSchema,
-        notConfigured: messageOverrideSchema,
-        overloaded: messageOverrideSchema,
-        somethingWentWrong: messageOverrideSchema,
-        groupChatRefusal: messageOverrideSchema,
-    }),
+    messages: telegramMessagesSchema,
 });
 
 type EditChannelFormData = z.infer<typeof editChannelSchema>;
