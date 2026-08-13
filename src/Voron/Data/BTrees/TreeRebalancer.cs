@@ -20,15 +20,12 @@ namespace Voron.Data.BTrees
         private readonly TreeCursor _cursor;
 
         private bool _ancestorsChanged;
-        private readonly long _watchedPageNumber;
-        public bool WatchedPageWasFreed { get; private set; }
 
-        public TreeRebalancer(LowLevelTransaction tx, Tree tree, TreeCursor cursor, long watchedPageNumber = -1L)
+        public TreeRebalancer(LowLevelTransaction tx, Tree tree, TreeCursor cursor)
         {
             _tx = tx;
             _tree = tree;
             _cursor = cursor;
-            _watchedPageNumber = watchedPageNumber;
         }
         
         private FreeSpaceHandlingDisabler DisableFreeSpaceUsageIfSplittingRootTree()
@@ -543,7 +540,9 @@ namespace Voron.Data.BTrees
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void FreePage(TreePage page)
         {
-            WatchedPageWasFreed |= page.PageNumber == _watchedPageNumber;
+            if (page is DecompressedLeafPage dlp)
+                dlp.Invalidate();
+                
             _tree.FreePage(page);
         }
 

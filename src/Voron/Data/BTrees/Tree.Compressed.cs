@@ -295,8 +295,6 @@ namespace Voron.Data.BTrees
             }
 
             var decompressed = DecompressPage(page, usage: DecompressionUsage.Write, skipCache: false);
-            var rebalancingFreedThePage = false;
-
             try
             {
                 decompressed.Search(_llt, keyToDelete);
@@ -310,27 +308,22 @@ namespace Voron.Data.BTrees
 
                 using (var cursor = cursorConstructor.Build(keyToDelete))
                 {
-                    var treeRebalancer = new TreeRebalancer(_llt, this, cursor, watchedPageNumber: decompressed.PageNumber);
+                    var treeRebalancer = new TreeRebalancer(_llt, this, cursor);
                     var changedPage = (TreePage)decompressed;
                     while (changedPage != null)
                     {
                         changedPage = treeRebalancer.Execute(changedPage);
                     }
-
-                    rebalancingFreedThePage = treeRebalancer.WatchedPageWasFreed;
                 }
 
 #if DEBUG
-                // validate only existing pages
-                if (rebalancingFreedThePage == false)
+                if (decompressed.IsInvalidated == false)
                     page.DebugValidate(this, ReadHeader().RootPageNumber);
 #endif
             }
             finally
             {
-                // the rebalancing may have taken this page out of the tree and freed it
-                if (rebalancingFreedThePage == false)
-                    decompressed.CopyToOriginal(_llt, defragRequired: true, wasModified: true, this);
+                decompressed.CopyToOriginal(_llt, defragRequired: true, wasModified: true, this);
             }
         }
 
