@@ -7,7 +7,7 @@ import { ApiState } from "@/components/data/api-state";
 import { SeriesBarChart } from "@/components/data/charts";
 import { DatePeriodPicker } from "@/components/data/date-period-picker";
 import { PagePanel } from "@/components/data/page-panel";
-import { canDrillInto, drillInto, getDefaultDatePeriod } from "@/lib/date-period";
+import { canDrillInto, drillInto, getDefaultDatePeriod, type DatePeriod } from "@/lib/date-period";
 import { useAppStartDate } from "@/lib/use-start-date";
 import { TableCell, TableRow } from "@/components/shadcn/ui/table";
 import { formatCompact } from "@/lib/format";
@@ -36,9 +36,6 @@ export function AppAnalytics() {
 
     return (
         <PagePanel>
-            <div className="mb-6 flex items-center justify-end">
-                <DatePeriodPicker value={period} earliest={appStartDate} onChange={setPeriod} />
-            </div>
             <ApiState
                 isLoading={appUsageQuery.isPending}
                 isError={appUsageQuery.isError}
@@ -48,7 +45,12 @@ export function AppAnalytics() {
             >
                 {appUsageQuery.data && (
                     <div className="space-y-8">
-                        <AnalyticsMetricCards usage={appUsageQuery.data} />
+                        <AnalyticsMetricCards
+                            usage={appUsageQuery.data}
+                            period={period}
+                            earliest={appStartDate}
+                            onPeriodChange={setPeriod}
+                        />
                         <AnalyticsSeriesSection
                             title="Tokens by capability"
                             series={appUsageQuery.data.tokensByCapability}
@@ -72,7 +74,17 @@ export function AppAnalytics() {
     );
 }
 
-function AnalyticsMetricCards({ usage }: { usage: AppUsageResponse }) {
+function AnalyticsMetricCards({
+    usage,
+    period,
+    earliest,
+    onPeriodChange,
+}: {
+    usage: AppUsageResponse;
+    period: DatePeriod;
+    earliest: Date | undefined;
+    onPeriodChange: (value: DatePeriod) => void;
+}) {
     const { conversations, tokens } = usage.metrics;
     const cards: DashboardStatCard[] = [
         {
@@ -85,7 +97,12 @@ function AnalyticsMetricCards({ usage }: { usage: AppUsageResponse }) {
         { label: "Tokens", value: tokens.value, isLoading: false, delta: tokens.delta, series: tokens.sparkline },
     ];
 
-    return <StatCardsSection cards={cards} />;
+    return (
+        <StatCardsSection
+            cards={cards}
+            action={<DatePeriodPicker value={period} earliest={earliest} onChange={onPeriodChange} />}
+        />
+    );
 }
 
 function AnalyticsSeriesSection({

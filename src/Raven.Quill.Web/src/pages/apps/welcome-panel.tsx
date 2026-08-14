@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { Check, ExternalLink, X } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
 import { Button } from "@/components/shadcn/ui/button";
 import { appRoutes } from "@/lib/app-routes";
 import { cn } from "@/lib/utils";
 
-const QUICKSTART_GUIDE_URL = "https://docs.ravendb.net/";
 const DISMISSED_STORAGE_KEY_PREFIX = "quill-welcome-dismissed:";
 
 function dismissedStorageKey(slug: string) {
@@ -32,15 +31,6 @@ export function WelcomePanel({ slug }: { slug: string }) {
         setIsDismissed(readDismissed(slug));
     }
 
-    if (isDismissed) {
-        return null;
-    }
-
-    const dismiss = () => {
-        localStorage.setItem(dismissedStorageKey(slug), "true");
-        setIsDismissed(true);
-    };
-
     const steps = [
         { label: "Connect a data source", isComplete: Boolean(appQuery.data?.database) },
         {
@@ -55,6 +45,17 @@ export function WelcomePanel({ slug }: { slug: string }) {
         },
     ];
 
+    const isConfigured = steps.every((step) => step.isComplete);
+
+    if (isDismissed || isConfigured) {
+        return null;
+    }
+
+    const dismiss = () => {
+        localStorage.setItem(dismissedStorageKey(slug), "true");
+        setIsDismissed(true);
+    };
+
     return (
         <section className="rounded-lg border bg-card p-4">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
@@ -64,18 +65,10 @@ export function WelcomePanel({ slug }: { slug: string }) {
                         Three steps to get your first agent answering questions in production.
                     </p>
                 </div>
-                <div className="flex items-center gap-1">
-                    <Button asChild size="sm" variant="outline">
-                        <a href={QUICKSTART_GUIDE_URL} target="_blank" rel="noreferrer">
-                            <ExternalLink className="size-3.5" aria-hidden="true" />
-                            Quickstart Guide
-                        </a>
-                    </Button>
-                    <Button size="sm" variant="ghost" className="text-muted-foreground" onClick={dismiss}>
-                        Dismiss
-                        <X className="size-3.5" aria-hidden="true" />
-                    </Button>
-                </div>
+                <Button size="sm" variant="ghost" className="text-muted-foreground" onClick={dismiss}>
+                    Dismiss
+                    <X className="size-3.5" aria-hidden="true" />
+                </Button>
             </div>
 
             <ol className="flex flex-wrap items-center gap-x-8 gap-y-3">

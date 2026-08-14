@@ -56,10 +56,12 @@ export function AddChannelMenu({
     slug,
     agent,
     label = "Add channel",
+    variant = "outline",
 }: {
     slug: string;
     agent?: FixedAgent;
     label?: string;
+    variant?: "default" | "outline";
 }) {
     const [isSheetOpen, setIsSheetOpen] = useState(false);
 
@@ -67,7 +69,7 @@ export function AddChannelMenu({
         <>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                    <Button size="sm" variant="outline">
+                    <Button size="sm" variant={variant}>
                         <Plus className="size-3.5" aria-hidden="true" />
                         {label}
                     </Button>

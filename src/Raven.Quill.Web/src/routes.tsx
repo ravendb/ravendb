@@ -195,6 +195,7 @@ const appPages: AppRouteDefinition[] = [
             icon: Bot,
             section: "database",
         },
+        isPageTitleHidden: true,
         element: <AppAgents />,
     },
     {
@@ -212,6 +213,7 @@ const appPages: AppRouteDefinition[] = [
             icon: MessagesSquare,
             section: "database",
         },
+        isPageTitleHidden: true,
         element: <AppConversations />,
     },
     {
@@ -242,6 +244,7 @@ const appPages: AppRouteDefinition[] = [
             icon: Cable,
             section: "settings",
         },
+        isPageTitleHidden: true,
         element: <AppChannels />,
     },
     {

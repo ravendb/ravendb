@@ -25,13 +25,12 @@ export function DashboardHome() {
             </header>
 
             {appsQuery.data && appsQuery.data.length > 0 && (
-                // The period also drives the apps table below, so the picker stays at page level.
-                <div className="space-y-4">
-                    <div className="flex justify-end">
-                        <DatePeriodPicker value={period} earliest={setupStartDate} onChange={setPeriod} />
-                    </div>
-                    <StatCardsSection cards={cards} />
-                </div>
+                // The period lives here because it also drives the apps table below, but the
+                // picker itself renders inline with the "Activity" header via the action slot.
+                <StatCardsSection
+                    cards={cards}
+                    action={<DatePeriodPicker value={period} earliest={setupStartDate} onChange={setPeriod} />}
+                />
             )}
 
             <ApiState
