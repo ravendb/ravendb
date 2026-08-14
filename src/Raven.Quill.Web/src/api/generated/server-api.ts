@@ -1563,6 +1563,7 @@ export interface components {
             allowedOrigins: null | string[];
             displayName?: null | string;
             telegram?: null | components["schemas"]["TelegramProvisionRequest"];
+            whatsApp?: null | components["schemas"]["WhatsAppProvisionRequest"];
         };
         ProvisionChannelResponse: {
             channelId: string;
@@ -1811,6 +1812,11 @@ export interface components {
         };
         WhatsAppPairingRestartRequest: {
             phoneNumber?: null | string;
+        };
+        WhatsAppProvisionRequest: {
+            parameterBindings?: null | {
+                [key: string]: components["schemas"]["TelegramParameterBinding"];
+            };
         };
         /** @enum {unknown} */
         WhatsAppSessionState: "Starting" | "Pairing" | "Connected" | "Disconnected" | "LoggedOut";
@@ -4192,6 +4198,7 @@ export type WebhookBinding = components["schemas"]["WebhookBinding"];
 export type WhatsAppChannelHealthResponse = components["schemas"]["WhatsAppChannelHealthResponse"];
 export type WhatsAppPairingResponse = components["schemas"]["WhatsAppPairingResponse"];
 export type WhatsAppPairingRestartRequest = components["schemas"]["WhatsAppPairingRestartRequest"];
+export type WhatsAppProvisionRequest = components["schemas"]["WhatsAppProvisionRequest"];
 export type WhatsAppSessionState = components["schemas"]["WhatsAppSessionState"];
 export type WhatsAppSummaryResponse = components["schemas"]["WhatsAppSummaryResponse"];
 export type WidgetAppearance = components["schemas"]["WidgetAppearance"];

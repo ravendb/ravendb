@@ -95,9 +95,9 @@ export function ChannelsSection({ slug, agent: fixedAgent }: { slug: string; age
                                                 @{channel.telegram.botUsername}
                                             </div>
                                         )}
-                                        {channel.phoneNumber && (
+                                        {channel.whatsApp?.phoneNumber && (
                                             <div className="font-mono text-xs font-normal text-muted-foreground">
-                                                {channel.phoneNumber}
+                                                {channel.whatsApp.phoneNumber}
                                             </div>
                                         )}
                                     </TableCell>

@@ -154,7 +154,7 @@ public static class WhatsAppEndpoints
         var items = new List<WhatsAppChannelHealthResponse>();
         foreach (var channel in channels.Where(c => c.Type == ChannelType.WhatsAppPersonal).OrderByDescending(c => c.CreatedAt))
         {
-            var channelId = Channel.StripIdPrefix(channel.Id);
+            var channelId = channel.ShortId;
 
             WhatsAppSessionStatus? status = null;
             string? lastError = null;

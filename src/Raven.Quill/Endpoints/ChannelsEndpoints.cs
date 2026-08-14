@@ -225,13 +225,13 @@ public static class ChannelsEndpoints
         if (body.AllowedOrigins is { Length: > 0 })
             return Results.BadRequest(new ApiErrorResponse("allowedOrigins does not apply to WhatsApp channels"));
 
-        if (string.IsNullOrWhiteSpace(body.BotToken) == false)
-            return Results.BadRequest(new ApiErrorResponse("botToken does not apply to WhatsApp channels"));
+        if (body.Telegram is not null)
+            return Results.BadRequest(new ApiErrorResponse("telegram settings apply to Telegram channels only"));
 
         if (TryValidateDisplayName(body.DisplayName, out var nameError) == false)
             return Results.BadRequest(new ApiErrorResponse(nameError!));
 
-        if (WhatsAppParameterBindings.TryResolve(config, body.ParameterBindings, out var bindings, out var paramError) == false)
+        if (WhatsAppParameterBindings.TryResolve(config, body.WhatsApp?.ParameterBindings, out var bindings, out var paramError) == false)
             return Results.BadRequest(new ApiErrorResponse(paramError!, Code: "missing_parameters"));
 
         using var session = store.OpenAsyncSession(app.Database);
@@ -473,8 +473,8 @@ public static class ChannelsEndpoints
         if (body.AllowedOrigins is not null)
             return Results.BadRequest(new ApiErrorResponse("allowedOrigins does not apply to WhatsApp channels"));
 
-        if (string.IsNullOrWhiteSpace(body.BotToken) == false)
-            return Results.BadRequest(new ApiErrorResponse("botToken does not apply to WhatsApp channels"));
+        if (body.Telegram is not null)
+            return Results.BadRequest(new ApiErrorResponse("telegram settings apply to Telegram channels only"));
 
         if (body.DisplayName is not null)
         {

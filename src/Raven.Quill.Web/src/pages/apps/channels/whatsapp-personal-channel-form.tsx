@@ -94,7 +94,9 @@ export function WhatsAppPersonalChannelForm({
                 agentId: values.agentId,
                 allowedOrigins: null,
                 displayName: values.displayName.trim() || null,
-                parameterBindings: values.parameters.length > 0 ? toParameterBindings(values.parameters) : null,
+                whatsApp: {
+                    parameterBindings: values.parameters.length > 0 ? toParameterBindings(values.parameters) : null,
+                },
             }),
         onSuccess: async () => {
             await invalidateChannelQueries(queryClient, slug);

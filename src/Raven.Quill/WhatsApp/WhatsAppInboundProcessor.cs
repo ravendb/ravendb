@@ -24,7 +24,7 @@ internal sealed class WhatsAppInboundProcessor(
 
     public void Enqueue(string database, Channel channel, string sender, string kind, string? text)
     {
-        var chainKey = $"{database}/{Channel.StripIdPrefix(channel.Id)}/{WhatsAppConversationId.SenderDigits(sender)}";
+        var chainKey = $"{database}/{channel.ShortId}/{WhatsAppConversationId.SenderDigits(sender)}";
 
         lock (_chainsLock)
         {
@@ -63,7 +63,7 @@ internal sealed class WhatsAppInboundProcessor(
     private async Task HandleMessageAsync(
         string database, Channel channel, string sender, string kind, string? text, CancellationToken ct)
     {
-        var channelId = Channel.StripIdPrefix(channel.Id);
+        var channelId = channel.ShortId;
 
         if (kind != "text")
         {

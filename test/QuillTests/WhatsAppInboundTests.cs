@@ -85,11 +85,11 @@ public class WhatsAppInboundTests(ITestOutputHelper output, QuillWhatsAppFixture
             new AiAgentParameter("sender", "the whatsapp sender"));
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.WhatsAppPersonal, agentId, null,
-            ParameterBindings: new Dictionary<string, TelegramParameterBinding>
+            WhatsApp: new WhatsAppProvisionRequest(new Dictionary<string, TelegramParameterBinding>
             {
                 ["customerId"] = new() { Source = TelegramParameterSource.Constant, Value = "customers/1" },
                 ["sender"] = new() { Source = TelegramParameterSource.PhoneNumber },
-            }));
+            })));
         Bridge.SetStatus(app.Slug, created.ChannelId, "connected", phoneNumber: "+48111222333");
 
         await PostInboundAsync(Inbound(app.Slug, created.ChannelId, Sender, "hello"));

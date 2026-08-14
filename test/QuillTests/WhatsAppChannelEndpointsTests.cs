@@ -40,7 +40,7 @@ public class WhatsAppChannelEndpointsTests(ITestOutputHelper output, QuillWhatsA
         var channels = await app.GetChannelsAsync();
         var summary = Assert.Single(channels, c => c.ChannelId == created.ChannelId);
         Assert.Equal(ChannelType.WhatsAppPersonal, summary.Type);
-        Assert.Null(summary.PhoneNumber);
+        Assert.Null(summary.WhatsApp?.PhoneNumber);
 
         await app.DeleteChannelAsync(created.ChannelId);
     }
@@ -86,9 +86,10 @@ public class WhatsAppChannelEndpointsTests(ITestOutputHelper output, QuillWhatsA
 
         var token = await Assert.ThrowsAsync<QuillHttpException>(() =>
             app.ProvisionChannelAsync(new ProvisionChannelRequest(
-                ChannelType.WhatsAppPersonal, agentId, null, BotToken: "123:AAtoken")));
+                ChannelType.WhatsAppPersonal, agentId, null,
+                Telegram: new TelegramProvisionRequest(BotToken: "123:AAtoken"))));
         Assert.Equal(HttpStatusCode.BadRequest, token.StatusCode);
-        Assert.Contains("botToken does not apply", token.Body);
+        Assert.Contains("telegram settings apply to Telegram channels only", token.Body);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -106,11 +107,11 @@ public class WhatsAppChannelEndpointsTests(ITestOutputHelper output, QuillWhatsA
 
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.WhatsAppPersonal, agentId, null,
-            ParameterBindings: new Dictionary<string, TelegramParameterBinding>
+            WhatsApp: new WhatsAppProvisionRequest(new Dictionary<string, TelegramParameterBinding>
             {
                 ["customerId"] = new() { Source = TelegramParameterSource.Constant, Value = "customers/1" },
                 ["sender"] = new() { Source = TelegramParameterSource.PhoneNumber },
-            }));
+            })));
 
         using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
@@ -133,10 +134,10 @@ public class WhatsAppChannelEndpointsTests(ITestOutputHelper output, QuillWhatsA
             var e = await Assert.ThrowsAsync<QuillHttpException>(() =>
                 app.ProvisionChannelAsync(new ProvisionChannelRequest(
                     ChannelType.WhatsAppPersonal, agentId, null,
-                    ParameterBindings: new Dictionary<string, TelegramParameterBinding>
+                    WhatsApp: new WhatsAppProvisionRequest(new Dictionary<string, TelegramParameterBinding>
                     {
                         ["sender"] = new() { Source = source },
-                    })));
+                    }))));
             Assert.Equal(HttpStatusCode.BadRequest, e.StatusCode);
             Assert.Contains($"WhatsApp channels cannot bind {source}", e.Body);
         }
@@ -179,9 +180,10 @@ public class WhatsAppChannelEndpointsTests(ITestOutputHelper output, QuillWhatsA
         Assert.Contains("allowedOrigins does not apply", origins.Body);
 
         var token = await Assert.ThrowsAsync<QuillHttpException>(() =>
-            app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null, BotToken: "123:AA")));
+            app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
+                Telegram: new TelegramUpdateRequest(BotToken: "123:AA"))));
         Assert.Equal(HttpStatusCode.BadRequest, token.StatusCode);
-        Assert.Contains("botToken does not apply", token.Body);
+        Assert.Contains("telegram settings apply to Telegram channels only", token.Body);
 
         await app.DeleteChannelAsync(created.ChannelId);
     }
@@ -276,7 +278,7 @@ public class WhatsAppChannelEndpointsTests(ITestOutputHelper output, QuillWhatsA
         Assert.Equal("+48111222333", connected.PhoneNumber);
 
         var summary = Assert.Single(await app.GetChannelsAsync(), c => c.ChannelId == created.ChannelId);
-        Assert.Equal("+48111222333", summary.PhoneNumber);
+        Assert.Equal("+48111222333", summary.WhatsApp!.PhoneNumber);
         using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
             var channel = await session.LoadAsync<Channel>(Channel.IdPrefix + created.ChannelId);
@@ -289,7 +291,7 @@ public class WhatsAppChannelEndpointsTests(ITestOutputHelper output, QuillWhatsA
         Assert.Equal(WhatsAppSessionState.LoggedOut, loggedOut!.State);
 
         summary = Assert.Single(await app.GetChannelsAsync(), c => c.ChannelId == created.ChannelId);
-        Assert.Null(summary.PhoneNumber);
+        Assert.Null(summary.WhatsApp?.PhoneNumber);
 
         await app.DeleteChannelAsync(created.ChannelId);
     }

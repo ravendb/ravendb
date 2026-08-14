@@ -22,7 +22,7 @@ internal static class WhatsAppSessionCleanup
 
         foreach (var channel in channels.Where(c => c.Type == ChannelType.WhatsAppPersonal))
         {
-            var channelId = Channel.StripIdPrefix(channel.Id);
+            var channelId = channel.ShortId;
             try
             {
                 await bridge.DeleteSessionAsync(database, channelId, ct);
