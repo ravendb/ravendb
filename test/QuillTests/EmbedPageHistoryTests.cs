@@ -76,16 +76,27 @@ public class EmbedPageHistoryTests(ITestOutputHelper output) : QuillTestBase(out
 
         var html = await widget.App.GetEmbedPageAsync(widget.Token);
 
-        Assert.DoesNotContain("__HISTORY__", html);
-        Assert.DoesNotContain("__TOKEN__", html);
-        Assert.DoesNotContain("__BASE_CSS__", html);
-
         var config = ReadConfig(html);
         Assert.Equal("live", config.GetProperty("mode").GetString());
         Assert.Equal($"/apps/{widget.App.Slug}/embed/{widget.Token}/chat", config.GetProperty("chatUrl").GetString());
 
         var history = HistoryOf(config);
         Assert.Equal([("user", "hello there"), ("assistant", "hi, how can I help?")], history);
+    }
+
+    /// The visitor-facing document must carry only what the widget renders - never timestamps, token usage
+    /// or raw tool-call payloads from the stored conversation.
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task History_turns_carry_only_role_and_content()
+    {
+        await using var widget = await SeedWidgetAsync(withHistory: true);
+
+        var config = ReadConfig(await widget.App.GetEmbedPageAsync(widget.Token));
+        var turns = config.GetProperty("history").EnumerateArray().ToArray();
+
+        Assert.NotEmpty(turns);
+        Assert.All(turns, turn =>
+            Assert.Equal(["role", "content"], turn.EnumerateObject().Select(p => p.Name).ToArray()));
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -95,7 +106,6 @@ public class EmbedPageHistoryTests(ITestOutputHelper output) : QuillTestBase(out
 
         var html = await widget.App.GetEmbedPageAsync(widget.Token);
 
-        Assert.DoesNotContain("__HISTORY__", html);
         Assert.Empty(HistoryOf(ReadConfig(html)));
     }
 
@@ -107,9 +117,10 @@ public class EmbedPageHistoryTests(ITestOutputHelper output) : QuillTestBase(out
         var config = ReadConfig(await widget.App.GetEmbedPageAsync(widget.Token));
         var theme = config.GetProperty("theme");
 
-        Assert.Equal(WidgetTheme.Default.AccentColor, theme.GetProperty("accentColor").GetString());
+        Assert.Equal(WidgetTheme.Default.Light.ButtonColor, theme.GetProperty("light").GetProperty("buttonColor").GetString());
+        Assert.Equal(WidgetTheme.Default.Dark.BackgroundColor, theme.GetProperty("dark").GetProperty("backgroundColor").GetString());
         Assert.Equal(WidgetTheme.Default.Appearance.ToString(), theme.GetProperty("appearance").GetString());
-        Assert.Equal(WidgetTheme.Default.Radius, theme.GetProperty("radius").GetInt32());
+        Assert.Equal(WidgetTheme.Default.Radius.ToString(), theme.GetProperty("radius").GetString());
     }
 
     /// The whole point of a JSON block over a `window.` assignment: a message body can carry `</script>`

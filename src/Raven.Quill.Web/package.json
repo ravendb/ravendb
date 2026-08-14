@@ -15,9 +15,9 @@
         "format:check": "prettier . --check",
         "format:fix": "prettier . --write",
         "preview": "vite preview",
-        "storybook": "storybook dev -p 6006",
-        "build-storybook": "storybook build",
-        "test:storybook": "vitest run --project=storybook && pnpm --filter @raven-quill/widget test:storybook",
+        "storybook": "pnpm build:widget && storybook dev -p 6006",
+        "build-storybook": "pnpm build:widget && storybook build",
+        "test:storybook": "pnpm build:widget && vitest run --project=storybook && pnpm --filter @raven-quill/widget test:storybook",
         "test:unit": "vitest run --project=unit && pnpm --filter @raven-quill/widget test:unit"
     },
     "dependencies": {

@@ -25,6 +25,7 @@ type FormStringListProps<TFieldValues extends FieldValues, TName extends ArrayPa
     addButtonLabel: string;
     defaultValue: FieldArray<TFieldValues, TName>;
     description?: string;
+    disabled?: boolean;
     emptyLabel?: string;
     fieldName: (index: number) => FieldPath<TFieldValues>;
     itemLabel?: (index: number) => string;
@@ -37,6 +38,7 @@ export function FormStringList<TFieldValues extends FieldValues, TName extends A
     control,
     defaultValue,
     description,
+    disabled,
     emptyLabel = "No values.",
     fieldName,
     itemLabel,
@@ -60,7 +62,13 @@ export function FormStringList<TFieldValues extends FieldValues, TName extends A
                     <FieldLabel>{label}</FieldLabel>
                     {description && <FieldDescription>{description}</FieldDescription>}
                 </div>
-                <Button type="button" variant="outline" size="sm" onClick={() => fieldArray.append(defaultValue)}>
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={disabled}
+                    onClick={() => fieldArray.append(defaultValue)}
+                >
                     <Plus className="size-4" aria-hidden />
                     {addButtonLabel}
                 </Button>
@@ -79,12 +87,14 @@ export function FormStringList<TFieldValues extends FieldValues, TName extends A
                                 name={fieldName(index)}
                                 label={itemLabel?.(index)}
                                 placeholder={placeholder}
+                                disabled={disabled}
                             />
                             <Button
                                 type="button"
                                 variant="ghost"
                                 size="icon"
                                 className="self-end text-destructive"
+                                disabled={disabled}
                                 onClick={() => fieldArray.remove(index)}
                                 aria-label="Remove value"
                                 title="Remove value"

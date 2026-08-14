@@ -33,11 +33,7 @@ const LOGO_RADIUS_VALUES = ["None", "Small", "Medium", "Large", "Pill"] as const
 const FONT_SIZE_VALUES = ["Small", "Medium", "Large", "Custom"] as const;
 
 const optionalText = (max: number, label: string) =>
-    z
-        .string()
-        .max(max, `${label} must be ${max} characters or fewer`)
-        .transform((value) => value.trim())
-        .nullable();
+    z.string().trim().max(max, `${label} must be ${max} characters or fewer`).nullable();
 
 const hexColor = z
     .string()
@@ -62,11 +58,9 @@ export const widgetThemeSchema = z
             .max(200, "Font stack must be 200 characters or fewer")
             .regex(FONT_STACK, "A font stack may only contain letters, digits, spaces, commas, hyphens and quotes"),
         fontSize: z.enum(FONT_SIZE_VALUES),
-        customFontSizeRem: z
-            .number("Enter a number")
-            .min(MIN_CUSTOM_FONT_SIZE_REM, `At least ${MIN_CUSTOM_FONT_SIZE_REM} rem`)
-            .max(MAX_CUSTOM_FONT_SIZE_REM, `At most ${MAX_CUSTOM_FONT_SIZE_REM} rem`)
-            .nullable(),
+        // Bounds live in the superRefine below: they only apply while the size is Custom, because RHF keeps
+        // the value after the input unmounts and a stale out-of-range number must not block saving.
+        customFontSizeRem: z.number("Enter a number").nullable(),
         logo: z
             .string()
             .max(MAX_LOGO_LENGTH, "That image is too large even after downscaling")
@@ -106,8 +100,22 @@ export const widgetThemeSchema = z
             .transform((value) => value.trim()),
     })
     .superRefine((data, ctx) => {
-        if (data.fontSize === "Custom" && data.customFontSizeRem === null) {
+        if (data.fontSize !== "Custom") return;
+
+        if (data.customFontSizeRem === null) {
             ctx.addIssue({ code: "custom", path: ["customFontSizeRem"], message: "Enter a size in rem, e.g. 1.05" });
+        } else if (data.customFontSizeRem < MIN_CUSTOM_FONT_SIZE_REM) {
+            ctx.addIssue({
+                code: "custom",
+                path: ["customFontSizeRem"],
+                message: `At least ${MIN_CUSTOM_FONT_SIZE_REM} rem`,
+            });
+        } else if (data.customFontSizeRem > MAX_CUSTOM_FONT_SIZE_REM) {
+            ctx.addIssue({
+                code: "custom",
+                path: ["customFontSizeRem"],
+                message: `At most ${MAX_CUSTOM_FONT_SIZE_REM} rem`,
+            });
         }
     });
 
