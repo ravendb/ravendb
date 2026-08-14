@@ -368,8 +368,8 @@ public class ChatCompletionClient : IDisposable
             var paramsSchema = GetSchemaForTool(schema: null, sampleObject: "{\"reason\":\"why the tool is being called\"}");
             var tool = GetTool(context, "connection_test_probe", "A probe so the request matches an agent call. Do not call it.", paramsSchema);
 
-            var request = CreateCompletionRequest(context, messages: [userMessage], attachments: null, tools: [context.ReadObject(tool, "probe/tool")], useTools: true, streaming: false, EmptySchema);
-            await CompleteAsync(context, request, new AiUsage(), schema: null, trace: null, token);
+            var request = CreateCompletionRequest(context, messages: [userMessage], attachments: null, tools: [context.ReadObject(tool, "probe/tool")], useTools: true, streaming: false, schema: null);
+            await EnsureRequestAcceptedAsync(context, request, token);
             return true;
         }
         catch (UnsuccessfulAiRequestException e) when (e.StatusCode == HttpStatusCode.BadRequest)
@@ -395,14 +395,24 @@ public class ChatCompletionClient : IDisposable
                 [Constants.RequestFields.Content] = "describe the image"
             }, "probe/user");
 
-            var request = CreateCompletionRequest(context, messages: [userMessage], attachments: [attachment], tools: null, useTools: false, streaming: false, EmptySchema);
-            await CompleteAsync(context, request, new AiUsage(), schema: null, trace: null, token);
+            var request = CreateCompletionRequest(context, messages: [userMessage], attachments: [attachment], tools: null, useTools: false, streaming: false, schema: null);
+            await EnsureRequestAcceptedAsync(context, request, token);
             return true;
         }
-        catch (Exception)
+        catch (UnsuccessfulAiRequestException)
         {
             return false;
         }
+    }
+    
+    private async Task EnsureRequestAcceptedAsync(JsonOperationContext context, HttpRequestMessage request, CancellationToken token)
+    {
+        AddDefaultHeaders(request);
+        using var response = await SendRequestAsync(request, token);
+        var responseContent = await GetResponseContentAsync(context, response, token);
+
+        var responseParser = new AiResponseParser(this, response, responseContent);
+        responseParser.EnsureSuccessfulResponse();
     }
 
     public async Task<AiResponse> CompleteAsync(JsonOperationContext context, HttpRequestMessage request, AiUsage usage, string schema, AiDebugTrace trace, CancellationToken token)
