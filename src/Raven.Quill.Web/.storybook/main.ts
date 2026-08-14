@@ -8,8 +8,8 @@ const config: StorybookConfig = {
     // so it is served to stories but never copied into the production build.
     //
     // The widget bundle is mapped at /widget so the theme editor's preview iframe resolves the same URL it
-    // does in production. Build it first with `pnpm build:widget`; without it the preview frame is empty and
-    // the rest of the story still renders.
+    // does in production. The `storybook` scripts build it first; after editing widget sources mid-session,
+    // run `pnpm build:widget` again or the frame keeps serving the stale bundle.
     staticDirs: ["../public", "./public", { from: "../packages/widget/dist", to: "/widget" }],
 };
 

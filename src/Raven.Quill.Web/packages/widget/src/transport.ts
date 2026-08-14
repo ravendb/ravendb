@@ -4,11 +4,13 @@ type ServerEvent =
     | { type: "done"; answer?: { reply?: string } | null }
     | { type: "error"; message?: string };
 
+/** Drives which message the UI shows; `expired` and `limit` are terminal for the session. */
+export type ChatErrorKind = "expired" | "limit" | "failed";
+
 export type ChatEvent =
     | { type: "chunk"; text: string }
     | { type: "done"; reply: string | null }
-    /** `kind` drives which message the UI shows; `expired` and `limit` are terminal for the session. */
-    | { type: "error"; kind: "expired" | "limit" | "failed"; message: string };
+    | { type: "error"; kind: ChatErrorKind; message: string };
 
 const LINK_INACTIVE_MESSAGE = "This conversation link is no longer active.";
 const LIMIT_MESSAGE = "This conversation has reached its usage limit.";

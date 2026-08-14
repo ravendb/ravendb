@@ -20,37 +20,45 @@ export const SAMPLE_FONT_OPTIONS: WidgetFontOption[] = [
 // The built-in default (see WidgetTheme.Default server-side).
 export const SAMPLE_DEFAULT_THEME: WidgetTheme = {
     appearance: "System",
-    accentColor: "#5b4bd6",
-    radius: 12,
+    light: { buttonColor: "#5b4bd6", messageColor: "#ebe9fa", backgroundColor: "#ffffff" },
+    dark: { buttonColor: "#5b4bd6", messageColor: "#201f45", backgroundColor: "#0d1117" },
+    radius: "Medium",
     fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
-    density: "Comfortable",
+    fontSize: "Medium",
+    customFontSizeRem: null,
+    logo: null,
+    logoRadius: "Pill",
     headerTitle: "AI Assistant",
     headerSubtitle: "Ask me anything",
-    avatarInitials: null,
     showHeader: true,
     greetingTitle: "How can I help?",
     greetingBody: "Ask a question and I'll do my best to answer it.",
     suggestedPrompts: [],
     inputPlaceholder: "Ask a question...",
     disclaimer: null,
+    customCss: null,
 };
 
 // A saved channel theme, the way an operator leaves it after editing.
 export const SAMPLE_CHANNEL_THEME: WidgetTheme = {
     appearance: "Light",
-    accentColor: "#2f6f4f",
-    radius: 16,
+    light: { buttonColor: "#2f6f4f", messageColor: "#e0ece6", backgroundColor: "#f7f5f0" },
+    dark: { buttonColor: "#4cc38a", messageColor: "#15302a", backgroundColor: "#0d1117" },
+    radius: "Large",
     fontFamily: 'Georgia, "Times New Roman", Times, serif',
-    density: "Compact",
+    fontSize: "Medium",
+    customFontSizeRem: null,
+    logo: null,
+    logoRadius: "Pill",
     headerTitle: "Order support",
     headerSubtitle: "We usually reply instantly",
-    avatarInitials: "OS",
     showHeader: true,
     greetingTitle: "Need a hand with an order?",
     greetingBody: "Ask about delivery, returns or anything else.",
     suggestedPrompts: ["Where is my order?", "How do I return an item?", "Do you ship internationally?"],
     inputPlaceholder: "Type a message...",
     disclaimer: "Answers are AI generated and may be inaccurate.",
+    customCss: null,
 };
 
 export const iframeMocks = {

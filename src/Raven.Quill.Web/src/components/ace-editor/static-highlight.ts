@@ -1,6 +1,7 @@
 import "ace-builds/src-noconflict/ace";
 import staticHighlight from "ace-builds/src-noconflict/ext-static_highlight";
 import { Mode as CSharpMode } from "ace-builds/src-noconflict/mode-csharp";
+import { Mode as HtmlMode } from "ace-builds/src-noconflict/mode-html";
 import { Mode as JavaScriptMode } from "ace-builds/src-noconflict/mode-javascript";
 import { Mode as PowershellMode } from "ace-builds/src-noconflict/mode-powershell";
 import { Mode as PythonMode } from "ace-builds/src-noconflict/mode-python";
@@ -9,6 +10,7 @@ import "@/components/ace-editor/ace-syntax-colors.css";
 
 const MODES = {
     csharp: new CSharpMode(),
+    html: new HtmlMode(),
     javascript: new JavaScriptMode(),
     powershell: new PowershellMode(),
     python: new PythonMode(),

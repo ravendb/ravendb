@@ -16,16 +16,19 @@ const PUSH_DEBOUNCE_MS = 120;
 
 export type PreviewAppearance = "Light" | "Dark";
 
-export type PreviewDevice = "desktop" | "mobile";
+/** Which screen the widget renders: the welcome (empty) state, where the greeting and suggested prompts
+ *  live, or the canned conversation that exercises bubbles, tables and code. */
+export type PreviewView = "Welcome" | "Conversation";
 
 type WebWidgetThemePreviewProps = {
     theme: WidgetTheme;
+    /** The scheme to preview - the editor passes the one whose colors are being edited. */
     appearance: PreviewAppearance;
-    device: PreviewDevice;
+    view: PreviewView;
     className?: string;
 };
 
-export function WebWidgetThemePreview({ theme, appearance, device, className }: WebWidgetThemePreviewProps) {
+export function WebWidgetThemePreview({ theme, appearance, view, className }: WebWidgetThemePreviewProps) {
     const iframeRef = useRef<HTMLIFrameElement>(null);
     const [isReady, setIsReady] = useState(false);
 
@@ -51,29 +54,23 @@ export function WebWidgetThemePreview({ theme, appearance, device, className }: 
                     source: ENVELOPE_SOURCE,
                     version: ENVELOPE_VERSION,
                     type: "theme",
-                    payload: { theme, appearanceOverride: appearance },
+                    payload: { theme, appearanceOverride: appearance, view },
                 },
                 window.location.origin,
             );
         }, PUSH_DEBOUNCE_MS);
 
         return () => clearTimeout(timer);
-    }, [theme, appearance, isReady]);
+    }, [theme, appearance, view, isReady]);
 
     return (
-        <div
-            className={cn(
-                "mx-auto overflow-hidden rounded-xl border bg-background shadow-sm transition-[max-width]",
-                device === "mobile" ? "max-w-[380px]" : "max-w-[620px]",
-                className,
-            )}
-        >
+        <div className={cn("overflow-hidden rounded-xl border bg-background shadow-sm", className)}>
             <iframe
                 ref={iframeRef}
                 title="Web widget preview"
                 src={PREVIEW_SRC}
                 onLoad={() => setIsReady(false)}
-                className="h-[600px] w-full border-0"
+                className="h-[640px] w-full border-0"
             />
         </div>
     );

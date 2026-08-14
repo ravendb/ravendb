@@ -6,10 +6,10 @@ import { DEFAULT_THEME } from "@/widget-theme";
 
 const THEME = {
     ...DEFAULT_THEME,
-    accentColor: "#2f6f4f",
+    light: { buttonColor: "#2f6f4f", messageColor: "#e6eeea", backgroundColor: "#ffffff" },
+    dark: { buttonColor: "#2f6f4f", messageColor: "#152824", backgroundColor: "#0d1117" },
     headerTitle: "Order support",
     headerSubtitle: "We usually reply instantly",
-    avatarInitials: "OS",
     greetingTitle: "Need a hand with an order?",
     greetingBody: "Ask about delivery, returns or anything else.",
     suggestedPrompts: ["Where is my order?", "How do I return an item?", "Do you ship internationally?"],
@@ -20,7 +20,6 @@ const MINIMAL_THEME = {
     ...THEME,
     showHeader: false,
     headerSubtitle: null,
-    avatarInitials: null,
     greetingTitle: null,
     greetingBody: null,
     suggestedPrompts: [],

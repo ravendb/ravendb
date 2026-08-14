@@ -44,11 +44,7 @@ export function ChatWidgetView({
             className="font-rq bg-rq-bg text-rq-fg flex h-full flex-col antialiased"
         >
             {theme.showHeader && (
-                <WidgetHeader
-                    title={theme.headerTitle}
-                    subtitle={theme.headerSubtitle}
-                    initials={theme.avatarInitials}
-                />
+                <WidgetHeader title={theme.headerTitle} subtitle={theme.headerSubtitle} logo={theme.logo} />
             )}
 
             <MessageFeed scrollSignal={hasTranscript ? scrollSignal : "empty"}>
@@ -79,7 +75,7 @@ export function ChatWidgetView({
             />
 
             {theme.disclaimer !== null && theme.disclaimer.length > 0 && (
-                <p className="text-rq-muted shrink-0 px-[var(--rq-pad-x)] pb-2.5 text-center text-[11px]">
+                <p className="text-rq-muted shrink-0 px-[var(--rq-pad-x)] pb-2.5 text-center text-[0.6875rem]">
                     {theme.disclaimer}
                 </p>
             )}
