@@ -2352,6 +2352,8 @@ namespace Raven.Server.Documents
 
             internal Action<EtlProcess, ExtractedItem, int> OnEtlItemExtracted; // (process, item, batchId == EtlPerformanceStats.Id)
 
+            internal Action<EtlProcess> OnEtlBatchCompleted;
+
             internal Action<ConversationDocument> BeforeAiAgentTalk;
 
             internal Func<AiAgentConfiguration, LazyStringValue, bool> ShouldAiAgentAddMutualParameterForSubAgentReq;
