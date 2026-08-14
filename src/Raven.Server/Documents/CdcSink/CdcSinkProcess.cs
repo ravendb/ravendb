@@ -516,12 +516,22 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler, IAsyncDis
 
             stats.Dispose();
             statsAggregator.Complete();
+
+            // Raise the completion event for every batch that ran - including a fully-failed one - so the
+            // live performance view picks up its stats. Success is tracked separately via LastBatchTime and
+            // the health status; this event is purely for performance reporting. Guarded so a handler
+            // failure can't mask the original batch exception.
+            try
+            {
+                Database.CdcSinkLoader.OnBatchCompleted(Configuration.Name, Name, Statistics);
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsWarnEnabled)
+                    Logger.Warn($"[{Name}] Failed to raise the CDC Sink batch-completed event.", e);
+            }
         }
 
-        // Raise the completion event for every batch that ran - including a fully-failed one - so the
-        // live performance view picks up its stats. Success is tracked separately via LastBatchTime and
-        // the health status; this event is purely for performance reporting.
-        Database.CdcSinkLoader.OnBatchCompleted(Configuration.Name, Name, Statistics);
         return (persistedCheckpoint, ops.Count);
     }
 
