@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
 import type { RowSelectionState } from "@tanstack/react-table";
 import { useFormContext, useFormState } from "react-hook-form";
-import { CheckIcon, PlusIcon, SearchIcon, TriangleAlertIcon } from "lucide-react";
+import { CheckIcon, CircleAlertIcon, PlusIcon, SearchIcon, TriangleAlertIcon } from "lucide-react";
 import type { DiscoverResponse, DiscoverTableResponse } from "@/api/generated/server-api";
 import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
 import { WizardErrorAlert } from "@/components/form/wizard/wizard-error-alert";
-import { Alert } from "@/components/shadcn/ui/alert";
+import { Alert, AlertTitle } from "@/components/shadcn/ui/alert";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/shadcn/ui/input-group";
@@ -108,7 +108,7 @@ export function VerifySchemaStep({ isBusy }: WizardBodyComponentProps) {
         <div className="flex min-h-0 flex-1 flex-col gap-4">
             <div className="grid shrink-0 gap-4">
                 <LockedConfigAlert />
-                <WizardErrorList errors={discoverResult?.errors} />
+                <WizardErrorList errors={discoverResult?.errors} title="Schema discovery failed" />
                 <MessageList messages={discoverResult?.warnings} tone="warning" />
             </div>
 
@@ -128,13 +128,6 @@ export function VerifySchemaStep({ isBusy }: WizardBodyComponentProps) {
                                 type="search"
                             />
                         </InputGroup>
-                        {currentTab === "verified" && (
-                            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                Hold
-                                <kbd className="rounded border px-1 py-0.5 font-mono text-[10px]">Shift</kbd>
-                                while clicking to select a range of tables
-                            </span>
-                        )}
                         <Button
                             type="button"
                             variant="outline"
@@ -205,7 +198,8 @@ export function VerifySchemaStep({ isBusy }: WizardBodyComponentProps) {
                 overflow, so a shrinkable alert collapses into an unreadable sliver. */}
             {tablesError && (
                 <Alert variant="destructive" className="shrink-0">
-                    {tablesError.message}
+                    <CircleAlertIcon aria-hidden="true" />
+                    <AlertTitle>{tablesError.message}</AlertTitle>
                 </Alert>
             )}
             {cdcError && <WizardErrorAlert error={cdcError} className="shrink-0" />}

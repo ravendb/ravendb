@@ -379,3 +379,21 @@ export const sampleMappingTest: TestMappingResponse = {
     errors: [],
     warnings: [],
 };
+
+export const failedMappingTest: TestMappingResponse = {
+    results: [],
+    errors: [
+        {
+            message: 'Could not project column "Preferences" into the mapped document: the value is not valid JSON.',
+            details:
+                "System.Text.Json.JsonException: '{' is an invalid start of a value. Path: $ | LineNumber: 0\n" +
+                "   at System.Text.Json.ThrowHelper.ReThrowWithPath(ReadStack&, JsonReaderException)\n" +
+                "   at Raven.Quill.Setup.MappingTester.ProjectColumn(DiscoverColumnResponse, Object)",
+        },
+        {
+            message: "Fix the column mapping or exclude the column, then run the preview again.",
+            details: null,
+        },
+    ],
+    warnings: [],
+};

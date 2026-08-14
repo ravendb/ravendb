@@ -7,11 +7,14 @@ import { FormInput } from "@/components/form/form-input";
 import { ConfirmDialog } from "@/components/shadcn/ui/confirm-dialog";
 import { Button } from "@/components/shadcn/ui/button";
 import { Spinner } from "@/components/shadcn/ui/spinner";
-import { Alert } from "@/components/shadcn/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/shadcn/ui/alert";
 import { WizardErrorList } from "@/components/form/wizard/wizard-error-list";
 import AceEditor from "@/components/ace-editor/ace-editor";
-import { DownloadIcon, MessageSquareWarningIcon } from "lucide-react";
+import { CircleAlertIcon, DownloadIcon, MessageSquareWarningIcon } from "lucide-react";
 import { buildConfigExport, downloadConfig } from "@/pages/setup/add-app-wizard/config-io";
+
+// Both failure paths report the same thing: the request itself failed, or it came back with errors.
+const MAPPING_TEST_ERROR_TITLE = "Testing the mapping failed";
 
 export function PreviewStep() {
     const { control, getValues } = useFormContext<AppFormData>();
@@ -102,8 +105,11 @@ function PreviewResult() {
     if (testMappingQuery.isError) {
         return (
             <Alert variant="destructive" className="mb-4">
-                Error testing mapping:{" "}
-                {testMappingQuery.error instanceof Error ? testMappingQuery.error.message : "Unknown error"}
+                <CircleAlertIcon aria-hidden="true" />
+                <AlertTitle>{MAPPING_TEST_ERROR_TITLE}</AlertTitle>
+                <AlertDescription>
+                    {testMappingQuery.error instanceof Error ? testMappingQuery.error.message : "Unknown error"}
+                </AlertDescription>
             </Alert>
         );
     }
@@ -114,9 +120,7 @@ function PreviewResult() {
 
     if (testMappingQuery.data.errors?.length) {
         return (
-            <Alert variant="destructive" className="mb-4">
-                <WizardErrorList errors={testMappingQuery.data.errors} />
-            </Alert>
+            <WizardErrorList errors={testMappingQuery.data.errors} title={MAPPING_TEST_ERROR_TITLE} className="mb-4" />
         );
     }
 

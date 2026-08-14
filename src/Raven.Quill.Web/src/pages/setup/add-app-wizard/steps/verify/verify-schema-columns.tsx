@@ -7,6 +7,7 @@ import type { RefObject } from "react";
 import type { ColumnDef, Table } from "@tanstack/react-table";
 import { TriangleAlertIcon } from "lucide-react";
 import type { DiscoverTableResponse } from "@/api/generated/server-api";
+import { InfoHint } from "@/components/data/info-hint";
 import { Checkbox } from "@/components/shadcn/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
 import {
@@ -58,6 +59,10 @@ const COLUMNS_COUNT_COLUMN: ColumnDef<DiscoverTableResponse> = {
     cell: ({ getValue }) => <span className="tabular-nums">{getValue<number>()}</span>,
 };
 
+// Lives in the select column header rather than the toolbar: the accelerator belongs to the
+// checkboxes right below it, and an icon keeps the hint quieter than the table it explains.
+const RANGE_SELECTION_HINT = "Hold Shift while clicking to select a range of tables";
+
 /**
  * Columns of the verified tables table. Built per mounted table rather than shared as a constant so
  * the select column can write the row of the last plain click into `anchorRowIdRef`: a shift-click
@@ -67,7 +72,12 @@ export function createVerifiedColumns(anchorRowIdRef: RefObject<string | null>):
     return [
         {
             id: "select",
-            header: ({ table }) => <SelectAllCheckbox table={table} />,
+            header: ({ table }) => (
+                <span className="flex items-center gap-1.5">
+                    <SelectAllCheckbox table={table} />
+                    <InfoHint content={RANGE_SELECTION_HINT} />
+                </span>
+            ),
             cell: ({ row, table }) => (
                 <Checkbox
                     checked={row.getIsSelected()}
@@ -101,7 +111,8 @@ export function createVerifiedColumns(anchorRowIdRef: RefObject<string | null>):
             enableSorting: false,
             enableHiding: false,
             enableResizing: false,
-            size: 40,
+            // Cell padding plus the checkbox and the hint icon sitting next to it in the header.
+            size: 48,
         },
         TABLE_NAME_COLUMN,
         PRIMARY_KEY_COLUMN,

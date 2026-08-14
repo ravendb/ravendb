@@ -12,6 +12,7 @@ import {
     discoveryWithAllStates,
     failedCdcVerification,
     failedDiscovery,
+    failedMappingTest,
     manyTablesDiscovery,
     sampleDiscovery,
     setupMocks,
@@ -355,4 +356,23 @@ export const MapTablesSuggesting: Story = {
 
 export const Preview: Story = {
     render: () => <AppWizardAtStep initialStep="preview" />,
+};
+
+// The mapping ran but reported errors, so the preview shows the destructive banner instead of documents.
+export const PreviewMappingErrors: Story = {
+    parameters: {
+        msw: { handlers: { setup: [setupMocks.testMapping(failedMappingTest), ...defaultApiMocks.setup] } },
+    },
+    render: () => <AppWizardAtStep initialStep="preview" />,
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        await waitFor(() => expect(canvas.getByText("Testing the mapping failed")).toBeInTheDocument());
+
+        // The banner is one alert, not an alert nested in another one.
+        expect(canvasElement.querySelectorAll('[data-slot="alert"]')).toHaveLength(1);
+
+        await userEvent.click(canvas.getByRole("button", { name: /show details/i }));
+        expect(canvas.getByText(/is an invalid start of a value/i)).toBeInTheDocument();
+    },
 };
