@@ -1,24 +1,29 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Monitor, Moon, Smartphone, Sun } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import type { WidgetFontOption, WidgetTheme } from "@/api/generated/server-api";
+import { FormAceEditor } from "@/components/form/form-ace-editor";
 import { FormColorPicker } from "@/components/form/form-color-picker";
+import { FormImagePicker } from "@/components/form/form-image-picker";
 import { FormInput } from "@/components/form/form-input";
 import { FormSelect } from "@/components/form/form-select";
-import { FormSlider } from "@/components/form/form-slider";
 import { FormStringList } from "@/components/form/form-string-list";
 import { FormSwitch } from "@/components/form/form-switch";
 import { FormToggleGroup } from "@/components/form/form-toggle-group";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
-import { Separator } from "@/components/shadcn/ui/separator";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/shadcn/ui/collapsible";
 import { Spinner } from "@/components/shadcn/ui/spinner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/shadcn/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/shadcn/ui/toggle-group";
 import {
-    ACCENT_PRESETS,
+    FONT_SIZE_OPTIONS,
+    LOGO_RADIUS_OPTIONS,
+    MAX_CUSTOM_FONT_SIZE_REM,
     MAX_PROMPTS,
-    RADIUS_MAX,
+    MIN_CUSTOM_FONT_SIZE_REM,
+    RADIUS_OPTIONS,
     toFormData,
     toPreviewTheme,
     toWidgetTheme,
@@ -29,18 +34,13 @@ import {
 import {
     WebWidgetThemePreview,
     type PreviewAppearance,
-    type PreviewDevice,
+    type PreviewView,
 } from "@/pages/apps/channels/web-widget-theme-preview";
 
 const APPEARANCE_OPTIONS = [
     { value: "Light", label: "Light" },
     { value: "Dark", label: "Dark" },
     { value: "System", label: "System" },
-] as const;
-
-const DENSITY_OPTIONS = [
-    { value: "Comfortable", label: "Comfortable" },
-    { value: "Compact", label: "Compact" },
 ] as const;
 
 type WebWidgetThemeEditorProps = {
@@ -56,12 +56,30 @@ type WebWidgetThemeEditorProps = {
     onSave: (theme: WidgetTheme | null) => void;
 };
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+function Section({
+    title,
+    defaultOpen = false,
+    children,
+}: {
+    title: string;
+    defaultOpen?: boolean;
+    children: ReactNode;
+}) {
     return (
-        <section className="grid gap-4">
-            <h3 className="text-sm font-semibold">{title}</h3>
-            {children}
-        </section>
+        <Collapsible defaultOpen={defaultOpen} className="rounded-md border bg-card p-4" asChild>
+            <section>
+                <h3 className="text-sm font-semibold">
+                    <CollapsibleTrigger className="group flex w-full items-center justify-between gap-3 rounded-sm text-left focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none">
+                        {title}
+                        <ChevronDown
+                            className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180"
+                            aria-hidden="true"
+                        />
+                    </CollapsibleTrigger>
+                </h3>
+                <CollapsibleContent className="mt-4 grid gap-4">{children}</CollapsibleContent>
+            </section>
+        </Collapsible>
     );
 }
 
@@ -84,16 +102,43 @@ export function WebWidgetThemeEditor({
         values: toFormData(savedTheme),
     });
 
-    const [appearancePreview, setAppearancePreview] = useState<PreviewAppearance | null>(null);
-    const [device, setDevice] = useState<PreviewDevice>("desktop");
+    // One state drives both the colors tabs and the previewed scheme, so the colors on screen are always
+    // the colors in the frame and editing dark never means guessing.
+    const [previewAppearance, setPreviewAppearance] = useState<PreviewAppearance>(
+        savedTheme.appearance === "Dark" ? "Dark" : "Light",
+    );
+    const [previewView, setPreviewView] = useState<PreviewView>("Conversation");
 
     const previewTheme = toPreviewTheme(useWatch({ control: form.control }), savedTheme);
-
-    const appearance: PreviewAppearance = appearancePreview ?? (previewTheme.appearance === "Dark" ? "Dark" : "Light");
 
     const fontSelectOptions = fontOptions.map((option) => ({ value: option.stack, label: option.label }));
     // A hand-written stack saved earlier is not in the curated list; offer it so the select can show it.
     const hasCuratedFont = fontSelectOptions.some((option) => option.value === previewTheme.fontFamily);
+
+    const colorFields = (scheme: PreviewAppearance) => (
+        <>
+            <FormColorPicker
+                control={form.control}
+                name={scheme === "Light" ? "lightButtonColor" : "darkButtonColor"}
+                label="Button color"
+                description="Buttons, links and highlights."
+                disabled={isSaving}
+            />
+            <FormColorPicker
+                control={form.control}
+                name={scheme === "Light" ? "lightMessageColor" : "darkMessageColor"}
+                label="Message color"
+                description="The visitor's message bubbles."
+                disabled={isSaving}
+            />
+            <FormColorPicker
+                control={form.control}
+                name={scheme === "Light" ? "lightBackgroundColor" : "darkBackgroundColor"}
+                label="Background color"
+                disabled={isSaving}
+            />
+        </>
+    );
 
     return (
         <form className="grid gap-6" onSubmit={form.handleSubmit((submitted) => onSave(toWidgetTheme(submitted)))}>
@@ -120,33 +165,56 @@ export function WebWidgetThemeEditor({
                 </Alert>
             )}
 
-            <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-                <div className="grid gap-6">
-                    <Section title="Appearance">
+            <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+                <div className="grid gap-4">
+                    <div className="rounded-md border bg-card p-4">
                         <FormToggleGroup
                             control={form.control}
                             name="appearance"
-                            label="Colour scheme"
-                            description="System follows each visitor's own light or dark preference."
+                            label="Default color scheme"
+                            description={
+                                "System follows each visitor's own light or dark preference. The embedding page can " +
+                                "override this per visitor: append ?appearance=dark (or light/system) to the embed " +
+                                "URL, or post an appearance message when its own theme toggles - see " +
+                                "“Embed on your own site” on the channel page."
+                            }
                             options={APPEARANCE_OPTIONS}
                             canDeselect={false}
+                            onValueChange={(next) => {
+                                if (next === "Light" || next === "Dark") setPreviewAppearance(next);
+                            }}
                             disabled={isSaving}
                         />
-                        <FormColorPicker
-                            control={form.control}
-                            name="accentColor"
-                            label="Accent colour"
-                            description="Every other colour is derived from this, so light and dark both stay coherent."
-                            presets={ACCENT_PRESETS}
-                            disabled={isSaving}
-                        />
-                        <FormSlider
+                    </div>
+
+                    <Section title="Colors" defaultOpen>
+                        <p className="text-sm text-muted-foreground">
+                            Each scheme keeps its own colors; every other option applies to both.
+                        </p>
+                        <Tabs
+                            value={previewAppearance}
+                            onValueChange={(next) => setPreviewAppearance(next as PreviewAppearance)}
+                        >
+                            <TabsList>
+                                <TabsTrigger value="Light">Light</TabsTrigger>
+                                <TabsTrigger value="Dark">Dark</TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="Light" className="mt-3 grid gap-4">
+                                {colorFields("Light")}
+                            </TabsContent>
+                            <TabsContent value="Dark" className="mt-3 grid gap-4">
+                                {colorFields("Dark")}
+                            </TabsContent>
+                        </Tabs>
+                    </Section>
+
+                    <Section title="Style">
+                        <FormSelect
                             control={form.control}
                             name="radius"
-                            label="Corner radius"
-                            min={0}
-                            max={RADIUS_MAX}
-                            formatValue={(value) => `${value}px`}
+                            label="Radius"
+                            description="Rounds every corner the widget draws, from surfaces to the prompt pills."
+                            options={RADIUS_OPTIONS}
                             disabled={isSaving}
                         />
                         <FormSelect
@@ -160,19 +228,45 @@ export function WebWidgetThemeEditor({
                             }
                             disabled={isSaving}
                         />
-                        <FormToggleGroup
+                        <FormSelect
                             control={form.control}
-                            name="density"
-                            label="Density"
-                            options={DENSITY_OPTIONS}
-                            canDeselect={false}
+                            name="fontSize"
+                            label="Font size"
+                            options={FONT_SIZE_OPTIONS}
                             disabled={isSaving}
                         />
+                        {previewTheme.fontSize === "Custom" && (
+                            <FormInput
+                                control={form.control}
+                                name="customFontSizeRem"
+                                label="Custom font size (rem)"
+                                type="number"
+                                step="0.025"
+                                min={MIN_CUSTOM_FONT_SIZE_REM}
+                                max={MAX_CUSTOM_FONT_SIZE_REM}
+                                placeholder="1"
+                                description={`1 is the standard size; ${MIN_CUSTOM_FONT_SIZE_REM}-${MAX_CUSTOM_FONT_SIZE_REM}.`}
+                                disabled={isSaving}
+                            />
+                        )}
                     </Section>
 
-                    <Separator />
-
                     <Section title="Branding">
+                        <FormImagePicker
+                            control={form.control}
+                            name="logo"
+                            label="Logo"
+                            description="Shown in the header next to the title. Downscaled to 128px and stored with the theme."
+                            disabled={isSaving}
+                        />
+                        <FormSelect
+                            control={form.control}
+                            name="logoRadius"
+                            label="Logo radius"
+                            description="Rounds only the logo. Pill crops a square logo to a circle."
+                            options={LOGO_RADIUS_OPTIONS}
+                            disabled={isSaving}
+                        />
                         <FormSwitch
                             control={form.control}
                             name="showHeader"
@@ -193,45 +287,37 @@ export function WebWidgetThemeEditor({
                             placeholder="Ask me anything"
                             disabled={isSaving}
                         />
-                        <FormInput
-                            control={form.control}
-                            name="avatarInitials"
-                            label="Avatar initials"
-                            placeholder="AI"
-                            maxLength={3}
-                            description="Up to three characters. Left blank, the title's initials are used."
-                            disabled={isSaving}
-                        />
                     </Section>
 
-                    <Separator />
-
                     <Section title="Content">
-                        <FormInput
-                            control={form.control}
-                            name="greetingTitle"
-                            label="Greeting title"
-                            placeholder="How can I help?"
-                            disabled={isSaving}
-                        />
-                        <FormInput
-                            control={form.control}
-                            name="greetingBody"
-                            label="Greeting body"
-                            placeholder="Ask a question and I'll do my best to answer it."
-                            disabled={isSaving}
-                        />
-                        <FormStringList
-                            control={form.control}
-                            name="suggestedPrompts"
-                            label="Suggested prompts"
-                            description={`Shown as pills on the empty state. Up to ${MAX_PROMPTS}.`}
-                            addButtonLabel="Add prompt"
-                            emptyLabel="No suggested prompts."
-                            defaultValue={{ value: "" }}
-                            fieldName={(index) => `suggestedPrompts.${index}.value`}
-                            placeholder="Where is my order?"
-                        />
+                        {/* These render only on the welcome screen, so editing them steers the preview there. */}
+                        <div className="grid gap-4" onFocusCapture={() => setPreviewView("Welcome")}>
+                            <FormInput
+                                control={form.control}
+                                name="greetingTitle"
+                                label="Greeting title"
+                                placeholder="How can I help?"
+                                disabled={isSaving}
+                            />
+                            <FormInput
+                                control={form.control}
+                                name="greetingBody"
+                                label="Greeting body"
+                                placeholder="Ask a question and I'll do my best to answer it."
+                                disabled={isSaving}
+                            />
+                            <FormStringList
+                                control={form.control}
+                                name="suggestedPrompts"
+                                label="Suggested prompts"
+                                description={`Offered on the welcome screen. Up to ${MAX_PROMPTS}.`}
+                                addButtonLabel="Add prompt"
+                                emptyLabel="No suggested prompts."
+                                defaultValue={{ value: "" }}
+                                fieldName={(index) => `suggestedPrompts.${index}.value`}
+                                placeholder="Where is my order?"
+                            />
+                        </div>
                         <FormInput
                             control={form.control}
                             name="inputPlaceholder"
@@ -248,40 +334,52 @@ export function WebWidgetThemeEditor({
                             disabled={isSaving}
                         />
                     </Section>
+
+                    <Section title="Custom CSS">
+                        <FormAceEditor
+                            control={form.control}
+                            name="customCss"
+                            mode="css"
+                            height="220px"
+                            disabled={isSaving}
+                            description="Appended after the widget's own styles, for anything the options above don't cover — scrollbars, spacing, one-off tweaks."
+                        />
+                    </Section>
                 </div>
 
                 <div className="grid gap-3 xl:sticky xl:top-4">
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                         <span className="text-sm font-medium">Live preview</span>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap items-center gap-3">
                             <ToggleGroup
                                 type="single"
-                                value={appearance}
-                                onValueChange={(next) => next && setAppearancePreview(next as PreviewAppearance)}
+                                variant="outline"
+                                size="sm"
+                                value={previewView}
+                                onValueChange={(next) => {
+                                    if (next !== "") setPreviewView(next as PreviewView);
+                                }}
+                                aria-label="Previewed screen"
                             >
-                                <ToggleGroupItem value="Light" aria-label="Preview in light mode">
-                                    <Sun className="size-4" />
-                                </ToggleGroupItem>
-                                <ToggleGroupItem value="Dark" aria-label="Preview in dark mode">
-                                    <Moon className="size-4" />
-                                </ToggleGroupItem>
+                                <ToggleGroupItem value="Welcome">Welcome</ToggleGroupItem>
+                                <ToggleGroupItem value="Conversation">Conversation</ToggleGroupItem>
                             </ToggleGroup>
                             <ToggleGroup
                                 type="single"
-                                value={device}
-                                onValueChange={(next) => next && setDevice(next as PreviewDevice)}
+                                variant="outline"
+                                size="sm"
+                                value={previewAppearance}
+                                onValueChange={(next) => {
+                                    if (next !== "") setPreviewAppearance(next as PreviewAppearance);
+                                }}
+                                aria-label="Previewed color scheme"
                             >
-                                <ToggleGroupItem value="desktop" aria-label="Preview at desktop width">
-                                    <Monitor className="size-4" />
-                                </ToggleGroupItem>
-                                <ToggleGroupItem value="mobile" aria-label="Preview at mobile width">
-                                    <Smartphone className="size-4" />
-                                </ToggleGroupItem>
+                                <ToggleGroupItem value="Light">Light</ToggleGroupItem>
+                                <ToggleGroupItem value="Dark">Dark</ToggleGroupItem>
                             </ToggleGroup>
                         </div>
                     </div>
-
-                    <WebWidgetThemePreview theme={previewTheme} appearance={appearance} device={device} />
+                    <WebWidgetThemePreview theme={previewTheme} appearance={previewAppearance} view={previewView} />
                 </div>
             </div>
         </form>

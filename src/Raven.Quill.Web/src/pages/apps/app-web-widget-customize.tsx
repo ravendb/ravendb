@@ -55,7 +55,7 @@ export function AppWebWidgetCustomize() {
                         <div className="grid gap-1">
                             <h2 className="text-lg font-semibold">{channel.displayName}</h2>
                             <p className="text-sm text-muted-foreground">
-                                Choose how this web widget looks and reads. Pick an accent colour and the rest of the
+                                Choose how this web widget looks and reads. Pick an accent color and the rest of the
                                 palette is derived from it, so light and dark both stay coherent.
                             </p>
                         </div>

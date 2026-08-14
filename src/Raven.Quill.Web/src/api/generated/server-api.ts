@@ -387,7 +387,7 @@ export interface paths {
         /** @description Lists the app's active embed links (non-expired, non-revoked), most recent first. Each item carries its token, the channel + agent it targets, the bound parameters, the TTL/cap, and how many turns it has consumed — so the operator can audit and revoke links. */
         get: operations["embedLinks.list"];
         put?: never;
-        /** @description Mints a per-user embed link for an iFrame channel (by channelId). Parameters are validated against the channel's agent and bound into the link server-side (never client-supplied). ttlSeconds and maxInvocations are bounded; both default when omitted. Returns the opaque token + an absolute, paste-ready embed URL. */
+        /** @description Mints a per-user embed link for an iFrame channel (by channelId). SERVER-SIDE ONLY: it needs the operator key, which must never reach a browser, and it sends no CORS headers — call it from your backend and pass only the returned url to the page. Parameters are validated against the channel's agent and bound into the link server-side (never client-supplied). ttlSeconds and maxInvocations are bounded; both default when omitted. Returns the opaque token + an absolute, paste-ready embed URL. */
         post: operations["embedLinks.mint"];
         delete?: never;
         options?: never;
@@ -1713,28 +1713,41 @@ export interface components {
             theme: components["schemas"]["WidgetTheme"];
             fontOptions: components["schemas"]["WidgetFontOption"][];
         };
-        /** @enum {unknown} */
-        WidgetDensity: "Comfortable" | "Compact";
         WidgetFontOption: {
             label: string;
             stack: string;
         };
+        /** @enum {unknown} */
+        WidgetFontSize: "Small" | "Medium" | "Large" | "Custom";
+        /** @enum {unknown} */
+        WidgetLogoRadius: "None" | "Small" | "Medium" | "Large" | "Pill";
+        /** @enum {unknown} */
+        WidgetRadius: "None" | "Small" | "Medium" | "Large";
         WidgetTheme: {
             appearance: components["schemas"]["WidgetAppearance"];
-            accentColor: string;
-            /** Format: int32 */
-            radius: number;
+            light: components["schemas"]["WidgetThemeColors"];
+            dark: components["schemas"]["WidgetThemeColors"];
+            radius: components["schemas"]["WidgetRadius"];
             fontFamily: string;
-            density: components["schemas"]["WidgetDensity"];
+            fontSize: components["schemas"]["WidgetFontSize"];
+            /** Format: double */
+            customFontSizeRem: null | number;
+            logo: null | string;
+            logoRadius: components["schemas"]["WidgetLogoRadius"];
             headerTitle: string;
             headerSubtitle: null | string;
-            avatarInitials: null | string;
             showHeader: boolean;
             greetingTitle: null | string;
             greetingBody: null | string;
             suggestedPrompts: string[];
             inputPlaceholder: string;
             disclaimer: null | string;
+            customCss: null | string;
+        };
+        WidgetThemeColors: {
+            buttonColor: string;
+            messageColor: string;
+            backgroundColor: string;
         };
         WidgetThemeResponse: {
             theme: null | components["schemas"]["WidgetTheme"];
@@ -3955,9 +3968,12 @@ export type VertexSettings = components["schemas"]["VertexSettings"];
 export type WebhookBinding = components["schemas"]["WebhookBinding"];
 export type WidgetAppearance = components["schemas"]["WidgetAppearance"];
 export type WidgetDefaultThemeResponse = components["schemas"]["WidgetDefaultThemeResponse"];
-export type WidgetDensity = components["schemas"]["WidgetDensity"];
 export type WidgetFontOption = components["schemas"]["WidgetFontOption"];
+export type WidgetFontSize = components["schemas"]["WidgetFontSize"];
+export type WidgetLogoRadius = components["schemas"]["WidgetLogoRadius"];
+export type WidgetRadius = components["schemas"]["WidgetRadius"];
 export type WidgetTheme = components["schemas"]["WidgetTheme"];
+export type WidgetThemeColors = components["schemas"]["WidgetThemeColors"];
 export type WidgetThemeResponse = components["schemas"]["WidgetThemeResponse"];
 export type WizardError = components["schemas"]["WizardError"];
 

@@ -41,6 +41,10 @@ public static class WidgetShell
 
     public static string BuildHtml(WidgetAssets assets, string nonce, string title, WidgetTheme theme, string configJson)
     {
+        // Defence for a document written outside the PUT path: an unvalidated theme is discarded whole
+        // rather than field by field, so nothing half-trusted reaches a stylesheet.
+        var safe = WidgetThemeValidation.TryValidate(theme, out _) ? theme : WidgetTheme.Default;
+
         var builder = new StringBuilder();
         builder.Append("<!doctype html>\n<html lang=\"en\">\n<head>\n");
         builder.Append("<meta charset=\"utf-8\">\n");
@@ -54,7 +58,13 @@ public static class WidgetShell
         foreach (var module in assets.ModuleUrls)
             builder.Append($"<link rel=\"modulepreload\" href=\"{module}\">\n");
 
-        builder.Append($"<style nonce=\"{nonce}\">{BuildRootBlock(theme)}</style>\n");
+        builder.Append($"<style nonce=\"{nonce}\">{BuildRootBlock(safe)}</style>\n");
+
+        // Last in the head, so the operator's rules win the cascade over the widget's own stylesheets.
+        // Validation guarantees the text cannot contain `</style`, so it cannot close this tag.
+        if (string.IsNullOrEmpty(safe.CustomCss) == false)
+            builder.Append($"<style nonce=\"{nonce}\">{safe.CustomCss}</style>\n");
+
         builder.Append("</head>\n<body>\n<div id=\"rq-root\"></div>\n");
 
         // A JSON block cannot execute, which keeps the bearer token out of any global and out of reach of
@@ -66,18 +76,20 @@ public static class WidgetShell
         return builder.ToString();
     }
 
-    /// Only the operator's raw inputs, never a derived colour: the derivation lives in the widget's
+    /// Only the operator's raw inputs, never a derived color: the derivation lives in the widget's
     /// TypeScript, and duplicating it here is exactly the drift this rewrite set out to remove. These are
-    /// enough for the browser to paint the right background before the bundle mounts.
+    /// enough for the browser to paint the right background before the bundle mounts. Both schemes' values
+    /// are emitted through light-dark(), so the first paint is right whichever way `color-scheme` resolves.
     internal static string BuildRootBlock(WidgetTheme theme)
     {
-        // Defence for a document written outside the PUT path: an unvalidated theme is discarded whole
-        // rather than field by field, so nothing half-trusted reaches the stylesheet.
+        // Same discard-whole defence as BuildHtml, kept here too because the notice pages call this alone.
         var safe = WidgetThemeValidation.TryValidate(theme, out _) ? theme : WidgetTheme.Default;
-        var radius = Math.Clamp(safe.Radius, 0, WidgetThemeValidation.MaxRadius);
 
-        return $":root{{color-scheme:{ColorScheme(safe.Appearance)};--rq-accent:{safe.AccentColor};" +
-               $"--rq-radius:{radius}px;--rq-font:{safe.FontFamily}}}";
+        return $":root{{color-scheme:{ColorScheme(safe.Appearance)};" +
+               $"--rq-accent:light-dark({safe.Light.ButtonColor},{safe.Dark.ButtonColor});" +
+               $"--rq-bg:light-dark({safe.Light.BackgroundColor},{safe.Dark.BackgroundColor});" +
+               $"--rq-radius:{RadiusPx(safe.Radius)}px;--rq-font:{safe.FontFamily};" +
+               $"font-size:{FontSizeRem(safe)}rem}}";
     }
 
     private static string ColorScheme(WidgetAppearance appearance) => appearance switch
@@ -86,6 +98,34 @@ public static class WidgetShell
         WidgetAppearance.Dark => "dark",
         _ => "light dark",
     };
+
+    // Kept in step with RADIUS_SCALE in packages/widget/src/widget-theme.ts; only the base value is needed
+    // here, because the first paint has no corners smaller than the surface radius to round.
+    private static int RadiusPx(WidgetRadius radius) => radius switch
+    {
+        WidgetRadius.None => 0,
+        WidgetRadius.Small => 6,
+        WidgetRadius.Large => 18,
+        _ => 12,
+    };
+
+    // Kept in step with FONT_SIZE_REM / resolveFontSizeRem in packages/widget/src/widget-theme.ts. Applied
+    // to :root, so every rem-based size inside the document scales with it.
+    private static string FontSizeRem(WidgetTheme theme)
+    {
+        var rem = theme.FontSize switch
+        {
+            WidgetFontSize.Small => 0.875,
+            WidgetFontSize.Large => 1.125,
+            WidgetFontSize.Custom => Math.Clamp(
+                theme.CustomFontSizeRem ?? 1,
+                WidgetThemeValidation.MinCustomFontSizeRem,
+                WidgetThemeValidation.MaxCustomFontSizeRem),
+            _ => 1,
+        };
+
+        return rem.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture);
+    }
 
     /// `JavaScriptEncoder.Default` escapes `<`, `>` and `&`, so a message body containing `</script>` can
     /// never close the config block. The app's converters are kept so enums stay camel-cased strings.

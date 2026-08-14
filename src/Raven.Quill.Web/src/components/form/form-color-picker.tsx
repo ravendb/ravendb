@@ -23,7 +23,7 @@ type FormColorPickerProps<TFieldValues extends FieldValues, TName extends FieldP
     presets?: readonly string[];
 };
 
-/** A hex colour field: a native swatch, a free-text hex input, and optional preset swatches. */
+/** A hex color field: a native swatch, a free-text hex input, and optional preset swatches. */
 export function FormColorPicker<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>({
     className,
     control,
@@ -47,7 +47,7 @@ export function FormColorPicker<TFieldValues extends FieldValues, TName extends 
                 <InputGroupAddon>
                     <input
                         type="color"
-                        aria-label={typeof label === "string" ? `${label} picker` : "Colour picker"}
+                        aria-label={typeof label === "string" ? `${label} picker` : "Color picker"}
                         className="size-5 shrink-0 cursor-pointer appearance-none rounded-full border-none bg-transparent p-0 ring-1 ring-foreground/20 ring-inset disabled:cursor-not-allowed"
                         value={toSwatchValue(value)}
                         disabled={disabled}

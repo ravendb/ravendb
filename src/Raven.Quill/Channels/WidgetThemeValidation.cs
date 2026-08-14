@@ -2,25 +2,39 @@ using System.Text.RegularExpressions;
 
 namespace Raven.Quill.Channels;
 
-/// Validates an operator-supplied theme. Unlike the freeform CSS this replaced, nothing here is a
-/// substring blocklist: every field is either an enum, a bounded number, or text matched against a
-/// positive pattern, so there is no sequence to smuggle past.
+/// Validates an operator-supplied theme. Every field is an enum, a bounded number, or text matched against
+/// a positive pattern — except <see cref="WidgetTheme.CustomCss"/>, which is deliberately freeform: it is
+/// emitted inside a nonce'd style tag under the embed page's CSP, so the only sequence that must never
+/// appear is the one that could close that tag.
 public static partial class WidgetThemeValidation
 {
-    public const int MaxRadius = 24;
     public const int MaxSuggestedPrompts = 4;
     public const int MaxSuggestedPromptLength = 80;
     public const int MaxHeaderTitleLength = 60;
     public const int MaxHeaderSubtitleLength = 100;
-    public const int MaxAvatarInitialsLength = 3;
     public const int MaxGreetingTitleLength = 80;
     public const int MaxGreetingBodyLength = 240;
     public const int MaxInputPlaceholderLength = 80;
     public const int MaxDisclaimerLength = 200;
     public const int MaxFontFamilyLength = 200;
+    public const int MaxCustomCssLength = 10_000;
+
+    /// ~110KB of base64, comfortably enough for a 128px logo while keeping the theme document small.
+    public const int MaxLogoLength = 150_000;
+
+    public const double MinCustomFontSizeRem = 0.625;
+    public const double MaxCustomFontSizeRem = 1.5;
+
+    /// The one sequence that could break out of the shell's `<style>` tag; HTML parses style content up to
+    /// the literal close tag, so blocking it is sufficient regardless of what surrounds it.
+    private const string StyleCloseSequence = "</style";
 
     [GeneratedRegex("^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")]
     private static partial Regex HexColorPattern { get; }
+
+    /// Raster formats only: an SVG data URI can carry script, and nothing here needs vectors.
+    [GeneratedRegex("^data:image/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$")]
+    private static partial Regex LogoDataUriPattern { get; }
 
     /// A custom stack may only use what a font stack actually needs. That rules out `;`, `{`, `}`, `@` and
     /// `url(` by construction rather than by listing them.
@@ -41,26 +55,44 @@ public static partial class WidgetThemeValidation
             return false;
         }
 
-        if (Enum.IsDefined(theme.Density) == false)
+        if (Enum.IsDefined(theme.Radius) == false)
         {
-            error = "density must be 'Comfortable' or 'Compact'";
+            error = "radius must be 'None', 'Small', 'Medium' or 'Large'";
             return false;
         }
 
-        if (HexColorPattern.IsMatch(theme.AccentColor ?? "") == false)
+        if (Enum.IsDefined(theme.LogoRadius) == false)
         {
-            error = "accentColor must be a hex colour such as '#2f6f4f'";
+            error = "logoRadius must be 'None', 'Small', 'Medium', 'Large' or 'Pill'";
             return false;
         }
 
-        if (theme.Radius < 0 || theme.Radius > MaxRadius)
-        {
-            error = $"radius must be between 0 and {MaxRadius}";
+        if (TryValidateColors(theme.Light, "light", out error) == false)
             return false;
-        }
+
+        if (TryValidateColors(theme.Dark, "dark", out error) == false)
+            return false;
 
         if (TryValidateFontFamily(theme.FontFamily, out error) == false)
             return false;
+
+        if (TryValidateFontSize(theme.FontSize, theme.CustomFontSizeRem, out error) == false)
+            return false;
+
+        if (theme.Logo is not null)
+        {
+            if (theme.Logo.Length > MaxLogoLength)
+            {
+                error = $"logo must be {MaxLogoLength} characters or fewer";
+                return false;
+            }
+
+            if (LogoDataUriPattern.IsMatch(theme.Logo) == false)
+            {
+                error = "logo must be a base64 data URI of a png, jpeg or webp image";
+                return false;
+            }
+        }
 
         if (TryValidateRequiredText(theme.HeaderTitle, "headerTitle", MaxHeaderTitleLength, out error) == false)
             return false;
@@ -69,9 +101,6 @@ public static partial class WidgetThemeValidation
             return false;
 
         if (TryValidateOptionalText(theme.HeaderSubtitle, "headerSubtitle", MaxHeaderSubtitleLength, out error) == false)
-            return false;
-
-        if (TryValidateOptionalText(theme.AvatarInitials, "avatarInitials", MaxAvatarInitialsLength, out error) == false)
             return false;
 
         if (TryValidateOptionalText(theme.GreetingTitle, "greetingTitle", MaxGreetingTitleLength, out error) == false)
@@ -83,6 +112,9 @@ public static partial class WidgetThemeValidation
         if (TryValidateOptionalText(theme.Disclaimer, "disclaimer", MaxDisclaimerLength, out error) == false)
             return false;
 
+        if (TryValidateCustomCss(theme.CustomCss, out error) == false)
+            return false;
+
         return TryValidateSuggestedPrompts(theme.SuggestedPrompts, out error);
     }
 
@@ -92,15 +124,18 @@ public static partial class WidgetThemeValidation
     /// operator should see.
     public static WidgetTheme Normalize(WidgetTheme theme) => theme with
     {
-        AccentColor = theme.AccentColor?.Trim().ToLowerInvariant() ?? "",
+        Light = NormalizeColors(theme.Light),
+        Dark = NormalizeColors(theme.Dark),
         FontFamily = theme.FontFamily?.Trim() ?? "",
+        CustomFontSizeRem = theme.FontSize == WidgetFontSize.Custom ? theme.CustomFontSizeRem : null,
+        Logo = Blank(theme.Logo),
         HeaderTitle = theme.HeaderTitle?.Trim() ?? "",
         HeaderSubtitle = Blank(theme.HeaderSubtitle),
-        AvatarInitials = Blank(theme.AvatarInitials)?.ToUpperInvariant(),
         GreetingTitle = Blank(theme.GreetingTitle),
         GreetingBody = Blank(theme.GreetingBody),
         InputPlaceholder = theme.InputPlaceholder?.Trim() ?? "",
         Disclaimer = Blank(theme.Disclaimer),
+        CustomCss = Blank(theme.CustomCss),
         SuggestedPrompts = (theme.SuggestedPrompts ?? [])
             .Select(prompt => prompt?.Trim() ?? "")
             .Where(prompt => prompt.Length > 0)
@@ -108,6 +143,68 @@ public static partial class WidgetThemeValidation
     };
 
     private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static WidgetThemeColors NormalizeColors(WidgetThemeColors? colors) => new(
+        ButtonColor: colors?.ButtonColor?.Trim().ToLowerInvariant() ?? "",
+        MessageColor: colors?.MessageColor?.Trim().ToLowerInvariant() ?? "",
+        BackgroundColor: colors?.BackgroundColor?.Trim().ToLowerInvariant() ?? "");
+
+    private static bool TryValidateColors(WidgetThemeColors? colors, string scheme, out string? error)
+    {
+        if (colors is null)
+        {
+            error = $"{scheme} colors are required";
+            return false;
+        }
+
+        if (HexColorPattern.IsMatch(colors.ButtonColor ?? "") == false)
+        {
+            error = $"{scheme}.buttonColor must be a hex color such as '#2f6f4f'";
+            return false;
+        }
+
+        if (HexColorPattern.IsMatch(colors.MessageColor ?? "") == false)
+        {
+            error = $"{scheme}.messageColor must be a hex color such as '#ebe9fa'";
+            return false;
+        }
+
+        if (HexColorPattern.IsMatch(colors.BackgroundColor ?? "") == false)
+        {
+            error = $"{scheme}.backgroundColor must be a hex color such as '#ffffff'";
+            return false;
+        }
+
+        error = null;
+        return true;
+    }
+
+    private static bool TryValidateFontSize(WidgetFontSize fontSize, double? customRem, out string? error)
+    {
+        if (Enum.IsDefined(fontSize) == false)
+        {
+            error = "fontSize must be 'Small', 'Medium', 'Large' or 'Custom'";
+            return false;
+        }
+
+        if (fontSize == WidgetFontSize.Custom)
+        {
+            if (customRem is null || double.IsFinite(customRem.Value) == false)
+            {
+                error = "customFontSizeRem is required when fontSize is 'Custom'";
+                return false;
+            }
+
+            if (customRem.Value < MinCustomFontSizeRem || customRem.Value > MaxCustomFontSizeRem)
+            {
+                error = $"customFontSizeRem must be between {MinCustomFontSizeRem} and {MaxCustomFontSizeRem}";
+                return false;
+            }
+        }
+
+        error = null;
+        return true;
+    }
 
     private static bool TryValidateFontFamily(string? fontFamily, out string? error)
     {
@@ -134,6 +231,30 @@ public static partial class WidgetThemeValidation
         if (FontStackPattern.IsMatch(stack) == false)
         {
             error = "fontFamily may only contain letters, digits, spaces, commas, hyphens and quotes";
+            return false;
+        }
+
+        error = null;
+        return true;
+    }
+
+    private static bool TryValidateCustomCss(string? customCss, out string? error)
+    {
+        if (customCss is null)
+        {
+            error = null;
+            return true;
+        }
+
+        if (customCss.Length > MaxCustomCssLength)
+        {
+            error = $"customCss must be {MaxCustomCssLength} characters or fewer";
+            return false;
+        }
+
+        if (customCss.Contains(StyleCloseSequence, StringComparison.OrdinalIgnoreCase))
+        {
+            error = $"customCss may not contain '{StyleCloseSequence}'";
             return false;
         }
 

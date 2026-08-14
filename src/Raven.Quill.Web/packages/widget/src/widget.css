@@ -22,14 +22,16 @@
     --radius-rq: var(--rq-radius);
     --radius-rq-sm: var(--rq-radius-sm);
     --radius-rq-pill: var(--rq-radius-pill);
+    --radius-rq-logo: var(--rq-logo-radius);
 
     --font-rq: var(--rq-font);
 }
 
-/* Painted before the bundle mounts, so a dark-mode host never flashes white. `color-scheme` comes
-   from the server's nonce'd inline style; the mounted tree then sets the full resolved palette. */
+/* Painted before the bundle mounts, so a dark-mode host never flashes white. `color-scheme` and an
+   operator background (if any) come from the server's nonce'd inline style; the mounted tree then sets
+   the full resolved palette. */
 html {
-    background: light-dark(#ffffff, #0d1117);
+    background: var(--rq-bg, light-dark(#ffffff, #0d1117));
 }
 
 html,

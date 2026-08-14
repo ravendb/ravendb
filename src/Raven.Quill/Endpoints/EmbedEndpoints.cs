@@ -46,18 +46,27 @@ public static class EmbedEndpoints
     {
         var ct = ctx.RequestAborted;
 
-        var resolved = await TryResolveLiveLinkAsync(ctx, store, slug, token, resolveTheme: true, ct);
-        if (resolved is null)
+        var (status, resolved) = await ResolveLiveLinkAsync(store, slug, token, resolveTheme: true, ct);
+        if (status != LinkStatus.Ok)
+        {
+            await WriteNoticeAsync(ctx, resolved?.theme ?? WidgetTheme.Default,
+                status == LinkStatus.Gone ? StatusCodes.Status410Gone : StatusCodes.Status404NotFound,
+                status == LinkStatus.Gone ? WidgetNotice.Notice.Expired("expired") : WidgetNotice.Notice.NotFound(),
+                ct);
             return;
+        }
 
-        var (app, link, channel, theme) = resolved.Value;
+        var (app, link, channel, theme) = resolved!.Value;
+
+        // A host page may pin the scheme per visitor without a theme of its own: ?appearance=dark|light|system.
+        // Only the appearance is overridable this way - it picks between palettes the operator already chose.
+        if (TryParseAppearance(ctx.Request.Query["appearance"], out var appearanceOverride))
+            theme = theme with { Appearance = appearanceOverride };
 
         if (assets.IsAvailable == false)
         {
-            ctx.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
-            await ctx.Response.WriteAsJsonAsync(
-                new ApiErrorResponse("the embeddable widget bundle is not available on this server",
-                    Code: "widget_unavailable"), ct);
+            await WriteNoticeAsync(ctx, theme, StatusCodes.Status503ServiceUnavailable,
+                WidgetNotice.Notice.Unavailable(), ct);
             return;
         }
 
@@ -87,6 +96,15 @@ public static class EmbedEndpoints
             WidgetShell.BuildHtml(assets, nonce, theme.HeaderTitle, theme, configJson), ct);
     }
 
+    private static bool TryParseAppearance(string? value, out WidgetAppearance appearance)
+    {
+        appearance = default;
+        if (string.IsNullOrEmpty(value))
+            return false;
+
+        return Enum.TryParse(value, ignoreCase: true, out appearance) && Enum.IsDefined(appearance);
+    }
+
     /// A channel with no configured origins is the operator's explicit opt-in to open embedding (the create
     /// endpoint rejects an omitted list precisely so the choice is deliberate), so no directive is emitted
     /// and any site may frame the page. Once origins exist the page is restricted to them, plus the
@@ -104,6 +122,21 @@ public static class EmbedEndpoints
             ancestors.Add(dashboardOrigin);
         ancestors.AddRange(channel.AllowedOrigins);
         return ancestors.ToArray();
+    }
+
+    private static async Task WriteNoticeAsync(
+        HttpContext ctx, WidgetTheme theme, int statusCode, WidgetNotice.Notice notice, CancellationToken ct)
+    {
+        var nonce = WidgetShell.CreateNonce();
+
+        ctx.Response.StatusCode = statusCode;
+        ctx.Response.Headers["Content-Security-Policy"] = WidgetNotice.BuildCsp(nonce);
+        ctx.Response.Headers["Referrer-Policy"] = "no-referrer";
+        ctx.Response.Headers["X-Content-Type-Options"] = "nosniff";
+        ctx.Response.Headers.CacheControl = "no-store";
+        ctx.Response.ContentType = "text/html; charset=utf-8";
+
+        await ctx.Response.WriteAsync(WidgetNotice.BuildHtml(theme, nonce, notice), ct);
     }
 
     private static async Task StreamEmbedChatAsync(
@@ -124,11 +157,17 @@ public static class EmbedEndpoints
             return;
         }
 
-        var resolved = await TryResolveLiveLinkAsync(ctx, store, slug, token, resolveTheme: false, ct);
-        if (resolved is null)
+        var (status, resolved) = await ResolveLiveLinkAsync(store, slug, token, resolveTheme: false, ct);
+        if (status != LinkStatus.Ok)
+        {
+            // the widget maps both of these onto its own terminal states, so no body is needed
+            ctx.Response.StatusCode = status == LinkStatus.Gone
+                ? StatusCodes.Status410Gone
+                : StatusCodes.Status404NotFound;
             return;
+        }
 
-        var (app, link, channel, _) = resolved.Value;
+        var (app, link, channel, _) = resolved!.Value;
 
         if (IsOriginAllowed(ctx.Request, channel.AllowedOrigins) == false)
         {
@@ -281,6 +320,7 @@ public static class EmbedEndpoints
         if (allowedOrigins.Length == 0)
             return true;
 
+        // A same-origin fetch from inside the frame sends no Origin, and neither does a CLI smoke test.
         var origin = request.Headers.Origin.ToString();
         if (string.IsNullOrEmpty(origin))
             return true;
@@ -295,37 +335,25 @@ public static class EmbedEndpoints
         return string.Equals(origin, self, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static async Task<(App app, EmbedLink link, Channel channel, WidgetTheme theme)?> TryResolveLiveLinkAsync(
-        HttpContext ctx, IDocumentStore store, string slug, string token, bool resolveTheme, CancellationToken ct)
-    {
-        if (EmbedLink.IsWellFormedToken(token) == false)
-        {
-            ctx.Response.StatusCode = StatusCodes.Status404NotFound;
-            return null;
-        }
+    private enum LinkStatus { Ok, NotFound, Gone }
 
-        if (Slugifier.IsWellFormed(slug) == false)
-        {
-            ctx.Response.StatusCode = StatusCodes.Status404NotFound;
-            return null;
-        }
+    /// `Gone` still carries the resolved link so the page route can render its notice in the channel's own
+    /// theme — an expired session should not look like a different product.
+    private static async Task<(LinkStatus Status, (App app, EmbedLink link, Channel channel, WidgetTheme theme)? Link)>
+        ResolveLiveLinkAsync(IDocumentStore store, string slug, string token, bool resolveTheme, CancellationToken ct)
+    {
+        if (EmbedLink.IsWellFormedToken(token) == false || Slugifier.IsWellFormed(slug) == false)
+            return (LinkStatus.NotFound, null);
 
         var resolved = await ResolveAsync(store, slug, token, resolveTheme, ct);
         if (resolved is null)
-        {
-            ctx.Response.StatusCode = StatusCodes.Status404NotFound;
-            return null;
-        }
+            return (LinkStatus.NotFound, null);
 
         var (_, link, channel, _) = resolved.Value;
 
-        if (channel.Enabled == false || link.Revoked || link.ExpiresAt <= DateTime.UtcNow)
-        {
-            ctx.Response.StatusCode = StatusCodes.Status410Gone;
-            return null;
-        }
-
-        return resolved;
+        return channel.Enabled == false || link.Revoked || link.ExpiresAt <= DateTime.UtcNow
+            ? (LinkStatus.Gone, resolved)
+            : (LinkStatus.Ok, resolved);
     }
 
     private static async Task<(App app, EmbedLink link, Channel channel, WidgetTheme theme)?> ResolveAsync(

@@ -218,6 +218,8 @@ curl -sk -X POST https://dashboard.<your-slug>.myquill.ai/api/apps/$SLUG/setup/c
   -H "Content-Type: application/json" \
   -d '{"type":"iframe","agentId":"product-catalog","allowedOrigins":[]}'
 #   -> {"channelId":"..."}
+#   allowedOrigins is required. [] means "any site may frame it"; otherwise list exact
+#   scheme://host[:port] entries.
 
 # (e) mint a per-user embed link for the channel (short-lived, invocation-capped)
 curl -sk -X POST https://dashboard.<your-slug>.myquill.ai/api/apps/$SLUG/embed-links \
@@ -243,6 +245,60 @@ curl -sk -N -X POST https://public.<your-slug>.myquill.ai/apps/<app-slug>/embed/
   -H "Content-Type: application/json" -d '{"prompt":"Do you have Chai? Give its price and stock."}'
 # NDJSON: {"type":"chunk","text":"…"} … {"type":"done","answer":{"reply":"…"},"conversationId":"chats/…"}
 ```
+
+---
+
+## 7. Embed on your own site
+
+A minted link is a bearer credential with a TTL and a turn cap, so there is no static widget URL — every
+visitor gets their own link, minted by **your backend**. The dashboard's channel page prints this flow,
+pre-filled with your slug and channel id.
+
+Your server calls `POST /api/apps/{slug}/embed-links` with the operator key and hands the page nothing
+but the returned `url`.
+
+> **`X-Api-Key` is server-side only.** It unlocks the whole appliance, and the endpoint sends no CORS
+> headers, so a browser `fetch` to it fails preflight anyway. Agent parameters are bound at mint time
+> precisely so a visitor cannot choose them.
+
+```html
+<iframe id="quill" title="Assistant" style="width:100%;height:600px;border:0"></iframe>
+
+<script type="module">
+    // your own endpoint: it mints server-side and returns just { url }
+    async function openSession() {
+        const response = await fetch("/api/quill-session", { method: "POST" });
+        if (!response.ok) throw new Error(`Could not start the assistant: ${response.status}`);
+
+        document.getElementById("quill").src = (await response.json()).url;
+    }
+
+    window.addEventListener("message", (event) => {
+        if (event.origin !== "https://public.<your-slug>.myquill.ai") return;
+
+        const message = event.data;
+        if (message?.source !== "raven-quill" || message.version !== 1) return;
+        if (message.type === "expired") void openSession(); // mint a fresh link and keep chatting
+    });
+
+    void openSession();
+</script>
+```
+
+### What the frame tells the host page
+
+A live embed posts these to its parent. Every one is data-free, so the target origin is `"*"`; validate
+`source` and `version`, and check `event.origin` against your appliance's `public.*` host.
+
+| `type` | Payload | Meaning |
+|---|---|---|
+| `ready` | — | The widget mounted. Hide your own loader. |
+| `expired` | `{ reason: "expired" \| "limit" }` | Terminal. Mint a new link and reset `iframe.src`. |
+| `error` | `{ message }` | Something failed; the frame is showing its own message. |
+
+`expired` also arrives from the server's own notice page, so a link that died *before* the page was served
+reports the same thing as one that died mid-conversation. There is no `resize`: the widget is a full-height
+panel that scrolls internally, so size the iframe with CSS.
 
 ---
 
@@ -273,6 +329,7 @@ docker rm -f nw-postgres            # if you used the throwaway Postgres
 | `UnsuccessfulAiRequestException: 401 invalid_api_key` | The LLM key is wrong/expired. Re-POST `ai/connection-strings` with a valid key (test it: `curl -H "Authorization: Bearer $KEY" https://api.openai.com/v1/models`). |
 | `MissingAiAgentParameterException: Parameter 'customerId' is missing` | The agent declares a **caller-supplied** agent-level parameter the iframe can't provide (e.g. `order-support`). Use `product-catalog` / `sales-insights`, whose inputs are model-filled query params. |
 | Agent runs but finds no rows | Check the query matches the mirrored field **types**, not just names — e.g. Northwind's `Discontinued` mirrors as integer `0/1`, so `Discontinued = false` matches nothing; filter on `= 0` or drop it. Confirm the CDC initial load finished (collection counts via Studio or `collections/stats`). |
+| The iframe is blank, nothing in the browser console you can act on | Load the embed URL directly in a tab. A 410 renders "This conversation has ended" (expired, revoked, or a disabled channel — mint a new link). If the page loads directly but not in the iframe, the host page's origin isn't on the channel's `allowedOrigins` (check the browser console for the CSP `frame-ancestors` rejection). |
 
 ---
 

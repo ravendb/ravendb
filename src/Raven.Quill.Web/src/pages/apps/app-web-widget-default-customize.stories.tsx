@@ -45,7 +45,11 @@ export const DarkTheme: Story = {
             handlers: {
                 iframe: [
                     iframeMocks.getDefaultTheme({
-                        theme: { ...SAMPLE_CHANNEL_THEME, appearance: "Dark", accentColor: "#0f766e" },
+                        theme: {
+                            ...SAMPLE_CHANNEL_THEME,
+                            appearance: "Dark",
+                            dark: { buttonColor: "#0f766e", messageColor: "#122d2a", backgroundColor: "#0d1117" },
+                        },
                         fontOptions: SAMPLE_FONT_OPTIONS,
                     }),
                     ...iframeHandlers(),

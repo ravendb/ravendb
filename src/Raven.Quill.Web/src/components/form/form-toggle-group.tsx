@@ -19,6 +19,8 @@ type FormToggleGroupProps<TFieldValues extends FieldValues, TName extends FieldP
     description?: ReactNode;
     disabled?: boolean;
     label?: ReactNode;
+    /** Runs after the form value updates, for view state that follows this field (e.g. a live preview). */
+    onValueChange?: (value: string | null) => void;
     options: readonly FormToggleGroupOption[];
 };
 
@@ -32,6 +34,7 @@ export function FormToggleGroup<TFieldValues extends FieldValues, TName extends 
     disabled,
     label,
     name,
+    onValueChange,
     options,
 }: FormToggleGroupProps<TFieldValues, TName>) {
     const {
@@ -54,8 +57,10 @@ export function FormToggleGroup<TFieldValues extends FieldValues, TName extends 
                 onValueChange={(next) => {
                     if (next !== "") {
                         onChange(next);
+                        onValueChange?.(next);
                     } else if (canDeselect) {
                         onChange(null);
+                        onValueChange?.(null);
                     }
                 }}
                 disabled={disabled || formState.isSubmitting}

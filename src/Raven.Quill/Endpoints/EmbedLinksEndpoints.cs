@@ -28,10 +28,12 @@ public static class EmbedLinksEndpoints
         group.MapPost("/embed-links", MintAsync)
             .WithName("embedLinks.mint")
             .WithDescription(
-                "Mints a per-user embed link for an iFrame channel (by channelId). Parameters are " +
+                "Mints a per-user embed link for an iFrame channel (by channelId). SERVER-SIDE ONLY: it " +
+                "needs the operator key, which must never reach a browser, and it sends no CORS headers " +
+                "— call it from your backend and pass only the returned url to the page. Parameters are " +
                 "validated against the channel's agent and bound into the link server-side (never " +
-                "client-supplied). ttlSeconds and maxInvocations are bounded; both default " +
-                "when omitted. Returns the opaque token + an absolute, paste-ready embed URL.")
+                "client-supplied). ttlSeconds and maxInvocations are bounded; both default when omitted. " +
+                "Returns the opaque token + an absolute, paste-ready embed URL.")
             .Accepts<MintEmbedLinkRequest>("application/json")
             .Produces<MintEmbedLinkResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)

@@ -1,4 +1,5 @@
 import { createRoot } from "react-dom/client";
+import { announceHostError } from "@/host-channel";
 import { LiveApp } from "@/live-app";
 import { PreviewApp } from "@/preview-app";
 import { readConfig, readMode } from "@/widget-config";
@@ -26,8 +27,10 @@ function mount() {
         createRoot(container).render(<LiveApp config={config} />);
     } catch {
         // A malformed or absent config block means the shell was served wrong; a blank frame would just
-        // look like a hung widget, so say something the visitor can act on.
+        // look like a hung widget, so say something the visitor can act on — and tell the host, which
+        // would otherwise sit on its loader forever waiting for a `ready` that never comes.
         renderFatal(container, "This assistant is unavailable right now.");
+        announceHostError("widget config is unusable");
     }
 }
 

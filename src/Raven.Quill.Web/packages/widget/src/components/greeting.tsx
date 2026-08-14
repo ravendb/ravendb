@@ -15,14 +15,14 @@ export function Greeting({ title, body, suggestedPrompts, isDisabled, onSelectPr
             </div>
 
             {suggestedPrompts.length > 0 && (
-                <ul className="flex flex-wrap gap-2">
+                <ul className="flex flex-col items-start gap-2">
                     {suggestedPrompts.map((prompt) => (
-                        <li key={prompt}>
+                        <li key={prompt} className="w-full">
                             <button
                                 type="button"
                                 disabled={isDisabled}
                                 onClick={() => onSelectPrompt(prompt)}
-                                className="rounded-rq-pill border-rq-border bg-rq-surface hover:border-rq-accent focus-visible:ring-rq-accent border px-3 py-1.5 text-start text-[13px] transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
+                                className="rounded-rq-pill border-rq-border bg-rq-surface hover:border-rq-accent focus-visible:ring-rq-accent border px-3 py-1.5 text-start text-[0.8125rem] transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
                             >
                                 {prompt}
                             </button>

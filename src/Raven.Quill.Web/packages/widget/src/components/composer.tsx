@@ -60,7 +60,7 @@ export function Composer({ placeholder, isStreaming, isDisabled, onSubmit, onSto
                         type="button"
                         onClick={onStop}
                         aria-label="Stop generating"
-                        className="bg-rq-accent text-rq-accent-fg hover:bg-rq-accent-hover focus-visible:ring-rq-accent focus-visible:ring-offset-rq-bg flex size-9 shrink-0 items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                        className="bg-rq-accent text-rq-accent-fg hover:bg-rq-accent-hover focus-visible:ring-rq-accent focus-visible:ring-offset-rq-bg rounded-rq-pill flex size-9 shrink-0 items-center justify-center transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                     >
                         <StopIcon className="size-4" />
                     </button>
@@ -69,7 +69,7 @@ export function Composer({ placeholder, isStreaming, isDisabled, onSubmit, onSto
                         type="submit"
                         disabled={canSend === false}
                         aria-label="Send message"
-                        className="bg-rq-accent text-rq-accent-fg hover:bg-rq-accent-hover focus-visible:ring-rq-accent focus-visible:ring-offset-rq-bg flex size-9 shrink-0 items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-40"
+                        className="bg-rq-accent text-rq-accent-fg hover:bg-rq-accent-hover focus-visible:ring-rq-accent focus-visible:ring-offset-rq-bg rounded-rq-pill flex size-9 shrink-0 items-center justify-center transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-40"
                     >
                         <ArrowUpIcon className="size-4" />
                     </button>

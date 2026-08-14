@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { streamChat } from "@/transport";
+import { streamChat, type ChatErrorKind } from "@/transport";
 import type { ChatRole, HistoryTurn } from "@/widget-config";
 
 export type ChatMessage = {
@@ -18,6 +18,8 @@ export type ChatController = {
     messages: ChatMessage[];
     streamingId: string | null;
     errorMessage: string | null;
+    /** Which failure the message describes, so a live embed can tell its host page apart from a retry. */
+    errorKind: ChatErrorKind | null;
     /** An expired link or an exhausted invocation budget can't recover, so the composer stays locked. */
     isBlocked: boolean;
     send: (prompt: string) => void;
@@ -28,7 +30,7 @@ export type ChatController = {
 export function useChat(chatUrl: string | null, history: HistoryTurn[]): ChatController {
     const [messages, setMessages] = useState<ChatMessage[]>(() => toMessages(history));
     const [streamingId, setStreamingId] = useState<string | null>(null);
-    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const [error, setError] = useState<{ kind: ChatErrorKind; message: string } | null>(null);
     const [isBlocked, setIsBlocked] = useState(false);
 
     const abortRef = useRef<AbortController | null>(null);
@@ -58,13 +60,13 @@ export function useChat(chatUrl: string | null, history: HistoryTurn[]): ChatCon
                         if (event.reply !== null) fillIfEmpty(assistantId, event.reply);
                         break;
                     case "error":
-                        setErrorMessage(event.message);
+                        setError({ kind: event.kind, message: event.message });
                         if (event.kind !== "failed") setIsBlocked(true);
                         break;
                 }
             }
         } catch {
-            setErrorMessage(GENERIC_ERROR);
+            setError({ kind: "failed", message: GENERIC_ERROR });
         } finally {
             setStreamingId(null);
             abortRef.current = null;
@@ -81,7 +83,7 @@ export function useChat(chatUrl: string | null, history: HistoryTurn[]): ChatCon
             { id: userId, role: "user", content: prompt },
             { id: assistantId, role: "assistant", content: "" },
         ]);
-        setErrorMessage(null);
+        setError(null);
         setStreamingId(assistantId);
 
         const controller = new AbortController();
@@ -91,5 +93,13 @@ export function useChat(chatUrl: string | null, history: HistoryTurn[]): ChatCon
 
     const stop = () => abortRef.current?.abort();
 
-    return { messages, streamingId, errorMessage, isBlocked, send, stop };
+    return {
+        messages,
+        streamingId,
+        errorMessage: error?.message ?? null,
+        errorKind: error?.kind ?? null,
+        isBlocked,
+        send,
+        stop,
+    };
 }
