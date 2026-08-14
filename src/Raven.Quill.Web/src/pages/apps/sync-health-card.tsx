@@ -10,6 +10,7 @@ import { cn, formatDateTime, formatRelativeTime } from "@/lib/utils";
 import { CdcErrorsSheet } from "@/pages/apps/cdc-errors-sheet";
 import { summarizeCdcErrors, type CdcErrorsSummary } from "@/pages/apps/cdc-errors-summary";
 import { SectionCard } from "@/pages/apps/section-card";
+import { SyncActivityDots } from "@/pages/apps/sync-activity-dots";
 import { hasErroredSinceLastSync, toSyncStatus, type SyncStatus } from "@/pages/apps/sync-status";
 import { SyncStatusBadge } from "@/pages/apps/sync-status-badge";
 
@@ -62,7 +63,7 @@ export function SyncHealthCard({ slug }: { slug: string }) {
                     <Card className={cn(isFailing && "border-destructive")}>
                         {/* Flow the readings side by side at their natural width. A grid would stretch
                             two items across the full card, leaving a chasm between them on a wide screen. */}
-                        <CardContent className="flex flex-wrap gap-x-6 gap-y-4">
+                        <CardContent className="flex flex-wrap items-center gap-x-6 gap-y-4">
                             <SyncDetail
                                 label="Last sync"
                                 value={describeLastSync(performance.lagSeconds)}
@@ -74,6 +75,11 @@ export function SyncHealthCard({ slug }: { slug: string }) {
                                 exactAt={errors.latestAt}
                                 isDestructive={isFailing}
                             />
+                            {/* Right-aligned: it fills the width the two readings leave empty
+                                rather than adding a row of its own. */}
+                            <div className="ml-auto">
+                                <SyncActivityDots batches={performance.recentBatches} />
+                            </div>
                         </CardContent>
                     </Card>
                 )}

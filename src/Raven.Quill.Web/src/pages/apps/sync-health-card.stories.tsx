@@ -34,6 +34,7 @@ export const Idle: Story = {
         expect(await canvas.findByText("Idle")).toBeInTheDocument();
         expect(await canvas.findByText(/3 recorded, latest 3w ago/i)).toBeInTheDocument();
         expect(await canvas.findByRole("button", { name: /view errors/i })).toBeInTheDocument();
+        expect(await canvas.findByRole("img", { name: /20 recent batches, 1 with errors/i })).toBeInTheDocument();
 
         // Relative on screen, exact on hover, so a lag can be matched against a server log.
         await userEvent.hover(await canvas.findByText("2m ago"));
@@ -97,6 +98,7 @@ export const FailingWithoutBatches: Story = {
                         status: "idle",
                         lastSyncAt: null,
                         lagSeconds: 7 * 24 * 60 * 60,
+                        recentBatches: [],
                     }),
                     appsMocks.cdcErrors(failingCdcErrors),
                 ],
@@ -110,5 +112,7 @@ export const FailingWithoutBatches: Story = {
         expect(await canvas.findByText(/3 recorded, latest 2m ago/i)).toBeInTheDocument();
         // Reported idle, shown as failing.
         expect(await canvas.findByText("Error")).toBeInTheDocument();
+        // The dots have nothing to draw here, which is exactly when they must not just vanish.
+        expect(await canvas.findByText("No batches in the recent window")).toBeInTheDocument();
     },
 };

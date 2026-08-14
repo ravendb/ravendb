@@ -3,6 +3,7 @@ import type {
     AiConnectionString,
     AppCdcConfigurationResponse,
     AppResponse,
+    CdcBatchPoint,
     CdcError,
     CdcPerformanceResponse,
     ProvisionAgentResponse,
@@ -104,8 +105,31 @@ export const sampleCdcPerformance: CdcPerformanceResponse = {
     recentReads: 24_800,
     recentWrites: 24_795,
     errorCount: 0,
-    recentBatches: [],
+    recentBatches: sampleCdcBatchPoints(),
 };
+
+// Twenty completed batches with one failure among them, so the overview's activity dots have a
+// shape to draw and a failed batch to mark.
+function sampleCdcBatchPoints(): CdcBatchPoint[] {
+    const firstStartedMs = Date.parse("2026-07-21T08:00:00Z");
+
+    return Array.from({ length: 20 }, (_, index) => {
+        const startedMs = firstStartedMs + index * 60_000;
+        const errors = index === 12 ? 3 : 0;
+        // A wide spread, the way real batches run: quiet stretches between catch-up bursts.
+        const processed = 40 + Math.round(Math.abs(Math.sin(index * 1.1)) * 960);
+
+        return {
+            started: new Date(startedMs).toISOString(),
+            completed: new Date(startedMs + 1_200).toISOString(),
+            durationInMs: 1_200,
+            read: processed + errors,
+            processed,
+            errors,
+            stopReason: null,
+        };
+    });
+}
 
 export const sampleCdcErrors: CdcError[] = [
     {
