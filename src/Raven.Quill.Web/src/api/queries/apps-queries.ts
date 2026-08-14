@@ -25,6 +25,14 @@ export function createAppsQueries(api: ServerApi["apps"]) {
                 queryKey: [baseKey, "cdcGet", slug],
                 queryFn: () => api.cdcGet(slug),
             }),
+        cdcPerformance: (slug: string) =>
+            queryOptions({
+                queryKey: [baseKey, "cdcPerformance", slug],
+                queryFn: () => api.cdcPerformance(slug),
+                // Sync health is a live reading, so it refetches on every mount. It keeps its cache
+                // entry, unlike cdcErrors, so revisiting shows the last status instead of a spinner.
+                staleTime: 0,
+            }),
         cdcErrors: (slug: string) =>
             queryOptions({
                 queryKey: [baseKey, "cdcErrors", slug],

@@ -4,6 +4,7 @@ import type {
     AppCdcConfigurationResponse,
     AppResponse,
     CdcError,
+    CdcPerformanceResponse,
     ProvisionAgentResponse,
     SuggestAgentResponse,
 } from "@/api/generated/server-api";
@@ -28,6 +29,8 @@ export const appsMocks = {
         }) as unknown as RequestHandler,
     cdcGet: (cdc: AppCdcConfigurationResponse = sampleAppCdcConfiguration) =>
         apiHttp.get("/api/apps/{slug}/cdc", ({ response }) => response(200).json(cdc)),
+    cdcPerformance: (performance: CdcPerformanceResponse = sampleCdcPerformance) =>
+        apiHttp.get("/api/apps/{slug}/cdc/performance", ({ response }) => response(200).json(performance)),
     cdcErrors: (errors: CdcError[] = sampleCdcErrors) =>
         apiHttp.get("/api/apps/{slug}/cdc/errors", ({ response }) => response(200).json(errors)),
     detail: (apps: AppResponse[] = sampleApps) =>
@@ -90,6 +93,19 @@ export const sampleApps: AppResponse[] = [
         createdAt: "2026-05-12T08:30:00Z",
     },
 ];
+
+// Idle and healthy on its own terms, while sampleCdcErrors still holds older failures - the pair
+// the overview card has to present without the two reading as a contradiction.
+export const sampleCdcPerformance: CdcPerformanceResponse = {
+    enabled: true,
+    status: "idle",
+    lastSyncAt: "2026-07-21T08:20:00Z",
+    lagSeconds: 120,
+    recentReads: 24_800,
+    recentWrites: 24_795,
+    errorCount: 0,
+    recentBatches: [],
+};
 
 export const sampleCdcErrors: CdcError[] = [
     {
