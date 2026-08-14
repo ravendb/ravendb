@@ -15,12 +15,15 @@ export function AppChannels() {
     ];
 
     return (
-        <div className="space-y-8">
-            <div className="flex items-start justify-between gap-4">
-                <p className="max-w-prose text-sm text-muted-foreground">
-                    Channels are the surfaces end users reach your agents through.
-                </p>
-                <AddChannelMenu slug={slug} label="New channel" />
+        <div className="space-y-6">
+            <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1">
+                    <h1 className="text-2xl font-semibold tracking-tight">Channels</h1>
+                    <p className="max-w-prose text-sm text-muted-foreground">
+                        Channels are the surfaces end users reach your agents through.
+                    </p>
+                </div>
+                <AddChannelMenu slug={slug} label="New channel" variant="default" />
             </div>
             <DashboardStatCards cards={cards} />
             <ChannelGroups slug={slug} />

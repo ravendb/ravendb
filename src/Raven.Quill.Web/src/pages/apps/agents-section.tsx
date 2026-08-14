@@ -13,96 +13,90 @@ import { DeleteAgentDialog } from "@/pages/apps/agents/delete-agent-dialog";
 import { SectionCard, SectionTable } from "@/pages/apps/section-card";
 
 export function AgentsSection({ slug }: { slug: string }) {
-    const agentsQuery = useQuery(api.queries.agents.list(slug));
-
     return (
-        <SectionCard title="Agents" action={<AddAgentButton slug={slug} />}>
-            <ApiState
-                isLoading={agentsQuery.isPending}
-                isError={agentsQuery.isError}
-                errorTitle="Could not load agents"
-                onRetry={() => void agentsQuery.refetch()}
-                loadingLabel="Loading agents..."
-            >
-                {agentsQuery.data && (
-                    <SectionTable
-                        headers={[
-                            "Agent name",
-                            "Status",
-                            "Model",
-                            "Last run",
-                            "Conversations",
-                            "Messages",
-                            "Tokens",
-                            "",
-                        ]}
-                        isEmpty={agentsQuery.data.length === 0}
-                        emptyMessage="No agents yet."
-                    >
-                        {agentsQuery.data.map((agent) => (
-                            <TableRow key={agent.agentId}>
-                                <TableCell className="font-medium">{agent.name}</TableCell>
-                                <TableCell>
-                                    <StatusIndicator
-                                        tone={agent.disabled ? "muted" : "positive"}
-                                        label={agent.disabled ? "Disabled" : "Active"}
-                                    />
-                                </TableCell>
-                                <TableCell className="font-mono text-xs text-muted-foreground">
-                                    {agent.model ?? "—"}
-                                </TableCell>
-                                <TableCell className="whitespace-nowrap text-muted-foreground">
-                                    {agent.lastInvokedAt ? formatDateTime(agent.lastInvokedAt) : "—"}
-                                </TableCell>
-                                <TableCell className="tabular-nums">{formatCompact(agent.conversations)}</TableCell>
-                                <TableCell className="tabular-nums">{formatCompact(agent.messages)}</TableCell>
-                                <TableCell className="tabular-nums">{formatCompact(agent.tokens)}</TableCell>
-                                <TableCell className="text-right">
-                                    <div className="flex items-center justify-end gap-1">
-                                        <Button
-                                            asChild
-                                            variant="ghost"
-                                            size="icon-sm"
-                                            aria-label={`Edit ${agent.name}`}
-                                            title="Edit agent"
-                                        >
-                                            <Link
-                                                to={appRoutes.app(
-                                                    slug,
-                                                    `agents/${encodeURIComponent(agent.agentId)}/edit`,
-                                                )}
-                                            >
-                                                <Pencil className="size-3.5" aria-hidden="true" />
-                                            </Link>
-                                        </Button>
-                                        <DeleteAgentDialog
-                                            slug={slug}
-                                            agent={agent}
-                                            trigger={
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon-sm"
-                                                    aria-label={`Delete ${agent.name}`}
-                                                    title="Delete agent"
-                                                >
-                                                    <Trash2 className="size-3.5" aria-hidden="true" />
-                                                </Button>
-                                            }
-                                        />
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </SectionTable>
-                )}
-            </ApiState>
+        <SectionCard title="Agents" action={<AddAgentButton slug={slug} variant="outline" />}>
+            <AgentsTable slug={slug} />
         </SectionCard>
     );
 }
 
-function AddAgentButton({ slug }: { slug: string }) {
+export function AgentsTable({ slug }: { slug: string }) {
+    const agentsQuery = useQuery(api.queries.agents.list(slug));
+
     return (
-        <Button asChild size="sm" variant="outline">
+        <ApiState
+            isLoading={agentsQuery.isPending}
+            isError={agentsQuery.isError}
+            errorTitle="Could not load agents"
+            onRetry={() => void agentsQuery.refetch()}
+            loadingLabel="Loading agents..."
+        >
+            {agentsQuery.data && (
+                <SectionTable
+                    headers={["Agent name", "Status", "Model", "Last run", "Conversations", "Messages", "Tokens", ""]}
+                    isEmpty={agentsQuery.data.length === 0}
+                    emptyMessage="No agents yet."
+                >
+                    {agentsQuery.data.map((agent) => (
+                        <TableRow key={agent.agentId}>
+                            <TableCell className="font-medium">{agent.name}</TableCell>
+                            <TableCell>
+                                <StatusIndicator
+                                    tone={agent.disabled ? "muted" : "positive"}
+                                    label={agent.disabled ? "Disabled" : "Active"}
+                                />
+                            </TableCell>
+                            <TableCell className="font-mono text-xs text-muted-foreground">
+                                {agent.model ?? "—"}
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap text-muted-foreground">
+                                {agent.lastInvokedAt ? formatDateTime(agent.lastInvokedAt) : "—"}
+                            </TableCell>
+                            <TableCell className="tabular-nums">{formatCompact(agent.conversations)}</TableCell>
+                            <TableCell className="tabular-nums">{formatCompact(agent.messages)}</TableCell>
+                            <TableCell className="tabular-nums">{formatCompact(agent.tokens)}</TableCell>
+                            <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                    <Button
+                                        asChild
+                                        variant="ghost"
+                                        size="icon-sm"
+                                        aria-label={`Edit ${agent.name}`}
+                                        title="Edit agent"
+                                    >
+                                        <Link
+                                            to={appRoutes.app(slug, `agents/${encodeURIComponent(agent.agentId)}/edit`)}
+                                        >
+                                            <Pencil className="size-3.5" aria-hidden="true" />
+                                        </Link>
+                                    </Button>
+                                    <DeleteAgentDialog
+                                        slug={slug}
+                                        agent={agent}
+                                        trigger={
+                                            <Button
+                                                variant="ghost"
+                                                size="icon-sm"
+                                                aria-label={`Delete ${agent.name}`}
+                                                title="Delete agent"
+                                            >
+                                                <Trash2 className="size-3.5" aria-hidden="true" />
+                                            </Button>
+                                        }
+                                    />
+                                </div>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </SectionTable>
+            )}
+        </ApiState>
+    );
+}
+
+export function AddAgentButton({ slug, variant = "default" }: { slug: string; variant?: "default" | "outline" }) {
+    return (
+        <Button asChild variant={variant} size="sm">
             <Link to={appRoutes.addCapability(slug, "agent")}>
                 <Plus className="size-3.5" aria-hidden="true" />
                 Add agent

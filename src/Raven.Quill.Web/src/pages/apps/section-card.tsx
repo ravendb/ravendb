@@ -7,20 +7,22 @@ export function SectionCard({
     action,
     children,
 }: {
-    title: ReactNode;
+    title?: ReactNode;
     description?: ReactNode;
     action?: ReactNode;
     children: ReactNode;
 }) {
     return (
         <section className="min-w-0">
-            <div className="mb-2 flex items-center justify-between gap-3">
-                <div className="space-y-0.5">
-                    <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
-                    {description && <p className="text-sm text-muted-foreground">{description}</p>}
+            {(title || action) && (
+                <div className="mb-2 flex items-center justify-between gap-3">
+                    <div className="space-y-0.5">
+                        {title && <h2 className="text-lg font-semibold tracking-tight">{title}</h2>}
+                        {description && <p className="text-sm text-muted-foreground">{description}</p>}
+                    </div>
+                    {action}
                 </div>
-                {action}
-            </div>
+            )}
             {children}
         </section>
     );
