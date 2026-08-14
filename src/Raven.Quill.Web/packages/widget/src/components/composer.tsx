@@ -49,7 +49,8 @@ export function Composer({ placeholder, isStreaming, isDisabled, onSubmit, onSto
                     aria-label={placeholder}
                     onChange={(event) => setValue(event.currentTarget.value)}
                     onKeyDown={(event) => {
-                        if (event.key !== "Enter" || event.shiftKey) return;
+                        // `isComposing`: an IME fires Enter to confirm a candidate, not to send.
+                        if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
                         event.preventDefault();
                         submit();
                     }}

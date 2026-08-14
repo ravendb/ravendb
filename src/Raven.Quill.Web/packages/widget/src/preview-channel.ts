@@ -2,8 +2,6 @@ import { envelope, isEnvelope, type Envelope } from "@/envelope";
 import { normalizeTheme } from "@/widget-config";
 import type { ResolvedAppearance, WidgetTheme } from "@/widget-theme";
 
-export { ENVELOPE_SOURCE, ENVELOPE_VERSION, envelope } from "@/envelope";
-
 /** Which screen the preview renders: the welcome (empty) state or the canned conversation. */
 export type PreviewView = "Welcome" | "Conversation";
 

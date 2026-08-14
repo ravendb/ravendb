@@ -43,6 +43,11 @@ const APPEARANCE_OPTIONS = [
     { value: "System", label: "System" },
 ] as const;
 
+const SCHEME_COLOR_FIELDS = {
+    Light: ["lightButtonColor", "lightMessageColor", "lightBackgroundColor"],
+    Dark: ["darkButtonColor", "darkMessageColor", "darkBackgroundColor"],
+} as const satisfies Record<PreviewAppearance, readonly (keyof WidgetThemeFormData)[]>;
+
 type WebWidgetThemeEditorProps = {
     /** The saved theme. Null means "follow the app default", which only the per-widget editor offers. */
     theme: WidgetTheme | null;
@@ -141,7 +146,22 @@ export function WebWidgetThemeEditor({
     );
 
     return (
-        <form className="grid gap-6" onSubmit={form.handleSubmit((submitted) => onSave(toWidgetTheme(submitted)))}>
+        <form
+            className="grid gap-6"
+            onSubmit={form.handleSubmit(
+                (submitted) => onSave(toWidgetTheme(submitted)),
+                (errors) => {
+                    // The color fields of the inactive scheme are unmounted with their tab, so an error there
+                    // would be invisible and Save would appear to do nothing - switch to the tab that has it.
+                    const hasColorError = (scheme: PreviewAppearance) =>
+                        SCHEME_COLOR_FIELDS[scheme].some((field) => field in errors);
+                    const otherScheme = previewAppearance === "Light" ? "Dark" : "Light";
+                    if (!hasColorError(previewAppearance) && hasColorError(otherScheme)) {
+                        setPreviewAppearance(otherScheme);
+                    }
+                },
+            )}
+        >
             <div className="flex flex-wrap items-center justify-end gap-2">
                 {canFollowAppDefault && !isFollowingAppDefault && (
                     <Button type="button" variant="outline" size="sm" disabled={isSaving} onClick={() => onSave(null)}>
@@ -316,6 +336,7 @@ export function WebWidgetThemeEditor({
                                 defaultValue={{ value: "" }}
                                 fieldName={(index) => `suggestedPrompts.${index}.value`}
                                 placeholder="Where is my order?"
+                                disabled={isSaving}
                             />
                         </div>
                         <FormInput

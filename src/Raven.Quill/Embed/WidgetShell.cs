@@ -128,7 +128,25 @@ public static class WidgetShell
     }
 
     /// `JavaScriptEncoder.Default` escapes `<`, `>` and `&`, so a message body containing `</script>` can
-    /// never close the config block. The app's converters are kept so enums stay camel-cased strings.
-    public static string SerializeConfig(object config, JsonSerializerOptions appOptions) =>
-        JsonSerializer.Serialize(config, new JsonSerializerOptions(appOptions) { Encoder = JavaScriptEncoder.Default });
+    /// never close the config block. The app's converters are kept so the message role serializes as its
+    /// camelCase string ("user"/"assistant"); the theme enums stay PascalCase names, which is what the
+    /// widget expects.
+    public static string SerializeConfig(object config, JsonSerializerOptions appOptions)
+    {
+        // The app options never change after startup, so the derived options are built once instead of
+        // re-reflecting the contract on every unauthenticated embed GET. A lost race just rebuilds them.
+        var cache = _configOptionsCache;
+        if (cache is null || ReferenceEquals(cache.App, appOptions) == false)
+        {
+            cache = new ConfigOptionsCache(appOptions,
+                new JsonSerializerOptions(appOptions) { Encoder = JavaScriptEncoder.Default });
+            _configOptionsCache = cache;
+        }
+
+        return JsonSerializer.Serialize(config, cache.Derived);
+    }
+
+    private sealed record ConfigOptionsCache(JsonSerializerOptions App, JsonSerializerOptions Derived);
+
+    private static ConfigOptionsCache? _configOptionsCache;
 }

@@ -30,15 +30,19 @@ type WebWidgetThemePreviewProps = {
 
 export function WebWidgetThemePreview({ theme, appearance, view, className }: WebWidgetThemePreviewProps) {
     const iframeRef = useRef<HTMLIFrameElement>(null);
-    const [isReady, setIsReady] = useState(false);
+    // Counts `ready` envelopes rather than latching a boolean: a reloaded iframe posts a fresh `ready`,
+    // and the bump re-runs the push effect so the new document gets the current theme. Pushes to a window
+    // that is not listening yet are harmlessly dropped.
+    const [readyCount, setReadyCount] = useState(0);
 
     // The widget posts `ready` once it has mounted its message listener; pushing before that is dropped.
     useEffect(() => {
         const onMessage = (event: MessageEvent) => {
             if (event.origin !== window.location.origin) return;
+            if (event.source !== iframeRef.current?.contentWindow) return;
             const data = event.data as { source?: string; version?: number; type?: string } | null;
             if (data?.source !== ENVELOPE_SOURCE || data.version !== ENVELOPE_VERSION || data.type !== "ready") return;
-            setIsReady(true);
+            setReadyCount((count) => count + 1);
         };
 
         window.addEventListener("message", onMessage);
@@ -46,7 +50,7 @@ export function WebWidgetThemePreview({ theme, appearance, view, className }: We
     }, []);
 
     useEffect(() => {
-        if (!isReady) return;
+        if (readyCount === 0) return;
 
         const timer = setTimeout(() => {
             iframeRef.current?.contentWindow?.postMessage(
@@ -61,7 +65,7 @@ export function WebWidgetThemePreview({ theme, appearance, view, className }: We
         }, PUSH_DEBOUNCE_MS);
 
         return () => clearTimeout(timer);
-    }, [theme, appearance, view, isReady]);
+    }, [theme, appearance, view, readyCount]);
 
     return (
         <div className={cn("overflow-hidden rounded-xl border bg-background shadow-sm", className)}>
@@ -69,7 +73,6 @@ export function WebWidgetThemePreview({ theme, appearance, view, className }: We
                 ref={iframeRef}
                 title="Web widget preview"
                 src={PREVIEW_SRC}
-                onLoad={() => setIsReady(false)}
                 className="h-[640px] w-full border-0"
             />
         </div>

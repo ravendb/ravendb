@@ -42,6 +42,7 @@ public static class EmbedEndpoints
         string token,
         IDocumentStore store,
         WidgetAssets assets,
+        ILogger<EmbedLogger> logger,
         HttpContext ctx)
     {
         var ct = ctx.RequestAborted;
@@ -86,7 +87,7 @@ public static class EmbedEndpoints
         var serializerOptions = ctx.RequestServices
             .GetRequiredService<IOptions<Microsoft.AspNetCore.Http.Json.JsonOptions>>().Value.SerializerOptions;
 
-        var history = await BuildHistoryAsync(store, app.Database, link.ConversationId, replyField, ct);
+        var history = await BuildHistoryAsync(store, app.Database, link.ConversationId, replyField, logger, ct);
         var configJson = WidgetShell.SerializeConfig(
             new EmbedWidgetConfig("live", $"/apps/{app.Slug}/embed/{token}/chat", theme, history),
             serializerOptions);
@@ -392,8 +393,9 @@ public static class EmbedEndpoints
         return (app, link, channel, theme);
     }
 
-    private static async Task<AiConversationMessage[]> BuildHistoryAsync(
-        IDocumentStore store, string database, string? conversationId, string replyField, CancellationToken ct)
+    private static async Task<HistoryTurn[]> BuildHistoryAsync(
+        IDocumentStore store, string database, string? conversationId, string replyField,
+        ILogger<EmbedLogger> logger, CancellationToken ct)
     {
         if (string.IsNullOrEmpty(conversationId))
             return [];
@@ -406,10 +408,14 @@ public static class EmbedEndpoints
             }, ct);
             if (result is null)
                 return [];
-            return MetricsReadService.MapTranscript(result.Messages, replyField);
+            return MetricsReadService.MapTranscript(result.Messages, replyField)
+                .Select(m => new HistoryTurn(m.Role, m.Content ?? ""))
+                .ToArray();
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
+            // the page still works without history, but the visitor's transcript is gone - say so in the logs
+            logger.LogWarning(e, "failed to load embed history for conversationId={ConversationId}", conversationId);
             return [];
         }
     }
