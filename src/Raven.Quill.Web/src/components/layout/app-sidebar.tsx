@@ -1,7 +1,8 @@
 import { NavLink, useMatch } from "react-router";
 import type { ReactNode } from "react";
-import { CircleHelp, PanelLeftClose, PanelLeftOpen, Users } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { appNavigationSections, dashboardNavigationSections, navigationItems, type NavigationItem } from "@/routes";
+import { HelpMenu } from "@/components/layout/help-menu";
 import { ThemeSwitcher } from "@/components/layout/theme-switcher";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
@@ -58,14 +59,7 @@ export function AppSidebar({ slug, hasActiveApp, isCollapsed, isToggleVisible, o
                         ))}
                 </nav>
                 <div className={cn("flex flex-col gap-0.5 py-2", isCollapsed ? "items-center" : "px-2")}>
-                    <SidebarNavLink
-                        item={{ label: "Community", to: "/community", icon: Users, isComingSoon: true }}
-                        isCollapsed={isCollapsed}
-                    />
-                    <SidebarNavLink
-                        item={{ label: "Help", to: "/help", icon: CircleHelp, isComingSoon: true }}
-                        isCollapsed={isCollapsed}
-                    />
+                    <HelpMenu variant={isCollapsed ? "dropdown" : "inline"} />
                     <div
                         className={cn(
                             "flex",
