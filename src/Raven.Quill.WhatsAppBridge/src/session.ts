@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { Logger } from "./logger.js";
+import { redactJid, type Logger } from "./logger.js";
 import { classifyMessage, type ClassifiedMessage } from "./messages.js";
 
 export type SessionState = "starting" | "pairing" | "connected" | "disconnected" | "loggedOut";
@@ -36,6 +36,8 @@ export interface WaSocket {
     /// Baileys sends the pairing-code request without a reply handler, so WhatsApp's
     /// rejection of it is otherwise silent. Optional: test fakes may omit it.
     onIqError?(listener: (reason: string) => void): void;
+    /// Resolves a @lid address to its phone-number jid. Optional: test fakes may omit it.
+    signalRepository?: { lidMapping?: { getPNForLID(lid: string): Promise<string | null> } };
 }
 
 export type SocketFactory = (authDir: string) => Promise<WaSocket>;
@@ -145,7 +147,7 @@ export class Session {
         }) as never);
         socket.ev.on("messages.upsert", ((upsert: MessagesUpsert) => {
             if (generation === this.generation)
-                this.onMessagesUpsert(upsert);
+                void this.onMessagesUpsert(upsert);
         }) as never);
     }
 
@@ -347,7 +349,7 @@ export class Session {
         }
     }
 
-    private onMessagesUpsert(upsert: MessagesUpsert): void {
+    private async onMessagesUpsert(upsert: MessagesUpsert): Promise<void> {
         // "notify" is live traffic; "append" replays history/offline backlog after a
         // relink and must not flood the agent.
         if (upsert.type !== "notify")
@@ -356,8 +358,14 @@ export class Session {
         for (const raw of upsert.messages) {
             try {
                 const classified = classifyMessage(raw as never);
-                if (classified !== null)
-                    this.onInbound(classified);
+                if (classified === null)
+                    continue;
+
+                const resolved = await this.resolveSender(classified.sender);
+                if (resolved === null)
+                    continue;
+
+                this.onInbound({ ...classified, sender: resolved });
             } catch (error) {
                 this.logger.warn(
                     { database: this.database, channelId: this.channelId, error: String(error) },
@@ -365,6 +373,23 @@ export class Session {
                 );
             }
         }
+    }
+
+    /// A @lid sender carries no phone number, which downstream identity depends on; drop
+    /// rather than route an unresolvable one, so it is a logged gap and not silent loss.
+    private async resolveSender(sender: string): Promise<string | null> {
+        if (sender.endsWith("@lid") === false)
+            return sender;
+
+        const mapped = await this.socket?.signalRepository?.lidMapping?.getPNForLID(sender);
+        if (mapped)
+            return mapped;
+
+        this.logger.warn(
+            { database: this.database, channelId: this.channelId, sender: redactJid(sender) },
+            "dropping inbound message: no phone number known for this lid",
+        );
+        return null;
     }
 
     private scheduleReconnect(): void {

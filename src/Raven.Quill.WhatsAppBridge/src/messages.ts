@@ -11,6 +11,7 @@ export interface ClassifiedMessage {
 
 interface RawKey {
     remoteJid?: string | null;
+    remoteJidAlt?: string | null;
     fromMe?: boolean | null;
     id?: string | null;
 }
@@ -21,7 +22,8 @@ interface RawMessage {
     messageTimestamp?: number | { toNumber(): number } | null;
 }
 
-const DIRECT_JID_SUFFIX = "@s.whatsapp.net";
+const PHONE_JID_SUFFIX = "@s.whatsapp.net";
+const LID_JID_SUFFIX = "@lid";
 
 // Wrappers that carry the real content one level deeper.
 const WRAPPER_KEYS = ["ephemeralMessage", "viewOnceMessage", "viewOnceMessageV2", "documentWithCaptionMessage"];
@@ -42,8 +44,15 @@ export function classifyMessage(raw: RawMessage): ClassifiedMessage | null {
 
     const jid = key.remoteJid;
     // Direct chats only: groups (@g.us), broadcasts, newsletters and status updates are dropped.
-    if (!jid || !jid.endsWith(DIRECT_JID_SUFFIX))
+    // LID-addressed chats are direct too; WhatsApp addresses them by @lid rather than by number.
+    if (!jid || (!jid.endsWith(PHONE_JID_SUFFIX) && !jid.endsWith(LID_JID_SUFFIX)))
         return null;
+
+    // Downstream identity (conversation id, PhoneNumber bindings) needs the phone-number JID,
+    // so prefer the alternate key WhatsApp pairs with a @lid address. A @lid that arrives
+    // without one is resolved by the caller, which owns the LID->PN mapping.
+    const alt = key.remoteJidAlt;
+    const sender = jid.endsWith(LID_JID_SUFFIX) && alt?.endsWith(PHONE_JID_SUFFIX) ? alt : jid;
 
     let content = raw.message;
     if (!content)
@@ -67,7 +76,7 @@ export function classifyMessage(raw: RawMessage): ClassifiedMessage | null {
         typeof timestampRaw === "number" ? timestampRaw : (timestampRaw?.toNumber() ?? 0);
 
     return {
-        sender: jid,
+        sender,
         messageId: key.id ?? "",
         kind: text && text.trim().length > 0 ? "text" : "unsupported",
         text: text && text.trim().length > 0 ? text : null,

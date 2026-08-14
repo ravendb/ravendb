@@ -59,6 +59,35 @@ describe("classifyMessage", () => {
         assert.equal(classifyMessage({ key: key({ fromMe: true }), message: { conversation: "me" } }), null);
     });
 
+    it("routes a lid-addressed chat, reporting the paired phone number as the sender", () => {
+        const result = classifyMessage({
+            key: key({ remoteJid: "244576963039337@lid", remoteJidAlt: "48516031744@s.whatsapp.net" }),
+            message: { conversation: "hello" },
+            messageTimestamp: 1754300000,
+        });
+
+        assert.equal(result?.kind, "text");
+        assert.equal(result?.sender, "48516031744@s.whatsapp.net");
+    });
+
+    it("routes a lid-addressed chat with no alternate, leaving the lid for the caller to resolve", () => {
+        const result = classifyMessage({
+            key: key({ remoteJid: "244576963039337@lid" }),
+            message: { conversation: "hello" },
+        });
+
+        assert.equal(result?.sender, "244576963039337@lid");
+    });
+
+    it("keeps the phone-number jid when an alternate lid is supplied", () => {
+        const result = classifyMessage({
+            key: key({ remoteJidAlt: "244576963039337@lid" }),
+            message: { conversation: "hello" },
+        });
+
+        assert.equal(result?.sender, "48123456789@s.whatsapp.net");
+    });
+
     it("ignores group, broadcast, newsletter and status chats", () => {
         for (const remoteJid of [
             "1234-5678@g.us",

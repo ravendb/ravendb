@@ -47,6 +47,14 @@ class FakeSocket implements WaSocket {
         this.iqErrorListener = listener;
     }
 
+    lidToPn = new Map<string, string>();
+
+    signalRepository = {
+        lidMapping: {
+            getPNForLID: async (lid: string) => this.lidToPn.get(lid) ?? null,
+        },
+    };
+
     async logout(): Promise<void> {
         this.loggedOut = true;
     }
@@ -325,6 +333,46 @@ describe("Session", () => {
 
         assert.equal(inbound.length, 1);
         assert.equal(inbound[0]?.text, "hi");
+    });
+
+    it("resolves a lid sender through the lid mapping before forwarding", async () => {
+        const inbound: ClassifiedMessage[] = [];
+        const { session, socket, authDir } = await makeSession(inbound);
+        cleanup.push(() => session.stop(), () => fs.rm(authDir, { recursive: true, force: true }));
+
+        await session.start();
+        socket().lidToPn.set("244576963039337@lid", "48516031744@s.whatsapp.net");
+        socket().emit("messages.upsert", {
+            type: "notify",
+            messages: [{
+                key: { remoteJid: "244576963039337@lid", fromMe: false, id: "M1" },
+                message: { conversation: "hi" },
+                messageTimestamp: 1,
+            }],
+        });
+        await tick();
+
+        assert.equal(inbound.length, 1);
+        assert.equal(inbound[0]?.sender, "48516031744@s.whatsapp.net");
+    });
+
+    it("drops a lid sender the mapping cannot resolve to a phone number", async () => {
+        const inbound: ClassifiedMessage[] = [];
+        const { session, socket, authDir } = await makeSession(inbound);
+        cleanup.push(() => session.stop(), () => fs.rm(authDir, { recursive: true, force: true }));
+
+        await session.start();
+        socket().emit("messages.upsert", {
+            type: "notify",
+            messages: [{
+                key: { remoteJid: "244576963039337@lid", fromMe: false, id: "M1" },
+                message: { conversation: "hi" },
+                messageTimestamp: 1,
+            }],
+        });
+        await tick();
+
+        assert.equal(inbound.length, 0);
     });
 
     it("rejects sends while not connected and delivers when connected", async () => {
