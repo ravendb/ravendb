@@ -34,7 +34,7 @@ export default function AddNewOngoingTask({ queryParams }: ReactQueryParamsProps
     } = useNewOngoingTasks({ isAiOnly });
 
     const serverWideTasksUrl = appUrl.forServerWideTasks();
-    const ongoingTasksUrl = forCurrentDatabase.ongoingTasksUrl()();
+    const ongoingTasksUrl = forCurrentDatabase.ongoingTasksUrl();
     const aiTasksUrl = forCurrentDatabase.aiTasks();
 
     const { displayMode, setDisplayMode } = useTaskCardDisplayMode();
@@ -64,7 +64,6 @@ export default function AddNewOngoingTask({ queryParams }: ReactQueryParamsProps
                 <div className="add-new-ongoing-task-sidebar flex-shrink-0 p-3">
                     <TaskSearchInput searchText={searchText} setSearchText={setSearchText} className="mb-3" />
                     <TaskCategoryFilter
-                        variant="checkbox"
                         categories={allCategories}
                         availableCategories={searchFilteredTasks}
                         selectedCategories={selectedCategories}
@@ -73,15 +72,9 @@ export default function AddNewOngoingTask({ queryParams }: ReactQueryParamsProps
                     />
                     <hr className="my-3" />
                     <div className="small ms-1 text-muted">Need a cluster-wide task? Check out:</div>
-                    <a
-                        href={serverWideTasksUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="add-new-ongoing-task-nav-item text-decoration-none"
-                    >
+                    <a href={serverWideTasksUrl} className="add-new-ongoing-task-nav-item text-decoration-none">
                         <Icon icon="server-wide-tasks" margin="m-0" />
                         <span>Server-Wide Tasks</span>
-                        <Icon icon="newtab" margin="ms-0 m-0" className="add-new-ongoing-task-nav-item__newtab" />
                     </a>
                 </div>
                 <div className="add-new-ongoing-task-content pb-4">
@@ -125,21 +118,18 @@ interface CategoryNavItem {
 }
 
 export function TaskCategoryFilter({
-    variant,
     categories,
     availableCategories,
     selectedCategories,
     onToggle,
     onReset,
 }: {
-    variant: "chips" | "checkbox";
     categories: CategoryNavItem[];
     availableCategories: TaskCardCategory[];
     selectedCategories: string[];
     onToggle: (categoryName: string) => void;
     onReset: () => void;
 }) {
-    const isChips = variant === "chips";
     const hasActiveFilter = selectedCategories.length > 0;
 
     return (
@@ -157,43 +147,22 @@ export function TaskCategoryFilter({
                     <Icon icon="reset" margin="ms-1" />
                 </Button>
             </div>
-            {isChips ? (
-                <div className="add-new-ongoing-task-chips-row">
-                    {categories.map((category) => {
-                        const isAvailable = availableCategories.some((c) => c.categoryName === category.categoryName);
-                        return (
-                            <button
-                                key={category.categoryName}
-                                className={classNames("add-new-ongoing-task-chip", {
-                                    active: selectedCategories.includes(category.categoryName),
-                                })}
-                                onClick={() => onToggle(category.categoryName)}
-                                disabled={!isAvailable}
-                            >
-                                <Icon icon={category.categoryIcon} margin="m-0" />
-                                <span>{category.categoryName}</span>
-                            </button>
-                        );
-                    })}
-                </div>
-            ) : (
-                <div className="d-flex flex-column">
-                    {categories.map((category) => {
-                        const isAvailable = availableCategories.some((c) => c.categoryName === category.categoryName);
-                        return (
-                            <Checkbox
-                                key={category.categoryName}
-                                selected={selectedCategories.includes(category.categoryName)}
-                                toggleSelection={() => onToggle(category.categoryName)}
-                                disabled={!isAvailable}
-                                className="add-new-ongoing-task-filter-item"
-                            >
-                                {category.categoryName}
-                            </Checkbox>
-                        );
-                    })}
-                </div>
-            )}
+            <div className="d-flex flex-column">
+                {categories.map((category) => {
+                    const isAvailable = availableCategories.some((c) => c.categoryName === category.categoryName);
+                    return (
+                        <Checkbox
+                            key={category.categoryName}
+                            selected={selectedCategories.includes(category.categoryName)}
+                            toggleSelection={() => onToggle(category.categoryName)}
+                            disabled={!isAvailable}
+                            className="add-new-ongoing-task-filter-item"
+                        >
+                            {category.categoryName}
+                        </Checkbox>
+                    );
+                })}
+            </div>
         </div>
     );
 }

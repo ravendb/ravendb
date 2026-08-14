@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAsync } from "react-async-hook";
+import { useChanges } from "components/hooks/useChanges";
 import { useServices } from "components/hooks/useServices";
 import { InputItem } from "components/models/common";
 import {
@@ -22,6 +23,21 @@ export function useServerWideTasks() {
         // The default setLoading resets the state to { status: "loading", result: undefined }.
         setLoading: (state) => ({ ...state, loading: true }),
     });
+
+    const { serverNotifications } = useChanges();
+    const { execute: reload } = asyncGetTasks;
+
+    useEffect(() => {
+        if (serverNotifications) {
+            const watchClusterTopologyChanges = serverNotifications.watchClusterTopologyChanges(() => reload());
+            const watchReconnect = serverNotifications.watchReconnect(() => reload());
+
+            return () => {
+                watchClusterTopologyChanges.off();
+                watchReconnect.off();
+            };
+        }
+    }, [serverNotifications, reload]);
 
     const tasks: ServerWideTaskInfo[] = useMemo(
         () =>
@@ -56,7 +72,7 @@ export function useServerWideTasks() {
 
     return {
         fetchStatus: asyncGetTasks.status,
-        reload: asyncGetTasks.execute,
+        reload,
         tasks,
         filteredTasks,
         replicationTasks,

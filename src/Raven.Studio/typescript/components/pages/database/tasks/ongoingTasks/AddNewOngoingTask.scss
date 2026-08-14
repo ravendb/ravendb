@@ -51,7 +51,6 @@
 .add-new-ongoing-task-sidebar,
 .add-new-ongoing-task-horizontal-nav {
     .form-control.filtering-input {
-        box-sizing: border-box !important;
         min-width: 0 !important;
         width: 100% !important;
         max-width: 100% !important;
@@ -60,47 +59,6 @@
         padding-bottom: 0;
         padding-left: sizes.$gutter-xs !important;
         padding-right: sizes.$gutter-xs !important;
-    }
-}
-
-.add-new-ongoing-task-chips-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: sizes.$gutter-xs;
-}
-
-button.add-new-ongoing-task-chip {
-    display: flex;
-    align-items: center;
-    gap: sizes.$gutter-xxs;
-    padding: 4px 10px;
-    border: 1px solid colors.$border-color-light-var;
-    border-radius: 100px;
-    background: transparent;
-    color: colors.$text-muted-var;
-    white-space: nowrap;
-    cursor: pointer;
-    font-size: 0.8125rem;
-    transition:
-        background-color 0.15s ease,
-        color 0.15s ease,
-        border-color 0.15s ease;
-    flex-shrink: 0;
-
-    &:hover:not(:disabled) {
-        background: colors.$panel-bg-2-var;
-        color: colors.$text-emphasis-var;
-    }
-
-    &.active {
-        background: colors.$panel-bg-2-var;
-        color: colors.$text-emphasis-var;
-        border-color: colors.$text-muted-var;
-    }
-
-    &:disabled {
-        opacity: 0.4;
-        cursor: default;
     }
 }
 
@@ -116,10 +74,6 @@ a.add-new-ongoing-task-nav-item {
 
     &:hover {
         background: colors.$panel-bg-2-var;
-    }
-
-    .add-new-ongoing-task-nav-item__newtab {
-        font-size: sizes.$font-size-base;
     }
 }
 
