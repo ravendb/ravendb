@@ -96,14 +96,6 @@ function App() {
                 <CommandPalette slug={slug} appName={activeAppLabel} />
 
                 <nav className="ml-4 flex shrink-0 items-center gap-4 text-sm" aria-label="Top navigation">
-                    <a
-                        href="https://docs.ravendb.net/quill"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-muted-foreground transition-colors hover:text-foreground"
-                    >
-                        Docs
-                    </a>
                     <ContactSheet
                         trigger={
                             <Button variant="outline" size="sm">
