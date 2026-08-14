@@ -27,6 +27,8 @@ module.exports = {
         "<rootDir>/typescript"
     ],
     moduleNameMapper: {
+        "\\.(css|less|scss)$": "<rootDir>/typescript/test/__mocks__/styleMock.js",
+        "\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga|docx|pdf)$": "<rootDir>/typescript/test/__mocks__/fileMock.js",
         "^common/(.*)$": "<rootDir>/typescript/common/$1",
         "^components/(.*)$": "<rootDir>/typescript/components/$1",
         "^views/(.*)$": "<rootDir>/wwwroot/App/views/$1",
@@ -40,8 +42,6 @@ module.exports = {
         "^d3$": "<rootDir>/wwwroot/Content/custom_d3",
         "^qrcodejs$": "<rootDir>/wwwroot/Content/custom_qrcode",
         "^hooks/(.*)$": "<rootDir>/typescript/components/hooks/$1",
-        "\\.(css|less|scss)$": "<rootDir>/typescript/test/__mocks__/styleMock.js",
-        "\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga|docx|pdf)$": "<rootDir>/typescript/test/__mocks__/fileMock.js",
     },
     "reporters": [
         "default",

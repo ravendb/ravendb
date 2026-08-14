@@ -73,7 +73,7 @@ class appUrl {
         migrateDatabaseUrl: ko.pureComputed(() => appUrl.forMigrateDatabase(appUrl.currentDatabase())),
         sampleDataUrl: ko.pureComputed(() => appUrl.forSampleData(appUrl.currentDatabase())),
         backupsUrl: ko.pureComputed(() => appUrl.forBackups(appUrl.currentDatabase())),
-        ongoingTasksUrl: () => ko.pureComputed(() => appUrl.forOngoingTasks(appUrl.currentDatabase())),
+        ongoingTasksUrl: ko.pureComputed(() => appUrl.forOngoingTasks(appUrl.currentDatabase())),
         editExternalReplicationTaskUrl: ko.pureComputed(() => appUrl.forEditExternalReplication(appUrl.currentDatabase())),
         editReplicationHubTaskUrl: ko.pureComputed(() => appUrl.forEditReplicationHub(appUrl.currentDatabase())),
         editReplicationSinkTaskUrl: ko.pureComputed(() => appUrl.forEditReplicationSink(appUrl.currentDatabase())),

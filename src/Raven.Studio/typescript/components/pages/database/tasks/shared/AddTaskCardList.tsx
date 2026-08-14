@@ -9,8 +9,7 @@ import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { useEventsCollector } from "hooks/useEventsCollector";
 import LicenseRestrictedBadge, { LicenseBadgeText } from "components/common/LicenseRestrictedBadge";
 import IconName from "typings/server/icons";
-
-export type TaskCardVariant = "AI" | "Replication" | "Backups" | "Subscriptions" | "ETL" | "Sink";
+import { OngoingTaskFilterType } from "components/pages/database/tasks/ongoingTasks/partials/OngoingTasksFilter";
 
 export type TaskCardDisplayMode = "expanded" | "compact";
 
@@ -23,7 +22,7 @@ export interface TaskCardInfo {
     title: string;
     description: string;
     iconName: IconName;
-    variant: TaskCardVariant;
+    variant: OngoingTaskFilterType;
     link: string;
     target: string;
     licenseBadge?: LicenseBadgeText;

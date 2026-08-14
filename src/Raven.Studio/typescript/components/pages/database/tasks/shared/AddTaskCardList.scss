@@ -54,7 +54,7 @@ $variants: (
         before-hover-transform: translateX($translate-hover-x),
         icon-color: map-get(colors.$task-colors, "replication"),
     ),
-    Backups: (
+    Backup: (
         border-color: map-get(colors.$task-colors, "backups"),
         before-gradient: linear-gradient(
                 102deg,
@@ -65,7 +65,7 @@ $variants: (
         before-hover-transform: translateX($translate-hover-x),
         icon-color: map-get(colors.$task-colors, "backups"),
     ),
-    Subscriptions: (
+    Subscription: (
         border-color: map-get(colors.$task-colors, "subscriptions"),
         before-gradient: linear-gradient(
                 102deg,

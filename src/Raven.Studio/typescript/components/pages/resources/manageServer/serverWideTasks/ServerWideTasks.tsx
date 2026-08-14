@@ -122,29 +122,15 @@ export default function ServerWideTasks() {
                     <div className="d-flex flex-wrap flex-grow align-items-end gap-3 mb-3">
                         <div className="flex-grow">
                             <div className="small-label ms-1 mb-1">Filter by name</div>
-                            <div className="clearable-input">
-                                <Form.Control
-                                    type="text"
-                                    accessKey="/"
-                                    placeholder="e.g. BackupTask"
-                                    title="Filter server-wide tasks"
-                                    className="filtering-input"
-                                    value={nameFilter}
-                                    onChange={(e) => setNameFilter(e.target.value)}
-                                />
-                                {nameFilter && (
-                                    <div className="clear-button">
-                                        <Button
-                                            variant="secondary"
-                                            size="sm"
-                                            title="Clear filter"
-                                            onClick={() => setNameFilter("")}
-                                        >
-                                            <Icon icon="clear" margin="m-0" />
-                                        </Button>
-                                    </div>
-                                )}
-                            </div>
+                            <Form.Control
+                                type="search"
+                                accessKey="/"
+                                placeholder="e.g. BackupTask"
+                                title="Filter server-wide tasks"
+                                className="filtering-input"
+                                value={nameFilter}
+                                onChange={(e) => setNameFilter(e.target.value)}
+                            />
                         </div>
                         <div>
                             <MultiCheckboxToggle

@@ -1,6 +1,7 @@
 import React from "react";
 import Collapse from "react-bootstrap/Collapse";
 import appUrl from "common/appUrl";
+import genUtils from "common/generalUtils";
 import useBoolean from "hooks/useBoolean";
 import {
     RichPanel,
@@ -33,7 +34,9 @@ function Details(props: { task: ServerWideExternalReplicationTaskInfo }) {
                 {task.topologyDiscoveryUrls.length > 0 ? task.topologyDiscoveryUrls.join(", ") : "No URLs defined"}
             </RichPanelDetailItem>
             {task.delayReplicationFor && task.delayReplicationFor !== "00:00:00" && (
-                <RichPanelDetailItem label="Replication delay">{task.delayReplicationFor}</RichPanelDetailItem>
+                <RichPanelDetailItem label="Replication delay">
+                    {genUtils.formatTimeSpan(task.delayReplicationFor, true)}
+                </RichPanelDetailItem>
             )}
         </RichPanelDetails>
     );

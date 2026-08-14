@@ -21,6 +21,7 @@ import {
     ServerWideTaskStatus,
 } from "./ServerWideTaskPanelShared";
 import { ServerWideBackupTaskInfo } from "../serverWideTaskModels";
+import { formatBackupType } from "components/pages/database/tasks/ongoingTasks/panels/PeriodicBackupPanel";
 
 type ServerWideBackupPanelProps = BaseServerWideTaskPanelProps<ServerWideBackupTaskInfo>;
 
@@ -30,7 +31,7 @@ function Details(props: { task: ServerWideBackupTaskInfo }) {
     return (
         <RichPanelDetails>
             <ServerWideTaskExcludedDatabases task={task} />
-            <RichPanelDetailItem label="Backup type">{task.backupType}</RichPanelDetailItem>
+            <RichPanelDetailItem label="Backup type">{formatBackupType(task.backupType, true)}</RichPanelDetailItem>
             <RichPanelDetailItem label="Destinations">
                 {task.backupDestinations.length > 0 ? task.backupDestinations.join(", ") : "No destinations defined"}
             </RichPanelDetailItem>

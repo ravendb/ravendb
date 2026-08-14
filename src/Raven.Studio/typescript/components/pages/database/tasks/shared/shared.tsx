@@ -30,11 +30,8 @@ import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils"
 import { useAppUrls } from "hooks/useAppUrls";
 import appUrl from "common/appUrl";
 import { CounterBadge } from "components/common/CounterBadge";
-import {
-    TaskCardCategory,
-    TaskCardDisabledCondition,
-    TaskCardInfo,
-} from "components/pages/database/tasks/shared/AddTaskCardList";
+import { TaskCardCategory, TaskCardDisabledCondition } from "components/pages/database/tasks/shared/AddTaskCardList";
+import { useTaskCardFilters } from "components/pages/database/tasks/shared/useTaskCardFilters";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { getAccessRequiredMessage } from "components/utils/accessUtils";
 import { StudioConnectionType } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
@@ -489,17 +486,7 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
         !isProfessionalOrAbove &&
         (subscriptionsServerLimitStatus === "limitReached" || subscriptionsDatabaseLimitStatus === "limitReached");
 
-    const [searchText, setSearchText] = useState<string>("");
-    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
     const { forCurrentDatabase } = useAppUrls();
-
-    const toggleCategory = (categoryName: string) => {
-        setSelectedCategories((prev) =>
-            prev.includes(categoryName) ? prev.filter((c) => c !== categoryName) : [...prev, categoryName]
-        );
-    };
-
-    const resetCategories = () => setSelectedCategories([]);
 
     const getSubscriptionLimitReason = () => {
         if (!isSubscriptionDisabled) {
@@ -623,7 +610,7 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     title: "Periodic Backup",
                     description: "Create periodic backups or snapshots of the database on a defined schedule.",
                     iconName: "periodic-backup",
-                    variant: "Backups",
+                    variant: "Backup",
                     licenseBadge: "Professional +",
                     showLicenseBadge: !hasPeriodicBackups,
                     target: "PeriodicBackup",
@@ -643,7 +630,7 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     title: "Subscription",
                     description: "Send batches of documents that match a pre-defined query to a client for processing.",
                     iconName: "subscriptions",
-                    variant: "Subscriptions",
+                    variant: "Subscription",
                     target: "Subscription",
                     link: forCurrentDatabase.editSubscriptionTaskUrl(),
                     disabledConditions: getDisabledConditions({
@@ -866,44 +853,5 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
         ongoingTasks = ongoingTasks.filter((x) => x.categoryName === "AI");
     }
 
-    function getCategoryCount(category: TaskCardCategory["categoryName"]) {
-        const categoryTasks = ongoingTasks.find((x) => x.categoryName === category)?.tasks ?? [];
-        return categoryTasks.length;
-    }
-
-    const searchFilteredTasks = ongoingTasks
-        .map((category) => ({
-            ...category,
-            tasks: category.tasks.filter((task) => matchesSearchText(task, searchText)),
-        }))
-        .filter((category) => category.tasks.length > 0);
-
-    const filteredTasks = searchFilteredTasks.filter(
-        (category) => selectedCategories.length === 0 || selectedCategories.includes(category.categoryName)
-    );
-
-    const allCategories = ongoingTasks.map((c) => ({
-        categoryName: c.categoryName,
-        categoryIcon: c.categoryIcon,
-    }));
-
-    return {
-        filteredTasks,
-        searchFilteredTasks,
-        allCategories,
-        searchText,
-        setSearchText,
-        selectedCategories,
-        toggleCategory,
-        resetCategories,
-    };
+    return useTaskCardFilters(ongoingTasks);
 }
-
-const matchesSearchText = (task: TaskCardInfo, searchText: string) => {
-    if (!searchText) {
-        return true;
-    }
-
-    const searchLower = searchText.trim().toLowerCase();
-    return task.title.toLowerCase().includes(searchLower) || task.description.toLowerCase().includes(searchLower);
-};

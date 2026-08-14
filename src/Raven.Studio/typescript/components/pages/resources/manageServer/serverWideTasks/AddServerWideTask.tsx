@@ -1,5 +1,5 @@
 import "components/pages/database/tasks/ongoingTasks/AddNewOngoingTask.scss";
-import React, { useState } from "react";
+import React from "react";
 import appUrl from "common/appUrl";
 import { AboutViewHeading } from "components/common/AboutView";
 import { useAppSelector } from "components/store";
@@ -8,6 +8,7 @@ import { AddTaskCardList, TaskCardCategory } from "components/pages/database/tas
 import { TaskCategoryFilter, TaskSearchInput } from "components/pages/database/tasks/ongoingTasks/AddNewOngoingTask";
 import { RadioToggleWithIcon } from "components/common/toggles/RadioToggle";
 import { useTaskCardDisplayMode } from "components/pages/database/tasks/shared/useTaskCardDisplayMode";
+import { useTaskCardFilters } from "components/pages/database/tasks/shared/useTaskCardFilters";
 import { PerDatabaseOngoingTasksLink } from "./partials/PerDatabaseOngoingTasksLink";
 import { ServerWideTasksInfoHub } from "./partials/ServerWideTasksInfoHub";
 
@@ -18,17 +19,6 @@ export default function AddServerWideTask() {
     );
 
     const { displayMode, setDisplayMode } = useTaskCardDisplayMode();
-
-    const [searchText, setSearchText] = useState("");
-    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-
-    const toggleCategory = (categoryName: string) => {
-        setSelectedCategories((prev) =>
-            prev.includes(categoryName) ? prev.filter((c) => c !== categoryName) : [...prev, categoryName]
-        );
-    };
-
-    const resetCategories = () => setSelectedCategories([]);
 
     const serverWideTasks: TaskCardCategory[] = [
         {
@@ -57,7 +47,7 @@ export default function AddServerWideTask() {
                     description:
                         "Create periodic backups or snapshots of all databases in your cluster, managing schedule, retention, and destination from a single task.",
                     iconName: "periodic-backup",
-                    variant: "Backups",
+                    variant: "Backup",
                     target: "serverWidePeriodicBackup",
                     link: appUrl.forEditServerWideBackup(),
                     licenseBadge: "Professional +",
@@ -67,28 +57,16 @@ export default function AddServerWideTask() {
         },
     ];
 
-    const searchLower = searchText.trim().toLowerCase();
-
-    const searchFilteredTasks = serverWideTasks
-        .map((category) => ({
-            ...category,
-            tasks: category.tasks.filter(
-                (task) =>
-                    !searchLower ||
-                    task.title.toLowerCase().includes(searchLower) ||
-                    task.description.toLowerCase().includes(searchLower)
-            ),
-        }))
-        .filter((category) => category.tasks.length > 0);
-
-    const filteredTasks = searchFilteredTasks.filter(
-        (category) => selectedCategories.length === 0 || selectedCategories.includes(category.categoryName)
-    );
-
-    const allCategories = serverWideTasks.map((c) => ({
-        categoryName: c.categoryName,
-        categoryIcon: c.categoryIcon,
-    }));
+    const {
+        filteredTasks,
+        searchFilteredTasks,
+        allCategories,
+        searchText,
+        setSearchText,
+        selectedCategories,
+        toggleCategory,
+        resetCategories,
+    } = useTaskCardFilters(serverWideTasks);
 
     return (
         <div className="content-margin add-new-ongoing-task d-flex flex-column">
@@ -119,7 +97,6 @@ export default function AddServerWideTask() {
                         className="mb-3"
                     />
                     <TaskCategoryFilter
-                        variant="checkbox"
                         categories={allCategories}
                         availableCategories={searchFilteredTasks}
                         selectedCategories={selectedCategories}
