@@ -95,47 +95,57 @@ namespace Sparrow.Json
         {
             DisposeInternal();
 
-            // PERF: Check if flush completed synchronously to avoid async state machine
-            var flushTask = FlushAsync(_cancellationToken);
-            if (flushTask.IsCompletedSuccessfully)
+            try
             {
+                // PERF: Check if flush completed synchronously to avoid async state machine
+                var flushTask = FlushAsync(_cancellationToken);
+                if (flushTask.IsCompletedSuccessfully == false)
+                    return DisposeAsyncSlow(flushTask);
+
                 // Fast synchronous path
                 flushTask.GetAwaiter().GetResult();
                 if (_wroteToOutputStream)
                 {
                     var outputFlushTask = _outputStream.FlushAsync(_cancellationToken);
-                    if (outputFlushTask.IsCompleted)
-                    {
-                        outputFlushTask.GetAwaiter().GetResult();
-                        return DisposeStreamAsync();
-                    }
-                    else
-                    {
+                    if (outputFlushTask.IsCompleted == false)
                         return DisposeAsyncSlow(outputFlushTask);
-                    }
-                }
-                else
-                {
-                    return DisposeStreamAsync();
+
+                    outputFlushTask.GetAwaiter().GetResult();
                 }
             }
-            
-            return DisposeAsyncSlow(flushTask);
+            catch
+            {
+                _stream.Dispose();
+                throw;
+            }
+
+            return DisposeStreamAsync();
         }
 
         private async ValueTask DisposeAsyncSlow(ValueTask<long> flushTask)
         {
-            await flushTask.ConfigureAwait(_continueOnCapturedContext);
-            if (_wroteToOutputStream)
-                await _outputStream.FlushAsync(_cancellationToken).ConfigureAwait(_continueOnCapturedContext);
-
-            await DisposeStreamAsync().ConfigureAwait(_continueOnCapturedContext);
+            try
+            {
+                await flushTask.ConfigureAwait(_continueOnCapturedContext);
+                if (_wroteToOutputStream)
+                    await _outputStream.FlushAsync(_cancellationToken).ConfigureAwait(_continueOnCapturedContext);
+            }
+            finally
+            {
+                await DisposeStreamAsync().ConfigureAwait(_continueOnCapturedContext);
+            }
         }
 
         private async ValueTask DisposeAsyncSlow(Task outputFlushTask)
         {
-            await outputFlushTask.ConfigureAwait(_continueOnCapturedContext);
-            await DisposeStreamAsync().ConfigureAwait(_continueOnCapturedContext);
+            try
+            {
+                await outputFlushTask.ConfigureAwait(_continueOnCapturedContext);
+            }
+            finally
+            {
+                await DisposeStreamAsync().ConfigureAwait(_continueOnCapturedContext);
+            }
         }
 
         private ValueTask DisposeStreamAsync()
