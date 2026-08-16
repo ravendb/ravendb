@@ -11,8 +11,17 @@ done
 
 PFX="$(ls "$CERT_DIR"/cluster.server.certificate.*.pfx | head -n1)"
 
+pfx_serial() {
+    openssl pkcs12 -in "$PFX" -nokeys -clcerts -passin pass: 2>/dev/null | openssl x509 -noout -serial 2>/dev/null
+}
+
+pem_serial() {
+    openssl x509 -in /var/lib/quill/proxy/leaf.pem -noout -serial 2>/dev/null
+}
+
 while sleep 60; do
-    if [ "$PFX" -nt /var/lib/quill/proxy/leaf.pem ]; then
+    if [ "$(pfx_serial)" != "$(pem_serial)" ]; then
+        cert-chain "$PFX"
         proxy-certs
         s6-svc -h /run/service/03-proxy
         echo "04-certwatch: certificate renewed; nginx reloaded."
