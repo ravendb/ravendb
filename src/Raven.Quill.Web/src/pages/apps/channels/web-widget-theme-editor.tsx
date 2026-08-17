@@ -23,7 +23,7 @@ import {
     FONT_SIZE_OPTIONS,
     LOGO_RADIUS_OPTIONS,
     MAX_CUSTOM_FONT_SIZE_REM,
-    MAX_PROMPTS,
+    MAX_SUGGESTED_PROMPTS,
     MIN_CUSTOM_FONT_SIZE_REM,
     RADIUS_OPTIONS,
     toFormData,
@@ -353,7 +353,7 @@ export function WebWidgetThemeEditor({
                                 control={form.control}
                                 name="suggestedPrompts"
                                 label="Suggested prompts"
-                                description={`Offered on the welcome screen. Up to ${MAX_PROMPTS}.`}
+                                description={`Offered on the welcome screen. Up to ${MAX_SUGGESTED_PROMPTS}.`}
                                 addButtonLabel="Add prompt"
                                 emptyLabel="No suggested prompts."
                                 defaultValue={{ value: "" }}

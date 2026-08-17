@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { widgetThemeSchema, toFormData } from "@/pages/apps/channels/web-widget-theme-schema";
+import {
+    MAX_HEADER_TITLE_LENGTH,
+    MAX_SUGGESTED_PROMPTS,
+    widgetThemeSchema,
+    toFormData,
+} from "@/pages/apps/channels/web-widget-theme-schema";
 import type { WidgetTheme } from "@/api/generated/server-api";
 
 const theme: WidgetTheme = {
@@ -26,6 +31,8 @@ const theme: WidgetTheme = {
 const parse = (overrides: Partial<ReturnType<typeof toFormData>>) =>
     widgetThemeSchema.safeParse({ ...toFormData(theme), ...overrides });
 
+const promptRows = (count: number) => Array.from({ length: count }, (_, index) => ({ value: `prompt ${index + 1}` }));
+
 /** Rules that only apply while the option they belong to is on: the value behind a switched-off option is
  *  either invisible in the editor or dropped on save, so it must never block the form. */
 describe("widgetThemeSchema", () => {
@@ -40,17 +47,18 @@ describe("widgetThemeSchema", () => {
     });
 
     it("still bounds the title length while the header is hidden", () => {
-        expect(parse({ showHeader: false, headerTitle: "x".repeat(61) }).success).toBe(false);
+        const overLongTitle = "x".repeat(MAX_HEADER_TITLE_LENGTH + 1);
+        expect(parse({ showHeader: false, headerTitle: overLongTitle }).success).toBe(false);
     });
 
+    // Derived from the limit rather than written out, so raising it does not silently turn an
+    // "over the limit" case into an "at the limit" one.
     it("ignores blank rows when counting suggested prompts", () => {
-        const prompts = ["a", "b", "c", "d", "  "].map((value) => ({ value }));
-        expect(parse({ suggestedPrompts: prompts }).success).toBe(true);
+        expect(parse({ suggestedPrompts: [...promptRows(MAX_SUGGESTED_PROMPTS), { value: "  " }] }).success).toBe(true);
     });
 
-    it("rejects five non-blank prompts", () => {
-        const prompts = ["a", "b", "c", "d", "e"].map((value) => ({ value }));
-        expect(parse({ suggestedPrompts: prompts }).success).toBe(false);
+    it("rejects one prompt more than the limit allows", () => {
+        expect(parse({ suggestedPrompts: promptRows(MAX_SUGGESTED_PROMPTS + 1) }).success).toBe(false);
     });
 
     it("ignores a stale custom font size while the size is named", () => {

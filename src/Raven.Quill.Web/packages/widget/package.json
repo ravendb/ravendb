@@ -7,7 +7,6 @@
         "dev": "vite",
         "build": "tsc -b && vite build && node ./scripts/check-bundle.mjs",
         "typecheck": "tsc -b",
-        "lint": "eslint .",
         "check:bundle": "node ./scripts/check-bundle.mjs",
         "test:unit": "vitest run --project=unit",
         "test:storybook": "vitest run --project=storybook",
