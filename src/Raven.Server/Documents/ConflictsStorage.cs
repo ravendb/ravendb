@@ -179,7 +179,7 @@ namespace Raven.Server.Documents
                 StorageId = tvr.Id,
                 LowerId = TableValueToString(context, (int)ConflictsTable.LowerId, ref tvr),
                 Id = TableValueToId(context, (int)ConflictsTable.Id, ref tvr),
-                ChangeVector = TableValueToChangeVector(context, (int)ConflictsTable.ChangeVector, ref tvr),
+                ChangeVector = TableValueToChangeVector((int)ConflictsTable.ChangeVector, ref tvr),
                 Etag = etag = TableValueToEtag((int)ConflictsTable.Etag, ref tvr),
                 Doc = new BlittableJsonReaderObject(read, size, context),
                 Collection = TableValueToId(context, (int)ConflictsTable.Collection, ref tvr),

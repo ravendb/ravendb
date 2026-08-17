@@ -70,7 +70,7 @@ public sealed class StudioCollectionsHandlerProcessorForPreviewCollection : Abst
         }
         else
         {
-            changeVector = _database.DocumentsStorage.GetLastDocumentChangeVector(_context.Transaction.InnerTransaction, _context, Collection);
+            changeVector = _database.DocumentsStorage.GetLastDocumentChangeVector(_context.Transaction.InnerTransaction, Collection);
 
             if (changeVector != null)
                 etag = $"{changeVector}/{_totalResults}";
