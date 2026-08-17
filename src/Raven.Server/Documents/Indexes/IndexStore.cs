@@ -42,6 +42,7 @@ using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Threading;
+using DirectoryStorageEnvironmentOptions = Voron.StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -1186,6 +1187,12 @@ namespace Raven.Server.Documents.Indexes
         {
             _indexes.TryRemoveByName(index.Name, index);
 
+            var name = IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(index.Name);
+
+            var indexPath = index.Configuration.StoragePath.Combine(name);
+
+            var indexTempPath = index.Configuration.TempPath?.Combine(name);
+
             try
             {
                 index.Dispose();
@@ -1194,22 +1201,24 @@ namespace Raven.Server.Documents.Indexes
             {
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Could not dispose index '{index.Name}'.", e);
-            }
 
-            if (raiseNotification)
+                // the index may still be holding its files, so deleting them would leave a partially deleted directory
+                // that every later attempt to recreate this index trips over. leave it for the next deletion or restart
+                throw new IndexDeletionException(
+                    $"Could not delete the files of index '{index.Name}' because disposing it failed, so it may still be holding them. " +
+                    $"Leaving '{indexPath.FullPath}' in place.", e);
+            }
+            finally
             {
-                _documentDatabase.Changes.RaiseNotifications(new IndexChange
+                if (raiseNotification)
                 {
-                    Name = index.Name,
-                    Type = IndexChangeTypes.IndexRemoved
-                });
+                    _documentDatabase.Changes.RaiseNotifications(new IndexChange
+                    {
+                        Name = index.Name,
+                        Type = IndexChangeTypes.IndexRemoved
+                    });
+                }
             }
-
-            var name = IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(index.Name);
-
-            var indexPath = index.Configuration.StoragePath.Combine(name);
-
-            var indexTempPath = index.Configuration.TempPath?.Combine(name);
 
             if (index.Configuration.RunInMemory)
             {
@@ -1237,13 +1246,76 @@ namespace Raven.Server.Documents.Indexes
             }
             catch (Exception e)
             {
+                if (OnlyTemporaryFilesAreLeftBehind(indexPath.FullPath, index._environment?.Options?.TempPath?.FullPath, Logger) == false)
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Failed to delete the index {name} directory", e);
+                    throw;
+                }
+
                 if (Logger.IsInfoEnabled)
-                    Logger.Info($"Failed to delete the index {name} directory", e);
-                throw;
+                    Logger.Info($"Could not fully delete the index {name} directory, only temporary files are left behind", e);
             }
 
             if (indexTempPath != null)
-                IOExtensions.DeleteDirectory(indexTempPath.FullPath);
+            {
+                try
+                {
+                    IOExtensions.DeleteDirectory(indexTempPath.FullPath);
+                }
+                catch (Exception e)
+                {
+                    // same as above - the index storage is already gone at this point
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Could not delete the temporary directory of the index {name}", e);
+                }
+            }
+        }
+
+        internal static bool OnlyTemporaryFilesAreLeftBehind(string indexPath, string tempPath, Logger logger)
+        {
+            try
+            {
+                if (Directory.Exists(indexPath) == false)
+                    return true;
+
+                if (tempPath != null)
+                {
+                    tempPath = Path.GetFullPath(tempPath);
+
+                    if (tempPath.EndsWith(Path.DirectorySeparatorChar) == false)
+                        tempPath += Path.DirectorySeparatorChar;
+                }
+
+                var comparison = Sparrow.Platform.PlatformDetails.RunningOnPosix ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+
+                var temporaryFilesLeftBehind = 0;
+
+                foreach (var file in Directory.GetFiles(indexPath, "*", SearchOption.AllDirectories))
+                {
+                    if (tempPath == null)
+                        return false;
+
+                    var fullPath = Path.GetFullPath(file);
+
+                    if (fullPath.StartsWith(tempPath, comparison) == false)
+                        return false;
+
+                    if (DirectoryStorageEnvironmentOptions.IsTemporaryFile(fullPath) == false)
+                        return false;
+
+                    temporaryFilesLeftBehind++;
+                }
+
+                return temporaryFilesLeftBehind > 0;
+            }
+            catch (Exception e)
+            {
+                if (logger != null && logger.IsInfoEnabled)
+                    logger.Info($"Could not tell whether the directory '{indexPath}' still holds index storage, assuming that it does", e);
+
+                return false;
+            }
         }
 
         public IndexRunningStatus Status
@@ -2108,6 +2180,12 @@ namespace Raven.Server.Documents.Indexes
                                 DeleteIndexInternal(oldIndex, raiseNotification: false);
 
                             break;
+                        }
+                        catch (IndexDeletionException)
+                        {
+                            // Index.Dispose is a DisposeOnce<SingleAttempt> and rethrows the same failure forever,
+                            // so retrying would spin this loop every 500ms for as long as the database lives
+                            throw;
                         }
                         catch (TimeoutException)
                         {
