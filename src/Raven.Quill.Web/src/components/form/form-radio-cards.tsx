@@ -11,6 +11,13 @@ import { cn } from "@/lib/utils";
 export const SELECTED_CARD_CLASSES =
     "border-primary bg-linear-to-br from-primary/15 to-transparent ring-2 ring-ring/25";
 
+/**
+ * Type scale for a card's title and its supporting line. Exported for the same bespoke cards, which
+ * used to hardcode it and drifted from these every time the scale here changed.
+ */
+export const CARD_LABEL_CLASSES = "font-semibold";
+export const CARD_DESCRIPTION_CLASSES = "mt-1 block text-sm leading-5 text-muted-foreground";
+
 export type RadioCardOption<TValue extends string = string> = {
     value: TValue;
     label: ReactNode;
@@ -75,21 +82,23 @@ export function FormRadioCards<
                                 aria-checked={isSelected}
                                 disabled={isDisabled}
                                 onClick={select}
+                                // Keeps the padding on the header rather than the card so the whole
+                                // block stays part of the click target. Its bottom edge is the gap to
+                                // the content below, and stays under the card padding so the content
+                                // reads as belonging to the card instead of floating in it.
                                 className={cn(
-                                    "block w-full p-4 text-left",
-                                    option.content ? "rounded-t-lg" : "rounded-lg",
+                                    "block w-full text-left",
+                                    option.content ? "rounded-t-lg px-4 pt-4 pb-3" : "rounded-lg p-4",
                                     isDisabled && "cursor-not-allowed",
                                 )}
                             >
-                                {option.icon && <span className="mb-3 block">{option.icon}</span>}
-                                <span className="flex items-center gap-2 text-sm font-semibold">
+                                {option.icon && <span className="mb-2 block">{option.icon}</span>}
+                                <span className={cn("flex items-center gap-2", CARD_LABEL_CLASSES)}>
                                     {option.label}
                                     {option.badge}
                                 </span>
                                 {option.description && (
-                                    <span className="mt-2 block text-xs leading-5 text-muted-foreground">
-                                        {option.description}
-                                    </span>
+                                    <span className={CARD_DESCRIPTION_CLASSES}>{option.description}</span>
                                 )}
                             </button>
                             {option.content && (

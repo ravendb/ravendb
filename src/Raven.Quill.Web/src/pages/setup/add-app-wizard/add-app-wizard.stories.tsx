@@ -338,8 +338,89 @@ export const VerifySchemaCdcVerificationFailed: Story = {
     },
 };
 
+// Seeded with a prompt, so the field is already there and stepping back never hides it.
 export const MapSchema: Story = {
     render: () => <AppWizardAtStep initialStep="map" />,
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        expect(canvas.getByRole("textbox", { name: /intent prompt/i })).toBeInTheDocument();
+    },
+};
+
+const withoutIntentPrompt = (seed: AppFormData): AppFormData => ({ ...seed, map: { ...seed.map, aiPrompt: "" } });
+
+// The real first-run state: AI mapping chosen, no prompt yet, so the step asks only the
+// AI-versus-manual question. Deliberately has no play - a story that clicks its own button is an
+// interaction test, and this one has to stay at rest to be worth looking at.
+export const MapSchemaWithoutIntentPrompt: Story = {
+    render: () => <AppWizardAtStep initialStep="map" seedOverride={withoutIntentPrompt} />,
+};
+
+/*
+   The three stories below drive the intent prompt's transitions. Each one ends up looking like a
+   state already on show above, so they are tagged "!dev" to keep them out of the sidebar - the
+   vitest addon selects on the "test" tag, so they still run.
+*/
+
+// Adding the field swaps the button for a focused textarea.
+export const MapSchemaAddIntentPrompt: Story = {
+    tags: ["!dev"],
+    render: () => <AppWizardAtStep initialStep="map" seedOverride={withoutIntentPrompt} />,
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        expect(canvas.queryByRole("textbox", { name: /intent prompt/i })).not.toBeInTheDocument();
+
+        await userEvent.click(canvas.getByRole("button", { name: /add an intent prompt/i }));
+
+        const prompt = await waitFor(() => canvas.getByRole("textbox", { name: /intent prompt/i }));
+        expect(prompt).toHaveFocus();
+        expect(canvas.queryByRole("button", { name: /add an intent prompt/i })).not.toBeInTheDocument();
+    },
+};
+
+// Removing takes the text with it, so nothing keeps steering the suggestion from a hidden field.
+export const MapSchemaRemoveIntentPrompt: Story = {
+    tags: ["!dev"],
+    render: () => <AppWizardAtStep initialStep="map" />,
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        expect(canvas.getByRole("textbox", { name: /intent prompt/i })).toHaveValue(
+            "Embed order line items and link customers by id.",
+        );
+
+        await userEvent.click(canvas.getByRole("button", { name: /remove/i }));
+
+        const addButton = await waitFor(() => canvas.getByRole("button", { name: /add an intent prompt/i }));
+        expect(addButton).toHaveFocus();
+
+        // Re-adding starts from empty rather than restoring the discarded prompt.
+        await userEvent.click(addButton);
+        await waitFor(() => expect(canvas.getByRole("textbox", { name: /intent prompt/i })).toHaveValue(""));
+    },
+};
+
+// Reaching for the prompt while "Manual" is selected asks for a mapping the prompt cannot steer,
+// so adding it moves the choice to AI Suggest.
+export const MapSchemaIntentPromptFromManual: Story = {
+    tags: ["!dev"],
+    render: () => (
+        <AppWizardAtStep
+            initialStep="map"
+            seedOverride={(seed) => ({ ...seed, map: { source: "manual", aiPrompt: "" } })}
+        />
+    ),
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        expect(canvas.getByRole("radio", { name: /manual/i })).toBeChecked();
+
+        await userEvent.click(canvas.getByRole("button", { name: /add an intent prompt/i }));
+        await waitFor(() => expect(canvas.getByRole("radio", { name: /ai suggest/i })).toBeChecked());
+        expect(canvas.getByRole("textbox", { name: /intent prompt/i })).toBeInTheDocument();
+    },
 };
 
 export const MapTables: Story = {

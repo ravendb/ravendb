@@ -1,5 +1,5 @@
 import { useController, useFormContext, useFormState, useWatch } from "react-hook-form";
-import { SELECTED_CARD_CLASSES } from "@/components/form/form-radio-cards";
+import { CARD_LABEL_CLASSES, SELECTED_CARD_CLASSES } from "@/components/form/form-radio-cards";
 import { FormInput } from "@/components/form/form-input";
 import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
 import { Field, FieldDescription, FieldLabel } from "@/components/shadcn/ui/field";
@@ -130,7 +130,7 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
                                 )}
                             >
                                 {option.icon}
-                                <span className="text-sm font-semibold">{option.label}</span>
+                                <span className={CARD_LABEL_CLASSES}>{option.label}</span>
                             </button>
                         );
                     })}
