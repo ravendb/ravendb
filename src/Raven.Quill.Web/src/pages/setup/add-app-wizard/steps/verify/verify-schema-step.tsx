@@ -177,15 +177,22 @@ export function VerifySchemaStep({ isBusy }: WizardBodyComponentProps) {
                     )}
 
                     {currentTab === "verified" ? (
-                        <VerifiedTablesTable
-                            tables={verifiedTables}
-                            totalTableCount={allTables.length}
-                            search={search}
-                            rowSelection={rowSelection}
-                            onRowSelectionChange={handleRowSelectionChange}
-                            disabled={isLocked || isVerifyCdcRunning}
-                            isBusy={isBusy}
-                        />
+                        <>
+                            <VerifiedTablesTable
+                                tables={verifiedTables}
+                                totalTableCount={allTables.length}
+                                search={search}
+                                rowSelection={rowSelection}
+                                onRowSelectionChange={handleRowSelectionChange}
+                                disabled={isLocked || isVerifyCdcRunning}
+                                isBusy={isBusy}
+                            />
+                            <small className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
+                                Hold
+                                <kbd className="rounded border px-1 py-0.5 font-mono text-[10px]">Shift</kbd>
+                                to select a range of tables
+                            </small>
+                        </>
                     ) : (
                         <NeedsConfigTablesTable tables={needsConfigTables} search={search} />
                     )}
