@@ -256,10 +256,10 @@ internal static class Wire
     private const int TotalTokens = PromptTokens + CompletionTokens;
 
     /// <summary>A non-streaming chat completion. A null <paramref name="content"/> means a JSON null content.</summary>
-    public static string Completion(string content, string finishReason, string reasoning = null)
+    public static string Completion(string content, string finishReason, string reasoning = null, bool reasoningContentField = false)
     {
         var contentJson = content == null ? "null" : JsonConvert.ToString(content);
-        var reasoningJson = reasoning == null ? "" : $",\"reasoning\":{JsonConvert.ToString(reasoning)}";
+        var reasoningJson = reasoning == null ? "" : $",\"{(reasoningContentField ? "reasoning_content" : "reasoning")}\":{JsonConvert.ToString(reasoning)}";
         return $$"""
         {
             "id": "chatcmpl-injected",
@@ -288,6 +288,11 @@ internal static class Wire
     /// <summary>The terminating SSE chunk carrying finish_reason and usage.</summary>
     public static string FinishChunk(string finishReason) => Chunk("{}", finishReason, usage: true);
 
+    /// <summary>An SSE chunk carrying one tool-call fragment. Providers may reuse the same index for
+    /// consecutive calls, so the index is explicit.</summary>
+    public static string ToolCallDelta(int index, string id, string name, string arguments) =>
+        Chunk($"{{\"tool_calls\":[{{\"index\":{index},\"id\":{JsonConvert.ToString(id)},\"type\":\"function\",\"function\":{{\"name\":{JsonConvert.ToString(name)},\"arguments\":{JsonConvert.ToString(arguments)}}}}}]}}");
+
     private static string Chunk(string delta, string finishReason = null, bool usage = false)
     {
         var finish = finishReason == null ? "null" : $"\"{finishReason}\"";
@@ -299,13 +304,9 @@ internal static class Wire
 }
 
 /// <summary>
-/// A real <see cref="ConversationHandler"/> over a real provider connection string, where only the responses
-/// a real model cannot be made to produce on demand are injected in-process. Requests without an injected
-/// response are forwarded to the provider over HTTP, so the pipeline is always real and the model is real
-/// wherever the scenario allows it.
-/// <para>
-/// A <c>null</c> <paramref name="injected"/> forwards the request to the provider instead.
-/// </para>
+/// A real <see cref="ConversationHandler"/> whose provider response is supplied in-process instead of over
+/// HTTP, for responses a real model cannot be asked to produce on demand. Unlike <see cref="MockLlm"/> this
+/// also serves the streaming send, so SSE shapes can be injected.
 /// </summary>
 internal class InjectingConversationHandler(
     Raven.Server.ServerWide.ServerStore server,
@@ -335,28 +336,14 @@ internal class InjectingConversationHandler(
         : ChatCompletionClient(contextPool, settings, ConventionsToUse)
     {
         protected override Task<HttpResponseMessage> SendRequestAsync(HttpRequestMessage request, CancellationToken token) =>
-            HandleAsync(request, streaming: false, token);
+            Task.FromResult(Injected());
 
         protected override Task<HttpResponseMessage> SendStreamingRequestAsync(HttpRequestMessage request, CancellationToken token) =>
-            HandleAsync(request, streaming: true, token);
+            Task.FromResult(Injected());
 
-        private async Task<HttpResponseMessage> HandleAsync(HttpRequestMessage request, bool streaming, CancellationToken token)
+        private HttpResponseMessage Injected() => new(HttpStatusCode.OK)
         {
-            if (injected != null)
-            {
-                return new HttpResponseMessage(HttpStatusCode.OK)
-                {
-                    Content = new StringContent(injected.Body, Encoding.UTF8, injected.ContentType)
-                };
-            }
-
-            if (streaming)
-            {
-                // Do not buffer a forwarded stream - that would defeat the incremental streaming under test.
-                return await base.SendStreamingRequestAsync(request, token);
-            }
-
-            return await base.SendRequestAsync(request, token);
-        }
+            Content = new StringContent(injected.Body, Encoding.UTF8, injected.ContentType)
+        };
     }
 }

@@ -19,7 +19,7 @@ public class EmbeddingsOllamaConnectorForTesting : AbstractEmbeddingsConnectorFo
 
 public class GenAiOllamaConnectorForTesting : AbstractGenAiConnectorForTesting<GenAiOllamaConnectorForTesting>
 {
-    public const string Model = "qwen3-vl:4b";
+    public const string Model = "qwen2.5:0.5b";
 
     public GenAiOllamaConnectorForTesting()
     {
