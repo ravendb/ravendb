@@ -82,7 +82,7 @@ public static class EmbedEndpoints
         ctx.Response.Headers.CacheControl = "no-store";
 
         var agent = await AgentLookup.FindAsync(store, app.Database, channel.AgentId, ct);
-        var replyField = AgentOutputShape.ResolveReplyField(agent) ?? AgentOutputShape.DefaultReplyField;
+        var replyField = AgentOutputShape.ResolveReplyField(agent);
 
         var serializerOptions = ctx.RequestServices
             .GetRequiredService<IOptions<Microsoft.AspNetCore.Http.Json.JsonOptions>>().Value.SerializerOptions;

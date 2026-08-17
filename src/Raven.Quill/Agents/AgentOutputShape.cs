@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Raven.Client.Documents.Operations.AI.Agents;
 
@@ -8,11 +7,10 @@ public static class AgentOutputShape
 {
     public const string DefaultReplyField = "reply";
 
-    [return: NotNullIfNotNull(nameof(config))]
-    public static string? ResolveReplyField(AiAgentConfiguration? config)
+    public static string ResolveReplyField(AiAgentConfiguration? config)
     {
         if (config is null)
-            return null;
+            return DefaultReplyField;
 
         if (TryFirstObjectProperty(config.SampleObject, out var fromSample))
             return fromSample;

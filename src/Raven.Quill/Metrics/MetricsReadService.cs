@@ -528,7 +528,7 @@ internal static class MetricsReadService
         var channelName = await ChannelNameAsync(session, preview.ChannelId, ct);
 
         var config = await AgentLookup.FindAsync(store, database, result.Agent, ct);
-        var replyField = AgentOutputShape.ResolveReplyField(config) ?? AgentOutputShape.DefaultReplyField;
+        var replyField = AgentOutputShape.ResolveReplyField(config);
 
         return BuildDto(result, slug, preview, channelName, replyField, nowUtc);
     }
