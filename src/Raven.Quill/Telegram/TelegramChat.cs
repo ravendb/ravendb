@@ -57,21 +57,46 @@ internal sealed class TelegramChat
 
     private async Task RunAsync()
     {
+        var batch = new List<Message>();
+
         try
         {
             while (await WaitForMessageAsync())
             {
                 while (_queue.Reader.TryRead(out var message))
                 {
-                    await HandleSafeAsync(message);
+                    if (RunsAlone(message) == false)
+                    {
+                        if (string.IsNullOrWhiteSpace(message.Text) == false)
+                            batch.Add(message);
+                        continue;
+                    }
 
-                    Interlocked.Exchange(ref _overloadNotified, 0);
+                    await FlushAsync(batch);
+                    await HandleSafeAsync([message]);
                 }
+
+                await FlushAsync(batch);
             }
         }
         catch (OperationCanceledException) when (_ct.IsCancellationRequested)
         {
         }
+    }
+
+    private static bool RunsAlone(Message message) =>
+        message.Contact is not null || (message.Text is { } text && IsCommand(text));
+
+    private static bool IsCommand(string text) => text.TrimStart().StartsWith('/');
+
+    private async Task FlushAsync(List<Message> batch)
+    {
+        if (batch.Count == 0)
+            return;
+
+        var pending = batch.ToArray();
+        batch.Clear();
+        await HandleSafeAsync(pending);
     }
 
     private async Task<bool> WaitForMessageAsync()
@@ -98,11 +123,11 @@ internal sealed class TelegramChat
         _bot.OnChatRetired(_chatId, this);
     }
 
-    private async Task HandleSafeAsync(Message message)
+    private async Task HandleSafeAsync(IReadOnlyList<Message> batch)
     {
         try
         {
-            await HandleMessageAsync(message);
+            await HandleBatchAsync(batch);
         }
         catch (OperationCanceledException) when (_ct.IsCancellationRequested)
         {
@@ -113,10 +138,15 @@ internal sealed class TelegramChat
                 "Telegram message handling failed for channel {ChannelId} chat {ChatId}: {Error}",
                 _context.ChannelDoc.Id, _chatId, e.Message);
         }
+
+        Interlocked.Exchange(ref _overloadNotified, 0);
     }
 
-    private async Task HandleMessageAsync(Message message)
+    private async Task HandleBatchAsync(IReadOnlyList<Message> batch)
     {
+        // the sender is the same across a private chat's batch, so the last message binds the parameters
+        var message = batch[^1];
+
         if (message.Contact is not null)
         {
             await HandleContactAsync(message);
@@ -124,7 +154,9 @@ internal sealed class TelegramChat
         }
 
         var channel = _context.ChannelDoc;
-        var prompt = message.Text!.Trim();
+        var prompt = batch.Count == 1
+            ? message.Text!.Trim()
+            : string.Join('\n', batch.Select(m => m.Text!.Trim()));
         if (prompt.Length == 0)
             return;
 
