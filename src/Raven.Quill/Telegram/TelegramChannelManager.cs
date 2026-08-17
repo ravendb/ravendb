@@ -34,6 +34,8 @@ internal sealed class TelegramChannelManager(
 
     private volatile AsyncManualResetEvent? _wake;
 
+    private volatile bool _stopped;
+
     public void Wake() => _wake?.Set();
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -138,6 +140,9 @@ internal sealed class TelegramChannelManager(
 
         foreach (var (key, entry) in desired)
         {
+            if (_stopped)
+                return;
+
             if (_bots.ContainsKey(key))
                 continue;
 
@@ -194,6 +199,7 @@ internal sealed class TelegramChannelManager(
 
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
+        _stopped = true;
         await base.StopAsync(cancellationToken);
 
         var bots = _bots.Values.ToArray();
