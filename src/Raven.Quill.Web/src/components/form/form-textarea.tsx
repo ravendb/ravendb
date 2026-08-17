@@ -40,9 +40,13 @@ export function FormTextarea<TFieldValues extends FieldValues, TName extends Fie
 
     return (
         <Field className={className} data-invalid={invalid}>
-            <FieldLabel htmlFor={inputId} className={labelClassName}>
-                {label}
-            </FieldLabel>
+            {/* Field lays its children out with a gap, so an empty label would leave a stray one.
+                Callers that label the field from outside pass aria-labelledby instead. */}
+            {label && (
+                <FieldLabel htmlFor={inputId} className={labelClassName}>
+                    {label}
+                </FieldLabel>
+            )}
             <Textarea
                 id={inputId}
                 onBlur={onBlur}

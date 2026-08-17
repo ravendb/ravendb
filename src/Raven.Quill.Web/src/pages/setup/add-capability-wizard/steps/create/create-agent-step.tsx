@@ -1,6 +1,10 @@
 import { useFormContext, useWatch } from "react-hook-form";
 import { cn } from "@/lib/utils";
-import { SELECTED_CARD_CLASSES } from "@/components/form/form-radio-cards";
+import {
+    CARD_DESCRIPTION_CLASSES,
+    CARD_LABEL_CLASSES,
+    SELECTED_CARD_CLASSES,
+} from "@/components/form/form-radio-cards";
 import { FormTextarea } from "@/components/form/form-textarea";
 import { Alert } from "@/components/shadcn/ui/alert";
 import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
@@ -84,8 +88,8 @@ export function CreateAgentStep({ isBusy }: WizardBodyComponentProps) {
                         mode === "manual" && SELECTED_CARD_CLASSES,
                     )}
                 >
-                    <span className="block text-sm font-semibold">Setup manually</span>
-                    <span className="mt-2 block text-xs leading-5 text-muted-foreground">
+                    <span className={cn("block", CARD_LABEL_CLASSES)}>Setup manually</span>
+                    <span className={CARD_DESCRIPTION_CLASSES}>
                         Skip the AI suggestions and build the agent configuration from scratch in the next step.
                     </span>
                 </button>

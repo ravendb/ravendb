@@ -1,6 +1,10 @@
 import { useFormContext, useWatch } from "react-hook-form";
 import { cn } from "@/lib/utils";
-import { SELECTED_CARD_CLASSES } from "@/components/form/form-radio-cards";
+import {
+    CARD_DESCRIPTION_CLASSES,
+    CARD_LABEL_CLASSES,
+    SELECTED_CARD_CLASSES,
+} from "@/components/form/form-radio-cards";
 import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
 import { applySuggestionToForm } from "@/pages/setup/add-capability-wizard/agent-config-form";
 import { useCapabilityWizardStore } from "@/pages/setup/add-capability-wizard/capability-wizard-store";
@@ -36,10 +40,8 @@ export function SuggestionPicker() {
                             isSelected && SELECTED_CARD_CLASSES,
                         )}
                     >
-                        <span className="block text-sm font-semibold">{config.name}</span>
-                        <span className="mt-2 line-clamp-4 block text-xs leading-5 text-muted-foreground">
-                            {config.systemPrompt}
-                        </span>
+                        <span className={cn("block", CARD_LABEL_CLASSES)}>{config.name}</span>
+                        <span className={cn(CARD_DESCRIPTION_CLASSES, "line-clamp-4")}>{config.systemPrompt}</span>
                     </button>
                 );
             })}
