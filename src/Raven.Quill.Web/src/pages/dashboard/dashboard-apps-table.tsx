@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 import { Database, Pencil, Plus, Trash2 } from "lucide-react";
 import type { ApplianceAppResponse, AppWrites } from "@/api/generated/server-api";
+import { StatusIndicator, type StatusTone } from "@/components/data/status-indicator";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/ui/table";
@@ -8,28 +9,27 @@ import { WruLabel } from "@/components/data/wru-label";
 import { appRoutes } from "@/lib/app-routes";
 import { datePeriodUnit, type DatePeriod } from "@/lib/date-period";
 import { formatCompact } from "@/lib/format";
-import { cn } from "@/lib/utils";
 import { DeleteAppDialog } from "@/pages/apps/delete-app-dialog";
 
-type StatusStyle = { dotClassName: string; label: string };
+type StatusStyle = { tone: StatusTone; label: string };
 
 // Maps the server's derived status codes (MetricsReadService.DeriveAppStatus emits
 // running/warning/setup) onto the dashboard's status vocabulary. loading/failed are
 // kept for forward-compatibility so a future provisioning/error state renders sensibly.
 const STATUS_STYLES: Record<string, StatusStyle> = {
-    running: { dotClassName: "bg-emerald-500", label: "Healthy" },
-    healthy: { dotClassName: "bg-emerald-500", label: "Healthy" },
-    warning: { dotClassName: "bg-amber-500", label: "Needs attention" },
-    setup: { dotClassName: "bg-sky-500", label: "Setup" },
-    loading: { dotClassName: "bg-muted-foreground/50", label: "Loading" },
-    failed: { dotClassName: "bg-red-500", label: "Failed" },
-    error: { dotClassName: "bg-red-500", label: "Failed" },
+    running: { tone: "positive", label: "Healthy" },
+    healthy: { tone: "positive", label: "Healthy" },
+    warning: { tone: "warning", label: "Needs attention" },
+    setup: { tone: "info", label: "Setup" },
+    loading: { tone: "loading", label: "Loading" },
+    failed: { tone: "danger", label: "Failed" },
+    error: { tone: "danger", label: "Failed" },
 };
 
 function resolveStatusStyle(status: string): StatusStyle {
     return (
         STATUS_STYLES[status.toLowerCase()] ?? {
-            dotClassName: "bg-muted-foreground/50",
+            tone: "muted",
             label: status ? status[0].toUpperCase() + status.slice(1) : "Unknown",
         }
     );
@@ -137,12 +137,9 @@ function AppStatusCell({ app }: { app: ApplianceAppResponse }) {
     const style = resolveStatusStyle(app.status);
 
     return (
-        <div className="flex items-start gap-2">
-            <span className={cn("mt-1.5 size-1.5 shrink-0 rounded-full", style.dotClassName)} aria-hidden="true" />
-            <div className="flex flex-col">
-                <span className="text-sm font-medium">{style.label}</span>
-                {app.statusSubtitle && <span className="text-xs text-muted-foreground">{app.statusSubtitle}</span>}
-            </div>
+        <div className="flex flex-col items-start gap-1">
+            <StatusIndicator tone={style.tone} label={style.label} />
+            {app.statusSubtitle && <span className="text-xs text-muted-foreground">{app.statusSubtitle}</span>}
         </div>
     );
 }

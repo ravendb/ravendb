@@ -3,7 +3,7 @@ import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
 import { ApiState } from "@/components/data/api-state";
-import { StatusIndicator } from "@/components/data/status-indicator";
+import { EnabledStatus } from "@/components/data/status-indicator";
 import { Button } from "@/components/shadcn/ui/button";
 import { TableCell, TableRow } from "@/components/shadcn/ui/table";
 import { appRoutes } from "@/lib/app-routes";
@@ -41,10 +41,7 @@ export function AgentsTable({ slug }: { slug: string }) {
                         <TableRow key={agent.agentId}>
                             <TableCell className="font-medium">{agent.name}</TableCell>
                             <TableCell>
-                                <StatusIndicator
-                                    tone={agent.disabled ? "muted" : "positive"}
-                                    label={agent.disabled ? "Disabled" : "Active"}
-                                />
+                                <EnabledStatus isEnabled={!agent.disabled} />
                             </TableCell>
                             <TableCell className="font-mono text-xs text-muted-foreground">
                                 {agent.model ?? "—"}

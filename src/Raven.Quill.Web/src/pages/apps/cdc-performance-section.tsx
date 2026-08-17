@@ -1,8 +1,7 @@
-import { type ComponentProps } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
 import { ApiState } from "@/components/data/api-state";
-import { Badge } from "@/components/shadcn/ui/badge";
+import { StatusIndicator, type StatusTone } from "@/components/data/status-indicator";
 import { Button } from "@/components/shadcn/ui/button";
 import { CdcBatchLog } from "@/pages/apps/cdc-batch-log";
 import { DashboardStatCards, type DashboardStatCard } from "@/pages/dashboard/dashboard-stat-cards";
@@ -65,15 +64,15 @@ export function CdcPerformanceSection({
     );
 }
 
-const CDC_STATUS_BADGES: Record<CdcLiveStatus, { variant: ComponentProps<typeof Badge>["variant"]; label: string }> = {
-    active: { variant: "success", label: "Active" },
-    idle: { variant: "secondary", label: "Idle" },
-    error: { variant: "destructive", label: "Error" },
+const CDC_STATUS_BADGES: Record<CdcLiveStatus, { tone: StatusTone; label: string }> = {
+    active: { tone: "positive", label: "Active" },
+    idle: { tone: "muted", label: "Idle" },
+    error: { tone: "danger", label: "Error" },
 };
 
 function CdcStatusBadge({ status }: { status: CdcLiveStatus }) {
     const badge = CDC_STATUS_BADGES[status];
-    return <Badge variant={badge.variant}>{badge.label}</Badge>;
+    return <StatusIndicator tone={badge.tone} label={badge.label} />;
 }
 
 function CdcPerformanceContent({ performance }: { performance: CdcLivePerformance }) {

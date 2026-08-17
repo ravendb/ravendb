@@ -3,7 +3,7 @@ import { ArrowLeft, Palette } from "lucide-react";
 import { Link, useParams } from "react-router";
 import { api } from "@/api/api";
 import { ApiState } from "@/components/data/api-state";
-import { StatusIndicator } from "@/components/data/status-indicator";
+import { EnabledStatus } from "@/components/data/status-indicator";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
 import { appRoutes } from "@/lib/app-routes";
@@ -56,10 +56,7 @@ export function AppChannelDetail() {
                                 <div className="grid gap-1">
                                     <div className="flex items-center gap-3">
                                         <h2 className="text-lg font-semibold">{channel.displayName}</h2>
-                                        <StatusIndicator
-                                            tone={channel.enabled ? "positive" : "muted"}
-                                            label={channel.enabled ? "Connected" : "Disabled"}
-                                        />
+                                        <EnabledStatus isEnabled={channel.enabled} />
                                     </div>
                                     <p className="text-sm text-muted-foreground">
                                         {channel.type ? CHANNEL_TYPE_LABELS[channel.type] : "—"}

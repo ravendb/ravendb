@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Copy } from "lucide-react";
 import type { CertificateItem } from "@/api/custom-services/certificates-service";
 import type { AppResponse } from "@/api/generated/server-api";
+import { StatusIndicator, type StatusTone } from "@/components/data/status-indicator";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { formatDate } from "@/lib/format";
@@ -20,13 +21,13 @@ import { EditCertificateDialog } from "@/pages/dashboard/certificates/edit-certi
 const STATE_STRIP_CLASSES: Record<CertificateState, string> = {
     valid: "bg-success",
     expired: "bg-destructive",
-    disabled: "bg-warning",
+    disabled: "bg-muted-foreground/60",
 };
 
-const STATE_BADGE_VARIANTS: Record<CertificateState, "success" | "destructive" | "warning"> = {
-    valid: "success",
-    expired: "destructive",
-    disabled: "warning",
+const STATE_TONES: Record<CertificateState, StatusTone> = {
+    valid: "positive",
+    expired: "danger",
+    disabled: "muted",
 };
 
 export function CertificateCard({ certificate, apps }: { certificate: CertificateItem; apps: AppResponse[] }) {
@@ -41,8 +42,8 @@ export function CertificateCard({ certificate, apps }: { certificate: Certificat
                     <div className="min-w-0 space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
                             <h3 className="text-sm font-semibold">{certificate.name || "—"}</h3>
-                            <Badge variant={STATE_BADGE_VARIANTS[state]}>{CERTIFICATE_STATE_LABELS[state]}</Badge>
-                            {isAboutToExpire && <Badge variant="warning">About to expire</Badge>}
+                            <StatusIndicator tone={STATE_TONES[state]} label={CERTIFICATE_STATE_LABELS[state]} />
+                            {isAboutToExpire && <StatusIndicator tone="warning" label="About to expire" />}
                         </div>
                         <div className="flex items-center gap-1">
                             <span className="truncate font-mono text-xs text-muted-foreground">

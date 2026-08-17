@@ -1,7 +1,7 @@
-import { useId, useLayoutEffect, useRef, useState, type ComponentProps, type ReactNode, type UIEvent } from "react";
+import { useId, useLayoutEffect, useRef, useState, type ReactNode, type UIEvent } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { ChevronRight, CircleAlert, CircleCheck, Loader2, type LucideIcon } from "lucide-react";
-import { Badge } from "@/components/shadcn/ui/badge";
+import { ChevronRight } from "lucide-react";
+import { StatusIndicator, type StatusTone } from "@/components/data/status-indicator";
 import { Label } from "@/components/shadcn/ui/label";
 import { Switch } from "@/components/shadcn/ui/switch";
 import { formatCompact } from "@/lib/format";
@@ -153,33 +153,20 @@ function CdcBatchList({ batches }: { batches: CdcLiveBatch[] }) {
     );
 }
 
-const BATCH_STATES: Record<
-    CdcLiveBatchState,
-    {
-        label: string;
-        badgeVariant: ComponentProps<typeof Badge>["variant"];
-        icon: LucideIcon;
-        iconClassName?: string;
-        accentClassName: string;
-    }
-> = {
+const BATCH_STATES: Record<CdcLiveBatchState, { label: string; tone: StatusTone; accentClassName: string }> = {
     success: {
         label: "Success",
-        badgeVariant: "success",
-        icon: CircleCheck,
+        tone: "positive",
         accentClassName: "border-l-success",
     },
     pending: {
         label: "Pending",
-        badgeVariant: "secondary",
-        icon: Loader2,
-        iconClassName: "animate-spin",
+        tone: "loading",
         accentClassName: "border-l-muted-foreground",
     },
     error: {
         label: "Error",
-        badgeVariant: "destructive",
-        icon: CircleAlert,
+        tone: "danger",
         accentClassName: "border-l-destructive",
     },
 };
@@ -196,7 +183,6 @@ function CdcBatchRow({
     onToggle: () => void;
 }) {
     const state = BATCH_STATES[batch.state];
-    const StateIcon = state.icon;
     const errorCount = batch.scriptErrors + batch.readErrors;
 
     return (
@@ -214,10 +200,7 @@ function CdcBatchRow({
                         isExpanded && "rotate-90",
                     )}
                 />
-                <Badge variant={state.badgeVariant} className="w-20 shrink-0 justify-start">
-                    <StateIcon aria-hidden={true} className={state.iconClassName} />
-                    {state.label}
-                </Badge>
+                <StatusIndicator tone={state.tone} label={state.label} className="shrink-0 justify-start" />
                 <span className="shrink-0 font-mono text-xs text-muted-foreground tabular-nums">
                     {formatBatchTime(batch.started)}
                 </span>

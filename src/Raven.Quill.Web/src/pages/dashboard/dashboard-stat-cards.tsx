@@ -1,5 +1,4 @@
 import { useId, type ReactNode } from "react";
-import { TrendingDown, TrendingUp } from "lucide-react";
 import { Area, AreaChart, YAxis } from "recharts";
 import { ZERO_SAFE_Y_DOMAIN } from "@/lib/chart-domain";
 import { InfoHint } from "@/components/data/info-hint";
@@ -80,11 +79,9 @@ function StatCard({ card }: { card: DashboardStatCard }) {
 
 function DeltaBadge({ delta }: { delta: number }) {
     const isUp = delta >= 0;
-    const Icon = isUp ? TrendingUp : TrendingDown;
 
     return (
         <Badge variant={isUp ? "success" : "destructive"}>
-            <Icon aria-hidden="true" />
             {isUp ? "+" : ""}
             {delta.toFixed(1)}%
         </Badge>
