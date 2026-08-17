@@ -26,7 +26,9 @@ function getDeleteConflict(error: unknown): AiConnectionStringDeleteConflictResp
     return null;
 }
 
-function renderDeleteError(error: unknown, conflict: AiConnectionStringDeleteConflictResponse | null): ReactNode {
+function DeleteErrorMessage({ error }: { error: unknown }) {
+    const conflict = getDeleteConflict(error);
+
     if (conflict) {
         const isSingle = conflict.referencingAgentIds.length === 1;
 
@@ -69,8 +71,6 @@ export function DeleteAiConnectionStringDialog({ name, trigger }: DeleteAiConnec
         },
     });
 
-    const conflict = getDeleteConflict(deleteMutation.error);
-
     return (
         <DestructiveConfirmDialog
             trigger={trigger}
@@ -86,7 +86,7 @@ export function DeleteAiConnectionStringDialog({ name, trigger }: DeleteAiConnec
             }}
             onConfirm={() => deleteMutation.mutate()}
             isPending={deleteMutation.isPending}
-            error={deleteMutation.isError ? renderDeleteError(deleteMutation.error, conflict) : undefined}
+            error={deleteMutation.isError ? <DeleteErrorMessage error={deleteMutation.error} /> : undefined}
         />
     );
 }
