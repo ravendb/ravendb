@@ -54,6 +54,12 @@ public class AgentOutputShapeTests(ITestOutputHelper output) : NoDisposalNeeded(
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public void ResolveReplyField_defaults_to_reply_for_a_missing_agent()
+    {
+        Assert.Equal(AgentOutputShape.DefaultReplyField, AgentOutputShape.ResolveReplyField(null));
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public void ExtractReplyText_matches_field_case_insensitively()
     {
         var answer = new Dictionary<string, object> { ["Reply"] = "hello" };
