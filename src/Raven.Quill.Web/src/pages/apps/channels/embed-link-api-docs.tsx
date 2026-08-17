@@ -110,21 +110,11 @@ export function EmbedLinkApiDocs({ slug, channelId, parameterNames }: EmbedLinkA
                         <p className="text-sm text-muted-foreground">
                             Your server POSTs to the embed-links endpoint with your operator key in the{" "}
                             <InlineCode>X-Api-Key</InlineCode> header, then hands the page nothing but the returned{" "}
-                            <InlineCode>url</InlineCode>. The app and channel are already filled in below — swap in your{" "}
+                            <InlineCode>url</InlineCode>. The app and channel are already filled in below - swap in your{" "}
                             <InlineCode>QUILL_API_KEY</InlineCode>
                             {hasParameters ? " and the parameter values" : ""}.
                         </p>
                     </div>
-
-                    <Alert variant="destructive">
-                        <ShieldAlertIcon />
-                        <AlertTitle>Run this on your server, never in a browser</AlertTitle>
-                        <AlertDescription>
-                            The operator key unlocks the whole appliance, so it must never be shipped to a page or
-                            called from client-side JavaScript. The endpoint also sends no CORS headers, so a browser{" "}
-                            <InlineCode>fetch</InlineCode> to it fails on preflight regardless.
-                        </AlertDescription>
-                    </Alert>
 
                     <Tabs value={language} onValueChange={onLanguageChange} className="gap-3">
                         <TabsList>
@@ -136,6 +126,16 @@ export function EmbedLinkApiDocs({ slug, channelId, parameterNames }: EmbedLinkA
                         </TabsList>
                         {LANGUAGE_OPTIONS.map(({ value, mode }) => (
                             <TabsContent key={value} value={value}>
+                                <Alert variant="warning" className="mb-2">
+                                    <ShieldAlertIcon />
+                                    <AlertTitle>Run this on your server, never in a browser</AlertTitle>
+                                    <AlertDescription>
+                                        The operator key grants full access to every app, not just this widget, so it
+                                        must never be shipped to a page or called from client-side JavaScript. The
+                                        endpoint also sends no CORS headers, so a browser <InlineCode>fetch</InlineCode>{" "}
+                                        to it fails on preflight regardless.
+                                    </AlertDescription>
+                                </Alert>
                                 <CopyableCode
                                     code={requests[value]}
                                     language={mode}
@@ -144,9 +144,17 @@ export function EmbedLinkApiDocs({ slug, channelId, parameterNames }: EmbedLinkA
                             </TabsContent>
                         ))}
                     </Tabs>
+                    <dl className="grid gap-2 text-sm">
+                        {fields.map((field) => (
+                            <div key={field.name} className="grid gap-x-3 sm:grid-cols-[8rem_1fr]">
+                                <dt className="font-mono text-xs font-medium text-muted-foreground">{field.name}</dt>
+                                <dd className="text-muted-foreground">{field.description}</dd>
+                            </div>
+                        ))}
+                    </dl>
 
                     <div className="grid gap-2">
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm">
                             Then in the page, point an iframe at the <InlineCode>url</InlineCode> your endpoint
                             returned:
                         </p>
@@ -156,15 +164,6 @@ export function EmbedLinkApiDocs({ slug, channelId, parameterNames }: EmbedLinkA
                             copyLabel="Copy host page"
                         />
                     </div>
-
-                    <dl className="grid gap-2 text-sm">
-                        {fields.map((field) => (
-                            <div key={field.name} className="grid gap-x-3 sm:grid-cols-[8rem_1fr]">
-                                <dt className="font-mono text-xs font-medium">{field.name}</dt>
-                                <dd className="text-muted-foreground">{field.description}</dd>
-                            </div>
-                        ))}
-                    </dl>
                 </section>
             </CollapsibleContent>
         </Collapsible>
@@ -172,10 +171,6 @@ export function EmbedLinkApiDocs({ slug, channelId, parameterNames }: EmbedLinkA
 }
 
 const API_KEY_PLACEHOLDER = "<your QUILL_API_KEY>";
-
-// Copied code loses the surrounding page, and this snippet is otherwise indistinguishable from a browser
-// fetch — so the warning travels with it.
-const SERVER_SIDE_WARNING = "Server-side only: QUILL_API_KEY must never reach a browser.";
 
 function buildRequestSnippets(slug: string, channelId: string, parameterNames: string[]): Record<Language, string> {
     const url = buildMintEmbedLinkUrl(slug);
@@ -214,7 +209,6 @@ function buildCurlSnippet(
         .join("\n");
 
     return [
-        `# ${SERVER_SIDE_WARNING}`,
         `${curl} -X POST ${continuation}`,
         `  "${url}" ${continuation}`,
         `  -H "X-Api-Key: ${API_KEY_PLACEHOLDER}" ${continuation}`,
@@ -227,7 +221,6 @@ function buildCSharpSnippet(url: string, channelId: string, parameterNames: stri
     const parameterEntries = parameterNames.map((name) => `[${JSON.stringify(name)}] = "<value>"`).join(", ");
 
     return [
-        `// ${SERVER_SIDE_WARNING}`,
         "using System.Net.Http.Json;",
         "using System.Text.Json;",
         "",
@@ -254,7 +247,6 @@ function buildPythonSnippet(url: string, channelId: string, parameterNames: stri
     const parameterEntries = parameterNames.map((name) => `${JSON.stringify(name)}: "<value>"`).join(", ");
 
     return [
-        `# ${SERVER_SIDE_WARNING}`,
         "import requests",
         "",
         "response = requests.post(",
@@ -276,9 +268,6 @@ function buildNodeSnippet(url: string, channelId: string, parameterNames: string
     const parameterEntries = parameterNames.map((name) => `${JSON.stringify(name)}: "<value>"`).join(", ");
 
     return [
-        `// ${SERVER_SIDE_WARNING}`,
-        "// This runs in Node on your server. The same code in a browser fails CORS preflight and would",
-        "// leak the key to every visitor.",
         `const response = await fetch("${url}", {`,
         '    method: "POST",',
         "    headers: {",

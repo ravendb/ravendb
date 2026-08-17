@@ -230,6 +230,34 @@ public class WidgetThemeEndpointsTests(ITestOutputHelper output) : QuillTestBase
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_hidden_header_does_not_require_a_title()
+    {
+        await using var widget = await NewWidgetAsync();
+
+        var saved = await Host.UpdateWidgetThemeAsync(widget.Slug, widget.ChannelId, new UpdateWidgetThemeRequest(
+            Sample(theme =>
+            {
+                theme.ShowHeader = false;
+                theme.HeaderTitle = "";
+                theme.HeaderSubtitle = null;
+            })));
+
+        Assert.False(saved.Theme!.ShowHeader);
+        Assert.Equal("", saved.Theme.HeaderTitle);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Blank_prompts_do_not_count_toward_the_prompt_limit()
+    {
+        await using var widget = await NewWidgetAsync();
+
+        var saved = await Host.UpdateWidgetThemeAsync(widget.Slug, widget.ChannelId, new UpdateWidgetThemeRequest(
+            Sample(theme => theme.SuggestedPrompts = ["a", "b", "c", "d", "   "])));
+
+        Assert.Equal(["a", "b", "c", "d"], saved.Theme!.SuggestedPrompts);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task The_theme_route_404s_for_a_non_widget_channel()
     {
         await using var app = await NewAppAsync();

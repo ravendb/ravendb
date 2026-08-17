@@ -1,10 +1,11 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ChevronDown } from "lucide-react";
 import { useState, type ReactNode } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm, useWatch, type Control, type FieldPath } from "react-hook-form";
 import type { WidgetFontOption, WidgetTheme } from "@/api/generated/server-api";
 import { FormAceEditor } from "@/components/form/form-ace-editor";
 import { FormColorPicker } from "@/components/form/form-color-picker";
+import { FormErrorIcon } from "@/components/form/form-error-icon";
 import { FormImagePicker } from "@/components/form/form-image-picker";
 import { FormInput } from "@/components/form/form-input";
 import { FormSelect } from "@/components/form/form-select";
@@ -14,6 +15,7 @@ import { FormToggleGroup } from "@/components/form/form-toggle-group";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/shadcn/ui/collapsible";
+import { Separator } from "@/components/shadcn/ui/separator";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/shadcn/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/shadcn/ui/toggle-group";
@@ -36,6 +38,7 @@ import {
     type PreviewAppearance,
     type PreviewView,
 } from "@/pages/apps/channels/web-widget-theme-preview";
+import { InlineCode } from "@/components/data/inline-code";
 
 const APPEARANCE_OPTIONS = [
     { value: "Light", label: "Light" },
@@ -47,6 +50,14 @@ const SCHEME_COLOR_FIELDS = {
     Light: ["lightButtonColor", "lightMessageColor", "lightBackgroundColor"],
     Dark: ["darkButtonColor", "darkMessageColor", "darkBackgroundColor"],
 } as const satisfies Record<PreviewAppearance, readonly (keyof WidgetThemeFormData)[]>;
+
+const SECTION_FIELDS = {
+    colors: [...SCHEME_COLOR_FIELDS.Light, ...SCHEME_COLOR_FIELDS.Dark],
+    style: ["radius", "fontFamily", "fontSize", "customFontSizeRem"],
+    branding: ["showHeader", "logo", "logoRadius", "headerTitle", "headerSubtitle"],
+    content: ["greetingTitle", "greetingBody", "suggestedPrompts", "inputPlaceholder", "disclaimer"],
+    customCss: ["customCss"],
+} as const satisfies Record<string, readonly FieldPath<WidgetThemeFormData>[]>;
 
 type WebWidgetThemeEditorProps = {
     /** The saved theme. Null means "follow the app default", which only the per-widget editor offers. */
@@ -63,19 +74,28 @@ type WebWidgetThemeEditorProps = {
 
 function Section({
     title,
+    control,
+    paths,
     defaultOpen = false,
     children,
 }: {
     title: string;
+    control: Control<WidgetThemeFormData>;
+    paths: readonly FieldPath<WidgetThemeFormData>[];
     defaultOpen?: boolean;
     children: ReactNode;
 }) {
+    const [isOpen, setIsOpen] = useState(defaultOpen);
+
     return (
-        <Collapsible defaultOpen={defaultOpen} className="rounded-md border bg-card p-4" asChild>
+        <Collapsible open={isOpen} onOpenChange={setIsOpen} className="rounded-md border bg-card p-4" asChild>
             <section>
                 <h3 className="text-sm font-semibold">
                     <CollapsibleTrigger className="group flex w-full items-center justify-between gap-3 rounded-sm text-left focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none">
-                        {title}
+                        <span className="flex items-center gap-1.5">
+                            {title}
+                            <FormErrorIcon control={control} paths={paths} onError={() => setIsOpen(true)} />
+                        </span>
                         <ChevronDown
                             className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180"
                             aria-hidden="true"
@@ -162,17 +182,13 @@ export function WebWidgetThemeEditor({
                 },
             )}
         >
-            <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="sticky top-0 z-10 -mx-2 flex flex-wrap items-center justify-end gap-2 bg-surface1 px-2 py-2 dark:bg-surface2">
                 {canFollowAppDefault && !isFollowingAppDefault && (
                     <Button type="button" variant="outline" size="sm" disabled={isSaving} onClick={() => onSave(null)}>
                         Follow app default
                     </Button>
                 )}
-                <Button
-                    type="submit"
-                    size="sm"
-                    disabled={isSaving || (!form.formState.isDirty && !isFollowingAppDefault)}
-                >
+                <Button type="submit" size="sm" disabled={isSaving}>
                     {isSaving && <Spinner />}
                     Save
                 </Button>
@@ -193,10 +209,11 @@ export function WebWidgetThemeEditor({
                             name="appearance"
                             label="Default color scheme"
                             description={
-                                "System follows each visitor's own light or dark preference. The embedding page can " +
-                                "override this per visitor: append ?appearance=dark (or light/system) to the embed " +
-                                "URL, or post an appearance message when its own theme toggles - see " +
-                                "“Embed on your own site” on the channel page."
+                                <span>
+                                    System follows the visitor's own preference. The embedding page can override this
+                                    with <InlineCode>?appearance=dark|light|system</InlineCode> on the embed URL or an
+                                    appearance message - see “Embed on your own site” on the channel page.
+                                </span>
                             }
                             options={APPEARANCE_OPTIONS}
                             canDeselect={false}
@@ -207,9 +224,9 @@ export function WebWidgetThemeEditor({
                         />
                     </div>
 
-                    <Section title="Colors" defaultOpen>
+                    <Section title="Colors" control={form.control} paths={SECTION_FIELDS.colors} defaultOpen>
                         <p className="text-sm text-muted-foreground">
-                            Each scheme keeps its own colors; every other option applies to both.
+                            Each scheme keeps its own colors. Every other option applies to both.
                         </p>
                         <Tabs
                             value={previewAppearance}
@@ -228,12 +245,12 @@ export function WebWidgetThemeEditor({
                         </Tabs>
                     </Section>
 
-                    <Section title="Style">
+                    <Section title="Style" control={form.control} paths={SECTION_FIELDS.style}>
                         <FormSelect
                             control={form.control}
                             name="radius"
                             label="Radius"
-                            description="Rounds every corner the widget draws, from surfaces to the prompt pills."
+                            description="Rounds the corners inside the widget - message bubbles, code blocks, the composer and the prompt pills."
                             options={RADIUS_OPTIONS}
                             disabled={isSaving}
                         />
@@ -271,7 +288,19 @@ export function WebWidgetThemeEditor({
                         )}
                     </Section>
 
-                    <Section title="Branding">
+                    <Section title="Branding" control={form.control} paths={SECTION_FIELDS.branding}>
+                        <FormSwitch
+                            control={form.control}
+                            name="showHeader"
+                            label="Show the header"
+                            disabled={isSaving}
+                        />
+                        {previewTheme.showHeader === false && (
+                            <p className="text-sm text-muted-foreground">
+                                The header is hidden, so nothing below is shown to visitors. It is kept for when you
+                                turn the header back on.
+                            </p>
+                        )}
                         <FormImagePicker
                             control={form.control}
                             name="logo"
@@ -285,12 +314,6 @@ export function WebWidgetThemeEditor({
                             label="Logo radius"
                             description="Rounds only the logo. Pill crops a square logo to a circle."
                             options={LOGO_RADIUS_OPTIONS}
-                            disabled={isSaving}
-                        />
-                        <FormSwitch
-                            control={form.control}
-                            name="showHeader"
-                            label="Show the header"
                             disabled={isSaving}
                         />
                         <FormInput
@@ -309,7 +332,7 @@ export function WebWidgetThemeEditor({
                         />
                     </Section>
 
-                    <Section title="Content">
+                    <Section title="Content" control={form.control} paths={SECTION_FIELDS.content}>
                         {/* These render only on the welcome screen, so editing them steers the preview there. */}
                         <div className="grid gap-4" onFocusCapture={() => setPreviewView("Welcome")}>
                             <FormInput
@@ -356,7 +379,7 @@ export function WebWidgetThemeEditor({
                         />
                     </Section>
 
-                    <Section title="Custom CSS">
+                    <Section title="Custom CSS" control={form.control} paths={SECTION_FIELDS.customCss}>
                         <FormAceEditor
                             control={form.control}
                             name="customCss"
@@ -368,7 +391,7 @@ export function WebWidgetThemeEditor({
                     </Section>
                 </div>
 
-                <div className="grid gap-3 xl:sticky xl:top-4">
+                <div className="grid gap-3 xl:sticky xl:top-14">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                         <span className="text-sm font-medium">Live preview</span>
                         <div className="flex flex-wrap items-center gap-3">
@@ -385,6 +408,7 @@ export function WebWidgetThemeEditor({
                                 <ToggleGroupItem value="Welcome">Welcome</ToggleGroupItem>
                                 <ToggleGroupItem value="Conversation">Conversation</ToggleGroupItem>
                             </ToggleGroup>
+                            <Separator orientation="vertical" />
                             <ToggleGroup
                                 type="single"
                                 variant="outline"
