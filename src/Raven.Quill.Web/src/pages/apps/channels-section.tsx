@@ -3,7 +3,7 @@ import { Eye, Link2, Pencil, Trash2 } from "lucide-react";
 import { Link } from "react-router";
 import { api } from "@/api/api";
 import { ApiState } from "@/components/data/api-state";
-import { StatusIndicator } from "@/components/data/status-indicator";
+import { EnabledStatus } from "@/components/data/status-indicator";
 import { Button } from "@/components/shadcn/ui/button";
 import { Skeleton } from "@/components/shadcn/ui/skeleton";
 import { TableCell, TableRow } from "@/components/shadcn/ui/table";
@@ -85,10 +85,7 @@ export function ChannelsSection({ slug, agent: fixedAgent }: { slug: string; age
                                     </TableCell>
                                     {!fixedAgent && <TableCell className="font-medium">{agent?.name}</TableCell>}
                                     <TableCell>
-                                        <StatusIndicator
-                                            tone={channel.enabled ? "positive" : "muted"}
-                                            label={channel.enabled ? "Connected" : "Disabled"}
-                                        />
+                                        <EnabledStatus isEnabled={channel.enabled} />
                                     </TableCell>
                                     <TableCell>{channel.type ? CHANNEL_TYPE_LABELS[channel.type] : "—"}</TableCell>
                                     <TableCell className="text-muted-foreground tabular-nums">

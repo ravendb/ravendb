@@ -5,6 +5,7 @@ import { Link } from "react-router";
 import { api } from "@/api/api";
 import type { AgentSummaryResponse, ChannelSummaryResponse, ChannelType } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
+import { EnabledStatus } from "@/components/data/status-indicator";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { Card, CardAction, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/shadcn/ui/card";
@@ -150,7 +151,7 @@ function ChannelCard({
                     </Link>
                 </CardTitle>
                 <CardAction>
-                    <ChannelStatusPill enabled={channel.enabled} />
+                    <EnabledStatus isEnabled={channel.enabled} />
                 </CardAction>
             </CardHeader>
 
@@ -234,18 +235,6 @@ function ChannelCard({
                 />
             </CardFooter>
         </Card>
-    );
-}
-
-function ChannelStatusPill({ enabled }: { enabled: boolean }) {
-    return (
-        <Badge variant={enabled ? "success" : "secondary"}>
-            <span
-                className={cn("size-1.5 rounded-full", enabled ? "bg-emerald-500" : "bg-muted-foreground/60")}
-                aria-hidden="true"
-            />
-            {enabled ? "Active" : "Paused"}
-        </Badge>
     );
 }
 
