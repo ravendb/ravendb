@@ -135,6 +135,7 @@ ENV S6_VERBOSITY=0 \
     RAVEN_QUILL_SETUP_PACKAGE_PATH=/var/lib/quill/setup \
     RAVEN_QUILL_RAVENDB_S6_SERVICE=/run/service/01-ravendb \
     RAVEN_QUILL_RAVENDB_INTERNAL_PORT=8443 \
+    RAVEN_QUILL_RAVENDB_PROXY_PORT=8447 \
     RAVEN_DataDir=/var/lib/quill/ravendb \
     RAVEN_Logs_Path=/var/lib/quill/logs/ravendb-server \
     RAVEN_QUILL_STARTUP_GRACE_SECONDS=180
