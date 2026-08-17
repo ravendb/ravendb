@@ -171,11 +171,9 @@ internal sealed class TelegramBotRuntime
         Client.OnApiResponseReceived -= OnApiResponseReceived;
         await _cts.CancelAsync();
 
-        var draining = _chats.Values.Select(c => c.Completion).Append(_receive);
-
         try
         {
-            await Task.WhenAll(draining).WaitAsync(TimeSpan.FromSeconds(10));
+            await DrainAsync().WaitAsync(TimeSpan.FromSeconds(10));
         }
         catch (TimeoutException)
         {
@@ -188,6 +186,19 @@ internal sealed class TelegramBotRuntime
         }
 
         _cts.Dispose();
+    }
+
+    private async Task DrainAsync()
+    {
+        try
+        {
+            await _receive;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+
+        await Task.WhenAll(_chats.Values.Select(c => c.Completion));
     }
 }
 
