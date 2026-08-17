@@ -159,11 +159,13 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
 
         const long chatId = 510;
         Mock.EnqueueTextMessage(token, chatId, fromUserId: 510, "first try");
-        Mock.EnqueueTextMessage(token, chatId, fromUserId: 510, "second try");
+        await Mock.WaitUntilAsync(
+            () => Mock.SentMessages.Any(m => m.ChatId == chatId && m.Text.Contains("username")), "the first nudge");
 
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 510, "second try");
         await Mock.WaitUntilAsync(
             () => Mock.SentMessages.Count(m => m.ChatId == chatId && m.Text.Contains("username")) == 2,
-            "the nudges");
+            "the second nudge");
 
         Assert.All(Mock.SentMessages.Where(m => m.ChatId == chatId), m => Assert.Null(m.ParseMode));
         Assert.Empty(Router.Requests);
@@ -340,6 +342,64 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Messages_queued_behind_a_running_turn_are_merged_into_one_prompt()
+    {
+        var (app, channelId, token) = await ProvisionAsync();
+        await using var appGuard = app;
+
+        const long chatId = 150;
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Router.BeforeRun = request => request.Prompt == "hold" ? gate.Task : Task.CompletedTask;
+
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 150, "hold");
+        await Mock.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "hold"), "the blocking turn to start");
+
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 150, "what is the status");
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 150, "of order 42");
+        await Mock.WaitUntilAsync(
+            () => Mock.PendingUpdateCount(token) == 0, "the queued updates to reach the blocked chat");
+
+        gate.SetResult();
+        await Mock.WaitUntilAsync(() => Router.Requests.Count >= 2, "the merged turn");
+        await Task.Delay(400);
+
+        Assert.Equal(
+            ["hold", "what is the status\nof order 42"],
+            Router.Requests.Select(r => r.Prompt).ToArray());
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_command_queued_between_messages_is_not_merged_into_the_prompt()
+    {
+        var (app, channelId, token) = await ProvisionAsync();
+        await using var appGuard = app;
+
+        const long chatId = 160;
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Router.BeforeRun = request => request.Prompt == "hold" ? gate.Task : Task.CompletedTask;
+
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 160, "hold");
+        await Mock.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "hold"), "the blocking turn to start");
+
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 160, "before");
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 160, "/start");
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 160, "after");
+        await Mock.WaitUntilAsync(
+            () => Mock.PendingUpdateCount(token) == 0, "the queued updates to reach the blocked chat");
+
+        gate.SetResult();
+        await Mock.WaitUntilAsync(() => Router.Requests.Count >= 3, "both merged turns");
+        await Task.Delay(400);
+
+        Assert.Equal(["hold", "before", "after"], Router.Requests.Select(r => r.Prompt).ToArray());
+        Assert.Contains(Mock.SentMessages, m => m.ChatId == chatId && m.Text.Contains("Ask me anything"));
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task A_flooded_chat_sheds_messages_and_warns_the_sender_once()
     {
         var (app, channelId, token) = await ProvisionAsync();
@@ -366,7 +426,10 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         gate.SetResult();
 
         await Mock.WaitUntilAsync(() => Router.Requests.Count >= 2, "the queued turns");
-        var prompts = Router.Requests.Select(r => int.Parse(r.Prompt[1..])).ToArray();
+        var prompts = Router.Requests
+            .SelectMany(r => r.Prompt.Split('\n'))
+            .Select(p => int.Parse(p[1..]))
+            .ToArray();
         Assert.Equal(prompts.Order().ToArray(), prompts);
 
         await app.DeleteChannelAsync(channelId);

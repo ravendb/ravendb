@@ -75,6 +75,11 @@ public sealed class MockTelegramBotApi : IAsyncDisposable
         lock (_lock) return _lastOffsets.GetValueOrDefault(token);
     }
 
+    public int PendingUpdateCount(string token)
+    {
+        lock (_lock) return _updateQueues.TryGetValue(token, out var queue) ? queue.Count : 0;
+    }
+
     public void EnqueueTextMessage(string token, long chatId, long fromUserId, string text,
         string? username = null, string chatType = "private")
     {
