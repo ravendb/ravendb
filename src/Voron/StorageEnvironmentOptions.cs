@@ -408,6 +408,10 @@ namespace Voron
         {
             public const string TempFileExtension = ".tmp";
             public const string BuffersFileExtension = ".buffers";
+            
+            public static bool IsTemporaryFile(string path) =>
+                path.EndsWith(BuffersFileExtension, StringComparison.OrdinalIgnoreCase) ||
+                path.EndsWith(TempFileExtension, StringComparison.OrdinalIgnoreCase);
 
             private readonly VoronPathSetting _basePath;
 
@@ -774,9 +778,19 @@ namespace Voron
                 if (Directory.Exists(TempPath.FullPath) == false)
                     return;
 
-                foreach (var file in Directory.GetFiles(TempPath.FullPath).Where(x => x.EndsWith(BuffersFileExtension, StringComparison.OrdinalIgnoreCase) || x.EndsWith(TempFileExtension, StringComparison.OrdinalIgnoreCase)))
+                foreach (var file in Directory.GetFiles(TempPath.FullPath).Where(IsTemporaryFile))
                 {
-                    DeleteTempFile(file);
+                    try
+                    {
+                        DeleteTempFile(file);
+                    }
+                    catch (Exception e) when (e is UnauthorizedAccessException or IOException)
+                    {
+                        // failing to open the environment over a leftover temp file would make the whole directory
+                        // permanently unusable, and GetTemporaryPager renames around such a file anyway (RavenDB-27226)
+                        if (_log.IsInfoEnabled)
+                            _log.Info($"Could not delete the temporary file '{file}', leaving it behind. It will be picked up again the next time this temp directory is cleaned up.", e);
+                    }
                 }
             }
 
@@ -820,7 +834,7 @@ namespace Voron
                         if (File.Exists(tempFile.FullPath))
                             File.Delete(tempFile.FullPath);
                     }
-                    catch (IOException e)
+                    catch (Exception e) when (e is IOException or UnauthorizedAccessException)
                     {
                         // this can happen if someone is holding the file, shouldn't happen
                         // but might if there is some FS caching involved where it shouldn't
@@ -834,7 +848,7 @@ namespace Voron
                             true, // deleteOnClose
                             false); //usePageProtection
                     }
-                    catch (FileNotFoundException e)
+                    catch (Exception e) when (e is FileNotFoundException or UnauthorizedAccessException)
                     {
                         // unique case, when file was previously deleted, but still exists. 
                         // This can happen on cifs mount, see RavenDB-10923
