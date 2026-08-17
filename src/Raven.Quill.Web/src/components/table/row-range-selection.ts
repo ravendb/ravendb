@@ -8,36 +8,49 @@ export function countSelectedRows(selection: RowSelectionState): number {
     return Object.values(selection).filter(Boolean).length;
 }
 
-export function isRowSelected<TData>(table: Table<TData>, rowId: string | null): boolean {
+function isRowSelected<TData>(table: Table<TData>, rowId: string | null): boolean {
     return rowId !== null && Boolean(table.getState().rowSelection[rowId]);
 }
 
 /**
- * The rows a shift-click on `targetRowId` would apply the anchor row's state to, already trimmed to
- * the selection limit. Empty when there is no range to take, e.g. before the first click or once a
- * filter has removed the anchor; the click then falls back to toggling the row it landed on.
+ * The rows a shift-click on `targetRowId` would cover, and the state it would give them, already
+ * trimmed to the selection limit.
+ *
+ * `isSelecting` follows the row the click lands on, so the range takes the same toggle that row's
+ * own checkbox would: a shift-click on an unselected row extends the selection over the range, and
+ * one on a selected row clears it. Reading it off the anchor instead would strand the gesture -
+ * with nothing selected the anchor is unselected too, so the click would clear an already empty
+ * range and do nothing at all.
+ *
+ * The range runs from the top of the table when there is no usable anchor. Only a plain click on a
+ * row records one, so a selection that arrived some other way - seeded from a stored configuration,
+ * taken with the header checkbox, cleared through "Deselect all" - has none, and a filter can hide
+ * the row that held it. Without a fallback endpoint the shift-click in those states would collapse
+ * into a plain toggle, which reads as Shift doing nothing at all.
  */
-export function getRangeSelectionRows<TData>(
+export function getRangeSelection<TData>(
     table: Table<TData>,
     anchorRowId: string | null,
     targetRowId: string,
     maxSelectedCount: number = Infinity,
-): Row<TData>[] {
-    if (anchorRowId === null) {
-        return [];
-    }
-
+): { rows: Row<TData>[]; isSelecting: boolean } {
+    const isSelecting = !isRowSelected(table, targetRowId);
     const rows = table.getRowModel().rows;
-    const anchorIndex = rows.findIndex((row) => row.id === anchorRowId);
     const targetIndex = rows.findIndex((row) => row.id === targetRowId);
 
-    if (anchorIndex === -1 || targetIndex === -1) {
-        return [];
+    if (targetIndex === -1) {
+        return { rows: [], isSelecting };
     }
 
+    // findIndex reports -1 for both a missing and a null anchor, which the clamp turns into the
+    // first row; the empty-table case is already ruled out by the target lookup above.
+    const anchorIndex = Math.max(
+        rows.findIndex((row) => row.id === anchorRowId),
+        0,
+    );
     const rangeRows = rows.slice(Math.min(anchorIndex, targetIndex), Math.max(anchorIndex, targetIndex) + 1);
 
-    return takeWithinLimit(table, rangeRows, isRowSelected(table, anchorRowId), maxSelectedCount);
+    return { rows: takeWithinLimit(table, rangeRows, isSelecting, maxSelectedCount), isSelecting };
 }
 
 /** Selects or clears `rows`, in display order, without letting the selection pass the limit. */
@@ -127,7 +140,7 @@ export function useRowRangeSelection<TData>(maxSelectedCount: number = Infinity)
             }
 
             return new Set(
-                getRangeSelectionRows(table, anchorRowIdRef.current, hoveredRowId, maxSelectedCount).map(
+                getRangeSelection(table, anchorRowIdRef.current, hoveredRowId, maxSelectedCount).rows.map(
                     (row) => row.id,
                 ),
             );

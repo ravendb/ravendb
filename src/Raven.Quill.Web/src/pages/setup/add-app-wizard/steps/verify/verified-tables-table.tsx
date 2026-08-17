@@ -77,7 +77,6 @@ export function VerifiedTablesTable({
                 columnCount={columns.length}
                 emptyMessage="No tables match the current filter."
                 maxHeight="fill"
-                className="mb-4"
                 getRowState={(rowId) => (rowSelection[rowId] ? "selected" : "")}
                 getRowClassName={(rowId) => (rangePreviewRowIds.has(rowId) ? RANGE_PREVIEW_ROW_CLASSNAME : "")}
                 onRowHoverChange={rangeSelection.onRowHoverChange}
