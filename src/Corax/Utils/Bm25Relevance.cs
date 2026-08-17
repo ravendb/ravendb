@@ -23,8 +23,14 @@ public sealed unsafe class Bm25Relevance : IDisposable
     /// This is necessary in case we use 'order by score()' without a WHERE clause, where the document boost is the only factor in the equation.
     /// So in order not to multiply by 0 let set it to be very small. BM25F is using sum, so this has no impact on the result. 
     /// </summary>
-    public const float InitialScoreValue = 1 / 1_000_000f; 
-    
+    public const float InitialScoreValue = 1 / 1_000_000f;
+
+    /// <summary>
+    /// Score contribution of a document matched by a constant-scoring clause (e.g. exists()),
+    /// where existence carries no term-frequency signal.
+    /// </summary>
+    public const float ConstantScoreValue = 1f;
+
     private const int MaximumDocumentCapacity = MaxSizeOfStorage / (sizeof(long) + sizeof(short));
     private const int MaxSizeOfStorage = 1024 * 1024; //1MB;
     private const float BFactor = 0.25f;
