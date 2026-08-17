@@ -4,6 +4,7 @@ set -e
 exec 2>&1
 
 CERT_DIR=/var/lib/quill/certs
+PROXY_DIR=/var/lib/quill/proxy
 
 while [ -z "$(ls "$CERT_DIR"/cluster.server.certificate.*.pfx 2>/dev/null)" ]; do
     sleep 10
@@ -16,12 +17,23 @@ pfx_serial() {
 }
 
 pem_serial() {
-    openssl x509 -in /var/lib/quill/proxy/leaf.pem -noout -serial 2>/dev/null
+    openssl x509 -in "$PROXY_DIR/leaf.pem" -noout -serial 2>/dev/null
 }
 
+unreadable=""
+
 while sleep 60; do
-    if [ "$(pfx_serial)" != "$(pem_serial)" ]; then
-        cert-chain "$PFX"
+    # An unreadable pfx would compare equal to an unreadable leaf.pem and look like "no change", so
+    # say so instead - once, rather than every minute
+    serial="$(pfx_serial)"
+    if [ -z "$serial" ]; then
+        [ -n "$unreadable" ] || echo "04-certwatch: cannot read a serial from $PFX; renewal detection is paused." >&2
+        unreadable=yes
+        continue
+    fi
+    unreadable=""
+
+    if [ "$serial" != "$(pem_serial)" ]; then
         proxy-certs
         s6-svc -h /run/service/03-proxy
         echo "04-certwatch: certificate renewed; nginx reloaded."

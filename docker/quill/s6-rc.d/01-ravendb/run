@@ -38,8 +38,6 @@ if [ -f "$SETUP_SETTINGS" ]; then
     PFX="$(basename "$(ls "$SETUP_DIR"/A/cluster.server.certificate.*.pfx | head -n1)")"
     [ -f "$CERT_DIR/$PFX" ] || cp "$SETUP_DIR/A/$PFX" "$CERT_DIR/"
 
-    cert-chain "$CERT_DIR/$PFX"
-
     sed -i "s#\"$PFX\"#\"$CERT_DIR/$PFX\"#" /app/ravendb/settings.json
 
     if [ -f "$SETUP_DIR/admin-thumbprint" ]; then
