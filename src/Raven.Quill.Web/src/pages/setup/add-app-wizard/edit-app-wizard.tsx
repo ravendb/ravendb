@@ -51,7 +51,9 @@ function EditAppWizardForm({ app, cdc }: { app: ApplianceAppResponse; cdc: AppCd
                         {seed.error}
                         <div className="mt-3">
                             <Button asChild type="button" variant="outline" size="sm">
-                                <Link to={appRoutes.app(app.slug)}>Back to the application</Link>
+                                <Link to={appRoutes.app(app.slug)} className="!no-underline">
+                                    Back to the application
+                                </Link>
                             </Button>
                         </div>
                     </AlertDescription>
