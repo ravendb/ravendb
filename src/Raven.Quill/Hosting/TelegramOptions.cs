@@ -15,4 +15,6 @@ public sealed class TelegramOptions
     public int ChatQueueCapacity { get; set; } = 8;
 
     public TimeSpan ChatIdleTimeout { get; set; } = TimeSpan.FromMinutes(15);
+
+    public TimeSpan PollBackoffMax { get; set; } = TimeSpan.FromMinutes(1);
 }

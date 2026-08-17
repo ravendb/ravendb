@@ -16,7 +16,6 @@ internal sealed class TelegramBotRuntime
     private const string GetUpdatesMethod = "getUpdates";
 
     private static readonly TimeSpan MinBackoff = TimeSpan.FromSeconds(1);
-    private static readonly TimeSpan MaxBackoff = TimeSpan.FromSeconds(30);
 
     private readonly ConcurrentDictionary<long, TelegramChat> _chats = new();
     private readonly ConcurrentDictionary<long, bool> _refusedGroupChats = new();
@@ -148,8 +147,9 @@ internal sealed class TelegramBotRuntime
             return;
         }
 
+        var max = _context.Options.Telegram.PollBackoffMax;
         var doubled = _backoff * 2 + TimeSpan.FromMilliseconds(Random.Shared.Next(0, 250));
-        _backoff = doubled < MaxBackoff ? doubled : MaxBackoff;
+        _backoff = doubled < max ? doubled : max;
     }
 
     internal async Task TrySendPlainAsync(long chatId, string text)
