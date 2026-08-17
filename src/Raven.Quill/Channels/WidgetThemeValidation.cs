@@ -94,7 +94,13 @@ public static partial class WidgetThemeValidation
             }
         }
 
-        if (TryValidateRequiredText(theme.HeaderTitle, "headerTitle", MaxHeaderTitleLength, out error) == false)
+        // A hidden header shows no title, so requiring one would only force the operator to invent a string
+        // no visitor ever sees. The length still applies: the value is kept for when the header comes back.
+        var headerTitleValid = theme.ShowHeader
+            ? TryValidateRequiredText(theme.HeaderTitle, "headerTitle", MaxHeaderTitleLength, out error)
+            : TryValidateOptionalText(theme.HeaderTitle, "headerTitle", MaxHeaderTitleLength, out error);
+
+        if (headerTitleValid == false)
             return false;
 
         if (TryValidateRequiredText(theme.InputPlaceholder, "inputPlaceholder", MaxInputPlaceholderLength, out error) == false)

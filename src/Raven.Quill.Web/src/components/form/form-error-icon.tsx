@@ -2,6 +2,7 @@
 // mutable errors object, which keeps a stable identity across updates.
 "use no memo";
 
+import { useEffect, useEffectEvent } from "react";
 import { type Control, type FieldPath, type FieldValues, useFormState } from "react-hook-form";
 import { CircleAlert } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
@@ -10,17 +11,28 @@ import { cn } from "@/lib/utils";
 type FormErrorIconProps<TFieldValues extends FieldValues> = {
     control: Control<TFieldValues>;
     paths: readonly FieldPath<TFieldValues>[];
+    onError?: () => void;
     className?: string;
 };
 
 export function FormErrorIcon<TFieldValues extends FieldValues>({
     control,
     paths,
+    onError,
     className,
 }: FormErrorIconProps<TFieldValues>) {
     const { errors } = useFormState({ control, name: [...paths] });
 
     const message = paths.map((path) => findErrorMessage(getByPath(errors, path))).find(Boolean);
+    const hasError = Boolean(message);
+
+    const notifyError = useEffectEvent(() => onError?.());
+
+    useEffect(() => {
+        if (hasError) {
+            notifyError();
+        }
+    }, [hasError]);
 
     if (!message) {
         return null;

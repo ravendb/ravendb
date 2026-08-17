@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { findCssSyntaxError } from "@/pages/apps/channels/custom-css-syntax";
 import type {
     WidgetFontSize,
     WidgetLogoRadius,
@@ -58,15 +59,15 @@ export const widgetThemeSchema = z
             .max(200, "Font stack must be 200 characters or fewer")
             .regex(FONT_STACK, "A font stack may only contain letters, digits, spaces, commas, hyphens and quotes"),
         fontSize: z.enum(FONT_SIZE_VALUES),
-        // Bounds live in the superRefine below: they only apply while the size is Custom, because RHF keeps
-        // the value after the input unmounts and a stale out-of-range number must not block saving.
+        // Bounds live in the superRefine below, together with every other rule that only applies while the
+        // option it belongs to is switched on.
         customFontSizeRem: z.number("Enter a number").nullable(),
         logo: z
             .string()
             .max(MAX_LOGO_LENGTH, "That image is too large even after downscaling")
             .refine((value) => value.length === 0 || LOGO_DATA_URI.test(value), "Upload a png, jpeg or webp image"),
         logoRadius: z.enum(LOGO_RADIUS_VALUES),
-        headerTitle: z.string().trim().min(1, "A title is required").max(60, "Title must be 60 characters or fewer"),
+        headerTitle: z.string().trim().max(60, "Title must be 60 characters or fewer"),
         headerSubtitle: optionalText(100, "Subtitle"),
         showHeader: z.boolean(),
         greetingTitle: optionalText(80, "Greeting title"),
@@ -83,7 +84,12 @@ export const widgetThemeSchema = z
                         ),
                 }),
             )
-            .max(MAX_SUGGESTED_PROMPTS, `Up to ${MAX_SUGGESTED_PROMPTS} prompts`),
+            // A blank row is dropped on save, so only the prompts that will actually ship count - matching
+            // the server, which normalizes the list before it counts.
+            .refine(
+                (prompts) => prompts.filter((prompt) => prompt.value.length > 0).length <= MAX_SUGGESTED_PROMPTS,
+                `Up to ${MAX_SUGGESTED_PROMPTS} prompts`,
+            ),
         inputPlaceholder: z
             .string()
             .trim()
@@ -97,9 +103,22 @@ export const widgetThemeSchema = z
                 `Custom CSS must be ${MAX_CUSTOM_CSS_LENGTH.toLocaleString()} characters or fewer`,
             )
             .refine((value) => STYLE_CLOSE.test(value) === false, 'Custom CSS may not contain "</style"')
+            .superRefine((value, ctx) => {
+                const syntaxError = findCssSyntaxError(value);
+
+                if (syntaxError) {
+                    ctx.addIssue({ code: "custom", message: syntaxError });
+                }
+            })
             .transform((value) => value.trim()),
     })
+    // A rule that belongs to a switched-off option must not block saving: the value behind it is either
+    // invisible or unused, so the operator would be stuck on an error they cannot see the cause of.
     .superRefine((data, ctx) => {
+        if (data.showHeader && data.headerTitle.length === 0) {
+            ctx.addIssue({ code: "custom", path: ["headerTitle"], message: "A title is required" });
+        }
+
         if (data.fontSize !== "Custom") return;
 
         if (data.customFontSizeRem === null) {
