@@ -4,50 +4,25 @@ import { FormSelect } from "@/components/form/form-select";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
 import { FormInput } from "@/components/form/form-input";
-import { ConfirmDialog } from "@/components/shadcn/ui/confirm-dialog";
-import { Button } from "@/components/shadcn/ui/button";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/shadcn/ui/alert";
 import { WizardErrorList } from "@/components/form/wizard/wizard-error-list";
 import AceEditor from "@/components/ace-editor/ace-editor";
-import { CircleAlertIcon, DownloadIcon, MessageSquareWarningIcon } from "lucide-react";
-import { buildConfigExport, downloadConfig } from "@/pages/setup/add-app-wizard/config-io";
+import { CircleAlertIcon, MessageSquareWarningIcon } from "lucide-react";
 
 // Both failure paths report the same thing: the request itself failed, or it came back with errors.
 const MAPPING_TEST_ERROR_TITLE = "Testing the mapping failed";
 
 export function PreviewStep() {
-    const { control, getValues } = useFormContext<AppFormData>();
+    const { control } = useFormContext<AppFormData>();
 
     const tables = useWatch({
         control,
         name: "mapTables.tables",
     });
 
-    const dataSource = useWatch({
-        control,
-        name: "dataSource.source",
-    });
-
     return (
         <>
-            {dataSource === "external" && (
-                <div className="flex justify-end">
-                    <ConfirmDialog
-                        variant="warning"
-                        trigger={
-                            <Button type="button" variant="outline" disabled={tables.length === 0}>
-                                <DownloadIcon aria-hidden="true" />
-                                Export configuration
-                            </Button>
-                        }
-                        title="Export configuration?"
-                        description="The exported file contains the connection string in plain text, including any username and password it holds. Keep it somewhere safe and avoid sharing it."
-                        confirmLabel="Export"
-                        onConfirm={() => downloadConfig(buildConfigExport(getValues()))}
-                    />
-                </div>
-            )}
             <div className="grid grid-cols-2 gap-4">
                 <FormSelect
                     control={control}

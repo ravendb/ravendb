@@ -42,6 +42,10 @@ export type WizardFooterComponentProps = {
     isBusy: boolean;
 };
 
+export type WizardHeaderComponentProps = {
+    isBusy: boolean;
+};
+
 export type WizardBadgeContext<Values extends FieldValues = FieldValues> = {
     values: Values;
     isComplete: boolean;
@@ -71,6 +75,8 @@ export type WizardStep<StepId extends string, Values extends FieldValues = Field
     canCancel?: boolean;
     canGoBack?: boolean;
     footerComponent?: (props: WizardFooterComponentProps) => ReactNode;
+    /** Rendered beside the step title, for actions that act on the whole configuration. */
+    headerAction?: (props: WizardHeaderComponentProps) => ReactNode;
 } & WizardStepBadge<Values>;
 
 export type WizardSteps<StepId extends string, Values extends FieldValues = FieldValues> = Record<
@@ -231,11 +237,14 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
                                 currentStep.isFullHeight ? "flex h-full flex-col gap-5" : "grid gap-5",
                             )}
                         >
-                            <div>
-                                <h2 className="text-2xl font-semibold tracking-normal">{currentStep.title}</h2>
-                                {currentStep.description && (
-                                    <p className="mt-3 text-sm text-muted-foreground">{currentStep.description}</p>
-                                )}
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                    <h2 className="text-2xl font-semibold tracking-normal">{currentStep.title}</h2>
+                                    {currentStep.description && (
+                                        <p className="mt-3 text-sm text-muted-foreground">{currentStep.description}</p>
+                                    )}
+                                </div>
+                                {currentStep.headerAction && <currentStep.headerAction isBusy={isBusy} />}
                             </div>
 
                             <currentStep.bodyComponent currentStepId={currentStepIdInFlow} isBusy={isBusy} />

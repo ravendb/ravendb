@@ -7,3 +7,12 @@ export function toSlug(value: string) {
         .replace(/^-+|-+$/g, "")
         .toLowerCase();
 }
+
+/**
+ * A throwaway slug for work that must reach the server before the app is named - the wizard endpoints
+ * key their state by slug. Never shown to the operator and never kept, so it only has to be unlikely
+ * to collide with another draft; crypto.randomUUID is avoided because it needs a secure context.
+ */
+export function createDraftSlug() {
+    return `draft-${Math.random().toString(36).slice(2, 10)}`;
+}

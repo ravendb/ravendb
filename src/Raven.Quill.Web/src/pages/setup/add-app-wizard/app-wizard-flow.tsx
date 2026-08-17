@@ -15,6 +15,8 @@ import { ConnectSourceStep } from "@/pages/setup/add-app-wizard/steps/connect/co
 import { MapSchemaStep } from "@/pages/setup/add-app-wizard/steps/map/map-schema-step";
 import { MapTablesStep } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-step";
 import { PreviewStep } from "@/pages/setup/add-app-wizard/steps/preview/preview-step";
+import { ExportConfigAction } from "@/pages/setup/add-app-wizard/steps/preview/export-config-action";
+import { ImportConfigHeaderAction } from "@/pages/setup/add-app-wizard/steps/connect/import-config-header-action";
 import { VerifySchemaStep } from "@/pages/setup/add-app-wizard/steps/verify/verify-schema-step";
 import { useConnectSourceStep } from "@/pages/setup/add-app-wizard/steps/connect/use-connect-source-step";
 import { useMapSchemaStep } from "@/pages/setup/add-app-wizard/steps/map/use-map-schema-step";
@@ -52,6 +54,7 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
         externalConnection: {
             title: "Connect to your source database",
             bodyComponent: ConnectSourceStep,
+            headerAction: ImportConfigHeaderAction,
             validate: "externalConnection",
             beforeNext: connectSourceBeforeNext,
             badgeFields: [],
@@ -110,6 +113,7 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
             description:
                 "Ingest chosen number of rows per root table into a throwaway namespace so you can check shape before the real load.",
             bodyComponent: PreviewStep,
+            footerComponent: ExportConfigAction,
             validate: "preview",
         },
     };
