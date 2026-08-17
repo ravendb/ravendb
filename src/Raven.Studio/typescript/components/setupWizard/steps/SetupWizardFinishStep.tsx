@@ -31,6 +31,7 @@ import Code from "components/common/Code";
 import { useAppDispatch } from "components/store";
 import { setupWizardActions } from "components/setupWizard/store/setupWizardSlice";
 import OperationStatus = Raven.Client.Documents.Operations.OperationStatus;
+import { delay } from "components/utils/common";
 
 interface Logs {
     message: string;
@@ -39,8 +40,7 @@ interface Logs {
 
 const webSocketConnectionTimeoutMs = 5000;
 const operationStatePollIntervalMs = 2000;
-
-const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+const maxConsecutivePollFailures = 15;
 
 export function SetupWizardFinishStep() {
     const { control, setValue } = useFormContext<SetupWizardFormData>();
@@ -65,6 +65,19 @@ export function SetupWizardFinishStep() {
         dispatch(setupWizardActions.finishStepStatusSet(status));
         setValue("finishStep.finishingStatus", status);
         reportEvent(setupWizardGA4Prefixes.finalStep, "status", status);
+    };
+
+    const failSetup = (message: string) => {
+        if (isOperationFinishedRef.current) {
+            return;
+        }
+
+        isOperationFinishedRef.current = true;
+        lastStatusRef.current = "Faulted";
+
+        setLogs((prev) => [...prev, { message, color: "danger" }]);
+        setErrorLogs((prev) => [...prev, { message, color: "danger" }]);
+        handleSetFinishStatus("Faulted");
     };
 
     const applyOperationState = (state: Raven.Client.Documents.Operations.OperationState) => {
@@ -149,13 +162,17 @@ export function SetupWizardFinishStep() {
         let disposed = false;
         const websocket = new serverNotificationCenterClient();
 
-        const waitForWebSocketConnection = (): Promise<void> =>
+        const waitForWebSocketConnection = (): Promise<boolean> =>
             Promise.race([
-                new Promise<void>((resolve) => websocket.connectToWebSocketTask.always(() => resolve())),
-                delay(webSocketConnectionTimeoutMs),
+                new Promise<boolean>((resolve) =>
+                    websocket.connectToWebSocketTask.done(() => resolve(true)).fail(() => resolve(false))
+                ),
+                delay(webSocketConnectionTimeoutMs).then(() => false),
             ]);
 
         const pollOperationState = async (operationId: number) => {
+            let consecutiveFailures = 0;
+
             while (!disposed && !isOperationFinishedRef.current) {
                 await delay(operationStatePollIntervalMs);
 
@@ -165,8 +182,18 @@ export function SetupWizardFinishStep() {
 
                 try {
                     applyOperationState(await setupWizardService.getOperationState(operationId));
-                } catch {
+                    consecutiveFailures = 0;
+                } catch (e) {
+                    consecutiveFailures++;
+                    console.warn(`Failed to read state of setup operation ${operationId}`, e);
 
+                    if (consecutiveFailures >= maxConsecutivePollFailures) {
+                        failSetup(
+                            "The server stopped responding to setup status queries. " +
+                                "The setup might still be running - check the server log."
+                        );
+                        return;
+                    }
                 }
             }
         };
@@ -181,10 +208,14 @@ export function SetupWizardFinishStep() {
             const operationId = await databasesService.getNextOperationId(null);
 
             websocket.watchOperation(operationId, handleWebSocketOperation);
-            await waitForWebSocketConnection();
+            const isWebSocketConnected = await waitForWebSocketConnection();
 
             if (disposed) {
                 return;
+            }
+
+            if (!isWebSocketConnected) {
+                console.warn("Notification websocket is not connected, relying on operation state polling only");
             }
 
             if (setupMethodStep.method === "usePackage") {
@@ -193,10 +224,16 @@ export function SetupWizardFinishStep() {
                 regularFinish(operationId);
             }
 
-            pollOperationState(operationId);
+            await pollOperationState(operationId);
         };
 
-        finish();
+        finish().catch((e) => {
+            console.error("Setup failed", e);
+
+            if (!disposed) {
+                failSetup("Setup failed: " + genUtils.trimMessage(e?.responseJSON?.Message ?? e));
+            }
+        });
 
         return () => {
             disposed = true;
