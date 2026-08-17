@@ -104,6 +104,7 @@ builder.Services.AddOptions<ApplianceOptions>()
     .Validate(o => o.Telegram.EditDebounce > TimeSpan.Zero, "Telegram EditDebounce must be positive")
     .Validate(o => o.Telegram.ApplyChangesInterval > TimeSpan.Zero, "Telegram ApplyChangesInterval must be positive")
     .Validate(o => o.Telegram.ChatIdleTimeout > TimeSpan.Zero, "Telegram ChatIdleTimeout must be positive")
+    .Validate(o => o.Telegram.PollBackoffMax > TimeSpan.Zero, "Telegram PollBackoffMax must be positive")
     .ValidateOnStart();
 
 builder.Services.AddSingleton<IDocumentStore>(sp =>
