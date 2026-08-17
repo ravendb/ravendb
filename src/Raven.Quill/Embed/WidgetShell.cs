@@ -39,12 +39,12 @@ public static class WidgetShell
             : $"{string.Join("; ", directives)}; frame-ancestors {ancestors}";
     }
 
+    /// <paramref name="theme"/> must come from <see cref="WidgetThemeResolution"/>, which is where an
+    /// untrusted document is discarded. Validating again here would only be able to fix half the page:
+    /// <paramref name="configJson"/> is already serialized, so a swap at this point would paint the
+    /// default palette under a widget that then mounts with the theme this method rejected.
     public static string BuildHtml(WidgetAssets assets, string nonce, string title, WidgetTheme theme, string configJson)
     {
-        // Defence for a document written outside the PUT path: an unvalidated theme is discarded whole
-        // rather than field by field, so nothing half-trusted reaches a stylesheet.
-        var safe = WidgetThemeValidation.TryValidate(theme, out _) ? theme : WidgetTheme.Default;
-
         var builder = new StringBuilder();
         builder.Append("<!doctype html>\n<html lang=\"en\">\n<head>\n");
         builder.Append("<meta charset=\"utf-8\">\n");
@@ -58,12 +58,12 @@ public static class WidgetShell
         foreach (var module in assets.ModuleUrls)
             builder.Append($"<link rel=\"modulepreload\" href=\"{module}\">\n");
 
-        builder.Append($"<style nonce=\"{nonce}\">{BuildRootBlock(safe)}</style>\n");
+        builder.Append($"<style nonce=\"{nonce}\">{BuildRootBlock(theme)}</style>\n");
 
         // Last in the head, so the operator's rules win the cascade over the widget's own stylesheets.
         // Validation guarantees the text cannot contain `</style`, so it cannot close this tag.
-        if (string.IsNullOrEmpty(safe.CustomCss) == false)
-            builder.Append($"<style nonce=\"{nonce}\">{safe.CustomCss}</style>\n");
+        if (string.IsNullOrEmpty(theme.CustomCss) == false)
+            builder.Append($"<style nonce=\"{nonce}\">{theme.CustomCss}</style>\n");
 
         builder.Append("</head>\n<body>\n<div id=\"rq-root\"></div>\n");
 
@@ -80,17 +80,13 @@ public static class WidgetShell
     /// TypeScript, and duplicating it here is exactly the drift this rewrite set out to remove. These are
     /// enough for the browser to paint the right background before the bundle mounts. Both schemes' values
     /// are emitted through light-dark(), so the first paint is right whichever way `color-scheme` resolves.
-    internal static string BuildRootBlock(WidgetTheme theme)
-    {
-        // Same discard-whole defence as BuildHtml, kept here too because the notice pages call this alone.
-        var safe = WidgetThemeValidation.TryValidate(theme, out _) ? theme : WidgetTheme.Default;
-
-        return $":root{{color-scheme:{ColorScheme(safe.Appearance)};" +
-               $"--rq-accent:light-dark({safe.Light.ButtonColor},{safe.Dark.ButtonColor});" +
-               $"--rq-bg:light-dark({safe.Light.BackgroundColor},{safe.Dark.BackgroundColor});" +
-               $"--rq-radius:{RadiusPx(safe.Radius)}px;--rq-font:{safe.FontFamily};" +
-               $"font-size:{FontSizeRem(safe)}rem}}";
-    }
+    /// Takes a theme already trusted by <see cref="WidgetThemeResolution"/>, same as <see cref="BuildHtml"/>.
+    internal static string BuildRootBlock(WidgetTheme theme) =>
+        $":root{{color-scheme:{ColorScheme(theme.Appearance)};" +
+        $"--rq-accent:light-dark({theme.Light.ButtonColor},{theme.Dark.ButtonColor});" +
+        $"--rq-bg:light-dark({theme.Light.BackgroundColor},{theme.Dark.BackgroundColor});" +
+        $"--rq-radius:{RadiusPx(theme.Radius)}px;--rq-font:{theme.FontFamily};" +
+        $"font-size:{FontSizeRem(theme)}rem}}";
 
     private static string ColorScheme(WidgetAppearance appearance) => appearance switch
     {

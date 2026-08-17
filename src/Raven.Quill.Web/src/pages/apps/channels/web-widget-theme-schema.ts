@@ -9,9 +9,17 @@ import type {
 } from "@/api/generated/server-api";
 
 // Mirrors WidgetThemeValidation.cs. The server is still the authority; these bounds exist so the operator
-// gets the message next to the field instead of after a round trip.
-const MAX_SUGGESTED_PROMPTS = 4;
-const MAX_SUGGESTED_PROMPT_LENGTH = 80;
+// gets the message next to the field instead of after a round trip. Every one is named rather than inlined
+// so a change on the server has a single place to land here.
+export const MAX_SUGGESTED_PROMPTS = 10;
+const MAX_SUGGESTED_PROMPT_LENGTH = 200;
+export const MAX_HEADER_TITLE_LENGTH = 120;
+const MAX_HEADER_SUBTITLE_LENGTH = 200;
+const MAX_GREETING_TITLE_LENGTH = 160;
+const MAX_GREETING_BODY_LENGTH = 1_000;
+const MAX_INPUT_PLACEHOLDER_LENGTH = 160;
+const MAX_DISCLAIMER_LENGTH = 600;
+const MAX_FONT_FAMILY_LENGTH = 200;
 const MAX_CUSTOM_CSS_LENGTH = 10_000;
 const MAX_LOGO_LENGTH = 150_000;
 
@@ -56,7 +64,7 @@ export const widgetThemeSchema = z
             .string()
             .trim()
             .min(1, "Pick a font")
-            .max(200, "Font stack must be 200 characters or fewer")
+            .max(MAX_FONT_FAMILY_LENGTH, `Font stack must be ${MAX_FONT_FAMILY_LENGTH} characters or fewer`)
             .regex(FONT_STACK, "A font stack may only contain letters, digits, spaces, commas, hyphens and quotes"),
         fontSize: z.enum(FONT_SIZE_VALUES),
         // Bounds live in the superRefine below, together with every other rule that only applies while the
@@ -67,11 +75,14 @@ export const widgetThemeSchema = z
             .max(MAX_LOGO_LENGTH, "That image is too large even after downscaling")
             .refine((value) => value.length === 0 || LOGO_DATA_URI.test(value), "Upload a png, jpeg or webp image"),
         logoRadius: z.enum(LOGO_RADIUS_VALUES),
-        headerTitle: z.string().trim().max(60, "Title must be 60 characters or fewer"),
-        headerSubtitle: optionalText(100, "Subtitle"),
+        headerTitle: z
+            .string()
+            .trim()
+            .max(MAX_HEADER_TITLE_LENGTH, `Title must be ${MAX_HEADER_TITLE_LENGTH} characters or fewer`),
+        headerSubtitle: optionalText(MAX_HEADER_SUBTITLE_LENGTH, "Subtitle"),
         showHeader: z.boolean(),
-        greetingTitle: optionalText(80, "Greeting title"),
-        greetingBody: optionalText(240, "Greeting body"),
+        greetingTitle: optionalText(MAX_GREETING_TITLE_LENGTH, "Greeting title"),
+        greetingBody: optionalText(MAX_GREETING_BODY_LENGTH, "Greeting body"),
         suggestedPrompts: z
             .array(
                 z.object({
@@ -94,8 +105,11 @@ export const widgetThemeSchema = z
             .string()
             .trim()
             .min(1, "A placeholder is required")
-            .max(80, "Placeholder must be 80 characters or fewer"),
-        disclaimer: optionalText(200, "Disclaimer"),
+            .max(
+                MAX_INPUT_PLACEHOLDER_LENGTH,
+                `Placeholder must be ${MAX_INPUT_PLACEHOLDER_LENGTH} characters or fewer`,
+            ),
+        disclaimer: optionalText(MAX_DISCLAIMER_LENGTH, "Disclaimer"),
         customCss: z
             .string()
             .max(
@@ -143,8 +157,6 @@ export type WidgetThemeFormData = z.input<typeof widgetThemeSchema>;
 
 /** What the resolver hands to `handleSubmit`: trimmed and normalized, but still the form's prompt shape. */
 export type WidgetThemeFormOutput = z.output<typeof widgetThemeSchema>;
-
-export const MAX_PROMPTS = MAX_SUGGESTED_PROMPTS;
 
 export const RADIUS_OPTIONS = RADIUS_VALUES.map((value) => ({ value, label: value }));
 export const LOGO_RADIUS_OPTIONS = LOGO_RADIUS_VALUES.map((value) => ({ value, label: value }));

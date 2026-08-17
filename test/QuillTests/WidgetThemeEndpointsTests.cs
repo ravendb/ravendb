@@ -41,6 +41,11 @@ public class WidgetThemeEndpointsTests(ITestOutputHelper output) : QuillTestBase
             InputPlaceholder, Disclaimer, CustomCss);
     }
 
+    /// Derived from the limit rather than written out, so raising it does not silently turn an
+    /// "over the limit" case into an "at the limit" one.
+    private static string[] Prompts(int count) =>
+        Enumerable.Range(1, count).Select(i => $"prompt {i}").ToArray();
+
     private static WidgetTheme Sample(Action<WidgetThemeBuilder>? tweak = null)
     {
         var builder = new WidgetThemeBuilder();
@@ -54,7 +59,7 @@ public class WidgetThemeEndpointsTests(ITestOutputHelper output) : QuillTestBase
         public ValueTask DisposeAsync() => App.DisposeAsync();
     }
 
-    private async Task<Widget> NewWidgetAsync()
+    private async Task<Widget> NewWidgetAsync(string displayName = "Support Widget")
     {
         var app = await NewAppAsync();
         await app.ProvisionAgentAsync(new AiAgentConfiguration
@@ -63,7 +68,7 @@ public class WidgetThemeEndpointsTests(ITestOutputHelper output) : QuillTestBase
             ConnectionStringName = Host.ConnectionStringName,
         });
         var channel = await app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.IFrame, "demo", ["http://shop.example"], "Support Widget"));
+            new ProvisionChannelRequest(ChannelType.IFrame, "demo", ["http://shop.example"], displayName));
 
         return new Widget(app, channel.ChannelId);
     }
@@ -146,6 +151,32 @@ public class WidgetThemeEndpointsTests(ITestOutputHelper output) : QuillTestBase
         Assert.Equal(WidgetTheme.Default.Light, reset.Theme.Light);
     }
 
+    /// A display name may be more than three times as long as a header title, and a header-off theme is
+    /// allowed to leave the title blank - so the fill-in for one has to stay inside the bounds of the
+    /// other. It resolves into the embed document, and a theme that fails its own validation there is
+    /// discarded whole, which would cost the operator every colour they picked.
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_long_display_name_does_not_cost_a_header_off_widget_its_theme()
+    {
+        var displayName = new string('x', WidgetThemeValidation.MaxHeaderTitleLength + 20);
+        await using var widget = await NewWidgetAsync(displayName);
+
+        await Host.UpdateWidgetThemeAsync(widget.Slug, widget.ChannelId, new UpdateWidgetThemeRequest(
+            Sample(theme =>
+            {
+                theme.ShowHeader = false;
+                theme.HeaderTitle = "";
+                theme.Light = theme.Light with { ButtonColor = "#123456" };
+            })));
+
+        var token = (await widget.App.MintEmbedLinkAsync(new MintEmbedLinkRequest(widget.ChannelId))).Token;
+        var html = await Host.GetEmbedPageAsync(widget.Slug, token);
+
+        Assert.Contains("#123456", html);
+        Assert.DoesNotContain(WidgetTheme.Default.Light.ButtonColor, html);
+        Assert.Contains($"<title>{displayName[..WidgetThemeValidation.MaxHeaderTitleLength]}</title>", html);
+    }
+
     public static TheoryData<string, Action<WidgetThemeBuilder>> InvalidThemes() => new()
     {
         { "light.buttonColor", theme => theme.Light = theme.Light with { ButtonColor = "rebeccapurple" } },
@@ -165,7 +196,7 @@ public class WidgetThemeEndpointsTests(ITestOutputHelper output) : QuillTestBase
         { "fontFamily", theme => theme.FontFamily = new string('a', WidgetThemeValidation.MaxFontFamilyLength + 1) },
         { "radius", theme => theme.Radius = (WidgetRadius)99 },
         { "logoRadius", theme => theme.LogoRadius = (WidgetLogoRadius)99 },
-        { "suggestedPrompts", theme => theme.SuggestedPrompts = ["a", "b", "c", "d", "e"] },
+        { "suggestedPrompts", theme => theme.SuggestedPrompts = Prompts(WidgetThemeValidation.MaxSuggestedPrompts + 1) },
         { "suggested prompt", theme => theme.SuggestedPrompts = [new string('x', WidgetThemeValidation.MaxSuggestedPromptLength + 1)] },
         { "headerTitle", theme => theme.HeaderTitle = "" },
         { "headerTitle", theme => theme.HeaderTitle = new string('x', WidgetThemeValidation.MaxHeaderTitleLength + 1) },
@@ -250,11 +281,12 @@ public class WidgetThemeEndpointsTests(ITestOutputHelper output) : QuillTestBase
     public async Task Blank_prompts_do_not_count_toward_the_prompt_limit()
     {
         await using var widget = await NewWidgetAsync();
+        var full = Prompts(WidgetThemeValidation.MaxSuggestedPrompts);
 
         var saved = await Host.UpdateWidgetThemeAsync(widget.Slug, widget.ChannelId, new UpdateWidgetThemeRequest(
-            Sample(theme => theme.SuggestedPrompts = ["a", "b", "c", "d", "   "])));
+            Sample(theme => theme.SuggestedPrompts = [.. full, "   "])));
 
-        Assert.Equal(["a", "b", "c", "d"], saved.Theme!.SuggestedPrompts);
+        Assert.Equal(full, saved.Theme!.SuggestedPrompts);
     }
 
     [RavenFact(RavenTestCategory.Quill)]

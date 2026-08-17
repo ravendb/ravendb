@@ -8,14 +8,26 @@ namespace Raven.Quill.Channels;
 /// appear is the one that could close that tag.
 public static partial class WidgetThemeValidation
 {
-    public const int MaxSuggestedPrompts = 4;
-    public const int MaxSuggestedPromptLength = 80;
-    public const int MaxHeaderTitleLength = 60;
-    public const int MaxHeaderSubtitleLength = 100;
-    public const int MaxGreetingTitleLength = 80;
-    public const int MaxGreetingBodyLength = 240;
-    public const int MaxInputPlaceholderLength = 80;
-    public const int MaxDisclaimerLength = 200;
+    // Headroom, not house style. What reads well is the operator's call: the widget truncates the header
+    // title and subtitle in CSS and wraps everything else, so none of these lengths is a layout rule.
+    // They are only here because the whole theme is inlined into every embed page, and even taken together
+    // at their ceilings they come to a few KB - noise beside the logo. Widen them freely.
+    public const int MaxSuggestedPrompts = 10;
+    public const int MaxSuggestedPromptLength = 200;
+
+    /// Deliberately under `ChannelsEndpoints.MaxDisplayNameLength`, which is what
+    /// <see cref="WidgetThemeResolution"/> substitutes for an unset title - keeping the two apart is what
+    /// keeps that substitution's clamp exercised rather than dead.
+    public const int MaxHeaderTitleLength = 120;
+
+    public const int MaxHeaderSubtitleLength = 200;
+    public const int MaxGreetingTitleLength = 160;
+    public const int MaxGreetingBodyLength = 1_000;
+    public const int MaxInputPlaceholderLength = 160;
+    public const int MaxDisclaimerLength = 600;
+
+    // Not headroom: these two are interpolated into a stylesheet and shipped to every visitor, so their
+    // bounds are part of the mechanism rather than a matter of taste.
     public const int MaxFontFamilyLength = 200;
     public const int MaxCustomCssLength = 10_000;
 
@@ -291,12 +303,14 @@ public static partial class WidgetThemeValidation
         return true;
     }
 
+    /// Not optional the way a nullable string is: the widget's own theme type declares a plain array, and a
+    /// null - in the list or instead of it - would reach the welcome screen as one and throw there.
     private static bool TryValidateSuggestedPrompts(string[]? prompts, out string? error)
     {
         if (prompts is null)
         {
-            error = null;
-            return true;
+            error = "suggestedPrompts is required; use an empty list for none";
+            return false;
         }
 
         if (prompts.Length > MaxSuggestedPrompts)
@@ -307,7 +321,13 @@ public static partial class WidgetThemeValidation
 
         foreach (var prompt in prompts)
         {
-            if ((prompt?.Trim().Length ?? 0) > MaxSuggestedPromptLength)
+            if (prompt is null)
+            {
+                error = "suggestedPrompts may not contain a null entry";
+                return false;
+            }
+
+            if (prompt.Trim().Length > MaxSuggestedPromptLength)
             {
                 error = $"each suggested prompt must be {MaxSuggestedPromptLength} characters or fewer";
                 return false;

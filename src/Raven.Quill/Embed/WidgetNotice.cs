@@ -37,9 +37,10 @@ internal static class WidgetNotice
     /// framing host should see the notice (and receive its postMessage) instead of a blanked-out document.
     internal static string BuildCsp(string nonce) => WidgetShell.BuildCsp(nonce, []);
 
+    /// <paramref name="theme"/> comes from <see cref="WidgetThemeResolution"/>, which is where an untrusted
+    /// document is discarded.
     internal static string BuildHtml(WidgetTheme theme, string nonce, Notice notice)
     {
-        var safe = WidgetThemeValidation.TryValidate(theme, out _) ? theme : WidgetTheme.Default;
         var script = HostChannel.BuildPostMessageScript(notice.Type, notice.Payload);
 
         return $"""
@@ -49,8 +50,8 @@ internal static class WidgetNotice
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1">
             <meta name="referrer" content="no-referrer">
-            <title>{WebUtility.HtmlEncode(safe.HeaderTitle)}</title>
-            <style nonce="{nonce}">{BuildStyles(safe)}</style>
+            <title>{WebUtility.HtmlEncode(theme.HeaderTitle)}</title>
+            <style nonce="{nonce}">{BuildStyles(theme)}</style>
             </head>
             <body>
             <div class="rq-notice" role="status">

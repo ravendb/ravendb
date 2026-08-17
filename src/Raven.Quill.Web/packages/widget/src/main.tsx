@@ -2,7 +2,7 @@ import { createRoot } from "react-dom/client";
 import { announceHostError } from "@/host-channel";
 import { LiveApp } from "@/live-app";
 import { PreviewApp } from "@/preview-app";
-import { readConfig, readMode } from "@/widget-config";
+import { readConfigJson, resolveMount } from "@/widget-config";
 import "@/widget.css";
 
 const ROOT_ELEMENT_ID = "rq-root";
@@ -17,20 +17,21 @@ function mount() {
     const container = document.getElementById(ROOT_ELEMENT_ID);
     if (container === null) throw new Error(`missing #${ROOT_ELEMENT_ID}`);
 
-    if (readMode(window.location.search) === "preview") {
-        createRoot(container).render(<PreviewApp />);
-        return;
-    }
-
-    try {
-        const config = readConfig(document);
-        createRoot(container).render(<LiveApp config={config} />);
-    } catch {
-        // A malformed or absent config block means the shell was served wrong; a blank frame would just
-        // look like a hung widget, so say something the visitor can act on — and tell the host, which
-        // would otherwise sit on its loader forever waiting for a `ready` that never comes.
-        renderFatal(container, "This assistant is unavailable right now.");
-        announceHostError("widget config is unusable");
+    const resolved = resolveMount(readConfigJson(document), window.location.search);
+    switch (resolved.mode) {
+        case "live":
+            createRoot(container).render(<LiveApp config={resolved.config} />);
+            return;
+        case "preview":
+            createRoot(container).render(<PreviewApp />);
+            return;
+        case "unusable":
+            // A blank frame would just look like a hung widget, so say something the visitor can act on —
+            // and tell the host, which would otherwise sit on its loader forever waiting for a `ready`
+            // that never comes.
+            renderFatal(container, "This assistant is unavailable right now.");
+            announceHostError("widget config is unusable");
+            return;
     }
 }
 

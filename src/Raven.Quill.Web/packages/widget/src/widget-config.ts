@@ -14,12 +14,6 @@ export type WidgetConfig = {
 
 export const CONFIG_ELEMENT_ID = "rq-config";
 
-export type WidgetMode = "live" | "preview";
-
-export function readMode(search: string): WidgetMode {
-    return new URLSearchParams(search).get("mode") === "preview" ? "preview" : "live";
-}
-
 /** Server-supplied themes may predate a field the widget already reads, so every load merges over the
  *  defaults rather than trusting the payload to be complete. */
 export function normalizeTheme(theme: Partial<WidgetTheme> | null | undefined): WidgetTheme {
@@ -45,8 +39,26 @@ export function parseConfig(json: string): WidgetConfig {
     };
 }
 
-export function readConfig(doc: Document): WidgetConfig {
-    const element = doc.getElementById(CONFIG_ELEMENT_ID);
-    if (element === null) throw new Error(`missing #${CONFIG_ELEMENT_ID} block`);
-    return parseConfig(element.textContent ?? "");
+/** Null when the document carries no config block at all - the dev harness and the dashboard's preview
+ *  frame, as opposed to a shell the server rendered for a live link. */
+export function readConfigJson(doc: Document): string | null {
+    return doc.getElementById(CONFIG_ELEMENT_ID)?.textContent ?? null;
+}
+
+/** `unusable` means the shell was served wrong: it claims to be live but its config block is absent or
+ *  malformed, and there is nothing to render. */
+export type WidgetMount = { mode: "live"; config: WidgetConfig } | { mode: "preview" } | { mode: "unusable" };
+
+/** The config block, not the URL, is what makes a document live. A live shell passes its own query string
+ *  down to this document — `?appearance=` is a documented host option — so honouring `?mode=preview` there
+ *  would swap a visitor's real conversation for the canned demo transcript. */
+export function resolveMount(configJson: string | null, search: string): WidgetMount {
+    if (configJson === null)
+        return new URLSearchParams(search).get("mode") === "preview" ? { mode: "preview" } : { mode: "unusable" };
+
+    try {
+        return { mode: "live", config: parseConfig(configJson) };
+    } catch {
+        return { mode: "unusable" };
+    }
 }
