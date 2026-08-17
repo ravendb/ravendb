@@ -128,7 +128,7 @@ internal sealed class TelegramChat
         if (prompt.Length == 0)
             return;
 
-        var conversationId = TelegramConversationId.For(_context.ChannelDoc.ShortId, _chatId, DateTime.UtcNow);
+        var conversationId = TelegramConversationId.ForUtcDay(_context.ChannelDoc.ShortId, _chatId, DateTime.UtcNow);
 
         if (IsCommand(prompt, "clear"))
         {

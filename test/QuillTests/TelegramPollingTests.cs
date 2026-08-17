@@ -169,7 +169,7 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         Assert.Empty(Router.Requests);
         Assert.DoesNotContain(Mock.ChatActions, a => a.ChatId == chatId);
 
-        var conversationId = TelegramConversationId.For(channelId, chatId, DateTime.UtcNow);
+        var conversationId = TelegramConversationId.ForUtcDay(channelId, chatId, DateTime.UtcNow);
         using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
             Assert.Null(await session.LoadAsync<object>(conversationId));
@@ -501,7 +501,7 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         await using var appGuard = app;
 
         const long chatId = 300;
-        var conversationId = TelegramConversationId.For(channelId, chatId, DateTime.UtcNow);
+        var conversationId = TelegramConversationId.ForUtcDay(channelId, chatId, DateTime.UtcNow);
         using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
             await session.StoreAsync(new ConversationPreview { ConversationId = conversationId },
@@ -599,7 +599,7 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         const long groupChatId = -520;
         const long supergroupChatId = -521;
         const long channelChatId = -522;
-        var conversationId = TelegramConversationId.For(channelId, supergroupChatId, DateTime.UtcNow);
+        var conversationId = TelegramConversationId.ForUtcDay(channelId, supergroupChatId, DateTime.UtcNow);
         using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
             await session.StoreAsync(new ConversationPreview { ConversationId = conversationId },
