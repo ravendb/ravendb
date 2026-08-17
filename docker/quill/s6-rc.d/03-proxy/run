@@ -11,6 +11,16 @@ CERT_DIR=/var/lib/quill/certs
 PROXY_DIR=/var/lib/quill/proxy
 mkdir -p "$PROXY_DIR"
 
+RAVENDB_PORT="${RAVEN_QUILL_RAVENDB_INTERNAL_PORT:-8443}"
+RAVENDB_PROXY_PORT="${RAVEN_QUILL_RAVENDB_PROXY_PORT:-8447}"
+
+for port in $RAVENDB_PORT 8444 8445 8446 5000; do
+    if [ "$RAVENDB_PROXY_PORT" = "$port" ]; then
+        echo "03-proxy: RAVEN_QUILL_RAVENDB_PROXY_PORT ($RAVENDB_PROXY_PORT) is already in use; pick another." >&2
+        exit 1
+    fi
+done
+
 i=0
 while [ -z "$(ls "$CERT_DIR"/cluster.server.certificate.*.pfx 2>/dev/null)" ]; do
     i=$((i + 1))
@@ -23,9 +33,8 @@ done
 
 proxy-certs
 
-# Render the RavenDB passthrough port into the config from RAVEN_QUILL_RAVENDB_INTERNAL_PORT — the same env
-# 01-ravendb/run binds RavenDB to — so the two never drift. Run the rendered copy.
-RAVENDB_PORT="${RAVEN_QUILL_RAVENDB_INTERNAL_PORT:-8443}"
-sed "s|__RAVENDB_PORT__|${RAVENDB_PORT}|g" /etc/nginx/nginx.conf > "$PROXY_DIR/nginx.conf"
+cp /etc/nginx/nginx.conf "$PROXY_DIR/nginx.conf"
+sed -i "s|__RAVENDB_PORT__|$RAVENDB_PORT|g"             "$PROXY_DIR/nginx.conf"
+sed -i "s|__RAVENDB_PROXY_PORT__|$RAVENDB_PROXY_PORT|g" "$PROXY_DIR/nginx.conf"
 
 exec nginx -c "$PROXY_DIR/nginx.conf" -g 'daemon off;'
