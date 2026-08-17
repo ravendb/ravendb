@@ -211,8 +211,10 @@ export function WebWidgetThemeEditor({
                             description={
                                 <span>
                                     System follows the visitor's own preference. The embedding page can override this
-                                    with <InlineCode>?appearance=dark|light|system</InlineCode> on the embed URL or an
-                                    appearance message - see “Embed on your own site” on the channel page.
+                                    with{" "}
+                                    <InlineCode className="whitespace-nowrap">?appearance=dark|light|system</InlineCode>{" "}
+                                    on the embed URL or an appearance message - see “Embed on your own site” on the
+                                    channel page.
                                 </span>
                             }
                             options={APPEARANCE_OPTIONS}
