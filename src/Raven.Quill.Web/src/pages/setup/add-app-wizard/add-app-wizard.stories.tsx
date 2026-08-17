@@ -221,6 +221,31 @@ export const ConnectSourceConnectionString: Story = {
     },
 };
 
+// Import is a header action next to the step title, and it no longer waits for an application name:
+// the wizard endpoints get a draft slug until the operator provides a real one.
+export const ConnectSourceImport: Story = {
+    render: () => (
+        <AppWizardAtStep
+            initialStep="externalConnection"
+            seedOverride={(seed) => ({
+                ...seed,
+                externalConnection: { ...seed.externalConnection, appName: "", slug: "" },
+            })}
+        />
+    ),
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        const heading = canvas.getByRole("heading", { name: /connect to your source database/i });
+        const importButton = canvas.getByRole("button", { name: /import configuration/i });
+
+        expect(canvas.getByLabelText(/application name/i)).toHaveValue("");
+        expect(importButton).toBeEnabled();
+
+        // The heading sits in the title block, whose row also carries the header action.
+        expect(heading.parentElement?.parentElement).toContainElement(importButton);
+    },
+};
+
 const connectFailureHandlers = {
     setup: [
         setupMocks.connect({
@@ -571,6 +596,13 @@ export const MapTablesSuggesting: Story = {
 
 export const Preview: Story = {
     render: () => <AppWizardAtStep initialStep="preview" />,
+    // Export is a footer action, sharing the completion button's group.
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        const exportButton = canvas.getByRole("button", { name: /export configuration/i });
+
+        expect(exportButton.parentElement).toContainElement(canvas.getByRole("button", { name: /create app/i }));
+    },
 };
 
 // The mapping ran but reported errors, so the preview shows the destructive banner instead of documents.

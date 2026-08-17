@@ -1,4 +1,4 @@
-import { useController, useFormContext, useFormState, useWatch } from "react-hook-form";
+import { useController, useFormContext, useFormState } from "react-hook-form";
 import { CARD_LABEL_CLASSES, SELECTED_CARD_CLASSES } from "@/components/form/form-radio-cards";
 import { FormInput } from "@/components/form/form-input";
 import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
@@ -8,7 +8,6 @@ import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-sto
 import { type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { PROVIDER_OPTIONS } from "@/pages/setup/add-app-wizard/steps/connect/connect-source-options";
 import { ConnectionEditor } from "@/pages/setup/add-app-wizard/steps/connect/connection-editor";
-import { ImportConfigDialog } from "@/pages/setup/add-app-wizard/steps/connect/import-config-dialog";
 import { TestConnectionButton } from "@/pages/setup/add-app-wizard/steps/connect/test-connection-button";
 import { toSlug } from "@/pages/setup/add-app-wizard/slugify";
 import { InputGroupAddon } from "@/components/shadcn/ui/input-group";
@@ -24,11 +23,6 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
     // where it is already the app's database name.
     const isSlugFollowingName = !touchedFields.externalConnection?.slug && !isEditingApp;
 
-    const appName = useWatch({ control, name: "externalConnection.appName" });
-    const slug = useWatch({ control, name: "externalConnection.slug" });
-    // The import runs through the wizard endpoints, which key their state by slug.
-    const isImportReady = slug.trim() !== "" || toSlug(appName) !== "";
-
     const {
         field: { value },
         fieldState: { error, invalid },
@@ -36,22 +30,6 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
 
     return (
         <div className="grid gap-5">
-            {!isEditingApp && (
-                <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 px-4 py-3">
-                    <div className="grid gap-0.5">
-                        <span className="text-sm font-medium">Have an exported configuration?</span>
-                        <span className="text-xs text-muted-foreground">
-                            Import it to reuse a saved connection and table mapping.
-                        </span>
-                    </div>
-                    <ImportConfigDialog
-                        disabled={isBusy || !isImportReady}
-                        disabledExplanation={
-                            isImportReady ? undefined : "Enter an application name first to import a configuration."
-                        }
-                    />
-                </div>
-            )}
             <FormInput
                 control={control}
                 name="externalConnection.appName"

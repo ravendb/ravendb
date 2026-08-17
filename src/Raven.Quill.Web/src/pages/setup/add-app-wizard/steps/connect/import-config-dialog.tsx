@@ -17,11 +17,9 @@ import { useImportConfig } from "@/pages/setup/add-app-wizard/steps/connect/use-
 
 type ImportConfigDialogProps = {
     disabled?: boolean;
-    /** Tooltip on the disabled trigger, explaining why the import is unavailable. */
-    disabledExplanation?: string;
 };
 
-export function ImportConfigDialog({ disabled, disabledExplanation }: ImportConfigDialogProps) {
+export function ImportConfigDialog({ disabled }: ImportConfigDialogProps) {
     const [isOpen, setIsOpen] = useState(false);
     const { importMutation, progressLabel } = useImportConfig();
 
@@ -46,30 +44,24 @@ export function ImportConfigDialog({ disabled, disabledExplanation }: ImportConf
         });
     };
 
-    const trigger = (
-        <DialogTrigger asChild>
-            <Button type="button" variant="outline" disabled={disabled}>
-                <UploadIcon aria-hidden="true" />
-                Import configuration
-            </Button>
-        </DialogTrigger>
-    );
-
     return (
         <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-            {disabled && disabledExplanation ? (
-                // The disabled button swallows pointer events, so the span carries the tooltip.
-                <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <span>{trigger}</span>
-                        </TooltipTrigger>
-                        <TooltipContent>{disabledExplanation}</TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
-            ) : (
-                trigger
-            )}
+            <TooltipProvider>
+                <Tooltip>
+                    {/* A disabled button swallows pointer events, so the span carries the tooltip. */}
+                    <TooltipTrigger asChild>
+                        <span>
+                            <DialogTrigger asChild>
+                                <Button type="button" variant="outline" disabled={disabled}>
+                                    <UploadIcon aria-hidden="true" />
+                                    Import configuration
+                                </Button>
+                            </DialogTrigger>
+                        </span>
+                    </TooltipTrigger>
+                    <TooltipContent>Reuse a saved connection and table mapping.</TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
             <DialogContent showCloseButton={!importMutation.isPending}>
                 <DialogHeader>
                     <DialogTitle>Import configuration</DialogTitle>

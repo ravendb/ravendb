@@ -19,7 +19,7 @@ import {
     findDiscoveredTable,
     getSourceTableLabel,
 } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
-import { toSlug } from "@/pages/setup/add-app-wizard/slugify";
+import { createDraftSlug, toSlug } from "@/pages/setup/add-app-wizard/slugify";
 import { discoverTables } from "@/pages/setup/add-app-wizard/steps/verify/use-discover-tables";
 import {
     computeConnectKey,
@@ -38,10 +38,22 @@ const IMPORT_PHASES = {
 type ImportResult = {
     config: WizardConfig;
     slug: string;
+    isDraftSlug: boolean;
     formTables: AppFormData["mapTables"]["tables"];
     discoverResult: DiscoverResponse;
     schemas: string[];
 };
+
+/**
+ * The export carries no slug, and the import can run before the app is even named, so a draft slug
+ * stands in for the server calls. The form keeps its slug empty in that case: naming the app later
+ * changes the connect key, which is what makes the connect step re-run under the real slug.
+ */
+function resolveImportSlug(connection: AppFormData["externalConnection"]): { slug: string; isDraft: boolean } {
+    const slug = connection.slug.trim() || toSlug(connection.appName);
+
+    return slug ? { slug, isDraft: false } : { slug: createDraftSlug(), isDraft: true };
+}
 
 export function useImportConfig() {
     const { setValue, getValues } = useFormContext<AppFormData>();
@@ -58,11 +70,8 @@ export function useImportConfig() {
                 );
             }
 
-            // The export carries no slug, so the import runs under the operator's, derived from the
-            // app name when the override is empty. It cannot be blank: the wizard endpoints key
-            // their state by it, which is why the trigger stays disabled until one can be derived.
             const connectionValues = getValues("externalConnection");
-            const slug = connectionValues.slug.trim() || toSlug(connectionValues.appName);
+            const { slug, isDraft: isDraftSlug } = resolveImportSlug(connectionValues);
             const connection = {
                 ...connectionValues,
                 provider: config.provider,
@@ -108,14 +117,14 @@ export function useImportConfig() {
 
             try {
                 const formTables = tablesSchema.parse(wrapDtoTablesToFormShape(config.tables));
-                return { config, slug, formTables, discoverResult, schemas };
+                return { config, slug, isDraftSlug, formTables, discoverResult, schemas };
             } catch {
                 throw new Error(
                     "The configuration's table mapping is invalid or was exported from an incompatible version.",
                 );
             }
         },
-        onSuccess: ({ config, slug, formTables, discoverResult, schemas }) => {
+        onSuccess: ({ config, slug, isDraftSlug, formTables, discoverResult, schemas }) => {
             toast.success("Configuration imported");
 
             const verifySchemaTables = config.tables.map((table) => ({
@@ -129,8 +138,11 @@ export function useImportConfig() {
             setValue("externalConnection.mode", droppedKeywords.length === 0 ? "fields" : "raw");
             setValue("externalConnection.fields", fields);
             setValue("externalConnection.connectionString", config.connectionString);
-            // The form must carry the slug the import ran under: later steps key their work by it.
-            setValue("externalConnection.slug", slug, { shouldValidate: true });
+            // A real slug is the one later steps key their work by, so the form must carry it. A draft
+            // one is never shown: the operator still has to name the app, and the slug follows from that.
+            if (!isDraftSlug) {
+                setValue("externalConnection.slug", slug, { shouldValidate: true });
+            }
             setValue("verifySchema.tables", verifySchemaTables);
             setValue("map.source", "manual");
             setValue("map.aiPrompt", "");
