@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RuntimeFrameworkVersion>10.0.11</RuntimeFrameworkVersion>
+    <AssemblyName>DocumentsTxCache.Benchmark</AssemblyName>
+    <OutputType>Exe</OutputType>
+    <PackageId>DocumentsTxCache.Benchmark</PackageId>
+    <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\test\Tests.Infrastructure\Tests.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

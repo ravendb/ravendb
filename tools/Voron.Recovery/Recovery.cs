@@ -1659,12 +1659,12 @@ namespace Voron.Recovery
             }
         }
 
-        private static string ReadChangeVectorStringFromTvr(JsonOperationContext context, ref TableValueReader tvr)
+        private static string ReadChangeVectorStringFromTvr(ref TableValueReader tvr)
         {
             int index = tvr.Count > (int)RevisionsTable.FullChangeVector
                 ? (int)RevisionsTable.FullChangeVector
                 : (int)RevisionsTable.RevisionPk;
-            return DocumentsStorage.TableValueToChangeVector(context, index, ref tvr);
+            return DocumentsStorage.TableValueToChangeVector(index, ref tvr);
         }
 
         private static Document ParseRawDataSectionRevisionWithValidation(JsonOperationContext context, ref TableValueReader tvr, int expectedSize)
@@ -1685,7 +1685,7 @@ namespace Voron.Recovery
                 LastModified = DocumentsStorage.TableValueToDateTime((int)RevisionsTable.LastModified, ref tvr),
                 Flags = DocumentsStorage.TableValueToFlags((int)RevisionsTable.Flags, ref tvr),
                 TransactionMarker = *(short*)tvr.Read((int)RevisionsTable.TransactionMarker, out size),
-                ChangeVector = ReadChangeVectorStringFromTvr(context, ref tvr)
+                ChangeVector = ReadChangeVectorStringFromTvr(ref tvr)
             };
 
             if (size != sizeof(short))
