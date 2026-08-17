@@ -23,7 +23,7 @@ const TABLE_NAME_COLUMN: ColumnDef<DiscoverTableResponse> = {
             {row.original.warnings.length > 0 && (
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        <Button variant="link" aria-label="Table warnings">
+                        <Button variant="link" aria-label="Table warnings" className="cursor-default px-0">
                             <TriangleAlertIcon
                                 className="size-3.5 shrink-0 text-amber-600 dark:text-amber-400"
                                 aria-hidden="true"
