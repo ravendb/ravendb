@@ -267,8 +267,9 @@ function AgentChip({ name, seed }: { name: string; seed: string }) {
     );
 }
 
-// White-on-color avatar swatches; 600-level keeps the initials legible in both themes.
-const AGENT_COLORS = ["#059669", "#2563eb", "#7c3aed", "#e11d48", "#0891b2", "#c026d3", "#ea580c", "#0d9488"];
+// White-on-color avatar swatches, matching `agentAvatarColor` in lib/palette.ts: one lightness for
+// legible initials, cool hues only so a swatch is never mistaken for the primary or an error.
+const AGENT_COLORS = ["#558111", "#158561", "#158186", "#147ba9", "#3f69d3", "#735acc", "#964bb4", "#ae4090"];
 
 function getAgentColor(seed: string): string {
     let hash = 0;
