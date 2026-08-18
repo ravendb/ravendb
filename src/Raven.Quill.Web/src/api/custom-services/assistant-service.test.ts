@@ -1,0 +1,141 @@
+import { describe, expect, it } from "vitest";
+import {
+    createAssistantService,
+    describeAssistantError,
+    type AssistantChatFrame,
+    type AssistantStreamEvent,
+} from "@/api/custom-services/assistant-service";
+import { createApiClient, type ApiTransport } from "@/api/http-client";
+
+function respondWithFrames(...frames: AssistantChatFrame[]) {
+    const transport: ApiTransport = () =>
+        Promise.resolve(
+            new Response(frames.map((frame) => `data: ${JSON.stringify(frame)}\n\n`).join(""), {
+                headers: { "Content-Type": "text/event-stream" },
+            }),
+        );
+
+    return createApiClient({ transport });
+}
+
+async function streamEvents(client: ReturnType<typeof createApiClient>) {
+    const events: AssistantStreamEvent[] = [];
+
+    for await (const event of createAssistantService(client).stream({ message: "hi", conversationId: null })) {
+        events.push(event);
+    }
+
+    return events;
+}
+
+function doneFrame(result: object): AssistantChatFrame {
+    return { type: "Done", text: { ConversationId: "conversations/1", Status: "Success", ...result } };
+}
+
+describe("assistant stream", () => {
+    it("accumulates the chunks and splices them into the answer the Done frame left empty", async () => {
+        const client = respondWithFrames(
+            { type: "Ongoing", text: "RavenDB " },
+            { type: "Ongoing", text: "is a database." },
+            doneFrame({ Response: { Answer: "", RelevantLinks: [] } }),
+        );
+
+        const events = await streamEvents(client);
+
+        expect(events).toEqual([
+            { type: "chunk", answer: "RavenDB " },
+            { type: "chunk", answer: "RavenDB is a database." },
+            {
+                type: "done",
+                result: {
+                    ConversationId: "conversations/1",
+                    Status: "Success",
+                    Response: { Answer: "RavenDB is a database.", RelevantLinks: [] },
+                },
+            },
+        ]);
+    });
+
+    it("keeps the answer the Done frame carried when nothing streamed", async () => {
+        const client = respondWithFrames(doneFrame({ Response: { Answer: "Answered in one go." } }));
+
+        const events = await streamEvents(client);
+
+        expect(events).toEqual([
+            {
+                type: "done",
+                result: {
+                    ConversationId: "conversations/1",
+                    Status: "Success",
+                    Response: { Answer: "Answered in one go." },
+                },
+            },
+        ]);
+    });
+
+    it("reports a Done frame that refused the turn as an error", async () => {
+        const client = respondWithFrames(doneFrame({ Status: "OutOfTokens" }));
+
+        await expect(streamEvents(client)).resolves.toEqual([
+            { type: "error", message: "The AI assistant has used up its quota for now. Please try again later." },
+        ]);
+    });
+
+    it("reports an Error frame", async () => {
+        const client = respondWithFrames({ type: "Ongoing", text: "Half an ans" }, { type: "Error" });
+
+        const events = await streamEvents(client);
+
+        expect(events.at(-1)).toEqual({
+            type: "error",
+            message: "The AI assistant is unavailable right now. Please try again later.",
+        });
+    });
+
+    it("reports a stream that ended without a Done frame", async () => {
+        const client = respondWithFrames({ type: "Ongoing", text: "Half an ans" });
+
+        const events = await streamEvents(client);
+
+        expect(events.at(-1)).toEqual({
+            type: "error",
+            message: "The AI assistant did not finish answering. Please try again.",
+        });
+    });
+});
+
+async function errorOf(body: string, status: number, contentType: string) {
+    const client = createApiClient({
+        transport: () => Promise.resolve(new Response(body, { status, headers: { "Content-Type": contentType } })),
+    });
+
+    try {
+        await streamEvents(client);
+    } catch (error) {
+        return describeAssistantError(error);
+    }
+
+    return null;
+}
+
+describe("describeAssistantError", () => {
+    it("reads the Status the AI service put in its relayed refusal", async () => {
+        const message = await errorOf('{"Status":"ConsentRequired"}', 401, "application/json");
+
+        expect(message).toBe(
+            "The AI assistant needs consent to send data to the RavenDB AI service, and it could not be granted automatically.",
+        );
+    });
+
+    it("falls back to the status code for a refusal that carries no JSON body", async () => {
+        const message = await errorOf("Request body too large", 413, "text/plain");
+
+        expect(message).toBe("That message is too large for the AI assistant. Please shorten it and try again.");
+    });
+
+    it("keeps Quill's own message for a request it rejected itself", async () => {
+        const message = await errorOf('{"error":"message is required"}', 400, "application/json");
+
+        expect(message).toBe("message is required");
+    });
+});

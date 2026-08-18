@@ -4,7 +4,6 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.CdcSink;
 using Microsoft.Extensions.Logging;
-using Raven.Quill.Contracts;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
 
@@ -84,16 +83,31 @@ public sealed class AiHelperInternalClient(
         };
 
         var response = await PostChatAsync(request, ct);
-        if (await IsConsentRequiredAsync(response, ct) == false)
-            return response;
-
-        // Consent is refused before the answer starts streaming, so asking again replays nothing.
-        // When it cannot be granted the original 401 already explains itself to the caller.
-        if (await GiveConsentAsync(ct) != AiHelperStatus.Success)
+        if (await ShouldRetryWithConsentAsync(response, ct) == false)
             return response;
 
         response.Dispose();
         return await PostChatAsync(request, ct);
+    }
+
+    // Owns the failure path of the response it inspects: reading the refusal or asking for consent can
+    // be cancelled, and nobody else is holding the 401 to close it.
+    private async Task<bool> ShouldRetryWithConsentAsync(HttpResponseMessage response, CancellationToken ct)
+    {
+        try
+        {
+            if (await IsConsentRequiredAsync(response, ct) == false)
+                return false;
+
+            // Consent is refused before the answer starts streaming, so asking again replays nothing.
+            // When it cannot be granted the original 401 already explains itself to the caller.
+            return await GiveConsentAsync(ct) == AiHelperStatus.Success;
+        }
+        catch
+        {
+            response.Dispose();
+            throw;
+        }
     }
 
     private async Task<HttpResponseMessage> PostChatAsync(ChatbotApiRequest request, CancellationToken ct)
