@@ -43,14 +43,14 @@ export type WidgetTheme = {
     customCss: string | null;
 };
 
-export const DEFAULT_ACCENT_COLOR = "#5b4bd6";
+export const DEFAULT_ACCENT_COLOR = "#ff775f";
 
 export const DEFAULT_THEME: WidgetTheme = {
     appearance: "System",
     // The message colors are the button color mixed into the background (12% light, 24% dark), the mix the
     // palette derived on its own before the message color became an operator option.
-    light: { buttonColor: DEFAULT_ACCENT_COLOR, messageColor: "#ebe9fa", backgroundColor: "#ffffff" },
-    dark: { buttonColor: DEFAULT_ACCENT_COLOR, messageColor: "#201f45", backgroundColor: "#0d1117" },
+    light: { buttonColor: DEFAULT_ACCENT_COLOR, messageColor: "#ffefec", backgroundColor: "#ffffff" },
+    dark: { buttonColor: DEFAULT_ACCENT_COLOR, messageColor: "#472928", backgroundColor: "#0d1117" },
     radius: "Medium",
     fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
     fontSize: "Medium",

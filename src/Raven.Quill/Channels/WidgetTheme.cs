@@ -80,8 +80,8 @@ public sealed record WidgetTheme(
         Appearance: WidgetAppearance.System,
         // The message colors are the button color mixed into the background (12% light, 24% dark), the mix
         // the widget's palette derivation used before the message color became its own option.
-        Light: new WidgetThemeColors("#5b4bd6", MessageColor: "#ebe9fa", BackgroundColor: "#ffffff"),
-        Dark: new WidgetThemeColors("#5b4bd6", MessageColor: "#201f45", BackgroundColor: "#0d1117"),
+        Light: new WidgetThemeColors("#ff775f", MessageColor: "#ffefec", BackgroundColor: "#ffffff"),
+        Dark: new WidgetThemeColors("#ff775f", MessageColor: "#472928", BackgroundColor: "#0d1117"),
         Radius: WidgetRadius.Medium,
         FontFamily: WidgetFonts.SystemStack,
         FontSize: WidgetFontSize.Medium,

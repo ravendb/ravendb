@@ -20,8 +20,8 @@ export const SAMPLE_FONT_OPTIONS: WidgetFontOption[] = [
 // The built-in default (see WidgetTheme.Default server-side).
 export const SAMPLE_DEFAULT_THEME: WidgetTheme = {
     appearance: "System",
-    light: { buttonColor: "#5b4bd6", messageColor: "#ebe9fa", backgroundColor: "#ffffff" },
-    dark: { buttonColor: "#5b4bd6", messageColor: "#201f45", backgroundColor: "#0d1117" },
+    light: { buttonColor: "#ff775f", messageColor: "#ffefec", backgroundColor: "#ffffff" },
+    dark: { buttonColor: "#ff775f", messageColor: "#472928", backgroundColor: "#0d1117" },
     radius: "Medium",
     fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
     fontSize: "Medium",

@@ -6,7 +6,7 @@ function validFormData(customCss: string): WidgetThemeFormData {
     return {
         appearance: "Light",
         lightButtonColor: "#2f6f4f",
-        lightMessageColor: "#ebe9fa",
+        lightMessageColor: "#ffefec",
         lightBackgroundColor: "#ffffff",
         darkButtonColor: "#2f6f4f",
         darkMessageColor: "#2b2b3c",
