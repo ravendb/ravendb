@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { RavenLogo } from "@/components/brand/raven-logo";
+import { QuillLogo } from "@/components/brand/quill-logo.tsx";
 import { AuthBackground } from "@/components/auth/auth-background";
 import { cn } from "@/lib/utils";
 
@@ -35,11 +35,7 @@ export function AuthScreenLayout({
             {isAnimated ? <AuthBackground /> : <SimpleBackground />}
             <div className="relative z-10 flex w-full max-w-md flex-col items-center">
                 <div className="mb-8 flex items-center gap-2.5 text-foreground">
-                    <RavenLogo className="size-9" />
-                    <div className="flex flex-col leading-tight">
-                        <span className="text-sm font-semibold tracking-tight">Quill</span>
-                        <span className="text-xs text-muted-foreground">by RavenDB</span>
-                    </div>
+                    <QuillLogo className="animate-once w-[120px] animate-in duration-600 fade-in-0 zoom-in-90" />
                 </div>
                 {children}
             </div>

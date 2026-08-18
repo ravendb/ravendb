@@ -2,8 +2,9 @@ import * as React from "react";
 
 const Beams = React.lazy(() => import("@/components/auth/backgrounds/beams"));
 
-// Pastel brand violet (≈ --brand-400) lifts the black beam geometry off the near-black background.
-const BEAM_TINT = "#989cff";
+// A muted coral lifts the black beam geometry off the near-black background. Deliberately duller
+// than the ramp (brand-400 is #f08c6f) so the login screen stays quiet behind the form.
+const BEAM_TINT = "#9b6b5d";
 
 function usePrefersReducedMotion(): boolean {
     const query = "(prefers-reduced-motion: reduce)";
@@ -51,7 +52,7 @@ const DarkBeams = () => (
         beamNumber={30}
         beamWidth={2.5}
         beamHeight={14}
-        speed={1.5}
+        speed={1.25}
         noiseIntensity={1}
         scale={0.2}
         rotation={-15}

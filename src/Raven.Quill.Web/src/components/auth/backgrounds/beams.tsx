@@ -180,7 +180,7 @@ const Beams = ({
     beamHeight = 15,
     beamNumber = 12,
     lightColor = "#ffffff",
-    speed = 2,
+    speed = 1.25,
     noiseIntensity = 1.75,
     scale = 0.2,
     rotation = 0,
@@ -226,7 +226,12 @@ const Beams = ({
   }`,
                 fragmentHeader: "",
                 vertex: {
-                    "#include <begin_vertex>": `transformed.z += getPos(transformed.xyz);`,
+                    // Normals are sampled from the noise-displaced virtual surface, but the vertices
+                    // stay on the z=0 plane. Displacing them for real varied each beam's z, and the
+                    // perspective divide turned that into seams that drifted apart every frame, so
+                    // the spacing read as uneven. Flat geometry keeps every seam fixed on screen
+                    // while the perturbed normals still animate the light, and the perspective
+                    // camera still shades off-axis beams at a grazing angle for the vignette.
                     "#include <beginnormal_vertex>": `objectNormal = getNormal(position.xyz);`,
                 },
                 fragment: {
