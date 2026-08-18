@@ -14,7 +14,6 @@ import { countSelectedRows } from "@/components/table/row-range-selection";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { getTableKey, isTableSupported, MAX_SELECTED_TABLES } from "@/pages/setup/add-app-wizard/discover-utils";
-import { LockedConfigAlert } from "@/pages/setup/add-app-wizard/locked-config-alert";
 import { DefineSchemasSheet } from "@/pages/setup/add-app-wizard/steps/verify/define-schemas-sheet";
 import { NeedsConfigTablesTable } from "@/pages/setup/add-app-wizard/steps/verify/needs-config-tables-table";
 import { useDiscoverTablesMutation } from "@/pages/setup/add-app-wizard/steps/verify/use-discover-tables";
@@ -38,7 +37,6 @@ export function VerifySchemaStep({ isBusy }: WizardBodyComponentProps) {
     const { error: cdcError, isRunning: isVerifyCdcRunning } = useVerifySchemaCdcState();
     const discoverResult = useSetupWizardStore((state) => state.discoverResult);
     const discoverSchemas = useSetupWizardStore((state) => state.discoverSchemas);
-    const isLocked = useSetupWizardStore((state) => state.configLock) === "locked";
     const discoverMutation = useDiscoverTablesMutation();
 
     const [activeTab, setActiveTab] = useState<VerifyTab>("verified");
@@ -107,7 +105,6 @@ export function VerifySchemaStep({ isBusy }: WizardBodyComponentProps) {
     return (
         <div className="flex min-h-0 flex-1 flex-col gap-4">
             <div className="grid shrink-0 gap-4">
-                <LockedConfigAlert />
                 <WizardErrorList errors={discoverResult?.errors} title="Schema discovery failed" />
                 <MessageList messages={discoverResult?.warnings} tone="warning" />
             </div>
@@ -133,7 +130,7 @@ export function VerifySchemaStep({ isBusy }: WizardBodyComponentProps) {
                             variant="outline"
                             className="ml-auto"
                             onClick={() => setIsSchemasSheetOpen(true)}
-                            disabled={isLocked || isVerifyCdcRunning}
+                            disabled={isVerifyCdcRunning}
                         >
                             <PlusIcon aria-hidden="true" />
                             Customize schemas
@@ -184,7 +181,7 @@ export function VerifySchemaStep({ isBusy }: WizardBodyComponentProps) {
                                 search={search}
                                 rowSelection={rowSelection}
                                 onRowSelectionChange={handleRowSelectionChange}
-                                disabled={isLocked || isVerifyCdcRunning}
+                                disabled={isVerifyCdcRunning}
                                 isBusy={isBusy}
                             />
                             <small className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">

@@ -6,23 +6,18 @@ import { FormTextarea } from "@/components/form/form-textarea";
 import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
 import { Button } from "@/components/shadcn/ui/button";
 import { FieldLabel } from "@/components/shadcn/ui/field";
-import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import { type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
-import { LockedConfigAlert } from "@/pages/setup/add-app-wizard/locked-config-alert";
 import { AI_SUGGEST_OPTION, MANUAL_OPTION } from "@/pages/setup/add-app-wizard/steps/map/map-source-options";
 
 export function MapSchemaStep({ isBusy }: WizardBodyComponentProps) {
     const { control } = useFormContext<AppFormData>();
-    const isLocked = useSetupWizardStore((state) => state.configLock) === "locked";
-    const isDisabled = isBusy || isLocked;
 
     return (
         <div className="grid gap-5">
-            <LockedConfigAlert />
             <FormRadioCards
                 control={control}
                 name="map.source"
-                disabled={isDisabled}
+                disabled={isBusy}
                 className="gap-4"
                 options={[
                     {
@@ -30,7 +25,7 @@ export function MapSchemaStep({ isBusy }: WizardBodyComponentProps) {
                         label: AI_SUGGEST_OPTION.label,
                         description: AI_SUGGEST_OPTION.description,
                         icon: <Sparkles className="size-5" aria-hidden="true" />,
-                        content: ({ select }) => <IntentPrompt isDisabled={isDisabled} select={select} />,
+                        content: ({ select }) => <IntentPrompt isDisabled={isBusy} select={select} />,
                     },
                     {
                         value: MANUAL_OPTION.value,

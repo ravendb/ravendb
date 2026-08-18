@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { FormProvider, useForm, useFormContext, useWatch } from "react-hook-form";
-import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
+import { useSetupWizardStore, type SelectedSourceTable } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import { type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { FormWizard, type WizardCompletion } from "@/components/form/wizard/form-wizard";
 import { buildAppSchemaForFlow, getAppFlow, useAppSteps } from "@/pages/setup/add-app-wizard/app-wizard-flow";
@@ -31,6 +31,8 @@ export type EditedApp = {
     slug: string;
     /** Schemas the stored mapping references, so discovery reaches beyond the default one. */
     discoverSchemas: string[];
+    /** Tables the stored mapping covers, the baseline for the "Selection changed" stepper badge. */
+    initialSelectedTables: SelectedSourceTable[];
 };
 
 type AppWizardProps = {
@@ -71,7 +73,7 @@ export function AppWizard({ defaultValues, editedApp }: AppWizardProps) {
         resetStore();
 
         if (editedAppSeed) {
-            startEditingApp(editedAppSeed.slug, editedAppSeed.discoverSchemas);
+            startEditingApp(editedAppSeed.slug, editedAppSeed.discoverSchemas, editedAppSeed.initialSelectedTables);
         }
 
         return () => {

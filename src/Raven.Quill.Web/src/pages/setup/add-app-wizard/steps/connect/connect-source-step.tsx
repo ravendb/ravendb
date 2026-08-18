@@ -6,7 +6,6 @@ import { Field, FieldDescription, FieldLabel } from "@/components/shadcn/ui/fiel
 import { cn } from "@/lib/utils";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import { type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
-import { LockedConfigAlert } from "@/pages/setup/add-app-wizard/locked-config-alert";
 import { PROVIDER_OPTIONS } from "@/pages/setup/add-app-wizard/steps/connect/connect-source-options";
 import { ConnectionEditor } from "@/pages/setup/add-app-wizard/steps/connect/connection-editor";
 import { ImportConfigDialog } from "@/pages/setup/add-app-wizard/steps/connect/import-config-dialog";
@@ -19,9 +18,7 @@ import { RefreshCw } from "lucide-react";
 export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
     const { control, setValue, getValues } = useFormContext<AppFormData>();
     const { touchedFields } = useFormState({ control });
-    const configLock = useSetupWizardStore((state) => state.configLock);
     const isEditingApp = useSetupWizardStore((state) => state.editedAppSlug !== null);
-    const isLocked = configLock === "locked";
 
     // The slug follows the app name until the operator touches it, and never on an existing app,
     // where it is already the app's database name.
@@ -37,13 +34,9 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
         fieldState: { error, invalid },
     } = useController({ control, name: "externalConnection.provider" });
 
-    // A locked configuration owns its connection until the operator enables editing.
-    const isConnectionDisabled = isBusy || isLocked;
-
     return (
         <div className="grid gap-5">
-            <LockedConfigAlert />
-            {configLock === "none" && (
+            {!isEditingApp && (
                 <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 px-4 py-3">
                     <div className="grid gap-0.5">
                         <span className="text-sm font-medium">Have an exported configuration?</span>
@@ -119,14 +112,12 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
                                         shouldValidate: true,
                                     })
                                 }
-                                disabled={isConnectionDisabled}
+                                disabled={isBusy}
                                 className={cn(
                                     "flex min-h-28 flex-col items-center justify-center gap-3 rounded-lg border bg-background p-4 transition-colors",
                                     isSelected && SELECTED_CARD_CLASSES,
-                                    !isSelected &&
-                                        !isConnectionDisabled &&
-                                        "hover:bg-accent hover:text-accent-foreground",
-                                    isConnectionDisabled && "cursor-not-allowed opacity-55",
+                                    !isSelected && !isBusy && "hover:bg-accent hover:text-accent-foreground",
+                                    isBusy && "cursor-not-allowed opacity-55",
                                 )}
                             >
                                 {option.icon}
@@ -137,8 +128,8 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
                 </div>
                 {error?.message && <FieldDescription className="text-destructive">{error.message}</FieldDescription>}
             </Field>
-            <ConnectionEditor isDisabled={isConnectionDisabled} />
-            <TestConnectionButton disabled={isConnectionDisabled} />
+            <ConnectionEditor isDisabled={isBusy} />
+            <TestConnectionButton disabled={isBusy} />
         </div>
     );
 }

@@ -38,7 +38,12 @@ export function ImportConfigDialog({ disabled, disabledExplanation }: ImportConf
     };
 
     const handleFileSelected = (file: File) => {
-        importMutation.mutate(file);
+        importMutation.mutate(file, {
+            onSuccess: () => {
+                importMutation.reset();
+                setIsOpen(false);
+            },
+        });
     };
 
     const trigger = (

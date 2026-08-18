@@ -352,7 +352,7 @@ function WizardStepBadge<StepId extends string, Values extends FieldValues>({
         return null;
     }
 
-    return <div className="flex">{badge}</div>;
+    return <div className="flex empty:hidden">{badge}</div>;
 }
 
 function StepIndicator({ isComplete, isCurrent }: { isComplete: boolean; isCurrent: boolean }) {
