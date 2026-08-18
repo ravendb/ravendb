@@ -154,7 +154,7 @@ export function useImportConfig() {
                     selectedTables: verifySchemaTables,
                 }),
             );
-            store.lockConfig();
+            store.setInitialSelectedTables(verifySchemaTables);
         },
     });
 

@@ -17,7 +17,7 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-// Seeded from the app's stored CDC configuration, and locked so nothing regenerates the mapping.
+// Seeded from the app's stored CDC configuration
 export const Default: Story = {
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
@@ -29,10 +29,9 @@ export const Default: Story = {
         // The stored string parses cleanly, so the wizard seeds the connection details, not the raw string.
         const host = canvas.getByLabelText("Host");
         expect(host).toHaveValue("localhost");
-        expect(host).toBeDisabled();
+        expect(host).toBeEnabled();
         expect(canvas.getByLabelText("Database")).toHaveValue("demo_shop");
         expect(canvas.getByLabelText("Username")).toHaveValue("admin");
-        expect(canvas.getByRole("button", { name: /enable editing/i })).toBeInTheDocument();
     },
 };
 

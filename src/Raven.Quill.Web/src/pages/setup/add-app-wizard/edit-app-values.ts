@@ -36,6 +36,10 @@ export function buildEditAppSeed(
 
     const tables = parsedTables.data;
     const provider = resolveProviderFromSourceType(app.source.type);
+    const selectedTables = tables.map((table) => ({
+        sourceTableSchema: table.sourceTableSchema,
+        sourceTableName: table.sourceTableName,
+    }));
 
     return {
         values: {
@@ -46,17 +50,16 @@ export function buildEditAppSeed(
                 provider,
                 ...buildConnectionSeed(provider, cdc.connectionString ?? ""),
             },
-            verifySchema: {
-                tables: tables.map((table) => ({
-                    sourceTableSchema: table.sourceTableSchema,
-                    sourceTableName: table.sourceTableName,
-                })),
-            },
+            verifySchema: { tables: selectedTables },
             map: { source: "manual", aiPrompt: "" },
             mapTables: { tables },
             preview: { table: getSourceTableLabel(tables[0]) ?? "", maxRows: 1 },
         },
-        editedApp: { slug: app.slug, discoverSchemas: collectConfigSchemas(configTables) },
+        editedApp: {
+            slug: app.slug,
+            discoverSchemas: collectConfigSchemas(configTables),
+            initialSelectedTables: selectedTables,
+        },
     };
 }
 

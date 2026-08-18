@@ -16,6 +16,7 @@ import {
 } from "@/components/shadcn/ui/dialog";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
+import { ExpandableTableNames } from "@/pages/setup/add-app-wizard/steps/map-tables/expandable-table-names";
 import {
     collectMappedSourceTableKeys,
     getSourceTableKey,
@@ -23,8 +24,6 @@ import {
     scaffoldTables,
 } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
 import { useApplyMapTables } from "@/pages/setup/add-app-wizard/steps/map-tables/use-apply-map-tables";
-
-const COLLAPSED_TABLE_NAMES_COUNT = 5;
 
 type UnmappedTable = {
     key: string;
@@ -65,49 +64,19 @@ export function UnmappedTablesAlert() {
             </AlertTitle>
             <AlertDescription>
                 <span>
-                    Changes to <UnmappedTableNames unmappedTables={unmappedTables} /> will not be synced. Review your
-                    configuration to verify, map {unmappedTables.length === 1 ? "it" : "them"} back, or go back and
-                    deselect {unmappedTables.length === 1 ? "it" : "them"}.
+                    Changes to{" "}
+                    <ExpandableTableNames
+                        labels={unmappedTables.map(({ table }) => getSourceTableLabel(table) ?? "")}
+                    />{" "}
+                    will not be synced. Review your configuration to verify, map{" "}
+                    {unmappedTables.length === 1 ? "it" : "them"} back, or go back and deselect{" "}
+                    {unmappedTables.length === 1 ? "it" : "them"}.
                 </span>
             </AlertDescription>
             <AlertAction>
                 <MapTablesDialog unmappedTables={unmappedTables} onMapTables={handleMapTables} />
             </AlertAction>
         </Alert>
-    );
-}
-
-function UnmappedTableNames({ unmappedTables }: { unmappedTables: UnmappedTable[] }) {
-    const [isExpanded, setIsExpanded] = useState(false);
-
-    const labels = unmappedTables.map(({ table }) => getSourceTableLabel(table));
-    const visibleLabels = isExpanded ? labels : labels.slice(0, COLLAPSED_TABLE_NAMES_COUNT);
-    const hiddenCount = labels.length - visibleLabels.length;
-
-    return (
-        <>
-            {visibleLabels.join(", ")}
-            {hiddenCount > 0 && (
-                <>
-                    {" and "}
-                    <ToggleNamesButton onClick={() => setIsExpanded(true)}>{hiddenCount} more</ToggleNamesButton>
-                </>
-            )}
-            {isExpanded && labels.length > COLLAPSED_TABLE_NAMES_COUNT && (
-                <>
-                    {" "}
-                    <ToggleNamesButton onClick={() => setIsExpanded(false)}>(show less)</ToggleNamesButton>
-                </>
-            )}
-        </>
-    );
-}
-
-function ToggleNamesButton({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
-    return (
-        <button type="button" className="font-medium underline underline-offset-2" onClick={onClick}>
-            {children}
-        </button>
     );
 }
 

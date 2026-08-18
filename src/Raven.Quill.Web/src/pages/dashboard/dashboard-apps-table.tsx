@@ -10,6 +10,7 @@ import { appRoutes } from "@/lib/app-routes";
 import { datePeriodUnit, type DatePeriod } from "@/lib/date-period";
 import { formatCompact } from "@/lib/format";
 import { DeleteAppDialog } from "@/pages/apps/delete-app-dialog";
+import { EditAppConfirmDialog } from "@/pages/setup/add-app-wizard/edit-app-confirm-dialog";
 
 type StatusStyle = { tone: StatusTone; label: string };
 
@@ -113,11 +114,14 @@ function AppRow({ app, writes }: { app: ApplianceAppResponse; writes: number | u
             </TableCell>
             <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-1">
-                    <Button asChild variant="ghost" size="icon-sm" aria-label={`Edit ${app.name}`}>
-                        <Link to={appRoutes.editApp(app.slug)}>
-                            <Pencil className="size-3.5" aria-hidden="true" />
-                        </Link>
-                    </Button>
+                    <EditAppConfirmDialog
+                        slug={app.slug}
+                        trigger={
+                            <Button variant="ghost" size="icon-sm" aria-label={`Edit ${app.name}`}>
+                                <Pencil className="size-3.5" aria-hidden="true" />
+                            </Button>
+                        }
+                    />
                     <DeleteAppDialog
                         slug={app.slug}
                         appName={app.name}

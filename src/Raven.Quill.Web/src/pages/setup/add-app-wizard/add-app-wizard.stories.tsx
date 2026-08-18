@@ -113,7 +113,7 @@ function AppWizardAtStep({
             discoverResult: discovery,
             discoverSchemas: [],
             editedAppSlug: null,
-            configLock: "none",
+            initialSelectedTables: null,
             connectKey: null,
             appliedMapKey: isMappingApplied
                 ? computeMapKey({
@@ -543,6 +543,22 @@ export const MapTablesRawViewBlockedByInvalidTable: Story = {
 
         await waitFor(() => expect(canvas.getByRole("switch", { name: /raw json/i })).not.toBeChecked());
         expect(canvas.getByPlaceholderText(/filter tables/i)).toBeInTheDocument();
+    },
+};
+
+export const MapTablesUnselectedTable: Story = {
+    render: () => (
+        <AppWizardAtStep
+            initialStep="mapTables"
+            seedOverride={(seed) => ({
+                ...seed,
+                verifySchema: { tables: [{ sourceTableSchema: "dbo", sourceTableName: "Customers" }] },
+            })}
+        />
+    ),
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        expect(canvas.queryByText("1 mapped table is not selected")).toBeInTheDocument();
     },
 };
 

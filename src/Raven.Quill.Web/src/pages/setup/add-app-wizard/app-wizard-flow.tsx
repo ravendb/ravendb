@@ -23,6 +23,7 @@ import { useMapTablesStep } from "@/pages/setup/add-app-wizard/steps/map-tables/
 import { useIsMapTablesNextDisabled } from "@/pages/setup/add-app-wizard/steps/map-tables/use-suggested-map-tables";
 import { useIsVerifyCdcRunning, useVerifyCdcStep } from "@/pages/setup/add-app-wizard/steps/verify/use-verify-cdc-step";
 import { useVerifySchemaStep } from "@/pages/setup/add-app-wizard/steps/verify/use-verify-schema-step";
+import { VerifySelectionChangedBadge } from "@/pages/setup/add-app-wizard/steps/verify/verify-selection-changed-badge";
 
 export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
     const connectSourceBeforeNext = useConnectSourceStep();
@@ -77,6 +78,8 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
             },
             // Advancing mid-run would carry a selection the dry run has not answered for yet.
             isNextDisabled: isVerifyCdcRunning,
+            badgeFields: ["verifySchema.tables"],
+            badge: ({ values }) => <VerifySelectionChangedBadge tables={values.verifySchema.tables} />,
         },
         map: {
             title: "How would you like to map your schema?",
