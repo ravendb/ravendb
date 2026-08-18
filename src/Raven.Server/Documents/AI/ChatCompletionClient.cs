@@ -399,7 +399,7 @@ public class ChatCompletionClient : IDisposable
             await EnsureRequestAcceptedAsync(context, request, token);
             return true;
         }
-        catch (UnsuccessfulAiRequestException)
+        catch (Exception)
         {
             return false;
         }
