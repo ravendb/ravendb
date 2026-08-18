@@ -4,6 +4,12 @@ import { recordFetchStartedAt } from "@/lib/query-fetch-start";
 
 const baseKey = "apps";
 
+// The overview presents sync as a live reading, so its two queries refresh on their own while the
+// tab is open. They poll together: refreshing the status and the batch shape while the error count
+// and the failing verdict beside them sat stale would be worse than not refreshing at all. React
+// Query holds the timer while the tab is in the background.
+const SYNC_POLL_INTERVAL_IN_MS = 15_000;
+
 // Partial key covering every app's connection strings list, so mutations on the
 // (server-wide) connection strings can invalidate all of them at once.
 export const APP_AI_CONNECTION_STRINGS_KEY = [baseKey, "aiConnectionStringsList"] as const;
@@ -25,6 +31,15 @@ export function createAppsQueries(api: ServerApi["apps"]) {
                 queryKey: [baseKey, "cdcGet", slug],
                 queryFn: () => api.cdcGet(slug),
             }),
+        cdcPerformance: (slug: string) =>
+            queryOptions({
+                queryKey: [baseKey, "cdcPerformance", slug],
+                queryFn: () => api.cdcPerformance(slug),
+                // Sync health is a live reading, so it refetches on every mount. It keeps its cache
+                // entry, unlike cdcErrors, so revisiting shows the last status instead of a spinner.
+                staleTime: 0,
+                refetchInterval: SYNC_POLL_INTERVAL_IN_MS,
+            }),
         cdcErrors: (slug: string) =>
             queryOptions({
                 queryKey: [baseKey, "cdcErrors", slug],
@@ -32,6 +47,7 @@ export function createAppsQueries(api: ServerApi["apps"]) {
                 // Errors must always reflect the current server state, so never serve them from cache.
                 staleTime: 0,
                 gcTime: 0,
+                refetchInterval: SYNC_POLL_INTERVAL_IN_MS,
             }),
         suggestAgentFromData: (slug: string) =>
             queryOptions({

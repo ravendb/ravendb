@@ -3,7 +3,9 @@ import type {
     AiConnectionString,
     AppCdcConfigurationResponse,
     AppResponse,
+    CdcBatchPoint,
     CdcError,
+    CdcPerformanceResponse,
     ProvisionAgentResponse,
     SuggestAgentResponse,
 } from "@/api/generated/server-api";
@@ -28,6 +30,8 @@ export const appsMocks = {
         }) as unknown as RequestHandler,
     cdcGet: (cdc: AppCdcConfigurationResponse = sampleAppCdcConfiguration) =>
         apiHttp.get("/api/apps/{slug}/cdc", ({ response }) => response(200).json(cdc)),
+    cdcPerformance: (performance: CdcPerformanceResponse = sampleCdcPerformance) =>
+        apiHttp.get("/api/apps/{slug}/cdc/performance", ({ response }) => response(200).json(performance)),
     cdcErrors: (errors: CdcError[] = sampleCdcErrors) =>
         apiHttp.get("/api/apps/{slug}/cdc/errors", ({ response }) => response(200).json(errors)),
     delete: () => apiHttp.delete("/api/apps/{slug}", ({ response }) => response(204).empty()),
@@ -91,6 +95,42 @@ export const sampleApps: AppResponse[] = [
         createdAt: "2026-05-12T08:30:00Z",
     },
 ];
+
+// Idle and healthy on its own terms, while sampleCdcErrors still holds older failures - the pair
+// the overview card has to present without the two reading as a contradiction.
+export const sampleCdcPerformance: CdcPerformanceResponse = {
+    enabled: true,
+    status: "idle",
+    lastSyncAt: "2026-07-21T08:20:00Z",
+    lagSeconds: 120,
+    recentReads: 24_800,
+    recentWrites: 24_795,
+    errorCount: 0,
+    recentBatches: sampleCdcBatchPoints(),
+};
+
+// Twenty completed batches with one failure among them, so the overview's activity dots have a
+// shape to draw and a failed batch to mark.
+function sampleCdcBatchPoints(): CdcBatchPoint[] {
+    const firstStartedMs = Date.parse("2026-07-21T08:00:00Z");
+
+    return Array.from({ length: 20 }, (_, index) => {
+        const startedMs = firstStartedMs + index * 60_000;
+        const errors = index === 12 ? 3 : 0;
+        // A wide spread, the way real batches run: quiet stretches between catch-up bursts.
+        const processed = 40 + Math.round(Math.abs(Math.sin(index * 1.1)) * 960);
+
+        return {
+            started: new Date(startedMs).toISOString(),
+            completed: new Date(startedMs + 1_200).toISOString(),
+            durationInMs: 1_200,
+            read: processed + errors,
+            processed,
+            errors,
+            stopReason: null,
+        };
+    });
+}
 
 export const sampleCdcErrors: CdcError[] = [
     {

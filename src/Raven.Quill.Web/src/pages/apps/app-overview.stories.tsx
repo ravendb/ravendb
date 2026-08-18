@@ -1,10 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import { agentsMocks } from "@/mocks/agents-mocks";
 import { appsMocks } from "@/mocks/apps-mocks";
 import { channelsMocks } from "@/mocks/channels-mocks";
 import { AppOverview } from "./app-overview";
 
-const appsWithoutCdcErrors = [appsMocks.detail(), appsMocks.cdcErrors([])];
+const appsWithoutCdcErrors = [appsMocks.detail(), appsMocks.cdcPerformance(), appsMocks.cdcErrors([])];
 
 const meta = {
     title: "Apps/Overview",
@@ -19,15 +20,12 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = {};
+// The card's own states live in Apps/Data Sync; this only checks it reaches the page.
+export const Default: Story = {
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
 
-export const WithoutCdcErrors: Story = {
-    parameters: {
-        msw: {
-            handlers: {
-                apps: appsWithoutCdcErrors,
-            },
-        },
+        expect(await canvas.findByRole("heading", { name: /data sync/i })).toBeInTheDocument();
     },
 };
 

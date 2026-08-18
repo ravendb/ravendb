@@ -1,18 +1,14 @@
-import { type ComponentProps } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
 import { ApiState } from "@/components/data/api-state";
-import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { CdcBatchLog } from "@/pages/apps/cdc-batch-log";
 import { DashboardStatCards, type DashboardStatCard } from "@/pages/dashboard/dashboard-stat-cards";
 import { CdcErrorsSheet } from "@/pages/apps/cdc-errors-sheet";
+import { summarizeCdcErrors } from "@/pages/apps/cdc-errors-summary";
 import { SectionCard } from "@/pages/apps/section-card";
-import {
-    useCdcLivePerformance,
-    type CdcLivePerformance,
-    type CdcLiveStatus,
-} from "@/pages/apps/use-cdc-live-performance";
+import { SyncStatusBadge } from "@/pages/apps/sync-status-badge";
+import { useCdcLivePerformance, type CdcLivePerformance } from "@/pages/apps/use-cdc-live-performance";
 
 export function CdcPerformanceSection({
     slug,
@@ -28,27 +24,30 @@ export function CdcPerformanceSection({
     const live = useCdcLivePerformance(slug);
     // The button opens the stored error list, so it is gated on that list rather than on the
     // live errorCount, which only covers the recently tracked batches and could disagree.
+    // Both counts are shown side by side, each naming its own window, so the disagreement
+    // reads as two different measurements rather than as one of them being wrong.
     const errorsQuery = useQuery(api.queries.apps.cdcErrors(slug));
-    const hasStoredErrors = (errorsQuery.data?.length ?? 0) > 0;
+    const storedErrorCount = summarizeCdcErrors(errorsQuery.data).count;
 
     return (
         <SectionCard
-            title={title}
+            title={
+                <span className="flex items-center gap-2">
+                    {title}
+                    {live.performance && <SyncStatusBadge status={live.performance.status} />}
+                </span>
+            }
+            description="Live view of the sink's most recent batches, extended as new ones complete."
             action={
-                (hasStoredErrors || live.performance) && (
-                    <div className="flex items-center gap-2">
-                        {hasStoredErrors && (
-                            <CdcErrorsSheet
-                                slug={slug}
-                                trigger={
-                                    <Button variant="destructive-outline" size="sm">
-                                        View errors
-                                    </Button>
-                                }
-                            />
-                        )}
-                        {live.performance && <CdcStatusBadge status={live.performance.status} />}
-                    </div>
+                storedErrorCount > 0 && (
+                    <CdcErrorsSheet
+                        slug={slug}
+                        trigger={
+                            <Button variant="destructive-outline" size="sm">
+                                View {storedErrorCount} recorded {storedErrorCount === 1 ? "error" : "errors"}
+                            </Button>
+                        }
+                    />
                 )
             }
         >
@@ -65,21 +64,15 @@ export function CdcPerformanceSection({
     );
 }
 
-const CDC_STATUS_BADGES: Record<CdcLiveStatus, { variant: ComponentProps<typeof Badge>["variant"]; label: string }> = {
-    active: { variant: "success", label: "Active" },
-    idle: { variant: "secondary", label: "Idle" },
-    error: { variant: "destructive", label: "Error" },
-};
-
-function CdcStatusBadge({ status }: { status: CdcLiveStatus }) {
-    const badge = CDC_STATUS_BADGES[status];
-    return <Badge variant={badge.variant}>{badge.label}</Badge>;
-}
-
 function CdcPerformanceContent({ performance }: { performance: CdcLivePerformance }) {
     const cards: DashboardStatCard[] = [
         { label: "Recent CDC writes", value: performance.recentWrites, isLoading: false },
-        { label: "Errors", value: performance.errorCount, isLoading: false },
+        {
+            label: "Recent errors",
+            labelInfo: "Errors in the batches listed below.",
+            value: performance.errorCount,
+            isLoading: false,
+        },
     ];
 
     return (
