@@ -123,7 +123,11 @@ public sealed unsafe class CompactKey : IDisposable
 
             int expectedSize = maxSize + _currentIdx + sizeof(int);
             if (expectedSize > _storage.Length)
+            {
                 UnlikelyGrowStorage(expectedSize);
+                // IMPORTANT: we have to re-acquire the decoded key because the grow storage call has invalidated the pointer.
+                decodedKey = Decoded();
+            }
 
             int encodedStartIdx = _currentIdx;
             var encodedKey = _storage.AsSpan(encodedStartIdx + sizeof(int), maxSize);

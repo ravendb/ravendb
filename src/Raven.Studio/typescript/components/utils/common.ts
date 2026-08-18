@@ -47,7 +47,7 @@ export function createFailureState(error?: any): loadableData<undefined> {
 }
 
 export async function delay(ms: number) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    return new Promise<void>((resolve) => setTimeout(resolve, ms));
 }
 
 export function databaseLocationComparator(lhs: databaseLocationSpecifier, rhs: databaseLocationSpecifier) {

@@ -21,7 +21,7 @@
     <Optimize>true</Optimize>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="README.md" Pack="true" PackagePath=""/>
+    <None Include="README.md" Pack="true" PackagePath="" />
   </ItemGroup>
   <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
     <Compile Remove="Properties\AssemblyInfo.Linux.cs" />
@@ -175,6 +175,7 @@
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net6.0' OR '$(TargetFramework)' == 'net7.0'">
     <PackageReference Include="System.Collections.Immutable" VersionOverride="8.0.0" />
+    <PackageReference Include="System.IO.Hashing" VersionOverride="8.0.0" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0' OR '$(TargetFramework)' == 'netstandard2.1' OR '$(TargetFramework)' == 'netcoreapp3.1'">
     <PackageReference Include="Microsoft.CSharp" />
