@@ -34,7 +34,7 @@ if ([string]::IsNullOrEmpty($env:QEMU_ARCH)) {
     $DOCKER_FILE = "./ubuntu_multiarch.Dockerfile"
 }
 
-$DEB_BUILD_ENV_IMAGE = "ravendb-deb_ubuntu_$env:DEB_ARCHITECTURE"
+$DEB_BUILD_ENV_IMAGE = "ravendb-deb_ubuntu-$($env:DISTRO_VERSION_NAME)_$($env:DEB_ARCHITECTURE)"
 
 docker pull --platform $env:DOCKER_BUILDPLATFORM ubuntu:$env:DISTRO_VERSION
 docker build `
@@ -78,3 +78,7 @@ docker run --rm -t `
     -e "QEMU_ARCH=$env:QEMU_ARCH" `
     $DEB_BUILD_ENV_IMAGE
 
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Failed to build the DEB package."
+    exit $LASTEXITCODE
+}

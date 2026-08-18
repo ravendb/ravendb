@@ -8,7 +8,7 @@ RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y dos2unix devscri
 
 RUN apt update \ 
     && apt-get -y dist-upgrade \
-    && apt install -y curl wget apt-transport-https 
+    && apt install -y curl wget apt-transport-https software-properties-common
 
 ENV DEBEMAIL=support@ravendb.net DEBFULLNAME="RavenDB LTD" 
 ENV DEB_ARCHITECTURE="" DOTNET_RUNTIME_VERSION="" DOTNET_DEPS_VERSION=""
