@@ -101,7 +101,28 @@ ${colorConfig
     );
 };
 
-const ChartTooltip = RechartsPrimitive.Tooltip;
+// Recharts positions the tooltip wrapper with a transform and transitions that transform while the
+// tooltip is active. On the frame the tooltip appears there is no position to move from, so the
+// transition animates it in from the chart origin instead of leaving it under the cursor. Suppress
+// the transition for that one frame, which keeps the glide as the pointer then moves along.
+function ChartTooltip({ isAnimationActive, ...props }: React.ComponentProps<typeof RechartsPrimitive.Tooltip>) {
+    const isActive = RechartsPrimitive.useIsTooltipActive();
+    const [hasAppeared, setHasAppeared] = React.useState(false);
+
+    React.useEffect(() => {
+        if (!isActive) {
+            return;
+        }
+
+        const frame = requestAnimationFrame(() => setHasAppeared(true));
+        return () => {
+            cancelAnimationFrame(frame);
+            setHasAppeared(false);
+        };
+    }, [isActive]);
+
+    return <RechartsPrimitive.Tooltip isAnimationActive={isAnimationActive ?? hasAppeared} {...props} />;
+}
 
 function ChartTooltipContent({
     active,
