@@ -21,6 +21,7 @@ import { TableEditor } from "@/pages/setup/add-app-wizard/steps/map-tables/table
 import { TablesExplorer } from "@/pages/setup/add-app-wizard/steps/map-tables/tables-explorer";
 import { UnmappedTablesAlert } from "@/pages/setup/add-app-wizard/steps/map-tables/unmapped-tables-alert";
 import { useApplyMapTables } from "@/pages/setup/add-app-wizard/steps/map-tables/use-apply-map-tables";
+import { useFocusMapTablesError } from "@/pages/setup/add-app-wizard/steps/map-tables/use-focus-map-tables-error";
 import { useSuggestedMapTables } from "@/pages/setup/add-app-wizard/steps/map-tables/use-suggested-map-tables";
 import { useVerifyMapTablesState } from "@/pages/setup/add-app-wizard/steps/map-tables/use-verify-map-tables";
 import { VerifyCdcButton } from "@/pages/setup/add-app-wizard/steps/verify/verify-cdc-button";
@@ -33,8 +34,9 @@ const VERIFY_TABLES_LABELS = {
 };
 
 export function MapTablesStep({ isBusy }: WizardBodyComponentProps) {
-    const { getValues, setValue } = useFormContext<AppFormData>();
+    const { getValues, setValue, trigger } = useFormContext<AppFormData>();
     const applyMapTables = useApplyMapTables();
+    const focusMapTablesError = useFocusMapTablesError();
     const {
         isSuggesting,
         startedAt: suggestionStartedAt,
@@ -53,8 +55,13 @@ export function MapTablesStep({ isBusy }: WizardBodyComponentProps) {
     // against is not what the editor shows.
     const isFormBehindEditor = isRawView && !isRawContentValid;
 
-    const handleToggleRawView = (checked: boolean) => {
+    const handleToggleRawView = async (checked: boolean) => {
         if (checked) {
+            if (!(await trigger(["mapTables.tables"]))) {
+                focusMapTablesError();
+                return;
+            }
+
             openRawView(serializeFormTablesToRaw(getValues("mapTables.tables")));
             return;
         }
@@ -101,7 +108,11 @@ export function MapTablesStep({ isBusy }: WizardBodyComponentProps) {
                 <div className="flex shrink-0 items-center justify-end gap-4">
                     <VerifyMapTablesButton isBusy={isBusy} isFormBehindEditor={isFormBehindEditor} />
                     <Field orientation="horizontal">
-                        <Switch id="map-tables-raw-view" checked={isRawView} onCheckedChange={handleToggleRawView} />
+                        <Switch
+                            id="map-tables-raw-view"
+                            checked={isRawView}
+                            onCheckedChange={(checked) => void handleToggleRawView(checked)}
+                        />
                         <FieldLabel htmlFor="map-tables-raw-view">Raw JSON</FieldLabel>
                     </Field>
                 </div>

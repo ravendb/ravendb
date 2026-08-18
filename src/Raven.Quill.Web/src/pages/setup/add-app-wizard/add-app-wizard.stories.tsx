@@ -24,7 +24,7 @@ import { isTableSupported } from "./discover-utils";
 import { appSchema, type AppFormData, type AppStepId } from "./app-wizard-validation";
 import { computeSourceKey } from "./steps/connect/use-connect-source-step";
 import { computeMapKey } from "./steps/map/use-map-schema-step";
-import { scaffoldRootTable } from "./steps/map-tables/map-tables-utils";
+import { createEmptyRootTable, scaffoldRootTable } from "./steps/map-tables/map-tables-utils";
 
 const meta = {
     title: "Setup/Add App Wizard",
@@ -521,6 +521,29 @@ export const MapSchemaIntentPromptFromManual: Story = {
 
 export const MapTables: Story = {
     render: () => <AppWizardAtStep initialStep="mapTables" />,
+};
+
+// The raw editor can only be left through a mapping that validates, so an incomplete table (here a
+// just-added empty one) must not be able to open it - that used to be a one-way trip into raw JSON.
+export const MapTablesRawViewBlockedByInvalidTable: Story = {
+    tags: ["!dev"],
+    render: () => (
+        <AppWizardAtStep
+            initialStep="mapTables"
+            seedOverride={(seed) => ({
+                ...seed,
+                mapTables: { tables: [...seed.mapTables.tables, createEmptyRootTable()] },
+            })}
+        />
+    ),
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        await userEvent.click(canvas.getByRole("switch", { name: /raw json/i }));
+
+        await waitFor(() => expect(canvas.getByRole("switch", { name: /raw json/i })).not.toBeChecked());
+        expect(canvas.getByPlaceholderText(/filter tables/i)).toBeInTheDocument();
+    },
 };
 
 // The suggestion call routinely runs for more than a minute, so it is parked here to keep the
