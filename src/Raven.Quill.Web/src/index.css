@@ -462,14 +462,24 @@
     .app-shell {
         --app-sidebar-width: 13.75rem;
         --app-sidebar-collapsed-width: 3.5rem;
+        --app-assistant-track: 0rem;
 
         display: grid;
-        grid-template-columns: var(--app-sidebar-collapsed-width) minmax(0, 1fr);
+        grid-template-columns: var(--app-sidebar-collapsed-width) minmax(0, 1fr) var(--app-assistant-track);
         /* Optional banner row (collapses to 0 when absent), then header, then body. */
         grid-template-rows: auto auto minmax(0, 1fr);
         height: 100svh;
         overflow: hidden;
         transition: grid-template-columns 200ms ease-out;
+    }
+
+    .app-shell--assistant-open {
+        --app-assistant-track: var(--app-assistant-width);
+    }
+
+    /* While the assistant resize handle is dragged, the column must track the pointer directly. */
+    .app-shell--assistant-resizing {
+        transition: none;
     }
 
     .app-shell__banner {
@@ -504,13 +514,24 @@
         overflow: hidden;
     }
 
+    .app-shell__assistant {
+        grid-row: 3;
+        grid-column: 3;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        /* Fixed at the open width so the chat doesn't reflow while the column animates;
+           the closed 0-width track lets the shell's overflow clip it off-screen. */
+        width: var(--app-assistant-width);
+    }
+
     @media (min-width: 64rem) {
         .app-shell {
-            grid-template-columns: var(--app-sidebar-width) minmax(0, 1fr);
+            grid-template-columns: var(--app-sidebar-width) minmax(0, 1fr) var(--app-assistant-track);
         }
 
         .app-shell--collapsed {
-            grid-template-columns: var(--app-sidebar-collapsed-width) minmax(0, 1fr);
+            grid-template-columns: var(--app-sidebar-collapsed-width) minmax(0, 1fr) var(--app-assistant-track);
         }
     }
 }
