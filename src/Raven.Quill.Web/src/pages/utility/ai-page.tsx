@@ -8,7 +8,7 @@ export function AiPage() {
         <PagePanel>
             <div className="mx-auto flex h-[36rem] max-h-[80vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg border bg-card">
                 <header className="flex items-center gap-2 border-b px-4 py-3">
-                    <Bot className="size-5 text-primary" aria-hidden />
+                    <Bot className="size-5 text-primary-strong" aria-hidden />
                     <h2 className="text-sm font-semibold">AI Assistant</h2>
                 </header>
 

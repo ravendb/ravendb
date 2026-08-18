@@ -100,7 +100,7 @@ function WelcomeStep({ position, label, isComplete, to }: WelcomeStepProps) {
     }
 
     return (
-        <Link to={to} className="group flex items-center gap-2 transition-colors hover:text-primary">
+        <Link to={to} className="group flex items-center gap-2 transition-colors hover:text-primary-strong">
             <Indicator isComplete={isComplete} position={position} />
             <span className="text-sm font-medium group-hover:underline">{label}</span>
         </Link>

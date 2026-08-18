@@ -20,7 +20,7 @@ const VARIANT_CONFIG: Record<
     ConfirmVariant,
     { buttonVariant: "default" | "warning" | "destructive"; iconWrap: string; Icon: LucideIcon }
 > = {
-    primary: { buttonVariant: "default", iconWrap: "bg-primary/10 text-primary", Icon: InfoIcon },
+    primary: { buttonVariant: "default", iconWrap: "bg-primary/10 text-primary-strong", Icon: InfoIcon },
     warning: { buttonVariant: "warning", iconWrap: "bg-warning/10 text-badge-warning-fg", Icon: TriangleAlertIcon },
     destructive: {
         buttonVariant: "destructive",

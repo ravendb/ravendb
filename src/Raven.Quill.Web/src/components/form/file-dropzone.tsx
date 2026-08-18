@@ -71,7 +71,7 @@ export function FileDropzone({
             className={cn(
                 "flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-input bg-muted/30 px-6 py-8 text-center transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
                 !disabled && "cursor-pointer hover:bg-muted/60",
-                isDragActive && !disabled && "border-primary bg-primary/5",
+                isDragActive && !disabled && "border-primary-strong bg-primary/5",
                 disabled && "cursor-not-allowed opacity-60",
                 className,
             )}
