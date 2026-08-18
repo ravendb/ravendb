@@ -38,9 +38,12 @@ namespace Raven.Server.Documents
             _context = context;
             _changes = changes;
 
+            // ComputeTransactionCache runs at the Voron layer and reaches back to this documents transaction
+            // (for the collections created in it) through Transaction.Owner, so it must be set on every tx.
+            transaction.Owner = _context;
+
             if (context.DocumentDatabase is ShardedDocumentDatabase sharded)
             {
-                transaction.Owner = _context;
                 transaction.OnBeforeCommit += sharded.ShardedDocumentsStorage.OnBeforeCommit;
                 transaction.LowLevelTransaction.OnRollBack += sharded.ShardedDocumentsStorage.OnFailure;
             }
@@ -155,6 +158,10 @@ namespace Raven.Server.Documents
                 || _counterNotifications != null
                 || _timeSeriesNotifications != null;
         }
+
+        // the collections created (first seen) in this transaction, with canonical CollectionName instances.
+        // populated synchronously by ExtractCollectionName, so it is complete while the tx is committing.
+        public IEnumerable<CollectionName> CollectionsCreatedInTransaction => _collectionCache?.Values;
 
         public bool TryGetFromCache(string collectionName, out CollectionName name)
         {
