@@ -31,13 +31,15 @@ export function UnselectedMappedTablesAlert() {
             <TriangleAlertIcon className="text-amber-600 dark:text-amber-400" />
             <AlertTitle>
                 {isSingle
-                    ? "1 mapped table is not selected"
-                    : `${unselectedTables.length} mapped tables are not selected`}
+                    ? "1 deselected table will still be synced"
+                    : `${unselectedTables.length} deselected tables will still be synced`}
             </AlertTitle>
             <AlertDescription>
                 <span>
                     <ExpandableTableNames labels={unselectedTables.map((table) => getSourceTableLabel(table) ?? "")} />{" "}
-                    {isSingle ? "was" : "were"} not selected in the Verify your schema step.
+                    {isSingle ? "was" : "were"} not selected in Verify your schema, but the mapping still includes{" "}
+                    {isSingle ? "it" : "them"}. To leave {isSingle ? "it" : "them"} out, remove{" "}
+                    {isSingle ? "it" : "them"} from the mapping.
                 </span>
             </AlertDescription>
         </Alert>

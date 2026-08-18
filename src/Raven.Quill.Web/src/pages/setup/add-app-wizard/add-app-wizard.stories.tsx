@@ -558,7 +558,7 @@ export const MapTablesUnselectedTable: Story = {
     ),
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
-        expect(canvas.queryByText("1 mapped table is not selected")).toBeInTheDocument();
+        expect(canvas.queryByText("1 deselected table will still be synced")).toBeInTheDocument();
     },
 };
 
