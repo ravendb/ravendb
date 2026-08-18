@@ -1,0 +1,132 @@
+import { API_ENDPOINTS, type AssistantChatRequest } from "@/api/generated/server-api";
+import { streamSseData } from "@/api/custom-services/response-stream";
+import { isApiError, type ApiClient } from "@/api/http-client";
+
+/** How the AI service reports the outcome of a turn, in its own words. */
+export type AssistantChatStatus =
+    | "Success"
+    | "InvalidCredentials"
+    | "InvalidData"
+    | "ConsentRequired"
+    | "OutOfTokens"
+    | "RequestTooLarge"
+    | "Aborted"
+    | "InternalError";
+
+export type AssistantRelevantLink = {
+    Title: string;
+    Url: string;
+};
+
+/** The AI service's chatbot result. The backend relays the assist stream untouched — the same way
+ * RavenDB's own /assistant/assist proxy does — so this is the service's shape and casing rather
+ * than Quill's, and it stays in step with the DTO the RavenDB Studio consumes. */
+export type AssistantChatResult = {
+    ConversationId?: string | null;
+    Status?: AssistantChatStatus;
+    UsagePercentage?: number;
+    Response?: {
+        Answer: string;
+        RelevantLinks?: AssistantRelevantLink[];
+        FollowUpQuestions?: string[];
+    };
+    Endpoints?: Record<string, string[]>;
+};
+
+/** One Server-Sent Events frame: an `Ongoing` answer chunk, the terminal `Done` result, or `Error`. */
+export type AssistantChatFrame = {
+    type?: "Ongoing" | "Done" | "Error";
+    text?: string | AssistantChatResult | null;
+};
+
+export type AssistantStreamEvent =
+    | { type: "chunk"; answer: string }
+    | { type: "done"; result: AssistantChatResult }
+    | { type: "error"; message: string };
+
+export function createAssistantService(client: ApiClient) {
+    return {
+        stream: async function* (
+            request: AssistantChatRequest,
+            signal?: AbortSignal,
+        ): AsyncGenerator<AssistantStreamEvent> {
+            let answer = "";
+
+            for await (const payload of streamSseData(client, API_ENDPOINTS.assistant.chat, request, signal)) {
+                const frame = parseFrame(payload);
+
+                if (frame.type === "Ongoing" && typeof frame.text === "string") {
+                    answer += frame.text;
+                    yield { type: "chunk", answer };
+                    continue;
+                }
+
+                if (frame.type === "Done" && typeof frame.text === "object" && frame.text !== null) {
+                    const result = spliceAnswer(frame.text, answer);
+                    yield result.Status === "Success" || result.Status === undefined
+                        ? { type: "done", result }
+                        : { type: "error", message: describeAssistantStatus(result.Status) };
+                    return;
+                }
+
+                if (frame.type === "Error") {
+                    yield { type: "error", message: describeAssistantStatus("InternalError") };
+                    return;
+                }
+            }
+
+            yield { type: "error", message: "The AI assistant did not finish answering. Please try again." };
+        },
+    };
+}
+
+export type AssistantService = ReturnType<typeof createAssistantService>;
+
+/** Turns a failed request into an operator-facing sentence. The AI service reports its refusals as a
+ * `Status` in the error body (401 ConsentRequired, 429 OutOfTokens) and the backend relays those
+ * untouched, so they are read from there; anything else keeps the request's own message. */
+export function describeAssistantError(error: unknown) {
+    const status = isApiError(error) ? readStatus(error.details) : undefined;
+
+    if (status) {
+        return describeAssistantStatus(status);
+    }
+
+    return error instanceof Error ? error.message : describeAssistantStatus("InternalError");
+}
+
+const ASSISTANT_STATUS_MESSAGES: Partial<Record<AssistantChatStatus, string>> = {
+    ConsentRequired:
+        "The AI assistant needs consent to send data to the RavenDB AI service, and it could not be granted automatically.",
+    InvalidCredentials: "The AI assistant is not available for this appliance's license.",
+    InvalidData: "The AI assistant could not make sense of that request.",
+    OutOfTokens: "The AI assistant has used up its quota for now. Please try again later.",
+    RequestTooLarge: "That message is too large for the AI assistant. Please shorten it and try again.",
+};
+
+function describeAssistantStatus(status: AssistantChatStatus) {
+    return ASSISTANT_STATUS_MESSAGES[status] ?? "The AI assistant is unavailable right now. Please try again later.";
+}
+
+// The service leaves Response.Answer empty — the answer exists only as the Ongoing chunks — so it is
+// spliced back in before anything reads the result, exactly as the Studio does.
+function spliceAnswer(result: AssistantChatResult, answer: string): AssistantChatResult {
+    return { ...result, Response: { ...result.Response, Answer: answer } };
+}
+
+function parseFrame(payload: string): AssistantChatFrame {
+    try {
+        return JSON.parse(payload) as AssistantChatFrame;
+    } catch {
+        throw new Error("The AI assistant sent a malformed response.");
+    }
+}
+
+function readStatus(details: unknown): AssistantChatStatus | undefined {
+    if (typeof details === "object" && details !== null && "Status" in details) {
+        const status = (details as { Status: unknown }).Status;
+        return typeof status === "string" ? (status as AssistantChatStatus) : undefined;
+    }
+
+    return undefined;
+}

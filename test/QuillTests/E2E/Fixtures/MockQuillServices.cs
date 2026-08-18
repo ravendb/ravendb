@@ -46,9 +46,32 @@ public sealed class MockQuillServices : IAsyncDisposable
 
     public string? LastAgentRequestBody { get; private set; }
 
+    public string? LastChatbotRequestBody { get; private set; }
+
     public (int Status, string Body) CdcResponse { get; set; } = (200, "{}");
 
     public (int Status, string Body) AgentResponse { get; set; } = (200, "{}");
+
+    /// The Ongoing frames a Chatbot assist streams; the answer is their concatenation.
+    public string[] ChatbotChunks { get; set; } = [];
+
+    /// The Done frame payload, i.e. the chatbot result; null ends the stream without one.
+    public string? ChatbotResult { get; set; } = ChatbotResultBody();
+
+    /// When set, a Chatbot assist fails with this status and body instead of streaming.
+    public (int Status, string Body)? ChatbotFailure { get; set; }
+
+    /// When set, this frame is streamed after the chunks in place of the Done frame.
+    public string? ChatbotErrorFrame { get; set; }
+
+    // one line: the reader on the other end parses SSE line by line
+    public static string ChatbotResultBody(
+        string conversationId = "conversations/1",
+        string status = "Success",
+        string relevantLinks = "[]",
+        string followUpQuestions = "[]",
+        double usagePercentage = 1.5) =>
+        $$$"""{"ConversationId":"{{{conversationId}}}","Status":"{{{status}}}","UsagePercentage":{{{usagePercentage}}},"Response":{"Answer":"","RelevantLinks":{{{relevantLinks}}},"FollowUpQuestions":{{{followUpQuestions}}}}}""";
 
     /// Simulates slow LLM generation.
     public TimeSpan AssistDelay { get; set; }
@@ -164,8 +187,13 @@ public sealed class MockQuillServices : IAsyncDisposable
     {
         LastCdcRequestBody = null;
         LastAgentRequestBody = null;
+        LastChatbotRequestBody = null;
         CdcResponse = (200, "{}");
         AgentResponse = (200, "{}");
+        ChatbotChunks = [];
+        ChatbotResult = ChatbotResultBody();
+        ChatbotFailure = null;
+        ChatbotErrorFrame = null;
         AssistDelay = TimeSpan.Zero;
         RequireConsentForAssist = false;
         GiveConsentResponse = (200, "{\"Status\":\"Success\"}");
@@ -217,6 +245,14 @@ public sealed class MockQuillServices : IAsyncDisposable
                     if (RequireConsentForAssist && _consentGiven == false)
                         return Results.Content("{\"Status\":\"ConsentRequired\"}", "application/json", statusCode: 401);
                     return Results.Content(AgentResponse.Body, "application/json", statusCode: AgentResponse.Status);
+                case "Chatbot":
+                    LastChatbotRequestBody = body;
+                    if (RequireConsentForAssist && _consentGiven == false)
+                        return Results.Content("{\"Status\":\"ConsentRequired\"}", "application/json", statusCode: 401);
+                    if (ChatbotFailure is { } failure)
+                        return Results.Content(failure.Body, "application/json", statusCode: failure.Status);
+                    await WriteChatbotStreamAsync(ctx);
+                    return Results.Empty;
                 default:
                     return Results.BadRequest($"Unknown OperationType '{operationType}'.");
             }
@@ -255,6 +291,26 @@ public sealed class MockQuillServices : IAsyncDisposable
         // fixture works regardless of how the connection string spells the base address
         app.MapPost("/chat/completions", CompleteAsync);
         app.MapPost("/v1/chat/completions", CompleteAsync);
+    }
+
+    /// The chatbot answer as the real service delivers it: SSE Ongoing frames, then one Done frame.
+    private async Task WriteChatbotStreamAsync(HttpContext ctx)
+    {
+        ctx.Response.ContentType = "text/event-stream";
+
+        foreach (var chunk in ChatbotChunks)
+            await WriteSseFrameAsync(ctx, $"{{\"type\":\"Ongoing\",\"text\":{JsonSerializer.Serialize(chunk)}}}");
+
+        if (ChatbotErrorFrame is not null)
+            await WriteSseFrameAsync(ctx, ChatbotErrorFrame);
+        else if (ChatbotResult is not null)
+            await WriteSseFrameAsync(ctx, $"{{\"type\":\"Done\",\"text\":{ChatbotResult}}}");
+    }
+
+    private static async Task WriteSseFrameAsync(HttpContext ctx, string json)
+    {
+        await ctx.Response.WriteAsync($"data: {json}\n\n", ctx.RequestAborted);
+        await ctx.Response.Body.FlushAsync(ctx.RequestAborted);
     }
 
     private async Task CompleteAsync(HttpContext ctx)

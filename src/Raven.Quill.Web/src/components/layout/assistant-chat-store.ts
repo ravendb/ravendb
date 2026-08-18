@@ -1,47 +1,106 @@
 import { create } from "zustand";
+import { api } from "@/api/api";
+import { describeAssistantError, type AssistantRelevantLink } from "@/api/custom-services/assistant-service";
 
 export type AssistantMessage = {
     id: string;
-    role: "user" | "assistant";
+    role: "user" | "assistant" | "error";
     text: string;
+    relevantLinks?: AssistantRelevantLink[];
 };
 
 let messageIdCounter = 0;
 
-export function nextAssistantMessageId() {
+function nextMessageId() {
     messageIdCounter += 1;
     return `assistant-message-${messageIdCounter}`;
 }
 
+// Kept out of the store: aborting is a transport concern, and nothing renders from it.
+let streamAbortController: AbortController | null = null;
+
 type AssistantChatState = {
-    messageIds: string[];
-    messagesById: Record<string, AssistantMessage>;
-    appendMessages: (messages: AssistantMessage[]) => void;
-    updateMessageText: (id: string, text: string) => void;
+    messages: AssistantMessage[];
+    /** Ties the next turn to the same upstream conversation; null starts a fresh one. */
+    conversationId: string | null;
+    isStreaming: boolean;
+    sendPrompt: (prompt: string) => Promise<void>;
+    stopStreaming: () => void;
     clearMessages: () => void;
 };
 
-// Messages are normalized (id list + by-id map) so components can subscribe per message:
-// a streaming update via updateMessageText re-renders only that bubble, and the transcript
-// list itself only re-renders when messages are added or removed.
-export const useAssistantChatStore = create<AssistantChatState>((set) => ({
-    messageIds: [],
-    messagesById: {},
-    appendMessages: (messages) =>
+export const useAssistantChatStore = create<AssistantChatState>((set, get) => ({
+    messages: [],
+    conversationId: null,
+    isStreaming: false,
+    sendPrompt: async (prompt) => {
+        if (get().isStreaming) {
+            return;
+        }
+
+        const promptId = nextMessageId();
+        const answerId = nextMessageId();
         set((state) => ({
-            messageIds: [...state.messageIds, ...messages.map((message) => message.id)],
-            messagesById: {
-                ...state.messagesById,
-                ...Object.fromEntries(messages.map((message) => [message.id, message])),
-            },
-        })),
-    updateMessageText: (id, text) =>
-        set((state) => {
-            const message = state.messagesById[id];
-            if (!message) {
-                return state;
+            messages: [
+                ...state.messages,
+                { id: promptId, role: "user", text: prompt },
+                { id: answerId, role: "assistant", text: "" },
+            ],
+        }));
+
+        // A cleared conversation drops the answer bubble, and then there is nothing to update.
+        const updateAnswer = (changes: Partial<AssistantMessage>) =>
+            set((state) => ({
+                messages: state.messages.map((message) =>
+                    message.id === answerId ? { ...message, ...changes } : message,
+                ),
+            }));
+
+        const abortController = new AbortController();
+        streamAbortController = abortController;
+        set({ isStreaming: true });
+
+        try {
+            for await (const event of api.services.assistantChat.stream(
+                { message: prompt, conversationId: get().conversationId },
+                abortController.signal,
+            )) {
+                if (event.type === "chunk") {
+                    updateAnswer({ text: event.answer });
+                } else if (event.type === "done") {
+                    const { ConversationId, Response } = event.result;
+                    // An answer that came through empty would strand the "Thinking…" placeholder.
+                    updateAnswer(
+                        Response?.Answer
+                            ? { text: Response.Answer, relevantLinks: Response.RelevantLinks ?? [] }
+                            : { role: "error", text: "The AI assistant returned no answer." },
+                    );
+                    set({ conversationId: ConversationId ?? null });
+                } else {
+                    updateAnswer({ role: "error", text: event.message });
+                }
             }
-            return { messagesById: { ...state.messagesById, [id]: { ...message, text } } };
-        }),
-    clearMessages: () => set({ messageIds: [], messagesById: {} }),
+        } catch (error) {
+            // Stopped by the operator (or by clearing the conversation) — the partial answer stands.
+            if (abortController.signal.aborted) {
+                return;
+            }
+
+            updateAnswer({ role: "error", text: describeAssistantError(error) });
+        } finally {
+            if (streamAbortController === abortController) {
+                streamAbortController = null;
+                set({ isStreaming: false });
+            }
+        }
+    },
+    stopStreaming: () => {
+        streamAbortController?.abort();
+        streamAbortController = null;
+        set({ isStreaming: false });
+    },
+    clearMessages: () => {
+        get().stopStreaming();
+        set({ messages: [], conversationId: null });
+    },
 }));
