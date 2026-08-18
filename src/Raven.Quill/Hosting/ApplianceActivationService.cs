@@ -3,6 +3,8 @@ using System.IO.Compression;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Options;
 using Raven.Quill.AiHelper;
+using Raven.Quill.Logging;
+using Raven.Server.Logging;
 
 namespace Raven.Quill.Hosting;
 
@@ -11,7 +13,7 @@ public sealed class ApplianceActivationService(
     IOptions<ApplianceOptions> options,
     ILicenseClient licenseClient,
     IHostApplicationLifetime lifetime,
-    ILogger<ApplianceActivationService> logger) : BackgroundService
+    QuillLogger<ApplianceActivationService> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -19,16 +21,18 @@ public sealed class ApplianceActivationService(
 
         if (string.IsNullOrWhiteSpace(opts.LicenseKey))
         {
-            logger.LogInformation(
-                "No QUILL_LICENSE_KEY; skipping startup activation (appliance stays in NeedsActivation).");
+            if (logger.IsInfoEnabled)
+                logger.Info(
+                    "No QUILL_LICENSE_KEY; skipping startup activation (appliance stays in NeedsActivation).");
             return;
         }
 
         if (bootstrap.TryMarkRedeeming() == false)
         {
-            logger.LogInformation(
-                "Setup package already applied (bootstrap phase {Phase}); skipping startup activation.",
-                bootstrap.Phase);
+            if (logger.IsInfoEnabled)
+                logger.Info(
+                    "Setup package already applied (bootstrap phase {Phase}); skipping startup activation.",
+                    bootstrap.Phase);
             return;
         }
 
@@ -49,11 +53,15 @@ public sealed class ApplianceActivationService(
                 try { File.Delete(tempZipPath); }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
-                    logger.LogDebug(ex, "Failed to delete temp zip {Path}", tempZipPath);
+                    if (logger.IsDebugEnabled)
+                        logger.Debug(ex, "Failed to delete temp zip {Path}", tempZipPath);
                 }
             }
 
-            logger.LogInformation("Setup package activated and unpacked to {Path}.", opts.SetupPackagePath);
+            if (logger.IsInfoEnabled)
+                logger.Info("Setup package activated and unpacked to {Path}.", opts.SetupPackagePath);
+            if (logger.AuditEnabled)
+                logger.Audit("ACTIVATION", $"setup package unpacked to '{opts.SetupPackagePath}'", context: null);
 
             WriteAdminThumbprint(opts);
 
@@ -71,17 +79,22 @@ public sealed class ApplianceActivationService(
         }
         catch (InvalidDataException ex)
         {
-            logger.LogWarning(ex, "Activation: setup package was not a valid zip.");
+            if (logger.IsWarnEnabled)
+                logger.Warn(ex, "Activation: setup package was not a valid zip.");
             bootstrap.MarkFailed("activation failed: the setup package was invalid");
         }
         catch (LicenseRetrievalException ex)
         {
-            logger.LogError(ex, "Activation: failed to retrieve the setup package.");
+            if (logger.IsErrorEnabled)
+                logger.Error(ex, "Activation: failed to retrieve the setup package.");
             bootstrap.MarkFailed("activation failed: could not retrieve the setup package");
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Activation failed.");
+            if (logger.IsErrorEnabled)
+                logger.Error(ex, "Activation failed.");
+            if (logger.AuditEnabled)
+                logger.Audit("ACTIVATION", "failed", context: null);
             bootstrap.MarkFailed("activation failed; see server logs for details");
         }
     }
@@ -94,11 +107,12 @@ public sealed class ApplianceActivationService(
             .FirstOrDefault();
         if (adminPfx is null)
         {
-            logger.LogWarning(
-                "No admin client certificate (admin.client.certificate.*.pfx) found under {Path}; " +
-                "skipping the admin-thumbprint marker — RavenDB will not trust the admin cert and the " +
-                "secure store may fail to authenticate (appliance can hang in Restarting).",
-                opts.SetupPackagePath);
+            if (logger.IsWarnEnabled)
+                logger.Warn(
+                    "No admin client certificate (admin.client.certificate.*.pfx) found under {Path}; " +
+                    "skipping the admin-thumbprint marker — RavenDB will not trust the admin cert and the " +
+                    "secure store may fail to authenticate (appliance can hang in Restarting).",
+                    opts.SetupPackagePath);
             return;
         }
 
@@ -120,10 +134,14 @@ public sealed class ApplianceActivationService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Could not signal s6 to restart RavenDB ({Service}); an s6 supervisor must restart the host.", opts.RavenDbS6Service);
+            if (logger.IsErrorEnabled)
+                logger.Error(ex, "Could not signal s6 to restart RavenDB ({Service}); an s6 supervisor must restart the host.", opts.RavenDbS6Service);
         }
 
-        logger.LogInformation("Activation complete; restarting .NET host to bind the secure IDocumentStore.");
+        if (logger.IsInfoEnabled)
+            logger.Info("Activation complete; restarting .NET host to bind the secure IDocumentStore.");
+        if (logger.AuditEnabled)
+            logger.Audit("ACTIVATION", "complete; restarting the host to bind the secure store", context: null);
         lifetime.StopApplication();
     }
 }

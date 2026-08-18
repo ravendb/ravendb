@@ -333,6 +333,40 @@ docker rm -f nw-postgres            # if you used the throwaway Postgres
 
 ---
 
+## Logs and the audit log
+
+**By default the appliance logs to the console only.** s6 pipes that stream to a rotated file at
+`/var/lib/quill/logs/web/` (3 × 10 MB) with a `web.log` symlink, not to `docker compose logs`.
+
+The `quill.log` and `quill.audit.log` file sinks are **opt-in** — the console stream is already captured,
+and these write to the volume that holds the database. The appliance runs on built-in defaults with no
+configuration file; to take it over, copy the shipped template onto the volume and edit it there:
+
+```bash
+docker compose cp quill:/app/web/quill.nlog.template.config ./quill.nlog.config    # then edit, and copy back to /var/lib/quill/quill.nlog.config
+```
+
+**To switch a sink on, point its rule at its target** — the two `writeTo` attributes are the whole
+switch, and both ship off:
+
+```xml
+<logger ruleName="Raven_Default_Audit" name="Audit" levels="Info" final="true" writeTo="QuillLoggingAudit" />
+<logger ruleName="Raven_Default" name="*" minlevel="Info" writeTo="AsyncTargetWrapper,Console" />
+```
+
+Until the audit rule writes somewhere there is **no audit trail**: every audit call is a no-op and
+`GET /api/settings/logs/configuration` reports `auditLogs.level` as `Off`.
+
+`RAVEN_QUILL_LOGS_PATH` sets the directory `quill.log` goes to and `RAVEN_QUILL_SECURITY_AUDITLOG_PATH`
+the audit one. Everything else — levels, rotation, filters, layouts — is the API's or the file's.
+
+### What is audited
+
+Authentication events, and every operation that changes access, data flow or spend — credentials,
+certificates, agents and their webhook origins, channels, embed links, apps, activation, and the log
+configuration itself. Secrets, prompts and model output are never written. Attribution is per-key: lines
+identify a source IP and an authentication method, not a person.
+
 ## Production hardening (beyond this runbook)
 
 This is the local-run posture. For a real deployment:

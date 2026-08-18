@@ -37,6 +37,14 @@
     <Compile Include="..\..\src\Raven.Server\Smuggler\Documents\Processors\BuildVersion.cs" Link="Raven\Linked\BuildVersion.cs" />
     <Compile Include="..\Sparrow.Server\AsyncManualResetEvent.cs" Link="Hosting\Linked\AsyncManualResetEvent.cs" />
     <Compile Include="..\Sparrow\Utils\TimeoutManager.cs" Link="Hosting\Linked\TimeoutManager.cs" />
+    <Compile Include="..\..\src\Raven.Server\Logging\RavenAuditLogger.cs" Link="Raven\Linked\RavenAuditLogger.cs" />
+    <Compile Include="..\..\src\Sparrow.Server\Logging\LogLevelExtensions.cs" Link="Raven\Linked\LogLevelExtensions.cs" />
+    <Compile Include="..\..\src\Sparrow.Server\Logging\LogFilterExtensions.cs" Link="Raven\Linked\LogFilterExtensions.cs" />
+    <Compile Include="..\..\src\Raven.Server\Logging\RavenConditionBasedFilter.cs" Link="Raven\Linked\RavenConditionBasedFilter.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="quill.nlog.template.config" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
@@ -48,6 +56,9 @@
     <PackageReference Include="Microsoft.Extensions.Resilience" />
     <PackageReference Include="Polly" />
     <PackageReference Include="Telegram.Bot" />
+    <PackageReference Include="NLog" />
+    <PackageReference Include="NLog.Web.AspNetCore" />
+    <PackageReference Include="JetBrains.Annotations" />
   </ItemGroup>
 
 </Project>

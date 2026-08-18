@@ -19,7 +19,9 @@ using Raven.Quill.Hosting;
 using Raven.Quill.Infrastructure;
 using Raven.Quill.Licensing;
 using Raven.Quill.Telegram;
+using Raven.Quill.Logging;
 using Raven.Client.Documents;
+using NLog.Extensions.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 var isOpenApiDocumentGeneration = Assembly.GetEntryAssembly()?.GetName().Name == "GetDocument.Insider";
@@ -64,8 +66,22 @@ builder.Services.AddOpenApi(options =>
     });
 });
 
-builder.Logging.AddFilter("Polly", LogLevel.None);
+var logOptions = QuillLogOptions.FromEnvironment();
 
+builder.Services.AddSingleton(logOptions);
+builder.Services.AddSingleton(_ => QuillLogging.CreateOrFallback(logOptions));
+
+builder.Logging.ClearProviders();
+builder.Logging.AddNLog(
+    new NLogProviderOptions
+    {
+        IncludeScopes = false,
+        CaptureMessageTemplates = false,
+        IncludeActivityIdsWithBeginScope = false,
+    },
+    static sp => sp.GetRequiredService<QuillLogging>().Factory);
+
+builder.Services.AddSingleton(typeof(QuillLogger<>), typeof(QuillLogger<>));
 builder.Services.AddOptions<ApplianceOptions>()
     .Configure(options =>
     {
@@ -226,6 +242,10 @@ builder.Services
         };
         options.Events.OnRedirectToAccessDenied = ctx =>
         {
+            var logger = ctx.HttpContext.RequestServices.GetRequiredService<QuillLogger<AuthEndpoints.AuthLogger>>();
+            if (logger.AuditEnabled)
+                logger.Audit("AUTH",
+                    $"denied {ctx.Request.Method} {Uri.EscapeDataString(ctx.Request.Path)}", ctx.HttpContext);
             ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
             return Task.CompletedTask;
         };
@@ -251,6 +271,8 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 });
 
 var app = builder.Build();
+
+ReportLoggingStatus(app.Services);
 
 if (app.Environment.IsDevelopment())
     app.MapOpenApi();
@@ -299,6 +321,59 @@ static TimeSpan ParsePositiveSeconds(string name, string value)
     if (int.TryParse(value, out var seconds) == false || seconds <= 0)
         throw new InvalidOperationException($"{name} must be a positive number of seconds, got '{value}'");
     return TimeSpan.FromSeconds(seconds);
+}
+
+static void ReportLoggingStatus(IServiceProvider services)
+{
+    var logging = services.GetRequiredService<QuillLogging>();
+    var logger = services.GetRequiredService<QuillLogger<QuillLogging>>();
+
+    var source = logging.LoadedFrom ?? "the built-in defaults";
+
+    if (logger.IsInfoEnabled)
+        logger.Info("Logging configured from {Source} at {MinLevel} level.", source, logging.CurrentMinLevel);
+
+    foreach (var problem in logging.ConfigurationProblems)
+    {
+        if (logger.IsWarnEnabled)
+            logger.Warn("A logging setting could not be applied, so it is running on the default for " +
+                        "it: {Problem}", problem);
+    }
+
+    if (logging.IsFileLogEnabled)
+    {
+        if (logging.CurrentLogFile is { } logFile)
+        {
+            if (logger.IsInfoEnabled)
+                logger.Info("Logging to '{Path}'.", logFile);
+        }
+        else if (logger.IsWarnEnabled)
+        {
+            logger.Warn("The file sink is on in {Source} but there is no '{Target}' target behind it, so " +
+                        "the log file cannot be reported or moved through the API.",
+                source, QuillLogging.NormalTargetName);
+        }
+    }
+    else if (logger.IsInfoEnabled)
+    {
+        logger.Info("The file sink is off in {Source}; logging to the console only.", source);
+    }
+
+    if (logging.IsAuditEnabled)
+    {
+        if (logging.CurrentAuditFile is { } auditFile)
+        {
+            if (logger.IsInfoEnabled)
+                logger.Info("Audit log enabled: '{Path}'.", auditFile);
+        }
+        else if (logger.IsWarnEnabled)
+        {
+            logger.Warn("The audit log is enabled in {Source} by a target other than '{Target}', so its " +
+                        "file cannot be reported here.", source, QuillLogging.AuditTargetName);
+        }
+
+        logging.Audit("AUDIT", "log started", context: null);
+    }
 }
 
 static string GetJsonPropertyName(System.Reflection.PropertyInfo property)

@@ -9,6 +9,7 @@ using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints.Helpers;
 using Raven.Quill.Raven;
 using Raven.Quill.Telegram;
+using Raven.Quill.Logging;
 using Raven.Quill.Wizard;
 using TelegramUser = Telegram.Bot.Types.User;
 
@@ -65,7 +66,8 @@ public static class ChannelsEndpoints
         ProvisionChannelRequest body,
         IDocumentStore store,
         ITelegramChannelManager telegramManager,
-        ILogger<ChannelsLogger> logger,
+        QuillLogger<ChannelsLogger> logger,
+        HttpContext ctx,
         CancellationToken ct)
     {
         if (body is null || string.IsNullOrWhiteSpace(body.AgentId))
@@ -78,8 +80,8 @@ public static class ChannelsEndpoints
 
         return body.Type switch
         {
-            ChannelType.IFrame => await ProvisionIFrameAsync(app, body, store, logger, ct),
-            ChannelType.Telegram => await ProvisionTelegramAsync(app, body, store, telegramManager, logger, ct),
+            ChannelType.IFrame => await ProvisionIFrameAsync(app, body, store, logger, ctx, ct),
+            ChannelType.Telegram => await ProvisionTelegramAsync(app, body, store, telegramManager, logger, ctx, ct),
             ChannelType.WhatsApp => ProvisionWhatsAppAsync(),
             null => Results.BadRequest(new ApiErrorResponse("type is required")),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{body.Type}'")),
@@ -90,7 +92,8 @@ public static class ChannelsEndpoints
         App app,
         ProvisionChannelRequest body,
         IDocumentStore store,
-        ILogger<ChannelsLogger> logger,
+        QuillLogger<ChannelsLogger> logger,
+        HttpContext ctx,
         CancellationToken ct)
     {
         var config = await AgentLookup.FindAsync(store, app.Database, body.AgentId, ct);
@@ -129,9 +132,16 @@ public static class ChannelsEndpoints
 
         await session.SaveChangesAsync(ct);
 
-        logger.LogInformation(
-            "Provisioned iFrame channel slug={Slug} channelId={ChannelId} agentId={AgentId}",
-            app.Slug, channelId, config.Identifier);
+        if (logger.IsInfoEnabled)
+            logger.Info(
+                "Provisioned iFrame channel slug={Slug} channelId={ChannelId} agentId={AgentId}",
+                app.Slug, channelId, config.Identifier);
+
+        if (logger.AuditEnabled)
+            logger.Audit("POST",
+                $"Channel '{channelId}' in App '{app.Slug}' type={ChannelType.IFrame} " +
+                $"agent='{config.Identifier}' origins=[{string.Join(", ", origins)}]",
+                ctx);
 
         return Results.Ok(new ProvisionChannelResponse(channelId));
     }
@@ -141,7 +151,8 @@ public static class ChannelsEndpoints
         ProvisionChannelRequest body,
         IDocumentStore store,
         ITelegramChannelManager telegramManager,
-        ILogger<ChannelsLogger> logger,
+        QuillLogger<ChannelsLogger> logger,
+        HttpContext ctx,
         CancellationToken ct)
     {
         var config = await AgentLookup.FindAsync(store, app.Database, body.AgentId, ct);
@@ -201,11 +212,15 @@ public static class ChannelsEndpoints
             throw;
         }
 
-        telegramManager.Wake();
+        if (logger.IsInfoEnabled)
+            logger.Info(
+                "Provisioned Telegram channel slug={Slug} channelId={ChannelId} agentId={AgentId} bot=@{Bot}",
+                app.Slug, channelId, config.Identifier, bot.Username);
 
-        logger.LogInformation(
-            "Provisioned Telegram channel slug={Slug} channelId={ChannelId} agentId={AgentId} bot=@{Bot}",
-            app.Slug, channelId, config.Identifier, bot.Username);
+        if (logger.AuditEnabled)
+            logger.Audit("PROVISION", $"Channel '{channelId}' in App '{app.Slug}'", ctx);
+
+        telegramManager.Wake();
 
         return Results.Ok(new ProvisionChannelResponse(channelId));
     }
@@ -239,7 +254,8 @@ public static class ChannelsEndpoints
         UpdateChannelRequest body,
         IDocumentStore store,
         ITelegramChannelManager telegramManager,
-        ILogger<ChannelsLogger> logger,
+        QuillLogger<ChannelsLogger> logger,
+        HttpContext ctx,
         CancellationToken ct)
     {
         if (body is null)
@@ -256,8 +272,8 @@ public static class ChannelsEndpoints
 
         return channel.Type switch
         {
-            ChannelType.IFrame => await UpdateIFrameChannelAsync(session, channel, body, app.Slug, channelId, logger, ct),
-            ChannelType.Telegram => await UpdateTelegramChannelAsync(session, channel, body, app, channelId, store, telegramManager, logger, ct),
+            ChannelType.IFrame => await UpdateIFrameChannelAsync(session, channel, body, app.Slug, channelId, logger, ctx, ct),
+            ChannelType.Telegram => await UpdateTelegramChannelAsync(session, channel, body, app, channelId, store, telegramManager, logger, ctx, ct),
             ChannelType.WhatsApp => UpdateWhatsAppChannelAsync(),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{channel.Type}'")),
         };
@@ -269,7 +285,8 @@ public static class ChannelsEndpoints
         UpdateChannelRequest body,
         string slug,
         string channelId,
-        ILogger<ChannelsLogger> logger,
+        QuillLogger<ChannelsLogger> logger,
+        HttpContext ctx,
         CancellationToken ct)
     {
         if (body.Telegram is not null)
@@ -295,9 +312,16 @@ public static class ChannelsEndpoints
 
         await session.SaveChangesAsync(ct);
 
-        logger.LogInformation(
-            "Updated iFrame channel slug={Slug} channelId={ChannelId} enabled={Enabled}",
-            slug, channelId, channel.Enabled);
+        if (logger.IsInfoEnabled)
+            logger.Info(
+                "Updated iFrame channel slug={Slug} channelId={ChannelId} enabled={Enabled}",
+                slug, channelId, channel.Enabled);
+
+        if (logger.AuditEnabled)
+            logger.Audit("PUT",
+                $"Channel '{channelId}' in App '{slug}' enabled={channel.Enabled} " +
+                $"origins=[{string.Join(", ", channel.AllowedOrigins)}]",
+                ctx);
 
         return Results.Ok(ChannelSummaryResponse.From(channel));
     }
@@ -310,7 +334,8 @@ public static class ChannelsEndpoints
         string channelId,
         IDocumentStore store,
         ITelegramChannelManager telegramManager,
-        ILogger<ChannelsLogger> logger,
+        QuillLogger<ChannelsLogger> logger,
+        HttpContext ctx,
         CancellationToken ct)
     {
         if (body.AllowedOrigins is { Length: > 0 })
@@ -393,11 +418,15 @@ public static class ChannelsEndpoints
         if (rotatedBot is not null && previousBotId > 0)
             await TryReleaseBotAsync(store, previousBotId, app.Database, channel.Id!, logger);
 
-        telegramManager.Wake();
+        if (logger.IsInfoEnabled)
+            logger.Info(
+                "Updated Telegram channel slug={Slug} channelId={ChannelId} enabled={Enabled} tokenRotated={TokenRotated}",
+                app.Slug, channelId, channel.Enabled, tokenRotated);
 
-        logger.LogInformation(
-            "Updated Telegram channel slug={Slug} channelId={ChannelId} enabled={Enabled} tokenRotated={TokenRotated}",
-            app.Slug, channelId, channel.Enabled, tokenRotated);
+        if (logger.AuditEnabled)
+            logger.Audit("UPDATE", $"Channel '{channelId}' in App '{app.Slug}'", ctx);
+
+        telegramManager.Wake();
 
         return Results.Ok(ChannelSummaryResponse.From(channel));
     }
@@ -410,7 +439,8 @@ public static class ChannelsEndpoints
         string channelId,
         IDocumentStore store,
         ITelegramChannelManager telegramManager,
-        ILogger<ChannelsLogger> logger,
+        QuillLogger<ChannelsLogger> logger,
+        HttpContext ctx,
         CancellationToken ct)
     {
         var app = await AppLookup.LoadAppAsync(store, slug, ct);
@@ -424,8 +454,8 @@ public static class ChannelsEndpoints
 
         return channel.Type switch
         {
-            ChannelType.IFrame => await DeleteIFrameChannelAsync(session, channel, app.Slug, channelId, logger, ct),
-            ChannelType.Telegram => await DeleteTelegramChannelAsync(session, channel, app, channelId, store, telegramManager, logger, ct),
+                ChannelType.IFrame => await DeleteIFrameChannelAsync(session, channel, app.Slug, channelId, logger, ctx, ct),
+            ChannelType.Telegram => await DeleteTelegramChannelAsync(session, channel, app, channelId, store, telegramManager, logger, ctx, ct),
             ChannelType.WhatsApp => DeleteWhatsAppChannelAsync(),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{channel.Type}'")),
         };
@@ -436,13 +466,18 @@ public static class ChannelsEndpoints
         Channel channel,
         string slug,
         string channelId,
-        ILogger<ChannelsLogger> logger,
+        QuillLogger<ChannelsLogger> logger,
+        HttpContext ctx,
         CancellationToken ct)
     {
         session.Delete(channel);
         await session.SaveChangesAsync(ct);
 
-        logger.LogInformation("Deleted iFrame channel slug={Slug} channelId={ChannelId}", slug, channelId);
+        if (logger.IsInfoEnabled)
+            logger.Info("Deleted iFrame channel slug={Slug} channelId={ChannelId}", slug, channelId);
+        if (logger.AuditEnabled)
+            logger.Audit("DELETE", $"Channel '{channelId}' in App '{slug}'", ctx);
+
         return Results.NoContent();
     }
 
@@ -453,7 +488,8 @@ public static class ChannelsEndpoints
         string channelId,
         IDocumentStore store,
         ITelegramChannelManager telegramManager,
-        ILogger<ChannelsLogger> logger,
+        QuillLogger<ChannelsLogger> logger,
+        HttpContext ctx,
         CancellationToken ct)
     {
         session.Delete(channel);
@@ -464,7 +500,10 @@ public static class ChannelsEndpoints
 
         telegramManager.Wake();
 
-        logger.LogInformation("Deleted Telegram channel slug={Slug} channelId={ChannelId}", app.Slug, channelId);
+        if (logger.IsInfoEnabled)
+            logger.Info("Deleted Telegram channel slug={Slug} channelId={ChannelId}", app.Slug, channelId);
+        if (logger.AuditEnabled)
+            logger.Audit("DELETE", $"Channel '{channelId}' in App '{app.Slug}'", ctx);
         return Results.NoContent();
     }
 
@@ -531,7 +570,7 @@ public static class ChannelsEndpoints
     }
 
     private static async Task TryReleaseBotAsync(
-        IDocumentStore store, long botId, string database, string channelId, ILogger<ChannelsLogger> logger)
+        IDocumentStore store, long botId, string database, string channelId, QuillLogger<ChannelsLogger> logger)
     {
         var reservationId = TelegramBotReservation.IdFor(botId);
         try
@@ -547,7 +586,8 @@ public static class ChannelsEndpoints
         catch (Exception e)
         {
             // an unreleased reservation is an orphan the next reserve attempt reclaims
-            logger.LogWarning("Telegram bot reservation {ReservationId} was not released: {Error}", reservationId, e.Message);
+            if (logger.IsWarnEnabled)
+                logger.Warn("Telegram bot reservation {ReservationId} was not released: {Error}", reservationId, e.Message);
         }
     }
 

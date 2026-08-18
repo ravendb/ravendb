@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using QuillTests.E2E.Fixtures;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Quill.Agents;
+using Raven.Client.ServerWide.Operations.Logs;
+using Raven.Quill.Logging;
 using Tests.Infrastructure;
 using Xunit;
 using static QuillTests.E2E.Fixtures.ActionFixtures;
@@ -166,7 +168,11 @@ public class AgentActionExecutorTests(ITestOutputHelper output) : NoDisposalNeed
 
     private WebhookActionExecutor WebhookExecutor(TimeSpan? timeout = null) =>
         new(new SingleClientFactory(new HttpClient { Timeout = timeout ?? TimeSpan.FromSeconds(30) }),
-            NullLogger<WebhookActionExecutor>.Instance);
+            NullQuillLogger<WebhookActionExecutor>());
+
+    private static QuillLogger<T> NullQuillLogger<T>() =>
+        new(NullLogger<T>.Instance,
+            QuillLogging.Create(Path.Combine(AppContext.BaseDirectory, QuillLogging.TemplateFileName)));
 
     private sealed class SingleClientFactory(HttpClient client) : IHttpClientFactory
     {

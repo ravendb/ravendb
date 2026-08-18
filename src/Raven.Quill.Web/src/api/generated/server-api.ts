@@ -84,38 +84,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/assistant/chat": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["assistant.chat"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/assistant/consent": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["assistant.consent"];
-        put?: never;
-        post: operations["assistant.giveConsent"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/bootstrap/status": {
         parameters: {
             query?: never;
@@ -716,6 +684,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/settings/logs/configuration": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Reports what the live log sinks are doing. A path is null when that sink is off, and auditLogs.level is Off when the audit log is disabled. */
+        get: operations["settings.logConfiguration"];
+        put?: never;
+        /** @description Changes log levels and the log file path on the running appliance. Send the whole state, not a patch: a logs block with no path switches the file sink off. Changes revert on restart unless persist is true. */
+        post: operations["settings.updateLogConfiguration"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/settings/certificates/get": {
         parameters: {
             query?: never;
@@ -1026,8 +1012,6 @@ export interface components {
             subConversationId?: null | string;
         };
         /** @enum {unknown} */
-        AiHelperStatus: "Success" | "InvalidCredentials" | "InvalidData" | "ConsentRequired" | "OutOfTokens" | "InternalError";
-        /** @enum {unknown} */
         AiMessageRole: "system" | "user" | "assistant" | "summary" | "internal";
         AiModelsRequest: {
             connectorType?: components["schemas"]["AiConnectorType"];
@@ -1139,12 +1123,16 @@ export interface components {
             /** Format: int64 */
             writes: number;
         };
-        AssistantChatRequest: {
-            message: string;
-            conversationId: null | string;
-        };
-        AssistantConsentResponse: {
-            status: components["schemas"]["AiHelperStatus"];
+        AuditLogsConfiguration: {
+            path?: null | string;
+            level?: components["schemas"]["LogLevel"];
+            /** Format: int64 */
+            archiveAboveSizeInMb?: number;
+            /** Format: int32 */
+            maxArchiveDays?: null | number;
+            /** Format: int32 */
+            maxArchiveFiles?: null | number;
+            enableArchiveFileCompression?: boolean;
         };
         AuthStatusResponse: {
             authenticated: boolean;
@@ -1297,7 +1285,6 @@ export interface components {
             enabled: boolean;
             /** Format: date-time */
             createdAt: string;
-            telegram?: null | components["schemas"]["TelegramSummaryResponse"];
         };
         /** @enum {unknown} */
         ChannelType: "IFrame" | "Telegram" | "WhatsApp" | null;
@@ -1467,8 +1454,36 @@ export interface components {
             connectivity: components["schemas"]["ConnectivityStatus"];
             plans: components["schemas"]["LicensePlan"][];
         };
+        LogConfigurationResponse: {
+            logs: components["schemas"]["LogsConfiguration"];
+            auditLogs: components["schemas"]["AuditLogsConfiguration"];
+            microsoftLogs: components["schemas"]["MicrosoftLogsConfiguration"];
+            canPersist: boolean;
+        };
+        LogFilter: Record<string, unknown>;
+        /** @enum {unknown} */
+        LogFilterAction: "Neutral" | "Log" | "Ignore" | "LogFinal" | "IgnoreFinal";
         LoginRequest: {
             apiKey: string;
+        };
+        LogLevel: string;
+        LogsConfiguration: {
+            path?: null | string;
+            currentMinLevel?: components["schemas"]["LogLevel"];
+            currentFilters?: null | components["schemas"]["LogFilter"][];
+            currentLogFilterDefaultAction?: components["schemas"]["LogFilterAction"];
+            minLevel?: components["schemas"]["LogLevel"];
+            /** Format: int64 */
+            archiveAboveSizeInMb?: number;
+            /** Format: int32 */
+            maxArchiveDays?: null | number;
+            /** Format: int32 */
+            maxArchiveFiles?: null | number;
+            enableArchiveFileCompression?: boolean;
+        };
+        LogsUpdate: {
+            path?: null | string;
+            minLevel?: components["schemas"]["LogLevel"];
         };
         MapRequest: {
             slug?: string;
@@ -1489,6 +1504,10 @@ export interface components {
             /** Format: double */
             delta: number;
             sparkline: number[];
+        };
+        MicrosoftLogsConfiguration: {
+            currentMinLevel?: components["schemas"]["LogLevel"];
+            minLevel?: components["schemas"]["LogLevel"];
         };
         MintEmbedLinkRequest: {
             channelId: string;
@@ -1559,7 +1578,6 @@ export interface components {
             agentId: string;
             allowedOrigins: null | string[];
             displayName?: null | string;
-            telegram?: null | components["schemas"]["TelegramProvisionRequest"];
         };
         ProvisionChannelResponse: {
             channelId: string;
@@ -1659,45 +1677,6 @@ export interface components {
             rationale: string[];
             status: string;
         };
-        TelegramChannelMessages: {
-            greeting?: null | string;
-            conversationCleared?: null | string;
-            usernameMissing?: null | string;
-            phoneNumberRequest?: null | string;
-            sharePhoneNumberButton?: null | string;
-            ownContactRequired?: null | string;
-            phoneNumberReceived?: null | string;
-            notConfigured?: null | string;
-            overloaded?: null | string;
-            somethingWentWrong?: null | string;
-            groupChatRefusal?: null | string;
-        };
-        TelegramParameterBinding: {
-            source?: components["schemas"]["TelegramParameterSource"];
-            value?: null | string;
-        };
-        /** @enum {unknown} */
-        TelegramParameterSource: "Constant" | "UserId" | "Username" | "PhoneNumber";
-        TelegramProvisionRequest: {
-            botToken: null | string;
-            parameterBindings?: null | {
-                [key: string]: components["schemas"]["TelegramParameterBinding"];
-            };
-        };
-        TelegramSummaryResponse: {
-            botUsername: string;
-            parameterBindings: {
-                [key: string]: components["schemas"]["TelegramParameterBinding"];
-            };
-            messages: null | components["schemas"]["TelegramChannelMessages"];
-        };
-        TelegramUpdateRequest: {
-            botToken?: null | string;
-            messages?: null | components["schemas"]["TelegramChannelMessages"];
-            parameterBindings?: null | {
-                [key: string]: components["schemas"]["TelegramParameterBinding"];
-            };
-        };
         TestMappingRequest: {
             sourceTableName: string;
             /** Format: int32 */
@@ -1738,7 +1717,12 @@ export interface components {
             displayName: null | string;
             allowedOrigins: null | string[];
             enabled: null | boolean;
-            telegram?: null | components["schemas"]["TelegramUpdateRequest"];
+        };
+        UpdateLogConfigurationRequest: {
+            logs?: null | components["schemas"]["LogsUpdate"];
+            microsoftLogs?: null | components["schemas"]["MicrosoftLogsConfiguration"];
+            /** @default false */
+            persist: boolean;
         };
         UpdateWidgetThemeRequest: {
             theme: null | components["schemas"]["WidgetTheme"];
@@ -1979,104 +1963,6 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    "assistant.chat": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AssistantChatRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Bad Gateway */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    "assistant.consent": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AssistantConsentResponse"];
-                };
-            };
-            /** @description Bad Gateway */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    "assistant.giveConsent": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AssistantConsentResponse"];
-                };
-            };
-            /** @description Bad Gateway */
-            502: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3638,6 +3524,75 @@ export interface operations {
             };
         };
     };
+    "settings.logConfiguration": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LogConfigurationResponse"];
+                };
+            };
+        };
+    };
+    "settings.updateLogConfiguration": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateLogConfigurationRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
     "settings.certificates": {
         parameters: {
             query: {
@@ -4042,7 +3997,6 @@ export type AiConnectionStringDeleteConflictResponse = components["schemas"]["Ai
 export type AiConnectionStringTestResponse = components["schemas"]["AiConnectionStringTestResponse"];
 export type AiConnectorType = components["schemas"]["AiConnectorType"];
 export type AiConversationMessage = components["schemas"]["AiConversationMessage"];
-export type AiHelperStatus = components["schemas"]["AiHelperStatus"];
 export type AiMessageRole = components["schemas"]["AiMessageRole"];
 export type AiModelsRequest = components["schemas"]["AiModelsRequest"];
 export type AiModelsResponse = components["schemas"]["AiModelsResponse"];
@@ -4059,8 +4013,7 @@ export type AppTokens = components["schemas"]["AppTokens"];
 export type AppUsageMetrics = components["schemas"]["AppUsageMetrics"];
 export type AppUsageResponse = components["schemas"]["AppUsageResponse"];
 export type AppWrites = components["schemas"]["AppWrites"];
-export type AssistantChatRequest = components["schemas"]["AssistantChatRequest"];
-export type AssistantConsentResponse = components["schemas"]["AssistantConsentResponse"];
+export type AuditLogsConfiguration = components["schemas"]["AuditLogsConfiguration"];
 export type AuthStatusResponse = components["schemas"]["AuthStatusResponse"];
 export type AzureOpenAiSettings = components["schemas"]["AzureOpenAiSettings"];
 export type BootstrapPhase = components["schemas"]["BootstrapPhase"];
@@ -4105,9 +4058,16 @@ export type HuggingFaceSettings = components["schemas"]["HuggingFaceSettings"];
 export type JsonElement = components["schemas"]["JsonElement"];
 export type LicensePlan = components["schemas"]["LicensePlan"];
 export type LicenseResponse = components["schemas"]["LicenseResponse"];
+export type LogConfigurationResponse = components["schemas"]["LogConfigurationResponse"];
+export type LogFilter = components["schemas"]["LogFilter"];
+export type LogFilterAction = components["schemas"]["LogFilterAction"];
 export type LoginRequest = components["schemas"]["LoginRequest"];
+export type LogLevel = components["schemas"]["LogLevel"];
+export type LogsConfiguration = components["schemas"]["LogsConfiguration"];
+export type LogsUpdate = components["schemas"]["LogsUpdate"];
 export type MapRequest = components["schemas"]["MapRequest"];
 export type MetricCard = components["schemas"]["MetricCard"];
+export type MicrosoftLogsConfiguration = components["schemas"]["MicrosoftLogsConfiguration"];
 export type MintEmbedLinkRequest = components["schemas"]["MintEmbedLinkRequest"];
 export type MintEmbedLinkResponse = components["schemas"]["MintEmbedLinkResponse"];
 export type MistralAiSettings = components["schemas"]["MistralAiSettings"];
@@ -4135,18 +4095,13 @@ export type SuggestAgentRequest = components["schemas"]["SuggestAgentRequest"];
 export type SuggestAgentResponse = components["schemas"]["SuggestAgentResponse"];
 export type SuggestCdcRequest = components["schemas"]["SuggestCdcRequest"];
 export type SuggestCdcResponse = components["schemas"]["SuggestCdcResponse"];
-export type TelegramChannelMessages = components["schemas"]["TelegramChannelMessages"];
-export type TelegramParameterBinding = components["schemas"]["TelegramParameterBinding"];
-export type TelegramParameterSource = components["schemas"]["TelegramParameterSource"];
-export type TelegramProvisionRequest = components["schemas"]["TelegramProvisionRequest"];
-export type TelegramSummaryResponse = components["schemas"]["TelegramSummaryResponse"];
-export type TelegramUpdateRequest = components["schemas"]["TelegramUpdateRequest"];
 export type TestMappingRequest = components["schemas"]["TestMappingRequest"];
 export type TestMappingResponse = components["schemas"]["TestMappingResponse"];
 export type TestMappingRowResponse = components["schemas"]["TestMappingRowResponse"];
 export type TokensByAppResponse = components["schemas"]["TokensByAppResponse"];
 export type TopCapability = components["schemas"]["TopCapability"];
 export type UpdateChannelRequest = components["schemas"]["UpdateChannelRequest"];
+export type UpdateLogConfigurationRequest = components["schemas"]["UpdateLogConfigurationRequest"];
 export type UpdateWidgetThemeRequest = components["schemas"]["UpdateWidgetThemeRequest"];
 export type UsagePoint = components["schemas"]["UsagePoint"];
 export type UsageResponse = components["schemas"]["UsageResponse"];
@@ -4196,11 +4151,6 @@ export const API_ENDPOINTS = {
         setupTry: (slug: string) => `/apps/${encodeURIComponent(slug)}/setup/try`,
         suggestAgent: (slug: string) => `/apps/${encodeURIComponent(slug)}/suggest/agent`,
     },
-    assistant: {
-        chat: "/assistant/chat",
-        consent: "/assistant/consent",
-        giveConsent: "/assistant/consent",
-    },
     auth: {
         login: "/auth/login",
         logout: "/auth/logout",
@@ -4235,6 +4185,8 @@ export const API_ENDPOINTS = {
         certificatesGenerate: "/settings/certificates/generate",
         feedback: "/settings/feedback",
         license: "/settings/license",
+        logConfiguration: "/settings/logs/configuration",
+        updateLogConfiguration: "/settings/logs/configuration",
         usage: "/settings/usage",
     },
     setup: {
@@ -4292,11 +4244,6 @@ export function createServerApi(client: ApiClient) {
             setupTry: (slug: string, request: SetupTryRequest) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.apps.setupTry(slug), request),
             suggestAgent: (slug: string, request: SuggestAgentRequest) => client.post<SuggestAgentResponse, ApiErrorResponse>(API_ENDPOINTS.apps.suggestAgent(slug), request),
         },
-        assistant: {
-            chat: (request: AssistantChatRequest) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.assistant.chat, request),
-            consent: () => client.get<AssistantConsentResponse, ApiErrorResponse>(API_ENDPOINTS.assistant.consent),
-            giveConsent: () => client.post<AssistantConsentResponse, ApiErrorResponse>(API_ENDPOINTS.assistant.giveConsent),
-        },
         auth: {
             login: (request: LoginRequest) => client.post<AuthStatusResponse, AuthStatusResponse>(API_ENDPOINTS.auth.login, request),
             logout: () => client.post<void>(API_ENDPOINTS.auth.logout),
@@ -4331,6 +4278,8 @@ export function createServerApi(client: ApiClient) {
             certificatesGenerate: (request: Record<string, DatabaseAccess>, searchParams: { clearance: SecurityClearance; name: string; password?: string; }) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.settings.certificatesGenerate, request, { searchParams }),
             feedback: (request: SendFeedbackRequest) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.settings.feedback, request),
             license: () => client.get<LicenseResponse>(API_ENDPOINTS.settings.license),
+            logConfiguration: () => client.get<LogConfigurationResponse>(API_ENDPOINTS.settings.logConfiguration),
+            updateLogConfiguration: (request: UpdateLogConfigurationRequest) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.settings.updateLogConfiguration, request),
             usage: (searchParams: { day?: string; month?: string; year: string; }) => client.get<QuillUsageResponse, ApiErrorResponse>(API_ENDPOINTS.settings.usage, { searchParams }),
         },
         setup: {

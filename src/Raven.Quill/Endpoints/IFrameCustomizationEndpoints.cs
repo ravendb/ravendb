@@ -6,6 +6,7 @@ using Raven.Client.Documents.Session;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints.Helpers;
+using Raven.Quill.Logging;
 
 namespace Raven.Quill.Endpoints;
 
@@ -68,7 +69,7 @@ public static class IFrameCustomizationEndpoints
         string channelId,
         UpdateWidgetThemeRequest body,
         IDocumentStore store,
-        ILogger<IFrameCustomizationLogger> logger,
+        QuillLogger<IFrameCustomizationLogger> logger,
         CancellationToken ct)
     {
         if (body is null)
@@ -90,7 +91,8 @@ public static class IFrameCustomizationEndpoints
         await session.SaveChangesAsync(ct);
 
         var defaults = await session.LoadAsync<WidgetThemeDefaults>(WidgetThemeDefaults.DocumentId, ct);
-        logger.LogInformation(
+        if (logger.IsInfoEnabled)
+            logger.Info(
             "Updated web widget theme slug={Slug} channelId={ChannelId} follows={FollowsAppDefault}",
             app.Slug, channelId, theme is null);
         return Results.Ok(BuildThemeResponse(channel, defaults));
@@ -114,7 +116,7 @@ public static class IFrameCustomizationEndpoints
         string slug,
         UpdateWidgetThemeRequest body,
         IDocumentStore store,
-        ILogger<IFrameCustomizationLogger> logger,
+        QuillLogger<IFrameCustomizationLogger> logger,
         CancellationToken ct)
     {
         if (body is null)
@@ -141,7 +143,8 @@ public static class IFrameCustomizationEndpoints
         defaults.UpdatedAt = DateTime.UtcNow;
         await session.SaveChangesAsync(ct);
 
-        logger.LogInformation("Updated default web widget theme slug={Slug}", app.Slug);
+        if (logger.IsInfoEnabled)
+            logger.Info("Updated default web widget theme slug={Slug}", app.Slug);
         return Results.Ok(new WidgetDefaultThemeResponse(defaults.Theme, WidgetFonts.Curated));
     }
 

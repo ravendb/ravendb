@@ -3,10 +3,12 @@ using System.Text;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Sparrow;
 
+using Raven.Quill.Logging;
+
 namespace Raven.Quill.Agents;
 
 internal sealed class WebhookActionExecutor(
-    IHttpClientFactory httpClientFactory, ILogger<WebhookActionExecutor> logger)
+    IHttpClientFactory httpClientFactory, QuillLogger<WebhookActionExecutor> logger)
 {
     internal const string ClientName = "quill-action-webhook";
 
@@ -70,12 +72,14 @@ internal sealed class WebhookActionExecutor(
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested == false)
         {
-            logger.LogWarning("Action webhook '{Action}' timed out", action.Name);
+            if (logger.IsWarnEnabled)
+                logger.Warn("Action webhook '{Action}' timed out", action.Name);
             return "action failed: webhook timed out";
         }
         catch (Exception e)
         {
-            logger.LogWarning(e, "Action webhook '{Action}' failure", action.Name);
+            if (logger.IsWarnEnabled)
+                logger.Warn(e, "Action webhook '{Action}' failure", action.Name);
             return $"action failed: {e.Message}";
         }
         finally
