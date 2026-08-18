@@ -241,7 +241,7 @@ namespace Raven.Server.Documents
             FromSmuggler,
             FromResolveConflicts
         }
-        
+
         public AttachmentDetailsServer PutAttachment(DocumentsOperationContext context, string documentId, string name, string contentType,
             string hash, long size, RemoteAttachmentParameters remoteParams, string expectedChangeVector = null, Stream stream = null,
             bool updateDocument = true, bool extractCollectionName = false, bool streamAlreadyInRemoteStorage = false, AttachmentSource source = AttachmentSource.None)
@@ -258,7 +258,7 @@ namespace Raven.Server.Documents
             // Attachment etag should be generated before updating the document
             var attachmentEtag = _documentsStorage.GenerateNextEtag();
 
-            var fromSmuggler = source == AttachmentSource.FromSmuggler; 
+            var fromSmuggler = source == AttachmentSource.FromSmuggler;
             using (DocumentIdWorker.GetLoweredIdSliceFromId(context, documentId, out Slice lowerDocumentId))
             {
                 TableValueReader tvr = default;
@@ -464,11 +464,11 @@ namespace Raven.Server.Documents
         {
             if (_documentDatabase.SupportedFeatures.SupportedFeatureTypes.ThrowControlCharactersInIdentifier == false)
                 return;
-            
+
             DocumentIdWorker.CheckAndThrowContainsControlCharacters(name, "Attachment name");
             DocumentIdWorker.CheckAndThrowContainsControlCharacters(contentType, "Attachment content type");
         }
-        
+
         /// <summary>
         /// LazyStringValue overload for the receive path. Internalises the storage-key conversion
         /// so the handler doesn't manage two extra `using` scopes per call.
@@ -867,7 +867,7 @@ namespace Raven.Server.Documents
                         [nameof(AttachmentName.Hash)] = attachment.Base64Hash.ToString(),
                         [nameof(AttachmentName.ContentType)] = attachment.ContentType,
                         [nameof(AttachmentName.Size)] = attachment.Size,
-   
+
                     };
 
                     if (attachment.RemoteParameters != null)
@@ -988,7 +988,7 @@ namespace Raven.Server.Documents
                        null, out var keySlice))
             {
                 var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-                return table.SeekOnePrimaryKeyPrefix(keySlice, out _) ;
+                return table.SeekOnePrimaryKeyPrefix(keySlice, out _);
             }
         }
         private Attachment GetAttachmentDirect(DocumentsOperationContext context, string documentId, string name, AttachmentType type, string changeVector,
@@ -1102,7 +1102,7 @@ namespace Raven.Server.Documents
                 Name = TableValueToId(context, (int)AttachmentsTable.Name, ref tvr),
                 ContentType = TableValueToId(context, (int)AttachmentsTable.ContentType, ref tvr),
                 Size = TableValueToLong((int)AttachmentsTable.Size, ref tvr),
-                RevisionVersion = ReadRevisionVersion(context, ref tvr),
+                RevisionVersion = ReadRevisionVersion(ref tvr),
             };
 
             result.RemoteParameters = RemoteAttachmentExtensions.GetRemoteAttachmentParameters(
@@ -1118,10 +1118,10 @@ namespace Raven.Server.Documents
         }
 
         // Field 11 (RevisionVersion) is present only on Hashed RA rows; legacy / doc-attachment rows have <=11 fields.
-        private static string ReadRevisionVersion(JsonOperationContext context, ref TableValueReader tvr)
+        private static string ReadRevisionVersion(ref TableValueReader tvr)
         {
             return tvr.Count > (int)AttachmentsTable.RevisionVersion
-                ? TableValueToChangeVector(context, (int)AttachmentsTable.RevisionVersion, ref tvr)
+                ? TableValueToChangeVector((int)AttachmentsTable.RevisionVersion, ref tvr)
                 : null;
         }
 
@@ -1455,7 +1455,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void DeleteInternal(DocumentsOperationContext context, Slice key, long etag, Slice hash, string changeVector, 
+        private void DeleteInternal(DocumentsOperationContext context, Slice key, long etag, Slice hash, string changeVector,
              long lastModifiedTicks, DocumentFlags flags, long remoteAtTicks)
         {
             CreateTombstone(context, key, etag, changeVector, lastModifiedTicks, flags);

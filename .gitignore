@@ -133,7 +133,7 @@ temp
 /.idea
 .vscode
 /test/Tryouts/Databases/*
-bench/Micro.Benchmark/BenchmarkDotNet.Artifacts/
+BenchmarkDotNet.Artifacts/
 /src/Raven.Server/*.DotSettings
 /src/Raven.Pal/osxcross
 /src/Raven.Pal/*.nativecodeanalysis.xml
