@@ -7,7 +7,8 @@ DOMAIN=$(openssl pkcs12 -in "$SETUP"/A/cluster.server.certificate.*.pfx -nokeys 
        | openssl x509 -noout -ext subjectAltName \
        | sed -nE 's|^ *DNS:\*\.||p')
 
-# TODO decide weather we should include 'a' in the $IP args or it should be fixed 127.0.0.1 so it will never leave the contianer. 
+# 'a' is included: every record points at the operator's IP, and the container resolves its own
+# hostname to loopback via /etc/hosts (01-ravendb/run) rather than relying on DNS to do it.
 exec /app/ravendb/rvn dns update -l "$SETUP/license.json" -d "$DOMAIN" \
-    -n "$IP=dashboard,db,public,api"
+    -n "$IP=a,dashboard,db,public,api"
 

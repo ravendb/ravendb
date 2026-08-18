@@ -10,12 +10,6 @@ mkdir -p /var/lib/quill/ravendb
 # RavenDB starts unsecured on loopback (Setup.Mode=Unsecured from
 # docker/quill/ravendb-settings.json).
 #
-# The hostname in PublicServerUrl (e.g. https://a.<slug>.myquill.ai, where
-# <slug> is the tenant slug assigned by the Quill sign-up flow and baked into
-# the setup package at activation) already resolves to 127.0.0.1 via public
-# DNS — *.<slug>.myquill.ai has wildcard A records pointing at loopback for
-# exactly this purpose — so no /etc/hosts hack is needed inside the container.
-#
 # The admin client cert's thumbprint is written by the .NET activation endpoint
 # next to the unpacked package as the file `admin-thumbprint`. Reading it here
 # rather than extracting from the PFX with openssl avoids PKCS#12 bag-ordering
@@ -31,6 +25,11 @@ if [ -f "$SETUP_SETTINGS" ]; then
     # to RavenDB on this port (RavenStoreFactory.RavenInternalPort); nginx passes db.*/a.* through to it.
     RAVENDB_PORT="${RAVEN_QUILL_RAVENDB_INTERNAL_PORT:-8443}"
     sed -i -E "s#(\"ServerUrl\"[[:space:]]*:[[:space:]]*\")https://[^\"]*(\")#\1https://127.0.0.1:${RAVENDB_PORT}\2#" /app/ravendb/settings.json
+
+    NODE_HOST="$(jq -r '.PublicServerUrl' "$SETUP_SETTINGS" | sed -E 's#^https?://##; s#[:/].*##')"
+    if [ -n "$NODE_HOST" ]; then
+        grep -q "[[:space:]]$NODE_HOST\$" /etc/hosts || echo "127.0.0.1 $NODE_HOST" >> /etc/hosts
+    fi
 
     CERT_DIR=/var/lib/quill/certs
     mkdir -p "$CERT_DIR"

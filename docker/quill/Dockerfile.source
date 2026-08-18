@@ -7,8 +7,6 @@ ARG STUDIO_NODE_MAJOR=24
 ARG PNPM_VERSION=11.2.2
 ARG S6_OVERLAY_VERSION=3.2.1.0
 
-
-# Stage 0: build Raven.Server from source.
 FROM ${SDK_IMAGE} AS ravendb-server-build
 ARG TARGETARCH
 WORKDIR /src
@@ -17,6 +15,12 @@ COPY . .
 RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
     . docker/quill/scripts/dotnet-rid.sh \
     && dotnet publish src/Raven.Server/Raven.Server.csproj \
+        -c Release \
+        -r "$DOTNET_RID" \
+        --self-contained false \
+        -o /publish/raven \
+        --nologo \
+    && dotnet publish tools/rvn/rvn.csproj \
         -c Release \
         -r "$DOTNET_RID" \
         --self-contained false \
