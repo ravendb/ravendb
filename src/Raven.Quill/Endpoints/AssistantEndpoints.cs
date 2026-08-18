@@ -17,14 +17,20 @@ public static class AssistantEndpoints
             // Relays the AI service's Server-Sent Events, so the response is not a JSON body and the
             // service's own codes (401 with a Status body, 413, 429) reach the client unchanged.
             .Produces(StatusCodes.Status200OK, contentType: EventStreamContentType)
-            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ApiErrorResponse>(StatusCodes.Status502BadGateway);
     }
 
-    // A proxy rather than a translation layer, mirroring Raven.Server's own /assistant/assist
+    // The response is relayed rather than translated, mirroring Raven.Server's own /assistant/assist
     // processor: the result frame carries more than the answer (follow-up questions, usage,
     // endpoints), and reshaping it here would mean re-modelling that contract inside Quill and
     // dropping whatever a given build has not heard of. Message size is the service's to police as
     // well — it answers RequestTooLarge.
+    //
+    // The request, by contrast, is deliberately narrowed to what this panel can produce. The service
+    // also accepts ActionsResponses and AdditionalAttachedContext, which drive the Studio's
+    // endpoint-calling turns; until Quill has a UI for approving those calls there is nothing to send
+    // back, so a turn that answers with Endpoints goes unanswered.
     private static async Task ChatAsync(
         HttpContext ctx,
         AssistantChatRequest body,
@@ -74,8 +80,11 @@ public static class AssistantEndpoints
                 return;
 
             ctx.Response.StatusCode = StatusCodes.Status502BadGateway;
-            // The shape the AI service uses for its own refusals, so the client has one thing to read.
-            await ctx.Response.WriteAsJsonAsync(new { Status = nameof(AiHelperStatus.InternalError) }, ct);
+            // Quill's own error shape rather than the AI service's: WriteAsJsonAsync serializes through
+            // the app's camelCase policy, so a hand-rolled { Status = ... } would arrive as "status"
+            // and never match the PascalCase Status the client reads out of relayed refusals.
+            await ctx.Response.WriteAsJsonAsync(
+                new ApiErrorResponse("The AI assistant is unavailable right now."), ct);
         }
     }
 

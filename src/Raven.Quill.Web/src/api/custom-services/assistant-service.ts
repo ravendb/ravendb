@@ -84,12 +84,15 @@ export type AssistantService = ReturnType<typeof createAssistantService>;
 
 /** Turns a failed request into an operator-facing sentence. The AI service reports its refusals as a
  * `Status` in the error body (401 ConsentRequired, 429 OutOfTokens) and the backend relays those
- * untouched, so they are read from there; anything else keeps the request's own message. */
+ * untouched, so they are read from there first, then from the status code for the refusals that carry
+ * no JSON body; anything else keeps the request's own message. */
 export function describeAssistantError(error: unknown) {
-    const status = isApiError(error) ? readStatus(error.details) : undefined;
+    if (isApiError(error)) {
+        const status = readStatus(error.details) ?? ASSISTANT_STATUS_BY_HTTP_CODE[error.status];
 
-    if (status) {
-        return describeAssistantStatus(status);
+        if (status) {
+            return describeAssistantStatus(status);
+        }
     }
 
     return error instanceof Error ? error.message : describeAssistantStatus("InternalError");
@@ -104,14 +107,23 @@ const ASSISTANT_STATUS_MESSAGES: Partial<Record<AssistantChatStatus, string>> = 
     RequestTooLarge: "That message is too large for the AI assistant. Please shorten it and try again.",
 };
 
+// A refusal the service answers in plain text rather than JSON — a 413 is the one that reaches an
+// operator in practice — leaves nothing for readStatus to find, so the code stands in for the Status.
+const ASSISTANT_STATUS_BY_HTTP_CODE: Partial<Record<number, AssistantChatStatus>> = {
+    401: "InvalidCredentials",
+    413: "RequestTooLarge",
+    429: "OutOfTokens",
+};
+
 function describeAssistantStatus(status: AssistantChatStatus) {
     return ASSISTANT_STATUS_MESSAGES[status] ?? "The AI assistant is unavailable right now. Please try again later.";
 }
 
 // The service leaves Response.Answer empty — the answer exists only as the Ongoing chunks — so it is
-// spliced back in before anything reads the result, exactly as the Studio does.
+// spliced back in before anything reads the result, the way the Studio does. A turn that streamed no
+// chunks at all keeps whatever the Done frame carried rather than being blanked out.
 function spliceAnswer(result: AssistantChatResult, answer: string): AssistantChatResult {
-    return { ...result, Response: { ...result.Response, Answer: answer } };
+    return { ...result, Response: { ...result.Response, Answer: answer || (result.Response?.Answer ?? "") } };
 }
 
 function parseFrame(payload: string): AssistantChatFrame {

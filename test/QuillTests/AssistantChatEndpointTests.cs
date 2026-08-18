@@ -91,7 +91,7 @@ public class AssistantChatEndpointTests(ITestOutputHelper output, QuillAiHelperF
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Chat_relays_an_exhausted_quota_with_its_status_code()
     {
-        Mock.ChatbotFailure = (429, """{"Status":"OutOfTokens"}""");
+        Mock.ChatbotFailure = (429, """{"Status":"OutOfTokens"}""", "application/json");
 
         var response = await Host.Client.PostAsJsonAsync(AssistantChatRoute, new { message = "hi" });
 
@@ -124,14 +124,44 @@ public class AssistantChatEndpointTests(ITestOutputHelper output, QuillAiHelperF
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Chat_relays_a_message_the_service_finds_too_large()
     {
-        Mock.ChatbotFailure = (413, """{"Status":"RequestTooLarge"}""");
+        // The service answers this one in plain text, so there is no Status for the client to read and
+        // the content type has to survive the relay for it to fall back on the code instead.
+        Mock.ChatbotFailure = (413, "Request body too large", "text/plain");
 
         // Quill caps nothing itself: how much the AI service will take is the service's to say.
         var response = await Host.Client.PostAsJsonAsync(
             AssistantChatRoute, new { message = new string('a', 64 * 1024) });
 
         Assert.Equal(HttpStatusCode.RequestEntityTooLarge, response.StatusCode);
-        Assert.Equal("RequestTooLarge", await ReadStatusAsync(response));
+        Assert.Equal("text/plain", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("Request body too large", await response.Content.ReadAsStringAsync());
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Chat_relays_an_error_frame_as_it_arrived()
+    {
+        Mock.ChatbotChunks = ["Half an ans"];
+        Mock.ChatbotErrorFrame = """{"type":"Error","text":"the model gave up"}""";
+
+        var (response, frames) = await ChatAsync(new { message = "hi", conversationId = (string?)null });
+
+        // Naming the failure is the client's job; the proxy just passes the frame along.
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(["Ongoing", "Error"], frames.Select(frame => frame.GetProperty("type").GetString()));
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Chat_answers_502_in_Quills_own_error_shape_when_the_service_is_unreachable()
+    {
+        Mock.ChatbotAbortsConnection = true;
+
+        var response = await Host.Client.PostAsJsonAsync(AssistantChatRoute, new { message = "hi" });
+
+        Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
+        // Not the AI service's PascalCase Status: this body is Quill's, and it goes out through the app's
+        // camelCase policy, so it has to be a shape the client reads that way.
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("The AI assistant is unavailable right now.", body.RootElement.GetProperty("error").GetString());
     }
 
     private const string AssistantChatRoute = "/api/assistant/chat";

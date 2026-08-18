@@ -58,8 +58,12 @@ public sealed class MockQuillServices : IAsyncDisposable
     /// The Done frame payload, i.e. the chatbot result; null ends the stream without one.
     public string? ChatbotResult { get; set; } = ChatbotResultBody();
 
-    /// When set, a Chatbot assist fails with this status and body instead of streaming.
-    public (int Status, string Body)? ChatbotFailure { get; set; }
+    /// When set, a Chatbot assist fails with this status and body instead of streaming. The content type
+    /// is the caller's to state: the service answers some refusals in JSON and others in plain text.
+    public (int Status, string Body, string ContentType)? ChatbotFailure { get; set; }
+
+    /// When true, a Chatbot assist drops the connection, so Quill sees a transport failure.
+    public bool ChatbotAbortsConnection { get; set; }
 
     /// When set, this frame is streamed after the chunks in place of the Done frame.
     public string? ChatbotErrorFrame { get; set; }
@@ -193,6 +197,7 @@ public sealed class MockQuillServices : IAsyncDisposable
         ChatbotChunks = [];
         ChatbotResult = ChatbotResultBody();
         ChatbotFailure = null;
+        ChatbotAbortsConnection = false;
         ChatbotErrorFrame = null;
         AssistDelay = TimeSpan.Zero;
         RequireConsentForAssist = false;
@@ -249,8 +254,13 @@ public sealed class MockQuillServices : IAsyncDisposable
                     LastChatbotRequestBody = body;
                     if (RequireConsentForAssist && _consentGiven == false)
                         return Results.Content("{\"Status\":\"ConsentRequired\"}", "application/json", statusCode: 401);
+                    if (ChatbotAbortsConnection)
+                    {
+                        ctx.Abort();
+                        return Results.Empty;
+                    }
                     if (ChatbotFailure is { } failure)
-                        return Results.Content(failure.Body, "application/json", statusCode: failure.Status);
+                        return Results.Content(failure.Body, failure.ContentType, statusCode: failure.Status);
                     await WriteChatbotStreamAsync(ctx);
                     return Results.Empty;
                 default:
