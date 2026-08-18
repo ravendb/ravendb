@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Pin, PinOff, Sparkles, Trash2, X } from "lucide-react";
 import { useAssistantChatStore } from "@/components/layout/assistant-chat-store";
 import { AssistantComposer } from "@/components/layout/assistant-composer";
@@ -28,6 +29,11 @@ function AssistantResizeHandle({ axis }: { axis: "width" | "height" }) {
     const growKey = isWidthAxis ? "ArrowLeft" : "ArrowUp";
     const shrinkKey = isWidthAxis ? "ArrowRight" : "ArrowDown";
 
+    // Unmounting mid-drag (pinning hides the height handle) would otherwise leave the shell stuck
+    // in its resizing state, with the column transition suppressed for good.
+    const stopActiveResizeRef = useRef<(() => void) | null>(null);
+    useEffect(() => () => stopActiveResizeRef.current?.(), []);
+
     function startResize(event: React.PointerEvent<HTMLDivElement>) {
         // A second finger landing on the handle would start a rival drag whose listeners
         // outlive it, leaving the panel stuck in the resizing state.
@@ -50,11 +56,13 @@ function AssistantResizeHandle({ axis }: { axis: "width" | "height" }) {
             handle.removeEventListener("pointermove", handleMove);
             handle.removeEventListener("pointerup", stopResize);
             handle.removeEventListener("pointercancel", stopResize);
+            stopActiveResizeRef.current = null;
             setResizing(false);
         };
         handle.addEventListener("pointermove", handleMove);
         handle.addEventListener("pointerup", stopResize);
         handle.addEventListener("pointercancel", stopResize);
+        stopActiveResizeRef.current = stopResize;
     }
 
     return (
@@ -90,7 +98,7 @@ export function AssistantPanel() {
     const { canPin, isPinned } = useAssistantPinning();
     const setOpen = useAssistantStore((state) => state.setOpen);
     const setPinned = useAssistantStore((state) => state.setPinned);
-    const hasMessages = useAssistantChatStore((state) => state.messageIds.length > 0);
+    const hasMessages = useAssistantChatStore((state) => state.messages.length > 0);
     const clearMessages = useAssistantChatStore((state) => state.clearMessages);
 
     return (

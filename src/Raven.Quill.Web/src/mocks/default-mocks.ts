@@ -3,6 +3,7 @@ import { agentsMocks } from "./agents-mocks";
 import { aiConnectionStringsMocks } from "./ai-connection-strings-mocks";
 import { aiModelsMocks } from "./ai-models-mocks";
 import { appsMocks } from "./apps-mocks";
+import { assistantMocks } from "./assistant-mocks";
 import { authMocks } from "./auth-mocks";
 import { bootstrapMocks } from "./bootstrap-mocks";
 import { channelsMocks } from "./channels-mocks";
@@ -46,6 +47,7 @@ export const defaultApiMocks = {
         appsMocks.suggestAgent(),
         appsMocks.aiConnectionStringsList(),
     ],
+    assistant: [assistantMocks.chat()],
     auth: [authMocks.status(), authMocks.login(), authMocks.logout()],
     bootstrap: [bootstrapMocks.status()],
     channels: [channelsMocks.list(), channelsMocks.create(), channelsMocks.update(), channelsMocks.delete()],

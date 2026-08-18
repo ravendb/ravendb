@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { ApiClient } from "@/api/http-client";
+import { streamNdjsonLines } from "@/api/custom-services/response-stream";
 
 // One query tool the agent invoked during the turn, reconstructed server-side from the
 // conversation transcript: the configured RQL + description, the parameters the model filled
@@ -52,41 +53,8 @@ export async function* streamAgentNdjson(
     body: unknown,
     signal?: AbortSignal,
 ): AsyncGenerator<AgentStreamEvent> {
-    const response = await client.post<Response>(path, body, { responseType: "response", signal });
-
-    if (!response.body) {
-        return;
-    }
-
-    const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
-    let buffer = "";
-
-    try {
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) {
-                break;
-            }
-
-            buffer += value;
-            const lines = buffer.split("\n");
-            buffer = lines.pop() ?? "";
-
-            for (const line of lines) {
-                if (line.trim()) {
-                    yield parseAgentStreamEvent(line);
-                }
-            }
-        }
-
-        if (buffer.trim()) {
-            yield parseAgentStreamEvent(buffer);
-        }
-    } finally {
-        // Cancel the body so an aborted or abandoned generator stops the request streaming in the
-        // background instead of only releasing the lock. cancel() also releases the reader; it
-        // rejects on an already-errored stream (e.g. after an abort), which is safe to ignore.
-        await reader.cancel().catch(() => {});
+    for await (const line of streamNdjsonLines(client, path, body, signal)) {
+        yield parseAgentStreamEvent(line);
     }
 }
 

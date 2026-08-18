@@ -44,6 +44,12 @@ public class QuillSuggestCdcCollection : ICollectionFixture<QuillAiHelperFixture
     public const string Name = "quill-suggest-cdc";
 }
 
+[CollectionDefinition(Name)]
+public class QuillAssistantCollection : ICollectionFixture<QuillAiHelperFixture>
+{
+    public const string Name = "quill-assistant";
+}
+
 // its own host: these tests register server-wide AI connection strings pointing at per-test mock LLMs
 [CollectionDefinition(Name)]
 public class QuillAgentActionsCollection : ICollectionFixture<QuillCollectionHost>

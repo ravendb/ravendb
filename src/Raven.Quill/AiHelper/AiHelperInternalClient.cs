@@ -4,6 +4,8 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.CdcSink;
 using Microsoft.Extensions.Logging;
+using Raven.Quill.Contracts;
+using Raven.Server.ServerWide;
 using Sparrow.Json;
 
 namespace Raven.Quill.AiHelper;
@@ -70,6 +72,52 @@ public sealed class AiHelperInternalClient(
             wire.Rationale ?? [],
             wire.InputTokenCount,
             wire.OutputTokenCount);
+    }
+
+    public async Task<HttpResponseMessage> SendChatAsync(string message, string? conversationId, CancellationToken ct)
+    {
+        var request = new ChatbotApiRequest
+        {
+            Message = message,
+            ConversationId = conversationId,
+            RavenVersion = ServerVersion.Build,
+        };
+
+        var response = await PostChatAsync(request, ct);
+        if (await IsConsentRequiredAsync(response, ct) == false)
+            return response;
+
+        // Consent is refused before the answer starts streaming, so asking again replays nothing.
+        // When it cannot be granted the original 401 already explains itself to the caller.
+        if (await GiveConsentAsync(ct) != AiHelperStatus.Success)
+            return response;
+
+        response.Dispose();
+        return await PostChatAsync(request, ct);
+    }
+
+    private async Task<HttpResponseMessage> PostChatAsync(ChatbotApiRequest request, CancellationToken ct)
+    {
+        using var content = new StringContent(SerializeRequest(request), Encoding.UTF8, "application/json");
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, AssistPath) { Content = content };
+        return await httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, ct);
+    }
+
+    // Reading the body buffers it, so the response stays relayable after the check.
+    private async Task<bool> IsConsentRequiredAsync(HttpResponseMessage response, CancellationToken ct)
+    {
+        if (response.StatusCode != HttpStatusCode.Unauthorized)
+            return false;
+
+        var text = await response.Content.ReadAsStringAsync(ct);
+        var status = await ClassifyUnauthorizedAsync(text, ct);
+
+        logger.Log(
+            status == AiHelperStatus.ConsentRequired ? LogLevel.Information : LogLevel.Warning,
+            "AI Helper {Path} was refused: upstream 401, mapped {Status}. Body: {Body}",
+            AssistPath, status, TruncateForLog(text));
+
+        return status == AiHelperStatus.ConsentRequired;
     }
 
     private async Task<(AiHelperStatus Transport, string Content)> SendWithConsentRetryAsync(string path, string method, object request, CancellationToken ct)
@@ -194,6 +242,14 @@ public sealed class AiHelperInternalClient(
     private sealed class StatusOnly
     {
         public string? Status { get; set; }
+    }
+
+    private sealed class ChatbotApiRequest
+    {
+        public string OperationType { get; set; } = "Chatbot";
+        public string Message { get; set; } = null!;
+        public string? ConversationId { get; set; }
+        public int RavenVersion { get; set; }
     }
 
     private sealed class SuggestCdcApiRequest
