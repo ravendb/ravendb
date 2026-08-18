@@ -160,7 +160,7 @@ export function GenerateEmbedLinkDialog({
             hasUnsavedChanges={unsavedChanges.hasUnsavedChanges}
         >
             <DialogTrigger asChild>{trigger}</DialogTrigger>
-            <DialogContent className={cn("sm:max-w-md", result && "max-h-[90vh] overflow-y-auto sm:max-w-lg")}>
+            <DialogContent className={cn("sm:max-w-md", result && "sm:max-w-lg")}>
                 <DialogHeader>
                     <DialogTitle>Generate embed link</DialogTitle>
                     <DialogDescription>

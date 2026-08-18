@@ -11,7 +11,6 @@ import type { CdcLiveBatch, CdcLiveBatchState } from "@/pages/apps/use-cdc-live-
 // The h-10 header button plus the 1px row separator, so an unmeasured collapsed row already
 // estimates to its real height and the total size barely moves once measuring catches up.
 const COLLAPSED_ROW_HEIGHT_IN_PX = 41;
-const LIST_HEIGHT_IN_PX = 420;
 const OVERSCAN = 12;
 // Slack around the bottom edge so a resting scroll position still counts as "at the latest".
 const AT_LATEST_THRESHOLD_IN_PX = 24;
@@ -116,7 +115,7 @@ function CdcBatchList({ batches }: { batches: CdcLiveBatch[] }) {
                 ref={scrollRef}
                 onScroll={handleScroll}
                 className="overflow-y-auto overscroll-contain"
-                style={{ height: LIST_HEIGHT_IN_PX }}
+                style={{ height: "clamp(10rem, 40dvh, 26rem)" }}
             >
                 <div ref={contentRef} className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
                     {virtualizer.getVirtualItems().map((virtualRow) => {
