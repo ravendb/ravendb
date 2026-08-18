@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "@fontsource-variable/geist";
+@import "@fontsource-variable/inter";
+/* Fontsource's default entry ships only the upright faces, so the italics need their own
+   import or the browser synthesises an oblique for markdown emphasis in AI replies. */
+@import "@fontsource-variable/inter/wght-italic.css";
 @import "@fontsource-variable/geist-mono";
 @import "streamdown/styles.css";
 
@@ -250,7 +253,7 @@
 }
 
 @theme inline {
-    --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+    --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
     --font-mono: "Geist Mono Variable", ui-monospace, "SFMono-Regular", Menlo, monospace;
     --color-background: var(--background);
     --color-foreground: var(--foreground);
