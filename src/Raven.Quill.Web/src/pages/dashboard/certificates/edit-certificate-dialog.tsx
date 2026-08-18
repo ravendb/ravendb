@@ -65,7 +65,7 @@ export function EditCertificateDialog({
     return (
         <GuardedDialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>{trigger}</DialogTrigger>
-            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+            <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
                     <DialogTitle>Edit certificate</DialogTitle>
                     <DialogDescription>
