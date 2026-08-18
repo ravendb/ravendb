@@ -17,7 +17,7 @@ export function ConversationToolCall({ toolCall }: { toolCall: AiToolCallResult 
                 onClick={() => setIsExpanded((expanded) => !expanded)}
             >
                 <span className="flex min-w-0 items-center gap-2">
-                    <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                    <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary-strong">
                         <Wrench className="size-3.5" aria-hidden />
                     </span>
                     <span className="truncate font-medium">{toolCall.name || "Tool call"}</span>

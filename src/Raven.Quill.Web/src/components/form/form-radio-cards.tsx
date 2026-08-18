@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
  * can't use FormRadioCards still reuse this so the selected look stays consistent.
  */
 export const SELECTED_CARD_CLASSES =
-    "border-primary bg-linear-to-br from-primary/15 to-transparent ring-2 ring-ring/25";
+    "border-primary-strong bg-linear-to-br from-primary/15 to-transparent ring-2 ring-ring/25";
 
 /**
  * Type scale for a card's title and its supporting line. Exported for the same bespoke cards, which

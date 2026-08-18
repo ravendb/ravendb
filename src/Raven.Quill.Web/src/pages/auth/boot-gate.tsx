@@ -29,7 +29,7 @@ export function BootGate({ children }: { children: ReactNode }) {
 function BootStarting({ phase }: { phase?: BootstrapPhase }) {
     return (
         <>
-            <Spinner className="mx-auto size-7 text-primary" />
+            <Spinner className="mx-auto size-7 text-primary-strong" />
             <h1 className="mt-4 text-lg font-semibold tracking-tight">Starting Quill</h1>
             <p className="mt-1.5 text-sm text-muted-foreground">{getStartingMessage(phase)}</p>
         </>

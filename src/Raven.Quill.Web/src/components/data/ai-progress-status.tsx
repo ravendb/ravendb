@@ -21,7 +21,7 @@ export function AiProgressStatus({
     return (
         <div className="grid gap-2">
             <div className="flex items-center gap-2">
-                <SparklesIcon className="size-4 shrink-0 animate-pulse text-primary" aria-hidden="true" />
+                <SparklesIcon className="size-4 shrink-0 animate-pulse text-primary-strong" aria-hidden="true" />
                 <span className="animate-pulse text-sm font-medium" aria-live="polite">
                     {stage?.label}...
                 </span>
