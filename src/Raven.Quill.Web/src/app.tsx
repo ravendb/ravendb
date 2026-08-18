@@ -11,7 +11,7 @@ import { UserMenu } from "@/components/layout/user-menu";
 import { appRoutes } from "@/lib/app-routes";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
-import { RavenLogo } from "@/components/brand/raven-logo";
+import { QuillMark } from "@/components/brand/quill-logo.tsx";
 import { ContactSheet } from "@/components/layout/contact-sheet";
 import { Button } from "@/components/shadcn/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
@@ -71,26 +71,17 @@ function App() {
                 <div className="flex min-w-0 items-center gap-2">
                     <Link
                         to={appRoutes.dashboard()}
-                        className="flex items-center justify-center rounded-full"
-                        aria-label="Quill home"
+                        className="group flex size-8 items-center justify-center rounded-md"
+                        title="Back to Overview"
+                        aria-label="Back to Overview"
                     >
-                        <RavenLogo className="size-6" />
+                        <QuillMark className="size-6 text-sidebar-foreground/85 transition-all group-hover:scale-110 group-hover:text-primary" />
                     </Link>
-                    <Link to={appRoutes.dashboard()} className="text-sm font-semibold text-sidebar-foreground">
-                        Quill
-                    </Link>
-                    {breadcrumbLabel && (
-                        <>
-                            <span className="text-sidebar-foreground/40">/</span>
-                            {hasActiveApp && slug ? (
-                                <AppBreadcrumbSwitcher slug={slug} appName={breadcrumbLabel} />
-                            ) : (
-                                <Link to="." className="truncate text-sm font-semibold text-sidebar-foreground">
-                                    {breadcrumbLabel}
-                                </Link>
-                            )}
-                        </>
-                    )}
+                    <span className="text-sidebar-foreground/40">/</span>
+                    {/* One segment, always the switcher: it shows where you are — the app, or the
+                        route that has no app, like the add-application wizard — and opens the app
+                        list. Only a route with no title of its own falls back to the placeholder. */}
+                    <AppBreadcrumbSwitcher slug={slug} appName={breadcrumbLabel} />
                 </div>
 
                 <CommandPalette slug={slug} appName={activeAppLabel} />

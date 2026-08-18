@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronsUpDown } from "lucide-react";
+import { ChevronsUpDown, Plus } from "lucide-react";
 import { api } from "@/api/api";
 import {
     DropdownMenu,
     DropdownMenuContent,
+    DropdownMenuItem,
     DropdownMenuLabel,
     DropdownMenuRadioGroup,
     DropdownMenuRadioItem,
@@ -14,11 +15,15 @@ import {
 } from "@/components/shadcn/ui/dropdown-menu";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { appRoutes } from "@/lib/app-routes";
+import { cn } from "@/lib/utils";
 import { appSectionPaths } from "@/routes";
 
+// Both optional: the switcher is a permanent header control, so it also renders with nothing
+// selected — on the dashboard, on a utility route, and for an operator whose first app does not
+// exist yet. In that state it is the entry point to creating one.
 type AppBreadcrumbSwitcherProps = {
-    slug: string;
-    appName: string;
+    slug?: string;
+    appName?: string;
 };
 
 export function AppBreadcrumbSwitcher({ slug, appName }: AppBreadcrumbSwitcherProps) {
@@ -33,6 +38,10 @@ export function AppBreadcrumbSwitcher({ slug, appName }: AppBreadcrumbSwitcherPr
         if (nextSlug === slug) {
             return;
         }
+        if (!slug) {
+            navigate(appRoutes.app(nextSlug));
+            return;
+        }
         const currentAppPrefix = `${appRoutes.app(slug)}/`;
         const sectionPath = pathname.startsWith(currentAppPrefix) ? pathname.slice(currentAppPrefix.length) : "";
         // Stay on the same section in the next app; detail pages reference
@@ -44,16 +53,19 @@ export function AppBreadcrumbSwitcher({ slug, appName }: AppBreadcrumbSwitcherPr
         <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
             <DropdownMenuTrigger
                 aria-label="Switch application"
-                className="flex min-w-0 items-center gap-1 rounded-md text-sm font-semibold text-sidebar-foreground transition-colors outline-none hover:text-sidebar-foreground/70 focus-visible:ring-2 focus-visible:ring-ring"
+                className={cn(
+                    "flex min-w-0 items-center gap-1 rounded-md text-sm transition-colors outline-none hover:text-sidebar-foreground/70 focus-visible:ring-2 focus-visible:ring-ring",
+                    appName ? "text-sidebar-foreground" : "text-sidebar-foreground/60",
+                )}
             >
-                <span className="truncate">{appName}</span>
+                <span className="truncate">{appName ?? "Select application"}</span>
                 <ChevronsUpDown className="size-3.5 shrink-0 text-sidebar-foreground/50" aria-hidden="true" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-64">
                 <DropdownMenuLabel>Switch application</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {apps.length > 0 ? (
-                    <DropdownMenuRadioGroup value={slug}>
+                    <DropdownMenuRadioGroup value={slug ?? ""}>
                         {apps.map((app) => (
                             <DropdownMenuRadioItem
                                 key={app.slug}
@@ -74,6 +86,11 @@ export function AppBreadcrumbSwitcher({ slug, appName }: AppBreadcrumbSwitcherPr
                         {appsQuery.isError ? "Couldn't load applications." : "No applications yet."}
                     </p>
                 )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => navigate(appRoutes.addApp())}>
+                    <Plus aria-hidden="true" />
+                    New application
+                </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
     );
