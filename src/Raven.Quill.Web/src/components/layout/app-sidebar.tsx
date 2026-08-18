@@ -58,7 +58,7 @@ export function AppSidebar({ slug, hasActiveApp, isCollapsed, isToggleVisible, o
                             </SidebarGroup>
                         ))}
                 </nav>
-                <div className={cn("flex flex-col gap-0.5 py-2", isCollapsed ? "items-center" : "px-2")}>
+                <div className={cn("flex flex-col gap-0.5 py-2", isCollapsed ? "items-center" : "px-3")}>
                     <HelpMenu variant={isCollapsed ? "dropdown" : "inline"} />
                     <div
                         className={cn(
@@ -92,8 +92,12 @@ function SidebarGroup({ label, isCollapsed, children }: { label?: string; isColl
     }
 
     return (
-        <div className="flex flex-col px-2 pt-3 first:pt-0">
-            {label && <div className="flex h-7 items-center px-2 text-xs text-sidebar-foreground/70">{label}</div>}
+        <div className="flex flex-col px-3 pt-3 first:pt-0">
+            {label && (
+                <div className="flex h-7 items-center px-2 text-xs text-sidebar-foreground/70">
+                    <span className="truncate">{label}</span>
+                </div>
+            )}
             <div className="flex flex-col gap-0.5">{children}</div>
         </div>
     );
@@ -153,7 +157,7 @@ function SidebarNavLink({ item, isCollapsed }: { item: NavigationItem; isCollaps
                 isCollapsed ? "size-8 justify-center px-0" : "px-2",
                 isActive
                     ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground/85 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+                    : "text-sidebar-foreground/85 hover:bg-sidebar-foreground/8 hover:text-sidebar-foreground",
             )}
         >
             <item.icon className="size-4 shrink-0" aria-hidden="true" />
@@ -181,7 +185,7 @@ function CollapseButton({ isCollapsed, onToggle }: { isCollapsed: boolean; onTog
             aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             aria-pressed={isCollapsed}
             title={isCollapsed ? undefined : "Collapse sidebar"}
-            className="flex size-8 items-center justify-center rounded-md text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+            className="flex size-8 items-center justify-center rounded-md text-sidebar-foreground/70 hover:bg-sidebar-foreground/8 hover:text-sidebar-foreground"
         >
             {isCollapsed ? (
                 <PanelLeftOpen className="size-4" aria-hidden="true" />

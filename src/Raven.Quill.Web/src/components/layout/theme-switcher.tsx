@@ -34,7 +34,7 @@ export function ThemeSwitcher({ variant = "inline" }: { variant?: "inline" | "dr
                             aria-label="Theme"
                             className={cn(
                                 "flex size-8 items-center justify-center rounded-md text-sidebar-foreground/70 transition-colors",
-                                "hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                                "hover:bg-sidebar-foreground/8 hover:text-sidebar-foreground",
                                 "focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:outline-none",
                             )}
                         >
@@ -64,7 +64,7 @@ export function ThemeSwitcher({ variant = "inline" }: { variant?: "inline" | "dr
             className={cn(
                 "group relative inline-flex items-center gap-0.5 overflow-hidden rounded-md",
                 "border border-transparent transition-colors",
-                "hover:border-border hover:bg-accent/40",
+                "hover:bg-sidebar-foreground/8/40 hover:border-border",
                 "focus-within:border-border focus-within:bg-accent/40",
             )}
         >

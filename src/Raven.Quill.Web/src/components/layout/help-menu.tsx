@@ -41,7 +41,7 @@ export function HelpMenu({ variant = "inline" }: { variant?: "inline" | "dropdow
                             aria-label="Help center"
                             className={cn(
                                 "flex size-8 items-center justify-center rounded-md text-sidebar-foreground/85 transition-colors",
-                                "hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                                "hover:bg-sidebar-foreground/8 hover:text-sidebar-foreground",
                                 "focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:outline-none",
                             )}
                         >
@@ -71,7 +71,7 @@ export function HelpMenu({ variant = "inline" }: { variant?: "inline" | "dropdow
             <CollapsibleTrigger
                 className={cn(
                     "group flex h-8 w-full items-center gap-2 rounded-md px-2 text-sm transition-colors",
-                    "text-sidebar-foreground/85 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+                    "text-sidebar-foreground/85 hover:bg-sidebar-foreground/8 hover:text-sidebar-foreground",
                     "focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:outline-none",
                 )}
             >
@@ -97,7 +97,7 @@ export function HelpMenu({ variant = "inline" }: { variant?: "inline" | "dropdow
                             rel="noreferrer"
                             className={cn(
                                 "flex h-8 items-center gap-2 rounded-md pr-2 pl-8 text-sm transition-colors",
-                                "text-sidebar-foreground/85 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+                                "text-sidebar-foreground/85 hover:bg-sidebar-foreground/8 hover:text-sidebar-foreground",
                             )}
                         >
                             <Icon className="size-4 shrink-0" aria-hidden="true" />
