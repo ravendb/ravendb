@@ -18,3 +18,6 @@ export function useMediaQuery(query: string) {
         () => false,
     );
 }
+
+/** Below the `lg` breakpoint the shell has no room to dock both the sidebar and a side panel. */
+export const COMPACT_LAYOUT_MEDIA_QUERY = "(max-width: 63.999rem)";
