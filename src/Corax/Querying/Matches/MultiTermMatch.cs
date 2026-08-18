@@ -132,7 +132,7 @@ namespace Corax.Querying.Matches
             private int _smallPostingListIndex;
             private ContextBoundNativeList<long> _smallPostListIds;
             private ByteStringContext<ByteStringMemoryCache>.InternalScope _itBufferScope, _containerItemsScope;
-            private readonly PageLocator _pageLocator;
+            private PageLocator _pageLocator;
 
             public MultiTermReader(Querying.IndexSearcher searcher, long max = long.MaxValue)
             {
@@ -296,7 +296,7 @@ namespace Corax.Querying.Matches
                 _smallPostListIds.Dispose();
                 _containerItemsScope.Dispose();
                 _itBufferScope.Dispose();
-                _searcher.Transaction.LowLevelTransaction.FreePageLocator(_pageLocator);
+                _searcher.Transaction.LowLevelTransaction.FreePageLocator(ref _pageLocator);
             }
         }
 

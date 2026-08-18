@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -898,7 +899,48 @@ namespace Raven.Server.Documents.TransactionMerger
             if (commands == null)
                 return;
 
-            TaskExecutor.Execute(DoCommandsNotification, commands);
+            var n = commands.Count;
+            var cores = Environment.ProcessorCount;
+            var shardSize = Math.Min(2 * cores, (n + cores - 1) / cores);
+            if (n <= shardSize)
+            {
+                TaskExecutor.Execute(DoCommandsNotification, commands);
+                return;
+            }
+
+            var sharded = new ShardedNotification(this, commands, n, shardSize);
+            var workers = (n + shardSize - 1) / shardSize;
+
+            TaskExecutor.Execute(static s => ((ShardedNotification)s).Run(), sharded);
+            for (var i = 1; i < workers; i++)
+                ThreadPool.UnsafeQueueUserWorkItem(static s => s.Run(), sharded, preferLocal: false);
+        }
+
+        private sealed class ShardedNotification(AbstractTransactionOperationsMerger<TOperationContext, TTransaction> parent, List<MergedTransactionCommand<TOperationContext, TTransaction>> commands, int total, int shardSize)
+        {
+            private int _next;
+            private int _completed;
+
+            public void Run()
+            {
+                while (true)
+                {
+                    var start = Interlocked.Add(ref _next, shardSize) - shardSize;
+                    if (start >= total)
+                        return;
+
+                    var end = Math.Min(start + shardSize, total);
+                    for (var i = start; i < end; i++)
+                        DoCommandNotification(commands[i]);
+
+                    if (Interlocked.Add(ref _completed, end - start) == total)
+                    {
+                        commands.Clear();
+                        parent._opsBuffers.Enqueue(commands);
+                        return;
+                    }
+                }
+            }
         }
 
         private void RunEachOperationIndependently(List<MergedTransactionCommand<TOperationContext, TTransaction>> pendingOps)
@@ -986,7 +1028,7 @@ namespace Raven.Server.Documents.TransactionMerger
 
             while (_operations.TryDequeue(out MergedTransactionCommand<TOperationContext, TTransaction> result))
             {
-                result.TaskCompletionSource.TrySetCanceled();
+                TaskExecutor.Execute(static s => ((MergedTransactionCommand<TOperationContext, TTransaction>)s).TaskCompletionSource.TrySetCanceled(), result);
             }
         }
 

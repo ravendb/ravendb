@@ -118,7 +118,7 @@ namespace Voron.Impl.Scratch
 
         public bool TryGettingFromAllocatedBuffer(LowLevelTransaction tx, int numberOfPages, int size, long pageNumber, Page previousVersion, out PageFromScratchBuffer result)
         {
-            result = null;
+            result = default;
 
             if (_freePagesBySize.TryGetValue(size, out LinkedList<PendingPage> list) == false || list.Count <= 0)
                 return false;
@@ -236,7 +236,7 @@ namespace Voron.Impl.Scratch
 
         public bool IsDisposed => _disposeOnceRunner.Disposed;
 
-        public PageFromScratchBuffer ShrinkOverflowPage(PageFromScratchBuffer value, int newNumberOfPages)
+        public PageFromScratchBuffer ShrinkOverflowPage(in PageFromScratchBuffer value, int newNumberOfPages)
         {
             if (_allocatedPages.Remove(value.PositionInScratchBuffer) == false)
                 InvalidAttemptToShrinkPageThatWasntAllocated(value);
@@ -257,7 +257,7 @@ namespace Voron.Impl.Scratch
             return shrinked;
         }
 
-        private static void InvalidAttemptToShrinkPageThatWasntAllocated(PageFromScratchBuffer value)
+        private static void InvalidAttemptToShrinkPageThatWasntAllocated(in PageFromScratchBuffer value)
         {
             throw new InvalidOperationException($"Attempt to shrink a page that wasn't currently allocated: {value.PositionInScratchBuffer}");
         }
@@ -303,7 +303,7 @@ namespace Voron.Impl.Scratch
                     if (_parent._allocatedPages.TryGetValue(key, out var pageFromScratchBuffer) == false)
                         continue;
 
-                    if (pageFromScratchBuffer == null)
+                    if (pageFromScratchBuffer.IsValid is false)
                         continue;
 
                     pages.Add(pageFromScratchBuffer);
