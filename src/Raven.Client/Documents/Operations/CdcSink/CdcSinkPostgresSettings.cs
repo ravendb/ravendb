@@ -11,14 +11,14 @@ public class CdcSinkPostgresSettings : IDynamicJson
 {
     /// <summary>
     /// The PostgreSQL publication name used for logical replication.
-    /// If null on creation, auto-filled with an auto-generated name (rvn_cdc_p_{guid}).
+    /// If null on creation, auto-filled with an auto-generated name (rvn_cdc_p_{taskId}).
     /// Must be a valid PostgreSQL identifier (alphanumeric + underscore, max 63 chars).
     /// </summary>
     public string PublicationName { get; set; }
 
     /// <summary>
     /// The PostgreSQL logical replication slot name.
-    /// If null on creation, auto-filled with an auto-generated name (rvn_cdc_s_{guid}).
+    /// If null on creation, auto-filled with an auto-generated name (rvn_cdc_s_{taskId}).
     /// Must be a valid PostgreSQL identifier (alphanumeric + underscore, max 63 chars).
     /// </summary>
     public string SlotName { get; set; }

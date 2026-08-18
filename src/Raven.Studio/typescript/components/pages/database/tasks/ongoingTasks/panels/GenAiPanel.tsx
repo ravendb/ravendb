@@ -10,7 +10,6 @@ import {
 } from "components/common/RichPanel";
 import {
     ConnectionStringItem,
-    ICanShowTransformationScriptPreview,
     OngoingTaskActions,
     OngoingTaskName,
     OngoingTaskResponsibleNode,
@@ -32,7 +31,7 @@ import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 type GenAiPanelProps = EtlPanelBaseProps<OngoingTaskGenAiInfo>;
 
-export function GenAiPanel(props: GenAiPanelProps & ICanShowTransformationScriptPreview) {
+export function GenAiPanel(props: GenAiPanelProps) {
     const { data, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState, etlStats } = props;
 
     const { forCurrentDatabase } = useAppUrls();
@@ -44,7 +43,6 @@ export function GenAiPanel(props: GenAiPanelProps & ICanShowTransformationScript
         detailsVisible,
         toggleDetails,
         onEdit,
-        showPreview,
         taskHealth,
         errorCount,
         errorsByLocation,
@@ -138,7 +136,7 @@ export function GenAiPanel(props: GenAiPanelProps & ICanShowTransformationScript
             </RichPanelDetails>
             <Collapse in={detailsVisible}>
                 <div>
-                    <OngoingEtlTaskDistribution task={data} showPreview={showPreview} etlStats={etlStats} />
+                    <OngoingEtlTaskDistribution task={data} etlStats={etlStats} />
                 </div>
             </Collapse>
         </RichPanel>

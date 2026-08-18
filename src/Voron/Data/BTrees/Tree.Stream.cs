@@ -239,8 +239,15 @@ namespace Voron.Data.BTrees
             }
         }
 
+        // The writer may force the stream info and its tag onto a fresh single page. The tag
+        // can never exceed one page's data area.
+        public const int MaxStreamTagSize = Constants.Storage.PageSize - PageHeader.SizeOf - StreamInfo.SizeOf;
+
         public void AddStream(Slice key, Stream stream, Slice? tag = null, int? initialNumberOfPagesPerChunk = null)
         {
+            if (tag is { Size: > MaxStreamTagSize })
+                throw new ArgumentException($"Stream tag of {tag.Value.Size} bytes exceeds the maximum of {MaxStreamTagSize} bytes", nameof(tag));
+
             if ((State.Header.Flags & TreeFlags.Streams) != TreeFlags.Streams)
             {
                 ref var state = ref State.Modify();

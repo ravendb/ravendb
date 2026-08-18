@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
 using PgSqlParser;
+using Raven.Server.Integrations.PostgreSQL.Translation;
+using Raven.Server.Integrations.PostgreSQL.VirtualCatalog;
 
 namespace Raven.Server.Integrations.PostgreSQL
 {
@@ -49,7 +52,13 @@ namespace Raven.Server.Integrations.PostgreSQL
 
             if (HasJoinExpr(outer))
             {
-                message = "SQL JOIN over RavenDB collections is not supported. RavenDB models cross-document relationships via document IDs rather than relational joins — express the relationship in RQL using `load` / `include`, or denormalize the data into the parent document.";
+                // A JOIN whose relations are all pg_catalog / information_schema tables is a
+                // system-catalog probe from a BI/SQL client (e.g. SQLAlchemy's hstore lookup),
+                // NOT a user query over RavenDB collections. Labeling it as the latter is
+                // misleading and sends people chasing an RQL rewrite for a query they never wrote.
+                message = AllJoinRelationsAreCatalogTables(outer)
+                    ? "This system-catalog JOIN shape is not yet supported by the PostgreSQL-bridge virtual catalog. The query targets pg_catalog / information_schema tables (not RavenDB collections) and is typically emitted by a BI/SQL client during connection setup. Please report the exact query so the shape can be added."
+                    : "SQL JOIN over RavenDB collections is not supported. RavenDB models cross-document relationships via document IDs rather than relational joins — express the relationship in RQL using `load` / `include`, or denormalize the data into the parent document.";
                 return true;
             }
 
@@ -65,11 +74,47 @@ namespace Raven.Server.Integrations.PostgreSQL
                 return true;
             }
 
-            if (IsScalarAggregateWithoutGroupBy(outer))
+            if (TryGetUnsupportedAggregateModifier(outer, out var modifier))
             {
-                message = "Scalar aggregate (e.g. `SELECT sum(...) FROM t` with no GROUP BY) is not yet supported. Wrap the query in a GROUP BY (even a constant key) or compute the aggregate client-side from the underlying rows.";
+                message = $"An aggregate with {modifier} is not supported. RavenDB's map-reduce aggregates every row that falls into a group, so there is no way to de-duplicate, pre-filter or window the values being aggregated — `count(DISTINCT x)`, `sum(DISTINCT x)`, `count(*) FILTER (WHERE ...)` and `count(*) OVER (...)` would all silently return the plain count/sum over the whole group. De-duplicate or filter client-side, or group by the column so each group already holds only the values you want.";
                 return true;
             }
+
+            if (HasCountOverColumn(outer))
+            {
+                message = "count(<column>) is not supported — only count(*). PostgreSQL counts the non-NULL values of the named column, while RavenDB's count() returns the group's total row count and ignores the argument, so the two disagree for every document that is missing the field. Use count(*) for the row count, or compute the non-null count client-side.";
+                return true;
+            }
+
+            // Before the scalar-aggregate check: these predicates make `SELECT count(*) ... WHERE x IS
+            // DISTINCT FROM y` fail translation, and blaming the aggregate would hide the real cause.
+            if (HasDistinctFromPredicate(outer))
+            {
+                message = "IS DISTINCT FROM / IS NOT DISTINCT FROM (and NULLIF used as a predicate) are not supported. PostgreSQL builds them from a plain `=` operator that differs only in how it treats NULL, and RavenDB does not distinguish a stored null from a missing field, so neither form can be translated without changing which documents match. Combine `=` / `!=` with an explicit `IS NULL` / `IS NOT NULL` check, or run the query as RQL.";
+                return true;
+            }
+
+            if (TryGetUnsupportedSortModifier(outer, out var sortModifier))
+            {
+                message = $"ORDER BY ... {sortModifier} is not supported. RavenDB orders missing and null values by its own rule, which is not guaranteed to match PostgreSQL's, and RQL cannot express a per-key null placement or a sort driven by an operator — so the clause is rejected rather than silently sorted a different way. Drop the clause if the default ordering will do, or sort the rows client-side.";
+                return true;
+            }
+
+            // count(*) on its own translates, so when a scalar count(*) query still failed the aggregate
+            // is not the cause — blame the WHERE clause when that is what the translator choked on.
+            if (IsSupportedScalarCountStar(outer) && TryDiagnoseWhereClause(outer, out message))
+                return true;
+
+            if (IsScalarAggregateWithoutGroupBy(outer))
+            {
+                message = "Scalar aggregate without GROUP BY is supported for `count(*)` only. RavenDB's sum() is a map-reduce aggregation that requires a GROUP BY, so `SELECT sum(...) FROM t` with no grouping has no RQL form — compute the aggregate client-side from the underlying rows.";
+                return true;
+            }
+
+            // Before the GROUP BY checks: an unsupported LIKE on a group key otherwise gets reported as a
+            // non-grouped-field filter, which points the user at the wrong part of the query.
+            if (TryDiagnoseLike(outer, out message))
+                return true;
 
             if (outer.HavingClause != null)
             {
@@ -86,6 +131,84 @@ namespace Raven.Server.Integrations.PostgreSQL
             }
 
             return false;
+        }
+
+        // Reports the first LIKE / ILIKE whose pattern shape has no correct RQL form. Supported shapes
+        // return false so a query that failed for an unrelated reason keeps its own diagnosis.
+        private static bool TryDiagnoseLike(SelectStmt selectStmt, out string message)
+        {
+            message = null;
+
+            var wheres = new List<Node>();
+            CollectWhereClauses(selectStmt, wheres, depth: 0);
+
+            foreach (var where in wheres)
+            {
+                if (TryDiagnoseLike(where, depth: 0, out message))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static void CollectWhereClauses(SelectStmt selectStmt, List<Node> acc, int depth)
+        {
+            if (selectStmt == null || depth >= MaxJoinSearchDepth)
+                return;
+
+            if (selectStmt.Op != SetOperation.SetopNone)
+            {
+                CollectWhereClauses(selectStmt.Larg, acc, depth + 1);
+                CollectWhereClauses(selectStmt.Rarg, acc, depth + 1);
+            }
+
+            if (selectStmt.WhereClause != null)
+                acc.Add(selectStmt.WhereClause);
+
+            if (selectStmt.FromClause == null)
+                return;
+
+            foreach (var item in selectStmt.FromClause)
+            {
+                if (item?.RangeSubselect?.Subquery?.SelectStmt is { } inner)
+                    CollectWhereClauses(inner, acc, depth + 1);
+            }
+        }
+
+        private static bool TryDiagnoseLike(Node node, int depth, out string message)
+        {
+            message = null;
+            if (node == null || depth >= MaxJoinSearchDepth)
+                return false;
+
+            if (node.BoolExpr?.Args is { } args)
+            {
+                foreach (var arg in args)
+                {
+                    if (TryDiagnoseLike(arg, depth + 1, out message))
+                        return true;
+                }
+                return false;
+            }
+
+            if (node.AExpr is not { } aExpr)
+                return false;
+
+            var op = aExpr.Name is { Count: 1 } ? aExpr.Name[0]?.String?.Sval?.Trim() : null;
+            if (op != null && SqlLikePattern.IsLikeOperator(op))
+            {
+                var pattern = aExpr.Rexpr?.AConst?.Sval?.Sval;
+                if (pattern == null)
+                {
+                    message = SqlLikePattern.NonLiteralPattern;
+                    return true;
+                }
+
+                return SqlLikePattern.TryClassify(pattern, out _, out _, out message) == false;
+            }
+
+            return TryDiagnoseLike(aExpr.Lexpr, depth + 1, out message)
+                || TryDiagnoseLike(aExpr.Rexpr, depth + 1, out message);
         }
 
         // Textual check for a `declare function {...}` fragment: starts with `declare function` and has
@@ -196,6 +319,62 @@ namespace Raven.Server.Integrations.PostgreSQL
             return false;
         }
 
+        // True when every base relation reachable in the query's FROM / JOIN tree resolves to a
+        // known virtual-catalog table (pg_catalog / information_schema). Any unresolved relation -
+        // i.e. a real RavenDB collection - makes this false, preserving the RavenDB-collections
+        // message for genuine user JOINs. Depth-bounded and descends into sub-SELECTs, mirroring
+        // HasJoinExpr's traversal.
+        private static bool AllJoinRelationsAreCatalogTables(SelectStmt selectStmt)
+        {
+            var relations = new List<RangeVar>();
+            CollectRangeVars(selectStmt, relations, depth: 0);
+            if (relations.Count == 0)
+                return false;
+
+            foreach (var rv in relations)
+            {
+                if (PgVirtualDatabase.TryGetTable(rv.Schemaname, rv.Relname, out _) == false)
+                    return false;
+            }
+            return true;
+        }
+
+        private static void CollectRangeVars(SelectStmt selectStmt, List<RangeVar> acc, int depth)
+        {
+            if (selectStmt == null || depth >= MaxJoinSearchDepth)
+                return;
+
+            if (selectStmt.Op != SetOperation.SetopNone)
+            {
+                CollectRangeVars(selectStmt.Larg, acc, depth + 1);
+                CollectRangeVars(selectStmt.Rarg, acc, depth + 1);
+            }
+
+            if (selectStmt.FromClause == null)
+                return;
+
+            foreach (var item in selectStmt.FromClause)
+                CollectRangeVarsFromNode(item, acc, depth);
+        }
+
+        private static void CollectRangeVarsFromNode(Node node, List<RangeVar> acc, int depth)
+        {
+            if (node == null || depth >= MaxJoinSearchDepth)
+                return;
+
+            if (node.RangeVar != null)
+                acc.Add(node.RangeVar);
+
+            if (node.JoinExpr != null)
+            {
+                CollectRangeVarsFromNode(node.JoinExpr.Larg, acc, depth + 1);
+                CollectRangeVarsFromNode(node.JoinExpr.Rarg, acc, depth + 1);
+            }
+
+            if (node.RangeSubselect?.Subquery?.SelectStmt is { } inner)
+                CollectRangeVars(inner, acc, depth + 1);
+        }
+
         // True iff any projection is a min()/max() FuncCall. Surfaced before the generic scalar-aggregate
         // check: min/max are unsupported with or without GROUP BY (RavenDB aggregates are Count/Sum only),
         // and their workaround (ORDER BY + LIMIT 1) differs from the "wrap in GROUP BY" hint for sum/count.
@@ -247,6 +426,204 @@ namespace Raven.Server.Integrations.PostgreSQL
                     return true;
             }
             return false;
+        }
+
+        private static bool TryGetUnsupportedAggregateModifier(SelectStmt selectStmt, out string modifier)
+        {
+            modifier = null;
+
+            if (selectStmt.TargetList is not { Count: > 0 } targets)
+                return false;
+
+            foreach (var t in targets)
+            {
+                var funcCall = t?.ResTarget?.Val?.FuncCall;
+                if (funcCall == null)
+                    continue;
+
+                if (funcCall.AggDistinct)
+                    modifier = "DISTINCT";
+                else if (funcCall.AggFilter != null)
+                    modifier = "a FILTER (WHERE ...) clause";
+                else if (funcCall.Over != null)
+                    modifier = "an OVER (...) window clause";
+                else
+                    continue;
+
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool IsSupportedScalarCountStar(SelectStmt selectStmt)
+        {
+            if (selectStmt.GroupClause is { Count: > 0 })
+                return false;
+
+            if (selectStmt.TargetList is not { Count: 1 } targets)
+                return false;
+
+            var funcCall = targets[0]?.ResTarget?.Val?.FuncCall;
+            if (funcCall is not { AggStar: true })
+                return false;
+
+            if (funcCall.AggDistinct || funcCall.AggFilter != null || funcCall.Over != null)
+                return false;
+
+            var name = funcCall.Funcname is { Count: > 0 }
+                ? funcCall.Funcname[funcCall.Funcname.Count - 1]?.String?.Sval
+                : null;
+
+            return string.Equals(name, "count", StringComparison.OrdinalIgnoreCase);
+        }
+
+        // Uses the translator's own WHERE parser as the oracle so the diagnoser can't drift from what is
+        // actually supported, then names the offending operator when the AST identifies one.
+        private static bool TryDiagnoseWhereClause(SelectStmt selectStmt, out string message)
+        {
+            message = null;
+
+            if (selectStmt.WhereClause == null)
+                return false;
+
+            if (SqlWhereParser.TryParse(selectStmt.WhereClause, outerAliasToStrip: null, out _))
+                return false;
+
+            message = TryGetUnsupportedPredicateName(selectStmt.WhereClause, depth: 0, out var predicate)
+                ? $"The WHERE clause uses {predicate}, which is not supported. The aggregate itself is fine — `count(*)` translates on its own — so rewrite just the predicate (for example express NOT BETWEEN as `< lower OR > upper`), or run the query as RQL."
+                : "The WHERE clause could not be translated. The aggregate itself is fine — `count(*)` translates on its own — so the unsupported part is the predicate: simplify it to comparisons, IN, BETWEEN, LIKE and IS [NOT] NULL combined with AND / OR / NOT, or run the query as RQL.";
+
+            return true;
+        }
+
+        private static bool TryGetUnsupportedPredicateName(Node node, int depth, out string predicate)
+        {
+            predicate = null;
+            if (node == null || depth >= MaxJoinSearchDepth)
+                return false;
+
+            if (node.BoolExpr?.Args is { } args)
+            {
+                foreach (var arg in args)
+                {
+                    if (TryGetUnsupportedPredicateName(arg, depth + 1, out predicate))
+                        return true;
+                }
+
+                return false;
+            }
+
+            if (node.AExpr is not { } aExpr)
+                return false;
+
+            predicate = aExpr.Kind switch
+            {
+                A_Expr_Kind.AexprNotBetween => "NOT BETWEEN",
+                A_Expr_Kind.AexprBetweenSym => "BETWEEN SYMMETRIC",
+                A_Expr_Kind.AexprNotBetweenSym => "NOT BETWEEN SYMMETRIC",
+                A_Expr_Kind.AexprSimilar => "SIMILAR TO",
+                A_Expr_Kind.AexprOpAny => "an ANY (...) comparison",
+                A_Expr_Kind.AexprOpAll => "an ALL (...) comparison",
+                _ => null
+            };
+
+            if (predicate != null)
+                return true;
+
+            return TryGetUnsupportedPredicateName(aExpr.Lexpr, depth + 1, out predicate)
+                || TryGetUnsupportedPredicateName(aExpr.Rexpr, depth + 1, out predicate);
+        }
+
+        private static bool TryGetUnsupportedSortModifier(SelectStmt selectStmt, out string modifier)
+        {
+            modifier = null;
+
+            if (selectStmt.SortClause is not { Count: > 0 } sortClause)
+                return false;
+
+            foreach (var sortNode in sortClause)
+            {
+                var sortBy = sortNode?.SortBy;
+                if (sortBy == null)
+                    continue;
+
+                if (sortBy.SortbyNulls is SortByNulls.First or SortByNulls.Last)
+                    modifier = "NULLS FIRST / NULLS LAST";
+                else if (sortBy.SortbyDir == SortByDir.SortbyUsing)
+                    modifier = "USING <operator>";
+                else
+                    continue;
+
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool HasCountOverColumn(SelectStmt selectStmt)
+        {
+            if (selectStmt.TargetList is not { Count: > 0 } targets)
+                return false;
+
+            foreach (var t in targets)
+            {
+                var funcCall = t?.ResTarget?.Val?.FuncCall;
+                if (funcCall == null || funcCall.AggStar)
+                    continue;
+
+                var name = funcCall.Funcname is { Count: > 0 }
+                    ? funcCall.Funcname[funcCall.Funcname.Count - 1]?.String?.Sval
+                    : null;
+                if (string.Equals(name, "count", System.StringComparison.OrdinalIgnoreCase) == false)
+                    continue;
+
+                if (funcCall.Args is { Count: 1 } && funcCall.Args[0]?.ColumnRef != null)
+                    return true;
+            }
+
+            return false;
+        }
+
+        // PG parses IS [NOT] DISTINCT FROM and NULLIF into an A_Expr whose operator name is "=", so
+        // only the Kind separates them from real equality.
+        private static bool HasDistinctFromPredicate(SelectStmt selectStmt)
+        {
+            var wheres = new List<Node>();
+            CollectWhereClauses(selectStmt, wheres, depth: 0);
+
+            foreach (var where in wheres)
+            {
+                if (HasDistinctFromPredicate(where, depth: 0))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static bool HasDistinctFromPredicate(Node node, int depth)
+        {
+            if (node == null || depth >= MaxJoinSearchDepth)
+                return false;
+
+            if (node.BoolExpr?.Args is { } args)
+            {
+                foreach (var arg in args)
+                {
+                    if (HasDistinctFromPredicate(arg, depth + 1))
+                        return true;
+                }
+                return false;
+            }
+
+            if (node.AExpr is not { } aExpr)
+                return false;
+
+            if (aExpr.Kind is A_Expr_Kind.AexprDistinct or A_Expr_Kind.AexprNotDistinct or A_Expr_Kind.AexprNullif)
+                return true;
+
+            return HasDistinctFromPredicate(aExpr.Lexpr, depth + 1)
+                || HasDistinctFromPredicate(aExpr.Rexpr, depth + 1);
         }
 
         // True iff every projection is an aggregate FuncCall (count/sum/avg/min/max) with no GROUP BY key.

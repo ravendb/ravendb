@@ -17,6 +17,7 @@ require("prismjs/components/prism-csharp");
 require("prismjs/components/prism-json");
 require("prismjs/components/prism-sql");
 require("prismjs/components/prism-python");
+require("prismjs/components/prism-java");
 
 export const supportedCodeLanguages = [
     "plaintext",
@@ -36,6 +37,7 @@ export const supportedCodeLanguages = [
     "sql",
     "rql",
     "python",
+    "java",
 ] as const;
 
 export type CodeLanguage = (typeof supportedCodeLanguages)[number];
@@ -210,4 +212,5 @@ const languageTitles: Record<CodeLanguage, string> = {
     sql: "SQL",
     rql: "RQL",
     python: "Python",
+    java: "Java",
 };

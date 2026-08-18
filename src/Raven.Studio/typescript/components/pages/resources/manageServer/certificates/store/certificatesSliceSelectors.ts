@@ -151,11 +151,11 @@ const selectFilteredCertificates = createSelector(
             }
 
             const state = certificatesUtils.getState(cert);
-            if (stateFilter.includes("Valid") && (state === "Valid" || state === "About to expire")) {
-                return true;
-            }
+            // About to expire certificates are still valid
+            const matchesStateFilter =
+                stateFilter.includes(state) || (stateFilter.includes("Valid") && state === "About to expire");
 
-            if (stateFilter.length > 0 && !stateFilter.includes(state)) {
+            if (stateFilter.length > 0 && !matchesStateFilter) {
                 return false;
             }
 
@@ -259,4 +259,5 @@ export const certificatesSelectors = {
     ssoServerCertificates: selectSsoServerCertificates,
     ssoUserCertificates: selectSsoUserCertificates,
     hasActiveFilter: selectHasActiveFilter,
+    isRenewedModalOpen: (state: RootState) => state.certificates.isRenewedModalOpen,
 };

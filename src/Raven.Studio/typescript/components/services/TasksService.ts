@@ -56,6 +56,7 @@ import retryBatchEtlCommand from "commands/database/tasks/retryBatchEtlCommand";
 import testCdcSinkCommand from "commands/database/tasks/testCdcSinkCommand";
 import saveCdcSinkTaskCommand from "commands/database/tasks/saveCdcSinkTaskCommand";
 import getCdcSinkTaskSchemaCommand from "commands/database/tasks/getCdcSinkTaskSchemaCommand";
+import assertUnreachable from "components/utils/assertUnreachable";
 
 export default class TasksService {
     async getOngoingTasks(databaseName: string, location: databaseLocationSpecifier) {
@@ -286,6 +287,29 @@ export default class TasksService {
 
     async getGenAiTaskInfo(...args: Parameters<typeof getOngoingTaskInfoCommand.forGenAi>) {
         return getOngoingTaskInfoCommand.forGenAi(...args).execute();
+    }
+
+    async getEtlTaskInfo(databaseName: string, etlType: Raven.Client.Documents.Operations.ETL.EtlType, taskId: number) {
+        switch (etlType) {
+            case "Raven":
+                return getOngoingTaskInfoCommand.forRavenEtl(databaseName, taskId).execute();
+            case "Sql":
+                return getOngoingTaskInfoCommand.forSqlEtl(databaseName, taskId).execute();
+            case "Snowflake":
+                return getOngoingTaskInfoCommand.forSnowflakeEtl(databaseName, taskId).execute();
+            case "Olap":
+                return getOngoingTaskInfoCommand.forOlapEtl(databaseName, taskId).execute();
+            case "ElasticSearch":
+                return getOngoingTaskInfoCommand.forElasticSearchEtl(databaseName, taskId).execute();
+            case "Queue":
+                return getOngoingTaskInfoCommand.forQueueEtl(databaseName, taskId).execute();
+            case "EmbeddingsGeneration":
+                return getOngoingTaskInfoCommand.forEmbeddingsGeneration(databaseName, taskId).execute();
+            case "GenAi":
+                return getOngoingTaskInfoCommand.forGenAi(databaseName, taskId).execute();
+            default:
+                return assertUnreachable(etlType);
+        }
     }
 
     async saveGenAiTask(...args: Parameters<typeof saveEtlTaskCommand.forGenAi>) {

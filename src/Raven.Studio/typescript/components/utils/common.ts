@@ -46,8 +46,23 @@ export function createFailureState(error?: any): loadableData<undefined> {
     };
 }
 
+export function getErrorHeadline(error: string): string {
+    const colonIndex = error.indexOf(":");
+    if (colonIndex === -1) {
+        return error;
+    }
+
+    // only split on ": " when the prefix looks like an exception type (e.g. "System.TimeoutException"),
+    // not e.g. a URL scheme ("http://...") or a message that merely happens to contain a colon
+    const prefix = error.slice(0, colonIndex);
+    const isUriScheme = error.slice(colonIndex, colonIndex + 3) === "://";
+    const looksLikeExceptionType = prefix.length > 0 && !prefix.includes(" ") && !isUriScheme;
+
+    return looksLikeExceptionType ? prefix.trim() : error;
+}
+
 export async function delay(ms: number) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    return new Promise<void>((resolve) => setTimeout(resolve, ms));
 }
 
 export function databaseLocationComparator(lhs: databaseLocationSpecifier, rhs: databaseLocationSpecifier) {

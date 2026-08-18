@@ -74,6 +74,8 @@ export class TasksStubs {
                 TasksStubs.getRabbitProgress(),
                 TasksStubs.getAzureQueueStorageProgress(),
                 TasksStubs.getAmazonSqsProgress(),
+                TasksStubs.getGenAiProgress(),
+                TasksStubs.getEmbeddingsGenerationProgress(),
             ],
         };
     }
@@ -254,6 +256,62 @@ export class TasksStubs {
         return TasksStubs.getEtlProgress(taskName, "ElasticSearch");
     }
 
+    static getGenAiProgress(): EtlTaskProgress {
+        const task = TasksStubs.getGenAi();
+        return {
+            TaskName: task.TaskName,
+            EtlType: "GenAi",
+            ProcessesProgress: [
+                {
+                    AverageProcessedPerSecond: 4.2,
+                    Disabled: false,
+                    Completed: false,
+                    NumberOfDocumentsToProcess: 76,
+                    TotalNumberOfDocuments: 250,
+                    // GenAI doesn't track tombstones, counters or time series
+                    NumberOfCounterGroupsToProcess: 0,
+                    TotalNumberOfCounterGroups: 0,
+                    NumberOfDocumentTombstonesToProcess: 0,
+                    TotalNumberOfDocumentTombstones: 0,
+                    NumberOfTimeSeriesDeletedRangesToProcess: 0,
+                    TotalNumberOfTimeSeriesDeletedRanges: 0,
+                    TotalNumberOfTimeSeriesSegments: 0,
+                    NumberOfTimeSeriesSegmentsToProcess: 0,
+                    TransformationName: task.Configuration.Transforms[0].Name,
+                    TransactionalId: "genai-batch-7f3a1c",
+                },
+            ],
+        };
+    }
+
+    static getEmbeddingsGenerationProgress(): EtlTaskProgress {
+        const task = TasksStubs.getEmbeddingsGeneration();
+        return {
+            TaskName: task.TaskName,
+            EtlType: "EmbeddingsGeneration",
+            ProcessesProgress: [
+                {
+                    AverageProcessedPerSecond: 11.5,
+                    Disabled: false,
+                    Completed: false,
+                    NumberOfDocumentsToProcess: 312,
+                    TotalNumberOfDocuments: 1500,
+                    // Embeddings generation doesn't track counters or time series
+                    NumberOfCounterGroupsToProcess: 0,
+                    TotalNumberOfCounterGroups: 0,
+                    NumberOfDocumentTombstonesToProcess: 5,
+                    TotalNumberOfDocumentTombstones: 20,
+                    NumberOfTimeSeriesDeletedRangesToProcess: 0,
+                    TotalNumberOfTimeSeriesDeletedRanges: 0,
+                    TotalNumberOfTimeSeriesSegments: 0,
+                    NumberOfTimeSeriesSegmentsToProcess: 0,
+                    TransformationName: task.Configuration.Transforms[0].Name,
+                    TransactionalId: "embeddings-batch-4d21e8",
+                },
+            ],
+        };
+    }
+
     static getPeriodicBackupListItem(): OngoingTaskBackup {
         return {
             TaskName: "Raven Backup",
@@ -410,6 +468,7 @@ export class TasksStubs {
                 ],
                 EmbeddingsTransformation: null,
                 Quantization: "Single",
+                StoreChunkText: false,
                 EmbeddingsCacheExpiration: "90.00:00:00",
                 ChunkingOptionsForQuerying: {
                     OverlapTokens: 0,

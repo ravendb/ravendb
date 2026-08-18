@@ -31,9 +31,10 @@ namespace Corax.Querying.Matches.TermProviders
         private long _postingListId;
         
         private CompactTree.Iterator<TLookupIterator> _iterator;
-        private readonly CompactKey _compactKey;
 
-        public ExistsTermProvider(Querying.IndexSearcher searcher, CompactTree tree, in FieldMetadata field, bool forAggregation = false)
+        private CompactKey _termsRetrieverKey;
+
+        public ExistsTermProvider(Querying.IndexSearcher searcher, CompactTree tree, in FieldMetadata field)
         {
             _tree = tree;
             _field = field;
@@ -52,12 +53,6 @@ namespace Corax.Querying.Matches.TermProviders
                 }
             }
 
-            if (forAggregation)
-            {
-                _compactKey = _searcher._transaction.LowLevelTransaction.AcquireCompactKey();
-                _compactKey.Initialize(_searcher._transaction.LowLevelTransaction);
-            }
-            
             _iterator = tree.Iterate<TLookupIterator>();
             _numberOfTerms = tree.NumberOfEntries;
             _iterator.Reset();
@@ -97,8 +92,10 @@ namespace Corax.Querying.Matches.TermProviders
                 term = _searcher.TermQuery(_field, containerId: _postingListId, 1D);
                 return true;
             }
-            
-            while (_iterator.MoveNext(out var key, out _, out _))
+          
+            using var scope = new CompactKeyCacheScope(_searcher._transaction.LowLevelTransaction);
+            var key = scope.Key;
+            while (_iterator.MoveNext(key, out _, out _))
             {
                 term = _searcher.TermQuery(_field, key, _tree);
                 return true;
@@ -117,9 +114,11 @@ namespace Corax.Querying.Matches.TermProviders
                 return true;
             }
             
-            while (_iterator.MoveNext(out var compactKey, out long _, out _))
+            // Reuse a single key across the whole scan, term's span is valid to next GetNextTerm() call 
+            _termsRetrieverKey ??= _searcher._transaction.LowLevelTransaction.AcquireCompactKey();
+            while (_iterator.MoveNext(_termsRetrieverKey, out long _, out _))
             {
-                var key = compactKey.Decoded();
+                var key = _termsRetrieverKey.Decoded();
                 int termSize = key.Length;
                 if (key.Length > 1)
                 {
@@ -133,6 +132,12 @@ namespace Corax.Querying.Matches.TermProviders
 
             term = Span<byte>.Empty;
             return false;
+        }
+
+        public void Dispose()
+        {
+            if (_termsRetrieverKey != null)
+                _searcher._transaction.LowLevelTransaction.ReleaseCompactKey(ref _termsRetrieverKey);
         }
 
         public ConvertTo Type => ConvertTo.String;
@@ -166,23 +171,31 @@ namespace Corax.Querying.Matches.TermProviders
                 _fetchNulls = false;
             }
 
-            while (_iterator.MoveNext(_compactKey, out long postingListId, out _))
+            var compactKey = _searcher._transaction.LowLevelTransaction.AcquireCompactKey();
+            try
             {
-                var key = _compactKey.Decoded();
-                
-                int termSize = key.Length;
-                if (key.Length > 1)
+                while (_iterator.MoveNext(compactKey, out long postingListId, out _))
                 {
-                    if (key[^1] == 0)
-                        termSize--;
-                }
+                    var key = compactKey.Decoded();
 
-                var term = key.SequenceEqual(Constants.EmptyStringByteSpan) 
-                    ? Constants.ProjectionEmptyString 
-                    : Encodings.Utf8.GetString(key.Slice(0, termSize));
-                
-                terms.Add(term);
-                termCount[termIdx++] = postingListId;
+                    int termSize = key.Length;
+                    if (key.Length > 1)
+                    {
+                        if (key[^1] == 0)
+                            termSize--;
+                    }
+
+                    var term = key.SequenceEqual(Constants.EmptyStringByteSpan)
+                        ? Constants.ProjectionEmptyString
+                        : Encodings.Utf8.GetString(key.Slice(0, termSize));
+
+                    terms.Add(term);
+                    termCount[termIdx++] = postingListId;
+                }
+            }
+            finally
+            {
+                _searcher._transaction.LowLevelTransaction.ReleaseCompactKey(ref compactKey);
             }
 
 

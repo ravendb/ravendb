@@ -13,7 +13,7 @@ namespace StressTests.Issues;
 
 public class RavenDB_24423(ITestOutputHelper output) : SlowTests.Issues.RavenDB_24423(output)
 {
-    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenMultiplatformTheory(RavenTestCategory.Querying, RavenArchitecture.AllX64)]
     [InlineData(1, 0x007F)]
     [InlineData(0x0080, 0x07FF)]
     [InlineData(0x0800, 0xFFFF)]

@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Corax;
+using Corax.Querying;
 using Corax.Mappings;
 using Corax.Querying.Matches;
 using Corax.Querying.Matches.Meta;
@@ -270,13 +271,15 @@ namespace FastTests.Corax
             Assert.Equal(1, match3.Fill(ids)); //match one doc
         }
         
-        [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
-        public void MultiTermMatchWithTermMatch()
+        [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+        [InlineData(BitmapAndFillMode.Off)]
+        [InlineData(BitmapAndFillMode.Force)]
+        public void MultiTermMatchWithTermMatch(BitmapAndFillMode bitmapAndFillMode)
         {
             PrepareData();
             IndexEntries();
             using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
 
             var match0 = searcher.TermQuery(_longItemFieldMetadata, "1");
             var match1 = searcher.StartWithQuery("Id", "ent");

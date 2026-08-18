@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { useAsync, useAsyncCallback } from "react-async-hook";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useAsyncCallback } from "react-async-hook";
 import { virtualTableConstants } from "../utils/virtualTableConstants";
 
 // Use it along with VirtualTable component
@@ -15,13 +15,14 @@ type FetchData<T extends PagedResultWithoutCount> = (skip: number, take: number)
 interface useVirtualTableWithoutTotalCountProps<T extends PagedResultWithoutCount> {
     fetchData: FetchData<T>;
     initialOverscan?: number;
-    dependencies?: any[];
+    // when any of these change, the table resets and refetches page 0 (also covers the initial load)
+    reloadDependencies?: unknown[];
 }
 
 export function useVirtualTableWithoutTotalCount<T extends PagedResultWithoutCount>({
     fetchData,
     initialOverscan = 50,
-    dependencies = [],
+    reloadDependencies = [],
 }: useVirtualTableWithoutTotalCountProps<T>) {
     const tableContainerRef = useRef<HTMLDivElement>(null);
 
@@ -29,34 +30,66 @@ export function useVirtualTableWithoutTotalCount<T extends PagedResultWithoutCou
 
     const [dataArray, setDataArray] = useState<T["items"]>([]);
 
-    const [nextItemToFetchIndex, setNextItemToFetchIndex] = useState<number>(0);
-    const [hasMore, setHasMore] = useState<boolean>(true);
+    // refs (not state) so the mount-time scroll handler always sees current values
+    const fetchDataRef = useRef(fetchData);
+    fetchDataRef.current = fetchData;
+    const nextItemToFetchIndexRef = useRef(0);
+    const hasMoreRef = useRef(true);
 
-    const asyncLoadInitialData = useAsync(async () => {
-        const result = await fetchData(0, initialItemsCount);
+    // synchronous in-flight guard; asyncLoadData.loading only updates after a re-render
+    const isFetchingRef = useRef(false);
 
-        setHasMore(result.items.length === initialItemsCount);
-        setNextItemToFetchIndex(nextItemToFetchIndex + initialItemsCount);
-        setDataArray(result.items);
-    }, dependencies);
+    // incremented on every reset so in-flight appends started before the reset discard their results
+    const generationRef = useRef(0);
 
-    const asyncLoadData = useAsyncCallback(async () => {
-        const result = await fetchData(nextItemToFetchIndex, initialItemsCount);
+    const asyncLoadData = useAsyncCallback(async (reset: boolean) => {
+        const generation = reset ? ++generationRef.current : generationRef.current;
+        isFetchingRef.current = true;
 
-        setHasMore(result.items.length === initialItemsCount);
-        setNextItemToFetchIndex(nextItemToFetchIndex + initialItemsCount);
-        setDataArray((prev) => [...prev, ...result.items]);
+        try {
+            const skip = reset ? 0 : nextItemToFetchIndexRef.current;
+            const result = await fetchDataRef.current(skip, initialItemsCount);
+
+            if (generation !== generationRef.current) {
+                // a reset happened while this fetch was in flight - discard the stale result
+                return;
+            }
+
+            hasMoreRef.current = result.items.length === initialItemsCount;
+            nextItemToFetchIndexRef.current = skip + result.items.length;
+            setDataArray((prev) => (reset ? result.items : [...prev, ...result.items]));
+        } finally {
+            // a stale call must not clear the guard while a newer reset fetch is still in flight
+            if (generation === generationRef.current) {
+                isFetchingRef.current = false;
+            }
+        }
     });
+
+    const asyncLoadDataRef = useRef(asyncLoadData);
+    asyncLoadDataRef.current = asyncLoadData;
+
+    const reload = useCallback(async () => {
+        hasMoreRef.current = true;
+        // optional call: jsdom's HTMLElement has no scrollTo
+        tableContainerRef.current?.scrollTo?.({ top: 0 });
+        await asyncLoadDataRef.current.execute(true);
+    }, []);
+
+    // single load path: runs on mount and whenever a reload dependency changes
+    useEffect(() => {
+        reload();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, reloadDependencies);
 
     // Handle scroll
     useEffect(() => {
         if (!tableContainerRef.current) {
             return;
         }
-        let isFetching = false;
 
-        const handleScroll = async (e: Event) => {
-            if (!hasMore) {
+        const handleScroll = (e: Event) => {
+            if (!hasMoreRef.current || isFetchingRef.current) {
                 return;
             }
 
@@ -64,14 +97,7 @@ export function useVirtualTableWithoutTotalCount<T extends PagedResultWithoutCou
             const positionToFetch = target.scrollHeight - target.clientHeight - defaultRowHeightInPx;
 
             if (target.scrollTop >= positionToFetch) {
-                if (isFetching) {
-                    return;
-                }
-
-                isFetching = true;
-                await asyncLoadData.execute();
-            } else {
-                isFetching = false;
+                asyncLoadDataRef.current.execute(false);
             }
         };
 
@@ -81,13 +107,14 @@ export function useVirtualTableWithoutTotalCount<T extends PagedResultWithoutCou
         return () => {
             current.removeEventListener("scroll", handleScroll);
         };
-    }, [hasMore]);
+    }, []);
 
     return {
         dataArray,
+        reload,
         componentProps: {
             tableContainerRef,
-            isLoading: asyncLoadInitialData.loading || asyncLoadData.loading,
+            isLoading: asyncLoadData.loading,
         },
     };
 }

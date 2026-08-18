@@ -20,10 +20,16 @@ namespace SlowTests.Server.Documents.CdcSink
         {
         }
 
+        private const int SqlDeadlockErrorNumber = 1205;
+
+        private static bool IsDeadlock(SqlException e) =>
+            e.Number == SqlDeadlockErrorNumber ||
+            e.Message.Contains("deadlock", StringComparison.OrdinalIgnoreCase);
+
         private void ExecuteMsSql(string connectionString, string sql)
         {
             const int maxAttempts = 5;
-            for (var attempt = 1; ; attempt++)
+            for (var attempt = 1; attempt <= maxAttempts; attempt++)
             {
                 try
                 {
@@ -34,7 +40,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     cmd.ExecuteNonQuery();
                     return;
                 }
-                catch (SqlException e) when (CdcSqlServerFixture.IsDeadlock(e) && attempt < maxAttempts)
+                catch (SqlException e) when (IsDeadlock(e) && attempt < maxAttempts)
                 {
                     System.Threading.Thread.Sleep(500 * attempt);
                 }

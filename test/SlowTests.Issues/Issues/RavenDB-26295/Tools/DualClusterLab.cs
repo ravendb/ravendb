@@ -263,6 +263,12 @@ public sealed class DualClusterLab : IAsyncDisposable
     public DocumentSnapshot GetFilteredRoundTripDocument(LabNode node) =>
         GetDocumentById(RequiredFilteredPassReceiveSide, node, RequiredFilteredRoundTripTicketId);
 
+    public DocumentSnapshot GetAllowedTicketBeforeFilteredOutUser(LabNode node) =>
+        GetDocumentById(RequiredFilteredPassReceiveSide, node, RequiredAllowedTicketBeforeFilteredOutUserId);
+
+    public DocumentSnapshot GetFilteredOutUser(LabNode node) =>
+        GetDocumentById(RequiredFilteredPassReceiveSide, node, RequiredFilteredOutUserDocumentId);
+
     public List<ConflictSnapshot> GetFilteredRoundTripConflicts(LabNode node) =>
         GetConflicts(RequiredFilteredPassReceiveSide, node, RequiredFilteredRoundTripTicketId);
 

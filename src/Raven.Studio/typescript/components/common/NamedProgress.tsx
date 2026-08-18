@@ -4,12 +4,16 @@ import classNames from "classnames";
 
 import "./NamedProgress.scss";
 
-export function NamedProgress(props: { name: string | ReactNode; children: ReactNode | ReactNode[] }) {
-    const { name, children } = props;
+export function NamedProgress(props: {
+    name: string | ReactNode;
+    children: ReactNode | ReactNode[];
+    vertical?: boolean;
+}) {
+    const { name, children, vertical } = props;
     return (
         <div className="named-progress-container">
             <small className="m-auto w-100 text-center small-label">{name}</small>
-            <div className="named-progress">{children}</div>
+            <div className={classNames("named-progress", { "flex-column": vertical })}>{children}</div>
         </div>
     );
 }

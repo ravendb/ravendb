@@ -17,6 +17,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.IdentityModel.Tokens;
+using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -161,19 +162,23 @@ public class ChatCompletionClient : IDisposable
     public async Task<AiResponse> StreamingCompleteAsync(JsonOperationContext streamingContext, IMemoryContextPool contextPool,
         string streamPropertyPath, HttpRequestMessage request,
         Func<Memory<byte>, Task> streamedPropertyCallback,
-        AiUsage usage, AiDebugTrace trace, CancellationToken token)
+        AiUsage usage, string schema, AiDebugTrace trace, CancellationToken token)
     {
         AddDefaultHeaders(request);
         using var streamedPropertyBuffer = new JsonOperationContextBuffer<byte>(streamingContext);
 
-        var parser = new SseStreamingJsonParser(streamingContext, streamPropertyPath);
+        bool structuredOutput = schema != null;
         var alreadySeen = 0;
-        parser.OnStringRead += (e) =>
+
+        using var parser = structuredOutput ? new SseStreamingJsonParser(streamingContext, streamPropertyPath) : null;
+        if (parser != null)
         {
             // the `e` we get here is the _full_ string (including past chunks we already saw)
-            // we want to read only the *new* parts, that we didn't see before
-            alreadySeen += streamedPropertyBuffer.Append(alreadySeen, e);
-        };
+            parser.OnStringRead += (e) =>
+            {
+                alreadySeen += streamedPropertyBuffer.Append(alreadySeen, e);
+            };
+        }
 
         using var response = await SendStreamingRequestAsync(request, token);
         if (response.IsSuccessStatusCode == false)
@@ -185,7 +190,8 @@ public class ChatCompletionClient : IDisposable
 
         await using var responseStream = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
         IToolCallState toolCallState = _settings.CreateToolCallState();
-        BlittableJsonReaderObject message = null;
+        object message = null;
+        StringBuilder stringContent = structuredOutput ? null : new StringBuilder();
 
         // need two contexts here because we run two parsing operations at once, first for each of the SSE events
         // and then for the internal buffer that there are providing.
@@ -233,19 +239,30 @@ public class ChatCompletionClient : IDisposable
                 {
                     toolCallState.AddAndReset();
 
-                    var final = parser.Process(content);
-                    if (streamedPropertyBuffer.Length is not 0) // Length is the written data length (not the buffer real size)
+                    if (structuredOutput)
                     {
-                        // here we send all the data that wasn't sent so far to the client
-                        await streamedPropertyCallback(streamedPropertyBuffer.AsMemory());
-                        // reset the buffer length so we can overwrite the start of the buffer
-                        // and only retain in memory the parts we'll need to send next time
-                        streamedPropertyBuffer.Length = 0;
-                    }
+                        var final = parser.Process(content);
+                        if (streamedPropertyBuffer.Length is not 0) // Length is the written data length (not the buffer real size)
+                        {
+                            // here we send all the data that wasn't sent so far to the client
+                            await streamedPropertyCallback(streamedPropertyBuffer.AsMemory());
+                            // reset the buffer length so we can overwrite the start of the buffer
+                            // and only retain in memory the parts we'll need to send next time
+                            streamedPropertyBuffer.Length = 0;
+                        }
 
-                    if (final is not null)
+                        if (final is not null)
+                        {
+                            message = final;
+                        }
+                    }
+                    else
                     {
-                        message = final;
+                        // For unstructured output, stream the raw text chunks directly
+                        stringContent.Append(content);
+                        streamedPropertyBuffer.Append(content.AsSpan());
+                        await streamedPropertyCallback(streamedPropertyBuffer.AsMemory());
+                        streamedPropertyBuffer.Length = 0;
                     }
                 }
 
@@ -271,6 +288,20 @@ public class ChatCompletionClient : IDisposable
                     [Constants.ResponseFields.ToolCalls] = allToolCalls
                 }, "persisted/streamed/toolcalls"),
                 ToolCalls = toolCallState.GetAllToolCalls(),
+            };
+        }
+
+        if (structuredOutput == false)
+        {
+            var fullText = stringContent.ToString();
+            return new AiResponse(AiResponseType.Result)
+            {
+                Message = streamingContext.ReadObject(new DynamicJsonValue
+                {
+                    [Constants.ResponseFields.Role] = Constants.RequestFields.RoleAssistantValue,
+                    [Constants.ResponseFields.Content] = fullText,
+                }, "persisted/streamed/message"),
+                Result = fullText,
             };
         }
 
@@ -317,7 +348,7 @@ public class ChatCompletionClient : IDisposable
         }, "system/msg");
 
         var request = CreateCompletionRequest(context, [prompt, user], attachments: null, tools: null, useTools: false, streaming: false, schema);
-        var r = await CompleteAsync(context, request, new AiUsage(), trace: null, token);
+        var r = await CompleteAsync(context, request, new AiUsage(), schema, trace: null, token);
         return (r.Result.ToString(), r.Message.ToString());
     }
 
@@ -339,16 +370,16 @@ public class ChatCompletionClient : IDisposable
             }, "probe/user");
 
             var request = CreateCompletionRequest(context, messages: [userMessage], attachments: [attachment], tools: null, useTools: false, streaming: false, EmptySchema);
-            await CompleteAsync(context, request, new AiUsage(), trace: null, token);
+            await CompleteAsync(context, request, new AiUsage(), schema: null, trace: null, token);
             return true;
         }
-        catch (Exception) when (token.IsCancellationRequested == false)
+        catch (Exception)
         {
             return false;
         }
     }
 
-    public async Task<AiResponse> CompleteAsync(JsonOperationContext context, HttpRequestMessage request, AiUsage usage, AiDebugTrace trace, CancellationToken token)
+    public async Task<AiResponse> CompleteAsync(JsonOperationContext context, HttpRequestMessage request, AiUsage usage, string schema, AiDebugTrace trace, CancellationToken token)
     {
         AddDefaultHeaders(request);
         using var response = await SendRequestAsync(request, token);
@@ -364,7 +395,7 @@ public class ChatCompletionClient : IDisposable
             return new AiResponse(AiResponseType.Tool) { ToolCalls = tools, Message = responseParser.Message };
         }
 
-        var result = responseParser.GetContent(context);
+        var result = responseParser.GetContent(context, schema != null);
 
         return new AiResponse(AiResponseType.Result) { Result = result, Message = responseParser.Message };
     }
@@ -424,7 +455,7 @@ public class ChatCompletionClient : IDisposable
             return true;
         }
 
-        public BlittableJsonReaderObject GetContent(JsonOperationContext context)
+        public object GetContent(JsonOperationContext context, bool structuredOutput)
         {
             // Try content, then reasoning_content, then reasoning (for LM Studio and other OpenAI-like APIs that still use the older mechanism)
             if (TryGetDeltaContent(Message, out var content) == false)
@@ -437,7 +468,10 @@ public class ChatCompletionClient : IDisposable
                 RefusedToAnswerException.Throw(refusal, responseContent.ToString(), finishReason, GetRequestId(response.Headers));
             }
 
-            var result = context.Sync.ReadForMemory(content, "ai/output");
+            object result = structuredOutput
+                ? context.Sync.ReadForMemory(content, "ai/output")
+                : content.ToString();
+
             Message.Modifications ??= new DynamicJsonValue(Message);
             Message.Modifications[Constants.ResponseFields.Content] = result;
 
@@ -518,7 +552,7 @@ public class ChatCompletionClient : IDisposable
         writer.WriteString(_settings.Model);
         writer.WriteComma();
 
-        List<LazyStringValue> filterProperties = [ctx.GetLazyString(ConversationDocument.DateProperty), ctx.GetLazyString(ConversationDocument.UsageProperty)];
+        List<LazyStringValue> filterProperties = [ctx.GetLazyString(ConversationDocument.DateProperty), ctx.GetLazyString(ConversationDocument.UsageProperty), ctx.GetLazyString(ConversationDocument.OutputSchemaProperty)];
 
         writer.WriteArray(ctx, Constants.RequestFields.Messages, WithAttachments(ctx, messages, attachments), (w, context, message) =>
         {
@@ -529,30 +563,33 @@ public class ChatCompletionClient : IDisposable
             w.WriteObjectWithFilter(message, filterProperties.Contains);
             w.WriteEndObject();
         });
-        writer.WriteComma();
 
         // Optional
         if (tools?.Count > 0)
         {
-            writer.WriteArray(Constants.RequestFields.Tools, tools);
             writer.WriteComma();
+            writer.WriteArray(Constants.RequestFields.Tools, tools);
 
             if (useTools is false)
             {
+                writer.WriteComma();
                 writer.WritePropertyName(Constants.RequestFields.ToolChoice);
                 writer.WriteString("none");
-                writer.WriteComma();
             }
         }
 
-        writer.WritePropertyName(Constants.RequestFields.ResponseFormat);
-        writer.WriteStartObject();
-        writer.WritePropertyName(Constants.RequestFields.Type);
-        writer.WriteString(Constants.RequestFields.JsonSchema);
-        writer.WriteComma();
-        writer.WritePropertyName(Constants.RequestFields.JsonSchema);
-        writer.WriteObject(GetStructuredOutputSchemaAsBlittable());
-        writer.WriteEndObject();
+        if (schema != null)
+        {
+            writer.WriteComma();
+            writer.WritePropertyName(Constants.RequestFields.ResponseFormat);
+            writer.WriteStartObject();
+            writer.WritePropertyName(Constants.RequestFields.Type);
+            writer.WriteString(Constants.RequestFields.JsonSchema);
+            writer.WriteComma();
+            writer.WritePropertyName(Constants.RequestFields.JsonSchema);
+            writer.WriteObject(GetStructuredOutputSchemaAsBlittable());
+            writer.WriteEndObject();
+        }
 
         if (streaming)
         {

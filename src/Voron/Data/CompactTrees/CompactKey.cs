@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Text;
+using System.Threading;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
@@ -22,10 +23,21 @@ public sealed unsafe class CompactKey : IDisposable
 {
     public static readonly CompactKey NullInstance = new();
 
-    [ThreadStatic]
-    private static ArrayPool<byte> StoragePool;
-    [ThreadStatic]
-    private static ArrayPool<long> KeyMappingPool;
+    // We want to avoid contention here, so we have separate pool per core instead of globally shared
+    // cannot use a [ThreadStatic] here, because we may hop between threads to a thread that didn't have this initialized
+    private static readonly ArrayPool<byte>[] SharedBytesPools = new ArrayPool<byte>[Environment.ProcessorCount];
+    private static readonly ArrayPool<long>[] SharedKeyMappingPools = new ArrayPool<long>[Environment.ProcessorCount];
+
+    private static ArrayPool<T> GetPoolFrom<T>(ArrayPool<T>[] perCore)
+    {
+        // casting to uint here to avoid -1 from GetCurrentProcessorId (the modulus will handle high values anyway)
+        var index = (uint)Thread.GetCurrentProcessorId() % perCore.Length;
+        ArrayPool<T> arrayPool = perCore[index];
+        if (arrayPool != null)
+            return arrayPool;
+        arrayPool = ArrayPool<T>.Create();
+        return Interlocked.CompareExchange(ref perCore[index], arrayPool, null) ?? arrayPool;
+    }
 
     private LowLevelTransaction _owner;
 
@@ -69,11 +81,8 @@ public sealed unsafe class CompactKey : IDisposable
         _currentIdx = 0;
         MaxLength = 0;
 
-        StoragePool ??= ArrayPool<byte>.Create();
-        KeyMappingPool ??= ArrayPool<long>.Create();
-
-        _storage = StoragePool.Rent(2 * Constants.CompactTree.MaximumKeySize);
-        _keyMappingCache = KeyMappingPool.Rent(2 * MappingTableMask);
+        _storage = GetPoolFrom(SharedBytesPools).Rent(2 * Constants.CompactTree.MaximumKeySize);
+        _keyMappingCache = GetPoolFrom(SharedKeyMappingPools).Rent(2 * MappingTableSize);
     }
 
     public void Reset()
@@ -83,10 +92,10 @@ public sealed unsafe class CompactKey : IDisposable
 
         _owner = null;
 
-        StoragePool.Return(_storage);
+        GetPoolFrom(SharedBytesPools).Return(_storage);
         _storage = null;
 
-        KeyMappingPool.Return(_keyMappingCache);
+        GetPoolFrom(SharedKeyMappingPools).Return(_keyMappingCache);
         _keyMappingCache = null;
     }
 
@@ -123,7 +132,11 @@ public sealed unsafe class CompactKey : IDisposable
 
             int expectedSize = maxSize + _currentIdx + sizeof(int);
             if (expectedSize > _storage.Length)
+            {
                 UnlikelyGrowStorage(expectedSize);
+                // IMPORTANT: we have to re-acquire the decoded key because the grow storage call has invalidated the pointer.
+                decodedKey = Decoded();
+            }
 
             int encodedStartIdx = _currentIdx;
             var encodedKey = _storage.AsSpan(encodedStartIdx + sizeof(int), maxSize);
@@ -230,10 +243,10 @@ public sealed unsafe class CompactKey : IDisposable
         // Request more memory, copy the content and return it.
         maxSize = Math.Max(maxSize, oldStorage.Length) * 2;
 
-        var storage = StoragePool.Rent(maxSize);
+        var storage = GetPoolFrom(SharedBytesPools).Rent(maxSize);
         _storage.AsSpan(0, _currentIdx).CopyTo(storage.AsSpan());
-        
-        StoragePool.Return(_storage); // Return old to pool.
+
+        GetPoolFrom(SharedBytesPools).Return(_storage); // Return old to pool.
         _storage = storage; // Update the new references.
     }
 

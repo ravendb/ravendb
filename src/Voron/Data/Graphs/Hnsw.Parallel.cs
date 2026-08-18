@@ -118,6 +118,17 @@ public partial class Hnsw
 
         public int MaxConcurrentBatches = 512;
 
+        internal static void CollectVectorsToPreload(ReadOnlySpan<int> edgesIndexes, ReadOnlySpan<Node> nodes, List<long> batch)
+        {
+            foreach (int index in edgesIndexes)
+            {
+                Node edge = nodes[index];
+                if (edge.VectorLoaded)
+                    continue;
+                batch.Add(edge.NodeId);
+            }
+        }
+
         private void InsertVectorsToGraph(ref ContextBoundNativeList<byte> byteBuffer, CancellationToken token)
         {
             if (_searchState.TryGetLocationForNode(EntryPointId, out var entryPointNode) is false)
@@ -993,13 +1004,7 @@ public partial class Hnsw
                     }
                 }
                 
-                for (int i = 0; i < edgesIndexes.Count; i++)
-                {
-                    int index = edgesIndexes[i];
-                    if (searchState.Nodes[index].VectorLoaded)
-                        continue;
-                    batch.Add(edgesList[i]);
-                }
+                CollectVectorsToPreload(edgesIndexes.ToSpan(), searchState.Nodes, batch);
                 return old != batch.Count;
             }
         }

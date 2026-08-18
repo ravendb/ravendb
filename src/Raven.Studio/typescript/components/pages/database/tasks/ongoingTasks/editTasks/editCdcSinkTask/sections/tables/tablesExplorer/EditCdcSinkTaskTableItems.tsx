@@ -47,6 +47,9 @@ interface IndexedRootTable {
     table: FormRootTable;
 }
 
+// Empty schemas are possible in configurations created through the API.
+const emptySchemaKey = "";
+
 export function EditCdcSinkTaskTableItems({ filter, rootFieldIds }: EditCdcSinkTaskTableItemsProps) {
     const parentRef = useRef<HTMLDivElement>(null);
     const expandedTables = useAppSelector((state) => state.editCdcSinkTask.expandedTables);
@@ -126,8 +129,9 @@ export function buildExplorerRows({ allTables, expandedTables, filter, rootField
         index,
     }));
 
+    // Tables with an empty schema are grouped under a "(default schema)" placeholder.
     const filteredGroupedTables = Object.entries(
-        _.groupBy(indexedTables, ({ table }) => table?.sourceTableSchema || "public")
+        _.groupBy(indexedTables, ({ table }) => table?.sourceTableSchema || emptySchemaKey)
     )
         .map(([schema, rootTables]) => ({
             schema,
@@ -145,7 +149,7 @@ export function buildExplorerRows({ allTables, expandedTables, filter, rootField
                 type: "schema",
                 path: `schema:${schema}`,
                 rowKey: `schema:${schema}`,
-                label: schema,
+                label: schema === emptySchemaKey ? "(default schema)" : schema,
             },
         ];
 

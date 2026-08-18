@@ -65,7 +65,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
 
     private record GenerateEmbeddings(
         AiConnectionStringIdentifier ConnectionStringId,
-        TimeSpan CacheDuration, 
+        TimeSpan CacheDuration,
         List<string> Values,
         List<ReadOnlyMemory<byte>> Embeddings,
         string CacheKey,
@@ -73,6 +73,18 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
         )
     {
         public readonly TaskCompletionSource TaskCompletionSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public List<string> CachedValues { get; init; }
+
+        public string TextForEmbeddingAt(int index)
+        {
+            var cachedCount = CachedValues?.Count ?? 0;
+            if (index < cachedCount)
+                return CachedValues[index]; // it came from the cache
+
+            var pendingIndex = index - cachedCount; // it is a new value that we are generating embeddings for
+            return pendingIndex >= 0 && pendingIndex < Values.Count ? Values[pendingIndex] : null;
+        }
     }
 
     private class AiWorker : ILowMemoryHandler
@@ -133,6 +145,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
          {
              Dictionary<string, HashSet<GenerateEmbeddings>> embeddingsByName = new();
              var cacheDuration = Configuration.EmbeddingsCacheExpiration;
+             var storeChunkText = Configuration.StoreChunkText; 
              List<(string DocId, string Value)> expirationRefresh = null;
              foreach (var (name, field) in props)
              {
@@ -141,14 +154,17 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                  {
                      List<string> pending = [];
                      List<ReadOnlyMemory<byte>> cachedEmbeddingsBuffers = [];
+                     List<string> cachedTexts = null;
                      foreach (var chunkedValue in TextChunker.Chunk(value, chunking, _prefixTokenCounts))
                      {
                          if (string.IsNullOrWhiteSpace(chunkedValue))
                              continue; // this can happen if we have just spaces, or if we have an HTML with just <img/>, etc.
-                         
+
                          if (TryGetFromCache(documentsContext, chunkedValue, cacheDuration, ref expirationRefresh, out var cachedEntry))
                          {
                              cachedEmbeddingsBuffers.Add(cachedEntry);
+                             if (storeChunkText)
+                                 (cachedTexts ??= []).Add(chunkedValue); // kept aligned with cachedEmbeddingsBuffers
                              cachedEmbeddings.Value++;
                          }
                          else
@@ -156,7 +172,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                              pending.Add(chunkedValue);
                          }
                      }
-                     var generateEmbeddings = RegisterPendingEmbeddings(pending, cachedEmbeddingsBuffers, value, cacheDuration);
+                     var generateEmbeddings = RegisterPendingEmbeddings(pending, cachedEmbeddingsBuffers, value, cacheDuration, cachedTexts);
                      tasks.Add(generateEmbeddings.TaskCompletionSource.Task);
                      hashes.Add(generateEmbeddings);
                  }
@@ -220,9 +236,9 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
             }
         }
         
-        GenerateEmbeddings RegisterPendingEmbeddings(List<string> pending, List<ReadOnlyMemory<byte>> cachedEmbeddings, string value, TimeSpan cacheDuration)
+        GenerateEmbeddings RegisterPendingEmbeddings(List<string> pending, List<ReadOnlyMemory<byte>> cachedEmbeddings, string value, TimeSpan cacheDuration, List<string> cachedValues = null)
         {
-            var newGen = new GenerateEmbeddings(_connectionStringIdentifier, cacheDuration, pending,  cachedEmbeddings,value, this);
+            var newGen = new GenerateEmbeddings(_connectionStringIdentifier, cacheDuration, pending,  cachedEmbeddings,value, this) { CachedValues = cachedValues };
             if (pending.Count == 0) // all from the cache
             {
                 newGen.TaskCompletionSource.TrySetResult();
@@ -904,28 +920,39 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                 documentsStorage.Delete(context, embeddingDocId, null);
             }
 
+            var storeChunkText = _worker.Configuration.StoreChunkText;
             foreach (var pde in _results)
             {
                 var embeddingDocId = EmbeddingsHelper.GetEmbeddingDocumentId(pde.DocumentId);
                 Dictionary<string, HashSet<string>> hashesByName = [];
                 Dictionary<string, ReadOnlyMemory<byte>> attachments = [];
+                Dictionary<string, string> textByHash = storeChunkText ? [] : null;
                 foreach (var (name, embeddings) in pde.Data)
                 {
                     HashSet<string> hashes = [];
                     foreach (var generatedEmbeddings in embeddings)
                     {
-                        foreach (var embedding in generatedEmbeddings.Embeddings)
+                        var generated = generatedEmbeddings.Embeddings;
+                        for (int i = 0; i < generated.Count; i++)
                         {
+                            var embedding = generated[i];
                             string embeddingHash = AttachmentsStorageHelper.CalculateHash(embedding.Span);
                             hashes.Add(embeddingHash);
                             attachments[embeddingHash] = embedding;
+
+                            if (textByHash is not null)
+                            {
+                                var chunkText = generatedEmbeddings.TextForEmbeddingAt(i);
+                                if (chunkText is not null)
+                                    textByHash.TryAdd(embeddingHash, chunkText);
+                            }
                         }
                     }
 
                     hashesByName[name] = hashes;
                 }
 
-                using var updatedDoc = CreateOrUpdateDocumentEmbeddingDoc(embeddingDocId, pde, hashesByName, out var attachmentsToRemove);
+                using var updatedDoc = CreateOrUpdateDocumentEmbeddingDoc(embeddingDocId, pde, hashesByName, textByHash, out var attachmentsToRemove);
                 documentsStorage.Put(context, embeddingDocId, null, updatedDoc);
                 foreach (var (embeddingHash, embedding) in attachments)
                 {
@@ -943,7 +970,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
 
             return operations;
 
-            BlittableJsonReaderObject CreateOrUpdateDocumentEmbeddingDoc(string embeddingDocId, PutDocumentEmbeddings pde, Dictionary<string, HashSet<string>> hashesByName, out HashSet<string> attachmentsToRemove)
+            BlittableJsonReaderObject CreateOrUpdateDocumentEmbeddingDoc(string embeddingDocId, PutDocumentEmbeddings pde, Dictionary<string, HashSet<string>> hashesByName, Dictionary<string, string> textByHash, out HashSet<string> attachmentsToRemove)
             {
                 using Document document = documentsStorage.Get(context, embeddingDocId);
                 DynamicJsonValue modifications;
@@ -973,6 +1000,15 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                     attachmentsToRemove.ExceptWith(hashes);
                     djv[name] = new DynamicJsonArray(hashes);
                 }
+
+                if (textByHash is { Count: > 0 })
+                {
+                    var chunkText = new DynamicJsonValue();
+                    foreach (var (hash, text) in textByHash)
+                        chunkText[hash] = text;
+                    djv[EmbeddingsHelper.ChunkTextPropertyName] = chunkText;
+                }
+
                 if (document != null)
                 {
                     RetainAttachmentsFromOtherTasks(document.Data, pde, attachmentsToRemove);

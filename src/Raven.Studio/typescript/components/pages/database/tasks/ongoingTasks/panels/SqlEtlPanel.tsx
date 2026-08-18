@@ -2,7 +2,6 @@
 import {
     ConnectionStringItem,
     EmptyScriptsWarning,
-    ICanShowTransformationScriptPreview,
     OngoingTaskActions,
     OngoingTaskName,
     OngoingTaskResponsibleNode,
@@ -30,7 +29,7 @@ import { TaskPanelErrors, EtlPanelHealthBadge, EtlPanelProgressItem, EtlPanelTog
 
 type SqlEtlPanelProps = EtlPanelBaseProps<OngoingTaskSqlEtlInfo>;
 
-export function SqlEtlPanel(props: SqlEtlPanelProps & ICanShowTransformationScriptPreview) {
+export function SqlEtlPanel(props: SqlEtlPanelProps) {
     const { data, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState, etlStats } = props;
 
     const { forCurrentDatabase } = useAppUrls();
@@ -42,7 +41,6 @@ export function SqlEtlPanel(props: SqlEtlPanelProps & ICanShowTransformationScri
         detailsVisible,
         toggleDetails,
         onEdit,
-        showPreview,
         taskHealth,
         errorCount,
         errorsByLocation,
@@ -116,7 +114,7 @@ export function SqlEtlPanel(props: SqlEtlPanelProps & ICanShowTransformationScri
             </RichPanelDetails>
             <Collapse in={detailsVisible}>
                 <div>
-                    <OngoingEtlTaskDistribution task={data} showPreview={showPreview} etlStats={etlStats} />
+                    <OngoingEtlTaskDistribution task={data} etlStats={etlStats} />
                 </div>
             </Collapse>
         </RichPanel>

@@ -71,7 +71,7 @@ export function OngoingTasksHeader(props: OngoingTasksHeaderProps) {
                         <>
                             <div id="NewTaskButton">
                                 <Button
-                                    href={forCurrentDatabase.addNewOngoingTask(isAiOnly)()}
+                                    href={forCurrentDatabase.addNewOngoingTaskUrl(isAiOnly)()}
                                     className="rounded-pill"
                                 >
                                     <Icon icon="ongoing-tasks" addon="plus" />

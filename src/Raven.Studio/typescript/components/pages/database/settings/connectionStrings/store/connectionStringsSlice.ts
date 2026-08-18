@@ -1,7 +1,7 @@
 import { PayloadAction, createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { services } from "components/hooks/useServices";
 import { loadStatus } from "components/models/common";
-import { Connection, StudioConnectionType } from "../connectionStringsTypes";
+import { Connection, ConnectionsByType, StudioConnectionType } from "../connectionStringsTypes";
 import { RootState } from "components/store";
 import { ConnectionStringsUrlParameters } from "../ConnectionStrings";
 import {
@@ -20,7 +20,7 @@ export type ConnectionStringsViewContext =
 
 interface ConnectionStringsState {
     loadStatus: loadStatus;
-    connections: { [key in StudioConnectionType]: Connection[] };
+    connections: ConnectionsByType;
     urlParameters: ConnectionStringsUrlParameters;
     initialEditConnection: Connection;
     viewContext: ConnectionStringsViewContext;
@@ -49,6 +49,12 @@ const initialState: ConnectionStringsState = {
     viewContext: "connectionStrings",
 };
 
+// A write keyed by a `Connection`'s own discriminant cannot be correlated with the matching
+// `ConnectionsByType` slot, so writes go through a widened view. Reads stay narrow.
+function widenByType(connections: ConnectionsByType): Record<StudioConnectionType, Connection[]> {
+    return connections;
+}
+
 export const connectionStringsSlice = createSlice({
     name: "connectionStrings",
     initialState,
@@ -73,17 +79,18 @@ export const connectionStringsSlice = createSlice({
                 ...connection,
                 usedBy: connection.usedBy ?? [],
             };
-            state.connections[connection.type].push(newConnection);
+            widenByType(state.connections)[connection.type].push(newConnection);
         },
         connectionEdited: (state, { payload }: PayloadAction<{ oldName: string; newConnection: Connection }>) => {
+            const connections = widenByType(state.connections);
             const type = payload.newConnection.type;
 
-            state.connections[type] = state.connections[type].map((x) =>
-                x.name === payload.oldName ? payload.newConnection : x
-            );
+            connections[type] = connections[type].map((x) => (x.name === payload.oldName ? payload.newConnection : x));
         },
         connectionDeleted: (state, { payload }: PayloadAction<Connection>) => {
-            state.connections[payload.type] = state.connections[payload.type].filter((x) => x.name !== payload.name);
+            const connections = widenByType(state.connections);
+
+            connections[payload.type] = connections[payload.type].filter((x) => x.name !== payload.name);
         },
         viewContextSet: (state, { payload: viewContext }: PayloadAction<ConnectionStringsViewContext>) => {
             state.viewContext = viewContext;
@@ -189,7 +196,10 @@ export const connectionStringsActions = {
 export const connectionStringSelectors = {
     loadStatus: (store: RootState) => store.connectionStrings.loadStatus,
     connections: (store: RootState) => store.connectionStrings.connections,
-    connectionsByType: (type: StudioConnectionType) => (store: RootState) => store.connectionStrings.connections[type],
+    connectionsByType:
+        <T extends StudioConnectionType>(type: T) =>
+        (store: RootState): ConnectionsByType[T] =>
+            store.connectionStrings.connections[type],
     initialEditConnection: (store: RootState) => store.connectionStrings.initialEditConnection,
     isEmpty: (store: RootState) => _.isEqual(store.connectionStrings.connections, initialState.connections),
     viewContext: (store: RootState) => store.connectionStrings.viewContext,

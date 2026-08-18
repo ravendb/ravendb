@@ -44,7 +44,9 @@ namespace Corax.Querying.Matches.TermProviders
         public bool Next(out TermMatch term)
         {
             var suffix = _endsWith.Decoded();
-            while (_iterator.MoveNext(out var key, out _, out _))
+            using var scope = new CompactKeyCacheScope(_searcher._transaction.LowLevelTransaction);
+            var key = scope.Key;
+            while (_iterator.MoveNext(key, out _, out _))
             {
                 var termSlice = key.Decoded();
                 if (termSlice.EndsWith(suffix) == false)

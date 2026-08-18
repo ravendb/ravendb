@@ -42,6 +42,10 @@ function getState(cert: CertificateItem): CertificatesState {
         return "Disabled";
     }
 
+    if (!cert.NotAfter) {
+        return "Valid";
+    }
+
     const expirationDate = moment.utc(cert.NotAfter);
     const nowPlusExpirationThreshold = moment
         .utc()

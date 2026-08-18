@@ -2,7 +2,6 @@
 import {
     ConnectionStringItem,
     EmptyScriptsWarning,
-    ICanShowTransformationScriptPreview,
     OngoingTaskActions,
     OngoingTaskName,
     OngoingTaskResponsibleNode,
@@ -30,7 +29,7 @@ import { TaskPanelErrors, EtlPanelHealthBadge, EtlPanelProgressItem, EtlPanelTog
 
 type ElasticSearchEtlPanelProps = EtlPanelBaseProps<OngoingTaskElasticSearchEtlInfo>;
 
-export function ElasticSearchEtlPanel(props: ElasticSearchEtlPanelProps & ICanShowTransformationScriptPreview) {
+export function ElasticSearchEtlPanel(props: ElasticSearchEtlPanelProps) {
     const { data, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState, etlStats } = props;
 
     const { forCurrentDatabase } = useAppUrls();
@@ -42,7 +41,6 @@ export function ElasticSearchEtlPanel(props: ElasticSearchEtlPanelProps & ICanSh
         detailsVisible,
         toggleDetails,
         onEdit,
-        showPreview,
         taskHealth,
         errorCount,
         errorsByLocation,
@@ -115,7 +113,7 @@ export function ElasticSearchEtlPanel(props: ElasticSearchEtlPanelProps & ICanSh
             </RichPanelDetails>
             <Collapse in={detailsVisible}>
                 <div>
-                    <OngoingEtlTaskDistribution task={data} showPreview={showPreview} etlStats={etlStats} />
+                    <OngoingEtlTaskDistribution task={data} etlStats={etlStats} />
                 </div>
             </Collapse>
         </RichPanel>

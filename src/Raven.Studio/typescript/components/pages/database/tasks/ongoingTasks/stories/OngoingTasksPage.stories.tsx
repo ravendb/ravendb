@@ -4,7 +4,12 @@ import { Meta, StoryObj } from "@storybook/react-webpack5";
 import { withStorybookContexts, withBootstrap5, withForceRerender } from "test/storybookTestUtils";
 import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";
-import { commonInit } from "components/pages/database/tasks/ongoingTasks/stories/common";
+import {
+    commonInit,
+    mockEtlProgress,
+    mockExternalReplicationProgress,
+} from "components/pages/database/tasks/ongoingTasks/stories/common";
+import OngoingTasksResult = Raven.Server.Web.System.OngoingTasksResult;
 
 export default {
     title: "Pages/Tasks/Ongoing Tasks/Ongoing Tasks Page",
@@ -17,13 +22,31 @@ export default {
     },
 } satisfies Meta;
 
-export const FullView: StoryObj<{ isAiOnly: boolean }> = {
+const shardResponsibleNodes: Record<number, string> = { 0: "A", 1: "B", 2: "C" };
+
+function applyShardResponsibleNodes(dto: OngoingTasksResult, location: databaseLocationSpecifier) {
+    const nodeTag =
+        location.shardNumber != null
+            ? (shardResponsibleNodes[location.shardNumber] ?? location.nodeTag)
+            : location.nodeTag;
+    dto.OngoingTasks.forEach((task) => {
+        if (task.ResponsibleNode) {
+            task.ResponsibleNode = {
+                NodeTag: nodeTag,
+                NodeUrl: `http://${nodeTag.toLowerCase()}.ravendb`,
+                ResponsibleNode: nodeTag,
+            };
+        }
+    });
+}
+
+export const FullView: StoryObj<{ isAiOnly: boolean; databaseType: "sharded" | "cluster" | "singleNode" }> = {
     render: (props) => {
-        commonInit();
+        commonInit(props.databaseType);
 
         const { tasksService } = mockServices;
 
-        tasksService.withGetTasks();
+        tasksService.withGetTasksPerLocation(applyShardResponsibleNodes);
         tasksService.withGetEtlProgress();
         tasksService.withTaskErrors();
         tasksService.withEtlStats();
@@ -34,6 +57,93 @@ export const FullView: StoryObj<{ isAiOnly: boolean }> = {
     },
     args: {
         isAiOnly: false,
+        databaseType: "sharded",
+    },
+    argTypes: {
+        databaseType: { control: "radio", options: ["sharded", "cluster", "singleNode"] },
+    },
+};
+
+export const Completed: StoryObj = {
+    render: () => {
+        commonInit("sharded");
+
+        const { tasksService } = mockServices;
+
+        tasksService.withGetTasksPerLocation(applyShardResponsibleNodes);
+        mockEtlProgress(tasksService, true, false, false);
+        tasksService.withTaskErrors();
+        tasksService.withEtlStats();
+        mockExternalReplicationProgress(tasksService, true);
+        tasksService.withGetInternalReplicationProgress();
+
+        return <OngoingTasksPage />;
+    },
+};
+
+export const Disabled: StoryObj = {
+    render: () => {
+        commonInit("sharded");
+
+        const { tasksService } = mockServices;
+
+        tasksService.withGetTasksPerLocation((dto, location) => {
+            applyShardResponsibleNodes(dto, location);
+            dto.OngoingTasks.forEach((task) => {
+                task.TaskState = "Disabled";
+                task.TaskConnectionStatus = "NotActive";
+            });
+        });
+        mockEtlProgress(tasksService, false, true, false);
+        tasksService.withTaskErrors([]);
+        tasksService.withEtlStats();
+        tasksService.withGetExternalReplicationProgress();
+        tasksService.withGetInternalReplicationProgress();
+
+        return <OngoingTasksPage />;
+    },
+};
+
+export const WithRuntimeError: StoryObj = {
+    render: () => {
+        commonInit("sharded");
+
+        const { tasksService } = mockServices;
+
+        tasksService.withGetTasksPerLocation((dto, location) => {
+            applyShardResponsibleNodes(dto, location);
+            dto.OngoingTasks.forEach((task) => {
+                task.Error = "Connection refused: error connecting to remote server at http://target:8080";
+            });
+        });
+        tasksService.withGetEtlProgress();
+        tasksService.withTaskErrors();
+        tasksService.withEtlStats();
+        tasksService.withGetExternalReplicationProgress();
+        tasksService.withGetInternalReplicationProgress();
+
+        return <OngoingTasksPage />;
+    },
+};
+
+// Shard 1 (responsible node B) fails to load — shard 0 (A) and shard 2 (C) show normally
+export const WithLoadError: StoryObj = {
+    render: () => {
+        commonInit("sharded");
+
+        const { tasksService } = mockServices;
+
+        tasksService.withGetTasksPerLocation(
+            applyShardResponsibleNodes,
+            (location) => location.shardNumber === 1 && location.nodeTag === "B"
+        );
+        tasksService.withGetEtlProgress();
+        tasksService.withTaskErrors();
+        tasksService.withEtlStats();
+        tasksService.withGetExternalReplicationProgress();
+        tasksService.withGetInternalReplicationProgress();
+
+        return <OngoingTasksPage />;
     },
 };
 
@@ -58,6 +168,6 @@ export const EmptyView: StoryObj = {
             dto.Results = [];
         });
 
-        return <OngoingTasksPage />;
+        return <OngoingTasksPage queryParams={{ allowEmpty: "1" }} />;
     },
 };

@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Server.Documents.AI;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Attachments;
 using Raven.Server.Documents.Handlers.Batches;
@@ -58,7 +59,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
             if (streaming)
             {
-                var streamPropertyPath = RequestHandler.GetStringQueryString("streamPropertyPath");
+                var streamPropertyPath = RequestHandler.GetStringQueryString("streamPropertyPath", required: handler.Schema != null);
                 HttpContext.Response.Headers.ContentType = "text/event-stream";
                 RequestHandler.DisableResponseBuffering();
 
@@ -75,6 +76,10 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                     throw;
                 }
                 catch (MissingAiAgentParameterException)
+                {
+                    throw;
+                }
+                catch (QueryToolFailedException)
                 {
                     throw;
                 }
@@ -127,14 +132,17 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 MaxModelIterationsPerCall = maxModelIterationsPerCall
             };
 
-            return new RequestBody
+            var request = new RequestBody
             {
                 ActionResponses = actionResponses,
                 ArtificialActions = artificialActions,
                 UserPrompt = userPrompt,
                 Parameters = parameters,
-                CreationOptions = options
+                CreationOptions = options,
+                OutputOptions = AiServerOutputOptions.From(body)
             };
+
+            return request;
         }
 
         public async Task<RequestBody> ReadRequestBodyAsync(DocumentsOperationContext context, string destinationDocumentId, CancellationToken token)

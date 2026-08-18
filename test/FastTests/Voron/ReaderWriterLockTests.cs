@@ -8,6 +8,7 @@ using Tests.Infrastructure;
 
 namespace FastTests.Voron
 {
+#pragma warning disable CS0618 // this test covers the obsolete lock while the journal flush still uses it
     public class ReaderWriterLockTests(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
         [RavenFact(RavenTestCategory.Core)]
@@ -68,4 +69,5 @@ namespace FastTests.Voron
             Assert.True(resultReader1.ElapsedInMs < 1000, $"elapsed: {resultReader1.ElapsedInMs}");
         }
     }
+#pragma warning restore CS0618
 }
