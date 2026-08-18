@@ -10,7 +10,7 @@ export function RouteErrorBoundary() {
 
     if (isNotFound) {
         return (
-            <AuthScreenLayout>
+            <AuthScreenLayout background="simple">
                 <PageErrorState
                     code="404"
                     title="Page not found"
@@ -25,7 +25,7 @@ export function RouteErrorBoundary() {
     }
 
     return (
-        <AuthScreenLayout>
+        <AuthScreenLayout background="simple">
             <PageErrorState title="Something went wrong" description={<p>{getErrorMessage(error)}</p>}>
                 <Button variant="outline" asChild>
                     <Link to={appRoutes.dashboard()}>Go to dashboard</Link>
