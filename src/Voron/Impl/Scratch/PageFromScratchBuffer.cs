@@ -1,35 +1,9 @@
-using System;
-using Sparrow;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Voron.Impl.Paging;
 
 namespace Voron.Impl.Scratch
 {
-    public sealed class PageFromScratchBufferEqualityComparer : IEqualityComparer<PageFromScratchBuffer>
-    {
-        public static readonly PageFromScratchBufferEqualityComparer Instance = new PageFromScratchBufferEqualityComparer();
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Equals(PageFromScratchBuffer x, PageFromScratchBuffer y)
-        {
-            if (x == y) return true;
-            if (x == null || y == null) return false;            
-
-            return x.PositionInScratchBuffer == y.PositionInScratchBuffer && x.Size == y.Size && x.NumberOfPages == y.NumberOfPages && x.File.Number == y.File.Number;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int GetHashCode(PageFromScratchBuffer obj)
-        {
-            int v = Hashing.Combine(obj.NumberOfPages, obj.File.Number);
-            int w = Hashing.Combine(obj.Size.GetHashCode(), obj.PositionInScratchBuffer.GetHashCode());
-            return Hashing.Combine(v, w);
-        }
-    }
-
-
-    public sealed record PageFromScratchBuffer(
+    public readonly record struct PageFromScratchBuffer(
         ScratchBufferFile File,
         Pager.State State,
         long AllocatedInTransaction,
@@ -40,11 +14,16 @@ namespace Voron.Impl.Scratch
         int NumberOfPages
     )
     {
+        internal const long TombstoneTx = -1;
+        internal const long SurvivingTombstoneTx = -2;
+
+        public bool IsValid => File != null;
+
         public unsafe Page ReadPage(LowLevelTransaction tx)
         {
             return new Page(Read(ref tx.PagerTransactionState));
         }
-        
+
         public unsafe byte* Read(ref Pager.PagerTransactionState txState)
         {
             File.VerifyMatch(PageNumberInDataFile, PositionInScratchBuffer, NumberOfPages);
@@ -68,7 +47,7 @@ namespace Voron.Impl.Scratch
         {
             return new Page(ReadRaw(ref tx.PagerTransactionState));
         }
-        
+
         public unsafe byte* ReadRaw(ref Pager.PagerTransactionState txState)
         {
             File.VerifyMatch(PageNumberInDataFile, PositionInScratchBuffer, NumberOfPages);
