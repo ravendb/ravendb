@@ -225,7 +225,7 @@ public class RavenDB_22973 : StorageTest
     public void Overflow_should_reuse_shrinked_page_that_got_freed()
     {
         var shrinkedPageNumber = -1L;
-        PageFromScratchBuffer shrinkedPageInScratch = null;
+        PageFromScratchBuffer shrinkedPageInScratch = default;
 
         using (var tx = Env.WriteTransaction())
         {

@@ -20,18 +20,16 @@ public class RavenDB_23264 : StorageTest
         options.ManualFlushing = true;
         options.ManualSyncing = true;
     }
-    
+
     [RavenFact(RavenTestCategory.Voron)]
-    public void Piggybacking_tx_failure_after_flush_action_should_poison_the_environment_and_recover_on_restart()
+    public void Piggybacking_tx_failure_after_flush_action_must_keep_environment_consistent()
     {
         // RavenDB-23264: the _updateJournalStateAfterFlush action invoked by a piggybacking write tx that then
         // fails to commit must not double-free on the flush thread's retry (the free loop nulls entries after
-        // freeing them). RavenDB-27166 then revoked the retry contract entirely: such a rollback would restore
-        // the freed scratch entries, so it marks the environment as catastrophically failed and the recovery
-        // happens on restart.
+        // freeing them). RavenDB-27166: the scratch pool frees the action performed are not undone by the
+        // rollback, so the matching scratch table removals survive it as well - the environment stays fully
+        // consistent, the flush retry completes, and no restart is needed.
 
-        // file-based so RestartDatabase builds fresh options, the way a real database reload does - the
-        // catastrophic-failure mark set by the RavenDB-27166 fix lives on the options instance
         RequireFileBasedPager();
 
         long p1, p2, p3;
@@ -116,30 +114,44 @@ public class RavenDB_23264 : StorageTest
             // Expected - the simulated failure prevents the tx from committing
         }
 
-        // Step 10: Dispose txBlocker → releases write lock.
+        // Step 10: Dispose txBlocker → rollback (keeping the flush action's removals) → releases write lock.
         // OnTransactionCompleted will NOT clear the action because Committed = false.
         txBlocker.Dispose();
 
-        // Step 11 (RavenDB-27166): the flush thread wakes up, but txBlocker's rollback marked the environment
-        // as catastrophically failed - its retry transaction is refused and the flush surfaces the failure.
-        flushThread.Join(TimeSpan.FromSeconds(30));
+        // Step 11: the flush thread wakes up and its retry transaction completes the journal state update
+        // (the entries it already freed were nulled, so nothing is freed twice)
+        Assert.True(flushThread.Join(TimeSpan.FromSeconds(30)), "flush thread did not complete");
 
         // Clean up
         Env.Journal.Applicator.ForTestingPurposesOnly().OnWaitForJournalStateToBeUpdated_AfterAssigning_updateJournalStateAfterFlush = null;
 
-        Assert.True(Env.Options.IsCatastrophicFailureSet, "the rollback did not mark the environment as catastrophically failed");
-        Assert.NotNull(flushException);
+        Assert.Null(flushException);
+        Assert.False(Env.Options.IsCatastrophicFailureSet, "the rollback of the piggybacking tx must not poison the environment");
 
-        // Step 12: no committed data was lost (the failed transaction never reached the journal) - the forced
-        // restart recovers a consistent state
-        RestartDatabase();
+        // Step 12: the environment keeps serving correct data without any restart
+        AssertPagesAreReadable();
 
-        using (var rtx = Env.ReadTransaction())
+        using (var txw = Env.WriteTransaction())
         {
-            foreach (var pageNumber in new[] { p1, p2, p3 })
+            txw.LowLevelTransaction.ModifyPage(p1);
+            txw.Commit();
+        }
+
+        Env.FlushLogToDataFile();
+        AssertPagesAreReadable();
+
+        RestartDatabase();
+        AssertPagesAreReadable();
+
+        void AssertPagesAreReadable()
+        {
+            using (var rtx = Env.ReadTransaction())
             {
-                var page = rtx.LowLevelTransaction.GetPage(pageNumber);
-                Assert.Equal(pageNumber, page.PageNumber);
+                foreach (var pageNumber in new[] { p1, p2, p3 })
+                {
+                    var page = rtx.LowLevelTransaction.GetPage(pageNumber);
+                    Assert.Equal(pageNumber, page.PageNumber);
+                }
             }
         }
     }

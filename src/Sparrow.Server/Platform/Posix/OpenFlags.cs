@@ -41,4 +41,13 @@ namespace Sparrow.Server.Platform.Posix
         // O_CLOEXEC = 0x00080000,
         // O_PATH = 0x00200000
     }
+
+    [Flags]
+    public enum SyncFileRangeFlags : uint
+    {
+        SYNC_FILE_RANGE_WAIT_BEFORE = 1,
+        SYNC_FILE_RANGE_WRITE = 2,
+        SYNC_FILE_RANGE_WAIT_AFTER = 4,
+    }
+
 }
