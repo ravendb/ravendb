@@ -72,8 +72,8 @@ function App() {
                     <Link
                         to={appRoutes.dashboard()}
                         className="group flex size-8 items-center justify-center rounded-md"
-                        title="Back to Overview"
-                        aria-label="Back to Overview"
+                        title="Home"
+                        aria-label="Home"
                     >
                         <QuillMark className="size-6 text-sidebar-foreground/85 transition-all group-hover:scale-110 group-hover:text-primary" />
                     </Link>
