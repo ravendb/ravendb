@@ -183,7 +183,7 @@ public static partial class WidgetThemeValidation
 
         if (HexColorPattern.IsMatch(colors.MessageColor ?? "") == false)
         {
-            error = $"{scheme}.messageColor must be a hex color such as '#ebe9fa'";
+            error = $"{scheme}.messageColor must be a hex color such as '#ffefec'";
             return false;
         }
 
