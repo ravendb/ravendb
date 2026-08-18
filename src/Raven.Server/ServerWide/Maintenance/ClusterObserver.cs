@@ -26,6 +26,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance.Sharding;
 using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Platform;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
 
@@ -92,6 +93,8 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
             }, null, ThreadNames.ForClusterObserver($"Cluster observer for term {_term}", _term));
         }
+
+        internal int _clusterTransactionsCleanupBatchSize = PlatformDetails.Is32Bits ? 1 * 1024 : 10 * 1024;
 
         public bool Suspended = false; // don't really care about concurrency here
         internal long _iteration;
@@ -267,7 +270,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             }
                         }
 
-                        var cleanUp = mergedState.States.Min(s => CleanUpDatabaseValues(s.Value) ?? -1);
+                        var cleanUp = mergedState.States.Min(s => CleanUpDatabaseValues(context, s.Value) ?? -1);
                         if (cleanUp > 0)
                         {
                             cleanUpState ??= new Dictionary<string, long>();
@@ -809,7 +812,7 @@ namespace Raven.Server.ServerWide.Maintenance
             return (bool)result.Result;
         }
 
-        private long? CleanUpDatabaseValues(DatabaseObservationState state)
+        private long? CleanUpDatabaseValues(ClusterOperationContext context, DatabaseObservationState state)
         {
             if (_server.Engine.CommandsVersionManager.CurrentClusterMinimalVersion <
                 ClusterCommandsVersionManager.ClusterCommandsVersions[nameof(CleanUpClusterStateCommand)])
@@ -832,10 +835,15 @@ namespace Raven.Server.ServerWide.Maintenance
                 commandCount = Math.Min(commandCount, report.LastCompletedClusterTransaction);
             }
 
-            if (commandCount <= state.ReadTruncatedClusterTransactionCommandsCount())
+            var truncatedCount = state.ReadTruncatedClusterTransactionCommandsCount();
+            if (commandCount <= truncatedCount)
                 return null;
 
-            return commandCount;
+            var firstCommandsCount = ClusterTransactionCommand.ReadFirstClusterTransactionPreviousCount(context, state.RawDatabase.DatabaseName);
+            if (firstCommandsCount == null || firstCommandsCount >= commandCount)
+                return null;
+
+            return Math.Min(commandCount, Math.Max(truncatedCount + _clusterTransactionsCleanupBatchSize, firstCommandsCount.Value + 1));
         }
 
         private static bool AllDatabaseNodesHasReport(DatabaseObservationState state)

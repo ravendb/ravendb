@@ -13,6 +13,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
@@ -29,13 +30,18 @@ using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Rachis;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Maintenance;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Tests.Infrastructure;
+using Voron;
+using Voron.Data.Tables;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -2393,7 +2399,373 @@ select incl(c)"
                 Assert.Equal(count, await session.Query<TestObj>().CountAsync());
             }
         }
-        
+
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public async Task ReadCommandsBatch_ShouldReturnAllDatabaseCommands_RespectingFromCountAndTake()
+        {
+            const int count = 20;
+
+            using var store = GetDocumentStore();
+
+            var database = await GetDatabase(store.Database);
+
+            // Block the database tx-merger so the cluster-transaction executor cannot drain (and clean up)
+            // the commands. This keeps them in the cluster-storage table while we read them back.
+            using var mre = new ManualResetEvent(false);
+            var blockerTask = database.TxMerger.Enqueue(new TestCommand(mre, TimeSpan.FromSeconds(30)));
+
+            // The rows are written to the cluster-storage table when the raft command is applied, but the
+            // client-side await of a cluster-wide tx only completes once the (blocked) database applies it -
+            // so we fire the transactions here and await them only after releasing the merger.
+            var tasks = Task.WhenAll(Enumerable.Range(0, count).Select(async i =>
+            {
+                using var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
+                await session.StoreAsync(new TestObj(), $"TestObjs/{i}");
+                await session.SaveChangesAsync();
+            }));
+
+            try
+            {
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                {
+                    // wait until all the commands were persisted to the cluster-storage table
+                    await AssertWaitForTrueAsync(() =>
+                    {
+                        using (context.OpenReadTransaction())
+                            return Task.FromResult(ClusterTransactionCommand.ReadCommandsBatch(context, store.Database, fromCount: 0, take: long.MaxValue).Count() == count);
+                    });
+
+                    using (context.OpenReadTransaction())
+                    {
+                        // reading from the beginning must return every command of the database, in ascending order
+                        var all = ClusterTransactionCommand.ReadCommandsBatch(context, store.Database, fromCount: 0, take: long.MaxValue).ToList();
+                        Assert.Equal(count, all.Count);
+                        Assert.All(all, c => Assert.Equal(store.Database.ToLowerInvariant(), c.Database));
+                        Assert.Equal(all.Select(c => c.PreviousCount).OrderBy(x => x), all.Select(c => c.PreviousCount));
+
+                        // 'take' must bound the number of commands returned
+                        var firstFive = ClusterTransactionCommand.ReadCommandsBatch(context, store.Database, fromCount: 0, take: 5).ToList();
+                        Assert.Equal(5, firstFive.Count);
+                        Assert.Equal(all.Take(5).Select(c => c.PreviousCount), firstFive.Select(c => c.PreviousCount));
+
+                        // 'fromCount' must return the tail starting at the requested count (inclusive)
+                        var from = all[12].PreviousCount;
+                        var tail = ClusterTransactionCommand.ReadCommandsBatch(context, store.Database, fromCount: from, take: long.MaxValue).ToList();
+                        Assert.Equal(count - 12, tail.Count);
+                        Assert.Equal(from, tail[0].PreviousCount);
+                        Assert.Equal(all.Skip(12).Select(c => c.PreviousCount), tail.Select(c => c.PreviousCount));
+                    }
+                }
+            }
+            finally
+            {
+                mre.Set();
+            }
+
+            await blockerTask;
+            await tasks;
+
+            using (var session = store.OpenAsyncSession())
+                Assert.Equal(count, await session.Query<TestObj>().CountAsync());
+        }
+
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public void ReadCommandsBatch_ShouldSeekCorrectly_WithLargePreviousCount()
+        {
+            // Bootstrap the single-node cluster so the cluster-storage schema (the TransactionCommands table) exists.
+            const string database = "read-commands-batch-large-count";
+
+            // PreviousCount values chosen to exercise the big-endian key ordering, including values above
+            // int.MaxValue and around the 2^32 byte-carry boundary (where 'fromCount - 1' borrows across bytes).
+            var counts = new[]
+            {
+                0L,
+                1L,
+                int.MaxValue,            // 2^31 - 1
+                (long)int.MaxValue + 1,  // 2^31
+                (1L << 32) - 1,          // 2^32 - 1  (the lower 4 bytes are all 0xFF)
+                1L << 32,                // 2^32      (carry into the 5th byte)
+                1_000_000_000_000L       // 10^12
+            };
+
+            using var server = GetNewServer();
+            using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
+                    foreach (var previousCount in counts)
+                        InsertTransactionCommand(context, items, database, previousCount);
+
+                    tx.Commit();
+                }
+
+                using (context.OpenReadTransaction())
+                {
+                    // reading from 0 must return every row in ascending order - validates big-endian key ordering at large values
+                    var all = ClusterTransactionCommand.ReadCommandsBatch(context, database, fromCount: 0, take: long.MaxValue).ToList();
+                    Assert.Equal(counts.OrderBy(x => x).ToArray(), all.Select(c => c.PreviousCount).ToArray());
+
+                    // a 'fromCount' that exactly matches a large row must include that row.
+                    // Here fromCount - 1 == (2^32 - 1), which is itself a present row and borrows across a byte boundary.
+                    const long fromExact = 1L << 32; // 2^32
+                    var tailExact = ClusterTransactionCommand.ReadCommandsBatch(context, database, fromCount: fromExact, take: long.MaxValue).ToList();
+                    Assert.Equal(counts.Where(c => c >= fromExact).OrderBy(x => x).ToArray(), tailExact.Select(c => c.PreviousCount).ToArray());
+                    Assert.Equal(fromExact, tailExact[0].PreviousCount);
+
+                    // a 'fromCount' that falls between two large rows (no exact match) must return only the next-higher rows
+                    const long fromBetween = 4_000_000_000L; // between 2^31 and (2^32 - 1)
+                    var tailBetween = ClusterTransactionCommand.ReadCommandsBatch(context, database, fromCount: fromBetween, take: long.MaxValue).ToList();
+                    Assert.Equal(counts.Where(c => c >= fromBetween).OrderBy(x => x).ToArray(), tailBetween.Select(c => c.PreviousCount).ToArray());
+                }
+            }
+        }
+
+        private static unsafe void InsertTransactionCommand(TransactionOperationContext context, Table items, string database, long previousCount)
+        {
+            // mirrors ClusterTransactionCommand.SaveCommandBatch: Key = db <sep> big-endian(previousCount), then the commands blittable and the raft index.
+            using (ClusterTransactionCommand.GetPrefix(context, database, out Slice keySlice, previousCount))
+            using (var commands = context.ReadObject(new DynamicJsonValue { ["DatabaseCommands"] = new DynamicJsonArray() }, "cmd"))
+            using (items.Allocate(out TableValueBuilder tvb))
+            {
+                tvb.Add(keySlice.Content.Ptr, keySlice.Size);
+                tvb.Add(commands.BasePointer, commands.Size);
+                tvb.Add(previousCount); // RaftIndex - unique per row, not asserted on
+                items.Insert(tvb);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public async Task RestoredDatabase_ShouldCleanUpClusterTransactionCommands_EvenWhenTruncatedCountFromBackupIsHigh()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+
+            using (var source = GetDocumentStore())
+            {
+                const int originalCount = 64;
+                for (int i = 0; i < originalCount; i++)
+                {
+                    using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                    {
+                        await session.StoreAsync(new TestObj(), $"TestObjs/{i}");
+                        await session.SaveChangesAsync();
+                    }
+
+                    using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                    {
+                        session.Delete($"TestObjs/{i}");
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                await AssertWaitForTrueAsync(async () =>
+                {
+                    var r = (await source.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(source.Database)));
+                    return r.TruncatedClusterTransactionCommandsCount >= originalCount;
+                }, timeout: 60_000);
+
+                var config = Backup.CreateBackupConfiguration(backupPath, BackupType.Snapshot);
+                await Backup.UpdateConfigAndRunBackupAsync(Server, config, source);
+            }
+
+            using var newServer = GetNewServer();
+            var restoredDatabase = GetDatabaseName();
+            using var store = new DocumentStore { Urls = new[] { newServer.WebUrl }, Database = restoredDatabase }.Initialize();
+
+            var restore = new RestoreBackupOperation(new RestoreBackupConfiguration
+            {
+                BackupLocation = Directory.GetDirectories(backupPath).First(),
+                DatabaseName = restoredDatabase
+            });
+            var operation = await store.Maintenance.Server.SendAsync(restore);
+            await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
+
+            var restoredRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(restoredDatabase));
+            Assert.True(restoredRecord.TruncatedClusterTransactionCommandsCount == 0);
+
+            const int newCount = 5;
+            for (int i = 0; i < newCount; i++)
+            {
+                using var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
+                await session.StoreAsync(new TestObj(), $"NewObjs/{i}");
+                await session.SaveChangesAsync();
+            }
+
+            await AssertWaitForTrueAsync(() =>
+                Task.FromResult(CountClusterTransactionCommands(newServer, restoredDatabase) <= 1), timeout: 30_000);
+        }
+
+        private static long CountClusterTransactionCommands(RavenServer server, string database)
+        {
+            using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+                return ClusterTransactionCommand.ReadCommandsBatch(ctx, database, fromCount: 0, take: long.MaxValue).Count();
+        }
+
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public async Task ClusterTransactionCommandsCleanup_ShouldDrainLargeBacklog_WhenObserverResumes()
+        {
+            using var server = GetNewServer();
+            using var store = GetDocumentStore(new Options { Server = server });
+
+            // make sure the (single-node) cluster observer exists, then suspend it so a backlog can build up
+            await AssertWaitForTrueAsync(() => Task.FromResult(server.ServerStore.Observer != null));
+            var observer = server.ServerStore.Observer;
+            observer.Suspended = true;
+
+            // shrink this observer's cleanup batch size so a backlog spanning several cleanup batches
+            // can be built with a small number of transactions
+            observer._clusterTransactionsCleanupBatchSize = 64;
+            var count = 2 * observer._clusterTransactionsCleanupBatchSize + 5;
+
+            // Write 'count' cluster-wide transactions. The database executor processes them, but with the
+            // observer suspended none of the transaction commands are cleaned up, so they accumulate in the
+            // cluster storage.
+            for (var i = 0; i < count; i++)
+            {
+                using var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
+                await session.StoreAsync(new TestObj(), $"TestObjs/{i}");
+                await session.SaveChangesAsync();
+            }
+
+            using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                // verify the full backlog is present before enabling the observer
+                using (context.OpenReadTransaction())
+                    Assert.Equal(count, ClusterTransactionCommand.ReadCommandsBatch(context, store.Database, fromCount: 0, take: long.MaxValue).Count());
+
+                // Resume cleanup. The observer must drain the whole backlog - in bounded batches, over several
+                // cleanup commands - leaving at most the single retained marker. If batching were broken (e.g. the
+                // cleanup command id didn't advance) rows would be orphaned and this would time out.
+                observer.Suspended = false;
+
+                await AssertWaitForTrueAsync(() =>
+                {
+                    using (context.OpenReadTransaction())
+                        return Task.FromResult(ClusterTransactionCommand.ReadCommandsBatch(context, store.Database, fromCount: 0, take: long.MaxValue).Count() <= 1);
+                }, timeout: 120_000);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public async Task ClusterTransactionCommandsCleanup_ShouldDrainBacklog_WhenSingleTransactionExceedsTwoCleanupBatches()
+        {
+            // A single cluster-wide transaction is stored as one row in the cluster's TransactionCommands table, and
+            // cleanup deletes whole rows. When such a row spans more than 2x ClusterTransactionsCleanupBatchSize
+            // commands, the first cleanup round deletes it but advances TruncatedClusterTransactionCommandsCount only
+            // to truncatedCount + batchSize, which lands more than a batch below the next row. Every following round
+            // then computes the same capped target (truncatedCount never moves because nothing gets deleted), so the
+            // cleanup command id never changes, ContainsCommandId blocks the re-issue and the remaining rows are
+            // orphaned forever.
+            using var server = GetNewServer();
+            using var store = GetDocumentStore(new Options { Server = server });
+
+            // make sure the (single-node) cluster observer exists, then suspend it so a backlog can build up
+            await AssertWaitForTrueAsync(() => Task.FromResult(server.ServerStore.Observer != null));
+            var observer = server.ServerStore.Observer;
+            observer.Suspended = true;
+
+            // shrink this observer's cleanup batch size so the oversized transaction stays small
+            observer._clusterTransactionsCleanupBatchSize = 64;
+            var hugeCount = 2 * observer._clusterTransactionsCleanupBatchSize + 100;
+            const int tailCount = 128;
+
+            // one oversized cluster-wide transaction -> a single commands row spanning 'hugeCount' commands
+            // (atomic guards are disabled only to keep the raft command lean, they don't affect the commands count)
+            using (var session = store.OpenAsyncSession(new SessionOptions
+            {
+                TransactionMode = TransactionMode.ClusterWide,
+                DisableAtomicDocumentWritesInClusterWideTransaction = true
+            }))
+            {
+                for (var i = 0; i < hugeCount; i++)
+                    await session.StoreAsync(new TestObj(), $"TestObjs/huge/{i}");
+
+                await session.SaveChangesAsync();
+            }
+
+            // followed by regular single-command transactions - the rows a stalled cleanup would orphan
+            for (var i = 0; i < tailCount; i++)
+            {
+                using var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
+                await session.StoreAsync(new TestObj(), $"TestObjs/{i}");
+                await session.SaveChangesAsync();
+            }
+
+            using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                // sanity: the backlog is one oversized row followed by 'tailCount' single-command rows
+                using (context.OpenReadTransaction())
+                {
+                    var rows = ClusterTransactionCommand.ReadCommandsBatch(context, store.Database, fromCount: 0, take: long.MaxValue).ToList();
+                    Assert.Equal(1 + tailCount, rows.Count);
+                    Assert.Equal(0L, rows[0].PreviousCount);
+                    Assert.Equal((long)hugeCount, rows[1].PreviousCount);
+                }
+
+                // Resume cleanup. The observer must keep advancing the truncated commands count past the oversized
+                // row until the tail drains, leaving at most the single retained marker.
+                observer.Suspended = false;
+
+                await AssertWaitForTrueAsync(() =>
+                {
+                    using (context.OpenReadTransaction())
+                        return Task.FromResult(ClusterTransactionCommand.ReadCommandsBatch(context, store.Database, fromCount: 0, take: long.MaxValue).Count() <= 1);
+                }, timeout: 120_000);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClusterTransactions | RavenTestCategory.Sharding)]
+        public async Task ClusterTransactionCommandsCleanup_ShouldCleanupCommands_ForShardedDatabase()
+        {
+            const int count = 100;
+
+            using var server = GetNewServer();
+            using var store = Sharding.GetDocumentStore(new Options { Server = server });
+
+            // make sure the (single-node) cluster observer exists, then suspend it so a backlog can build up
+            await AssertWaitForTrueAsync(() => Task.FromResult(server.ServerStore.Observer != null));
+            var observer = server.ServerStore.Observer;
+            observer.Suspended = true;
+
+            for (var i = 0; i < count; i++)
+            {
+                using var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
+                await session.StoreAsync(new TestObj(), $"TestObjs/{i}");
+                await session.SaveChangesAsync();
+            }
+
+            // The cleanup point is the minimum over the shards of the last *executed own-command* position, so a
+            // shard whose last own command sits early in the stream would hold the whole tail back. Append one
+            // command per shard so every shard's completed position reaches the end of the backlog, which makes
+            // the drained state deterministic: at most one retained marker row per shard.
+            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+            var shardCount = record.Sharding.Shards.Count;
+            var remainingShards = new HashSet<int>(record.Sharding.Shards.Keys);
+            for (var i = 0; remainingShards.Count > 0; i++)
+            {
+                var id = $"TestObjs/tail/{i}";
+                var shardNumber = await Sharding.GetShardNumberForAsync(store, id);
+                if (remainingShards.Remove(shardNumber) == false)
+                    continue;
+
+                using var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
+                await session.StoreAsync(new TestObj(), id);
+                await session.SaveChangesAsync();
+            }
+
+            // the commands are stored under the sharded (parent) database name, one row per shard batch
+            Assert.Equal(count + shardCount, CountClusterTransactionCommands(server, store.Database));
+
+            // Resume cleanup. The observer computes the cleanup point from the shard states, but must read the
+            // first command row under the sharded database name - if it used the shard name ('db$0') the lookup
+            // would find nothing and no cleanup would ever be issued for a sharded database.
+            observer.Suspended = false;
+
+            await AssertWaitForTrueAsync(() =>
+                Task.FromResult(CountClusterTransactionCommands(server, store.Database) <= shardCount), timeout: 60_000);
+        }
+
         [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task TestCase()
         {

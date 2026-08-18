@@ -64,8 +64,8 @@ class appUrl {
         migrateDatabaseUrl: ko.pureComputed(() => appUrl.forMigrateDatabase(appUrl.currentDatabase())),
         sampleDataUrl: ko.pureComputed(() => appUrl.forSampleData(appUrl.currentDatabase())),
         backupsUrl: ko.pureComputed(() => appUrl.forBackups(appUrl.currentDatabase())),
-        ongoingTasksUrl: ko.pureComputed(() => appUrl.forOngoingTasks(appUrl.currentDatabase())),
-        addNewOngoingTaskUrl: ko.pureComputed(() => appUrl.forAddNewOngoingTasks(appUrl.currentDatabase())),
+        ongoingTasksUrl: (allowEmpty?: boolean) => ko.pureComputed(() => appUrl.forOngoingTasks(appUrl.currentDatabase(), allowEmpty)),
+        addNewOngoingTaskUrl: (noBack?: boolean) => ko.pureComputed(() => appUrl.forAddNewOngoingTasks(appUrl.currentDatabase(), noBack)),
         editExternalReplicationTaskUrl: ko.pureComputed(() => appUrl.forEditExternalReplication(appUrl.currentDatabase())),
         editReplicationHubTaskUrl: ko.pureComputed(() => appUrl.forEditReplicationHub(appUrl.currentDatabase())),
         editReplicationSinkTaskUrl: ko.pureComputed(() => appUrl.forEditReplicationSink(appUrl.currentDatabase())),
@@ -571,14 +571,16 @@ class appUrl {
         return "#databases/tasks/backups?" + databasePart;
     }
     
-    static forOngoingTasks(db: database | string): string {
+    static forOngoingTasks(db: database | string, allowEmpty?: boolean): string {
         const databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/tasks/ongoingTasks?" + databasePart;
+        const allowEmptyPart = allowEmpty ? "&allowEmpty=1" : "";
+        return "#databases/tasks/ongoingTasks?" + databasePart + allowEmptyPart;
     }
     
-    static forAddNewOngoingTasks(db: database | string): string {
+    static forAddNewOngoingTasks(db: database | string, noBack?: boolean): string {
         const databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/tasks/addNewOngoingTasks?" + databasePart;
+        const noBackPart = noBack ? "&noBack=1" : "";
+        return "#databases/tasks/addNewOngoingTasks?" + databasePart + noBackPart;
     }
 
     static forEditExternalReplication(db: database | string, taskId?: number): string {

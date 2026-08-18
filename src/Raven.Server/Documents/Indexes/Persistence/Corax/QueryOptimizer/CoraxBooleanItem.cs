@@ -163,7 +163,7 @@ public struct CoraxBooleanItem : IQueryMatch
             {
                 Slice startWith = GetStartWithTerm();
                 streamingOptimization.SkipOrderByClause = true;
-                return _indexSearcher.StartWithQuery(streamingOptimization.CompoundField, startWith, isNegated: false, forward: streamingOptimization.Forward,
+                return _indexSearcher.StartWithQuery(streamingOptimization.CompoundField, startWith, forward: streamingOptimization.Forward,
                     streamingEnabled: true, validatePostfixLen: true);
             }
             default:

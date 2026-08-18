@@ -67,7 +67,7 @@ export function OngoingTasksHeader(props: OngoingTasksHeaderProps) {
                 <div className="hstack gap-3 flex-wrap">
                     {hasDatabaseWriteAccess && (
                         <div id="NewTaskButton">
-                            <Button href={forCurrentDatabase.addNewOngoingTaskUrl()} className="rounded-pill">
+                            <Button href={forCurrentDatabase.addNewOngoingTaskUrl()()} className="rounded-pill">
                                 <Icon icon="ongoing-tasks" addon="plus" />
                                 Add a Database Task
                             </Button>

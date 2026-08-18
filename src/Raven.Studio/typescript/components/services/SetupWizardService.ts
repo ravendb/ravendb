@@ -11,6 +11,7 @@ import checkDomainAvailabilityCommand from "commands/wizard/checkDomainAvailabil
 import claimDomainCommand from "commands/wizard/claimDomainCommand";
 import continueSecureClusterConfigurationCommand from "commands/wizard/continueSecureClusterConfigurationCommand";
 import loadAgreementCommand from "commands/wizard/loadAgreementCommand";
+import getServerOperationStateCommand from "commands/operations/getServerOperationStateCommand";
 
 export default class SetupWizardService {
     async getEula() {
@@ -66,5 +67,9 @@ export default class SetupWizardService {
 
     async getLetsEncryptAgreement(...args: ConstructorParameters<typeof loadAgreementCommand>) {
         return new loadAgreementCommand(...args).execute();
+    }
+
+    async getOperationState(...args: ConstructorParameters<typeof getServerOperationStateCommand>) {
+        return new getServerOperationStateCommand(...args).execute();
     }
 }

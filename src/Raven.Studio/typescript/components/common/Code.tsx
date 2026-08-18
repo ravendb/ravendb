@@ -9,9 +9,10 @@ import Button from "react-bootstrap/Button";
 require("prismjs/components/prism-javascript");
 require("prismjs/components/prism-csharp");
 require("prismjs/components/prism-json");
-require("prismjs/components/prism-json");
+require("prismjs/components/prism-python");
+require("prismjs/components/prism-java");
 
-type Language =
+export type CodeLanguage =
     | "plaintext"
     | "markup"
     | "html"
@@ -25,11 +26,13 @@ type Language =
     | "clike"
     | "javascript"
     | "csharp"
-    | "json";
+    | "json"
+    | "python"
+    | "java";
 
 interface CodeProps {
     code: string;
-    language: Language;
+    language: CodeLanguage;
     className?: string;
     elementToCopy?: string;
 }
