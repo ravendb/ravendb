@@ -118,13 +118,15 @@ namespace Voron.Impl
 
         public Size TransactionSize => new Size(NumberOfModifiedPages * Constants.Storage.PageSize, SizeUnit.Bytes) + AdditionalMemoryUsageSize;
 
+        public long TotalAllocatedInBytes => _allocator._totalAllocated;
+
+        public long TotalEncryptionBufferInBytes => PagerTransactionState.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
+
         public Size AdditionalMemoryUsageSize
         {
             get
             {
-                var additionalMemoryUsageSize = PagerTransactionState.AdditionalMemoryUsageSize;
-                additionalMemoryUsageSize.Add(DecompressedBufferBytes, SizeUnit.Bytes);
-                return additionalMemoryUsageSize;
+                return new Size(DecompressedBufferBytes + TotalEncryptionBufferInBytes, SizeUnit.Bytes);
             }
         }
         public event Action<LowLevelTransaction> OnDispose;
