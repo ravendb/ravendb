@@ -10,8 +10,8 @@ export function EditAppConfirmDialog({ slug, trigger }: { slug: string; trigger:
         <ConfirmDialog
             variant="warning"
             trigger={trigger}
-            title="Edit application configuration?"
-            description="Changes on one step affect the steps after it: the connection determines which tables can be selected, and the table selection determines the mapping. Review the later steps after changing an earlier one."
+            title="Edit this app’s configuration?"
+            description="Changing an early step can invalidate the steps after it, so you’ll need to review the rest. Nothing is saved until you finish the wizard."
             confirmLabel="Edit configuration"
             onConfirm={() => navigate(appRoutes.editApp(slug))}
         />

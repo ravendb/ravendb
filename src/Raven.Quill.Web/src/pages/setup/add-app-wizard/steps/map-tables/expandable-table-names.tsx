@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 
 const COLLAPSED_TABLE_NAMES_COUNT = 5;
 
@@ -10,7 +10,12 @@ export function ExpandableTableNames({ labels }: { labels: string[] }) {
 
     return (
         <>
-            {visibleLabels.join(", ")}
+            {visibleLabels.map((label, index) => (
+                <Fragment key={label}>
+                    {index > 0 && ", "}
+                    <span className="font-mono">{label}</span>
+                </Fragment>
+            ))}
             {hiddenCount > 0 && (
                 <>
                     {" and "}

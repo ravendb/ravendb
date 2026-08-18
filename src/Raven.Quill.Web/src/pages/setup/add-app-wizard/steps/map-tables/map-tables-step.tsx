@@ -118,6 +118,16 @@ export function MapTablesStep({ isBusy }: WizardBodyComponentProps) {
                     </Field>
                 </div>
 
+                {/* Derived from form state, which raw edits keep in sync, so they belong to both views.
+                    Skipped only while the editor holds JSON that has not parsed yet: the form then
+                    still carries the previous mapping, which is not what the operator is looking at. */}
+                {!isFormBehindEditor && (
+                    <>
+                        <UnmappedTablesAlert />
+                        <UnselectedMappedTablesAlert />
+                    </>
+                )}
+
                 {isRawView ? (
                     <AceEditor
                         mode="json"
@@ -132,8 +142,6 @@ export function MapTablesStep({ isBusy }: WizardBodyComponentProps) {
                     />
                 ) : (
                     <>
-                        <UnmappedTablesAlert />
-                        <UnselectedMappedTablesAlert />
                         <ResizablePanelGroup
                             orientation="horizontal"
                             className="min-h-80 flex-1 rounded-lg border bg-background"
