@@ -35,7 +35,7 @@ else
     DOCKER_FILE="./ubuntu_multiarch.Dockerfile"
 fi
 
-DEB_BUILD_ENV_IMAGE="ravendb-deb_ubuntu_$DEB_ARCHITECTURE"
+DEB_BUILD_ENV_IMAGE="ravendb-deb_ubuntu-${DISTRO_VERSION_NAME}_${DEB_ARCHITECTURE}"
 
 docker pull --platform $DOCKER_BUILDPLATFORM ubuntu:$DISTRO_VERSION
 docker build \
