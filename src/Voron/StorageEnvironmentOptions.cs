@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -848,9 +849,9 @@ namespace Voron
                             true, // deleteOnClose
                             false); //usePageProtection
                     }
-                    catch (Exception e) when (e is FileNotFoundException or UnauthorizedAccessException)
+                    catch (Exception e) when (e is FileNotFoundException || IsFileInaccessible(e))
                     {
-                        // unique case, when file was previously deleted, but still exists. 
+                        // unique case, when file was previously deleted, but still exists.
                         // This can happen on cifs mount, see RavenDB-10923
                         // if this is a temp file we can try recreate it in a different name
                         Rename();
@@ -859,6 +860,17 @@ namespace Voron
                 }
 
                 throw new InvalidOperationException("Unable to create temporary mapped file " + name + ", even after trying multiple times.", err);
+            }
+
+            private static bool IsFileInaccessible(Exception e)
+            {
+                if (e is UnauthorizedAccessException)
+                    return true;
+
+                return e is IOException && e.InnerException is Win32Exception
+                {
+                    NativeErrorCode: (int)Win32NativeFileErrors.ERROR_ACCESS_DENIED or (int)Win32NativeFileErrors.ERROR_SHARING_VIOLATION
+                };
             }
 
             public override AbstractPager CreateScratchPager(string name, long initialSize)
