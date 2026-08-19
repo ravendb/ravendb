@@ -1,7 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import AceEditor from "components/common/ace/AceEditor";
 import { LanguageService } from "components/models/aceEditor";
-import SampleQueriesTabs from "components/common/sampleQueries/SampleQueriesTabs";
+import SamplesTabs from "components/common/sampleQueries/SamplesTabs";
+import {
+    createMethodsTab,
+    createSampleScriptsTab,
+} from "components/common/sampleQueries/partials/samplesTabFactories";
 import { scripts, methodGroups } from "./patchSamplesData";
 import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
@@ -13,6 +17,8 @@ export interface PatchAceEditorProps {
     languageService: LanguageService;
     validationErrorMessage?: string;
 }
+
+const patchSamplesTabs = [createSampleScriptsTab(scripts), createMethodsTab(methodGroups)];
 
 function SamplesToggleButton({ onClick }: { onClick: (e: React.MouseEvent) => void }) {
     return (
@@ -106,16 +112,15 @@ export default function PatchAceEditor({ query, languageService, validationError
             <AnimatePresence>
                 {showSamples && (
                     <motion.div
-                        className="patch-samples-panel bs5"
+                        className="ace-samples-panel bs5"
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
                         transition={{ duration: 0.2 }}
                         style={{ overflow: "hidden" }}
                     >
-                        <SampleQueriesTabs
-                            scripts={scripts}
-                            methodGroups={methodGroups}
+                        <SamplesTabs
+                            tabs={patchSamplesTabs}
                             onSelect={handleLoadScript}
                             onClose={() => setShowSamples(false)}
                         />

@@ -6,30 +6,34 @@ import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import { motion } from "motion/react";
 import { Icon } from "components/common/Icon";
-import SampleScriptsList from "./partials/SampleScriptsList";
-import MethodsTable from "./partials/MethodsTable";
-import { MethodGroup, SampleScript } from "./partials/sampleQueriesTypes";
+import useUniqueId from "components/hooks/useUniqueId";
+import { SamplesTab } from "./partials/sampleQueriesTypes";
 import "./SampleQueries.scss";
 
-type ActiveTab = "scripts" | "methods";
-
-export interface SampleQueriesTabsProps {
-    scripts: SampleScript[];
-    methodGroups: MethodGroup[];
+export interface SamplesTabsProps {
+    tabs: SamplesTab[];
     onSelect: (script: string) => void;
     onClose?: () => void;
 }
 
-export default function SampleQueriesTabs({ scripts, methodGroups, onSelect, onClose }: SampleQueriesTabsProps) {
-    const [activeTab, setActiveTab] = useState<ActiveTab>("scripts");
-    const [methodSearch, setMethodSearch] = useState("");
+export default function SamplesTabs({ tabs, onSelect, onClose }: SamplesTabsProps) {
+    const [activeTabKey, setActiveTabKey] = useState(tabs[0]?.key);
+    const [searchByTab, setSearchByTab] = useState<Record<string, string>>({});
     const tabContentRef = useRef<HTMLDivElement>(null);
+    const tabsId = useUniqueId("samples-tabs");
 
-    const handleTabSelect = (tab: ActiveTab) => {
-        setActiveTab(tab);
+    const activeTab = tabs.find((tab) => tab.key === activeTabKey);
+    const activeSearch = searchByTab[activeTabKey] ?? "";
+
+    const handleTabSelect = (tabKey: string) => {
+        setActiveTabKey(tabKey);
         if (tabContentRef.current) {
             tabContentRef.current.scrollTop = 0;
         }
+    };
+
+    const handleSearchChange = (value: string) => {
+        setSearchByTab((prev) => ({ ...prev, [activeTabKey]: value }));
     };
 
     return (
@@ -37,23 +41,19 @@ export default function SampleQueriesTabs({ scripts, methodGroups, onSelect, onC
             <Tab.Container
                 mountOnEnter
                 unmountOnExit
-                id="sample-queries-tabs"
-                activeKey={activeTab}
-                onSelect={(tab) => handleTabSelect(tab as ActiveTab)}
+                id={tabsId}
+                activeKey={activeTabKey}
+                onSelect={handleTabSelect}
             >
                 <Nav variant="pills" className="gap-1 panel-bg-2 sample-queries-nav">
-                    <Nav.Item>
-                        <Nav.Link eventKey="scripts" className="no-decor">
-                            <Icon icon="document" />
-                            Sample scripts
-                        </Nav.Link>
-                    </Nav.Item>
-                    <Nav.Item>
-                        <Nav.Link eventKey="methods" className="no-decor">
-                            <Icon icon="indent" />
-                            Methods
-                        </Nav.Link>
-                    </Nav.Item>
+                    {tabs.map((tab) => (
+                        <Nav.Item key={tab.key}>
+                            <Nav.Link eventKey={tab.key} className="no-decor">
+                                <Icon icon={tab.icon} />
+                                {tab.label}
+                            </Nav.Link>
+                        </Nav.Item>
+                    ))}
                     {onClose && (
                         <Button
                             variant="link"
@@ -73,24 +73,23 @@ export default function SampleQueriesTabs({ scripts, methodGroups, onSelect, onC
                         </Button>
                     )}
                 </Nav>
-                {activeTab === "methods" && (
+                {activeTab?.hasSearch && (
                     <div className="methods-search-wrapper position-relative panel-bg-1 px-3">
                         <Icon icon="search" margin="m-0" className="methods-search-icon position-absolute" />
                         <Form.Control
-                            placeholder="Search by signature"
+                            placeholder={activeTab.searchPlaceholder ?? "Search"}
                             className="rounded-1 methods-search-input"
-                            value={methodSearch}
-                            onChange={(e) => setMethodSearch(e.target.value)}
+                            value={activeSearch}
+                            onChange={(e) => handleSearchChange(e.target.value)}
                         />
                     </div>
                 )}
                 <Tab.Content ref={tabContentRef}>
-                    <Tab.Pane eventKey="scripts">
-                        <SampleScriptsList scripts={scripts} onSelect={onSelect} />
-                    </Tab.Pane>
-                    <Tab.Pane eventKey="methods">
-                        <MethodsTable methodGroups={methodGroups} search={methodSearch} onSelect={onSelect} />
-                    </Tab.Pane>
+                    {tabs.map((tab) => (
+                        <Tab.Pane key={tab.key} eventKey={tab.key}>
+                            {tab.content({ onSelect, search: searchByTab[tab.key] ?? "" })}
+                        </Tab.Pane>
+                    ))}
                 </Tab.Content>
             </Tab.Container>
         </Card>
