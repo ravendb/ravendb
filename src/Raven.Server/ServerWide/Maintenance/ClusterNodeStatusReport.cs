@@ -62,6 +62,7 @@ namespace Raven.Server.ServerWide.Maintenance
         public string Name;
         public string NodeName;
 
+        public string DatabaseId;
         public string DatabaseChangeVector;
 
         public Dictionary<string, ObservedIndexStatus> LastIndexStats = new();
@@ -86,6 +87,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             Name = other.Name;
             NodeName = other.NodeName;
+            DatabaseId = other.DatabaseId;
             DatabaseChangeVector = other.DatabaseChangeVector;
 
             // shallow
@@ -157,6 +159,7 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 [nameof(Name)] = Name,
                 [nameof(NodeName)] = NodeName,
+                [nameof(DatabaseId)] = DatabaseId,
                 [nameof(Status)] = Status,
                 [nameof(LastEtag)] = LastEtag,
                 [nameof(LastTombstoneEtag)] = LastTombstoneEtag,
