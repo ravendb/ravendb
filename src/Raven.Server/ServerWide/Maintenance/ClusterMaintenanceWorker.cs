@@ -6,6 +6,7 @@ using Raven.Client;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
+using Raven.Server.Commercial.WriteUsageMetering;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Sharding;
@@ -395,6 +396,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 report.NumberOfConflicts = prevDatabaseReport.NumberOfConflicts;
                 report.NumberOfDocuments = prevDatabaseReport.NumberOfDocuments;
                 report.DatabaseChangeVector = prevDatabaseReport.DatabaseChangeVector;
+                report.SystemCollections = prevDatabaseReport.SystemCollections;
             }
             else
             {
@@ -405,8 +407,31 @@ namespace Raven.Server.ServerWide.Maintenance
                     report.NumberOfConflicts = documentsStorage.ConflictsStorage.ConflictsCount;
                     report.NumberOfDocuments = documentsStorage.GetNumberOfDocuments(context);
                     report.DatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
+                    report.SystemCollections = GetSystemCollectionsStats(tx, context, documentsStorage);
                 }
             }
+        }
+
+        // Last etag and document count for every system collection of this database.
+        private static Dictionary<string, SystemCollectionStats> GetSystemCollectionsStats(DocumentsTransaction tx, DocumentsOperationContext context,
+            DocumentsStorage documentsStorage)
+        {
+            var stats = new Dictionary<string, SystemCollectionStats>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var collection in documentsStorage.GetCollectionsNames(context))
+            {
+                if (collection.StartsWith('@') == false ||
+                    collection.Equals(Constants.Documents.Collections.EmptyCollection, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                stats[collection] = new SystemCollectionStats
+                {
+                    Etag = documentsStorage.GetLastDocumentEtag(tx.InnerTransaction, collection),
+                    Count = documentsStorage.GetNumberOfDocumentsFor(collection, context)
+                };
+            }
+
+            return stats;
         }
 
         private static void FillReplicationInfo(DocumentDatabase dbInstance, DatabaseStatusReport report)
