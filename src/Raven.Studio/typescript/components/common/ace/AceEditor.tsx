@@ -15,6 +15,10 @@ import AceEditorToggleNewLinesAction from "./actions/AceEditorToggleNewLinesActi
 import AceEditorAutoResizeHeightAction, { handleAutoResizeHeight } from "./actions/AceEditorAutoResizeHeightAction";
 import { aceEditorConstants } from "./aceEditorConstants";
 import useResizableHeight from "components/hooks/useResizableHeight";
+import AceEditorSamplesPanel, {
+    AceEditorSamplesPanelConfig,
+    AceEditorSamplesToggleAction,
+} from "./AceEditorSamplesPanel";
 
 interface ActionItem {
     component: ReactNode;
@@ -33,6 +37,8 @@ export interface AceEditorProps extends IAceEditorProps {
     minHeight?: number | string;
     maxHeight?: number | string;
     disabled?: boolean;
+    samplesPanel?: AceEditorSamplesPanelConfig;
+    overlay?: ReactNode;
 }
 
 function AceEditor(props: AceEditorProps) {
@@ -50,6 +56,9 @@ function AceEditor(props: AceEditorProps) {
         isFullScreenLabelHidden,
         readOnly,
         disabled,
+        samplesPanel,
+        overlay,
+        onChange,
         ...rest
     } = props;
 
@@ -67,6 +76,24 @@ function AceEditor(props: AceEditorProps) {
     };
 
     const validActions = actions.filter(Boolean);
+
+    const [isSamplesPanelOpen, setIsSamplesPanelOpen] = useState(false);
+
+    const hasSamplesPanel = samplesPanel?.tabs.length > 0;
+
+    const samplesToggleAction: ActionItem | null = hasSamplesPanel && !disabled && !readOnly
+        ? {
+              component: (
+                  <AceEditorSamplesToggleAction
+                      tooltipTitle={samplesPanel.tooltipTitle}
+                      onClick={() => setIsSamplesPanelOpen((prev) => !prev)}
+                  />
+              ),
+              position: "bottom",
+          }
+        : null;
+
+    const effectiveActions = [...validActions, samplesToggleAction].filter(Boolean);
 
     const [aceErrorMessage, setAceErrorMessage] = useState<string>(null);
 
@@ -186,21 +213,22 @@ function AceEditor(props: AceEditorProps) {
                         setOptions={overriddenSetOptions}
                         commands={commands}
                         onLoad={handleLoad}
+                        onChange={onChange}
                         readOnly={disabled || readOnly}
                         {...rest}
                     />
-                    {actions.length > 0 && (
+                    {effectiveActions.length > 0 && (
                         <div className="actions">
                             <div className="d-flex flex-column h-100">
                                 <div className="flex-grow-0 vstack gap-1">
-                                    {validActions
+                                    {effectiveActions
                                         .filter((action) => !action.position || action.position === "top")
                                         .map((action, index) => (
                                             <div key={index}>{action.component}</div>
                                         ))}
                                 </div>
                                 <div className="flex-grow-1 d-flex flex-column justify-content-end vstack gap-1">
-                                    {validActions
+                                    {effectiveActions
                                         .filter((icon) => icon.position === "bottom")
                                         .map((action, index) => (
                                             <div key={index}>{action.component}</div>
@@ -218,6 +246,7 @@ function AceEditor(props: AceEditorProps) {
                         <small>{errorMessage}</small>
                     </div>
                 )}
+                {overlay}
                 <div
                     style={{
                         position: "absolute",
@@ -231,6 +260,14 @@ function AceEditor(props: AceEditorProps) {
                     onDoubleClick={() => handleAutoResizeHeight(aceRef, resizableHeight.setHeight)}
                 />
             </div>
+            {hasSamplesPanel && (
+                <AceEditorSamplesPanel
+                    isOpen={isSamplesPanelOpen && !disabled && !readOnly}
+                    tabs={samplesPanel.tabs}
+                    onSelect={(script) => onChange?.(script)}
+                    onClose={() => setIsSamplesPanelOpen(false)}
+                />
+            )}
         </AceEditorContext.Provider>
     );
 }
