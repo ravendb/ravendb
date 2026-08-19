@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { channelsMocks } from "@/mocks/channels-mocks";
+import { expect, userEvent, waitFor, within } from "storybook/test";
+import { channelsMocks, SAMPLE_SLACK_CHANNEL_ID } from "@/mocks/channels-mocks";
 import { embedLinksMocks } from "@/mocks/embed-links-mocks";
 import { AppChannels } from "./app-channels";
 
@@ -25,6 +26,37 @@ export const Empty: Story = {
                 channels: [channelsMocks.list([])],
             },
         },
+    },
+};
+
+export const CreateSlack: Story = {
+    parameters: {
+        msw: {
+            handlers: {
+                channels: [
+                    channelsMocks.list(),
+                    channelsMocks.create({ channelId: SAMPLE_SLACK_CHANNEL_ID }),
+                    channelsMocks.update(),
+                    channelsMocks.delete(),
+                ],
+            },
+        },
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        const body = within(canvasElement.ownerDocument.body);
+
+        await userEvent.click(await canvas.findByRole("button", { name: /new channel/i }));
+        await userEvent.click(await body.findByRole("menuitem", { name: /slack/i }));
+
+        const sheet = within(await body.findByRole("dialog"));
+        await userEvent.click(sheet.getByRole("combobox", { name: /agent/i }));
+        await userEvent.click(await body.findByRole("option", { name: /faq bot/i }));
+        await userEvent.type(sheet.getByLabelText(/bot token/i), "xoxb-111-222-secret");
+        await userEvent.type(sheet.getByLabelText(/signing secret/i), "8f742231b10e8888abcd99yyyzzz85a5");
+        await userEvent.click(sheet.getByRole("button", { name: /connect bot/i }));
+
+        await waitFor(() => expect(sheet.getByText(/webhooks\/slack\//i)).toBeInTheDocument());
     },
 };
 

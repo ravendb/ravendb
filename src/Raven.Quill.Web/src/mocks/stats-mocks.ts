@@ -89,7 +89,7 @@ export const sampleDashboardApps: ApplianceAppResponse[] = [
         channelsCount: 3,
         adaptersCount: 0,
         agentsCount: 3,
-        channelsLabel: "Web widget, Telegram, WhatsApp",
+        channelsLabel: "Web widget, Telegram, WhatsApp, Slack",
         statusSubtitle: null,
         createdAt: "2026-05-02T10:00:00Z",
         updatedAt: "2026-06-25T09:00:00Z",

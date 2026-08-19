@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { Cable, CodeXml, Link2, MessageCircle, Palette, Pencil, Send, Trash2, type LucideIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import { Cable, CodeXml, Link2, MessageCircle, Palette, Pencil, Send, Trash2 } from "lucide-react";
+import type { ComponentType, ReactNode, SVGProps } from "react";
 import { Link } from "react-router";
 import { api } from "@/api/api";
 import type { AgentSummaryResponse, ChannelSummaryResponse, ChannelType } from "@/api/generated/server-api";
@@ -12,13 +12,14 @@ import { Card, CardAction, CardContent, CardFooter, CardHeader, CardTitle } from
 import { Skeleton } from "@/components/shadcn/ui/skeleton";
 import { appRoutes } from "@/lib/app-routes";
 import { cn, formatDateTime, formatRelativeTime } from "@/lib/utils";
+import { SlackIcon } from "@/pages/apps/channels/channel-brand-icons";
 import { DeleteChannelDialog } from "@/pages/apps/channels/delete-channel-dialog";
 import { GenerateEmbedLinkDialog } from "@/pages/apps/channels/generate-embed-link-dialog";
 
 type ChannelGroupConfig = {
     type: NonNullable<ChannelType>;
     label: string;
-    icon: LucideIcon;
+    icon: ComponentType<SVGProps<SVGSVGElement>>;
 };
 
 // Order and icons mirror the "Add channel" menu so the page reads the same way channels are created.
@@ -26,6 +27,7 @@ const CHANNEL_GROUPS: ChannelGroupConfig[] = [
     { type: "IFrame", label: "Web widgets", icon: CodeXml },
     { type: "Telegram", label: "Telegram bots", icon: Send },
     { type: "WhatsApp", label: "WhatsApp", icon: MessageCircle },
+    { type: "Slack", label: "Slack", icon: SlackIcon },
 ];
 
 export function ChannelGroups({ slug }: { slug: string }) {
@@ -151,6 +153,11 @@ function ChannelCard({
                     {channel.telegram?.botUsername && (
                         <div className="truncate text-xs font-normal text-muted-foreground">
                             @{channel.telegram.botUsername}
+                        </div>
+                    )}
+                    {channel.slack?.teamName && (
+                        <div className="truncate text-xs font-normal text-muted-foreground">
+                            {channel.slack.teamName}
                         </div>
                     )}
                 </CardTitle>

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ComponentType, type SVGProps } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
     Bot,
@@ -11,7 +11,6 @@ import {
     Play,
     Send,
     Trash2,
-    type LucideIcon,
 } from "lucide-react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { toast } from "sonner";
@@ -32,16 +31,18 @@ import {
 } from "@/components/form/unsaved-changes/unsaved-changes-store";
 import { appRoutes } from "@/lib/app-routes";
 import { CHANNEL_TYPE_LABELS } from "@/lib/channel-type-labels";
+import { SlackIcon } from "@/pages/apps/channels/channel-brand-icons";
 import { cn } from "@/lib/utils";
 import { invalidateChannelQueries } from "@/lib/query-invalidation";
 import { getChannelTabs, resolveActiveTab, type ChannelTabDef } from "@/pages/apps/channels/channel-detail-tabs";
 import { DeleteChannelDialog } from "@/pages/apps/channels/delete-channel-dialog";
 import { EditChannelSheet } from "@/pages/apps/channels/edit-channel-sheet";
 
-const CHANNEL_TYPE_ICONS: Record<NonNullable<ChannelType>, LucideIcon> = {
+const CHANNEL_TYPE_ICONS: Record<NonNullable<ChannelType>, ComponentType<SVGProps<SVGSVGElement>>> = {
     IFrame: CodeXml,
     Telegram: Send,
     WhatsApp: MessageCircle,
+    Slack: SlackIcon,
 };
 
 // Roomier hit area than the default trigger padding. The active underline is a single sliding

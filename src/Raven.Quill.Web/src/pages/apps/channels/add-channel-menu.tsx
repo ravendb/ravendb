@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { CodeXml, MessageCircle, Plus, Send, type LucideIcon } from "lucide-react";
+import { useState, type ComponentType, type SVGProps } from "react";
+import { CodeXml, MessageCircle, Plus, Send } from "lucide-react";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import {
@@ -10,18 +10,20 @@ import {
 } from "@/components/shadcn/ui/dropdown-menu";
 import { SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/shadcn/ui/sheet";
 import { GuardedSheet } from "@/components/form/unsaved-changes/guarded-overlays";
+import { SlackIcon } from "@/pages/apps/channels/channel-brand-icons";
+import { SlackChannelForm } from "@/pages/apps/channels/slack-channel-form";
 import { TelegramChannelForm } from "@/pages/apps/channels/telegram-channel-form";
 import { WebWidgetChannelForm, type FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
 
-type ChannelOptionId = "web-widget" | "telegram";
+type ChannelOptionId = "web-widget" | "telegram" | "slack";
 
 type ChannelOption = {
     label: string;
     description: string;
-    icon: LucideIcon;
+    icon: ComponentType<SVGProps<SVGSVGElement>>;
 } & ({ id: ChannelOptionId; enabled: true } | { id: string; enabled: false });
 
-// The web widget and Telegram are backed by the channels API today; the rest are previewed as disabled.
+// The web widget, Telegram, and Slack are backed by the channels API today; the rest are previewed as disabled.
 const CHANNEL_OPTIONS: ChannelOption[] = [
     {
         id: "web-widget",
@@ -50,6 +52,13 @@ const CHANNEL_OPTIONS: ChannelOption[] = [
         description: "Connect via Meta Cloud API",
         icon: MessageCircle,
         enabled: false,
+    },
+    {
+        id: "slack",
+        label: "Slack",
+        description: "Connect a Slack app for DMs",
+        icon: SlackIcon,
+        enabled: true,
     },
 ];
 
@@ -120,6 +129,18 @@ export function AddChannelMenu({
                                 </SheetDescription>
                             </SheetHeader>
                             <TelegramChannelForm slug={slug} agent={agent} onCreated={() => setOpenOption(null)} />
+                        </>
+                    ) : openOption === "slack" ? (
+                        <>
+                            <SheetHeader className="border-b">
+                                <SheetTitle>New Slack channel</SheetTitle>
+                                <SheetDescription>
+                                    {agent
+                                        ? `Connect a Slack app for direct messages, routed to “${agent.name}”.`
+                                        : "Connect a Slack app and answer its direct messages with an agent."}
+                                </SheetDescription>
+                            </SheetHeader>
+                            <SlackChannelForm slug={slug} agent={agent} onDone={() => setOpenOption(null)} />
                         </>
                     ) : (
                         <>
