@@ -25,7 +25,7 @@ Session states: `starting -> pairing -> connected <-> disconnected -> loggedOut`
 
 | Env var | Default |
 | --- | --- |
-| `RAVEN_QUILL_WHATSAPP_BRIDGE_LISTEN` | `127.0.0.1:8447` |
+| `RAVEN_QUILL_WHATSAPP_BRIDGE_LISTEN` | `127.0.0.1:8448` |
 | `RAVEN_QUILL_WHATSAPP_DATA_DIR` | `/var/lib/quill/whatsapp` |
 | `RAVEN_QUILL_WEB_INTERNAL_URL` | `http://127.0.0.1:5000` |
 | `RAVEN_QUILL_WHATSAPP_BRIDGE_LOG_LEVEL` | `info` |

@@ -4,7 +4,7 @@ End-to-end: stand up the appliance in Docker, point it at a Northwind PostgreSQL
 provision an AI agent, and chat with it through an embeddable iframe.
 
 The appliance is a single Docker image bundling an **nginx** TLS/SNI front (`:443`) + **RavenDB** (secure) +
-the **appliance web app** (`:5000`) + the **WhatsApp bridge** (loopback `:8447`), supervised by s6. The
+the **appliance web app** (`:5000`) + the **WhatsApp bridge** (loopback `:8448`), supervised by s6. The
 canonical way to run it locally is `docker/quill/compose/docker-compose.yml`.
 
 ```

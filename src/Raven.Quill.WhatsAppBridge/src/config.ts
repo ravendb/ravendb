@@ -11,7 +11,7 @@ export interface BridgeConfig {
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): BridgeConfig {
-    const listen = env.RAVEN_QUILL_WHATSAPP_BRIDGE_LISTEN ?? "127.0.0.1:8447";
+    const listen = env.RAVEN_QUILL_WHATSAPP_BRIDGE_LISTEN ?? "127.0.0.1:8448";
     const separator = listen.lastIndexOf(":");
     if (separator <= 0)
         throw new Error(`RAVEN_QUILL_WHATSAPP_BRIDGE_LISTEN must be host:port, got '${listen}'`);
