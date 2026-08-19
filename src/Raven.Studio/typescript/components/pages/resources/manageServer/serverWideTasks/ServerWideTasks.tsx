@@ -1,6 +1,7 @@
 import React, { ReactNode, useEffect, useState } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
+import { AsyncStateStatus } from "react-async-hook";
 import appUrl from "common/appUrl";
 import { compareSets } from "common/typeUtils";
 import IconName from "typings/server/icons";
@@ -11,15 +12,24 @@ import { Icon } from "components/common/Icon";
 import { LoadError } from "components/common/LoadError";
 import { LoadingView } from "components/common/LoadingView";
 import { MultiCheckboxToggle } from "components/common/toggles/MultiCheckboxToggle";
-import OngoingTaskOperationConfirm from "components/pages/database/tasks/shared/OngoingTaskOperationConfirm";
+import { InputItem } from "components/models/common";
+import OngoingTaskOperationConfirm, {
+    OngoingTaskOperationConfirmType,
+} from "components/pages/database/tasks/shared/OngoingTaskOperationConfirm";
 import OngoingTaskSelectActions from "components/pages/database/tasks/ongoingTasks/partials/OngoingTaskSelectActions";
 import { ServerWideBackupPanel } from "./partials/ServerWideBackupPanel";
 import { ServerWideExternalReplicationPanel } from "./partials/ServerWideExternalReplicationPanel";
 import { PerDatabaseOngoingTasksLink } from "./partials/PerDatabaseOngoingTasksLink";
 import { ServerWideTasksInfoHub } from "./partials/ServerWideTasksInfoHub";
 import { useServerWideTasks } from "./useServerWideTasks";
-import { useServerWideTasksOperations, toOperationConfirmInfo } from "./useServerWideTasksOperations";
-import { ServerWideTaskInfo, ServerWideTaskSharedInfo } from "./serverWideTaskModels";
+import { toOperationConfirmInfo, useServerWideTasksOperations } from "./useServerWideTasksOperations";
+import {
+    ServerWideBackupTaskInfo,
+    ServerWideExternalReplicationTaskInfo,
+    ServerWideTaskInfo,
+    ServerWideTaskSharedInfo,
+    ServerWideTaskType,
+} from "./serverWideTaskModels";
 
 export default function ServerWideTasks() {
     const {
@@ -46,6 +56,84 @@ export default function ServerWideTasks() {
         isTogglingStateAny,
     } = useServerWideTasksOperations(reload);
 
+    return (
+        <div className="content-margin">
+            <div className="d-flex justify-content-between align-items-center mb-4">
+                <AboutViewHeading title="Server-Wide Tasks" icon="server-wide-tasks" marginBottom={0} />
+                <div className="d-flex align-items-center gap-3">
+                    <PerDatabaseOngoingTasksLink />
+                    <ServerWideTasksInfoHub />
+                </div>
+            </div>
+
+            {operationConfirm && (
+                <OngoingTaskOperationConfirm
+                    type={operationConfirm.type}
+                    taskSharedInfos={operationConfirm.tasks.map(toOperationConfirmInfo)}
+                    toggle={cancelOperationConfirm}
+                    onConfirm={operationConfirm.onConfirm}
+                />
+            )}
+
+            <ServerWideTasksBody
+                fetchStatus={fetchStatus}
+                reload={reload}
+                tasks={tasks}
+                filteredTasks={filteredTasks}
+                replicationTasks={replicationTasks}
+                backupTasks={backupTasks}
+                nameFilter={nameFilter}
+                setNameFilter={setNameFilter}
+                selectedTypes={selectedTypes}
+                setSelectedTypes={setSelectedTypes}
+                typeFilterItems={typeFilterItems}
+                onTaskOperation={onTaskOperation}
+                isDeleting={isDeleting}
+                isTogglingState={isTogglingState}
+                isDeletingAny={isDeletingAny}
+                isTogglingStateAny={isTogglingStateAny}
+            />
+        </div>
+    );
+}
+
+interface ServerWideTasksBodyProps {
+    fetchStatus: AsyncStateStatus;
+    reload: () => void;
+    tasks: ServerWideTaskInfo[];
+    filteredTasks: ServerWideTaskInfo[];
+    replicationTasks: ServerWideExternalReplicationTaskInfo[];
+    backupTasks: ServerWideBackupTaskInfo[];
+    nameFilter: string;
+    setNameFilter: (value: string) => void;
+    selectedTypes: ServerWideTaskType[];
+    setSelectedTypes: (types: ServerWideTaskType[]) => void;
+    typeFilterItems: InputItem<ServerWideTaskType>[];
+    onTaskOperation: (type: OngoingTaskOperationConfirmType, tasks: ServerWideTaskSharedInfo[]) => void;
+    isDeleting: (taskId: number) => boolean;
+    isTogglingState: (taskId: number) => boolean;
+    isDeletingAny: boolean;
+    isTogglingStateAny: boolean;
+}
+
+function ServerWideTasksBody({
+    fetchStatus,
+    reload,
+    tasks,
+    filteredTasks,
+    replicationTasks,
+    backupTasks,
+    nameFilter,
+    setNameFilter,
+    selectedTypes,
+    setSelectedTypes,
+    typeFilterItems,
+    onTaskOperation,
+    isDeleting,
+    isTogglingState,
+    isDeletingAny,
+    isTogglingStateAny,
+}: ServerWideTasksBodyProps) {
     const [selectedTaskIds, setSelectedTaskIds] = useState<number[]>([]);
 
     const filteredTaskIds = filteredTasks.map((x) => x.taskId);
@@ -78,47 +166,25 @@ export default function ServerWideTasks() {
         isTogglingState,
     };
 
+    if (fetchStatus === "loading") {
+        return <LoadingView />;
+    }
+
+    if (fetchStatus === "error") {
+        return <LoadError error="Unable to load server-wide tasks" refresh={reload} />;
+    }
+
     return (
-        <div className="content-margin">
-            <div className="d-flex justify-content-between align-items-center mb-4">
-                <AboutViewHeading title="Server-Wide Tasks" icon="server-wide-tasks" marginBottom={0} />
-                <div className="d-flex align-items-center gap-3">
-                    <PerDatabaseOngoingTasksLink />
-                    <ServerWideTasksInfoHub />
-                </div>
-            </div>
+        <>
+            <Button variant="primary" className="rounded-pill mb-3" href={appUrl.forAddServerWideTask()}>
+                <Icon icon="plus" />
+                Add a Server-Wide Task
+            </Button>
 
-            {operationConfirm && (
-                <OngoingTaskOperationConfirm
-                    type={operationConfirm.type}
-                    taskSharedInfos={operationConfirm.tasks.map(toOperationConfirmInfo)}
-                    toggle={cancelOperationConfirm}
-                    onConfirm={operationConfirm.onConfirm}
-                />
-            )}
+            {tasks.length === 0 && <EmptySet>No server-wide tasks have been created</EmptySet>}
 
-            {fetchStatus === "loading" && <LoadingView />}
-
-            {fetchStatus === "error" && <LoadError error="Unable to load server-wide tasks" refresh={reload} />}
-
-            {fetchStatus === "success" && tasks.length === 0 && (
-                <div className="text-center mt-5">
-                    <EmptySet>No server-wide tasks configured yet</EmptySet>
-                    <div className="text-muted mb-3">Automate backups and replication across your entire cluster</div>
-                    <Button variant="primary" className="rounded-pill" href={appUrl.forAddServerWideTask()}>
-                        <Icon icon="plus" />
-                        Create Server-Wide Task
-                    </Button>
-                </div>
-            )}
-
-            {fetchStatus === "success" && tasks.length > 0 && (
+            {tasks.length > 0 && (
                 <>
-                    <Button variant="primary" className="rounded-pill mb-3" href={appUrl.forAddServerWideTask()}>
-                        <Icon icon="plus" />
-                        Add a Server-Wide Task
-                    </Button>
-
                     <div className="d-flex flex-wrap flex-grow align-items-end gap-3 mb-3">
                         <div className="flex-grow">
                             <div className="small-label ms-1 mb-1">Filter by name</div>
@@ -162,7 +228,7 @@ export default function ServerWideTasks() {
                     </TaskSection>
                 </>
             )}
-        </div>
+        </>
     );
 }
 

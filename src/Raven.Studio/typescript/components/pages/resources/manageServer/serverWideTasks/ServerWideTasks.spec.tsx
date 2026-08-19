@@ -6,8 +6,7 @@ import React from "react";
 const { ServerWideTasksStory } = composeStories(Stories);
 
 const selectors = {
-    emptyState: /No server-wide tasks configured yet/,
-    createButton: /Create Server-Wide Task/,
+    emptyState: /No server-wide tasks have been created/,
     addButton: /Add a Server-Wide Task/,
     backupTaskName: /BackupTask/,
     replicationTaskName: /ExternalReplicationTask/,
@@ -21,8 +20,7 @@ describe("ServerWideTasks", () => {
         const { screen } = await rtlRender_WithWaitForLoad(<ServerWideTasksStory isEmpty />);
 
         expect(screen.queryByText(selectors.emptyState)).toBeInTheDocument();
-        expect(screen.queryByText(selectors.createButton)).toBeInTheDocument();
-        expect(screen.queryByText(selectors.addButton)).not.toBeInTheDocument();
+        expect(screen.queryByText(selectors.addButton)).toBeInTheDocument();
     });
 
     it("can render tasks grouped by type", async () => {
