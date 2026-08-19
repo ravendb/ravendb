@@ -192,7 +192,11 @@ public class ChatCompletionClient : IDisposable
         IToolCallState toolCallState = _settings.CreateToolCallState();
         object message = null;
         StringBuilder stringContent = structuredOutput ? null : new StringBuilder();
-        var refusalSb = new StringBuilder();
+        // OpenAI streams the refusal as delta.refusal text fragments to concatenate; Azure/Google derive a full
+        // message from finish_reason/content_filter_results per chunk. Keep them apart so a repeated (or two-part)
+        // provider message isn't concatenated into a garbled string.
+        var refusalFragments = new StringBuilder();
+        string providerRefusal = null;
         string finishReason = null;
 
         // need two contexts here because we run two parsing operations at once, first for each of the SSE events
@@ -236,13 +240,17 @@ public class ChatCompletionClient : IDisposable
 
             var choice = (BlittableJsonReaderObject)choices[0];
             var hasDelta = choice.TryGet(Constants.ResponseFields.Delta, out BlittableJsonReaderObject delta);
-            var refusalDelta = _settings.GetRefusal(choice, delta, streaming: true);
+            var refusalDelta = _settings.GetRefusal(choice, delta, streaming: true, out var refusalIsComplete);
             if (string.IsNullOrEmpty(refusalDelta) == false)
-                refusalSb.Append(refusalDelta);
+            {
+                if (refusalIsComplete)
+                    providerRefusal ??= refusalDelta; // set-once: a full provider message, may repeat across chunks
+                else
+                    refusalFragments.Append(refusalDelta); // OpenAI delta.refusal fragments
+            }
 
             if (choice.TryGet(Constants.ResponseFields.FinishReason, out string fr) && string.IsNullOrEmpty(fr) == false)
                 finishReason ??= fr;
-
 
             if (hasDelta)
             {
@@ -287,6 +295,13 @@ public class ChatCompletionClient : IDisposable
             }
         }
 
+        // Surface a refusal before returning tool calls: a stream can carry partial tool-call deltas and then be cut
+        // by a content filter (e.g. Azure emits finish_reason=content_filter with truncated output). Returning here
+        // would hand the agent loop truncated tool-call JSON while silently dropping the refusal.
+        var refusal = string.IsNullOrEmpty(providerRefusal) ? refusalFragments.ToString() : providerRefusal;
+        if (string.IsNullOrEmpty(refusal) == false)
+            RefusedToAnswerException.Throw(refusal, message?.ToString(), finishReason, GetRequestId(response.Headers));
+
         // Some OpenAI-like APIs return an empty array instead of omitting the field when no tool calls are made
         if (toolCallState.TryGetToolCallsForMessage(out var allToolCalls))
         {
@@ -302,10 +317,6 @@ public class ChatCompletionClient : IDisposable
             };
         }
 
-        var refusal = refusalSb.ToString();
-        if (string.IsNullOrEmpty(refusal) == false)
-            RefusedToAnswerException.Throw(refusal, message?.ToString(), finishReason, GetRequestId(response.Headers));
-        
         if (structuredOutput == false)
         {
             var fullText = stringContent.ToString();

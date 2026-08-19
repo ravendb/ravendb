@@ -52,8 +52,12 @@ internal class AzureOpenAiChatCompletionClientSettings : AbstractOpenAiChatCompl
         };
     }
 
-    public override string GetRefusal(BlittableJsonReaderObject choice0, BlittableJsonReaderObject message, bool streaming = false)
+    public override string GetRefusal(BlittableJsonReaderObject choice0, BlittableJsonReaderObject message, bool streaming, out bool isCompleteMessage)
     {
+        // The messages below are full sentences derived from the content-filter annotations - a streaming
+        // caller must keep one, not concatenate the same block across chunks.
+        isCompleteMessage = true;
+
         // Azure annotates the filtered categories/severities in content_filter_results - prefer that detail.
         if (choice0.TryGet(FiltersConstants.ContentFilterResults, out BlittableJsonReaderObject filtersObj)
             && filtersObj != null
@@ -67,7 +71,7 @@ internal class AzureOpenAiChatCompletionClientSettings : AbstractOpenAiChatCompl
             return "Response blocked due to content policy";
 
         // Otherwise fall back to the OpenAI default (explicit refusal field).
-        return base.GetRefusal(choice0, message);
+        return base.GetRefusal(choice0, message, streaming, out isCompleteMessage);
     }
 
     internal static bool GetFiltersMessage(BlittableJsonReaderObject filtersObj, out string message)
