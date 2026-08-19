@@ -249,9 +249,10 @@ namespace Raven.Server.ServerWide.Maintenance
                             var state = new DatabaseObservationState(topology.Name, rawRecord, topology.Topology, clusterTopology, newStats, prevStats, etag, _iteration);
 
                             // Collect the current write-usage values for this topology (database or shard):
-                            // one entry per topology, carrying the MEMBER change vectors merged into a single
-                            // cluster-wide change vector.
+                            // the MEMBER change vectors merged into a single cluster-wide change vector, plus
+                            // each member's own (database id, last etag) kept unmerged for per-node metering.
                             var memberChangeVectors = new List<string>();
+                            var dbLastEtag = new List<LastEtagSnapshot>();
                             foreach (var member in state.DatabaseTopology.Members)
                             {
                                 var memberReport = state.GetCurrentDatabaseReport(member);
@@ -259,10 +260,16 @@ namespace Raven.Server.ServerWide.Maintenance
                                     continue;
 
                                 memberChangeVectors.Add(ChangeVector.StripMoveTag(memberReport.DatabaseChangeVector, context).AsString());
+
+                                if (string.IsNullOrEmpty(memberReport.DatabaseId))
+                                    continue;
+
+                                dbLastEtag.Add(new LastEtagSnapshot(memberReport.DatabaseId, memberReport.LastEtag));
                             }
 
                             var mergedChangeVector = ChangeVectorUtils.MergeVectors(memberChangeVectors);
-                            writeUsageSnapshots.Add(new WriteUsageApplicationSnapshot(state.Name, state.DatabaseTopology.DatabaseTopologyIdBase64, mergedChangeVector));
+                            writeUsageSnapshots.Add(new WriteUsageApplicationSnapshot(state.Name, state.DatabaseTopology.DatabaseTopologyIdBase64, mergedChangeVector,
+                                dbLastEtag));
 
                             try
                             {

@@ -257,6 +257,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         }
 
                         report.Status = DatabaseStatus.Loaded;
+                        report.DatabaseId = dbInstance.DbBase64Id;
                         var now = dbInstance.Time.GetUtcNow();
                         try
                         {
