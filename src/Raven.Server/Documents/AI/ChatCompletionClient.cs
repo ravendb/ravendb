@@ -409,10 +409,11 @@ public class ChatCompletionClient : IDisposable
     {
         AddDefaultHeaders(request);
         using var response = await SendRequestAsync(request, token);
-        var responseContent = await GetResponseContentAsync(context, response, token);
+        if (response.IsSuccessStatusCode)
+            return;
 
-        var responseParser = new AiResponseParser(this, response, responseContent);
-        responseParser.EnsureSuccessfulResponse();
+        var responseContent = await GetResponseContentAsync(context, response, token);
+        HandleUnsuccessfulResponse(response, responseContent);
     }
 
     public async Task<AiResponse> CompleteAsync(JsonOperationContext context, HttpRequestMessage request, AiUsage usage, string schema, AiDebugTrace trace, CancellationToken token)
