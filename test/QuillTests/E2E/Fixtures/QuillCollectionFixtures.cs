@@ -266,6 +266,12 @@ internal sealed class RecordingAiHelperClient : IAiHelperClient
     public Task<HttpResponseMessage> SendChatAsync(string message, string? conversationId, CancellationToken ct) =>
         throw new NotSupportedException();
 
+    public Task<AiHelperStatus> CheckConsentAsync(CancellationToken ct) =>
+        throw new NotSupportedException();
+
+    public Task<AiHelperStatus> GiveConsentAsync(CancellationToken ct) =>
+        throw new NotSupportedException();
+
     public Task<T> DeserializeAsync<T>(string json, CancellationToken ct) where T : class =>
         throw new NotSupportedException();
 

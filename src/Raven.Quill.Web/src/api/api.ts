@@ -7,6 +7,7 @@ import { createSetupSuggestionsService } from "@/api/custom-services/setup-sugge
 import { createCertificatesQueries } from "@/api/queries/certificates-queries";
 import { createAppsQueries } from "@/api/queries/apps-queries";
 import { createAgentsQueries } from "@/api/queries/agents-queries";
+import { createAssistantQueries } from "@/api/queries/assistant-queries";
 import { createChannelsQueries } from "@/api/queries/channels-queries";
 import { createWebWidgetQueries } from "@/api/queries/web-widget-queries";
 import { createEmbedLinksQueries } from "@/api/queries/embed-links-queries";
@@ -28,6 +29,7 @@ export type ApiQueries = {
     bootstrap: ReturnType<typeof createBootstrapQueries>;
     apps: ReturnType<typeof createAppsQueries>;
     agents: ReturnType<typeof createAgentsQueries>;
+    assistant: ReturnType<typeof createAssistantQueries>;
     channels: ReturnType<typeof createChannelsQueries>;
     webWidget: ReturnType<typeof createWebWidgetQueries>;
     embedLinks: ReturnType<typeof createEmbedLinksQueries>;
@@ -63,6 +65,7 @@ export function createApi(options?: ApiClientOptions): Api {
             bootstrap: createBootstrapQueries(services.bootstrap),
             apps: createAppsQueries(services.apps),
             agents: createAgentsQueries(services.agents),
+            assistant: createAssistantQueries(services.assistant),
             channels: createChannelsQueries(services.channels),
             webWidget: createWebWidgetQueries(services.iframe),
             embedLinks: createEmbedLinksQueries(services.embedLinks),

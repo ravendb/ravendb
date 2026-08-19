@@ -1,5 +1,6 @@
 import { hashKey, queryOptions, type QueryClient, type QueryFilters } from "@tanstack/react-query";
 import { api } from "@/api/api";
+import { AI_CONSENT_REQUIRED_MESSAGE } from "@/api/custom-services/assistant-service";
 import type { DiscoverResponse } from "@/api/generated/server-api";
 import { clearFetchStartedAt, recordFetchStartedAt } from "@/lib/query-fetch-start";
 import { tablesSchema, type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
@@ -115,6 +116,10 @@ async function suggestMapTables(
     signal: AbortSignal,
 ): Promise<AppFormData["mapTables"]["tables"]> {
     const result = await api.services.setupSuggestions.suggestCdc({ slug, intentPrompt, selectedTables }, signal);
+
+    if (result.status === "ConsentRequired") {
+        throw new Error(AI_CONSENT_REQUIRED_MESSAGE);
+    }
 
     if (result.status !== "Success" || !result.configuration) {
         throw new Error(result.rationale.filter(Boolean).join("\n") || `AI suggestion failed (${result.status}).`);

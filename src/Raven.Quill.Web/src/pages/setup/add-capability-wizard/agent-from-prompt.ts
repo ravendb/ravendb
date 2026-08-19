@@ -1,4 +1,5 @@
 import { api } from "@/api/api";
+import { AI_CONSENT_REQUIRED_MESSAGE } from "@/api/custom-services/assistant-service";
 import type { AiAgentConfiguration } from "@/api/generated/server-api";
 
 // Asks the AI service for a single agent candidate derived from the operator's free-text
@@ -9,6 +10,10 @@ export async function generateAgentFromPrompt(slug: string, intentPrompt: string
         mode: "from-prompt",
         intentPrompt,
     });
+
+    if (result.status === "ConsentRequired") {
+        throw new Error(AI_CONSENT_REQUIRED_MESSAGE);
+    }
 
     if (result.status !== "Success" || result.configurations.length === 0) {
         throw new Error(result.rationale?.filter(Boolean).join("\n") || `AI suggestion failed (${result.status}).`);

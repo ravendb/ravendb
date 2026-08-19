@@ -80,13 +80,13 @@ public sealed class MockQuillServices : IAsyncDisposable
     /// Simulates slow LLM generation.
     public TimeSpan AssistDelay { get; set; }
 
-    /// When true, assist returns 401 ConsentRequired until give-consent is called.
+    /// When true, assist and check-consent answer 401 ConsentRequired until give-consent is called.
     public bool RequireConsentForAssist { get; set; }
 
     public (int Status, string Body) GiveConsentResponse { get; set; } = (200, "{\"Status\":\"Success\"}");
 
-    /// When true, a successful give-consent does NOT open the assist gate — simulates propagation lag.
-    public bool ConsentGrantHasNoEffect { get; set; }
+    /// When set, check-consent answers this instead of reporting whether the gate is open.
+    public (int Status, string Body)? CheckConsentResponse { get; set; }
 
     public int GiveConsentCallCount { get; private set; }
 
@@ -202,7 +202,7 @@ public sealed class MockQuillServices : IAsyncDisposable
         AssistDelay = TimeSpan.Zero;
         RequireConsentForAssist = false;
         GiveConsentResponse = (200, "{\"Status\":\"Success\"}");
-        ConsentGrantHasNoEffect = false;
+        CheckConsentResponse = null;
         GiveConsentCallCount = 0;
         _consentGiven = false;
 
@@ -268,12 +268,23 @@ public sealed class MockQuillServices : IAsyncDisposable
             }
         });
 
-        // the appliance posts here after a ConsentRequired, then retries assist; a 200 opens the gate
+        // the appliance asks here before it lets an operator chat; 401 until the gate is open
+        app.MapGet("/assistant/check-consent", () =>
+        {
+            if (CheckConsentResponse is { } configured)
+                return Results.Content(configured.Body, "application/json", statusCode: configured.Status);
+
+            return RequireConsentForAssist && _consentGiven == false
+                ? Results.Content("{\"Status\":\"ConsentRequired\"}", "application/json", statusCode: 401)
+                : Results.Content("{\"Status\":\"Success\"}", "application/json");
+        });
+
+        // the appliance posts here once an operator accepted the terms; a 200 opens the gate
         app.MapPost("/assistant/give-consent", () =>
         {
             GiveConsentCallCount++;
             var (status, body) = GiveConsentResponse;
-            if (status is >= 200 and < 300 && ConsentGrantHasNoEffect == false)
+            if (status is >= 200 and < 300)
                 _consentGiven = true;
             return Results.Content(body, "application/json", statusCode: status);
         });

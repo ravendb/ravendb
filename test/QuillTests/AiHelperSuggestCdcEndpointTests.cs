@@ -216,7 +216,7 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHe
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Consent_required_then_signs_consent_and_retries_successfully()
+    public async Task Consent_required_is_surfaced_instead_of_being_granted()
     {
         // mock mirrors the real consent gate
         Mock.RequireConsentForAssist = true;
@@ -224,36 +224,12 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHe
         await SeedDiscoveredSchemaAsync(Host);
 
         var resp = await Host.SuggestCdcAsync(Request("shopping cart assistant", "orders"));
-        Assert.Equal("Success", resp.Status);
-        Assert.Equal("shop-cdc", resp.Configuration!.Name);
 
-        Assert.Equal(1, Mock.GiveConsentCallCount);
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
-    public async Task Give_consent_rejection_surfaces_invalid_credentials()
-    {
-        Mock.RequireConsentForAssist = true;
-        Mock.GiveConsentResponse = (401, "{\"Status\":\"InvalidCredentials\"}");
-        await SeedDiscoveredSchemaAsync(Host);
-
-        var resp = await Host.SuggestCdcAsync(Request("x", "orders"));
-        Assert.Equal("InvalidCredentials", resp.Status);
-        Assert.Equal(1, Mock.GiveConsentCallCount);
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
-    public async Task Post_retry_consent_required_is_surfaced_verbatim()
-    {
-        Mock.RequireConsentForAssist = true;
-        // grant succeeds but gate stays closed: retry once, surface ConsentRequired, don't loop
-        Mock.ConsentGrantHasNoEffect = true;
-        await SeedDiscoveredSchemaAsync(Host);
-
-        var resp = await Host.SuggestCdcAsync(Request("x", "orders"));
+        // Accepting the AI service's terms is the operator's call, made in the assistant panel — the
+        // wizard says what is missing rather than consenting for them.
         Assert.Equal("ConsentRequired", resp.Status);
         Assert.Null(resp.Configuration);
-        Assert.Equal(1, Mock.GiveConsentCallCount);
+        Assert.Equal(0, Mock.GiveConsentCallCount);
     }
 
     [RavenFact(RavenTestCategory.Quill)]

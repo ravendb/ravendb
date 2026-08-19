@@ -128,7 +128,7 @@ public class AiHelperSuggestAgentEndpointTests(ITestOutputHelper output, QuillAi
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task From_data_consent_required_then_signs_consent_and_retries_successfully()
+    public async Task From_data_surfaces_consent_required_instead_of_granting_consent()
     {
         // mock mirrors the real consent gate
         Mock.RequireConsentForAssist = true;
@@ -137,10 +137,11 @@ public class AiHelperSuggestAgentEndpointTests(ITestOutputHelper output, QuillAi
         await using var app = await NewAppAsync();
 
         var resp = await app.SuggestAgentAsync(new SuggestAgentRequest(null, "from-data"));
-        Assert.Equal("Success", resp.Status);
-        Assert.Single(resp.Configurations);
 
-        Assert.Equal(1, Mock.GiveConsentCallCount);
+        // Accepting the AI service's terms is the operator's call, made in the assistant panel.
+        Assert.Equal("ConsentRequired", resp.Status);
+        Assert.Empty(resp.Configurations);
+        Assert.Equal(0, Mock.GiveConsentCallCount);
     }
 
     [RavenFact(RavenTestCategory.Quill)]

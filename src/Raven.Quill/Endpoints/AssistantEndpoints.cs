@@ -19,7 +19,45 @@ public static class AssistantEndpoints
             .Produces(StatusCodes.Status200OK, contentType: EventStreamContentType)
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status502BadGateway);
+
+        app.MapGet("/api/assistant/consent", CheckConsentAsync)
+            .RequireAuthorization()
+            .WithTags("assistant")
+            .WithName("assistant.consent")
+            .Produces<AssistantConsentResponse>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status502BadGateway);
+
+        app.MapPost("/api/assistant/consent", GiveConsentAsync)
+            .RequireAuthorization()
+            .WithTags("assistant")
+            .WithName("assistant.giveConsent")
+            .Produces<AssistantConsentResponse>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status502BadGateway);
     }
+
+    private static async Task<IResult> CheckConsentAsync(IAiHelperClient aiClient, CancellationToken ct) =>
+        ToConsentResult(await aiClient.CheckConsentAsync(ct));
+
+    // Consent is the operator's to give: this runs only because they accepted the AI service's terms in
+    // the assistant panel, and nothing else in Quill grants it for them.
+    private static async Task<IResult> GiveConsentAsync(
+        IAiHelperClient aiClient,
+        ILogger<AssistantLogger> logger,
+        CancellationToken ct)
+    {
+        var status = await aiClient.GiveConsentAsync(ct);
+        if (status == AiHelperStatus.Success)
+            logger.LogInformation("AI assistant consent granted for this appliance's license.");
+
+        return ToConsentResult(status);
+    }
+
+    private static IResult ToConsentResult(AiHelperStatus status) =>
+        status is AiHelperStatus.Success or AiHelperStatus.ConsentRequired or AiHelperStatus.InvalidCredentials
+            ? Results.Ok(new AssistantConsentResponse(status))
+            : Results.Json(
+                new ApiErrorResponse("The AI service could not be reached."),
+                statusCode: StatusCodes.Status502BadGateway);
 
     // The response is relayed rather than translated, mirroring Raven.Server's own /assistant/assist
     // processor: the result frame carries more than the answer (follow-up questions, usage,
@@ -35,7 +73,7 @@ public static class AssistantEndpoints
         HttpContext ctx,
         AssistantChatRequest body,
         IAiHelperClient aiClient,
-        ILogger<AssistantChatLogger> logger,
+        ILogger<AssistantLogger> logger,
         CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(body?.Message))
@@ -91,5 +129,5 @@ public static class AssistantEndpoints
     private static bool IsEventStream(string? contentType) =>
         contentType?.StartsWith(EventStreamContentType, StringComparison.OrdinalIgnoreCase) == true;
 
-    internal sealed class AssistantChatLogger;
+    internal sealed class AssistantLogger;
 }
