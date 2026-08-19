@@ -1,6 +1,11 @@
 import { create } from "zustand";
 import { api } from "@/api/api";
-import { describeAssistantError, type AssistantRelevantLink } from "@/api/custom-services/assistant-service";
+import {
+    describeAssistantError,
+    isAssistantConsentRequired,
+    type AssistantRelevantLink,
+} from "@/api/custom-services/assistant-service";
+import { queryClient } from "@/lib/query-client";
 
 export type AssistantMessage = {
     id: string;
@@ -18,6 +23,10 @@ function nextMessageId() {
 
 // Kept out of the store: aborting is a transport concern, and nothing renders from it.
 let streamAbortController: AbortController | null = null;
+
+function markConsentRequired() {
+    queryClient.setQueryData(api.queries.assistant.consent().queryKey, { status: "ConsentRequired" });
+}
 
 type AssistantChatState = {
     messages: AssistantMessage[];
@@ -82,6 +91,10 @@ export const useAssistantChatStore = create<AssistantChatState>((set, get) => ({
                     );
                     set({ conversationId: ConversationId ?? null });
                 } else {
+                    if (event.status === "ConsentRequired") {
+                        markConsentRequired();
+                    }
+
                     updateAnswer({ role: "error", text: event.message });
                 }
             }
@@ -91,6 +104,10 @@ export const useAssistantChatStore = create<AssistantChatState>((set, get) => ({
             if (abortController.signal.aborted) {
                 dropAnswerIfEmpty();
                 return;
+            }
+
+            if (isAssistantConsentRequired(error)) {
+                markConsentRequired();
             }
 
             updateAnswer({ role: "error", text: describeAssistantError(error) });

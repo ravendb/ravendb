@@ -1,5 +1,7 @@
 import { delay, http, HttpResponse } from "msw";
 import type { AssistantChatFrame } from "@/api/custom-services/assistant-service";
+import type { AssistantConsentResponse } from "@/api/generated/server-api";
+import { apiHttp } from "./api-http";
 
 // assistant/chat relays the AI service's Server-Sent Events rather than serving a body the OpenAPI
 // contract describes, so this mock uses plain msw instead of `apiHttp` — mirroring appsMocks.setupTry.
@@ -20,6 +22,14 @@ export const assistantMocks = {
 
             return new HttpResponse(stream, { headers: { "Content-Type": "text/event-stream" } });
         }),
+    consent: (response: AssistantConsentResponse = { status: "Success" }) =>
+        apiHttp.get("/api/assistant/consent", ({ response: res }) => res(200).json(response)),
+    consentUnavailable: () =>
+        apiHttp.get("/api/assistant/consent", ({ response: res }) =>
+            res(502).json({ error: "The AI service could not be reached." }),
+        ),
+    giveConsent: (response: AssistantConsentResponse = { status: "Success" }) =>
+        apiHttp.post("/api/assistant/consent", ({ response: res }) => res(200).json(response)),
 };
 
 const sampleAssistantFrames: AssistantChatFrame[] = [

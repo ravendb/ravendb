@@ -16,6 +16,8 @@ public sealed class AiHelperInternalClient(
 {
     private const string AssistPath = "/assistant/assist";
 
+    private const string CheckConsentPath = "/assistant/check-consent";
+
     private const string GiveConsentPath = "/assistant/give-consent";
 
     public async Task<SuggestCdcInternalResult> SuggestCdcAsync(
@@ -28,7 +30,7 @@ public sealed class AiHelperInternalClient(
             Prompt = prompt,
         };
 
-        var (transport, content) = await SendWithConsentRetryAsync(AssistPath, "POST", request, ct);
+        var (transport, content) = await SendAsync(AssistPath, "POST", request, ct);
         if (transport != AiHelperStatus.Success)
             return new SuggestCdcInternalResult(transport, Configuration: null, [], 0, 0);
 
@@ -56,7 +58,7 @@ public sealed class AiHelperInternalClient(
             Prompt = prompt,
         };
 
-        var (transport, content) = await SendWithConsentRetryAsync(AssistPath, "POST", request, ct);
+        var (transport, content) = await SendAsync(AssistPath, "POST", request, ct);
         if (transport != AiHelperStatus.Success)
             return new SuggestAiAgentInternalResult(transport, [], [], 0, 0);
 
@@ -82,77 +84,9 @@ public sealed class AiHelperInternalClient(
             RavenVersion = ServerVersion.Build,
         };
 
-        var response = await PostChatAsync(request, ct);
-        if (await ShouldRetryWithConsentAsync(response, ct) == false)
-            return response;
-
-        response.Dispose();
-        return await PostChatAsync(request, ct);
-    }
-
-    // Owns the failure path of the response it inspects: reading the refusal or asking for consent can
-    // be cancelled, and nobody else is holding the 401 to close it.
-    private async Task<bool> ShouldRetryWithConsentAsync(HttpResponseMessage response, CancellationToken ct)
-    {
-        try
-        {
-            if (await IsConsentRequiredAsync(response, ct) == false)
-                return false;
-
-            // Consent is refused before the answer starts streaming, so asking again replays nothing.
-            // When it cannot be granted the original 401 already explains itself to the caller.
-            return await GiveConsentAsync(ct) == AiHelperStatus.Success;
-        }
-        catch
-        {
-            response.Dispose();
-            throw;
-        }
-    }
-
-    private async Task<HttpResponseMessage> PostChatAsync(ChatbotApiRequest request, CancellationToken ct)
-    {
         using var content = new StringContent(SerializeRequest(request), Encoding.UTF8, "application/json");
         using var httpRequest = new HttpRequestMessage(HttpMethod.Post, AssistPath) { Content = content };
         return await httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, ct);
-    }
-
-    // Reading the body buffers it, so the response stays relayable after the check.
-    private async Task<bool> IsConsentRequiredAsync(HttpResponseMessage response, CancellationToken ct)
-    {
-        if (response.StatusCode != HttpStatusCode.Unauthorized)
-            return false;
-
-        var text = await response.Content.ReadAsStringAsync(ct);
-        var status = await ClassifyUnauthorizedAsync(text, ct);
-
-        logger.Log(
-            status == AiHelperStatus.ConsentRequired ? LogLevel.Information : LogLevel.Warning,
-            "AI Helper {Path} was refused: upstream 401, mapped {Status}. Body: {Body}",
-            AssistPath, status, TruncateForLog(text));
-
-        return status == AiHelperStatus.ConsentRequired;
-    }
-
-    private async Task<(AiHelperStatus Transport, string Content)> SendWithConsentRetryAsync(string path, string method, object request, CancellationToken ct)
-    {
-        var result = await SendAsync(path, method, request, ct);
-        if (result.Transport != AiHelperStatus.ConsentRequired)
-            return result;
-
-        var consent = await GiveConsentAsync(ct);
-        if (consent != AiHelperStatus.Success)
-            return (consent, string.Empty);
-
-        var retried = await SendAsync(path, method, request, ct);
-        if (retried.Transport == AiHelperStatus.ConsentRequired)
-        {
-            logger.LogWarning(
-                "AI Helper {Path}: assist still returns ConsentRequired after give-consent succeeded — propagation lag or cert-thumbprint mismatch.",
-                path);
-        }
-
-        return retried;
     }
 
     public async Task<(AiHelperStatus Transport, string Content)> SendAsync(string path, string method, object request, CancellationToken ct)
@@ -187,27 +121,45 @@ public sealed class AiHelperInternalClient(
         }
     }
 
-    private async Task<AiHelperStatus> GiveConsentAsync(CancellationToken ct)
+    public Task<AiHelperStatus> CheckConsentAsync(CancellationToken ct) =>
+        SendConsentRequestAsync(CheckConsentPath, HttpMethod.Get, ct);
+
+    public Task<AiHelperStatus> GiveConsentAsync(CancellationToken ct) =>
+        SendConsentRequestAsync(GiveConsentPath, HttpMethod.Post, ct);
+
+    // Both consent calls answer with a { Status } body — 200 once the service is satisfied, 401 while
+    // it still wants consent or rejects the license — so the status is read out of the body either way.
+    private async Task<AiHelperStatus> SendConsentRequestAsync(string path, HttpMethod method, CancellationToken ct)
     {
         try
         {
-            using var content = new StringContent("{}", Encoding.UTF8, "application/json");
-            using var response = await httpClient.PostAsync(GiveConsentPath, content, ct);
-            if (response.IsSuccessStatusCode)
-                return AiHelperStatus.Success;
+            using var httpRequest = new HttpRequestMessage(method, path);
+            if (method == HttpMethod.Post)
+                httpRequest.Content = new StringContent("{}", Encoding.UTF8, "application/json");
 
+            using var response = await httpClient.SendAsync(httpRequest, ct);
             var text = await response.Content.ReadAsStringAsync(ct);
-            var status = response.StatusCode == HttpStatusCode.Unauthorized
-                ? AiHelperStatus.InvalidCredentials
-                : AiHelperStatus.InternalError;
-            logger.LogWarning("AI Helper give-consent failed: upstream {Code}, mapped {Status}. Body: {Body}",
-                (int)response.StatusCode, status, TruncateForLog(text));
+
+            var status = response.IsSuccessStatusCode
+                ? ParseStatus((await DeserializeAsync<StatusOnly>(text, ct))?.Status)
+                : response.StatusCode == HttpStatusCode.Unauthorized
+                    ? await ClassifyUnauthorizedAsync(text, ct)
+                    : AiHelperStatus.InternalError;
+
+            if (status != AiHelperStatus.Success)
+            {
+                logger.Log(
+                    status == AiHelperStatus.ConsentRequired ? LogLevel.Information : LogLevel.Warning,
+                    "AI Helper {Path}: upstream {Code}, mapped {Status}. Body: {Body}",
+                    path, (int)response.StatusCode, status, TruncateForLog(text));
+            }
+
             return status;
         }
         catch (Exception e) when (e is HttpRequestException ||
                                   (e is OperationCanceledException && ct.IsCancellationRequested == false))
         {
-            logger.LogWarning(e, "AI Helper give-consent failed (transport).");
+            logger.LogWarning(e, "AI Helper {Path} failed (transport).", path);
             return AiHelperStatus.InternalError;
         }
     }

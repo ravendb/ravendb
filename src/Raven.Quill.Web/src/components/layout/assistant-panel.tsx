@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Pin, PinOff, Sparkles, Trash2, X } from "lucide-react";
 import { useAssistantChatStore } from "@/components/layout/assistant-chat-store";
 import { AssistantComposer } from "@/components/layout/assistant-composer";
+import { AssistantConsentGate } from "@/components/layout/assistant-consent";
 import { AssistantMessages } from "@/components/layout/assistant-messages";
 import {
     ASSISTANT_MAX_WIDTH_PX,
@@ -13,6 +14,7 @@ import {
     useAssistantPinning,
     useAssistantStore,
 } from "@/components/layout/assistant-store";
+import { useAssistantConsent } from "@/components/layout/use-assistant-consent";
 import { Button } from "@/components/shadcn/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -102,6 +104,7 @@ export function AssistantPanel() {
     const setPinned = useAssistantStore((state) => state.setPinned);
     const hasMessages = useAssistantChatStore((state) => state.messages.length > 0);
     const clearMessages = useAssistantChatStore((state) => state.clearMessages);
+    const hasConsent = useAssistantConsent().data?.status === "Success";
 
     return (
         <div
@@ -157,9 +160,14 @@ export function AssistantPanel() {
                 </div>
             </header>
 
-            <AssistantMessages />
-
-            <AssistantComposer />
+            {hasConsent ? (
+                <>
+                    <AssistantMessages />
+                    <AssistantComposer />
+                </>
+            ) : (
+                <AssistantConsentGate />
+            )}
         </div>
     );
 }

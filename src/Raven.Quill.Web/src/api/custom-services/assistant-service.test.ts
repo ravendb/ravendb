@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+    AI_CONSENT_REQUIRED_MESSAGE,
     createAssistantService,
     describeAssistantError,
+    isAssistantConsentRequired,
     type AssistantChatFrame,
     type AssistantStreamEvent,
 } from "@/api/custom-services/assistant-service";
@@ -77,7 +79,11 @@ describe("assistant stream", () => {
         const client = respondWithFrames(doneFrame({ Status: "OutOfTokens" }));
 
         await expect(streamEvents(client)).resolves.toEqual([
-            { type: "error", message: "The AI assistant has used up its quota for now. Please try again later." },
+            {
+                type: "error",
+                message: "The AI assistant has used up its quota for now. Please try again later.",
+                status: "OutOfTokens",
+            },
         ]);
     });
 
@@ -89,6 +95,7 @@ describe("assistant stream", () => {
         expect(events.at(-1)).toEqual({
             type: "error",
             message: "The AI assistant is unavailable right now. Please try again later.",
+            status: "InternalError",
         });
     });
 
@@ -104,7 +111,7 @@ describe("assistant stream", () => {
     });
 });
 
-async function errorOf(body: string, status: number, contentType: string) {
+async function refusalOf(body: string, status: number, contentType: string) {
     const client = createApiClient({
         transport: () => Promise.resolve(new Response(body, { status, headers: { "Content-Type": contentType } })),
     });
@@ -112,19 +119,21 @@ async function errorOf(body: string, status: number, contentType: string) {
     try {
         await streamEvents(client);
     } catch (error) {
-        return describeAssistantError(error);
+        return error;
     }
 
     return null;
+}
+
+async function errorOf(body: string, status: number, contentType: string) {
+    return describeAssistantError(await refusalOf(body, status, contentType));
 }
 
 describe("describeAssistantError", () => {
     it("reads the Status the AI service put in its relayed refusal", async () => {
         const message = await errorOf('{"Status":"ConsentRequired"}', 401, "application/json");
 
-        expect(message).toBe(
-            "The AI assistant needs consent to send data to the RavenDB AI service, and it could not be granted automatically.",
-        );
+        expect(message).toBe(AI_CONSENT_REQUIRED_MESSAGE);
     });
 
     it("falls back to the status code for a refusal that carries no JSON body", async () => {
@@ -137,5 +146,19 @@ describe("describeAssistantError", () => {
         const message = await errorOf('{"error":"message is required"}', 400, "application/json");
 
         expect(message).toBe("message is required");
+    });
+});
+
+describe("isAssistantConsentRequired", () => {
+    it("recognizes the refusal that asks for consent", async () => {
+        const error = await refusalOf('{"Status":"ConsentRequired"}', 401, "application/json");
+
+        expect(isAssistantConsentRequired(error)).toBe(true);
+    });
+
+    it("does not read a rejected license as a missing consent", async () => {
+        const error = await refusalOf("Unauthorized", 401, "text/plain");
+
+        expect(isAssistantConsentRequired(error)).toBe(false);
     });
 });

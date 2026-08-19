@@ -42,7 +42,8 @@ export type AssistantChatFrame = {
 export type AssistantStreamEvent =
     | { type: "chunk"; answer: string }
     | { type: "done"; result: AssistantChatResult }
-    | { type: "error"; message: string };
+    /** `status` carries the AI service's own word for the refusal when it named one. */
+    | { type: "error"; message: string; status?: AssistantChatStatus };
 
 export function createAssistantService(client: ApiClient) {
     return {
@@ -65,12 +66,16 @@ export function createAssistantService(client: ApiClient) {
                     const result = spliceAnswer(frame.text, answer);
                     yield result.Status === "Success" || result.Status === undefined
                         ? { type: "done", result }
-                        : { type: "error", message: describeAssistantStatus(result.Status) };
+                        : { type: "error", message: describeAssistantStatus(result.Status), status: result.Status };
                     return;
                 }
 
                 if (frame.type === "Error") {
-                    yield { type: "error", message: describeAssistantStatus("InternalError") };
+                    yield {
+                        type: "error",
+                        message: describeAssistantStatus("InternalError"),
+                        status: "InternalError",
+                    };
                     return;
                 }
             }
@@ -98,9 +103,17 @@ export function describeAssistantError(error: unknown) {
     return error instanceof Error ? error.message : describeAssistantStatus("InternalError");
 }
 
+export const AI_CONSENT_REQUIRED_MESSAGE =
+    "The RavenDB AI service needs your consent before it can answer. Open the AI assistant panel to review and accept the Terms of Use.";
+
+/** True when a request was refused for want of that consent rather than for any other reason. The AI
+ * service says so in the `Status` of its 401 body, which the backend relays untouched. */
+export function isAssistantConsentRequired(error: unknown) {
+    return isApiError(error) && readStatus(error.details) === "ConsentRequired";
+}
+
 const ASSISTANT_STATUS_MESSAGES: Partial<Record<AssistantChatStatus, string>> = {
-    ConsentRequired:
-        "The AI assistant needs consent to send data to the RavenDB AI service, and it could not be granted automatically.",
+    ConsentRequired: AI_CONSENT_REQUIRED_MESSAGE,
     InvalidCredentials: "The AI assistant is not available for this appliance's license.",
     InvalidData: "The AI assistant could not make sense of that request.",
     OutOfTokens: "The AI assistant has used up its quota for now. Please try again later.",

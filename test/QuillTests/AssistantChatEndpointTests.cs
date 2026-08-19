@@ -61,31 +61,18 @@ public class AssistantChatEndpointTests(ITestOutputHelper output, QuillAiHelperF
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Chat_gives_consent_once_and_retries_before_relaying_anything()
+    public async Task Chat_relays_the_consent_refusal_instead_of_granting_consent()
     {
         Mock.RequireConsentForAssist = true;
         Mock.ChatbotChunks = ["Answered after consent."];
 
-        var (response, frames) = await ChatAsync(new { message = "hi", conversationId = (string?)null });
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal(1, Mock.GiveConsentCallCount);
-        // Consent is settled before the relay starts, so the answer is streamed exactly once.
-        Assert.Equal(["Ongoing", "Done"], frames.Select(frame => frame.GetProperty("type").GetString()));
-        Assert.Equal("Answered after consent.", frames[0].GetProperty("text").GetString());
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
-    public async Task Chat_relays_the_refusal_when_consent_cannot_be_granted()
-    {
-        Mock.RequireConsentForAssist = true;
-        Mock.GiveConsentResponse = (401, """{"Status":"InvalidCredentials"}""");
-
         var response = await Host.Client.PostAsJsonAsync(AssistantChatRoute, new { message = "hi" });
 
-        // The client reads the upstream Status out of the body, the way the Studio does.
+        // Consent is the operator's to give through /api/assistant/consent. The client reads the
+        // upstream Status out of the body, the way the Studio does, and shows its consent gate.
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         Assert.Equal("ConsentRequired", await ReadStatusAsync(response));
+        Assert.Equal(0, Mock.GiveConsentCallCount);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
