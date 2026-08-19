@@ -189,20 +189,22 @@ internal class GoogleChatCompletionClientSettings : AbstractOpenAiChatCompletion
         public string quotaValue { get; set; }
     }
 
-    public override string GetRefusal(BlittableJsonReaderObject choice0, BlittableJsonReaderObject message, bool streaming = false)
+    public override string GetRefusal(BlittableJsonReaderObject choice0, BlittableJsonReaderObject message, bool streaming, out bool isCompleteMessage)
     {
-        if (streaming)
+        // Gemini's OpenAI-compatible API can expose a refusal through the choice's finish_reason
+        // (e.g. "content_filter: PROHIBITED_CONTENT") - a full message, not a fragment to concatenate.
+        if (choice0.TryGet(ChatCompletionClient.Constants.ResponseFields.FinishReason, out string finishReason)
+            && finishReason != null
+            && finishReason.StartsWith("content_filter", StringComparison.OrdinalIgnoreCase))
         {
-            // Gemini's OpenAI-compatible API exposes a refusal purely through the choice's finish_reason
-            // (e.g. "content_filter: PROHIBITED_CONTENT") - for non-streaming, with no
-            // "message"/"refusal" field.
-            if (choice0.TryGet(ChatCompletionClient.Constants.ResponseFields.FinishReason, out string finishReason)
-                && finishReason != null
-                && finishReason.StartsWith("content_filter", StringComparison.OrdinalIgnoreCase))
-                return finishReason;
-
-            return base.GetRefusal(choice0, message, streaming);
+            isCompleteMessage = true;
+            return finishReason;
         }
+
+        if (streaming)
+            return base.GetRefusal(choice0, message, streaming, out isCompleteMessage);
+
+        isCompleteMessage = true;
 
         // For non-streaming the response looks like:
         //
@@ -217,7 +219,10 @@ internal class GoogleChatCompletionClientSettings : AbstractOpenAiChatCompletion
         // }
         //
         // The "message" object contains no "content", no "refusal" metadata and no finish reason.
-        return "The model refused to answer";
+        if (message != null)
+            return "The model refused to answer";
+
+        return base.GetRefusal(choice0, message, streaming, out isCompleteMessage);
     }
 
     public override async ValueTask<BlittableJsonReaderObject> TryGetResponseContentAsync(JsonOperationContext context, Stream stream)

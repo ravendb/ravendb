@@ -57,43 +57,43 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             handler.Initialize(configuration, conversationId, body, changeVector, RequestHandler.GetRaftRequestIdFromQuery(), debugOverride, cancelPendingActionTools);
             AiInternalConversationResult r;
 
-            if (streaming)
+            try
             {
-                var streamPropertyPath = RequestHandler.GetStringQueryString("streamPropertyPath", required: handler.Schema != null);
-                HttpContext.Response.Headers.ContentType = "text/event-stream";
-                RequestHandler.DisableResponseBuffering();
+                if (streaming)
+                {
+                    var streamPropertyPath = RequestHandler.GetStringQueryString("streamPropertyPath", required: handler.Schema != null);
+                    HttpContext.Response.Headers.ContentType = "text/event-stream";
+                    RequestHandler.DisableResponseBuffering();
 
-                r = await handler.HandleStreamingRequestAsync(context, RequestHandler.ResponseBodyStream(), streamPropertyPath, token.Token);
-            }
-            else
-            {
-                try
+                    r = await handler.HandleStreamingRequestAsync(context, RequestHandler.ResponseBodyStream(), streamPropertyPath, token.Token);
+                }
+                else
                 {
                     r = await handler.HandleRequestAsync(context, token.Token);
                 }
-                catch (ConcurrencyException)
+            }
+            catch (ConcurrencyException)
+            {
+                throw;
+            }
+            catch (MissingAiAgentParameterException)
+            {
+                throw;
+            }
+            catch (QueryToolFailedException)
+            {
+                throw;
+            }
+            catch (AttachmentDoesNotExistException)
+            {
+                throw;
+            }
+            catch (Exception e)
+            {
+                throw new AiException($"Failed to communicate with the agent '{configuration.Identifier}', conversation: '{conversationId}'.", e)
                 {
-                    throw;
-                }
-                catch (MissingAiAgentParameterException)
-                {
-                    throw;
-                }
-                catch (QueryToolFailedException)
-                {
-                    throw;
-                }
-                catch (AttachmentDoesNotExistException)
-                {
-                    throw;
-                }
-                catch (Exception e)
-                {
-                    throw new AiException($"Failed to communicate with the agent '{configuration.Identifier}', conversation: '{conversationId}'.", e)
-                    {
-                        RequestId = RequestHandler.HttpContext.Response.Headers.RequestId
-                    };
-                }
+                    RequestId = RequestHandler.HttpContext.Response.Headers.RequestId
+                };
             }
 
             await using var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream());
