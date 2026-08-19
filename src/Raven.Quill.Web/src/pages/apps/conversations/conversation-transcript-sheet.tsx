@@ -75,7 +75,8 @@ export function ConversationTranscriptSheet({
 function isDisplayableTurn(turn: AiConversationMessage): boolean {
     const hasToolCalls = (turn.toolCalls?.length ?? 0) > 0;
     const hasVisibleContent = (turn.role === "user" || turn.role === "assistant") && Boolean(turn.content?.trim());
-    return hasVisibleContent || hasToolCalls;
+    const isParametersMessage = turn.role === "user" && turn.content?.startsWith("AI Agent Parameters:");
+    return (hasVisibleContent || hasToolCalls) && !isParametersMessage;
 }
 
 function TranscriptTurn({ turn }: { turn: AiConversationMessage }) {

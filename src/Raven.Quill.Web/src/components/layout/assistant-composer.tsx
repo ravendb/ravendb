@@ -90,6 +90,9 @@ export function AssistantComposer() {
                     </Button>
                 )}
             </div>
+            <div className="pt-2 text-center text-xs text-muted-foreground">
+                Responses are AI-generated and may require verification.
+            </div>
         </form>
     );
 }

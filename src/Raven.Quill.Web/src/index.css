@@ -469,7 +469,10 @@
         /* Optional banner row (collapses to 0 when absent), then header, then body. */
         grid-template-rows: auto auto minmax(0, 1fr);
         height: 100svh;
-        overflow: hidden;
+        /* clip, not hidden: `hidden` is still a scroll container, so focusing the assistant composer
+           while the column is mid-transition (and the panel therefore still overflows) let the browser
+           scroll the whole shell sideways to reveal it. `clip` cannot be scrolled at all. */
+        overflow: clip;
         transition: grid-template-columns 200ms ease-out;
     }
 
