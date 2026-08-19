@@ -157,6 +157,11 @@ internal static class QuillRoutes
 
     public static string EmbedLinks(string slug) => $"/api/apps/{slug}/embed-links";
     public static string EmbedLink(string slug, string token) => $"/api/apps/{slug}/embed-links/{token}";
+
+    public static string SlackWebhook(string token) => $"/webhooks/slack/{token}";
+    public static string SlackWebhookInfo(string slug, string channelId) =>
+        $"/api/apps/{slug}/channels/{channelId}/slack/webhook";
+    public static string SlackHealth(string slug) => $"/api/apps/{slug}/slack/health";
 }
 
 /// The <c>year[&amp;month[&amp;day]]</c> query shared by the usage/stats endpoints.
