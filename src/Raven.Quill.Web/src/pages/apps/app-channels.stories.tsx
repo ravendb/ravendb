@@ -57,9 +57,7 @@ export const CreateWhatsAppPersonal: Story = {
         await userEvent.click(await body.findByRole("option", { name: /faq bot/i }));
         await userEvent.click(sheet.getByRole("button", { name: /create channel/i }));
 
-        await waitFor(() =>
-            expect(sheet.getByRole("img", { name: /whatsapp pairing qr code/i })).toBeInTheDocument(),
-        );
+        await waitFor(() => expect(sheet.getByRole("img", { name: /whatsapp pairing qr code/i })).toBeInTheDocument());
     },
 };
 

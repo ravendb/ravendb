@@ -38,7 +38,6 @@ export function ChannelsSection({ slug, agent: fixedAgent }: { slug: string; age
         (whatsAppHealthQuery.data ?? []).map((health) => [health.channelId, health]),
     );
 
-
     const onRetry = async () => {
         if (channelsQuery.isError) {
             await channelsQuery.refetch();

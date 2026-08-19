@@ -52,7 +52,6 @@ export function ChannelGroups({ slug }: { slug: string }) {
         (whatsAppHealthQuery.data ?? []).map((health) => [health.channelId, health]),
     );
 
-
     const onRetry = async () => {
         if (channelsQuery.isError) {
             await channelsQuery.refetch();

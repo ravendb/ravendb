@@ -18,8 +18,17 @@ export function WhatsAppPairingPanel({
     channelId: string;
     isChannelEnabled?: boolean;
 }) {
-    const { pairing, isPending, isError, hasTimedOut, retry, restart, restartWithPhoneNumber, isRestarting, restartError } =
-        useWhatsAppPairing(slug, channelId);
+    const {
+        pairing,
+        isPending,
+        isError,
+        hasTimedOut,
+        retry,
+        restart,
+        restartWithPhoneNumber,
+        isRestarting,
+        restartError,
+    } = useWhatsAppPairing(slug, channelId);
     const [isEnteringPhoneNumber, setIsEnteringPhoneNumber] = useState(false);
 
     return (
