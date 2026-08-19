@@ -32,14 +32,30 @@ namespace Raven.Server.Commercial.WriteUsageMetering
         }
     }
 
+    public sealed class SystemCollectionStats : IDynamicJson
+    {
+        public long Etag;
+        public long Count;
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Etag)] = Etag,
+                [nameof(Count)] = Count
+            };
+        }
+    }
+
     public sealed class WriteUsageApplicationSnapshot
     {
-        public WriteUsageApplicationSnapshot(string applicationName, string topologyId, string changeVector, IReadOnlyList<LastEtagSnapshot> nodes)
+        public WriteUsageApplicationSnapshot(string applicationName, string topologyId, string changeVector, IReadOnlyList<LastEtagSnapshot> nodes, Dictionary<string, SystemCollectionStats> systemCollections)
         {
             ApplicationName = applicationName;
             TopologyId = topologyId;
             ChangeVector = changeVector;
             Nodes = nodes;
+            SystemCollections = systemCollections;
         }
 
         public string ApplicationName { get; }
@@ -54,6 +70,12 @@ namespace Raven.Server.Commercial.WriteUsageMetering
         /// </summary>
         public IReadOnlyList<LastEtagSnapshot> Nodes { get; }
 
+        /// <summary>
+        /// Last etag and document count per system ('@'-prefixed) collection, merged over the members
+        /// of the database group.
+        /// </summary>
+        public Dictionary<string, SystemCollectionStats> SystemCollections { get; }
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -61,7 +83,8 @@ namespace Raven.Server.Commercial.WriteUsageMetering
                 [nameof(ApplicationName)] = ApplicationName,
                 [nameof(TopologyId)] = TopologyId,
                 [nameof(ChangeVector)] = ChangeVector,
-                [nameof(Nodes)] = new DynamicJsonArray(Nodes.Select(n => n.ToJson()))
+                [nameof(Nodes)] = new DynamicJsonArray(Nodes.Select(n => n.ToJson())),
+                [nameof(SystemCollections)] = DynamicJsonValue.Convert(SystemCollections)
             };
         }
     }
