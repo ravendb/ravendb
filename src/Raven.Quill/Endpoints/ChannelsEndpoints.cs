@@ -8,6 +8,7 @@ using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints.Helpers;
 using Raven.Quill.Raven;
+using Raven.Quill.Slack;
 using Raven.Quill.Telegram;
 using Raven.Quill.Wizard;
 using TelegramUser = Telegram.Bot.Types.User;
@@ -65,6 +66,7 @@ public static class ChannelsEndpoints
         ProvisionChannelRequest body,
         IDocumentStore store,
         ITelegramChannelManager telegramManager,
+        ISlackClient slackClient,
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
@@ -81,10 +83,21 @@ public static class ChannelsEndpoints
             ChannelType.IFrame => await ProvisionIFrameAsync(app, body, store, logger, ct),
             ChannelType.Telegram => await ProvisionTelegramAsync(app, body, store, telegramManager, logger, ct),
             ChannelType.WhatsApp => ProvisionWhatsAppAsync(),
-            ChannelType.Slack => NotImplementedChannel(ChannelType.Slack),
+            ChannelType.Slack => await ProvisionSlackAsync(app, body, store, slackClient, logger, ct),
             null => Results.BadRequest(new ApiErrorResponse("type is required")),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{body.Type}'")),
         };
+    }
+
+    private static IResult? RejectForeignSettings(ChannelType type, bool hasTelegram, bool hasSlack)
+    {
+        if (type != ChannelType.Telegram && hasTelegram)
+            return Results.BadRequest(new ApiErrorResponse("telegram settings apply to Telegram channels only"));
+
+        if (type != ChannelType.Slack && hasSlack)
+            return Results.BadRequest(new ApiErrorResponse("slack settings apply to Slack channels only"));
+
+        return null;
     }
 
     private static async Task<IResult> ProvisionIFrameAsync(
@@ -98,8 +111,8 @@ public static class ChannelsEndpoints
         if (config is null)
             return Results.BadRequest(new ApiErrorResponse($"unknown agentId '{body.AgentId}'"));
 
-        if (body.Telegram is not null)
-            return Results.BadRequest(new ApiErrorResponse("telegram settings apply to Telegram channels only"));
+        if (RejectForeignSettings(ChannelType.IFrame, body.Telegram is not null, body.Slack is not null) is { } foreignSettings)
+            return foreignSettings;
 
         // open embed must be explicit (allowedOrigins: []); an omitted list => 400
         if (body.AllowedOrigins is null)
@@ -148,6 +161,9 @@ public static class ChannelsEndpoints
         var config = await AgentLookup.FindAsync(store, app.Database, body.AgentId, ct);
         if (config is null)
             return Results.BadRequest(new ApiErrorResponse($"unknown agentId '{body.AgentId}'"));
+
+        if (RejectForeignSettings(ChannelType.Telegram, body.Telegram is not null, body.Slack is not null) is { } foreignSettings)
+            return foreignSettings;
 
         if (string.IsNullOrWhiteSpace(body.Telegram?.BotToken))
             return Results.BadRequest(new ApiErrorResponse("telegram.botToken is required for a Telegram channel"));
@@ -213,6 +229,96 @@ public static class ChannelsEndpoints
 
     private static IResult ProvisionWhatsAppAsync() => NotImplementedChannel(ChannelType.WhatsApp);
 
+    private static async Task<IResult> ProvisionSlackAsync(
+        App app,
+        ProvisionChannelRequest body,
+        IDocumentStore store,
+        ISlackClient slackClient,
+        ILogger<ChannelsLogger> logger,
+        CancellationToken ct)
+    {
+        var config = await AgentLookup.FindAsync(store, app.Database, body.AgentId, ct);
+        if (config is null)
+            return Results.BadRequest(new ApiErrorResponse($"unknown agentId '{body.AgentId}'"));
+
+        if (RejectForeignSettings(ChannelType.Slack, body.Telegram is not null, hasSlack: false) is { } foreignSettings)
+            return foreignSettings;
+
+        if (body.AllowedOrigins is { Length: > 0 })
+            return Results.BadRequest(new ApiErrorResponse("allowedOrigins does not apply to Slack channels"));
+
+        var botToken = body.Slack?.BotToken?.Trim();
+        if (string.IsNullOrEmpty(botToken))
+            return Results.BadRequest(new ApiErrorResponse("slack.botToken is required for a Slack channel"));
+
+        if (botToken.StartsWith("xoxb-", StringComparison.Ordinal) == false)
+            return Results.BadRequest(new ApiErrorResponse(
+                "slack.botToken must be the bot token (xoxb-) from the Slack app's OAuth page"));
+
+        var signingSecret = body.Slack!.SigningSecret?.Trim();
+        if (string.IsNullOrEmpty(signingSecret))
+            return Results.BadRequest(new ApiErrorResponse("slack.signingSecret is required for a Slack channel"));
+
+        if (TryValidateDisplayName(body.DisplayName, out var nameError) == false)
+            return Results.BadRequest(new ApiErrorResponse(nameError!));
+
+        if (SlackParameterBindings.TryResolve(config, body.Slack.ParameterBindings, out var bindings, out var paramError) == false)
+            return Results.BadRequest(new ApiErrorResponse(paramError!, Code: "missing_parameters"));
+
+        var (auth, authError, _) = await slackClient.AuthTestAsync(botToken, ct);
+        if (auth is null)
+            return Results.BadRequest(new ApiErrorResponse(authError!));
+
+        var channelId = Guid.NewGuid().ToString("N");
+        var channel = new Channel
+        {
+            Id = Channel.IdPrefix + channelId,
+            Type = ChannelType.Slack,
+            DisplayName = body.DisplayName
+                          ?? (string.IsNullOrEmpty(auth.BotName) ? auth.TeamName : auth.BotName),
+            AgentId = config.Identifier,
+            AllowedOrigins = [],
+            Enabled = true,
+            CreatedAt = DateTime.UtcNow,
+            Slack = new SlackSettings
+            {
+                TeamId = auth.TeamId,
+                TeamName = auth.TeamName,
+                BotUserId = auth.BotUserId,
+                BotId = auth.BotId,
+                BotToken = botToken,
+                SigningSecret = signingSecret,
+                WebhookToken = Guid.NewGuid().ToString("N"),
+                ConnectedAt = DateTime.UtcNow,
+                ParameterBindings = bindings,
+            },
+        };
+
+        var (reserved, owner) = await TryReserveSlackBotAsync(
+            store, auth.TeamId, auth.BotUserId, app.Database, channel.Id!, channel.Slack.WebhookToken, ct);
+        if (reserved == false)
+            return Results.BadRequest(new ApiErrorResponse(SlackBotAlreadyConnected(auth.TeamName, auth.BotUserId, owner)));
+
+        try
+        {
+            using var session = store.OpenAsyncSession(app.Database);
+            await session.StoreAsync(channel, ct);
+            await session.SaveChangesAsync(ct);
+        }
+        catch
+        {
+            await TryReleaseSlackAsync(
+                store, auth.TeamId, auth.BotUserId, channel.Slack.WebhookToken, app.Database, channel.Id!, logger);
+            throw;
+        }
+
+        logger.LogInformation(
+            "Provisioned Slack channel slug={Slug} channelId={ChannelId} agentId={AgentId} teamId={TeamId} botUserId={BotUserId}",
+            app.Slug, channelId, config.Identifier, auth.TeamId, auth.BotUserId);
+
+        return Results.Ok(new ProvisionChannelResponse(channelId));
+    }
+
     private static async Task<IResult> ListChannelsAsync(
         string slug,
         IDocumentStore store,
@@ -240,6 +346,8 @@ public static class ChannelsEndpoints
         UpdateChannelRequest body,
         IDocumentStore store,
         ITelegramChannelManager telegramManager,
+        ISlackClient slackClient,
+        SlackHealthRegistry slackHealth,
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
@@ -260,7 +368,7 @@ public static class ChannelsEndpoints
             ChannelType.IFrame => await UpdateIFrameChannelAsync(session, channel, body, app.Slug, channelId, logger, ct),
             ChannelType.Telegram => await UpdateTelegramChannelAsync(session, channel, body, app, channelId, store, telegramManager, logger, ct),
             ChannelType.WhatsApp => UpdateWhatsAppChannelAsync(),
-            ChannelType.Slack => NotImplementedChannel(ChannelType.Slack),
+            ChannelType.Slack => await UpdateSlackChannelAsync(session, channel, body, app, channelId, store, slackClient, slackHealth, logger, ct),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{channel.Type}'")),
         };
     }
@@ -406,6 +514,89 @@ public static class ChannelsEndpoints
 
     private static IResult UpdateWhatsAppChannelAsync() => NotImplementedChannel(ChannelType.WhatsApp);
 
+    private static async Task<IResult> UpdateSlackChannelAsync(
+        IAsyncDocumentSession session,
+        Channel channel,
+        UpdateChannelRequest body,
+        App app,
+        string channelId,
+        IDocumentStore store,
+        ISlackClient slackClient,
+        SlackHealthRegistry health,
+        ILogger<ChannelsLogger> logger,
+        CancellationToken ct)
+    {
+        if (RejectForeignSettings(ChannelType.Slack, body.Telegram is not null, hasSlack: false) is { } foreignSettings)
+            return foreignSettings;
+
+        if (body.AllowedOrigins is { Length: > 0 })
+            return Results.BadRequest(new ApiErrorResponse("allowedOrigins does not apply to Slack channels"));
+
+        if (body.DisplayName is not null)
+        {
+            if (TryValidateDisplayName(body.DisplayName, out var nameError) == false)
+                return Results.BadRequest(new ApiErrorResponse(nameError!));
+            channel.DisplayName = body.DisplayName;
+        }
+
+        var settings = channel.Slack ??= new SlackSettings();
+
+        var tokenRotated = false;
+        if (string.IsNullOrWhiteSpace(body.Slack?.BotToken) == false)
+        {
+            var botToken = body.Slack.BotToken.Trim();
+            if (botToken.StartsWith("xoxb-", StringComparison.Ordinal) == false)
+                return Results.BadRequest(new ApiErrorResponse(
+                    "slack.botToken must be the bot token (xoxb-) from the Slack app's OAuth page"));
+
+            var (auth, authError, _) = await slackClient.AuthTestAsync(botToken, ct);
+            if (auth is null)
+                return Results.BadRequest(new ApiErrorResponse(authError!));
+
+            if (auth.TeamId != settings.TeamId || auth.BotUserId != settings.BotUserId)
+                return Results.BadRequest(new ApiErrorResponse(
+                    "the token belongs to a different workspace or bot; connect it as a new channel instead"));
+
+            settings.BotToken = botToken;
+            settings.TeamName = auth.TeamName;
+            settings.BotId = auth.BotId;
+            tokenRotated = true;
+        }
+
+        var secretRotated = false;
+        if (string.IsNullOrWhiteSpace(body.Slack?.SigningSecret) == false)
+        {
+            settings.SigningSecret = body.Slack.SigningSecret.Trim();
+            secretRotated = true;
+        }
+
+        if (body.Slack?.ParameterBindings is { } suppliedBindings)
+        {
+            var config = await AgentLookup.FindAsync(store, app.Database, channel.AgentId, ct);
+            if (config is null)
+                return Results.BadRequest(new ApiErrorResponse($"unknown agentId '{channel.AgentId}'"));
+
+            if (SlackParameterBindings.TryResolve(config, suppliedBindings, out var bindings, out var paramError) == false)
+                return Results.BadRequest(new ApiErrorResponse(paramError!, Code: "missing_parameters"));
+
+            settings.ParameterBindings = bindings;
+        }
+
+        if (body.Enabled is not null)
+            channel.Enabled = body.Enabled.Value;
+
+        await session.SaveChangesAsync(ct);
+
+        if (tokenRotated)
+            health.InvalidateTokenCheck(app.Database, channel.ShortId);
+
+        logger.LogInformation(
+            "Updated Slack channel slug={Slug} channelId={ChannelId} enabled={Enabled} tokenRotated={TokenRotated} secretRotated={SecretRotated}",
+            app.Slug, channelId, channel.Enabled, tokenRotated, secretRotated);
+
+        return Results.Ok(ChannelSummaryResponse.From(channel));
+    }
+
 
     private static async Task<IResult> DeleteChannelAsync(
         string slug,
@@ -429,7 +620,7 @@ public static class ChannelsEndpoints
             ChannelType.IFrame => await DeleteIFrameChannelAsync(session, channel, app.Slug, channelId, logger, ct),
             ChannelType.Telegram => await DeleteTelegramChannelAsync(session, channel, app, channelId, store, telegramManager, logger, ct),
             ChannelType.WhatsApp => DeleteWhatsAppChannelAsync(),
-            ChannelType.Slack => NotImplementedChannel(ChannelType.Slack),
+            ChannelType.Slack => await DeleteSlackChannelAsync(session, channel, app, channelId, store, logger, ct),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{channel.Type}'")),
         };
     }
@@ -472,6 +663,26 @@ public static class ChannelsEndpoints
     }
 
     private static IResult DeleteWhatsAppChannelAsync() => NotImplementedChannel(ChannelType.WhatsApp);
+
+    private static async Task<IResult> DeleteSlackChannelAsync(
+        IAsyncDocumentSession session,
+        Channel channel,
+        App app,
+        string channelId,
+        IDocumentStore store,
+        ILogger<ChannelsLogger> logger,
+        CancellationToken ct)
+    {
+        session.Delete(channel);
+        await session.SaveChangesAsync(ct);
+
+        if (channel.Slack is { TeamId.Length: > 0, BotUserId.Length: > 0 } settings)
+            await TryReleaseSlackAsync(
+                store, settings.TeamId, settings.BotUserId, settings.WebhookToken, app.Database, channel.Id!, logger);
+
+        logger.LogInformation("Deleted Slack channel slug={Slug} channelId={ChannelId}", app.Slug, channelId);
+        return Results.NoContent();
+    }
 
     private static string AlreadyConnected(string? botUsername, string? ownerDatabase) =>
         ownerDatabase is null
@@ -558,6 +769,98 @@ public static class ChannelsEndpoints
         Results.Problem(
             detail: $"{type} channels are not yet supported.",
             statusCode: StatusCodes.Status501NotImplemented);
+
+    private static string SlackBotAlreadyConnected(string teamName, string botUserId, string? ownerDatabase)
+    {
+        var bot = string.IsNullOrEmpty(teamName) ? botUserId : $"{botUserId} in workspace '{teamName}'";
+        return ownerDatabase is null
+            ? $"Slack bot {bot} is already connected"
+            : $"Slack bot {bot} is already connected in app '{ownerDatabase}'";
+    }
+
+    private static async Task<(bool Reserved, string? OwnerDatabase)> TryReserveSlackBotAsync(
+        IDocumentStore store, string teamId, string botUserId, string database, string channelId, string webhookToken, CancellationToken ct)
+    {
+        using var configSession = store.OpenAsyncSession();
+
+        var reservationId = SlackBotReservation.IdFor(teamId, botUserId);
+        var reservation = await configSession.LoadAsync<SlackBotReservation>(reservationId, ct);
+        if (reservation is not null && reservation.Database == database && reservation.ChannelId == channelId)
+            return (true, null);
+
+        if (reservation is null)
+        {
+            await configSession.StoreAsync(
+                new SlackBotReservation { Database = database, ChannelId = channelId },
+                string.Empty, reservationId, ct);
+        }
+        else
+        {
+            if (await IsSlackReservationLiveAsync(store, reservation, teamId, botUserId, ct))
+                return (false, reservation.Database);
+
+            reservation.Database = database;
+            reservation.ChannelId = channelId;
+            await configSession.StoreAsync(
+                reservation, configSession.Advanced.GetChangeVectorFor(reservation), reservationId, ct);
+        }
+
+        await configSession.StoreAsync(
+            new SlackWebhookRoute { Database = database, ChannelId = channelId },
+            SlackWebhookRoute.IdFor(webhookToken), ct);
+
+        try
+        {
+            await configSession.SaveChangesAsync(ct);
+            return (true, null);
+        }
+        catch (ConcurrencyException)
+        {
+            return (false, null);
+        }
+    }
+
+    private static async Task<bool> IsSlackReservationLiveAsync(
+        IDocumentStore store, SlackBotReservation reservation, string teamId, string botUserId, CancellationToken ct)
+    {
+        try
+        {
+            using var session = store.OpenAsyncSession(reservation.Database);
+            var channel = await session.LoadAsync<Channel>(reservation.ChannelId, ct);
+            return channel?.Slack is { } settings && settings.TeamId == teamId && settings.BotUserId == botUserId;
+        }
+        catch (DatabaseDoesNotExistException)
+        {
+            return false;
+        }
+    }
+
+    private static async Task TryReleaseSlackAsync(
+        IDocumentStore store, string teamId, string botUserId, string webhookToken, string database, string channelId, ILogger<ChannelsLogger> logger)
+    {
+        try
+        {
+            using var configSession = store.OpenAsyncSession();
+
+            var reservation = await configSession.LoadAsync<SlackBotReservation>(
+                SlackBotReservation.IdFor(teamId, botUserId));
+            if (reservation is not null && reservation.Database == database && reservation.ChannelId == channelId)
+                configSession.Delete(reservation);
+
+            var route = await configSession.LoadAsync<SlackWebhookRoute>(
+                SlackWebhookRoute.IdFor(webhookToken));
+            if (route is not null && route.Database == database && route.ChannelId == channelId)
+                configSession.Delete(route);
+
+            await configSession.SaveChangesAsync();
+        }
+        catch (Exception e)
+        {
+            logger.LogWarning(
+                "Slack bot reservation for {TeamId}/{BotUserId} was not released: {Error}",
+                teamId, botUserId, e.Message);
+        }
+    }
 
     private static bool TryNormalizeOrigins(string[] origins, out string? error)
     {
