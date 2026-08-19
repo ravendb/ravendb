@@ -18,6 +18,7 @@ using Raven.Quill.Feedback;
 using Raven.Quill.Hosting;
 using Raven.Quill.Infrastructure;
 using Raven.Quill.Licensing;
+using Raven.Quill.Slack;
 using Raven.Quill.Telegram;
 using Raven.Client.Documents;
 
@@ -76,6 +77,7 @@ builder.Services.AddOptions<ApplianceOptions>()
         ReadEnv("RAVEN_QUILL_RAVENDB_S6_SERVICE", v => options.RavenDbS6Service = v);
         ReadEnv("RAVEN_QUILL_API_URL", v => options.AiApiUrl = v);
         ReadEnv("RAVEN_QUILL_TELEGRAM_API_URL", v => options.Telegram.ApiUrl = v);
+        ReadEnv("RAVEN_QUILL_SLACK_API_URL", v => options.Slack.ApiUrl = v);
         ReadEnv("QUILL_LICENSE_KEY", v => options.LicenseKey = v);
         ReadEnv("QUILL_API_KEY", v => options.ApiKey = v);
         ReadEnv("RAVEN_QUILL_RAVENDB_INTERNAL_PORT", v =>
@@ -105,6 +107,15 @@ builder.Services.AddOptions<ApplianceOptions>()
     .Validate(o => o.Telegram.ApplyChangesInterval > TimeSpan.Zero, "Telegram ApplyChangesInterval must be positive")
     .Validate(o => o.Telegram.ChatIdleTimeout > TimeSpan.Zero, "Telegram ChatIdleTimeout must be positive")
     .Validate(o => o.Telegram.PollBackoffMax > TimeSpan.Zero, "Telegram PollBackoffMax must be positive")
+    .Validate(o => Uri.TryCreate(o.Slack.ApiUrl, UriKind.Absolute, out var u) &&
+                   (u.Scheme == Uri.UriSchemeHttp || u.Scheme == Uri.UriSchemeHttps),
+        "Slack ApiUrl must be an absolute http(s) URL")
+    .Validate(o => o.Slack.RequestTimeout > TimeSpan.Zero, "Slack RequestTimeout must be positive")
+    .Validate(o => o.Slack.MaxWebhookBodyBytes > 0, "Slack MaxWebhookBodyBytes must be positive")
+    .Validate(o => o.Slack.MessageLimit is > 0 and <= 40_000,
+        "Slack MessageLimit must be between 1 and 40000")
+    .Validate(o => o.Slack.EditDebounce > TimeSpan.Zero, "Slack EditDebounce must be positive")
+    .Validate(o => o.Slack.SignatureTolerance > TimeSpan.Zero, "Slack SignatureTolerance must be positive")
     .ValidateOnStart();
 
 builder.Services.AddSingleton<IDocumentStore>(sp =>
@@ -146,6 +157,14 @@ builder.Services.ConfigureHttpClientDefaults(httpBuilder =>
 
 builder.Services.AddHttpClient(WebhookActionExecutor.ClientName,
     static http => http.Timeout = TimeSpan.FromSeconds(30));
+
+builder.Services.AddHttpClient<ISlackClient, SlackApiClient>(static (sp, http) =>
+{
+    var opts = sp.GetRequiredService<IOptions<ApplianceOptions>>().Value.Slack;
+    http.BaseAddress = new Uri(opts.ApiUrl.EndsWith('/') ? opts.ApiUrl : opts.ApiUrl + "/");
+    http.Timeout = opts.RequestTimeout;
+});
+
 
 builder.Services.AddHttpClient<IAiHelperClient, AiHelperInternalClient>(static (sp, http) =>
     {

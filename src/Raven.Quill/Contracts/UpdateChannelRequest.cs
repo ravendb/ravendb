@@ -6,9 +6,15 @@ public sealed record UpdateChannelRequest(
     string? DisplayName,
     string[]? AllowedOrigins,
     bool? Enabled,
-    TelegramUpdateRequest? Telegram = null);
+    TelegramUpdateRequest? Telegram = null,
+    SlackUpdateRequest? Slack = null);
 
 public sealed record TelegramUpdateRequest(
     string? BotToken = null,
     TelegramChannelMessages? Messages = null,
+    Dictionary<string, TelegramParameterBinding>? ParameterBindings = null);
+
+public sealed record SlackUpdateRequest(
+    string? BotToken = null,
+    string? SigningSecret = null,
     Dictionary<string, TelegramParameterBinding>? ParameterBindings = null);
