@@ -86,6 +86,11 @@ export function ChannelsSection({ slug, agent: fixedAgent }: { slug: string; age
                                                 @{channel.telegram.botUsername}
                                             </div>
                                         )}
+                                        {channel.slack?.teamName && (
+                                            <div className="text-xs font-normal text-muted-foreground">
+                                                {channel.slack.teamName}
+                                            </div>
+                                        )}
                                     </TableCell>
                                     {!fixedAgent && <TableCell className="font-medium">{agent?.name}</TableCell>}
                                     <TableCell>

@@ -37,6 +37,7 @@ export const channelsMocks = {
 // id is shared with the embed-links mocks so the channel detail route resolves.
 export const SAMPLE_CHANNEL_ID = "4a1f9c2b7d8e4f6a9b0c1d2e3f405162";
 export const SAMPLE_TELEGRAM_CHANNEL_ID = "tlg_2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e";
+export const SAMPLE_SLACK_CHANNEL_ID = "slk_4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f90";
 
 export const sampleChannels: ChannelSummaryResponse[] = [
     {
@@ -65,6 +66,22 @@ export const sampleChannels: ChannelSummaryResponse[] = [
                 phoneNumber: { source: "PhoneNumber", value: null },
             },
             messages: null,
+        },
+    },
+    {
+        channelId: SAMPLE_SLACK_CHANNEL_ID,
+        type: "Slack",
+        agentId: "agents/support",
+        displayName: "Acme workspace bot",
+        enabled: true,
+        createdAt: "2026-08-18T09:15:00Z",
+        slack: {
+            teamId: "T0123456789",
+            teamName: "Acme Coffee",
+            botUserId: "U0QUILLBOT1",
+            parameterBindings: {
+                slackUser: { source: "UserId", value: null },
+            },
         },
     },
 ];
