@@ -236,6 +236,67 @@ public abstract class QuillTelegramTestBase(ITestOutputHelper output, QuillTeleg
         $"{Random.Shared.NextInt64(1_000_000, 9_999_999)}:AA{Guid.NewGuid():N}";
 }
 
+// ---- Slack ----
+
+public sealed class QuillSlackFixture : QuillCollectionHost
+{
+    public MockSlackApi Slack { get; private set; } = null!;
+
+    internal FakeAgentRouter Router { get; } = new();
+
+    public override async ValueTask InitializeAsync()
+    {
+        await base.InitializeAsync();
+        Slack = await MockSlackApi.StartAsync();
+    }
+
+    public override async ValueTask DisposeAsync()
+    {
+        await base.DisposeAsync();
+        await Slack.DisposeAsync();
+    }
+}
+
+public abstract class QuillSlackTestBase(ITestOutputHelper output, QuillSlackFixture fixture)
+    : QuillTestBase(output, fixture)
+{
+    protected MockSlackApi Slack => fixture.Slack;
+
+    internal FakeAgentRouter Router => fixture.Router;
+
+    protected override Task<QuillHost> NewHostAsync(
+        Action<ApplianceOptions>? configure = null, Action<IServiceCollection>? configureServices = null,
+        string setupPackagePath = "", bool seedChatConnectionString = true, bool longLived = false) =>
+        base.NewHostAsync(
+            configure: opts =>
+            {
+                opts.Slack.ApiUrl = fixture.Slack.BaseAddress;
+                opts.Slack.EditDebounce = TimeSpan.FromMilliseconds(50);
+                configure?.Invoke(opts);
+            },
+            configureServices: services =>
+            {
+                services.RemoveAll<Raven.Quill.Agents.IAgentRouter>();
+                services.AddSingleton<Raven.Quill.Agents.IAgentRouter>(fixture.Router);
+                configureServices?.Invoke(services);
+            },
+            setupPackagePath: setupPackagePath, seedChatConnectionString: seedChatConnectionString,
+            longLived: longLived);
+
+    public override async ValueTask InitializeAsync()
+    {
+        await base.InitializeAsync();
+        Slack.Reset();
+        Router.Reset();
+    }
+
+    protected static string NewBotToken() => "xoxb-" + Guid.NewGuid().ToString("N");
+
+    protected static string NewTeamId() => "T" + Random.Shared.Next(100_000_000, 999_999_999);
+
+    protected static string NewBotUserId() => "U" + Random.Shared.Next(100_000_000, 999_999_999);
+}
+
 // ---- AI models ----
 
 /// A resettable <see cref="IAiHelperClient"/> that records the last call and returns a per-test-configurable
