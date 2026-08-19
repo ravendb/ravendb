@@ -7,7 +7,7 @@ import { Button } from "@/components/shadcn/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/shadcn/ui/card";
 import { Field, FieldError, FieldLabel } from "@/components/shadcn/ui/field";
 import { Input } from "@/components/shadcn/ui/input";
-import { isIpV4 } from "@/lib/subdomain-origin";
+import { containerNameForHost, isIpV4 } from "@/lib/subdomain-origin";
 
 const NEW_IP_PLACEHOLDER = "<new-ip>";
 const DNS_A_RECORD_TYPE = 1;
@@ -91,16 +91,17 @@ export function DashboardIpConfiguration({ hostname = window.location.hostname }
                 </CardContent>
             </Card>
 
-            <ChangeIpCard />
+            <ChangeIpCard hostname={hostname} />
         </div>
     );
 }
 
-function ChangeIpCard() {
+function ChangeIpCard({ hostname }: { hostname: string }) {
     const [newIp, setNewIp] = useState("");
     const trimmedIp = newIp.trim();
     const isInvalidIp = trimmedIp !== "" && !isIpV4(trimmedIp);
-    const command = `docker exec quill update-dns --ip ${trimmedIp && !isInvalidIp ? trimmedIp : NEW_IP_PLACEHOLDER}`;
+
+    const command = `docker exec ${containerNameForHost(hostname)} update-dns --ip ${trimmedIp && !isInvalidIp ? trimmedIp : NEW_IP_PLACEHOLDER}`;
 
     return (
         <Card>
