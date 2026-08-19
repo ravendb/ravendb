@@ -135,6 +135,7 @@ builder.Services.AddSingleton(sp => WidgetAssets.Load(
 builder.Services.AddTransient<IFeedbackSender, FeedbackSender>();
 builder.Services.AddTransient<ILicenseStatsProvider, LicenseStatsProvider>();
 builder.Services.AddSingleton<ITelegramBotClientFactory, TelegramBotClientFactory>();
+builder.Services.AddSingleton<SlackHealthRegistry>();
 builder.Services.AddSingleton<TelegramChannelManager>();
 builder.Services.AddSingleton<ITelegramChannelManager>(sp => sp.GetRequiredService<TelegramChannelManager>());
 if (!isOpenApiDocumentGeneration)
