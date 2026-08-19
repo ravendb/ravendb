@@ -6,7 +6,7 @@ import { Icon } from "components/common/Icon";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
-export function PerDatabaseOngoingTasksLink({ text = "Per-database ongoing tasks" }: { text?: string }) {
+export function PerDatabaseOngoingTasksLink() {
     const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
     return (
@@ -22,7 +22,7 @@ export function PerDatabaseOngoingTasksLink({ text = "Per-database ongoing tasks
                 title="Go to the Ongoing Tasks view of the selected database"
             >
                 <Icon icon="ongoing-tasks" />
-                {text}
+                Per-database ongoing tasks
             </a>
         </ConditionalPopover>
     );

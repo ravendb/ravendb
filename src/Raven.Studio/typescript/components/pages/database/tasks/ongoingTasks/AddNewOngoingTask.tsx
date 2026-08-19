@@ -85,15 +85,13 @@ export default function AddNewOngoingTask({ queryParams }: ReactQueryParamsProps
     );
 }
 
-export function TaskSearchInput({
+function TaskSearchInput({
     searchText,
     setSearchText,
-    placeholder = "e.g. External Replication",
     className,
 }: {
     searchText: string;
     setSearchText: (value: string) => void;
-    placeholder?: string;
     className?: string;
 }) {
     return (
@@ -102,7 +100,7 @@ export function TaskSearchInput({
             <Form.Control
                 type="search"
                 accessKey="/"
-                placeholder={placeholder}
+                placeholder="e.g. External Replication"
                 title="Filter tasks"
                 className="filtering-input"
                 value={searchText}
@@ -117,7 +115,7 @@ interface CategoryNavItem {
     categoryIcon: IconName;
 }
 
-export function TaskCategoryFilter({
+function TaskCategoryFilter({
     categories,
     availableCategories,
     selectedCategories,
