@@ -6,9 +6,6 @@ using Raven.Quill.Metrics;
 
 namespace Raven.Quill.WhatsApp;
 
-/// Runs inbound WhatsApp messages through the agent and replies via the bridge.
-/// The HTTP endpoint answers 202 immediately (agent turns can take minutes); work
-/// continues here on per-sender chains so one sender's turns never interleave.
 internal sealed class WhatsAppInboundProcessor(
     IDocumentStore store,
     IAgentRouter router,
@@ -97,8 +94,6 @@ internal sealed class WhatsAppInboundProcessor(
             throw new InvalidOperationException(bindError);
         }
 
-        // WhatsApp has no streaming primitive: chunks only accumulate as a fallback
-        // for agents whose output shape yields no final reply field.
         var accumulated = new StringBuilder();
 
         try
@@ -132,7 +127,6 @@ internal sealed class WhatsAppInboundProcessor(
         }
     }
 
-    // matches "/clear" and "/clear <anything>", mirroring the Telegram command shape
     private static bool IsClearCommand(string text)
     {
         var separator = text.IndexOfAny([' ', '\t', '\r', '\n']);
@@ -162,7 +156,6 @@ internal sealed class WhatsAppInboundProcessor(
         }
     }
 
-    // phone numbers are PII: log lines carry only the last four digits
     private static string SenderSuffix(string sender)
     {
         var digits = WhatsAppConversationId.SenderDigits(sender);

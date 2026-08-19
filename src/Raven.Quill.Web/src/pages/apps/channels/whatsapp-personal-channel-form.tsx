@@ -18,8 +18,6 @@ import { invalidateChannelQueries } from "@/lib/query-invalidation";
 import { WhatsAppPairingPanel } from "@/pages/apps/channels/whatsapp-pairing-panel";
 import type { FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
 
-// A WhatsApp sender is identified only by its phone number, so Telegram's user id and
-// username sources have nothing to bind to here.
 const WHATSAPP_PARAMETER_SOURCES: FormSelectOption<TelegramParameterSource>[] = [
     { value: "Constant", label: "Constant value" },
     { value: "PhoneNumber", label: "Sender phone number" },
@@ -53,9 +51,6 @@ function toParameterBindings(parameters: WhatsAppChannelFormData["parameters"]) 
     return bindings;
 }
 
-// Two phases in one sheet: the create form, then the pairing panel for the freshly
-// provisioned channel — the operator has their phone in hand, so no detour via the
-// channel page. Pairing can always be finished later from there.
 export function WhatsAppPersonalChannelForm({
     slug,
     agent,

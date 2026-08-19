@@ -238,9 +238,6 @@ public abstract class QuillTelegramTestBase(ITestOutputHelper output, QuillTeleg
 
 // ---- WhatsApp ----
 
-/// Collection host for the WhatsApp channel tests: the shared host plus one <see cref="MockWhatsAppBridge"/> the
-/// host's bridge client is pointed at, and one <see cref="FakeAgentRouter"/> so pipeline tests assert on
-/// dispatched requests without a live LLM.
 public sealed class QuillWhatsAppFixture : QuillCollectionHost
 {
     public const string BridgeToken = "test-whatsapp-bridge-token";
@@ -262,8 +259,6 @@ public sealed class QuillWhatsAppFixture : QuillCollectionHost
     }
 }
 
-/// Base for the WhatsApp tests: points the shared collection host at the mock bridge, injects the shared
-/// token directly (no token file on disk), swaps in the recording router, and resets both per test.
 public abstract class QuillWhatsAppTestBase(ITestOutputHelper output, QuillWhatsAppFixture fixture)
     : QuillTestBase(output, fixture)
 {

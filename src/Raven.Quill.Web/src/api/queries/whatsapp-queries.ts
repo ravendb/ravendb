@@ -15,7 +15,6 @@ export function createWhatsAppQueries(api: ServerApi["whatsapp"]) {
             queryOptions({
                 queryKey: [baseKey, "pairing", slug, channelId],
                 queryFn: () => api.pairing(slug, channelId),
-                // live status: polling stops at rest states, so a remount must refetch
                 staleTime: 0,
             }),
     };

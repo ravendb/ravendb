@@ -1,6 +1,3 @@
-// Pure classification of a raw Baileys message into what the Quill web app receives.
-// Kept free of Baileys imports so tests drive it with plain objects.
-
 export interface ClassifiedMessage {
     sender: string;
     messageId: string;
@@ -25,7 +22,6 @@ interface RawMessage {
 const PHONE_JID_SUFFIX = "@s.whatsapp.net";
 const LID_JID_SUFFIX = "@lid";
 
-// Wrappers that carry the real content one level deeper.
 const WRAPPER_KEYS = ["ephemeralMessage", "viewOnceMessage", "viewOnceMessageV2", "documentWithCaptionMessage"];
 
 // Envelope/protocol payloads that are not user content at all.
@@ -43,14 +39,9 @@ export function classifyMessage(raw: RawMessage): ClassifiedMessage | null {
         return null;
 
     const jid = key.remoteJid;
-    // Direct chats only: groups (@g.us), broadcasts, newsletters and status updates are dropped.
-    // LID-addressed chats are direct too; WhatsApp addresses them by @lid rather than by number.
     if (!jid || (!jid.endsWith(PHONE_JID_SUFFIX) && !jid.endsWith(LID_JID_SUFFIX)))
         return null;
 
-    // Downstream identity (conversation id, PhoneNumber bindings) needs the phone-number JID,
-    // so prefer the alternate key WhatsApp pairs with a @lid address. A @lid that arrives
-    // without one is resolved by the caller, which owns the LID->PN mapping.
     const alt = key.remoteJidAlt;
     const sender = jid.endsWith(LID_JID_SUFFIX) && alt?.endsWith(PHONE_JID_SUFFIX) ? alt : jid;
 

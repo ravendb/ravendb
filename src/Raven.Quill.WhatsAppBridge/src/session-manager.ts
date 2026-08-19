@@ -68,14 +68,9 @@ export class SessionManager {
             return;
         }
 
-        // No live session: still wipe any credentials left on disk.
         await fs.rm(this.authDirOf(database, channelId), { recursive: true, force: true });
     }
 
-    // Linked sessions leave creds.json behind; resume them so a bridge restart
-    // does not silence connected channels. Never-paired sessions leave nothing,
-    // and a half-finished pairing leaves creds with no account - resuming that
-    // just burns a doomed login against WhatsApp.
     async resumeFromDisk(): Promise<void> {
         let databases: string[];
         try {
@@ -100,7 +95,6 @@ export class SessionManager {
                     await this.start(database, channelId);
                     this.logger.info({ database, channelId }, "resumed whatsapp session from disk");
                 } catch (error) {
-                    // One broken session must not stop the rest from resuming.
                     this.logger.warn(
                         { database, channelId, error: String(error) },
                         "failed to resume whatsapp session",
@@ -134,8 +128,6 @@ function keyOf(database: string, channelId: string): string {
     return `${database}/${channelId}`;
 }
 
-/// Only a completed pairing writes creds.account; creds carrying just a "me" are the
-/// leftovers of a rejected pairing-code request.
 async function isLinkedAsync(authDir: string): Promise<boolean> {
     try {
         const creds = JSON.parse(await fs.readFile(path.join(authDir, "creds.json"), "utf-8"));

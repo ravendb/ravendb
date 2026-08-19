@@ -81,7 +81,6 @@ function EditChannelForm({
     const queryClient = useQueryClient();
 
     const isTelegram = channel.type === "Telegram";
-    // origins are an embed-page concept; WhatsApp channels edit only name + enabled
     const isIFrame = channel.type === "IFrame";
     const [areMessagesOpen, setAreMessagesOpen] = useState(false);
 

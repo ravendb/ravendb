@@ -16,9 +16,6 @@ public static class WhatsAppEndpoints
 {
     public static void Map(WebApplication app)
     {
-        // Bridge-to-web push. Mapped outside /api so nginx's api.* surface never routes
-        // it, and excluded from OpenAPI; the loopback + shared-token guards below are
-        // the actual authentication.
         app.MapPost("/internal/whatsapp/inbound", HandleInboundAsync)
             .AllowAnonymous()
             .ExcludeFromDescription();
@@ -79,7 +76,6 @@ public static class WhatsAppEndpoints
             var status = await bridge.GetSessionStatusAsync(app.Database, channelId, ct);
             if (status is null)
             {
-                // the bridge lost the session (restart before the phone was linked); recreate it
                 await bridge.StartSessionAsync(app.Database, channelId, pairingPhoneNumber: null, ct);
                 status = await bridge.GetSessionStatusAsync(app.Database, channelId, ct)
                          ?? new WhatsAppSessionStatus(WhatsAppSessionState.Starting, null, null, null, null, null);
@@ -98,7 +94,6 @@ public static class WhatsAppEndpoints
     private static async Task<IResult> RestartPairingAsync(
         string slug,
         string channelId,
-        // a body with no phoneNumber is the plain QR restart
         WhatsAppPairingRestartRequest body,
         IDocumentStore store,
         IWhatsAppBridgeClient bridge,
@@ -179,8 +174,6 @@ public static class WhatsAppEndpoints
         return Results.Ok(items.ToArray());
     }
 
-    /// Mirrors the bridge-observed link state onto the channel doc so the channels
-    /// list can show the phone number without a bridge round-trip per row.
     private static async Task PersistLinkStateAsync(
         IAsyncDocumentSession session, Channel channel, WhatsAppSessionStatus status, CancellationToken ct)
     {
@@ -202,7 +195,6 @@ public static class WhatsAppEndpoints
         }
     }
 
-    /// Accepts the usual written forms ("+48 601 234 567") and hands the bridge bare digits.
     private static bool TryNormalizePairingPhoneNumber(string? phoneNumber, out string? normalized, out string? error)
     {
         normalized = null;
@@ -238,9 +230,6 @@ public static class WhatsAppEndpoints
         ILogger<WhatsAppLogger> logger,
         CancellationToken ct)
     {
-        // UseForwardedHeaders rewrites nginx-relayed requests to the real client IP, so
-        // only the bridge's direct loopback connection (or an in-process test server,
-        // which has no remote address) passes this check. 404 keeps the route unadvertised.
         if (IsLoopback(ctx.Connection.RemoteIpAddress) == false)
             return Results.NotFound();
 
@@ -249,7 +238,6 @@ public static class WhatsAppEndpoints
         if (token is null || TokensMatch(provided, token) == false)
             return Results.Unauthorized();
 
-        // bound manually so the guards above run before any request parsing
         WhatsAppInboundRequest? body;
         try
         {
@@ -269,8 +257,6 @@ public static class WhatsAppEndpoints
             return Results.BadRequest(new ApiErrorResponse("database, channelId, sender and a known kind are required"));
         }
 
-        // Unroutable messages are dropped with a 2xx: the bridge retries non-2xx, and
-        // a message for a deleted/disabled channel will never become routable.
         Channel? channel;
         try
         {

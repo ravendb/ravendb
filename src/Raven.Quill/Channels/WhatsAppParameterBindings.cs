@@ -4,12 +4,9 @@ namespace Raven.Quill.Channels;
 
 internal static class WhatsAppParameterBindings
 {
-    /// A WhatsApp sender is identified only by its phone number, so Telegram's UserId and
-    /// Username sources have nothing to bind to here.
     internal static bool IsSupportedSource(TelegramParameterSource source) =>
         source is TelegramParameterSource.Constant or TelegramParameterSource.PhoneNumber;
 
-    /// Keys of the returned dictionary carry the casing the agent declares, whatever casing was supplied.
     internal static bool TryResolve(
         AiAgentConfiguration config,
         Dictionary<string, TelegramParameterBinding>? supplied,

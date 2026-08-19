@@ -13,7 +13,6 @@ export interface InboundPayload {
 
 const DEFAULT_RETRY_DELAYS_MS = [1_000, 5_000, 15_000];
 
-// Pushes inbound messages to the Quill web app; delivery is at-most-once after the retry budget.
 export class InboundForwarder {
     constructor(
         private readonly webInternalUrl: string,

@@ -25,7 +25,6 @@ export interface MessagesUpsert {
     messages: unknown[];
 }
 
-// The narrow surface of a Baileys socket the session needs; tests inject fakes.
 export interface WaSocket {
     user?: { id: string } | null;
     ev: { on(event: string, listener: (arg: never) => void): void };
@@ -33,10 +32,7 @@ export interface WaSocket {
     requestPairingCode(phoneNumber: string): Promise<string>;
     logout(): Promise<void>;
     end(error?: Error): void;
-    /// Baileys sends the pairing-code request without a reply handler, so WhatsApp's
-    /// rejection of it is otherwise silent. Optional: test fakes may omit it.
     onIqError?(listener: (reason: string) => void): void;
-    /// Resolves a @lid address to its phone-number jid. Optional: test fakes may omit it.
     signalRepository?: { lidMapping?: { getPNForLID(lid: string): Promise<string | null> } };
 }
 
@@ -48,14 +44,11 @@ export class SessionNotConnectedError extends Error {
     }
 }
 
-// Baileys DisconnectReason values (Boom statusCode on connection close).
 const LOGGED_OUT = 401;
 const TIMED_OUT = 408;
 const CONNECTION_REPLACED = 440;
 const RESTART_REQUIRED = 515;
 
-// Baileys lets the first QR of a socket live 60s, then rotates every 20s until the
-// server's refs run out; stamping 60s on all of them overstates the later ones by 3x.
 const FIRST_QR_TTL_MS = 60_000;
 const ROTATED_QR_TTL_MS = 20_000;
 const MIN_RECONNECT_MS = 1_000;
@@ -66,17 +59,14 @@ export class Session {
     private state: SessionState = "starting";
     private qr: string | null = null;
     private qrExpiresAt: Date | null = null;
-    // The first QR of a socket lives longer than the rotated ones that follow it.
     private hasIssuedQr = false;
     private phoneNumber: string | null = null;
     private lastError: string | null = null;
-    // Set when the operator links by phone number instead of scanning a QR.
     private pairingPhoneNumber: string | null = null;
     private pairingCode: string | null = null;
     private stopped = false;
     private reconnectDelayMs = MIN_RECONNECT_MS;
     private reconnectTimer: NodeJS.Timeout | null = null;
-    // Bumped on every teardown so events from a superseded socket are ignored.
     private generation = 0;
 
     constructor(
@@ -90,8 +80,6 @@ export class Session {
 
     status(): SessionStatus {
         const isPairing = this.state === "pairing";
-        // A pairing code replaces the QR: showing both invites the operator to
-        // start two competing link attempts.
         return {
             state: this.state,
             qr: isPairing && this.pairingCode === null ? this.qr : null,
@@ -103,7 +91,6 @@ export class Session {
         };
     }
 
-    /// Null (the default) links by QR; a digits-only number links by pairing code.
     setPairingPhoneNumber(phoneNumber: string | null): void {
         this.pairingPhoneNumber = phoneNumber;
     }
@@ -198,8 +185,6 @@ export class Session {
             );
             this.hasIssuedQr = true;
 
-            // The first qr proves the noise handshake completed, which is what
-            // requestPairingCode needs before it can send its iq.
             if (this.pairingPhoneNumber !== null && this.pairingCode === null)
                 await this.requestPairingCodeAsync(this.pairingPhoneNumber);
 
@@ -236,9 +221,6 @@ export class Session {
         );
 
         if (statusCode === RESTART_REQUIRED) {
-            // WhatsApp closes the socket right after a successful QR scan; completing
-            // the registration requires an immediate reconnect with the saved
-            // credentials - keep the session in "starting" so pairing polls continue.
             this.teardownSocket();
             this.state = "starting";
             this.qr = null;
@@ -265,8 +247,6 @@ export class Session {
         }
 
         if (statusCode === TIMED_OUT && wasPairing) {
-            // WhatsApp closes the socket once the QR budget is spent; do not loop QR
-            // generation (ban hygiene) - the dashboard restart issues a fresh code.
             this.teardownSocket();
             this.state = "disconnected";
             this.qr = null;
@@ -281,11 +261,6 @@ export class Session {
             this.scheduleReconnect();
     }
 
-    /// requestPairingCode writes creds.me before WhatsApp has accepted anything, so a
-    /// rejected request leaves a "me" with no linked account behind. Baileys picks the
-    /// login path over registration whenever creds.me exists, so the next socket tries
-    /// to log in as an unregistered device, WhatsApp answers 401, and every later
-    /// attempt - QR included - is wedged. Only a completed pairing writes creds.account.
     private async discardUnlinkedCredentialsAsync(): Promise<void> {
         let creds: { me?: unknown; account?: unknown };
         try {
@@ -350,8 +325,6 @@ export class Session {
     }
 
     private async onMessagesUpsert(upsert: MessagesUpsert): Promise<void> {
-        // "notify" is live traffic; "append" replays history/offline backlog after a
-        // relink and must not flood the agent.
         if (upsert.type !== "notify")
             return;
 
@@ -375,8 +348,6 @@ export class Session {
         }
     }
 
-    /// A @lid sender carries no phone number, which downstream identity depends on; drop
-    /// rather than route an unresolvable one, so it is a logged gap and not silent loss.
     private async resolveSender(sender: string): Promise<string | null> {
         if (sender.endsWith("@lid") === false)
             return sender;

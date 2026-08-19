@@ -366,7 +366,6 @@ public class WhatsAppChannelEndpointsTests(ITestOutputHelper output, QuillWhatsA
             $"{(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
         var pairing = await response.Content.ReadFromJsonAsync<WhatsAppPairingResponse>(QuillHttp.Json);
 
-        // written forms are normalized to bare digits before reaching the bridge
         Assert.Contains((app.Slug, created.ChannelId, "48601234567"), Bridge.PairingPhoneNumbers);
         Assert.Equal(WhatsAppSessionState.Pairing, pairing!.State);
         Assert.Equal("ABCD1234", pairing.PairingCode);

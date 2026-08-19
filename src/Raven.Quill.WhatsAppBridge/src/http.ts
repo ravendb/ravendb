@@ -4,8 +4,6 @@ import type { Logger } from "./logger.js";
 import type { SessionManager } from "./session-manager.js";
 import { SessionNotConnectedError } from "./session.js";
 
-// Both segments become directory names under the sessions dir: the strict
-// shapes double as the path-traversal guard.
 const DATABASE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/;
 const CHANNEL_ID_PATTERN = /^[a-f0-9]{32}$/;
 
@@ -20,7 +18,6 @@ interface PairingBody {
     phoneNumber?: unknown;
 }
 
-/// Returns the digits of an E.164-ish number, null when absent, undefined when malformed.
 function readPairingPhoneNumber(body: PairingBody | undefined): string | null | undefined {
     const raw = body?.phoneNumber;
     if (raw === undefined || raw === null || raw === "")

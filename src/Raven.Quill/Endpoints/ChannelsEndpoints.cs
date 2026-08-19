@@ -252,8 +252,6 @@ public static class ChannelsEndpoints
         await session.StoreAsync(channel, ct);
         await session.SaveChangesAsync(ct);
 
-        // eager start so the pairing panel has a QR by its first poll; a dead bridge is
-        // not a failed provision - the pairing endpoint lazily starts the session later
         try
         {
             await whatsAppBridge.StartSessionAsync(app.Database, channelId, pairingPhoneNumber: null, ct);
@@ -483,7 +481,6 @@ public static class ChannelsEndpoints
             channel.DisplayName = body.DisplayName;
         }
 
-        // disable keeps the phone linked (re-enable is instant); the inbound gate drops messages
         if (body.Enabled is not null)
             channel.Enabled = body.Enabled.Value;
 
@@ -570,8 +567,6 @@ public static class ChannelsEndpoints
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
-        // unlink first: refuse to delete the doc while the bridge still holds a live
-        // phone link it could not wipe (refuse-rather-than-orphan, like the agent 409)
         try
         {
             await whatsAppBridge.DeleteSessionAsync(app.Database, channelId, ct);

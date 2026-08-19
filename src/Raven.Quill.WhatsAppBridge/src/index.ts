@@ -30,8 +30,6 @@ for (const signal of ["SIGTERM", "SIGINT"] as const) {
 await app.listen({ host: config.host, port: config.port });
 logger.info({ host: config.host, port: config.port, sessionsDir: config.sessionsDir }, "whatsapp bridge listening");
 
-// The web app mints the token on startup; block until it appears (same pattern
-// as the nginx service waiting for the wildcard certificate).
 async function waitForToken(tokenPath: string, log: Logger): Promise<string> {
     for (let attempt = 1; ; attempt++) {
         try {

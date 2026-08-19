@@ -9,7 +9,6 @@ internal sealed class WhatsAppBridgeClient(HttpClient http, IWhatsAppBridgeSecre
 {
     private const string TokenHeader = "X-Quill-Bridge-Token";
 
-    // the bridge speaks camelCase, including enum values ("loggedOut")
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
     {
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },

@@ -6,7 +6,6 @@ import { Spinner } from "@/components/shadcn/ui/spinner";
 import { FormInput } from "@/components/form/form-input";
 import { withNestedSubmit } from "@/lib/form-utils";
 
-// WhatsApp wants the full international number; the server keeps the digits only.
 const phoneNumberSchema = z.object({
     phoneNumber: z
         .string()

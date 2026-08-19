@@ -149,7 +149,6 @@ describe("Session", () => {
         const { session, authDir } = await makeSession();
         cleanup.push(() => session.stop(), () => fs.rm(authDir, { recursive: true, force: true }));
 
-        // what a rejected requestPairingCode leaves behind: a "me" and no linked account
         await fs.writeFile(
             path.join(authDir, "creds.json"),
             JSON.stringify({ me: { id: "48123456789@s.whatsapp.net" } }),
@@ -224,7 +223,6 @@ describe("Session", () => {
         const status = session.status();
         assert.equal(status.state, "pairing");
         assert.equal(status.pairingCode, "ABCD1234");
-        // the QR is withheld so the operator does not start two competing link attempts
         assert.equal(status.qr, null);
         assert.equal(status.qrExpiresAt, null);
     });

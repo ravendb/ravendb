@@ -296,8 +296,6 @@ ChatEndpoints.Map(app);
 EmbedEndpoints.Map(app);
 StaticAssetEndpoints.MapSpaFallback(app);
 
-// mint the bridge token up front: the 06-whatsapp s6 service blocks until the file exists.
-// skipped on hosts without the appliance volume so dev/test runs don't grow a /var tree.
 if (!isOpenApiDocumentGeneration)
 {
     var applianceOptions = app.Services.GetRequiredService<IOptions<ApplianceOptions>>().Value;

@@ -33,7 +33,6 @@ public sealed class ApplianceOptions
 
     public string WhatsAppDataDir { get; set; } = "/var/lib/quill/whatsapp";
 
-    // test/dev override; when unset the token is minted at WhatsAppDataDir/bridge-token
     public string? WhatsAppBridgeToken { get; set; }
 
     public TimeSpan ReadinessInitialDelay { get; set; } = TimeSpan.FromSeconds(15);

@@ -6,8 +6,6 @@ exec 2>&1
 DATA_DIR="${RAVEN_QUILL_WHATSAPP_DATA_DIR:-/var/lib/quill/whatsapp}"
 mkdir -p "$DATA_DIR/sessions"
 
-# The web app mints the bridge token on startup; wait for it (same pattern as
-# 03-proxy waiting for the wildcard certificate).
 while [ ! -f "$DATA_DIR/bridge-token" ]; do
   sleep 1
 done

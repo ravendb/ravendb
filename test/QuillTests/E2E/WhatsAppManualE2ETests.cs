@@ -9,13 +9,6 @@ using Xunit;
 
 namespace QuillTests.E2E;
 
-/// Runs against a real, locally running WhatsApp bridge (src/Raven.Quill.WhatsAppBridge), which in turn
-/// talks to the real WhatsApp servers. Covers what MockWhatsAppBridge cannot: the real linked-device
-/// handshake and QR issuance. Proving pairing needs no phone; the full reply loop does (see the comment
-/// in the test body and the manual QA script in the bridge README).
-///
-/// To run: start the bridge (npm run build && npm start) with RAVEN_QUILL_WHATSAPP_DATA_DIR pointing at a
-/// scratch dir containing a bridge-token file, then set the two env vars below to the bridge's URL and token.
 public class WhatsAppManualE2ETests(ITestOutputHelper output) : QuillTestBase(output)
 {
     private const string BridgeUrlVariable = "QUILL_WHATSAPP_E2E_BRIDGE_URL";
@@ -48,8 +41,6 @@ public class WhatsAppManualE2ETests(ITestOutputHelper output) : QuillTestBase(ou
         var created = await app.ProvisionChannelAsync(
             new ProvisionChannelRequest(ChannelType.WhatsAppPersonal, agentId, null));
 
-        // a real QR (the linked-device payload) proves the bridge completed the
-        // WhatsApp websocket handshake; no phone is needed up to this point
         var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(30);
         while (true)
         {
@@ -67,11 +58,6 @@ public class WhatsAppManualE2ETests(ITestOutputHelper output) : QuillTestBase(ou
         var health = Assert.Single(await host.Client.GetFromJsonAsync<WhatsAppChannelHealthResponse[]>(
             QuillRoutes.WhatsAppHealth(app.Slug), QuillHttp.Json) ?? []);
         Assert.Equal(WhatsAppSessionState.Pairing, health.State);
-
-        // To exercise the full reply loop manually: put a breakpoint (or a long Task.Delay) here,
-        // scan the QR from the dashboard (or log it from the bridge) with a test phone, and message
-        // the linked number. The seeded LLM connection string in QuillHost is unreachable, so a real
-        // reply additionally needs the agent pointed at a live model.
 
         await app.DeleteChannelAsync(created.ChannelId);
         Assert.Empty(await app.GetChannelsAsync());

@@ -52,12 +52,10 @@ ENV RAVEN_QUILL_OPENAPI_SKIP_SPEC_BUILD=1
 RUN pnpm build
 
 
-# Stage 2b: build the WhatsApp bridge (pure-JS deps, so multi-arch needs no toolchains).
 FROM ${NODE_IMAGE} AS whatsapp-bridge-build
 WORKDIR /workspace/bridge
 
 COPY src/Raven.Quill.WhatsAppBridge/package.json src/Raven.Quill.WhatsAppBridge/package-lock.json ./
-# patches/ must land before npm ci: its postinstall runs patch-package
 COPY src/Raven.Quill.WhatsAppBridge/patches/ ./patches/
 RUN --mount=type=cache,target=/root/.npm,sharing=locked npm ci
 
@@ -120,8 +118,6 @@ EOF
 COPY --from=ravendb   /usr/lib/ravendb/server /app/ravendb
 COPY --from=web-build /publish/web            /app/web
 
-# The bridge needs only the node binary, not a full Node install; the frontend build
-# stage already pins the Node version for the whole image.
 COPY --from=whatsapp-bridge-build /usr/local/bin/node /usr/local/bin/node
 COPY --from=whatsapp-bridge-build /workspace/bridge/dist         /app/whatsapp-bridge/dist
 COPY --from=whatsapp-bridge-build /workspace/bridge/node_modules /app/whatsapp-bridge/node_modules

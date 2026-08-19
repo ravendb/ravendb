@@ -10,8 +10,6 @@ using Microsoft.Extensions.Logging;
 
 namespace QuillTests.E2E.Fixtures;
 
-/// In-process stand-in for the Node WhatsApp bridge: implements its HTTP contract,
-/// records every call, and lets tests script per-session status.
 public sealed class MockWhatsAppBridge : IAsyncDisposable
 {
     private readonly WebApplication _app;
@@ -39,7 +37,6 @@ public sealed class MockWhatsAppBridge : IAsyncDisposable
 
     public string BaseAddress { get; }
 
-    /// When true every /sessions route answers 503, simulating a dead bridge.
     public bool Down { get; set; }
 
     private MockWhatsAppBridge(WebApplication app, string baseAddress, string expectedToken)
@@ -69,7 +66,6 @@ public sealed class MockWhatsAppBridge : IAsyncDisposable
         get { lock (_lock) return _sent.ToArray(); }
     }
 
-    /// Phone numbers the web app asked to link by pairing code.
     public IReadOnlyList<(string Database, string ChannelId, string PhoneNumber)> PairingPhoneNumbers
     {
         get { lock (_lock) return _pairingPhoneNumbers.ToArray(); }
@@ -80,7 +76,6 @@ public sealed class MockWhatsAppBridge : IAsyncDisposable
         lock (_lock) return _sessions.ContainsKey(KeyOf(database, channelId));
     }
 
-    /// Scripts (or overwrites) the status the bridge reports for a session.
     public void SetStatus(
         string database, string channelId, string state,
         string? qr = null, string? pairingCode = null, string? phoneNumber = null, string? lastError = null)
@@ -202,13 +197,11 @@ public sealed class MockWhatsAppBridge : IAsyncDisposable
         }
     }
 
-    /// Mirrors the bridge: a phone number yields a pairing code, otherwise a QR.
     private static SessionEntry NewPairingEntry(string? pairingPhoneNumber) =>
         pairingPhoneNumber is null
             ? new SessionEntry { State = "pairing", Qr = $"QR-{Guid.NewGuid():N}" }
             : new SessionEntry { State = "pairing", PairingCode = "ABCD1234" };
 
-    // the body may arrive chunked (no Content-Length), so always try to parse it
     private static async Task<string?> ReadPhoneNumberAsync(HttpContext ctx)
     {
         try

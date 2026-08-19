@@ -55,7 +55,6 @@ const whatsAppRouter = {
     path: "/apps/:slug/channels/:channelId",
 };
 
-// The default whatsapp handler answers with the Pairing state, so this renders the QR panel.
 export const WhatsAppPairing: Story = {
     parameters: { router: whatsAppRouter },
 };
@@ -75,7 +74,6 @@ export const WhatsAppConnected: Story = {
     },
 };
 
-// Linking by phone number: the panel shows the code to type into WhatsApp, no QR.
 export const WhatsAppPairingCode: Story = {
     parameters: {
         router: whatsAppRouter,
@@ -111,7 +109,6 @@ export const WhatsAppLoggedOut: Story = {
     },
 };
 
-// Walks the panel through a poll cycle: QR first, then the phone connects.
 export const WhatsAppPairingCompletes: Story = {
     parameters: {
         router: whatsAppRouter,
@@ -128,7 +125,6 @@ export const WhatsAppPairingCompletes: Story = {
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
         await waitFor(() => expect(canvas.getByRole("img", { name: /whatsapp pairing qr code/i })).toBeInTheDocument());
-        // the second poll (3s cadence) flips the panel to Connected
         await waitFor(() => expect(canvas.getByText(sampleWhatsAppConnected.phoneNumber!)).toBeInTheDocument(), {
             timeout: 10_000,
         });

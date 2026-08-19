@@ -6,9 +6,6 @@ namespace Raven.Quill.WhatsApp;
 
 internal static class WhatsAppSessionCleanup
 {
-    /// Unlinks every WhatsApp session of an app before its database is dropped.
-    /// Best effort: app deletion must not be blocked by a dead bridge; a session it
-    /// could not wipe only lingers until the operator unlinks the phone manually.
     internal static async Task DeleteAllForDatabaseAsync(
         IDocumentStore store,
         IWhatsAppBridgeClient bridge,

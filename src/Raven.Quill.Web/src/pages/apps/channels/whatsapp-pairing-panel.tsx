@@ -8,7 +8,6 @@ import { StatusIndicator } from "@/components/data/status-indicator";
 import { useWhatsAppPairing } from "@/pages/apps/channels/use-whatsapp-pairing";
 import { WhatsAppPhoneNumberForm } from "@/pages/apps/channels/whatsapp-phone-number-form";
 
-// Shared by the create sheet (right after provisioning) and the channel detail page.
 export function WhatsAppPairingPanel({
     slug,
     channelId,

@@ -40,8 +40,6 @@ export const whatsAppMocks = {
         apiHttp.get("/api/apps/{slug}/channels/{channelId}/whatsapp/pairing", ({ response }) =>
             response(200).json(pairing),
         ),
-    // Serves the given responses one poll at a time (sticking on the last), so a play
-    // test can walk the panel through Pairing -> Connected without a real bridge.
     pairingSequence: (responses: WhatsAppPairingResponse[]) => {
         let call = 0;
         return apiHttp.get("/api/apps/{slug}/channels/{channelId}/whatsapp/pairing", ({ response }) =>
@@ -97,7 +95,6 @@ export const sampleChannels: ChannelSummaryResponse[] = [
     },
 ];
 
-// A realistic multi-segment linked-device payload shape (content is arbitrary).
 export const sampleWhatsAppPairing: WhatsAppPairingResponse = {
     state: "Pairing",
     qr: "2@AbCdEfGhIjKlMnOpQrStUvWxYz0123456789+/=,ABCDEFabcdef0123456789,XyZ=",
@@ -107,7 +104,6 @@ export const sampleWhatsAppPairing: WhatsAppPairingResponse = {
     lastError: null,
 };
 
-// Linking by phone number replaces the QR with a code typed into WhatsApp.
 export const sampleWhatsAppPairingCode: WhatsAppPairingResponse = {
     state: "Pairing",
     qr: null,

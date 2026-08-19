@@ -29,8 +29,6 @@ export const Empty: Story = {
     },
 };
 
-// The whole add-channel happy path for WhatsApp Personal: pick the menu entry,
-// create the channel, and land on the in-sheet QR pairing phase.
 export const CreateWhatsAppPersonal: Story = {
     parameters: {
         msw: {
@@ -46,7 +44,6 @@ export const CreateWhatsAppPersonal: Story = {
     },
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
-        // the dropdown menu and sheet render in portals outside the canvas element
         const body = within(canvasElement.ownerDocument.body);
 
         await userEvent.click(await canvas.findByRole("button", { name: /new channel/i }));

@@ -67,7 +67,6 @@ public class WhatsAppInboundTests(ITestOutputHelper output, QuillWhatsAppFixture
 
         await Bridge.WaitUntilAsync(() => Bridge.SentMessages.Count == 3, "all three replies");
 
-        // only per-sender ordering is guaranteed, so key the requests by prompt
         var byPrompt = Router.Requests.ToDictionary(r => r.Prompt, r => r.ConversationId);
         Assert.Equal(byPrompt["first"], byPrompt["second"]);
         Assert.NotEqual(byPrompt["first"], byPrompt["third"]);
