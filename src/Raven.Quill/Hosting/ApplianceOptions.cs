@@ -30,6 +30,9 @@ public sealed class ApplianceOptions
 
     public TelegramOptions Telegram { get; set; } = new();
 
+    public SlackOptions Slack { get; set; } = new();
+
+
     public TimeSpan ReadinessInitialDelay { get; set; } = TimeSpan.FromSeconds(15);
 
     public TimeSpan ReadinessAttemptTimeout { get; set; } = TimeSpan.FromSeconds(2);
