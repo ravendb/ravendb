@@ -4,11 +4,12 @@ import { useAssistantChatStore } from "@/components/layout/assistant-chat-store"
 import { AssistantComposer } from "@/components/layout/assistant-composer";
 import { AssistantMessages } from "@/components/layout/assistant-messages";
 import {
-    ASSISTANT_MAX_HEIGHT_PX,
     ASSISTANT_MAX_WIDTH_PX,
     ASSISTANT_MIN_HEIGHT_PX,
     ASSISTANT_MIN_WIDTH_PX,
     ASSISTANT_PANEL_TITLE_ID,
+    assistantMaxHeightPx,
+    clampAssistantSize,
     useAssistantPinning,
     useAssistantStore,
 } from "@/components/layout/assistant-store";
@@ -23,7 +24,8 @@ function AssistantResizeHandle({ axis }: { axis: "width" | "height" }) {
     const setSize = useAssistantStore((state) => (isWidthAxis ? state.setWidth : state.setHeight));
     const setResizing = useAssistantStore((state) => state.setResizing);
     const minPx = isWidthAxis ? ASSISTANT_MIN_WIDTH_PX : ASSISTANT_MIN_HEIGHT_PX;
-    const maxPx = isWidthAxis ? ASSISTANT_MAX_WIDTH_PX : ASSISTANT_MAX_HEIGHT_PX;
+    const maxPx = isWidthAxis ? ASSISTANT_MAX_WIDTH_PX : assistantMaxHeightPx();
+    const effectiveValuePx = clampAssistantSize(valuePx, minPx, maxPx);
     // The panel is anchored to the viewport's right/bottom edge, so dragging the handle
     // left/up (toward smaller client coordinates) grows the panel.
     const growKey = isWidthAxis ? "ArrowLeft" : "ArrowUp";
@@ -44,7 +46,7 @@ function AssistantResizeHandle({ axis }: { axis: "width" | "height" }) {
         event.preventDefault();
         const handle = event.currentTarget;
         const startCoordinate = isWidthAxis ? event.clientX : event.clientY;
-        const startValuePx = valuePx;
+        const startValuePx = effectiveValuePx;
         handle.setPointerCapture(event.pointerId);
         setResizing(true);
 
@@ -73,7 +75,7 @@ function AssistantResizeHandle({ axis }: { axis: "width" | "height" }) {
             aria-label={isWidthAxis ? "Resize assistant panel width" : "Resize assistant panel height"}
             aria-valuemin={minPx}
             aria-valuemax={maxPx}
-            aria-valuenow={valuePx}
+            aria-valuenow={effectiveValuePx}
             className={cn(
                 // touch-none stops the browser from claiming the drag as a pan, which would
                 // cancel the pointer stream mid-resize on touch devices.
@@ -84,10 +86,10 @@ function AssistantResizeHandle({ axis }: { axis: "width" | "height" }) {
             onKeyDown={(event) => {
                 if (event.key === growKey) {
                     event.preventDefault();
-                    setSize(valuePx + RESIZE_KEYBOARD_STEP_PX);
+                    setSize(effectiveValuePx + RESIZE_KEYBOARD_STEP_PX);
                 } else if (event.key === shrinkKey) {
                     event.preventDefault();
-                    setSize(valuePx - RESIZE_KEYBOARD_STEP_PX);
+                    setSize(effectiveValuePx - RESIZE_KEYBOARD_STEP_PX);
                 }
             }}
         />

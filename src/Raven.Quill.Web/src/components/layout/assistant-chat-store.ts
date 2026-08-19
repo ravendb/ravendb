@@ -56,6 +56,11 @@ export const useAssistantChatStore = create<AssistantChatState>((set, get) => ({
                 ),
             }));
 
+        const dropAnswerIfEmpty = () =>
+            set((state) => ({
+                messages: state.messages.filter((message) => message.id !== answerId || message.text !== ""),
+            }));
+
         const abortController = new AbortController();
         streamAbortController = abortController;
         set({ isStreaming: true });
@@ -81,8 +86,10 @@ export const useAssistantChatStore = create<AssistantChatState>((set, get) => ({
                 }
             }
         } catch (error) {
-            // Stopped by the operator (or by clearing the conversation) — the partial answer stands.
+            // Stopped by the operator (or by clearing the conversation) — a partial answer stands, but
+            // an answer that never started would strand the "Thinking…" placeholder.
             if (abortController.signal.aborted) {
+                dropAnswerIfEmpty();
                 return;
             }
 

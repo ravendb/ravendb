@@ -33,8 +33,8 @@ interface VirtualDataTableProps<TData> {
     overlay?: ReactNode;
 }
 
-function getColumnStyle(size: number): CSSProperties {
-    return { width: size, flexGrow: 0, flexShrink: 0 };
+function getColumnStyle(size: number, canShrink = false): CSSProperties {
+    return { width: size, flexGrow: 0, flexShrink: canShrink ? 1 : 0 };
 }
 
 export function VirtualDataTable<TData>({
@@ -75,7 +75,7 @@ export function VirtualDataTable<TData>({
         return (
             <div className={cn("min-w-0 overflow-hidden rounded-lg border", className)}>
                 <table className="w-full caption-bottom text-sm">
-                    <VirtualTableHeader table={table} />
+                    <VirtualTableHeader table={table} canShrinkColumns />
                     <TableBody>
                         <TableRow>
                             <TableCell colSpan={columnCount} className="h-24 text-center text-muted-foreground">
@@ -169,9 +169,15 @@ export function VirtualDataTable<TData>({
     );
 }
 
-function VirtualTableHeader<TData>({ table }: { table: ReactTable<TData> }) {
+function VirtualTableHeader<TData>({
+    table,
+    canShrinkColumns = false,
+}: {
+    table: ReactTable<TData>;
+    canShrinkColumns?: boolean;
+}) {
     return (
-        <TableHeader className="sticky top-0 z-10 grid bg-background">
+        <TableHeader className="sticky top-0 z-10 grid grid-cols-1 bg-background">
             {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id} className="flex w-full hover:bg-transparent">
                     {headerGroup.headers.map((header) => (
@@ -179,7 +185,7 @@ function VirtualTableHeader<TData>({ table }: { table: ReactTable<TData> }) {
                             key={header.id}
                             data-column-id={header.column.id}
                             className="group relative flex items-center overflow-hidden"
-                            style={getColumnStyle(header.getSize())}
+                            style={getColumnStyle(header.getSize(), canShrinkColumns && header.column.getCanResize())}
                         >
                             <span className="truncate">
                                 {header.isPlaceholder

@@ -163,7 +163,7 @@ function App() {
                 className={cn(
                     isAssistantPinned
                         ? "app-shell__assistant"
-                        : "fixed right-2 bottom-2 z-40 flex h-[min(var(--app-assistant-height),calc(100svh-4rem))] w-[min(var(--app-assistant-width),calc(100vw-1rem))] flex-col",
+                        : "fixed right-4 bottom-4 z-40 flex h-[min(var(--app-assistant-height),calc(100svh-4rem))] w-[min(var(--app-assistant-width),calc(100vw-1rem))] flex-col",
                     !isAssistantPinned && !isAssistantOpen && "hidden",
                 )}
                 aria-labelledby={ASSISTANT_PANEL_TITLE_ID}
