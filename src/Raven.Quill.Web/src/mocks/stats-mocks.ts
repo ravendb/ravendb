@@ -475,9 +475,26 @@ export const sampleConversations: ConversationDto[] = [
     },
 ];
 
-// Returned by the conversation-detail mock so the transcript sheet has a full thread, including
-// tool calls so the tool transcript UI has demo data.
+// The detail EP returns every message, so a real transcript runs far past a screenful. This uneven
+// tail follows the scripted exchange below, to give the virtualized list something to virtualize.
+const sampleTranscriptTail: ConversationDto["transcript"] = Array.from({ length: 60 }, (_, index) => {
+    const at = new Date(Date.parse("2026-06-25T09:01:00Z") + index * 45_000).toISOString();
+    return index % 2 === 0
+        ? { role: "user" as const, content: `Follow-up ${index / 2 + 1}: can you check that one too?`, timestamp: at }
+        : {
+              role: "assistant" as const,
+              content: `Checked it.${" Here is a little more detail about what I found.".repeat((index % 6) + 1)}`,
+              timestamp: at,
+          };
+});
+
 const sampleTranscript: ConversationDto["transcript"] = [
+    {
+        role: "system",
+        content:
+            "You are a helpful store assistant. Answer questions about products, stock, and orders using the available tools.",
+        timestamp: "2026-06-25T08:59:20Z",
+    },
     { role: "user", content: "Hi, do you have the wireless mouse in stock?", timestamp: "2026-06-25T08:59:30Z" },
     {
         role: "assistant",
@@ -514,6 +531,7 @@ const sampleTranscript: ConversationDto["transcript"] = [
             },
         ],
     },
+    ...sampleTranscriptTail,
 ];
 
 const usageSparkline = (base: number) =>
