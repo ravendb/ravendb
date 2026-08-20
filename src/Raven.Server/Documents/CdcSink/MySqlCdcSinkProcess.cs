@@ -67,9 +67,6 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
         /// <summary>True when at least one processor is embedded - only then do UPDATEs need the pre-image.</summary>
         public required bool HasEmbedded { get; init; }
 
-        /// <summary>The primary processor (index 0); owns the pool the decode buffer is rented from.</summary>
-        public CdcSinkTableProcessor Processor => Processors[0];
-
         /// <summary>
         /// Expected binlog type bytes for column positions 0..RequiredPrefixLength-1,
         /// computed from INFORMATION_SCHEMA DATA_TYPE at resolve time. Used for prefix
@@ -333,13 +330,10 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
             // With several processors we must cover the widest one so a schema change in any
             // mapped position is detected.
             var requiredLen = 0;
-            var hasEmbedded = false;
             for (int p = 0; p < processors.Count; p++)
             {
                 if (processors[p].RequiredPrefixLength > requiredLen)
                     requiredLen = processors[p].RequiredPrefixLength;
-                if (processors[p].IsRoot == false)
-                    hasEmbedded = true;
             }
             var expectedPrefix = new byte[requiredLen];
             for (int i = 0; i < requiredLen && i < columnsArray.Length; i++)
@@ -350,7 +344,7 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
             {
                 Columns = columnsArray,
                 Processors = processors,
-                HasEmbedded = hasEmbedded,
+                HasEmbedded = HasEmbeddedProcessor(processors),
                 ExpectedTypesPrefix = expectedPrefix,
             };
         }
@@ -628,6 +622,8 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
             // _resolvedTables, so tables on a non-default schema stream too. Row events for uncached
             // table IDs are skipped automatically by the TryGetValue check.
             var tableMapCache = new Dictionary<long, TableInfo>();
+            // Reused across rows; CdcEvent is a struct the consumer copies out between yields.
+            var events = new List<CdcEvent>();
 
             await foreach (var (header, binlogEvent) in client.Replicate(ct))
             {
@@ -705,7 +701,7 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
                         foreach (var row in writeRows.Rows)
                         {
                             var values = DecodeRowInternal(wTable, row.Cells);
-                            var events = new List<CdcEvent>(wTable.Processors.Count);
+                            events.Clear();
                             AddUpsertEvents(wTable.Processors, values, StreamingJsonContext, events);
                             foreach (var e in events)
                                 yield return e;
@@ -719,7 +715,7 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
                         {
                             var newValues = DecodeRowInternal(uTable, row.AfterUpdate.Cells);
                             var oldValues = uTable.HasEmbedded ? DecodeRowInternal(uTable, row.BeforeUpdate.Cells) : null;
-                            var events = new List<CdcEvent>(uTable.Processors.Count + 1);
+                            events.Clear();
                             AddUpdateEvents(uTable.Processors, newValues, oldValues, events);
                             foreach (var e in events)
                                 yield return e;
@@ -732,7 +728,7 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
                         foreach (var row in deleteRows.Rows)
                         {
                             var values = DecodeRowInternal(dTable, row.Cells);
-                            var events = new List<CdcEvent>(dTable.Processors.Count);
+                            events.Clear();
                             AddDeleteEvents(dTable.Processors, values, StreamingJsonContext, events);
                             foreach (var e in events)
                                 yield return e;
@@ -757,7 +753,7 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
         TableInfo tableInfo, IReadOnlyList<object> cells)
     {
         var columns = tableInfo.Columns;
-        var processor = tableInfo.Processor;
+        var processor = tableInfo.Processors[0];
         var values = processor.RentValues();
         for (int i = 0; i < columns.Length && i < cells.Count; i++)
         {

@@ -591,15 +591,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
             var quotedFn = CommandBuilder.QuoteIdentifier($"fn_cdc_get_all_changes_{captureInstance}");
             // GetProcessors throws if the table isn't registered; every configured table is, so this is non-empty.
             var processors = DocumentProcessor.GetProcessors(tableInfo.Schema, tableInfo.TableName);
-            var hasEmbedded = false;
-            for (int p = 0; p < processors.Count; p++)
-            {
-                if (processors[p].IsRoot == false)
-                {
-                    hasEmbedded = true;
-                    break;
-                }
-            }
+            var hasEmbedded = HasEmbeddedProcessor(processors);
 
             // If ANY processor is embedded we need the pre-image to detect reparenting, so use
             // 'all update old'. A table mapped only as a root collection uses 'all' and skips it.
