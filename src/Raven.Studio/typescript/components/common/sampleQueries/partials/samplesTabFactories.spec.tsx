@@ -13,6 +13,14 @@ describe("samplesTabFactories", () => {
         expect(typeof tab.content).toBe("function");
     });
 
+    it("createSampleScriptsTab uses the provided label, key and icon", () => {
+        const tab = createSampleScriptsTab([], { label: "Sample object", key: "objects", icon: "json" });
+
+        expect(tab.key).toBe("objects");
+        expect(tab.label).toBe("Sample object");
+        expect(tab.icon).toBe("json");
+    });
+
     it("createSampleScriptsTab content renders the provided scripts", () => {
         const tab = createSampleScriptsTab([{ title: "T1", description: "", script: "x" }]);
 
@@ -46,5 +54,28 @@ describe("samplesTabFactories", () => {
         const { screen } = rtlRender(<>{tab.content({ onSelect: jest.fn(), search: "zzz" })}</>);
 
         expect(screen.queryByText("sig()")).not.toBeInTheDocument();
+        expect(screen.getByText("No available methods match your search.")).toBeInTheDocument();
+    });
+
+    it("createMethodsTab highlights examples as RQL by default", () => {
+        const tab = createMethodsTab([
+            { category: "Cat", methods: [{ signature: "sig()", description: "d", sampleScript: "from Orders" }] },
+        ]);
+
+        const { screen } = rtlRender(<>{tab.content({ onSelect: jest.fn(), search: "" })}</>);
+
+        // "rql" is highlighted using the "sql" grammar, hence language-sql
+        expect(screen.getByClassName("language-sql")).toBeInTheDocument();
+    });
+
+    it("createMethodsTab highlights examples using the requested language", () => {
+        const tab = createMethodsTab(
+            [{ category: "Cat", methods: [{ signature: "sig()", description: "d", sampleScript: "const a = 1;" }] }],
+            { language: "javascript" }
+        );
+
+        const { screen } = rtlRender(<>{tab.content({ onSelect: jest.fn(), search: "" })}</>);
+
+        expect(screen.getByClassName("language-javascript")).toBeInTheDocument();
     });
 });
