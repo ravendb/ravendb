@@ -72,6 +72,7 @@ enum
     FAIL_CREATE_THREAD 			= 	   62,
     FAIL_MUTEX_LOCK             =      63,
     FAIL_MUTEX_UNLOCK           =      64,
+    FAIL_WRITEBACK_NOT_SUPPORTED =     65,
 };
 
 #define ERRNO_SPECIAL_CODES_NONE        0

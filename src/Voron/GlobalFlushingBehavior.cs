@@ -135,11 +135,11 @@ namespace Voron
 
             for (int i = 0; i < parallelSyncsPerIo; i++)
             {
-                ThreadPool.QueueUserWorkItem(SyncAllEnvironmentsInMountPoint);
+                ThreadPool.QueueUserWorkItem(DrainSyncQueue);
             }
         }
 
-        private void SyncAllEnvironmentsInMountPoint(object mt)
+        private void DrainSyncQueue(object state)
         {
             while (_storageEnvironments.TryDequeue(out var req))
             {
