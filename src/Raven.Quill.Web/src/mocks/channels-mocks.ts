@@ -20,6 +20,7 @@ export const channelsMocks = {
                 ...channel,
                 displayName: update.displayName ?? channel.displayName,
                 enabled: update.enabled ?? channel.enabled,
+                allowedOrigins: update.allowedOrigins ?? channel.allowedOrigins,
                 telegram: channel.telegram
                     ? { ...channel.telegram, messages: update.telegram?.messages ?? channel.telegram.messages }
                     : channel.telegram,
@@ -41,6 +42,7 @@ export const sampleChannels: ChannelSummaryResponse[] = [
         displayName: "Website widget",
         enabled: true,
         createdAt: "2026-05-03T09:00:00Z",
+        allowedOrigins: ["https://example.com", "https://shop.example.com"],
     },
     {
         channelId: SAMPLE_TELEGRAM_CHANNEL_ID,
@@ -49,6 +51,7 @@ export const sampleChannels: ChannelSummaryResponse[] = [
         displayName: "Telegram bot",
         enabled: false,
         createdAt: "2026-05-09T14:20:00Z",
+        allowedOrigins: [],
         telegram: {
             botUsername: "acme_faq_bot",
             parameterBindings: {

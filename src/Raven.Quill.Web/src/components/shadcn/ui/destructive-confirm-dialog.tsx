@@ -18,7 +18,8 @@ import {
 } from "@/components/shadcn/ui/dialog";
 
 type DestructiveConfirmDialogProps = {
-    trigger: ReactNode;
+    /** Optional: omit when the dialog is opened programmatically via `isOpen`/`onOpenChange`. */
+    trigger?: ReactNode;
     title: ReactNode;
     description: ReactNode;
     confirmLabel: string;
@@ -49,7 +50,7 @@ export function DestructiveConfirmDialog({
 }: DestructiveConfirmDialogProps) {
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogTrigger asChild>{trigger}</DialogTrigger>
+            {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
             <DialogContent>
                 {/* Closing unmounts the content, which resets the typed confirmation, so
                     reopening can never reuse a gate satisfied for an earlier attempt. */}

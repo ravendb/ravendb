@@ -9,11 +9,25 @@ import { invalidateChannelQueries } from "@/lib/query-invalidation";
 type DeleteChannelDialogProps = {
     slug: string;
     channel: ChannelSummaryResponse;
-    trigger: ReactNode;
+    /** Omit when the dialog is driven by `open`/`onOpenChange` (e.g. from a dropdown menu item). */
+    trigger?: ReactNode;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    /** Called after a successful delete, e.g. to navigate away from the deleted channel's own page. */
+    onDeleted?: () => void;
 };
 
-export function DeleteChannelDialog({ slug, channel, trigger }: DeleteChannelDialogProps) {
-    const [isOpen, setIsOpen] = useState(false);
+export function DeleteChannelDialog({
+    slug,
+    channel,
+    trigger,
+    open,
+    onOpenChange,
+    onDeleted,
+}: DeleteChannelDialogProps) {
+    const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+    const isOpen = open ?? uncontrolledOpen;
+    const setIsOpen = onOpenChange ?? setUncontrolledOpen;
     const queryClient = useQueryClient();
 
     const deleteMutation = useMutation({
@@ -26,6 +40,7 @@ export function DeleteChannelDialog({ slug, channel, trigger }: DeleteChannelDia
             ]);
             toast.success(`Channel “${channel.displayName}” deleted`);
             setIsOpen(false);
+            onDeleted?.();
         },
     });
 

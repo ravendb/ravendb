@@ -1,7 +1,8 @@
 import { Link } from "react-router";
 import { Database, Pencil, Plus, Trash2 } from "lucide-react";
 import type { ApplianceAppResponse, AppWrites } from "@/api/generated/server-api";
-import { StatusIndicator, type StatusTone } from "@/components/data/status-indicator";
+import { StatusIndicator } from "@/components/data/status-indicator";
+import { resolveStatusStyle } from "@/lib/app-status";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/ui/table";
@@ -11,30 +12,6 @@ import { datePeriodUnit, type DatePeriod } from "@/lib/date-period";
 import { formatCompact } from "@/lib/format";
 import { DeleteAppDialog } from "@/pages/apps/delete-app-dialog";
 import { EditAppConfirmDialog } from "@/pages/setup/add-app-wizard/edit-app-confirm-dialog";
-
-type StatusStyle = { tone: StatusTone; label: string };
-
-// Maps the server's derived status codes (MetricsReadService.DeriveAppStatus emits
-// running/warning/setup) onto the dashboard's status vocabulary. loading/failed are
-// kept for forward-compatibility so a future provisioning/error state renders sensibly.
-const STATUS_STYLES: Record<string, StatusStyle> = {
-    running: { tone: "positive", label: "Healthy" },
-    healthy: { tone: "positive", label: "Healthy" },
-    warning: { tone: "warning", label: "Needs attention" },
-    setup: { tone: "info", label: "Setup" },
-    loading: { tone: "loading", label: "Loading" },
-    failed: { tone: "danger", label: "Failed" },
-    error: { tone: "danger", label: "Failed" },
-};
-
-function resolveStatusStyle(status: string): StatusStyle {
-    return (
-        STATUS_STYLES[status.toLowerCase()] ?? {
-            tone: "muted",
-            label: status ? status[0].toUpperCase() + status.slice(1) : "Unknown",
-        }
-    );
-}
 
 export function DashboardAppsTable({
     apps,

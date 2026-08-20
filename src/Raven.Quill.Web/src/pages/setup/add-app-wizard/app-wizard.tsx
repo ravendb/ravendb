@@ -123,7 +123,11 @@ export function AppWizard({ defaultValues, editedApp }: AppWizardProps) {
                 className="h-full"
             >
                 <AppWizardBody
-                    cancel={() => navigate(editedAppSeed ? appRoutes.app(editedAppSeed.slug) : appRoutes.dashboard())}
+                    cancel={() =>
+                        navigate(
+                            editedAppSeed ? appRoutes.app(editedAppSeed.slug, "data-source") : appRoutes.dashboard(),
+                        )
+                    }
                     completion={isEditing ? EDIT_COMPLETION : CREATE_COMPLETION}
                     isEditing={isEditing}
                     isSaved={isSaved}

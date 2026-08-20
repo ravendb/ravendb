@@ -7,19 +7,16 @@ import {
     SAMPLE_DEFAULT_THEME,
     SAMPLE_FONT_OPTIONS,
 } from "@/mocks/iframe-mocks";
-import { AppWebWidgetCustomize } from "./app-web-widget-customize";
+import { WebWidgetAppearanceTab } from "./web-widget-appearance-tab";
 
 const meta = {
-    title: "Apps/Web widget appearance",
-    component: AppWebWidgetCustomize,
-    parameters: {
-        page: { title: "Web widget appearance" },
-        router: {
-            initialPath: `/apps/demo/web-widget/${SAMPLE_CHANNEL_ID}/customize`,
-            path: "/apps/:slug/web-widget/:channelId/customize",
-        },
+    title: "Apps/Channels/Web widget appearance tab",
+    component: WebWidgetAppearanceTab,
+    args: {
+        slug: "demo",
+        channelId: SAMPLE_CHANNEL_ID,
     },
-} satisfies Meta<typeof AppWebWidgetCustomize>;
+} satisfies Meta<typeof WebWidgetAppearanceTab>;
 
 export default meta;
 
@@ -92,16 +89,6 @@ export const MinimalTheme: Story = {
                     ...iframeHandlers(),
                 ],
             },
-        },
-    },
-};
-
-// The channelId in the URL isn't a web widget in this app — the page shows a not-found alert.
-export const UnknownWidget: Story = {
-    parameters: {
-        router: {
-            initialPath: "/apps/demo/web-widget/unknown/customize",
-            path: "/apps/:slug/web-widget/:channelId/customize",
         },
     },
 };

@@ -153,7 +153,15 @@ function App() {
                 {!isPageTitleHidden && (
                     <h1 className="text-2xl font-semibold tracking-tight">{activeRoute?.title ?? "My apps"}</h1>
                 )}
-                <div className={cn("min-h-0 overflow-auto", !isBareLayout && "-mx-2 px-2")}>
+                <div
+                    className={cn(
+                        "min-h-0",
+                        // Bleed the scroll area to the panel's inner border (padding keeps content in place) so
+                        // a full-bleed detail header can reach the edges instead of being clipped short. Clip
+                        // horizontal overflow so the page never scrolls sideways; wide content self-scrolls.
+                        isBareLayout ? "overflow-auto" : "-mx-4 overflow-x-clip overflow-y-auto px-4 lg:-mx-5 lg:px-5",
+                    )}
+                >
                     <Outlet />
                 </div>
             </main>

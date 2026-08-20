@@ -9,11 +9,18 @@ import { invalidateAgentQueries } from "@/lib/query-invalidation";
 type DeleteAgentDialogProps = {
     slug: string;
     agent: AgentSummaryResponse;
-    trigger: ReactNode;
+    /** Omit when the dialog is driven by `open`/`onOpenChange` (e.g. from a dropdown menu item). */
+    trigger?: ReactNode;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    /** Called after a successful delete, e.g. to navigate away from the deleted agent's own page. */
+    onDeleted?: () => void;
 };
 
-export function DeleteAgentDialog({ slug, agent, trigger }: DeleteAgentDialogProps) {
-    const [isOpen, setIsOpen] = useState(false);
+export function DeleteAgentDialog({ slug, agent, trigger, open, onOpenChange, onDeleted }: DeleteAgentDialogProps) {
+    const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+    const isOpen = open ?? uncontrolledOpen;
+    const setIsOpen = onOpenChange ?? setUncontrolledOpen;
     const queryClient = useQueryClient();
 
     const deleteMutation = useMutation({
@@ -28,6 +35,7 @@ export function DeleteAgentDialog({ slug, agent, trigger }: DeleteAgentDialogPro
             ]);
             toast.success(`Agent “${agent.name}” deleted`);
             setIsOpen(false);
+            onDeleted?.();
         },
     });
 

@@ -2,7 +2,7 @@ using Raven.Quill.Channels;
 
 namespace Raven.Quill.Contracts;
 
-// no secrets: never projects binding id / allowed-origins / bot token
+// no secrets: never projects binding id / bot token
 public sealed record ChannelSummaryResponse(
     string ChannelId,
     ChannelType Type,
@@ -10,6 +10,7 @@ public sealed record ChannelSummaryResponse(
     string DisplayName,
     bool Enabled,
     DateTime CreatedAt,
+    string[] AllowedOrigins,
     TelegramSummaryResponse? Telegram = null)
 {
     internal static ChannelSummaryResponse From(Channel channel) => new(
@@ -19,6 +20,7 @@ public sealed record ChannelSummaryResponse(
         channel.DisplayName,
         channel.Enabled,
         channel.CreatedAt,
+        channel.AllowedOrigins,
         channel.Telegram is null
             ? null
             : new TelegramSummaryResponse(
