@@ -14,9 +14,6 @@ oauth_config:
       - chat:write
       - im:history
 settings:
-  event_subscriptions:
-    bot_events:
-      - message.im
   interactivity:
     is_enabled: false
   org_deploy_enabled: false
