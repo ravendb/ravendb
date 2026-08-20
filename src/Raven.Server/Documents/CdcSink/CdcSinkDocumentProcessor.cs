@@ -17,8 +17,6 @@ namespace Raven.Server.Documents.CdcSink;
 /// </summary>
 public class CdcSinkDocumentProcessor
 {
-    private readonly CdcSinkConfiguration _config;
-    private readonly string _defaultSchema;
     private readonly bool _includeDisabledTables;
     private readonly Dictionary<(string Schema, string Table), List<CdcSinkTableProcessor>> _tableIndex;
 
@@ -36,11 +34,13 @@ public class CdcSinkDocumentProcessor
     /// </param>
     public CdcSinkDocumentProcessor(CdcSinkConfiguration config, string defaultSchema = "", bool includeDisabledTables = false)
     {
-        _config = config;
-        _defaultSchema = defaultSchema;
         _includeDisabledTables = includeDisabledTables;
         _tableIndex = new Dictionary<(string, string), List<CdcSinkTableProcessor>>(TableKeyComparer.Instance);
 
+        // Two passes: all root mappings register before any embedded one, so processors[0] of every
+        // table's list is the root whenever the table has one. Index 0 is the table's PRIMARY
+        // processor - it owns the decode-buffer pool and represents the table in the
+        // single-representative accessors.
         foreach (var table in config.Tables)
         {
             // A disabled table is excluded from the runtime mapping: no processor is registered, so its rows
@@ -55,19 +55,20 @@ public class CdcSinkDocumentProcessor
             // now indexes consistently.
             var schema = string.IsNullOrEmpty(table.SourceTableSchema) ? defaultSchema : table.SourceTableSchema;
 
-            // Register the root table
-            var rootKey = MakeKey(schema, table.SourceTableName);
+            var discriminator = BuildDiscriminator(table.CollectionName, path: null);
+            var dispatchKey = MakeKey(schema, table.SourceTableName) + "|" + discriminator;
             var rootPropertyLookup = BuildPropertyLookup(table.Columns);
             var rootProcessor = new CdcSinkTableProcessor
             {
-                Key = rootKey,
-                KeyOnDelete = rootKey + "__on_delete",
+                Key = dispatchKey,
+                KeyOnDelete = dispatchKey + "__on_delete",
                 Schema = schema,
                 Table = table.SourceTableName,
-                Discriminator = string.Empty,
+                Discriminator = discriminator,
                 RootConfig = table,
                 CollectionName = table.CollectionName,
                 IsRoot = true,
+                IgnoresDeletes = table.OnDelete?.IgnoreDeletes == true && table.OnDelete.Patch == null,
                 Columns = table.Columns,
                 AttachmentColumns = FilterAttachmentColumns(table.Columns),
                 PropertyLookup = rootPropertyLookup,
@@ -76,48 +77,43 @@ public class CdcSinkDocumentProcessor
             };
 
             AddProcessor(schema, table.SourceTableName, rootProcessor);
+        }
 
-            // Register all embedded tables recursively
+        foreach (var table in config.Tables)
+        {
+            if (table.Disabled && _includeDisabledTables == false)
+                continue;
+
             if (table.EmbeddedTables != null)
-            {
-                RegisterEmbeddedTables(table, table.EmbeddedTables, table.PrimaryKeyColumns, rootPropertyLookup, new List<EmbeddedPathSegment>(), defaultSchema);
-            }
+                RegisterEmbeddedTables(table, table.EmbeddedTables, table.PrimaryKeyColumns, new List<EmbeddedPathSegment>(), defaultSchema);
         }
 
         CombinedPatchRequest = BuildCombinedPatchRequest();
     }
 
     /// <summary>
-    /// Builds a single combined script that dispatches per-table patches by table name.
-     /// Each per-table function receives $row as a parameter — so user scripts
+    /// Builds a single combined script that dispatches per-mapping patches by processor Key.
+    /// Each per-mapping function receives $row as a parameter — so user scripts
     /// can reference $row.column_name naturally, with `this` bound to the document.
+    /// Built from the registered processors so registration uses the same per-mapping keys the
+    /// dispatch path emits — a source table mapped several ways runs each mapping's own script.
     /// </summary>
     private PatchRequest BuildCombinedPatchRequest()
     {
-        var tableScripts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var tableScripts = new List<(string Key, string Script)>();
 
-        foreach (var table in _config.Tables)
+        foreach (var (_, processors) in _tableIndex)
         {
-            // Skip patches for disabled tables that weren't registered above - no op will reference them.
-            if (table.Disabled && _includeDisabledTables == false)
-                continue;
-
-            var schema = string.IsNullOrEmpty(table.SourceTableSchema) ? _defaultSchema : table.SourceTableSchema;
-
-            if (table.Patch != null)
-                tableScripts.TryAdd(MakeKey(schema, table.SourceTableName), table.Patch);
-
-            if (table.OnDelete?.Patch != null)
-                tableScripts.TryAdd(OnDeleteKey(schema, table.SourceTableName), table.OnDelete.Patch);
-
-            CdcSinkConfiguration.ForEachEmbeddedTable(table.EmbeddedTables, e =>
+            foreach (var processor in processors)
             {
-                var embeddedSchema = string.IsNullOrEmpty(e.SourceTableSchema) ? _defaultSchema : e.SourceTableSchema;
-                if (e.Patch != null)
-                    tableScripts.TryAdd(MakeKey(embeddedSchema, e.SourceTableName), e.Patch);
-                if (e.OnDelete?.Patch != null)
-                    tableScripts.TryAdd(OnDeleteKey(embeddedSchema, e.SourceTableName), e.OnDelete.Patch);
-            });
+                var patch = processor.IsRoot ? processor.RootConfig.Patch : processor.EmbeddedConfig.Patch;
+                if (patch != null)
+                    tableScripts.Add((processor.Key, patch));
+
+                var onDelete = processor.IsRoot ? processor.RootConfig.OnDelete : processor.EmbeddedConfig.OnDelete;
+                if (onDelete?.Patch != null)
+                    tableScripts.Add((processor.KeyOnDelete, onDelete.Patch));
+            }
         }
 
         if (tableScripts.Count == 0)
@@ -126,9 +122,11 @@ public class CdcSinkDocumentProcessor
         var functions = new Dictionary<string, DeclaredFunction>(StringComparer.OrdinalIgnoreCase);
         var switchCases = new StringBuilder();
 
-        foreach (var (tableName, script) in tableScripts)
+        for (int i = 0; i < tableScripts.Count; i++)
         {
-            var funcName = $"__cdc_{SanitizeForJs(tableName)}";
+            var (key, script) = tableScripts[i];
+            // The counter keeps function names unique when distinct keys sanitize to the same string.
+            var funcName = $"__cdc_{i}_{SanitizeForJs(key)}";
 
             functions[funcName] = new DeclaredFunction
             {
@@ -137,7 +135,7 @@ public class CdcSinkDocumentProcessor
                 Type = DeclaredFunction.FunctionType.JavaScript,
             };
 
-            switchCases.Append("    case \"").Append(EscapeJsString(tableName))
+            switchCases.Append("    case \"").Append(EscapeJsString(key))
                 .Append("\": ").Append(funcName).Append(".call(this, $row, $old); break;\n");
         }
 
@@ -176,7 +174,6 @@ public class CdcSinkDocumentProcessor
         CdcSinkTableConfig rootConfig,
         List<CdcSinkEmbeddedTableConfig> embeddedTables,
         List<string> parentPkColumns,
-        Dictionary<string, string> parentPropertyLookup,
         List<EmbeddedPathSegment> currentPath,
         string defaultSchema)
     {
@@ -234,18 +231,20 @@ public class CdcSinkDocumentProcessor
             var rootJoinColumns = path[0].Config.JoinColumns;
 
             var embeddedSchema = string.IsNullOrEmpty(embedded.SourceTableSchema) ? defaultSchema : embedded.SourceTableSchema;
-            var key = MakeKey(embeddedSchema, embedded.SourceTableName);
+            var discriminator = BuildDiscriminator(rootConfig.CollectionName, path);
+            var dispatchKey = MakeKey(embeddedSchema, embedded.SourceTableName) + "|" + discriminator;
             var embeddedPropertyLookup = BuildPropertyLookup(embedded.Columns);
             var processor = new CdcSinkTableProcessor
             {
-                Key = key,
-                KeyOnDelete = key + "__on_delete",
+                Key = dispatchKey,
+                KeyOnDelete = dispatchKey + "__on_delete",
                 Schema = embeddedSchema,
                 Table = embedded.SourceTableName,
-                Discriminator = BuildEmbeddedDiscriminator(path),
+                Discriminator = discriminator,
                 RootConfig = rootConfig,
                 CollectionName = rootConfig.CollectionName,
                 IsRoot = false,
+                IgnoresDeletes = embedded.OnDelete?.IgnoreDeletes == true && embedded.OnDelete.Patch == null,
                 EmbeddedConfig = embedded,
                 PathFromRoot = path,
                 RootJoinColumns = rootJoinColumns,
@@ -261,7 +260,7 @@ public class CdcSinkDocumentProcessor
             // Recurse for deep nesting
             if (embedded.EmbeddedTables != null && embedded.EmbeddedTables.Count > 0)
             {
-                RegisterEmbeddedTables(rootConfig, embedded.EmbeddedTables, embedded.PrimaryKeyColumns, embeddedPropertyLookup, path, defaultSchema);
+                RegisterEmbeddedTables(rootConfig, embedded.EmbeddedTables, embedded.PrimaryKeyColumns, path, defaultSchema);
             }
         }
     }
@@ -291,22 +290,32 @@ public class CdcSinkDocumentProcessor
     }
 
     /// <summary>
-    /// The primary processor for a source table: the root processor when the table is mapped as a
-    /// collection, otherwise the first embedded processor. NOT for row routing - anything that turns a
-    /// source row into document ops must use <see cref="GetProcessors"/> and fan out, or it silently drops
-    /// the table's other mappings. This single-representative accessor is only for operations about the
-    /// table itself where any one processor suffices: existence checks, the dry-run preview, and tests.
+    /// True when the source table is configured in this task. Existence-only check for streaming
+    /// providers that must skip rows of published-but-unconfigured tables.
+    /// </summary>
+    public bool HasProcessors(string schema, string table)
+    {
+        return _tableIndex.ContainsKey((schema ?? string.Empty, table));
+    }
+
+    /// <summary>
+    /// The primary processor for a source table: processors[0], which registration order guarantees is
+    /// the root processor when the table is mapped as a collection, otherwise the first embedded
+    /// processor. NOT for row routing - anything that turns a source row into document ops must use
+    /// <see cref="GetProcessors"/> and fan out, or it silently drops the table's other mappings. This
+    /// single-representative accessor is only for operations about the table itself where any one
+    /// processor suffices: existence checks, the dry-run preview, and tests.
     /// </summary>
     public CdcSinkTableProcessor GetPrimaryProcessor(string schema, string table)
     {
-        return SelectPrimary(GetProcessors(schema, table));
+        return GetProcessors(schema, table)[0];
     }
 
     public bool TryGetPrimaryProcessor(string schema, string table, out CdcSinkTableProcessor processor)
     {
         if (TryGetProcessors(schema, table, out var processors))
         {
-            processor = SelectPrimary(processors);
+            processor = processors[0];
             return true;
         }
 
@@ -315,16 +324,16 @@ public class CdcSinkDocumentProcessor
     }
 
     /// <summary>
-    /// Resolves the exact processor for a source table by its <see cref="CdcSinkTableProcessor.Discriminator"/>
-    /// (empty = root, otherwise the embedded property path). Used by tx-log replay to restore the specific
-    /// mapping an op belonged to. Falls back to the primary processor when the discriminator is empty or
-    /// matches no processor.
+    /// Resolves the exact processor for a source table by its <see cref="CdcSinkTableProcessor.Discriminator"/>.
+    /// Used by tx-log replay to restore the specific mapping an op belonged to. An op persisted without a
+    /// discriminator resolves to the primary processor; an unknown discriminator throws - the mapping
+    /// changed between persist and replay, and silently picking another processor would misroute the op.
     /// </summary>
     public CdcSinkTableProcessor GetProcessor(string schema, string table, string discriminator)
     {
         var processors = GetProcessors(schema, table);
         if (string.IsNullOrEmpty(discriminator))
-            return SelectPrimary(processors);
+            return processors[0];
 
         for (int i = 0; i < processors.Count; i++)
         {
@@ -332,18 +341,9 @@ public class CdcSinkDocumentProcessor
                 return processors[i];
         }
 
-        return SelectPrimary(processors);
-    }
-
-    private static CdcSinkTableProcessor SelectPrimary(IReadOnlyList<CdcSinkTableProcessor> processors)
-    {
-        for (int i = 0; i < processors.Count; i++)
-        {
-            if (processors[i].IsRoot)
-                return processors[i];
-        }
-
-        return processors[0];
+        throw new InvalidOperationException(
+            $"No processor with discriminator '{discriminator}' found for table '{schema}.{table}'. " +
+            "The table mapping changed between when the batch was persisted and this replay.");
     }
 
     public void SetSourceColumnNames(string schema, string table, string[] columnNames)
@@ -393,10 +393,10 @@ public class CdcSinkDocumentProcessor
 
     /// <summary>
     /// Processes a single row against the primary processor for its source table and returns one op.
-    /// Kept for callers (tests, previews) that map each table once; streaming and initial load fan a row
-    /// out to every processor via <see cref="GetProcessors"/> so all mappings are produced.
+    /// Kept internal for tests that map each table once; streaming and initial load fan a row out to
+    /// every processor via <see cref="GetProcessors"/> so all mappings are produced.
     /// </summary>
-    public CdcSinkDocumentOp ProcessRow(CdcSinkRow row, JsonOperationContext context)
+    internal CdcSinkDocumentOp ProcessRow(CdcSinkRow row, JsonOperationContext context)
     {
         if (_tableIndex.TryGetValue((row.TableSchema ?? string.Empty, row.TableName), out var processors) == false)
         {
@@ -405,7 +405,7 @@ public class CdcSinkDocumentProcessor
             return null;
         }
 
-        return ProcessRow(SelectPrimary(processors), row.Operation, row.Data, context);
+        return ProcessRow(processors[0], row.Operation, row.Data, context);
     }
 
     public CdcSinkDocumentOp ProcessRow(CdcSinkTableProcessor processor, CdcSinkOperation operation, object[] data, JsonOperationContext context)
@@ -423,9 +423,8 @@ public class CdcSinkDocumentProcessor
 
         if (operation == CdcSinkOperation.Delete)
         {
-            var onDelete = config.OnDelete;
-            if (onDelete?.IgnoreDeletes == true && onDelete.Patch == null)
-                return null; // silently ignore — no patch, no delete
+            if (processor.IgnoresDeletes)
+                return null;
 
             return new CdcSinkDocumentOp
             {
@@ -458,9 +457,8 @@ public class CdcSinkDocumentProcessor
 
     private CdcSinkDocumentOp ProcessEmbeddedRow(CdcSinkTableProcessor processor, CdcSinkOperation operation, object[] data, JsonOperationContext context)
     {
-        var onDelete = processor.EmbeddedConfig.OnDelete;
-        if (operation == CdcSinkOperation.Delete && onDelete?.IgnoreDeletes == true && onDelete.Patch == null)
-            return null; // silently ignore — no patch, no delete
+        if (operation == CdcSinkOperation.Delete && processor.IgnoresDeletes)
+            return null;
 
         var parentDocumentId = processor.GetParentDocumentId(data);
         var mappedData = processor.MapColumns(data, context);
@@ -477,12 +475,6 @@ public class CdcSinkDocumentProcessor
         };
     }
 
-    /// <summary>
-    /// Dispatch key for OnDelete.Patch scripts in the combined patch request,
-    /// distinct from the regular Patch key for the same table.
-    /// </summary>
-    internal static string OnDeleteKey(string schema, string tableName) => MakeKey(schema, tableName) + "__on_delete";
-
     private static string MakeKey(string schema, string tableName)
     {
         if (string.IsNullOrEmpty(schema))
@@ -498,19 +490,36 @@ public class CdcSinkDocumentProcessor
         list.Add(processor);
     }
 
-    private static string BuildEmbeddedDiscriminator(List<EmbeddedPathSegment> path)
+    /// <summary>
+    /// Builds the mapping identity described on <see cref="CdcSinkTableProcessor.Discriminator"/>:
+    /// the root collection name, followed by the embedded property path when <paramref name="path"/>
+    /// is non-null. Escaping keeps segment boundaries unambiguous for any collection/property name.
+    /// </summary>
+    private static string BuildDiscriminator(string collectionName, List<EmbeddedPathSegment> path)
     {
-        if (path.Count == 1)
-            return path[0].Config.PropertyName;
-
         var sb = new StringBuilder();
-        for (int i = 0; i < path.Count; i++)
+        AppendEscaped(sb, collectionName);
+
+        if (path != null)
         {
-            if (i > 0)
+            for (int i = 0; i < path.Count; i++)
+            {
                 sb.Append('/');
-            sb.Append(path[i].Config.PropertyName);
+                AppendEscaped(sb, path[i].Config.PropertyName);
+            }
         }
+
         return sb.ToString();
+
+        static void AppendEscaped(StringBuilder sb, string segment)
+        {
+            foreach (var c in segment)
+            {
+                if (c is '/' or '\\')
+                    sb.Append('\\');
+                sb.Append(c);
+            }
+        }
     }
 
     private static List<CdcColumnMapping> FilterAttachmentColumns(List<CdcColumnMapping> columns)
