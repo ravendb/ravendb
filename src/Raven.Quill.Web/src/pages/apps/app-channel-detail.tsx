@@ -5,9 +5,7 @@ import {
     CodeXml,
     Fingerprint,
     Globe,
-    Link2,
     MessageCircle,
-    Palette,
     Pause,
     Pencil,
     Play,
@@ -27,25 +25,18 @@ import { Button } from "@/components/shadcn/ui/button";
 import { DropdownMenuItem } from "@/components/shadcn/ui/dropdown-menu";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/shadcn/ui/tabs";
+import { UnsavedChangesConfirm } from "@/components/form/unsaved-changes/unsaved-changes-confirm";
+import {
+    selectHasUnsavedChanges,
+    useUnsavedChangesStore,
+} from "@/components/form/unsaved-changes/unsaved-changes-store";
 import { appRoutes } from "@/lib/app-routes";
 import { CHANNEL_TYPE_LABELS } from "@/lib/channel-type-labels";
 import { cn } from "@/lib/utils";
 import { invalidateChannelQueries } from "@/lib/query-invalidation";
-import { ChannelActiveLinks } from "@/pages/apps/channels/channel-active-links";
+import { getChannelTabs, resolveActiveTab, type ChannelTabDef } from "@/pages/apps/channels/channel-detail-tabs";
 import { DeleteChannelDialog } from "@/pages/apps/channels/delete-channel-dialog";
 import { EditChannelSheet } from "@/pages/apps/channels/edit-channel-sheet";
-import { EmbedLinkApiDocs } from "@/pages/apps/channels/embed-link-api-docs";
-import { GenerateEmbedLinkDialog } from "@/pages/apps/channels/generate-embed-link-dialog";
-import { TelegramChannelBindings } from "@/pages/apps/channels/telegram-channel-bindings";
-import { WebWidgetAppearanceTab } from "@/pages/apps/channels/web-widget-appearance-tab";
-import { SectionCard } from "@/pages/apps/section-card";
-
-const TABS = ["active-links", "customize"] as const;
-type ChannelTab = (typeof TABS)[number];
-
-function normalizeTab(value: string | null): ChannelTab {
-    return TABS.find((tab) => tab === value) ?? "active-links";
-}
 
 const CHANNEL_TYPE_ICONS: Record<NonNullable<ChannelType>, LucideIcon> = {
     IFrame: CodeXml,
@@ -66,14 +57,31 @@ export function AppChannelDetail() {
     const channel = channelsQuery.data?.find((candidate) => candidate.channelId === channelId);
     const agent = agentsQuery.data?.find((candidate) => candidate.agentId === channel?.agentId);
 
-    const isIFrame = channel?.type === "IFrame";
+    const tabs = channel ? getChannelTabs(channel) : [];
 
-    const [tab, setTab] = useState<ChannelTab>(() => normalizeTab(searchParams.get("tab")));
-    // The customize tab only exists for web widgets; fall back so a stale link can't select a missing tab.
-    const activeTab = tab === "customize" && !isIFrame ? "active-links" : tab;
-    // The customize tab brings its own sticky action bar and preview column, calibrated against a plain
-    // scroller; the embed tab instead wants content flush under the header with only inside padding.
-    const isCustomize = activeTab === "customize";
+    const [requestedTab, setRequestedTab] = useState<string | null>(() => searchParams.get("tab"));
+    // Resolve against this channel's tab set so a stale link (or a tab owned by another channel type)
+    // can't select a missing tab.
+    const activeTab = resolveActiveTab(tabs, requestedTab);
+
+    // Tabs switch via local state, not navigation, so the app-level route guard never sees it. Confirm
+    // before leaving a tab whose form is mid-edit, and hold the requested switch until then.
+    const hasUnsavedChanges = useUnsavedChangesStore(selectHasUnsavedChanges);
+    const [pendingTab, setPendingTab] = useState<string | null>(null);
+
+    const onTabChange = (next: string) => {
+        if (next !== activeTab && hasUnsavedChanges) {
+            setPendingTab(next);
+            return;
+        }
+        setRequestedTab(next);
+    };
+    const currentLayout = tabs.find((tab) => tab.key === activeTab)?.layout ?? "padded";
+    // "bare" tabs (e.g. the web widget's Customize) bring their own sticky top bar/preview and want content
+    // flush under the header. "fill" tabs (the editable Telegram tabs) keep a fixed header while their body
+    // scrolls. "padded" tabs get the default breathing padding.
+    const isBare = currentLayout === "bare";
+    const isFill = currentLayout === "fill";
 
     const onRetry = async () => {
         if (channelsQuery.isError) {
@@ -87,8 +95,8 @@ export function AppChannelDetail() {
     return (
         <Tabs
             value={activeTab}
-            onValueChange={(value) => setTab(value as ChannelTab)}
-            className={cn("h-full min-h-0", isCustomize ? "gap-5" : "gap-0")}
+            onValueChange={onTabChange}
+            className={cn("h-full min-h-0", isBare ? "gap-5" : "gap-0")}
         >
             <DetailHeader
                 title={channel?.displayName ?? "Channel"}
@@ -96,13 +104,20 @@ export function AppChannelDetail() {
                 backTo={{ to: appRoutes.app(slug, "channels"), label: "Channels" }}
                 meta={channel && <ChannelMeta channel={channel} agent={agent} />}
                 actions={channel && <ChannelActions slug={slug} channel={channel} />}
-                tabs={channel && <ChannelTabsList isIFrame={isIFrame} activeTab={activeTab} />}
+                tabs={channel && tabs.length > 0 && <ChannelTabsList tabs={tabs} activeTab={activeTab} />}
             />
 
             {/* -mx-2/px-2 keeps card borders/shadows off the scroller's clip edge (overflow-y-auto clips
-                x too). On the embed tab, py-5 breathes at rest but scrolls away so content sits flush
-                under the header; the customize tab keeps no padding for its own sticky action bar. */}
-            <div className={cn("-mx-2 min-h-0 flex-1 overflow-y-auto px-2", !isCustomize && "py-5")}>
+                x too). On padded tabs, py-5 breathes at rest but scrolls away so content sits flush under
+                the header; bare tabs keep no padding for their own sticky top bar. "fill" tabs own their
+                own scroller (with a fixed header), so this just becomes their flex column. */}
+            <div
+                className={cn(
+                    "min-h-0 flex-1",
+                    isFill ? "flex flex-col" : "-mx-2 overflow-y-auto px-2",
+                    !isBare && !isFill && "py-5",
+                )}
+            >
                 <ApiState
                     isLoading={channelsQuery.isPending || agentsQuery.isPending}
                     isError={channelsQuery.isError || agentsQuery.isError}
@@ -111,57 +126,37 @@ export function AppChannelDetail() {
                     loadingLabel="Loading channel..."
                 >
                     {channelsQuery.data &&
-                        (channel ? (
-                            <>
-                                <TabsContent value="active-links">
-                                    {isIFrame ? (
-                                        <div className="grid gap-5">
-                                            <EmbedLinkApiDocs
-                                                slug={slug}
-                                                channelId={channel.channelId}
-                                                parameterNames={agent?.parameters ?? []}
-                                            />
-                                            <SectionCard
-                                                title="Active links"
-                                                action={
-                                                    <GenerateEmbedLinkDialog
-                                                        slug={slug}
-                                                        channelId={channel.channelId}
-                                                        displayName={channel.displayName}
-                                                        parameterNames={agent?.parameters ?? []}
-                                                        trigger={
-                                                            <Button
-                                                                size="sm"
-                                                                variant="outline"
-                                                                disabled={!channel.enabled}
-                                                            >
-                                                                Generate link
-                                                            </Button>
-                                                        }
-                                                    />
-                                                }
-                                            >
-                                                <ChannelActiveLinks slug={slug} channelId={channel.channelId} />
-                                            </SectionCard>
-                                        </div>
-                                    ) : channel.type === "Telegram" ? (
-                                        <TelegramChannelBindings channel={channel} />
-                                    ) : (
-                                        <Alert>Embed links apply to web widget channels only.</Alert>
-                                    )}
-                                </TabsContent>
-
-                                {isIFrame && (
-                                    <TabsContent value="customize">
-                                        <WebWidgetAppearanceTab slug={slug} channelId={channel.channelId} />
-                                    </TabsContent>
-                                )}
-                            </>
-                        ) : (
+                        (!channel ? (
                             <Alert variant="destructive">No channel “{channelId}” in this app.</Alert>
+                        ) : tabs.length === 0 ? (
+                            <Alert>This channel type has no settings to configure yet.</Alert>
+                        ) : (
+                            tabs.map((tab) => (
+                                <TabsContent
+                                    key={tab.key}
+                                    value={tab.key}
+                                    className={cn(tab.layout === "fill" && "flex min-h-0 flex-1 flex-col")}
+                                >
+                                    {tab.render({ slug, channel, agent })}
+                                </TabsContent>
+                            ))
                         ))}
                 </ApiState>
             </div>
+
+            <UnsavedChangesConfirm
+                open={pendingTab !== null}
+                onOpenChange={(isOpen) => {
+                    if (!isOpen) {
+                        setPendingTab(null);
+                    }
+                }}
+                onConfirm={() => {
+                    // Switching unmounts the dirty tab, which drops its edits and clears its guard entry.
+                    setRequestedTab(pendingTab);
+                    setPendingTab(null);
+                }}
+            />
         </Tabs>
     );
 }
@@ -169,7 +164,7 @@ export function AppChannelDetail() {
 // Renders the tab strip with a single underline that slides to the active tab, instead of a static
 // per-tab underline. The indicator is measured from the active trigger and moved with a CSS
 // transition, so no animation library is needed.
-function ChannelTabsList({ isIFrame, activeTab }: { isIFrame: boolean; activeTab: ChannelTab }) {
+function ChannelTabsList({ tabs, activeTab }: { tabs: ChannelTabDef[]; activeTab: string }) {
     const listRef = useRef<HTMLDivElement>(null);
     const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null);
 
@@ -189,7 +184,7 @@ function ChannelTabsList({ isIFrame, activeTab }: { isIFrame: boolean; activeTab
         const observer = new ResizeObserver(measure);
         observer.observe(list);
         return () => observer.disconnect();
-    }, [activeTab, isIFrame]);
+    }, [activeTab, tabs]);
 
     return (
         <div ref={listRef} className="relative -mb-px">
@@ -197,16 +192,15 @@ function ChannelTabsList({ isIFrame, activeTab }: { isIFrame: boolean; activeTab
                 variant="line"
                 className="gap-2 rounded-none border-0 bg-transparent p-0 group-data-[orientation=horizontal]/tabs:h-auto"
             >
-                <TabsTrigger value="active-links" className={CHANNEL_TAB_CLASS}>
-                    <Link2 aria-hidden="true" />
-                    Embed
-                </TabsTrigger>
-                {isIFrame && (
-                    <TabsTrigger value="customize" className={CHANNEL_TAB_CLASS}>
-                        <Palette aria-hidden="true" />
-                        Customize appearance
-                    </TabsTrigger>
-                )}
+                {tabs.map((tab) => {
+                    const Icon = tab.icon;
+                    return (
+                        <TabsTrigger key={tab.key} value={tab.key} className={CHANNEL_TAB_CLASS}>
+                            <Icon aria-hidden="true" />
+                            {tab.label}
+                        </TabsTrigger>
+                    );
+                })}
             </TabsList>
             <span
                 aria-hidden="true"

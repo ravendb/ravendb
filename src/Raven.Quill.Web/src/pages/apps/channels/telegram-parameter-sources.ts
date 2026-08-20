@@ -15,10 +15,6 @@ export const TELEGRAM_PARAMETER_SOURCES: { value: TelegramParameterSource; label
     },
 ];
 
-export function telegramParameterSourceLabel(source: TelegramParameterSource | undefined) {
-    return TELEGRAM_PARAMETER_SOURCES.find((candidate) => candidate.value === source)?.label ?? (source || "—");
-}
-
 export function telegramParameterSourceHint(source: TelegramParameterSource | undefined) {
     return TELEGRAM_PARAMETER_SOURCES.find((candidate) => candidate.value === source)?.hint;
 }
