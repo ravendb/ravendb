@@ -83,6 +83,9 @@ internal abstract class AbstractChatCompletionClientSettings
         {
             public const string Think = "think";
             public const string Temperature = "temperature";
+            public const string ReasoningEffort = "reasoning_effort";
+            public const string Seed = "seed";
+            public const string ReasoningEffortNoneValue = "none";
         }
 
         public static class Headers

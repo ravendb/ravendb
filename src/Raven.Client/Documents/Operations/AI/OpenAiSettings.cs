@@ -10,7 +10,7 @@ public sealed class OpenAiSettings : OpenAiBaseSettings
 {
     public OpenAiSettings(string apiKey, string endpoint, string model, string organizationId = null, 
         string projectId = null, int? dimensions = null, double? temperature = null,
-        OpenAiReasoningEffort? reasoningEffort = null, int? seed = null) : base(apiKey, endpoint, model, dimensions, temperature)
+        string reasoningEffort = null, int? seed = null) : base(apiKey, endpoint, model, dimensions, temperature)
     {
         OrganizationId = organizationId;
         ProjectId = projectId;
@@ -55,22 +55,21 @@ public sealed class OpenAiSettings : OpenAiBaseSettings
     public string ProjectId { get; set; }
 
     /// <summary>
-    /// Controls the reasoning depth used by supported models (such as GPT-5 family).
-    /// Lower values reduce the amount of internal reasoning performed by the model,
+    /// The <c>reasoning_effort</c> to send to the provider, controlling the reasoning depth
+    /// of supported models (such as the GPT-5 family). Lower values reduce internal reasoning,
     /// which may improve latency and reduce variability in responses.
-    /// 
-    /// Supported values typically include:
-    /// <list type="bullet">
-    /// <item><description><c>minimal</c> - minimal reasoning, fastest responses.</description></item>
-    /// <item><description><c>low</c> - limited reasoning.</description></item>
-    /// <item><description><c>medium</c> - default reasoning level.</description></item>
-    /// <item><description><c>high</c> - deeper reasoning, potentially slower responses.</description></item>
-    /// </list>
-    /// 
-    /// Note that this setting reduces the likelihood of non-deterministic behavior,
-    /// but does not guarantee fully deterministic responses.
+    ///
+    /// Typical values are <c>none</c>, <c>minimal</c>, <c>low</c>, <c>medium</c>, <c>high</c>,
+    /// <c>xhigh</c> and <c>max</c>. Model families accept different subsets, for example
+    /// <c>minimal</c> is rejected by <c>gpt-5.1</c> and later, which take <c>none</c> instead.
+    /// When not set the field is omitted and the model applies its own default.
+    ///
+    /// Sent as supplied apart from trimming, and not validated by RavenDB, so new provider values
+    /// can be used without waiting for a RavenDB release. Providers match it exactly: OpenAI accepts
+    /// lowercase values only. Legacy <see cref="OpenAiReasoningEffort"/> member names persisted by
+    /// older clients (e.g. <c>High</c>) are normalized to the provider form by the server.
     /// </summary>
-    public OpenAiReasoningEffort? ReasoningEffort { get; set; }
+    public string ReasoningEffort { get; set; }
 
     /// <summary>
     /// Optional seed used to make the model's sampling more reproducible across requests.
@@ -106,7 +105,7 @@ public sealed class OpenAiSettings : OpenAiBaseSettings
         if (string.IsNullOrWhiteSpace(ProjectId) == false)
             json[nameof(ProjectId)] = ProjectId;
 
-        if (ReasoningEffort.HasValue)
+        if (string.IsNullOrWhiteSpace(ReasoningEffort) == false)
             json[nameof(ReasoningEffort)] = ReasoningEffort;
 
         if (Seed.HasValue)
@@ -118,13 +117,27 @@ public sealed class OpenAiSettings : OpenAiBaseSettings
 
 /// <summary>
 /// Specifies the reasoning effort level used by supported models.
-/// Controls how much internal reasoning the model performs,
-/// affecting latency and response variability.
+/// Kept for migration only; use the string-based <see cref="OpenAiSettings.ReasoningEffort"/> instead.
 /// </summary>
+[Obsolete("Use the string-based OpenAiSettings.ReasoningEffort instead, e.g. OpenAiReasoningEffort.High.ToReasoningEffort().")]
 public enum OpenAiReasoningEffort
 {
     Minimal,
     Low,
     Medium,
     High
+}
+
+public static class OpenAiReasoningEffortExtensions
+{
+#pragma warning disable CS0618 // the enum stays public for migration
+    /// <summary>
+    /// Converts a legacy <see cref="OpenAiReasoningEffort"/> value to the lowercase form
+    /// expected by the provider, e.g. <see cref="OpenAiReasoningEffort.High"/> to <c>high</c>.
+    /// </summary>
+    public static string ToReasoningEffort(this OpenAiReasoningEffort reasoningEffort)
+    {
+        return reasoningEffort.ToString().ToLowerInvariant();
+    }
+#pragma warning restore CS0618
 }
