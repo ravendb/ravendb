@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.RateLimiting;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication;
@@ -41,6 +42,16 @@ builder.Services.ConfigureHttpJsonOptions(static options =>
 
 builder.Services.AddOpenApi(options =>
 {
+    // Create union types form [Flags] enums
+    options.AddSchemaTransformer((schema, context, _) =>
+    {
+        var type = Nullable.GetUnderlyingType(context.JsonTypeInfo.Type) ?? context.JsonTypeInfo.Type;
+        if (type.IsEnum && schema.Enum is not { Count: > 0 })
+            schema.Enum = Enum.GetNames(type).Select(JsonNode (name) => JsonValue.Create(name)).ToList();
+
+        return Task.CompletedTask;
+    });
+
     options.AddSchemaTransformer((schema, context, _) =>
     {
         if (schema.Properties is null || schema.Properties.Count == 0)

@@ -70,8 +70,8 @@ describe("toFormValues", () => {
         expect(toFormValues(configuration({ logs: { path: null } })).logDirectory).toBe("");
     });
 
-    it("falls back when the server reports a level the client does not know", () => {
-        expect(toFormValues(configuration({ logs: { currentMinLevel: "Chatty" } })).minLevel).toBe("Info");
+    it("falls back when the server does not report a live level", () => {
+        expect(toFormValues(configuration({ logs: {} })).minLevel).toBe("Info");
     });
 
     it("starts persist on only when the appliance can write the configuration back", () => {

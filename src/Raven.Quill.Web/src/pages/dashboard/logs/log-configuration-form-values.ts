@@ -1,6 +1,16 @@
 import { z } from "zod";
-import type { LogConfigurationResponse, UpdateLogConfigurationRequest } from "@/api/generated/server-api";
-import { LOG_LEVELS, parseLogLevel } from "./log-levels";
+import type { LogConfigurationResponse, LogLevel, UpdateLogConfigurationRequest } from "@/api/generated/server-api";
+
+// In the server's order. `satisfies` keeps the list honest against the generated LogLevel union.
+export const LOG_LEVELS = [
+    "Trace",
+    "Debug",
+    "Info",
+    "Warn",
+    "Error",
+    "Fatal",
+    "Off",
+] as const satisfies readonly LogLevel[];
 
 // The appliance resolves a relative directory against its own install directory, /app/web, which
 // lives in the container image rather than on the volume - so logs written there are destroyed by
@@ -36,8 +46,8 @@ export function toFormValues(configuration: LogConfigurationResponse): LogConfig
         logDirectory: configuration.logs.path ?? "",
         // currentMinLevel is the live level. minLevel is whatever the appliance started with, and
         // stays there even after a persisted change, so it is only ever shown as a read-only fact.
-        minLevel: parseLogLevel(configuration.logs.currentMinLevel, "Info"),
-        frameworkMinLevel: parseLogLevel(configuration.microsoftLogs.currentMinLevel, "Off"),
+        minLevel: configuration.logs.currentMinLevel ?? "Info",
+        frameworkMinLevel: configuration.microsoftLogs.currentMinLevel ?? "Off",
         // A settings page that silently forgets on the next restart is the worse failure, so this
         // starts on wherever the appliance can actually write it back.
         shouldPersist: configuration.canPersist,

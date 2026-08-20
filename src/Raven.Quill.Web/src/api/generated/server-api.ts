@@ -976,7 +976,8 @@ export interface components {
             policy?: components["schemas"]["AiAgentParameterPolicy"];
             type?: components["schemas"]["AiAgentParameterValueType"];
         };
-        AiAgentParameterPolicy: string;
+        /** @enum {string} */
+        AiAgentParameterPolicy: "Default" | "ForbidModelGeneration";
         /** @enum {unknown} */
         AiAgentParameterValueType: "Default" | "String" | "Number" | "Boolean" | "ArrayOfString" | "ArrayOfNumber" | "ArrayOfBoolean" | "Null";
         AiAgentSummarizationByTokens: {
@@ -1508,7 +1509,8 @@ export interface components {
         LoginRequest: {
             apiKey: string;
         };
-        LogLevel: string;
+        /** @enum {string} */
+        LogLevel: "Trace" | "Debug" | "Info" | "Warn" | "Error" | "Fatal" | "Off";
         LogsConfiguration: {
             path?: null | string;
             currentMinLevel?: components["schemas"]["LogLevel"];

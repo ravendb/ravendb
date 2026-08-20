@@ -4,12 +4,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { api } from "@/api/api";
-import type { LogConfigurationResponse } from "@/api/generated/server-api";
+import type { LogConfigurationResponse, LogLevel } from "@/api/generated/server-api";
 import { isApiError } from "@/api/http-client";
 import { InlineCode } from "@/components/data/inline-code";
 import { EnabledStatus, StatusIndicator } from "@/components/data/status-indicator";
 import { FormInput } from "@/components/form/form-input";
-import { FormSelect } from "@/components/form/form-select";
+import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
 import { FormSwitch } from "@/components/form/form-switch";
 import { useFormUnsavedChanges } from "@/components/form/unsaved-changes/use-unsaved-changes";
 import { Alert, AlertDescription, AlertTitle } from "@/components/shadcn/ui/alert";
@@ -18,15 +18,25 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 import { ConfirmDialog } from "@/components/shadcn/ui/confirm-dialog";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import {
+    describeRotation,
     isFrameworkCaptureOn,
     logConfigurationFormSchema,
+    LOG_LEVELS,
     toFormValues,
     toUpdateRequest,
     type LogConfigurationFormValues,
 } from "./log-configuration-form-values";
-import { FRAMEWORK_LOG_LEVEL_OPTIONS, LOG_LEVEL_OPTIONS } from "./log-levels";
-import { describeRotation } from "./log-configuration-form-values";
 import { LogFact } from "./log-fact";
+
+const LOG_LEVEL_OPTIONS: readonly FormSelectOption<LogLevel>[] = LOG_LEVELS.map((level) => ({
+    value: level,
+    label: level,
+}));
+
+// Off is deliberately missing: it is the state the server refuses to accept a microsoftLogs block
+// in, so choosing it here would lock the control until someone edits quill.nlog.config and
+// restarts. Fatal is the quietest level an operator can still undo from this page.
+const FRAMEWORK_LOG_LEVEL_OPTIONS = LOG_LEVEL_OPTIONS.filter((option) => option.value !== "Off");
 
 // A settings change is only trustworthy once the appliance has echoed it back: ResolvePath turns a
 // relative directory absolute, so the response carries the path that is actually in use.
