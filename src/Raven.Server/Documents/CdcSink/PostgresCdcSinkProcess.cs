@@ -466,6 +466,9 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             ct,
             _lastLsn);
 
+        // Reused across messages; CdcEvent is a struct the consumer copies out between yields.
+        var events = new List<CdcEvent>();
+
         await foreach (var message in replicationStream.WithCancellation(ct))
         {
             LastActivityTime = Database.Time.GetUtcNow();
@@ -487,7 +490,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                     }
                     {
                         var (procs, values) = await DecodeRowInternal(insert.Relation, insert.NewRow, ct);
-                        var events = new List<CdcEvent>(procs.Count);
+                        events.Clear();
                         AddUpsertEvents(procs, values, StreamingJsonContext, events);
                         foreach (var e in events)
                             yield return e;
@@ -515,9 +518,9 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                         oldValues = null;
                     }
 
-                    var updateEvents = new List<CdcEvent>(procs.Count + 1);
-                    AddUpdateEvents(procs, newValues, oldValues, updateEvents);
-                    foreach (var e in updateEvents)
+                    events.Clear();
+                    AddUpdateEvents(procs, newValues, oldValues, events);
+                    foreach (var e in events)
                         yield return e;
                     break;
                 }
@@ -531,7 +534,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                         // No pre-image available (REPLICA IDENTITY DEFAULT), so we can't detect reparenting -
                         // upsert into the current parent, matching the single-processor behavior.
                         var (procs, values) = await DecodeRowInternal(update.Relation, update.NewRow, ct);
-                        var events = new List<CdcEvent>(procs.Count);
+                        events.Clear();
                         AddUpsertEvents(procs, values, StreamingJsonContext, events);
                         foreach (var e in events)
                             yield return e;
@@ -545,7 +548,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                     }
                     {
                         var (procs, values) = await DecodeRowInternal(keyDel.Relation, keyDel.Key, ct);
-                        var events = new List<CdcEvent>(procs.Count);
+                        events.Clear();
                         AddDeleteEvents(procs, values, StreamingJsonContext, events);
                         foreach (var e in events)
                             yield return e;
@@ -559,7 +562,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                     }
                     {
                         var (procs, values) = await DecodeRowInternal(fullDel.Relation, fullDel.OldRow, ct);
-                        var events = new List<CdcEvent>(procs.Count);
+                        events.Clear();
                         AddDeleteEvents(procs, values, StreamingJsonContext, events);
                         foreach (var e in events)
                             yield return e;
@@ -582,7 +585,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     /// </summary>
     private bool IsConfiguredRelation(RelationMessage relation)
     {
-        if (DocumentProcessor.TryGetPrimaryProcessor(relation.Namespace, relation.RelationName, out _))
+        if (DocumentProcessor.HasProcessors(relation.Namespace, relation.RelationName))
             return true;
 
         if (_unconfiguredRelations.Add(relation.RelationId) && Logger.IsInfoEnabled)
@@ -713,14 +716,6 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         }
 
         return (processors, values);
-    }
-
-    private static bool HasEmbeddedProcessor(IReadOnlyList<CdcSinkTableProcessor> processors)
-    {
-        for (int i = 0; i < processors.Count; i++)
-            if (processors[i].IsRoot == false)
-                return true;
-        return false;
     }
 
     private string QuoteTableList(List<CdcSinkConfiguration.TableInfo> tables)
