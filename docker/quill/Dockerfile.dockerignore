@@ -17,6 +17,7 @@ scripts/
 
 src/Raven.Quill.Web/dist/
 src/Raven.Quill.Web/storybook-static/
+src/Raven.Quill.WhatsAppBridge/dist/
 
 **/.env
 **/.env.local

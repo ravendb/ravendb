@@ -81,6 +81,7 @@ function EditChannelForm({
     const queryClient = useQueryClient();
 
     const isTelegram = channel.type === "Telegram";
+    const isIFrame = channel.type === "IFrame";
     const [areMessagesOpen, setAreMessagesOpen] = useState(false);
 
     const form = useForm<EditChannelFormData>({
@@ -105,7 +106,7 @@ function EditChannelForm({
             api.services.channels.update(slug, channel.channelId, {
                 displayName: values.displayName.trim(),
                 allowedOrigins:
-                    !isTelegram && values.shouldReplaceAllowedOrigins
+                    isIFrame && values.shouldReplaceAllowedOrigins
                         ? values.allowedOrigins.map((origin) => origin.value.trim()).filter(Boolean)
                         : null,
                 enabled: values.enabled,
@@ -138,7 +139,7 @@ function EditChannelForm({
                     description="Shown in the channels list."
                 />
                 <FormSwitch control={form.control} name="enabled" label="Enabled" />
-                {isTelegram ? (
+                {isTelegram && (
                     <>
                         <FormInput
                             control={form.control}
@@ -176,7 +177,8 @@ function EditChannelForm({
                             </CollapsibleContent>
                         </Collapsible>
                     </>
-                ) : (
+                )}
+                {isIFrame && (
                     <>
                         <div className="flex flex-col gap-1.5">
                             <FormSwitch

@@ -12,8 +12,9 @@ import { SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/compo
 import { GuardedSheet } from "@/components/form/unsaved-changes/guarded-overlays";
 import { TelegramChannelForm } from "@/pages/apps/channels/telegram-channel-form";
 import { WebWidgetChannelForm, type FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
+import { WhatsAppPersonalChannelForm } from "@/pages/apps/channels/whatsapp-personal-channel-form";
 
-type ChannelOptionId = "web-widget" | "telegram";
+type ChannelOptionId = "web-widget" | "telegram" | "whatsapp-personal";
 
 type ChannelOption = {
     label: string;
@@ -21,7 +22,8 @@ type ChannelOption = {
     icon: LucideIcon;
 } & ({ id: ChannelOptionId; enabled: true } | { id: string; enabled: false });
 
-// The web widget and Telegram are backed by the channels API today; the rest are previewed as disabled.
+// The web widget, Telegram and WhatsApp Personal are backed by the channels API today;
+// WhatsApp Business is previewed as disabled.
 const CHANNEL_OPTIONS: ChannelOption[] = [
     {
         id: "web-widget",
@@ -42,7 +44,7 @@ const CHANNEL_OPTIONS: ChannelOption[] = [
         label: "WhatsApp Personal",
         description: "Link a phone for QA & testing",
         icon: MessageCircle,
-        enabled: false,
+        enabled: true,
     },
     {
         id: "whatsapp-business",
@@ -120,6 +122,18 @@ export function AddChannelMenu({
                                 </SheetDescription>
                             </SheetHeader>
                             <TelegramChannelForm slug={slug} agent={agent} onCreated={() => setOpenOption(null)} />
+                        </>
+                    ) : openOption === "whatsapp-personal" ? (
+                        <>
+                            <SheetHeader className="border-b">
+                                <SheetTitle>New WhatsApp Personal channel</SheetTitle>
+                                <SheetDescription>
+                                    {agent
+                                        ? `Link a phone by scanning a QR code, routed to “${agent.name}”.`
+                                        : "Link a personal WhatsApp phone by scanning a QR code."}
+                                </SheetDescription>
+                            </SheetHeader>
+                            <WhatsAppPersonalChannelForm slug={slug} agent={agent} onDone={() => setOpenOption(null)} />
                         </>
                     ) : (
                         <>

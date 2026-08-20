@@ -12,6 +12,7 @@ import { ChannelActiveLinks } from "@/pages/apps/channels/channel-active-links";
 import { EmbedLinkApiDocs } from "@/pages/apps/channels/embed-link-api-docs";
 import { GenerateEmbedLinkDialog } from "@/pages/apps/channels/generate-embed-link-dialog";
 import { TelegramChannelBindings } from "@/pages/apps/channels/telegram-channel-bindings";
+import { WhatsAppPairingPanel } from "@/pages/apps/channels/whatsapp-pairing-panel";
 import { SectionCard } from "@/pages/apps/section-card";
 
 export function AppChannelDetail() {
@@ -32,6 +33,7 @@ export function AppChannelDetail() {
     };
 
     const isIFrame = channel?.type === "IFrame";
+    const isWhatsAppPersonal = channel?.type === "WhatsAppPersonal";
 
     return (
         <div className="grid gap-5">
@@ -109,6 +111,17 @@ export function AppChannelDetail() {
                                 </>
                             ) : channel.type === "Telegram" ? (
                                 <TelegramChannelBindings channel={channel} />
+                            ) : isWhatsAppPersonal ? (
+                                <SectionCard
+                                    title="WhatsApp pairing"
+                                    description="Link a phone by scanning the QR code with WhatsApp."
+                                >
+                                    <WhatsAppPairingPanel
+                                        slug={slug}
+                                        channelId={channel.channelId}
+                                        isChannelEnabled={channel.enabled}
+                                    />
+                                </SectionCard>
                             ) : (
                                 <Alert>Embed links apply to web widget channels only.</Alert>
                             )}

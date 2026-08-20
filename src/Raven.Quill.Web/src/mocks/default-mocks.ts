@@ -6,7 +6,7 @@ import { appsMocks } from "./apps-mocks";
 import { assistantMocks } from "./assistant-mocks";
 import { authMocks } from "./auth-mocks";
 import { bootstrapMocks } from "./bootstrap-mocks";
-import { channelsMocks } from "./channels-mocks";
+import { channelsMocks, whatsAppMocks } from "./channels-mocks";
 import { dnsMocks } from "./dns-mocks";
 import { embedLinksMocks } from "./embed-links-mocks";
 import { iframeHandlers } from "./iframe-mocks";
@@ -51,6 +51,7 @@ export const defaultApiMocks = {
     auth: [authMocks.status(), authMocks.login(), authMocks.logout()],
     bootstrap: [bootstrapMocks.status()],
     channels: [channelsMocks.list(), channelsMocks.create(), channelsMocks.update(), channelsMocks.delete()],
+    whatsapp: [whatsAppMocks.health(), whatsAppMocks.pairing(), whatsAppMocks.pairingRestart()],
     dns: [dnsMocks.resolve()],
     embedLinks: [embedLinksMocks.list(), embedLinksMocks.mint(), embedLinksMocks.revoke()],
     iframe: iframeHandlers(),

@@ -2,8 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Eye, Link2, Pencil, Trash2 } from "lucide-react";
 import { Link } from "react-router";
 import { api } from "@/api/api";
+import type { WhatsAppChannelHealthResponse } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
-import { EnabledStatus } from "@/components/data/status-indicator";
+import { EnabledStatus, StatusIndicator } from "@/components/data/status-indicator";
 import { Button } from "@/components/shadcn/ui/button";
 import { Skeleton } from "@/components/shadcn/ui/skeleton";
 import { TableCell, TableRow } from "@/components/shadcn/ui/table";
@@ -25,11 +26,17 @@ export function ChannelsSection({ slug, agent: fixedAgent }: { slug: string; age
     // Active-link counts are supplementary — kept out of the ApiState gate so a
     // links hiccup never blocks the channels table.
     const embedLinksQuery = useQuery(api.queries.embedLinks.list(slug));
+    const hasWhatsAppChannel = (channelsQuery.data ?? []).some((channel) => channel.type === "WhatsAppPersonal");
+    const whatsAppHealthQuery = useQuery({ ...api.queries.whatsapp.health(slug), enabled: hasWhatsAppChannel });
 
     const activeLinkCounts = new Map<string, number>();
     for (const link of embedLinksQuery.data ?? []) {
         activeLinkCounts.set(link.channelId, (activeLinkCounts.get(link.channelId) ?? 0) + 1);
     }
+
+    const whatsAppHealthByChannel = new Map(
+        (whatsAppHealthQuery.data ?? []).map((health) => [health.channelId, health]),
+    );
 
     const onRetry = async () => {
         if (channelsQuery.isError) {
@@ -87,10 +94,22 @@ export function ChannelsSection({ slug, agent: fixedAgent }: { slug: string; age
                                                 @{channel.telegram.botUsername}
                                             </div>
                                         )}
+                                        {channel.whatsApp?.phoneNumber && (
+                                            <div className="font-mono text-xs font-normal text-muted-foreground">
+                                                {channel.whatsApp.phoneNumber}
+                                            </div>
+                                        )}
                                     </TableCell>
                                     {!fixedAgent && <TableCell className="font-medium">{agent?.name}</TableCell>}
                                     <TableCell>
-                                        <EnabledStatus isEnabled={channel.enabled} />
+                                        {channel.type === "WhatsAppPersonal" ? (
+                                            <WhatsAppStatusBadge
+                                                enabled={channel.enabled}
+                                                health={whatsAppHealthByChannel.get(channel.channelId)}
+                                            />
+                                        ) : (
+                                            <EnabledStatus isEnabled={channel.enabled} />
+                                        )}
                                     </TableCell>
                                     <TableCell>{channel.type ? CHANNEL_TYPE_LABELS[channel.type] : "—"}</TableCell>
                                     <TableCell className="text-muted-foreground tabular-nums">
@@ -173,4 +192,23 @@ export function ChannelsSection({ slug, agent: fixedAgent }: { slug: string; age
             </ApiState>
         </SectionCard>
     );
+}
+
+function WhatsAppStatusBadge({
+    enabled,
+    health,
+}: {
+    enabled: boolean;
+    health: WhatsAppChannelHealthResponse | undefined;
+}) {
+    if (!enabled) {
+        return <EnabledStatus isEnabled={false} />;
+    }
+    if (health?.state === "Pairing" || health?.state === "Starting") {
+        return <StatusIndicator tone="warning" label="Pairing" />;
+    }
+    if (health && health.state !== "Connected") {
+        return <StatusIndicator tone="warning" label="Not linked" title={health.lastError ?? undefined} />;
+    }
+    return <EnabledStatus isEnabled />;
 }

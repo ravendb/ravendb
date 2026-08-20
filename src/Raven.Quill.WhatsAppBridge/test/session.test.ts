@@ -1,0 +1,418 @@
+import { afterEach, describe, it } from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { pino } from "pino";
+import { Session, SessionNotConnectedError, type WaSocket } from "../src/session.js";
+import type { ClassifiedMessage } from "../src/messages.js";
+
+const logger = pino({ level: "silent" });
+
+class FakeSocket implements WaSocket {
+    user: { id: string } | null = { id: "48123456789:5@s.whatsapp.net" };
+    ended = false;
+    loggedOut = false;
+    sent: Array<{ jid: string; text: string }> = [];
+    private readonly listeners = new Map<string, (arg: never) => void>();
+
+    ev = {
+        on: (event: string, listener: (arg: never) => void) => {
+            this.listeners.set(event, listener);
+        },
+    };
+
+    emit(event: string, arg: unknown): void {
+        this.listeners.get(event)?.(arg as never);
+    }
+
+    async sendMessage(jid: string, content: { text: string }) {
+        this.sent.push({ jid, text: content.text });
+        return { key: { id: "SENT1" } };
+    }
+
+    pairingRequests: string[] = [];
+    pairingFailure: Error | null = null;
+
+    async requestPairingCode(phoneNumber: string): Promise<string> {
+        this.pairingRequests.push(phoneNumber);
+        if (this.pairingFailure)
+            throw this.pairingFailure;
+        return "ABCD1234";
+    }
+
+    iqErrorListener: ((reason: string) => void) | null = null;
+
+    onIqError(listener: (reason: string) => void): void {
+        this.iqErrorListener = listener;
+    }
+
+    lidToPn = new Map<string, string>();
+
+    signalRepository = {
+        lidMapping: {
+            getPNForLID: async (lid: string) => this.lidToPn.get(lid) ?? null,
+        },
+    };
+
+    async logout(): Promise<void> {
+        this.loggedOut = true;
+    }
+
+    end(): void {
+        this.ended = true;
+    }
+}
+
+const tick = () => new Promise((resolve) => setTimeout(resolve, 10));
+
+async function makeSession(inbound: ClassifiedMessage[] = []) {
+    const authDir = await fs.mkdtemp(path.join(os.tmpdir(), "wa-session-test-"));
+    const sockets: FakeSocket[] = [];
+    const session = new Session(
+        "db",
+        "c".repeat(32),
+        authDir,
+        async () => {
+            const socket = new FakeSocket();
+            sockets.push(socket);
+            return socket;
+        },
+        (message) => inbound.push(message),
+        logger,
+    );
+    return { session, sockets, authDir, socket: () => sockets[sockets.length - 1]! };
+}
+
+let cleanup: Array<() => Promise<void> | void> = [];
+afterEach(async () => {
+    for (const fn of cleanup)
+        await fn();
+    cleanup = [];
+});
+
+describe("Session", () => {
+    it("starts in starting state and moves to pairing on qr", async () => {
+        const { session, socket, authDir } = await makeSession();
+        cleanup.push(() => session.stop(), () => fs.rm(authDir, { recursive: true, force: true }));
+
+        await session.start();
+        assert.equal(session.status().state, "starting");
+
+        socket().emit("connection.update", { qr: "QR-PAYLOAD-1" });
+        await tick();
+
+        const status = session.status();
+        assert.equal(status.state, "pairing");
+        assert.equal(status.qr, "QR-PAYLOAD-1");
+        assert.ok(status.qrExpiresAt);
+    });
+
+    it("moves to connected with the phone number on open", async () => {
+        const { session, socket, authDir } = await makeSession();
+        cleanup.push(() => session.stop(), () => fs.rm(authDir, { recursive: true, force: true }));
+
+        await session.start();
+        socket().emit("connection.update", { qr: "QR" });
+        socket().emit("connection.update", { connection: "open" });
+        await tick();
+
+        const status = session.status();
+        assert.equal(status.state, "connected");
+        assert.equal(status.phoneNumber, "+48123456789");
+        assert.equal(status.qr, null);
+    });
+
+    it("wipes credentials and reports loggedOut on 401", async () => {
+        const { session, socket, authDir } = await makeSession();
+        cleanup.push(() => session.stop());
+
+        await session.start();
+        socket().emit("connection.update", { connection: "open" });
+        await tick();
+        await fs.writeFile(path.join(authDir, "creds.json"), "{}");
+
+        socket().emit("connection.update", {
+            connection: "close",
+            lastDisconnect: { error: { output: { statusCode: 401 } } },
+        });
+        await tick();
+
+        const status = session.status();
+        assert.equal(status.state, "loggedOut");
+        assert.equal(status.phoneNumber, null);
+        assert.ok(status.lastError);
+        await assert.rejects(fs.access(authDir));
+    });
+
+    it("discards half-finished pairing credentials so the next socket registers", async () => {
+        const { session, authDir } = await makeSession();
+        cleanup.push(() => session.stop(), () => fs.rm(authDir, { recursive: true, force: true }));
+
+        await fs.writeFile(
+            path.join(authDir, "creds.json"),
+            JSON.stringify({ me: { id: "48123456789@s.whatsapp.net" } }),
+        );
+
+        await session.start();
+
+        await assert.rejects(fs.access(path.join(authDir, "creds.json")));
+    });
+
+    it("keeps the credentials of a completed pairing", async () => {
+        const { session, authDir } = await makeSession();
+        cleanup.push(() => session.stop(), () => fs.rm(authDir, { recursive: true, force: true }));
+
+        await fs.writeFile(
+            path.join(authDir, "creds.json"),
+            JSON.stringify({ me: { id: "48123456789@s.whatsapp.net" }, account: { details: "AAA=" } }),
+        );
+
+        await session.start();
+
+        await fs.access(path.join(authDir, "creds.json"));
+    });
+
+    it("reports the rejection when whatsapp refuses the pairing code request", async () => {
+        const { session, socket, authDir } = await makeSession();
+        cleanup.push(() => session.stop(), () => fs.rm(authDir, { recursive: true, force: true }));
+
+        session.setPairingPhoneNumber("48123456789");
+        await session.start();
+        socket().emit("connection.update", { qr: "QR" });
+        await tick();
+        assert.equal(session.status().pairingCode, "ABCD1234");
+
+        socket().iqErrorListener?.("400 bad-request");
+        await tick();
+
+        const status = session.status();
+        assert.equal(status.state, "disconnected");
+        assert.equal(status.pairingCode, null);
+        assert.match(status.lastError ?? "", /400 bad-request/);
+    });
+
+    it("stops without reconnecting when another client replaces the session", async () => {
+        const { session, sockets, socket, authDir } = await makeSession();
+        cleanup.push(() => session.stop(), () => fs.rm(authDir, { recursive: true, force: true }));
+
+        await session.start();
+        socket().emit("connection.update", {
+            connection: "close",
+            lastDisconnect: { error: { output: { statusCode: 440 } } },
+        });
+        await tick();
+
+        assert.equal(session.status().state, "disconnected");
+        assert.match(session.status().lastError ?? "", /took over/);
+        await tick();
+        assert.equal(sockets.length, 1);
+    });
+
+    it("requests a pairing code instead of a QR when a phone number is set", async () => {
+        const { session, socket, authDir } = await makeSession();
+        cleanup.push(() => session.stop(), () => fs.rm(authDir, { recursive: true, force: true }));
+
+        session.setPairingPhoneNumber("48123456789");
+        await session.start();
+        socket().emit("connection.update", { qr: "QR" });
+        await tick();
+
+        assert.deepEqual(socket().pairingRequests, ["48123456789"]);
+
+        const status = session.status();
+        assert.equal(status.state, "pairing");
+        assert.equal(status.pairingCode, "ABCD1234");
+        assert.equal(status.qr, null);
+        assert.equal(status.qrExpiresAt, null);
+    });
+
+    it("requests the pairing code once across QR rotations", async () => {
+        const { session, socket, authDir } = await makeSession();
+        cleanup.push(() => session.stop(), () => fs.rm(authDir, { recursive: true, force: true }));
+
+        session.setPairingPhoneNumber("48123456789");
+        await session.start();
+        socket().emit("connection.update", { qr: "QR-1" });
+        await tick();
+        socket().emit("connection.update", { qr: "QR-2" });
+        await tick();
+
+        assert.equal(socket().pairingRequests.length, 1);
+    });
+
+    it("falls back to the QR and reports why when the pairing code request fails", async () => {
+        const { session, socket, authDir } = await makeSession();
+        cleanup.push(() => session.stop(), () => fs.rm(authDir, { recursive: true, force: true }));
+
+        session.setPairingPhoneNumber("48123456789");
+        await session.start();
+        socket().pairingFailure = new Error("rate limited");
+        socket().emit("connection.update", { qr: "QR" });
+        await tick();
+
+        const status = session.status();
+        assert.equal(status.pairingCode, null);
+        assert.equal(status.qr, "QR");
+        assert.match(status.lastError ?? "", /rate limited/);
+    });
+
+    it("reverts to QR linking when the phone number is cleared", async () => {
+        const { session, socket, authDir } = await makeSession();
+        cleanup.push(() => session.stop(), () => fs.rm(authDir, { recursive: true, force: true }));
+
+        session.setPairingPhoneNumber("48123456789");
+        await session.start();
+        socket().emit("connection.update", { qr: "QR-1" });
+        await tick();
+        assert.equal(session.status().pairingCode, "ABCD1234");
+
+        session.setPairingPhoneNumber(null);
+        await session.restart();
+        socket().emit("connection.update", { qr: "QR-2" });
+        await tick();
+
+        const status = session.status();
+        assert.equal(status.pairingCode, null);
+        assert.equal(status.qr, "QR-2");
+    });
+
+    it("reconnects immediately when the server requires a restart after a scan", async () => {
+        const { session, sockets, socket, authDir } = await makeSession();
+        cleanup.push(() => session.stop(), () => fs.rm(authDir, { recursive: true, force: true }));
+
+        await session.start();
+        socket().emit("connection.update", { qr: "QR" });
+        await tick();
+        socket().emit("connection.update", {
+            connection: "close",
+            lastDisconnect: { error: { output: { statusCode: 515 } } },
+        });
+        await tick();
+
+        assert.equal(sockets.length, 2);
+        assert.equal(sockets[0]?.ended, true);
+        assert.equal(session.status().state, "starting");
+        assert.equal(session.status().lastError, null);
+    });
+
+    it("reports a pairing timeout without looping QR generation", async () => {
+        const { session, sockets, socket, authDir } = await makeSession();
+        cleanup.push(() => session.stop(), () => fs.rm(authDir, { recursive: true, force: true }));
+
+        await session.start();
+        socket().emit("connection.update", { qr: "QR" });
+        await tick();
+        socket().emit("connection.update", {
+            connection: "close",
+            lastDisconnect: { error: { output: { statusCode: 408 } } },
+        });
+        await tick();
+
+        assert.equal(session.status().state, "disconnected");
+        assert.match(session.status().lastError ?? "", /timed out/);
+        assert.equal(sockets.length, 1);
+    });
+
+    it("forwards only notify upserts", async () => {
+        const inbound: ClassifiedMessage[] = [];
+        const { session, socket, authDir } = await makeSession(inbound);
+        cleanup.push(() => session.stop(), () => fs.rm(authDir, { recursive: true, force: true }));
+
+        await session.start();
+        const raw = {
+            key: { remoteJid: "48123456789@s.whatsapp.net", fromMe: false, id: "M1" },
+            message: { conversation: "hi" },
+            messageTimestamp: 1,
+        };
+        socket().emit("messages.upsert", { type: "append", messages: [raw] });
+        socket().emit("messages.upsert", { type: "notify", messages: [raw] });
+        await tick();
+
+        assert.equal(inbound.length, 1);
+        assert.equal(inbound[0]?.text, "hi");
+    });
+
+    it("resolves a lid sender through the lid mapping before forwarding", async () => {
+        const inbound: ClassifiedMessage[] = [];
+        const { session, socket, authDir } = await makeSession(inbound);
+        cleanup.push(() => session.stop(), () => fs.rm(authDir, { recursive: true, force: true }));
+
+        await session.start();
+        socket().lidToPn.set("244576963039337@lid", "48516031744@s.whatsapp.net");
+        socket().emit("messages.upsert", {
+            type: "notify",
+            messages: [{
+                key: { remoteJid: "244576963039337@lid", fromMe: false, id: "M1" },
+                message: { conversation: "hi" },
+                messageTimestamp: 1,
+            }],
+        });
+        await tick();
+
+        assert.equal(inbound.length, 1);
+        assert.equal(inbound[0]?.sender, "48516031744@s.whatsapp.net");
+    });
+
+    it("drops a lid sender the mapping cannot resolve to a phone number", async () => {
+        const inbound: ClassifiedMessage[] = [];
+        const { session, socket, authDir } = await makeSession(inbound);
+        cleanup.push(() => session.stop(), () => fs.rm(authDir, { recursive: true, force: true }));
+
+        await session.start();
+        socket().emit("messages.upsert", {
+            type: "notify",
+            messages: [{
+                key: { remoteJid: "244576963039337@lid", fromMe: false, id: "M1" },
+                message: { conversation: "hi" },
+                messageTimestamp: 1,
+            }],
+        });
+        await tick();
+
+        assert.equal(inbound.length, 0);
+    });
+
+    it("rejects sends while not connected and delivers when connected", async () => {
+        const { session, socket, authDir } = await makeSession();
+        cleanup.push(() => session.stop(), () => fs.rm(authDir, { recursive: true, force: true }));
+
+        await session.start();
+        await assert.rejects(session.sendText("48123456789@s.whatsapp.net", "x"), SessionNotConnectedError);
+
+        socket().emit("connection.update", { connection: "open" });
+        await tick();
+
+        const messageId = await session.sendText("48123456789@s.whatsapp.net", "reply");
+        assert.equal(messageId, "SENT1");
+        assert.deepEqual(socket().sent, [{ jid: "48123456789@s.whatsapp.net", text: "reply" }]);
+    });
+
+    it("restart tears down the previous socket and starts a new one", async () => {
+        const { session, sockets, authDir } = await makeSession();
+        cleanup.push(() => session.stop(), () => fs.rm(authDir, { recursive: true, force: true }));
+
+        await session.start();
+        await session.restart();
+
+        assert.equal(sockets.length, 2);
+        assert.equal(sockets[0]?.ended, true);
+        assert.equal(session.status().state, "starting");
+    });
+
+    it("delete logs out, tears down and wipes the auth dir", async () => {
+        const { session, socket, authDir } = await makeSession();
+        cleanup.push(() => session.stop());
+
+        await session.start();
+        socket().emit("connection.update", { connection: "open" });
+        await tick();
+        await fs.writeFile(path.join(authDir, "creds.json"), "{}");
+
+        await session.delete();
+
+        assert.equal(socket().loggedOut, true);
+        assert.equal(socket().ended, true);
+        await assert.rejects(fs.access(authDir));
+    });
+});

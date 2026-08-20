@@ -9,12 +9,14 @@ on:
       - 'docker/quill/**'
       - 'src/Raven.Quill/**'
       - 'src/Raven.Quill.Web/**'
+      - 'src/Raven.Quill.WhatsAppBridge/**'
       - '.github/workflows/quill-build.yml'
   pull_request:
     paths:
       - 'docker/quill/**'
       - 'src/Raven.Quill/**'
       - 'src/Raven.Quill.Web/**'
+      - 'src/Raven.Quill.WhatsAppBridge/**'
       - '.github/workflows/quill-build.yml'
 
 jobs:
@@ -57,6 +59,31 @@ jobs:
             echo "::error::src/api/generated/server-api.ts is stale. Run 'pnpm generate:api' in src/Raven.Quill.Web and commit the result."
             exit 1
           fi
+
+  bridge-checks:
+    name: WhatsApp bridge typecheck & tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: src/Raven.Quill.WhatsAppBridge/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./src/Raven.Quill.WhatsAppBridge
+        run: npm ci
+
+      - name: Typecheck
+        working-directory: ./src/Raven.Quill.WhatsAppBridge
+        run: npm run typecheck
+
+      - name: Test
+        working-directory: ./src/Raven.Quill.WhatsAppBridge
+        run: npm test
 
   build:
     name: Build & smoke (${{ matrix.arch }})

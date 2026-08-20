@@ -27,4 +27,6 @@ internal sealed class Channel
     public WidgetTheme? Theme { get; set; }
 
     public TelegramSettings? Telegram { get; set; }
+
+    public WhatsAppSettings? WhatsApp { get; set; }
 }

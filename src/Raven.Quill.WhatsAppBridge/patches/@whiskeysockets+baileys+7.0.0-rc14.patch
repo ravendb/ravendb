@@ -1,0 +1,13 @@
+diff --git a/node_modules/@whiskeysockets/baileys/lib/Socket/messages-recv.js b/node_modules/@whiskeysockets/baileys/lib/Socket/messages-recv.js
+index f2003ac..af2d9a0 100644
+--- a/node_modules/@whiskeysockets/baileys/lib/Socket/messages-recv.js
++++ b/node_modules/@whiskeysockets/baileys/lib/Socket/messages-recv.js
+@@ -359,7 +359,7 @@ export const makeMessagesRecvSocket = (config) => {
+         }
+     };
+     const sendMessageAck = async (node, errorCode) => {
+-        const stanza = buildAckStanza(node, errorCode, authState.creds.me.id);
++        const stanza = buildAckStanza(node, errorCode, authState.creds.me?.id);
+         logger.debug({ recv: { tag: node.tag, attrs: node.attrs }, sent: stanza.attrs }, 'sent ack');
+         await sendNode(stanza);
+     };

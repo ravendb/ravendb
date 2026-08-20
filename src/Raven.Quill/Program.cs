@@ -19,6 +19,7 @@ using Raven.Quill.Hosting;
 using Raven.Quill.Infrastructure;
 using Raven.Quill.Licensing;
 using Raven.Quill.Telegram;
+using Raven.Quill.WhatsApp;
 using Raven.Client.Documents;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -76,6 +77,9 @@ builder.Services.AddOptions<ApplianceOptions>()
         ReadEnv("RAVEN_QUILL_RAVENDB_S6_SERVICE", v => options.RavenDbS6Service = v);
         ReadEnv("RAVEN_QUILL_API_URL", v => options.AiApiUrl = v);
         ReadEnv("RAVEN_QUILL_TELEGRAM_API_URL", v => options.Telegram.ApiUrl = v);
+        ReadEnv("RAVEN_QUILL_WHATSAPP_BRIDGE_URL", v => options.WhatsAppBridgeUrl = v);
+        ReadEnv("RAVEN_QUILL_WHATSAPP_DATA_DIR", v => options.WhatsAppDataDir = v);
+        ReadEnv("RAVEN_QUILL_WHATSAPP_BRIDGE_TOKEN", v => options.WhatsAppBridgeToken = v);
         ReadEnv("QUILL_LICENSE_KEY", v => options.LicenseKey = v);
         ReadEnv("QUILL_API_KEY", v => options.ApiKey = v);
         ReadEnv("RAVEN_QUILL_RAVENDB_INTERNAL_PORT", v =>
@@ -126,6 +130,14 @@ builder.Services.AddTransient<ILicenseStatsProvider, LicenseStatsProvider>();
 builder.Services.AddSingleton<ITelegramBotClientFactory, TelegramBotClientFactory>();
 builder.Services.AddSingleton<TelegramChannelManager>();
 builder.Services.AddSingleton<ITelegramChannelManager>(sp => sp.GetRequiredService<TelegramChannelManager>());
+builder.Services.AddSingleton<IWhatsAppBridgeSecret, WhatsAppBridgeSecret>();
+builder.Services.AddSingleton<WhatsAppInboundProcessor>();
+builder.Services.AddHttpClient<IWhatsAppBridgeClient, WhatsAppBridgeClient>(static (sp, http) =>
+{
+    var opts = sp.GetRequiredService<IOptions<ApplianceOptions>>().Value;
+    http.BaseAddress = new Uri(opts.WhatsAppBridgeUrl);
+    http.Timeout = TimeSpan.FromSeconds(10);
+});
 if (!isOpenApiDocumentGeneration)
 {
     builder.Services.AddHostedService<RavenReadinessService>();
@@ -270,6 +282,7 @@ BootstrapEndpoints.Map(app);
 AuthEndpoints.Map(app);
 AppsEndpoints.Map(app);
 ChannelsEndpoints.Map(app);
+WhatsAppEndpoints.Map(app);
 IFrameCustomizationEndpoints.Map(app);
 EmbedLinksEndpoints.Map(app);
 AiConnectionStringsEndpoints.Map(app);
@@ -283,6 +296,16 @@ AssistantEndpoints.Map(app);
 // map before MapSpaFallback or /apps/{slug}/embed/* is swallowed as index.html
 EmbedEndpoints.Map(app);
 StaticAssetEndpoints.MapSpaFallback(app);
+
+if (!isOpenApiDocumentGeneration)
+{
+    var applianceOptions = app.Services.GetRequiredService<IOptions<ApplianceOptions>>().Value;
+    if (string.IsNullOrEmpty(applianceOptions.WhatsAppBridgeToken) == false ||
+        Directory.Exists(Path.GetDirectoryName(applianceOptions.WhatsAppDataDir)))
+    {
+        await app.Services.GetRequiredService<IWhatsAppBridgeSecret>().GetAsync(CancellationToken.None);
+    }
+}
 
 app.Run();
 

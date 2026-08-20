@@ -9,6 +9,7 @@ using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints.Helpers;
 using Raven.Quill.Raven;
 using Raven.Quill.Telegram;
+using Raven.Quill.WhatsApp;
 using Raven.Quill.Wizard;
 using TelegramUser = Telegram.Bot.Types.User;
 
@@ -36,8 +37,7 @@ public static class ChannelsEndpoints
             .Accepts<ProvisionChannelRequest>("application/json")
             .Produces<ProvisionChannelResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
-            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound)
-            .ProducesProblem(StatusCodes.Status501NotImplemented);
+            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
         group.MapGet("/channels", ListChannelsAsync)
             .WithName("channels.list")
@@ -49,14 +49,13 @@ public static class ChannelsEndpoints
             .Accepts<UpdateChannelRequest>("application/json")
             .Produces<ChannelSummaryResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
-            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound)
-            .ProducesProblem(StatusCodes.Status501NotImplemented);
+            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
         group.MapDelete("/channels/{channelId}", DeleteChannelAsync)
             .WithName("channels.delete")
             .Produces(StatusCodes.Status204NoContent)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound)
-            .ProducesProblem(StatusCodes.Status501NotImplemented);
+            .Produces<ApiErrorResponse>(StatusCodes.Status502BadGateway);
     }
 
 
@@ -65,6 +64,7 @@ public static class ChannelsEndpoints
         ProvisionChannelRequest body,
         IDocumentStore store,
         ITelegramChannelManager telegramManager,
+        IWhatsAppBridgeClient whatsAppBridge,
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
@@ -80,7 +80,7 @@ public static class ChannelsEndpoints
         {
             ChannelType.IFrame => await ProvisionIFrameAsync(app, body, store, logger, ct),
             ChannelType.Telegram => await ProvisionTelegramAsync(app, body, store, telegramManager, logger, ct),
-            ChannelType.WhatsApp => ProvisionWhatsAppAsync(),
+            ChannelType.WhatsAppPersonal => await ProvisionWhatsAppAsync(app, body, store, whatsAppBridge, logger, ct),
             null => Results.BadRequest(new ApiErrorResponse("type is required")),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{body.Type}'")),
         };
@@ -210,7 +210,64 @@ public static class ChannelsEndpoints
         return Results.Ok(new ProvisionChannelResponse(channelId));
     }
 
-    private static IResult ProvisionWhatsAppAsync() => NotImplementedChannel(ChannelType.WhatsApp);
+    private static async Task<IResult> ProvisionWhatsAppAsync(
+        App app,
+        ProvisionChannelRequest body,
+        IDocumentStore store,
+        IWhatsAppBridgeClient whatsAppBridge,
+        ILogger<ChannelsLogger> logger,
+        CancellationToken ct)
+    {
+        var config = await AgentLookup.FindAsync(store, app.Database, body.AgentId, ct);
+        if (config is null)
+            return Results.BadRequest(new ApiErrorResponse($"unknown agentId '{body.AgentId}'"));
+
+        if (body.AllowedOrigins is { Length: > 0 })
+            return Results.BadRequest(new ApiErrorResponse("allowedOrigins does not apply to WhatsApp channels"));
+
+        if (body.Telegram is not null)
+            return Results.BadRequest(new ApiErrorResponse("telegram settings apply to Telegram channels only"));
+
+        if (TryValidateDisplayName(body.DisplayName, out var nameError) == false)
+            return Results.BadRequest(new ApiErrorResponse(nameError!));
+
+        if (WhatsAppParameterBindings.TryResolve(config, body.WhatsApp?.ParameterBindings, out var bindings, out var paramError) == false)
+            return Results.BadRequest(new ApiErrorResponse(paramError!, Code: "missing_parameters"));
+
+        using var session = store.OpenAsyncSession(app.Database);
+
+        var channelId = Guid.NewGuid().ToString("N");
+        var channel = new Channel
+        {
+            Id = Channel.IdPrefix + channelId,
+            Type = ChannelType.WhatsAppPersonal,
+            DisplayName = body.DisplayName ?? "WhatsApp Personal",
+            AgentId = config.Identifier,
+            AllowedOrigins = [],
+            Enabled = true,
+            CreatedAt = DateTime.UtcNow,
+            WhatsApp = new WhatsAppSettings { ParameterBindings = bindings },
+        };
+
+        await session.StoreAsync(channel, ct);
+        await session.SaveChangesAsync(ct);
+
+        try
+        {
+            await whatsAppBridge.StartSessionAsync(app.Database, channelId, pairingPhoneNumber: null, ct);
+        }
+        catch (WhatsAppBridgeException e)
+        {
+            logger.LogWarning(
+                "WhatsApp session start deferred for channel {ChannelId}: {Error}", channelId, e.Message);
+        }
+
+        logger.LogInformation(
+            "Provisioned WhatsApp Personal channel slug={Slug} channelId={ChannelId} agentId={AgentId}",
+            app.Slug, channelId, config.Identifier);
+
+        return Results.Ok(new ProvisionChannelResponse(channelId));
+    }
 
     private static async Task<IResult> ListChannelsAsync(
         string slug,
@@ -258,7 +315,7 @@ public static class ChannelsEndpoints
         {
             ChannelType.IFrame => await UpdateIFrameChannelAsync(session, channel, body, app.Slug, channelId, logger, ct),
             ChannelType.Telegram => await UpdateTelegramChannelAsync(session, channel, body, app, channelId, store, telegramManager, logger, ct),
-            ChannelType.WhatsApp => UpdateWhatsAppChannelAsync(),
+            ChannelType.WhatsAppPersonal => await UpdateWhatsAppChannelAsync(session, channel, body, app, channelId, logger, ct),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{channel.Type}'")),
         };
     }
@@ -402,7 +459,39 @@ public static class ChannelsEndpoints
         return Results.Ok(ChannelSummaryResponse.From(channel));
     }
 
-    private static IResult UpdateWhatsAppChannelAsync() => NotImplementedChannel(ChannelType.WhatsApp);
+    private static async Task<IResult> UpdateWhatsAppChannelAsync(
+        IAsyncDocumentSession session,
+        Channel channel,
+        UpdateChannelRequest body,
+        App app,
+        string channelId,
+        ILogger<ChannelsLogger> logger,
+        CancellationToken ct)
+    {
+        if (body.AllowedOrigins is not null)
+            return Results.BadRequest(new ApiErrorResponse("allowedOrigins does not apply to WhatsApp channels"));
+
+        if (body.Telegram is not null)
+            return Results.BadRequest(new ApiErrorResponse("telegram settings apply to Telegram channels only"));
+
+        if (body.DisplayName is not null)
+        {
+            if (TryValidateDisplayName(body.DisplayName, out var nameError) == false)
+                return Results.BadRequest(new ApiErrorResponse(nameError!));
+            channel.DisplayName = body.DisplayName;
+        }
+
+        if (body.Enabled is not null)
+            channel.Enabled = body.Enabled.Value;
+
+        await session.SaveChangesAsync(ct);
+
+        logger.LogInformation(
+            "Updated WhatsApp Personal channel slug={Slug} channelId={ChannelId} enabled={Enabled}",
+            app.Slug, channelId, channel.Enabled);
+
+        return Results.Ok(ChannelSummaryResponse.From(channel));
+    }
 
 
     private static async Task<IResult> DeleteChannelAsync(
@@ -410,6 +499,7 @@ public static class ChannelsEndpoints
         string channelId,
         IDocumentStore store,
         ITelegramChannelManager telegramManager,
+        IWhatsAppBridgeClient whatsAppBridge,
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
@@ -426,7 +516,7 @@ public static class ChannelsEndpoints
         {
             ChannelType.IFrame => await DeleteIFrameChannelAsync(session, channel, app.Slug, channelId, logger, ct),
             ChannelType.Telegram => await DeleteTelegramChannelAsync(session, channel, app, channelId, store, telegramManager, logger, ct),
-            ChannelType.WhatsApp => DeleteWhatsAppChannelAsync(),
+            ChannelType.WhatsAppPersonal => await DeleteWhatsAppChannelAsync(session, channel, app, channelId, whatsAppBridge, logger, ct),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{channel.Type}'")),
         };
     }
@@ -468,7 +558,34 @@ public static class ChannelsEndpoints
         return Results.NoContent();
     }
 
-    private static IResult DeleteWhatsAppChannelAsync() => NotImplementedChannel(ChannelType.WhatsApp);
+    private static async Task<IResult> DeleteWhatsAppChannelAsync(
+        IAsyncDocumentSession session,
+        Channel channel,
+        App app,
+        string channelId,
+        IWhatsAppBridgeClient whatsAppBridge,
+        ILogger<ChannelsLogger> logger,
+        CancellationToken ct)
+    {
+        try
+        {
+            await whatsAppBridge.DeleteSessionAsync(app.Database, channelId, ct);
+        }
+        catch (WhatsAppBridgeException e)
+        {
+            logger.LogWarning(
+                "WhatsApp channel delete refused for {ChannelId}: {Error}", channelId, e.Message);
+            return Results.Json(
+                new ApiErrorResponse("whatsapp bridge is unavailable; the channel was not deleted", Code: "bridge_unavailable"),
+                statusCode: StatusCodes.Status502BadGateway);
+        }
+
+        session.Delete(channel);
+        await session.SaveChangesAsync(ct);
+
+        logger.LogInformation("Deleted WhatsApp Personal channel slug={Slug} channelId={ChannelId}", app.Slug, channelId);
+        return Results.NoContent();
+    }
 
     private static string AlreadyConnected(string? botUsername, string? ownerDatabase) =>
         ownerDatabase is null
@@ -550,11 +667,6 @@ public static class ChannelsEndpoints
             logger.LogWarning("Telegram bot reservation {ReservationId} was not released: {Error}", reservationId, e.Message);
         }
     }
-
-    private static IResult NotImplementedChannel(ChannelType type) =>
-        Results.Problem(
-            detail: $"{type} channels are not yet supported.",
-            statusCode: StatusCodes.Status501NotImplemented);
 
     private static bool TryNormalizeOrigins(string[] origins, out string? error)
     {

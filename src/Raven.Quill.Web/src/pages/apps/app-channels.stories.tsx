@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { channelsMocks } from "@/mocks/channels-mocks";
+import { expect, userEvent, waitFor, within } from "storybook/test";
+import { channelsMocks, SAMPLE_WHATSAPP_CHANNEL_ID } from "@/mocks/channels-mocks";
 import { embedLinksMocks } from "@/mocks/embed-links-mocks";
 import { AppChannels } from "./app-channels";
 
@@ -25,6 +26,35 @@ export const Empty: Story = {
                 channels: [channelsMocks.list([])],
             },
         },
+    },
+};
+
+export const CreateWhatsAppPersonal: Story = {
+    parameters: {
+        msw: {
+            handlers: {
+                channels: [
+                    channelsMocks.list(),
+                    channelsMocks.create({ channelId: SAMPLE_WHATSAPP_CHANNEL_ID }),
+                    channelsMocks.update(),
+                    channelsMocks.delete(),
+                ],
+            },
+        },
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        const body = within(canvasElement.ownerDocument.body);
+
+        await userEvent.click(await canvas.findByRole("button", { name: /new channel/i }));
+        await userEvent.click(await body.findByRole("menuitem", { name: /whatsapp personal/i }));
+
+        const sheet = within(await body.findByRole("dialog"));
+        await userEvent.click(sheet.getByRole("combobox", { name: /agent/i }));
+        await userEvent.click(await body.findByRole("option", { name: /faq bot/i }));
+        await userEvent.click(sheet.getByRole("button", { name: /create channel/i }));
+
+        await waitFor(() => expect(sheet.getByRole("img", { name: /whatsapp pairing qr code/i })).toBeInTheDocument());
     },
 };
 

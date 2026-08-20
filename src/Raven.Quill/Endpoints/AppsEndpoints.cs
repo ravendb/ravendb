@@ -15,6 +15,7 @@ using Raven.Quill.Endpoints.Helpers;
 using Raven.Quill.Live;
 using Raven.Quill.Raven;
 using Raven.Quill.Telegram;
+using Raven.Quill.WhatsApp;
 using Raven.Quill.Wizard;
 
 namespace Raven.Quill.Endpoints;
@@ -98,6 +99,7 @@ public static class AppsEndpoints
         string slug,
         IDocumentStore store,
         ITelegramChannelManager telegramManager,
+        IWhatsAppBridgeClient whatsAppBridge,
         ILogger<AppsLogger> logger,
         CancellationToken ct)
     {
@@ -110,6 +112,9 @@ public static class AppsEndpoints
 
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
+
+        await WhatsAppSessionCleanup.DeleteAllForDatabaseAsync(store, whatsAppBridge, app.Database, logger, ct);
+
 
         await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(slug, true), ct);
         await AppLookup.DeleteAppAsync(store, slug, ct);

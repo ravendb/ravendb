@@ -239,17 +239,6 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : QuillTestBase
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Channel_endpoint_returns_501_for_recognized_but_unimplemented_type()
-    {
-        await using var app = await NewAppAsync();
-
-        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.WhatsApp, "demo-agent", Array.Empty<string>())));
-
-        Assert.Equal(HttpStatusCode.NotImplemented, ex.StatusCode);
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
     public async Task Channel_endpoint_rejects_unknown_type()
     {
         await using var app = await NewAppAsync();
