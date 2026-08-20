@@ -170,6 +170,33 @@ EXPORT int32_t
 rvn_sync_pager(void* handle,
     int32_t* detailed_error_code);
 
+struct rvn_writeback_stats
+{
+    int64_t bytes_written;
+    int64_t ranges_written;
+    int64_t set_bits_remaining;
+    int64_t total_wait_ticks;
+    int64_t max_range_wait_ticks;
+};
+
+/* Walks the pager's dirty pages and pushes the corresponding ranges to the device as a pipelined stream:
+    Blocking; returns once all dirty ranges have been pushed AND completed.
+   pipeline_depth == 0 is trickle mode: initiate the writeback without waiting (background work).
+   Any failure *must* be treated as catastrophic, see fsync-gate*/
+EXPORT int32_t
+rvn_pager_writeback_dirty(void* handle,
+    int32_t pipeline_depth,
+    int32_t block_size_bytes,
+    struct rvn_writeback_stats* stats,
+    int32_t* detailed_error_code);
+
+/* st_dev on posix, volume serial number on windows - groups pagers that share
+   a physical device so the caller can budget writeback per device. */
+EXPORT int32_t
+rvn_pager_get_device_id(void* handle,
+    uint64_t* device_id,
+    int32_t* detailed_error_code);
+
 EXPORT int32_t
 rvn_pager_set_sparse_region(void* handle,
     int64_t offset,

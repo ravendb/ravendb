@@ -1201,62 +1201,82 @@ namespace Voron.Impl.Journal
 #endif
             }
 
-            private int _dataFileWritebackFd = -2;
-            private static readonly bool DisableWritebackPacing =
-                Environment.GetEnvironmentVariable("VORON_DISABLE_WRITEBACK_PACING") == "1";
+            private const int DefaultWritebackPipelineDepth = 4;
 
-            private void ScheduleDataFileWriteback(Pager dataPager, Span<Pal.page_to_write> pages)
+            private static readonly int? PinnedWritebackDepth =
+                int.TryParse(Environment.GetEnvironmentVariable("VORON_WRITEBACK_DEPTH"), out var pinned) && pinned >= 1
+                    ? pinned : null;
+
+            private bool _writebackNotSupported;
+
+            /// <summary>
+            /// Push data to the drive, in a paced manner, so if we have 1GB to write, we won't push that all at once. 
+            /// We send it in blocks, and that avoids saturating the I/O channels, so journal writes aren't "stuck in a traffic jam".
+            /// </summary>
+            private void WritebackDirtyRanges()
             {
-                if (DisableWritebackPacing || PlatformDetails.RunningOnPosix == false || _dataFileWritebackFd == -1)
+                var options = _waj._env.Options;
+                if (_writebackNotSupported)
                     return;
 
-                if (_waj._env.Options.RootJournal != null)
+                var dataPager = _waj._env.DataPager;
+                var dataPagerState = _waj._env.CurrentStateRecord.DataPagerState;
+                var depth = PinnedWritebackDepth ?? DefaultWritebackPipelineDepth;
+
+                var rc = Pal.rvn_pager_writeback_dirty(dataPagerState.Handle, depth,
+                    options.SyncWritebackBlockSizeInMb * Constants.Size.Megabyte, out var stats, out var error);
+
+                if (rc == PalFlags.FailCodes.FailWritebackNotSupported)
+                {
+                    _writebackNotSupported = true;
+                    return;
+                }
+
+                if (rc != PalFlags.FailCodes.Success)
+                    PalHelper.ThrowLastError(rc, error, $"Failed to writeback dirty ranges of {dataPager.FileName}");
+
+                if (_waj._logger.IsDebugEnabled && stats.BytesWritten > 0)
+                {
+                    _waj._logger.Debug(
+                        $"Writeback of {stats.BytesWritten / Constants.Size.Kilobyte:#,#0} kb in {stats.RangesWritten:#,#} ranges " +
+                        $"(depth {depth}, waited {TimeSpan.FromTicks(stats.TotalWaitTicks).TotalMilliseconds:#,#0} ms, max range {TimeSpan.FromTicks(stats.MaxRangeWaitTicks).TotalMilliseconds:#,#0} ms, " +
+                        $"{stats.SetBitsRemaining:#,#0} dirty chunks remain) for {dataPager.FileName}");
+                }
+            }
+
+            /// <summary>
+            /// After each flush, initiate-only writeback of the freshly accumulated dirty ranges to the drive.
+            /// This trickle the writes to the disk on a roughly constant basis, so we don't have a huge writeback at the end of 
+            /// a long flush, which would stall journal writes. Under load, this will be deferred to the explict sync to avoid 
+            /// slowing down journal writes.
+            /// </summary>
+            private void TrickleWriteback(Pager dataPager, Pager.State dataPagerState)
+            {
+                var options = _waj._env.Options;
+                if (_writebackNotSupported || options.SyncWritebackBlockSizeInMb <= 0)
                     return;
 
-                if (_dataFileWritebackFd == -2)
+                if (PlatformDetails.RunningOnPosix == false)
+                    return; // FlushViewOfFile has no initiate-only form - it would stall the flush
+
+                if (options.RootJournal != null)
+                    return; // non-root (shared-journal) environments never trickle
+
+                var gate = options.WritebackGate;
+                if (gate != null && gate.ShouldDrain())
+                    return; // drain mode - the sync owns the writeback now
+
+                var rc = Pal.rvn_pager_writeback_dirty(dataPagerState.Handle, pipelineDepth: 0 /* initiate only */,
+                    options.SyncWritebackBlockSizeInMb * Constants.Size.Megabyte, out _, out var error);
+
+                if (rc == PalFlags.FailCodes.FailWritebackNotSupported)
                 {
-                    _dataFileWritebackFd = Sparrow.Server.Platform.Posix.Syscall.open(dataPager.FileName,
-                        Sparrow.Server.Platform.Posix.OpenFlags.O_WRONLY, 0);
-                    if (_dataFileWritebackFd < 0)
-                    {
-                        _dataFileWritebackFd = -1;
-                        return;
-                    }
+                    _writebackNotSupported = true;
+                    return;
                 }
 
-                const long mergeGap = 2 * 1024 * 1024;
-                const int maxCalls = 64;
-                long start = -1, end = 0;
-                var calls = 0;
-                foreach (ref readonly var page in pages)
-                {
-                    var offset = page.page_num * Constants.Storage.PageSize;
-                    var length = (long)page.count_of_pages * Constants.Storage.PageSize;
-                    if (start == -1)
-                    {
-                        start = offset;
-                        end = offset + length;
-                        continue;
-                    }
-
-                    if (offset - end <= mergeGap || calls >= maxCalls)
-                    {
-                        end = offset + length;
-                        continue;
-                    }
-
-                    Sparrow.Server.Platform.Posix.Syscall.sync_file_range(_dataFileWritebackFd, start, end - start,
-                        Sparrow.Server.Platform.Posix.SyncFileRangeFlags.SYNC_FILE_RANGE_WRITE);
-                    calls++;
-                    start = offset;
-                    end = offset + length;
-                }
-
-                if (start != -1)
-                {
-                    Sparrow.Server.Platform.Posix.Syscall.sync_file_range(_dataFileWritebackFd, start, end - start,
-                        Sparrow.Server.Platform.Posix.SyncFileRangeFlags.SYNC_FILE_RANGE_WRITE);
-                }
+                if (rc != PalFlags.FailCodes.Success)
+                    PalHelper.ThrowLastError(rc, error, $"Failed to trickle writeback of {dataPager.FileName}");
             }
 
             public void WaitForSyncToCompleteOnDispose()
@@ -1441,7 +1461,15 @@ namespace Voron.Impl.Journal
                     var dataPager = parent._waj._env.DataPager;
                     var currentStateRecord = parent._waj._env.CurrentStateRecord;
                     var dataPagerState = currentStateRecord.DataPagerState;
+                    var options = parent._waj._env.Options;
+                    var gate = options.SyncWritebackBlockSizeInMb > 0 ? options.WritebackGate : null;
+
+                    // In trickle mode, we already initiated the writeback, so we don't need to do it again here. 
+                    // In drain mode, we drain first to avoid big I/O hitting all at once, causing congestion.
+                    if (gate?.ShouldDrain() == true)
+                        parent.WritebackDirtyRanges();
                     dataPager.Sync(dataPagerState, Interlocked.Read(ref parent._totalWrittenButUnsyncedBytes));
+                    gate?.RecordSyncCost(sp.Elapsed.Ticks);
                     if (parent._waj._logger.IsDebugEnabled)
                     {
                         var sizeInKb = (dataPagerState.NumberOfAllocatedPages * Constants.Storage.PageSize) / Constants.Size.Kilobyte;
@@ -1633,7 +1661,7 @@ namespace Voron.Impl.Journal
                             }
                         }
 
-                        ScheduleDataFileWriteback(dataPager, pages);
+                        TrickleWriteback(dataPager, dataPagerState);
                     }
                     finally
                     {
@@ -1893,12 +1921,6 @@ namespace Voron.Impl.Journal
 
             public void Dispose()
             {
-                if (_dataFileWritebackFd >= 0)
-                {
-                    Sparrow.Server.Platform.Posix.Syscall.close(_dataFileWritebackFd);
-                    _dataFileWritebackFd = -1;
-                }
-
                 foreach (var journalFile in _journalsToDelete)
                 {
                     // we need to release all unused journals

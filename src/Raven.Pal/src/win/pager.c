@@ -23,6 +23,80 @@ __forceinline int clzl(uint64_t x)
 
 extern struct rvn_configuration g_cfg;
 
+static int64_t
+_stopwatch(void)
+{
+    LARGE_INTEGER counter;
+    QueryPerformanceCounter(&counter);
+    return counter.QuadPart;
+}
+
+static int64_t
+_elapsed(int64_t start, int64_t now)
+{
+    static int64_t frequency; /* fixed at boot; benign to race the init */
+    if (frequency == 0)
+    {
+        LARGE_INTEGER freq;
+        QueryPerformanceFrequency(&freq);
+        frequency = freq.QuadPart;
+    }
+
+    int64_t elapsed = now - start;
+    return (elapsed / frequency) * 10000000 + (elapsed % frequency) * 10000000 / frequency;
+}
+
+#include "../pager_writeback.inl"
+
+PRIVATE int32_t
+_writeback_supported(struct handle *handle_ptr)
+{
+    /* FlushViewOfFile needs a mapping; without one the FlushFileBuffers
+       barrier is the only option and the caller falls back to it */
+    return handle_ptr->write_address != NULL || handle_ptr->read_address != NULL;
+}
+
+PRIVATE int32_t
+_writeback_range_start(struct handle *handle_ptr, int64_t offset, int64_t length, int32_t *detailed_error_code)
+{
+    /* NtFlushVirtualMemory waits for the paging writes (but not the device
+       cache), so this is the synchronous push+wait - complete is a no-op */
+    if (offset >= handle_ptr->allocation_size)
+        return SUCCESS;
+    length = rvn_min(length, handle_ptr->allocation_size - offset);
+    char *address = (char *)(handle_ptr->write_address != NULL ? handle_ptr->write_address : handle_ptr->read_address) + offset;
+    if (!FlushViewOfFile(address, (SIZE_T)length))
+    {
+        *detailed_error_code = GetLastError();
+        return FAIL_FLUSH_VIEW_OF_FILE;
+    }
+    return SUCCESS;
+}
+
+PRIVATE int32_t
+_writeback_range_complete(struct handle *handle_ptr, int64_t offset, int64_t length, int32_t *detailed_error_code)
+{
+    (void)handle_ptr;
+    (void)offset;
+    (void)length;
+    (void)detailed_error_code;
+    return SUCCESS;
+}
+
+EXPORT int32_t
+rvn_pager_get_device_id(void *handle, uint64_t *device_id, int32_t *detailed_error_code)
+{
+    struct handle *handle_ptr = handle;
+    BY_HANDLE_FILE_INFORMATION info;
+    if (!GetFileInformationByHandle(handle_ptr->file_handle, &info))
+    {
+        *detailed_error_code = GetLastError();
+        return FAIL_GET_FILE_SIZE;
+    }
+    *device_id = info.dwVolumeSerialNumber;
+    return SUCCESS;
+}
+
 uint64_t _GetNearestFileSize(uint64_t needed_size)
 {
     const uint64_t POWER_OF_TWO_THRESHOLD = (uint64_t)512 * 1024ul * 1024ul; // 512MB
@@ -371,6 +445,7 @@ void delete_global_state(struct handle_global_state *global_state)
     {
         free(global_state->file_path);
     }
+    _free_dirty_bitmaps(global_state->dirty_bitmap);
     DeleteCriticalSection(&global_state->lock);
     free(global_state);
 }
@@ -769,6 +844,7 @@ int32_t rvn_write_file_io(
             return FAIL_WRITE_FILE;
         }
     }
+    _mark_dirty_pages(handle, buffers, count);
     return SUCCESS;
 }
 

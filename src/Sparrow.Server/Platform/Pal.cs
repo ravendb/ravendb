@@ -105,6 +105,16 @@ namespace Sparrow.Server.Platform
             DoNotMap = 1 << 9,
         }
 
+        [StructLayout(LayoutKind.Sequential)]
+        public struct WritebackStats
+        {
+            public long BytesWritten;
+            public long RangesWritten;
+            public long SetBitsRemaining;
+            public long TotalWaitTicks;
+            public long MaxRangeWaitTicks;
+        }
+
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.ErrnoSpecialCodes rvn_get_error_meaning(Int32 error);
 
@@ -159,6 +169,20 @@ namespace Sparrow.Server.Platform
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_sync_pager(
             void* handle, out Int32 errorCode);
+
+        
+        // This is advisory in general, for performance. but any failure MUST be treated as a sync failure (see fsync-gate)
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_pager_writeback_dirty(
+            void* handle,
+            Int32 pipelineDepth,
+            Int32 blockSizeBytes,
+            out WritebackStats stats,
+            out Int32 errorCode);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_pager_get_device_id(
+            void* handle, out UInt64 deviceId, out Int32 errorCode);
 
         public static PalFlags.FailCodes rvn_init_pager(
             string filename,
