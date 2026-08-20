@@ -117,6 +117,21 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(2)]
         [ConfigurationEntry("Storage.SyncJournalsCountThreshold", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int SyncJournalsCountThreshold { get; set; }
+
+        [Description("Block size for paced dirty-data writeback before the durability barrier to prevent blocking journal writes; set to 0 to disable and use monolithic fsync.")]
+        [DefaultValue(32)]
+        [ConfigurationEntry("Storage.SyncWritebackBlockSizeInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int SyncWritebackBlockSizeInMb { get; set; }
+
+        [Description("Moving-average sync cost threshold per device; exceeding this value switches writeback from trickle to drain mode to handle elevated I/O latency or exhausted burst credits.")]  
+        [DefaultValue(100)]
+        [ConfigurationEntry("Storage.SyncWritebackBarrierCostThresholdInMs", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int SyncWritebackBarrierCostThresholdInMs { get; set; }
+
+        [Description("Time-weighted device queue depth threshold (iostat aqu-sz) that switches writeback from trickle to paced drain mode; reverts when queue stays below 60% of this value for 30 seconds.")]
+        [DefaultValue(5)]
+        [ConfigurationEntry("Storage.SyncWritebackDrainQueueDepthThreshold", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int SyncWritebackDrainQueueDepthThreshold { get; set; }
         
         [Description("EXPERT: Determine the acceleration level that Voron will use when compressing journals.")]
         [DefaultValue(1)]

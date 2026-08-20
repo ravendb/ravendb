@@ -48,6 +48,8 @@ struct arena
     int eventfd;
 };
 
+struct dirty_bitmap;
+
 // This state is shared across all instances of the pager for a particular file
 struct handle_global_state
 {
@@ -75,6 +77,8 @@ struct handle_global_state
     // * we need to ensure no mixing of closing while fsyncing folders and no mixing of multiple
     //   fsyncs at the same time.
     struct arena fsync_dir_arena;
+
+    struct dirty_bitmap *dirty_bitmap;
 };
 
 struct handle
@@ -136,6 +140,21 @@ int32_t rvn_write_mmap32(
 
 PRIVATE
 bool _io_ring_supported();
+
+PRIVATE void
+_mark_dirty_pages(void *handle, struct page_to_write *buffers, int32_t count);
+
+PRIVATE void
+_free_dirty_bitmaps(struct dirty_bitmap *bm);
+
+PRIVATE int32_t
+_writeback_supported(struct handle *handle_ptr);
+
+PRIVATE int32_t
+_writeback_range_start(struct handle *handle_ptr, int64_t offset, int64_t length, int32_t *detailed_error_code);
+
+PRIVATE int32_t
+_writeback_range_complete(struct handle *handle_ptr, int64_t offset, int64_t length, int32_t *detailed_error_code);
 
 PRIVATE int32_t /* different impl for linux and mac */
 _flush_file(int32_t fd);

@@ -152,6 +152,47 @@ int32_t rvn_write_vectored_file_io(
         if (rc != SUCCESS)
             return rc;
     }
+    _mark_dirty_pages(handle, buffers, count);
+    return SUCCESS;
+}
+
+PRIVATE int32_t
+_writeback_supported(struct handle *handle_ptr)
+{
+    (void)handle_ptr;
+    return true;
+}
+
+PRIVATE int32_t
+_writeback_range_start(struct handle *handle_ptr, int64_t offset, int64_t length, int32_t *detailed_error_code)
+{
+    int rc;
+    do
+    {
+        rc = sync_file_range(handle_ptr->file_fd, offset, length, SYNC_FILE_RANGE_WRITE);
+    } while (rc != 0 && errno == EINTR);
+    if (rc != 0)
+    {
+        *detailed_error_code = errno;
+        return FAIL_SYNC_FILE;
+    }
+    return SUCCESS;
+}
+
+PRIVATE int32_t
+_writeback_range_complete(struct handle *handle_ptr, int64_t offset, int64_t length, int32_t *detailed_error_code)
+{
+    int rc;
+    do
+    {
+        rc = sync_file_range(handle_ptr->file_fd, offset, length,
+                             SYNC_FILE_RANGE_WAIT_BEFORE | SYNC_FILE_RANGE_WRITE | SYNC_FILE_RANGE_WAIT_AFTER);
+    } while (rc != 0 && errno == EINTR);
+    if (rc != 0)
+    {
+        *detailed_error_code = errno;
+        return FAIL_SYNC_FILE;
+    }
     return SUCCESS;
 }
 

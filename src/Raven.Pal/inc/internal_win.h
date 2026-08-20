@@ -17,6 +17,8 @@ struct journal_handle
 };
 
 
+struct dirty_bitmap;
+
 // This state is shared across all instances of the pager for a particular file
 struct handle_global_state
 {
@@ -41,6 +43,8 @@ struct handle_global_state
     char* file_path;
     void* arena;
     size_t arena_size;
+
+    struct dirty_bitmap* dirty_bitmap;
 };
 
 // This state represent a single handle to the pager on a file
@@ -81,6 +85,12 @@ int32_t rvn_write_io_ring(
     struct page_to_write* buffers,
     int32_t count,
     int32_t* detailed_error_code);
+
+PRIVATE void
+_mark_dirty_pages(void *handle, struct page_to_write *buffers, int32_t count);
+
+PRIVATE void
+_free_dirty_bitmaps(struct dirty_bitmap *bm);
 
 #endif
 #endif
