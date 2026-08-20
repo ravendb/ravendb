@@ -419,7 +419,8 @@ public static class EmbedEndpoints
         catch (Exception e) when (e is not OperationCanceledException)
         {
             // the page still works without history, but the visitor's transcript is gone - say so in the logs
-            logger.Warn(e, "failed to load embed history for conversationId={ConversationId}", conversationId);
+            if (logger.IsWarnEnabled)
+                logger.Warn(e, "failed to load embed history for conversationId={ConversationId}", conversationId);
             return [];
         }
     }
