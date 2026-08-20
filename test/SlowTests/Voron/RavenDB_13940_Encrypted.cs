@@ -21,6 +21,9 @@ namespace SlowTests.Voron
         }
 
         private readonly byte[] _masterKey = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
+        // RavenDB-27397: every journal opens with a 4KB header record, entries start one block later
+        private const int JournalHeaderRecordSize = Constants.Size.Kilobyte * 4;
+
         private bool _onIntegrityErrorOfAlreadySyncedDataHandlerWasCalled;
 
         protected override void Configure(StorageEnvironmentOptions options)
@@ -93,7 +96,7 @@ namespace SlowTests.Voron
 
             StopDatabase();
 
-            CorruptJournal(lastJournal, 4 * Constants.Size.Kilobyte * 4);
+            CorruptJournal(lastJournal, JournalHeaderRecordSize + 4 * Constants.Size.Kilobyte * 4);
 
             StartDatabase();
 
@@ -175,7 +178,7 @@ namespace SlowTests.Voron
 
             StopDatabase();
 
-            CorruptJournal(lastJournal, sizeof(TransactionHeader) + 5, 1);
+            CorruptJournal(lastJournal, JournalHeaderRecordSize + sizeof(TransactionHeader) + 5, 1);
 
             StartDatabase();
 
@@ -257,7 +260,7 @@ namespace SlowTests.Voron
 
             StopDatabase();
 
-            CorruptJournal(lastJournal, sizeof(TransactionHeader) + 5, Constants.Size.Kilobyte * 4 * 2);
+            CorruptJournal(lastJournal, JournalHeaderRecordSize + sizeof(TransactionHeader) + 5, Constants.Size.Kilobyte * 4 * 2);
 
             StartDatabase();
 
@@ -339,7 +342,7 @@ namespace SlowTests.Voron
 
             StopDatabase();
 
-            CorruptJournal(lastJournal, Constants.Size.Kilobyte * 4 + (int)Marshal.OffsetOf<TransactionHeader>(nameof(TransactionHeader.LastPageNumber)), 4, 0);
+            CorruptJournal(lastJournal, JournalHeaderRecordSize + Constants.Size.Kilobyte * 4 + (int)Marshal.OffsetOf<TransactionHeader>(nameof(TransactionHeader.LastPageNumber)), 4, 0);
 
             StartDatabase();
 
@@ -421,7 +424,7 @@ namespace SlowTests.Voron
 
             StopDatabase();
 
-            CorruptJournal(lastJournal, sizeof(TransactionHeader) + 5, Constants.Size.Kilobyte * 4 * 7);
+            CorruptJournal(lastJournal, JournalHeaderRecordSize + sizeof(TransactionHeader) + 5, Constants.Size.Kilobyte * 4 * 7);
 
             Assert.Throws<InvalidJournalException>(StartDatabase);
         }
