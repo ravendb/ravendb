@@ -57,7 +57,7 @@ export function FormStringList<TFieldValues extends FieldValues, TName extends A
 
     return (
         <Field>
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-start justify-between gap-3">
                 <div>
                     <FieldLabel>{label}</FieldLabel>
                     {description && <FieldDescription>{description}</FieldDescription>}

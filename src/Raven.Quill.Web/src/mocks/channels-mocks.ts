@@ -22,7 +22,11 @@ export const channelsMocks = {
                 enabled: update.enabled ?? channel.enabled,
                 allowedOrigins: update.allowedOrigins ?? channel.allowedOrigins,
                 telegram: channel.telegram
-                    ? { ...channel.telegram, messages: update.telegram?.messages ?? channel.telegram.messages }
+                    ? {
+                          ...channel.telegram,
+                          messages: update.telegram?.messages ?? channel.telegram.messages,
+                          parameterBindings: update.telegram?.parameterBindings ?? channel.telegram.parameterBindings,
+                      }
                     : channel.telegram,
             });
         }),

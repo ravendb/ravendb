@@ -3,6 +3,13 @@ import type { TelegramChannelMessages } from "@/api/generated/server-api";
 
 type MessageKey = keyof TelegramChannelMessages;
 
+type MessageDefault = { label: string; defaultText: string; kind?: "line" };
+
+// A message default paired with its key, as consumed by the edit form. Annotated so `kind` stays
+// accessible: `satisfies` below keeps each entry's narrow type, so without this the spread would drop
+// `kind` from every entry that doesn't set it.
+type TelegramMessageField = { name: MessageKey } & MessageDefault;
+
 // Mirrors ResolvedTelegramMessages.Defaults on the server; shown as placeholders in the edit form.
 const TELEGRAM_MESSAGE_DEFAULTS = {
     greeting: {
@@ -26,6 +33,7 @@ const TELEGRAM_MESSAGE_DEFAULTS = {
     sharePhoneNumberButton: {
         label: "Share-phone button label",
         defaultText: "Share phone number",
+        kind: "line",
     },
     ownContactRequired: {
         label: "Someone else's contact shared",
@@ -52,11 +60,45 @@ const TELEGRAM_MESSAGE_DEFAULTS = {
         label: "Group chat refusal",
         defaultText: "I only work in one-on-one chats. Message me directly to start a conversation.",
     },
-} satisfies Record<MessageKey, { label: string; defaultText: string }>;
+} satisfies Record<MessageKey, MessageDefault>;
 
-export const TELEGRAM_MESSAGE_FIELDS = (Object.keys(TELEGRAM_MESSAGE_DEFAULTS) as MessageKey[]).map((name) => ({
-    name,
-    ...TELEGRAM_MESSAGE_DEFAULTS[name],
+export const TELEGRAM_MESSAGE_FIELDS = (Object.keys(TELEGRAM_MESSAGE_DEFAULTS) as MessageKey[]).map(
+    (name): TelegramMessageField => ({
+        name,
+        ...TELEGRAM_MESSAGE_DEFAULTS[name],
+    }),
+);
+
+// The fields split into readable sections so the tab isn't one long stack of identical textareas.
+// Every message key belongs to exactly one group.
+const MESSAGE_GROUPS: { title: string; description: string; keys: MessageKey[] }[] = [
+    {
+        title: "Commands",
+        description: "Replies to the /start and /clear commands.",
+        keys: ["greeting", "conversationCleared"],
+    },
+    {
+        title: "Collecting details",
+        description: "Shown while the bot asks for the phone number and identity your agent needs.",
+        keys: [
+            "usernameMissing",
+            "phoneNumberRequest",
+            "sharePhoneNumberButton",
+            "ownContactRequired",
+            "phoneNumberReceived",
+        ],
+    },
+    {
+        title: "Errors & limits",
+        description: "Shown when something stops the bot from replying normally.",
+        keys: ["notConfigured", "overloaded", "somethingWentWrong", "groupChatRefusal"],
+    },
+];
+
+export const TELEGRAM_MESSAGE_GROUPS = MESSAGE_GROUPS.map((group) => ({
+    title: group.title,
+    description: group.description,
+    fields: group.keys.map((name): TelegramMessageField => ({ name, ...TELEGRAM_MESSAGE_DEFAULTS[name] })),
 }));
 
 const messageOverrideSchema = z.string().trim().max(4096, "Keep it under 4096 characters");

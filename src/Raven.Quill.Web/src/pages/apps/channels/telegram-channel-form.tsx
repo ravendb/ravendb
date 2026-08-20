@@ -195,10 +195,13 @@ function LoadedTelegramChannelForm({
                         />
                         {parameterFields.fields.length > 0 && (
                             <div className="flex flex-col gap-3">
-                                <p className="text-xs text-muted-foreground">
-                                    Map each agent parameter to a constant value bound once for the whole channel, or to
-                                    a field of the Telegram user sending each message.
-                                </p>
+                                <div className="space-y-0.5">
+                                    <h3 className="text-sm font-medium">Parameters</h3>
+                                    <p className="text-xs text-muted-foreground">
+                                        Map each agent parameter to a constant value bound once for the whole channel,
+                                        or to a field of the Telegram user sending each message.
+                                    </p>
+                                </div>
                                 {parameterFields.fields.map((field, index) => {
                                     const hint = telegramParameterSourceHint(parameters[index]?.source);
                                     return (
