@@ -1,17 +1,37 @@
 import { AboutViewAnchored, AccordionItemWrapper } from "components/common/AboutView";
-import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
 import useConnectionStringsLicense from "components/pages/database/settings/connectionStrings/useConnectionStringsLicense";
 import { Icon } from "components/common/Icon";
 import { useRavenLink } from "hooks/useRavenLink";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
+import { useAppSelector } from "components/store";
+import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 
 export default function ServerWideConnectionStringsInfoHub() {
     const { hasAll, featureAvailability } = useConnectionStringsLicense();
+    const hasServerWideConnectionStrings = useAppSelector(
+        licenseSelectors.statusValue("HasServerWideConnectionStrings")
+    );
+
+    const serverWideFeatureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: hasServerWideConnectionStrings,
+            },
+        ],
+    });
+
+    const isLicenseUnlimited = hasAll && hasServerWideConnectionStrings;
 
     const connectionStringsOverviewDocsLink = useRavenLink({ hash: "P5XJOV" });
     const connectionStringsServerwideDocsLink = useRavenLink({ hash: "5AQ7XL" });
 
     return (
-        <AboutViewAnchored defaultOpen={hasAll ? null : "licensing"}>
+        <AboutViewAnchored defaultOpen={isLicenseUnlimited ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -50,10 +70,20 @@ export default function ServerWideConnectionStringsInfoHub() {
                 </div>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper
-                data={featureAvailability}
-                isUnlimited={hasAll}
-                isOpenedByDefault={false}
+                data={[...serverWideFeatureAvailability, ...featureAvailability]}
+                isUnlimited={isLicenseUnlimited}
+                isOpenedByDefault={!hasServerWideConnectionStrings}
             />
         </AboutViewAnchored>
     );
 }
+
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "Server-Wide Connection Strings",
+        featureIcon: "manage-connection-strings",
+        community: { value: false },
+        professional: { value: true },
+        enterprise: { value: true },
+    },
+];
