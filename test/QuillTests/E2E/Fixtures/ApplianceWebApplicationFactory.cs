@@ -73,6 +73,9 @@ public sealed class ApplianceWebApplicationFactory : WebApplicationFactory<Progr
             services.RemoveAll<WidgetAssets>();
             services.AddSingleton(StubWidgetAssets);
 
+            services.RemoveAll<IQuillExpiry>();
+            services.AddSingleton<IQuillExpiry>(new FakeQuillExpiry(isExpired: false, DateTime.MaxValue));
+
             var toRemove = services
                 .Where(d => d.ImplementationType == typeof(RavenReadinessService))
                 .ToList();
