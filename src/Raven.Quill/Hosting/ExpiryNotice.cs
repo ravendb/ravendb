@@ -2,7 +2,7 @@ namespace Raven.Quill.Hosting;
 
 internal static class ExpiryNotice
 {
-    internal static string BuildHtml(DateTime expiresAt) => $"""
+    internal const string Page = $"""
         <!doctype html>
         <html lang="en">
         <head>
@@ -20,12 +20,12 @@ internal static class ExpiryNotice
         <div class="q-alert" role="alert">
         <div class="q-title">This Quill build has expired</div>
         <div class="q-desc">
-        <p>It stopped serving on {expiresAt:yyyy-MM-dd}. Update the image and restart:</p>
+        <p>Your Quill needs an update. Pull the latest image:</p>
         <div class="q-cmd">
-        <pre id="q-command">docker compose pull &amp;&amp; docker compose up -d</pre>
+        <pre id="q-command">docker pull ravendb/quill:latest</pre>
         <button class="q-copy" type="button">Copy</button>
         </div>
-        <p>Your data and activation live on the <code>quill-data</code> volume and survive the update.</p>
+        <p>After a successful update, run the Docker container again.</p>
         </div>
         </div>
         </div>
@@ -112,6 +112,7 @@ internal static class ExpiryNotice
         .q-title{font-weight:500;color:var(--destructive)}
         .q-desc{color:var(--muted-foreground);line-height:1.55}
         .q-desc p{margin:0}
+        .q-desc p+p{margin-top:.5rem}
         .q-desc code{font-family:var(--font-mono);font-size:.9em}
         .q-cmd{position:relative;margin:.5rem 0}
         .q-cmd pre{margin:0;padding:.5rem 5.25rem .5rem .625rem;overflow-x:auto;color:var(--foreground);

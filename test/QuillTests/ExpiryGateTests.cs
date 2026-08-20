@@ -31,10 +31,9 @@ public class ExpiryGateTests(ITestOutputHelper output) : RavenTestBase(output)
 
         var body = await response.Content.ReadAsStringAsync();
         Assert.Contains("This Quill build has expired", body);
-        Assert.Contains("2026-01-02", body);
-        // the command carries `&&`, and this is HTML
-        Assert.Contains("docker compose pull &amp;&amp; docker compose up -d", body);
-        Assert.Contains("quill-data", body);
+        Assert.Contains("Your Quill needs an update. Pull the latest image:", body);
+        Assert.Contains("docker pull ravendb/quill:latest", body);
+        Assert.Contains("After a successful update, run the Docker container again.", body);
     }
 
     /// Proves the gate precedes authentication: an unauthenticated operator gets the reason, not a 401 they
@@ -111,8 +110,8 @@ public class ExpiryGateTests(ITestOutputHelper output) : RavenTestBase(output)
         using var response = await factory.CreateClient().GetAsync("/");
         var body = await response.Content.ReadAsStringAsync();
 
-        Assert.Contains("""<pre id="q-command">docker compose pull &amp;&amp; docker compose up -d</pre>""", body);
-        Assert.Single(Regex.Matches(body, Regex.Escape("docker compose pull")));
+        Assert.Contains("""<pre id="q-command">docker pull ravendb/quill:latest</pre>""", body);
+        Assert.Single(Regex.Matches(body, Regex.Escape("docker pull ravendb/quill")));
         Assert.Contains("""<button class="q-copy" type="button">""", body);
         Assert.Contains("navigator.clipboard", body);
         // nothing to fetch: the page renders with the SPA build and the widget bundle both absent

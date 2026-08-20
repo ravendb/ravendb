@@ -12,8 +12,6 @@ public static class ExpiryGateMiddleware
         if (expiry.IsExpired == false)
             return pipeline;
 
-        var page = ExpiryNotice.BuildHtml(expiry.ExpiresAt);
-
         // every route, static asset, embed link and websocket
         // upgrade answers the notice, and there is no `next` to forget to skip.
         pipeline.Run(async context =>
@@ -28,7 +26,7 @@ public static class ExpiryGateMiddleware
 
             context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
             context.Response.ContentType = "text/html; charset=utf-8";
-            await context.Response.WriteAsync(page);
+            await context.Response.WriteAsync(ExpiryNotice.Page);
         });
 
         return pipeline;
