@@ -26,9 +26,6 @@ namespace SlowTests.Server.Documents.CdcSink
             using var store = GetDocumentStore();
             var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
-            // The standalone mapping ignores deletes; the embedded one doesn't. The embedding parent is
-            // listed first, yet the root must still register at index 0 (roots-first registration), so
-            // the ignoring processor is exactly the one that owns the shared decoded array.
             var config = new CdcSinkConfiguration
             {
                 Name = "fanout-delete",
@@ -75,13 +72,10 @@ namespace SlowTests.Server.Documents.CdcSink
                 var op = Assert.Single(deletes);
                 Assert.Equal(CdcSinkDocumentOpType.EmbeddedModify, op.Type);
                 Assert.Equal(CdcSinkOperation.Delete, op.Operation);
-                // The embedded processor must see the real row, not an array the ignoring processor
-                // already returned to its pool (which clears it in place).
                 Assert.Equal("Orders/1", op.DocumentId);
                 Assert.NotSame(values, op.RawValues);
                 Assert.Equal(10, (int)op.RawValues[0]);
 
-                // The unconsumed caller array went back to processors[0]'s pool, cleared.
                 Assert.All(values, Assert.Null);
             }
         }
@@ -110,14 +104,10 @@ namespace SlowTests.Server.Documents.CdcSink
 
             var (deletes, upserts) = process.RunAddUpdateEvents(processors, newValues, oldValues);
 
-            // The join column is unchanged: no mapping reparents. The second embedded processor must
-            // read the real pre-image, not an array the first one already returned (cleared) - a
-            // cleared pre-image fakes an old parent of "Orders/\0" and emits a spurious delete.
             Assert.Empty(deletes);
             Assert.Equal(2, upserts.Count);
             Assert.All(upserts, op => Assert.Equal("Orders/1", op.DocumentId));
 
-            // The caller's pre-image array went back to processors[0]'s pool, cleared.
             Assert.All(oldValues, Assert.Null);
         }
 

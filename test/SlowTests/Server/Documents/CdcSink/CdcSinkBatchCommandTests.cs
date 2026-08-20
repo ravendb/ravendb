@@ -3235,17 +3235,12 @@ namespace SlowTests.Server.Documents.CdcSink
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
 
-            // Both roots embed the same source table under the same property name; the persisted
-            // identity must still tell the two mappings apart or replay reparents ops under the
-            // wrong root.
             var processors = docProcessor.GetProcessors("public", "order_lines");
             Assert.Equal(2, processors.Count);
             Assert.NotEqual(processors[0].Discriminator, processors[1].Discriminator);
             Assert.Same(processors[0], docProcessor.GetProcessor("public", "order_lines", processors[0].Discriminator));
             Assert.Same(processors[1], docProcessor.GetProcessor("public", "order_lines", processors[1].Discriminator));
 
-            // A discriminator that no longer matches any mapping must fail loudly instead of
-            // silently replaying against another mapping's processor.
             Assert.Throws<InvalidOperationException>(() => docProcessor.GetProcessor("public", "order_lines", "Removed/Mapping"));
         }
 
@@ -3316,8 +3311,6 @@ namespace SlowTests.Server.Documents.CdcSink
                 statsScope: null, statistics: null, logger: null);
             await database.TxMerger.Enqueue(command);
 
-            // Each mapping's patch runs against its own destination: registering or dispatching the
-            // scripts by source table alone would run one mapping's script for the other's ops.
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {

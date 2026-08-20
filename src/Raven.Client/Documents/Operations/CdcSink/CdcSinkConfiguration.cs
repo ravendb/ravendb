@@ -510,8 +510,6 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
 
         public string FullName => $"{Schema}.{TableName}";
 
-        // Component-wise so dotted identifiers can't fold two tables into one
-        // (schema "a" + table "b.c" vs schema "a.b" + table "c").
         public override int GetHashCode() => HashCode.Combine(
             StringComparer.OrdinalIgnoreCase.GetHashCode(Schema ?? string.Empty),
             StringComparer.OrdinalIgnoreCase.GetHashCode(TableName ?? string.Empty));

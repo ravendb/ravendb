@@ -595,11 +595,6 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         }
     }
 
-    /// <summary>
-    /// Fans an initial-load row out to every processor of a source table, appending the ops directly.
-    /// Same as <see cref="AddUpsertEvents"/> without the <see cref="CdcEvent"/> wrapper the
-    /// upsert-only initial load would immediately discard. Takes ownership of <paramref name="values"/>.
-    /// </summary>
     protected void AddUpsertOps(IReadOnlyList<CdcSinkTableProcessor> processors, object[] values, JsonOperationContext context, List<CdcSinkDocumentOp> output)
     {
         for (int i = 0; i < processors.Count; i++)
@@ -657,7 +652,6 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             object[] oldForProc;
             if (processors.Count == 1)
             {
-                // Sole processor == processors[0]: it owns the caller's array, zero-clone hot path.
                 oldForProc = oldValues;
                 oldValues = null;
             }

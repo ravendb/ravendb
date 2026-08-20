@@ -37,10 +37,6 @@ public class CdcSinkDocumentProcessor
         _includeDisabledTables = includeDisabledTables;
         _tableIndex = new Dictionary<(string, string), List<CdcSinkTableProcessor>>(TableKeyComparer.Instance);
 
-        // Two passes: all root mappings register before any embedded one, so processors[0] of every
-        // table's list is the root whenever the table has one. Index 0 is the table's PRIMARY
-        // processor - it owns the decode-buffer pool and represents the table in the
-        // single-representative accessors.
         foreach (var table in config.Tables)
         {
             // A disabled table is excluded from the runtime mapping: no processor is registered, so its rows
@@ -56,7 +52,7 @@ public class CdcSinkDocumentProcessor
             var schema = string.IsNullOrEmpty(table.SourceTableSchema) ? defaultSchema : table.SourceTableSchema;
 
             var discriminator = BuildDiscriminator(table.CollectionName, path: null);
-            var dispatchKey = MakeKey(schema, table.SourceTableName) + "|" + discriminator;
+            var dispatchKey = MakeKey(schema, table.SourceTableName) + DispatchKeySeparator + discriminator;
             var rootPropertyLookup = BuildPropertyLookup(table.Columns);
             var rootProcessor = new CdcSinkTableProcessor
             {
@@ -125,7 +121,6 @@ public class CdcSinkDocumentProcessor
         for (int i = 0; i < tableScripts.Count; i++)
         {
             var (key, script) = tableScripts[i];
-            // The counter keeps function names unique when distinct keys sanitize to the same string.
             var funcName = $"__cdc_{i}_{SanitizeForJs(key)}";
 
             functions[funcName] = new DeclaredFunction
@@ -232,7 +227,7 @@ public class CdcSinkDocumentProcessor
 
             var embeddedSchema = string.IsNullOrEmpty(embedded.SourceTableSchema) ? defaultSchema : embedded.SourceTableSchema;
             var discriminator = BuildDiscriminator(rootConfig.CollectionName, path);
-            var dispatchKey = MakeKey(embeddedSchema, embedded.SourceTableName) + "|" + discriminator;
+            var dispatchKey = MakeKey(embeddedSchema, embedded.SourceTableName) + DispatchKeySeparator + discriminator;
             var embeddedPropertyLookup = BuildPropertyLookup(embedded.Columns);
             var processor = new CdcSinkTableProcessor
             {
@@ -289,10 +284,6 @@ public class CdcSinkDocumentProcessor
         return false;
     }
 
-    /// <summary>
-    /// True when the source table is configured in this task. Existence-only check for streaming
-    /// providers that must skip rows of published-but-unconfigured tables.
-    /// </summary>
     public bool HasProcessors(string schema, string table)
     {
         return _tableIndex.ContainsKey((schema ?? string.Empty, table));
@@ -475,6 +466,8 @@ public class CdcSinkDocumentProcessor
         };
     }
 
+    private const string DispatchKeySeparator = "|";
+
     private static string MakeKey(string schema, string tableName)
     {
         if (string.IsNullOrEmpty(schema))
@@ -490,11 +483,6 @@ public class CdcSinkDocumentProcessor
         list.Add(processor);
     }
 
-    /// <summary>
-    /// Builds the mapping identity described on <see cref="CdcSinkTableProcessor.Discriminator"/>:
-    /// the root collection name, followed by the embedded property path when <paramref name="path"/>
-    /// is non-null. Escaping keeps segment boundaries unambiguous for any collection/property name.
-    /// </summary>
     private static string BuildDiscriminator(string collectionName, List<EmbeddedPathSegment> path)
     {
         var sb = new StringBuilder();
