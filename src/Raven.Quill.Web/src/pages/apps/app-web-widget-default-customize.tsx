@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
-import { Link, useParams } from "react-router";
+import { useParams } from "react-router";
 import { api } from "@/api/api";
 import { ApiState } from "@/components/data/api-state";
+import { DetailHeader } from "@/components/data/detail-header";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { appRoutes } from "@/lib/app-routes";
 import { useWebWidgetThemeSave } from "@/pages/apps/channels/use-web-widget-theme-save";
@@ -25,44 +25,42 @@ export function AppWebWidgetDefaultCustomize() {
     });
 
     return (
-        <div className="grid gap-5">
-            <Link
-                to={appRoutes.app(slug, "channels")}
-                className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-            >
-                <ArrowLeft className="size-3.5" aria-hidden="true" />
-                Back to channels
-            </Link>
+        <div className="flex h-full min-h-0 flex-col gap-5">
+            <DetailHeader
+                title="Default web widget appearance"
+                backTo={{ to: appRoutes.app(slug, "channels"), label: "Channels" }}
+                meta="This theme applies to every web widget that doesn't have one of its own."
+            />
 
-            <ApiState
-                isLoading={defaultQuery.isPending}
-                isError={defaultQuery.isError}
-                errorTitle="Could not load the default theme"
-                onRetry={() => defaultQuery.refetch()}
-                loadingLabel="Loading default theme..."
-            >
-                <p className="text-sm text-muted-foreground">
-                    This theme applies to every web widget that doesn&rsquo;t have one of its own.
-                </p>
+            <div className="-mx-2 min-h-0 flex-1 overflow-y-auto px-2">
+                <ApiState
+                    isLoading={defaultQuery.isPending}
+                    isError={defaultQuery.isError}
+                    errorTitle="Could not load the default theme"
+                    onRetry={() => defaultQuery.refetch()}
+                    loadingLabel="Loading default theme..."
+                >
+                    <div className="grid gap-5">
+                        {defaultQuery.data && (
+                            <WebWidgetThemeEditor
+                                theme={defaultQuery.data.theme}
+                                defaultTheme={defaultQuery.data.theme}
+                                fontOptions={defaultQuery.data.fontOptions}
+                                isSaving={saveMutation.isPending}
+                                onSave={(theme) => saveMutation.mutate(theme)}
+                            />
+                        )}
 
-                {defaultQuery.data && (
-                    <WebWidgetThemeEditor
-                        theme={defaultQuery.data.theme}
-                        defaultTheme={defaultQuery.data.theme}
-                        fontOptions={defaultQuery.data.fontOptions}
-                        isSaving={saveMutation.isPending}
-                        onSave={(theme) => saveMutation.mutate(theme)}
-                    />
-                )}
-
-                {saveMutation.isError && (
-                    <Alert variant="destructive">
-                        {saveMutation.error instanceof Error
-                            ? saveMutation.error.message
-                            : "Could not save the default theme."}
-                    </Alert>
-                )}
-            </ApiState>
+                        {saveMutation.isError && (
+                            <Alert variant="destructive">
+                                {saveMutation.error instanceof Error
+                                    ? saveMutation.error.message
+                                    : "Could not save the default theme."}
+                            </Alert>
+                        )}
+                    </div>
+                </ApiState>
+            </div>
         </div>
     );
 }

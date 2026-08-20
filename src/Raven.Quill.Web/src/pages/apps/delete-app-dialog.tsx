@@ -10,11 +10,16 @@ import { invalidateAppQueries } from "@/lib/query-invalidation";
 type DeleteAppDialogProps = {
     slug: string;
     appName: string;
-    trigger: ReactNode;
+    /** Omit when the dialog is driven by `open`/`onOpenChange` (e.g. from a dropdown menu item). */
+    trigger?: ReactNode;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
 };
 
-export function DeleteAppDialog({ slug, appName, trigger }: DeleteAppDialogProps) {
-    const [isOpen, setIsOpen] = useState(false);
+export function DeleteAppDialog({ slug, appName, trigger, open, onOpenChange }: DeleteAppDialogProps) {
+    const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+    const isOpen = open ?? uncontrolledOpen;
+    const setIsOpen = onOpenChange ?? setUncontrolledOpen;
     const queryClient = useQueryClient();
     const navigate = useNavigate();
     const location = useLocation();

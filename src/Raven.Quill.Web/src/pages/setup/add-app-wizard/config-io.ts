@@ -1,11 +1,13 @@
 import { z } from "zod";
 import type {
+    AppCdcConfigurationResponse,
     CdcSinkEmbeddedTableConfig,
     CdcSinkLinkedTableConfig,
     CdcSinkTableConfig,
 } from "@/api/generated/server-api";
 import { type AppFormData, providerSchema } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { resolveConnectionString } from "@/pages/setup/add-app-wizard/connection-string";
+import { resolveProviderFromSourceType } from "@/pages/setup/add-app-wizard/steps/connect/connect-source-options";
 import { mapFormTablesToDto } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-dto";
 
 /** The portable wizard configuration: connection details plus the CDC Sink table mapping, in the
@@ -35,6 +37,17 @@ export function buildConfigExport(values: AppFormData): WizardConfig {
         provider: values.externalConnection.provider,
         connectionString: resolveConnectionString(values.externalConnection),
         tables: mapFormTablesToDto(values.mapTables.tables),
+    };
+}
+
+// Builds the same portable configuration from an existing app's stored CDC mapping, so the
+// data-source view can export it without going through the wizard. The stored tables are already in
+// the canonical DTO shape, and the provider is recovered from the app's reported source type.
+export function buildConfigExportFromCdc(sourceType: string, cdc: AppCdcConfigurationResponse): WizardConfig {
+    return {
+        provider: resolveProviderFromSourceType(sourceType),
+        connectionString: cdc.connectionString ?? "",
+        tables: cdc.configuration.tables ?? [],
     };
 }
 

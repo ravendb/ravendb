@@ -1297,6 +1297,7 @@ export interface components {
             enabled: boolean;
             /** Format: date-time */
             createdAt: string;
+            allowedOrigins: string[];
             telegram?: null | components["schemas"]["TelegramSummaryResponse"];
         };
         /** @enum {unknown} */

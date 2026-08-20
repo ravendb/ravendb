@@ -13,7 +13,6 @@ import { Skeleton } from "@/components/shadcn/ui/skeleton";
 import { appRoutes } from "@/lib/app-routes";
 import { cn, formatDateTime, formatRelativeTime } from "@/lib/utils";
 import { DeleteChannelDialog } from "@/pages/apps/channels/delete-channel-dialog";
-import { EditChannelSheet } from "@/pages/apps/channels/edit-channel-sheet";
 import { GenerateEmbedLinkDialog } from "@/pages/apps/channels/generate-embed-link-dialog";
 
 type ChannelGroupConfig = {
@@ -208,21 +207,18 @@ function ChannelCard({
                         }
                     />
                 )}
-                <EditChannelSheet
-                    slug={slug}
-                    channel={channel}
-                    trigger={
-                        <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            className="relative z-10"
-                            aria-label={`Edit ${channel.displayName}`}
-                            title="Edit channel"
-                        >
-                            <Pencil className="size-3.5" aria-hidden="true" />
-                        </Button>
-                    }
-                />
+                <Button
+                    asChild
+                    variant="ghost"
+                    size="icon-sm"
+                    className="relative z-10"
+                    aria-label={`Edit ${channel.displayName}`}
+                    title="Edit channel"
+                >
+                    <Link to={appRoutes.app(slug, `channels/${channel.channelId}?edit=1`)}>
+                        <Pencil className="size-3.5" aria-hidden="true" />
+                    </Link>
+                </Button>
                 <DeleteChannelDialog
                     slug={slug}
                     channel={channel}
