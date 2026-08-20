@@ -1624,8 +1624,8 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         public string ProcessorTable { get; set; }
         /// <summary>
         /// Which mapping of the source table this op belonged to, so replay restores the exact processor
-        /// when a table feeds several destinations. Empty for the root mapping; the
-        /// slash-joined embedded property path otherwise.
+        /// when a table feeds several destinations. See <see cref="CdcSinkTableProcessor.Discriminator"/>
+        /// for the format; replay throws when it no longer matches a registered mapping.
         /// </summary>
         public string ProcessorDiscriminator { get; set; }
         public BlittableJsonReaderObject MappedData { get; set; }

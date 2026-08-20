@@ -3204,6 +3204,136 @@ namespace SlowTests.Server.Documents.CdcSink
         }
 
         [RavenFact(RavenTestCategory.Sinks)]
+        public void SameTableEmbeddedUnderTwoRoots_EachMappingResolvesByDiscriminator()
+        {
+            CdcSinkTableConfig CreateRoot(string collection, string sourceTable) => new CdcSinkTableConfig
+            {
+                CollectionName = collection,
+                SourceTableSchema = "public",
+                SourceTableName = sourceTable,
+                PrimaryKeyColumns = new List<string> { "id" },
+                Columns = new List<CdcColumnMapping> { new() { Column = "id", Name = "Id" } },
+                EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
+                {
+                    new()
+                    {
+                        SourceTableSchema = "public",
+                        SourceTableName = "order_lines",
+                        PropertyName = "Lines",
+                        PrimaryKeyColumns = new List<string> { "line_id" },
+                        JoinColumns = new List<string> { "id" },
+                        Type = CdcSinkRelationType.Array,
+                        Columns = new List<CdcColumnMapping> { new() { Column = "line_id", Name = "LineId" } }
+                    }
+                }
+            };
+
+            var sinkConfig = new CdcSinkConfiguration
+            {
+                Name = "test-discriminators",
+                Tables = new List<CdcSinkTableConfig> { CreateRoot("Orders", "orders"), CreateRoot("Invoices", "invoices") }
+            };
+            var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
+
+            // Both roots embed the same source table under the same property name; the persisted
+            // identity must still tell the two mappings apart or replay reparents ops under the
+            // wrong root.
+            var processors = docProcessor.GetProcessors("public", "order_lines");
+            Assert.Equal(2, processors.Count);
+            Assert.NotEqual(processors[0].Discriminator, processors[1].Discriminator);
+            Assert.Same(processors[0], docProcessor.GetProcessor("public", "order_lines", processors[0].Discriminator));
+            Assert.Same(processors[1], docProcessor.GetProcessor("public", "order_lines", processors[1].Discriminator));
+
+            // A discriminator that no longer matches any mapping must fail loudly instead of
+            // silently replaying against another mapping's processor.
+            Assert.Throws<InvalidOperationException>(() => docProcessor.GetProcessor("public", "order_lines", "Removed/Mapping"));
+        }
+
+        [RavenFact(RavenTestCategory.Sinks)]
+        public async Task SourceTableMappedBothEmbeddedAndStandalone_EachMappingRunsItsOwnPatch()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var ordersConfig = CreateRootTableConfig("Orders");
+            ordersConfig.EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
+            {
+                new CdcSinkEmbeddedTableConfig
+                {
+                    SourceTableSchema = "public",
+                    SourceTableName = "order_lines",
+                    PropertyName = "Lines",
+                    PrimaryKeyColumns = new List<string> { "line_id" },
+                    JoinColumns = new List<string> { "order_id" },
+                    Type = CdcSinkRelationType.Array,
+                    Patch = "this.EmbeddedPatchRan = true;",
+                    Columns = new List<CdcColumnMapping>
+                    {
+                        new() { Column = "line_id", Name = "LineId" },
+                        new() { Column = "product", Name = "Product" }
+                    }
+                }
+            };
+
+            var orderLinesConfig = new CdcSinkTableConfig
+            {
+                CollectionName = "OrderLines",
+                SourceTableSchema = "public",
+                SourceTableName = "order_lines",
+                PrimaryKeyColumns = new List<string> { "line_id" },
+                Patch = "this.RootPatchRan = true;",
+                Columns = new List<CdcColumnMapping>
+                {
+                    new() { Column = "line_id", Name = "LineId" },
+                    new() { Column = "order_id", Name = "OrderId" },
+                    new() { Column = "product", Name = "Product" }
+                }
+            };
+
+            var sinkConfig = new CdcSinkConfiguration
+            {
+                Name = "test-dual-patch",
+                Tables = new List<CdcSinkTableConfig> { ordersConfig, orderLinesConfig }
+            };
+            var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
+            docProcessor.SetSourceColumnNames("public", "order_lines", new[] { "line_id", "order_id", "product" });
+            SetSourceColumnNamesFromConfig(docProcessor.GetPrimaryProcessor("public", "orders"), ordersConfig.Columns);
+
+            var ops = new List<CdcSinkDocumentOp>
+            {
+                docProcessor.ProcessRow(new CdcSinkRow
+                {
+                    TableSchema = "public", TableName = "orders",
+                    Operation = CdcSinkOperation.Upsert,
+                    Data = new object[] { 1, "Acme", 0 }
+                }, null)
+            };
+            foreach (var proc in docProcessor.GetProcessors("public", "order_lines"))
+                ops.Add(docProcessor.ProcessRow(proc, CdcSinkOperation.Upsert, new object[] { 10, 1, "Widget" }, null));
+
+            var command = new CdcSinkBatchCommand(database, ops, "test-dual-patch", null,
+                tableLoadUpdates: null, patchRequest: docProcessor.CombinedPatchRequest,
+                statsScope: null, statistics: null, logger: null);
+            await database.TxMerger.Enqueue(command);
+
+            // Each mapping's patch runs against its own destination: registering or dispatching the
+            // scripts by source table alone would run one mapping's script for the other's ops.
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                var order = database.DocumentsStorage.Get(ctx, "Orders/1");
+                Assert.NotNull(order);
+                Assert.True(order.Data.TryGet("EmbeddedPatchRan", out bool embeddedPatchRan) && embeddedPatchRan);
+                Assert.False(order.Data.TryGet("RootPatchRan", out bool _));
+
+                var line = database.DocumentsStorage.Get(ctx, "OrderLines/10");
+                Assert.NotNull(line);
+                Assert.True(line.Data.TryGet("RootPatchRan", out bool rootPatchRan) && rootPatchRan);
+                Assert.False(line.Data.TryGet("EmbeddedPatchRan", out bool _));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task EmbeddedOnDelete_Value_OldHasPreviousValue()
         {
             using var store = GetDocumentStore();

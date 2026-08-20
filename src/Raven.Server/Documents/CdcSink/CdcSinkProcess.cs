@@ -571,14 +571,18 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     // ---------------------------------------------------------------------------------------------
     // Fan-out. A single source table can feed several destinations at once - a root collection and/or
     // one or more embedded arrays. A decoded row must therefore produce an op for EVERY
-    // processor registered for that table, not just one. These helpers decode-once/emit-many: the first
-    // processor reuses the caller's decoded array, each additional processor gets a clone rented from its
-    // own pool so ReturnBatchValues returns each array to the right pool with no cross-processor sharing.
+    // processor registered for that table, not just one. These helpers decode-once/emit-many.
+    //
+    // Pool ownership: the caller's decoded arrays are rented from processors[0]'s pool, and each helper
+    // either hands such an array to a processors[0]-owned op or returns it to processors[0]'s pool once
+    // the loop is done. Every other processor works on a clone rented from its own pool. Two invariants
+    // follow: an array is never returned (which clears it in place) while a later processor still reads
+    // it, and every array goes back to the pool it was rented from.
     // ---------------------------------------------------------------------------------------------
 
     /// <summary>
-    /// Emits an Upsert event for every processor of a source table (INSERT, or the post-image of an
-    /// initial-load row). Takes ownership of <paramref name="values"/>.
+    /// Emits an Upsert event for every processor of a source table (INSERT, or an UPDATE post-image
+    /// without reparent detection). Takes ownership of <paramref name="values"/>.
     /// </summary>
     protected void AddUpsertEvents(IReadOnlyList<CdcSinkTableProcessor> processors, object[] values, JsonOperationContext context, List<CdcEvent> output)
     {
@@ -592,23 +596,41 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     }
 
     /// <summary>
-    /// Emits a Delete event for every processor of a source table. Takes ownership of
-    /// <paramref name="values"/>; a processor that ignores deletes releases its array back to its pool.
+    /// Fans an initial-load row out to every processor of a source table, appending the ops directly.
+    /// Same as <see cref="AddUpsertEvents"/> without the <see cref="CdcEvent"/> wrapper the
+    /// upsert-only initial load would immediately discard. Takes ownership of <paramref name="values"/>.
     /// </summary>
-    protected void AddDeleteEvents(IReadOnlyList<CdcSinkTableProcessor> processors, object[] values, JsonOperationContext context, List<CdcEvent> output)
+    protected void AddUpsertOps(IReadOnlyList<CdcSinkTableProcessor> processors, object[] values, JsonOperationContext context, List<CdcSinkDocumentOp> output)
     {
         for (int i = 0; i < processors.Count; i++)
         {
             var proc = processors[i];
             var rowValues = i == 0 ? values : CloneValues(proc, values);
-            var op = DocumentProcessor.ProcessRow(proc, CdcSinkOperation.Delete, rowValues, context);
-            if (op == null)
-            {
-                proc.ReturnValues(rowValues); // delete ignored by config - release the unused array
-                continue;
-            }
-            output.Add(new CdcEvent(CdcEventType.Delete, op, null));
+            output.Add(DocumentProcessor.ProcessRow(proc, CdcSinkOperation.Upsert, rowValues, context));
         }
+    }
+
+    /// <summary>
+    /// Emits a Delete event for every processor of a source table that doesn't ignore deletes.
+    /// Takes ownership of <paramref name="values"/>.
+    /// </summary>
+    protected void AddDeleteEvents(IReadOnlyList<CdcSinkTableProcessor> processors, object[] values, JsonOperationContext context, List<CdcEvent> output)
+    {
+        var valuesConsumed = false;
+        for (int i = 0; i < processors.Count; i++)
+        {
+            var proc = processors[i];
+            if (proc.IgnoresDeletes)
+                continue;
+
+            var rowValues = i == 0 ? values : CloneValues(proc, values);
+            var op = DocumentProcessor.ProcessRow(proc, CdcSinkOperation.Delete, rowValues, context);
+            output.Add(new CdcEvent(CdcEventType.Delete, op, null));
+            valuesConsumed |= i == 0;
+        }
+
+        if (valuesConsumed == false)
+            processors[0].ReturnValues(values);
     }
 
     /// <summary>
@@ -620,7 +642,6 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     /// </summary>
     protected void AddUpdateEvents(IReadOnlyList<CdcSinkTableProcessor> processors, object[] newValues, object[] oldValues, List<CdcEvent> output)
     {
-        var oldValuesAvailable = oldValues != null; // becomes false once an embedded processor takes ownership
         for (int i = 0; i < processors.Count; i++)
         {
             var proc = processors[i];
@@ -633,13 +654,12 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                 continue;
             }
 
-            // Embedded processor: it needs an old-row array from its own pool. The first embedded
-            // consumer reuses the caller's array; any later one gets a clone.
             object[] oldForProc;
-            if (oldValuesAvailable)
+            if (processors.Count == 1)
             {
+                // Sole processor == processors[0]: it owns the caller's array, zero-clone hot path.
                 oldForProc = oldValues;
-                oldValuesAvailable = false;
+                oldValues = null;
             }
             else
             {
@@ -650,11 +670,11 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             if (delete.HasValue)
                 output.Add(delete.Value);
             else
-                proc.ReturnValues(oldForProc); // no reparent - release the unused old-values array
+                proc.ReturnValues(oldForProc); // no reparent - release the unused old-values clone
             output.Add(upsert);
         }
 
-        if (oldValuesAvailable)
+        if (oldValues != null)
             processors[0].ReturnValues(oldValues);
     }
 
@@ -663,6 +683,17 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         var dst = proc.RentValues();
         Array.Copy(src, dst, src.Length);
         return dst;
+    }
+
+    protected static bool HasEmbeddedProcessor(IReadOnlyList<CdcSinkTableProcessor> processors)
+    {
+        for (int i = 0; i < processors.Count; i++)
+        {
+            if (processors[i].IsRoot == false)
+                return true;
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -1083,7 +1114,6 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
             // On first batch for this table, set source column names from the reader if not already set
             bool columnNamesSet = primary.SourceColumnNames != null;
-            var fanOut = new List<CdcEvent>(processors.Count);
 
             while (await reader.ReadAsync(ct))
             {
@@ -1115,10 +1145,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                 }
 
                 // Initial load only produces inserts; fan the row out to every processor.
-                fanOut.Clear();
-                AddUpsertEvents(processors, values, jsonParsingCtx, fanOut);
-                for (int i = 0; i < fanOut.Count; i++)
-                    ops.Add(fanOut[i].Op);
+                AddUpsertOps(processors, values, jsonParsingCtx, ops);
             }
 
             // Extract last keys from the last non-null op's RawValues for keyset pagination resume.
