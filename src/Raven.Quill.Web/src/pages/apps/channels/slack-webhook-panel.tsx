@@ -32,14 +32,14 @@ export function SlackWebhookPanel({ slug, channelId }: { slug: string; channelId
                             <CopyableCode code={infoQuery.data.requestUrl} copyLabel="Copy request URL" />
                         </li>
                         <li>
-                            Under <span className="font-medium">Subscribe to bot events</span>, make sure{" "}
-                            <span className="font-medium">message.im</span> is listed, then save.
+                            Under <span className="font-medium">Subscribe to bot events</span>, add{" "}
+                            <span className="font-medium">message.im</span>, then save.
                         </li>
                         <li>Open a DM with the bot in Slack and send it a message.</li>
                     </ol>
                     <p className="text-xs text-muted-foreground">
                         The appliance must be reachable from the internet on this URL. Apps created from the Quill
-                        manifest already subscribe to message.im and have the Messages tab enabled.
+                        manifest already carry the im:history scope, so adding the event needs no reinstall.
                     </p>
                     <SlackHealthStrip slug={slug} channelId={channelId} />
                 </div>
