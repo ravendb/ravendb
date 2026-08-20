@@ -793,7 +793,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
 
     /// <summary>
     /// Builds the cache key for arrayStates, including parent FK values for nested paths.
-    /// For depth-1 embedded tables (e.g., Order → Lines[]), the key is just "schema.table:PropertyName".
+    /// For depth-1 embedded tables (e.g., Order → Lines[]), the key is just "{processor.Key}:PropertyName".
     /// For deeper nesting (e.g., Company → Departments[] → Employees[]), the key includes
     /// the FK values that identify which parent element the array belongs to, so that
     /// employees in different departments get separate working arrays.
