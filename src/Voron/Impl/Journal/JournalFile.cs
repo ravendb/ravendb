@@ -20,6 +20,12 @@ namespace Voron.Impl.Journal
 
         public FrozenSet<Guid> RecoveredJournalIds = recoveredJournalIds;
 
+        // JournalId XORed with this, invalidates entries left over from a  recycled file.
+        public Guid Incarnation;
+
+        // 1 for a newly created file - the first write goes past the journal header record at position 0
+        public long InitialWritePosIn4Kb;
+
         public bool IsHardLinked { get; init; }
 
         public override string ToString()
@@ -27,7 +33,7 @@ namespace Voron.Impl.Journal
             return $"Number: {Number}";
         }
 
-        internal long GetWritePosIn4KbPosition(EnvironmentStateRecord record) => record.Journal.Number == Number ? record.Journal.Last4KWritePosition : 0;
+        internal long GetWritePosIn4KbPosition(EnvironmentStateRecord record) => record.Journal.Number == Number ? record.Journal.Last4KWritePosition : InitialWritePosIn4Kb;
 
         public long Number { get; } = journalNumber;
 
@@ -135,7 +141,7 @@ namespace Voron.Impl.Journal
         /// </summary>
         public long Write(LowLevelTransaction tx, Span<Pal.journal_entry> pages)
         {
-            var cur4KbPos = tx.CurrentStateRecord.Journal.Number == Number ? tx.CurrentStateRecord.Journal.Last4KWritePosition : 0;
+            var cur4KbPos = GetWritePosIn4KbPosition(tx.CurrentStateRecord);
 
             Debug.Assert(pages.IsEmpty is false && pages[0].NumberOf4Kbs > 0, "pages.IsEmpty is false && pages[0].NumberOf4Kbs > 0");
 

@@ -937,6 +937,7 @@ namespace Voron
             }
 
             long tempBuffers = 0;
+            long tempRecyclableJournals = 0;
 
             if (includeTempBuffers)
             {
@@ -949,6 +950,9 @@ namespace Voron
                     {
                         case TempBufferType.Scratch:
                             tempBuffers += file.AllocatedSpaceInBytes;
+                            break;
+                        case TempBufferType.RecyclableJournal:
+                            tempRecyclableJournals += file.AllocatedSpaceInBytes;
                             break;
                         default:
                             throw new InvalidOperationException($"Unknown temp file type: {file.Type}");
@@ -963,6 +967,7 @@ namespace Voron
                 JournalsInBytes = journalsSize,
                 HardLinkedJournalsInBytes = hardLinkedJournalsSize,
                 TempBuffersInBytes = tempBuffers,
+                TempRecyclableJournalsInBytes = tempRecyclableJournals,
             };
         }
 
@@ -1697,11 +1702,14 @@ namespace Voron
             return Hashing.Streamed.XXHash64.End(ref ctx);
         }
 
-        public void Cleanup()
+        public void Cleanup(bool tryCleanupRecycledJournals = false)
         {
             Journal.TryReduceSizeOfCompressionBufferIfNeeded();
             ScratchBufferPool.Cleanup();
             CleanupScratchPagesTable();
+
+            if (tryCleanupRecycledJournals)
+                Options.TryCleanupRecycledJournals();
         }
 
         private void CleanupScratchPagesTable()

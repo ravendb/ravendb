@@ -212,6 +212,7 @@ namespace Raven.Server.Documents
             options.SyncWritebackBarrierCostThresholdInMs = documentDatabase.Configuration.Storage.SyncWritebackBarrierCostThresholdInMs;
             options.SyncWritebackDrainQueueDepthThreshold = documentDatabase.Configuration.Storage.SyncWritebackDrainQueueDepthThreshold;
             options.SkipChecksumValidationOnDatabaseLoading = documentDatabase.Configuration.Storage.SkipChecksumValidationOnDatabaseLoading;
+            options.MaxNumberOfRecyclableJournals = documentDatabase.Configuration.Storage.MaxNumberOfRecyclableJournals;
         }
 
         private static void SwitchDatabaseDirectories(string basePath, string backupDirectory, string compactDirectory)

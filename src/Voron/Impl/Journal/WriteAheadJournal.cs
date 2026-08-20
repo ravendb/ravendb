@@ -191,6 +191,60 @@ namespace Voron.Impl.Journal
             }
         }
 
+        public class JournalHeaderRecord : IDisposable
+        {
+            public static readonly long TransactionIdMarker = MemoryMarshal.Read<long>("JrnlHead"u8);
+
+            /// <summary>
+            /// The record always occupies exactly this much of the start of a journal file, so it is
+            /// both what a new journal must be sized for on top of its first batch, and where the
+            /// first transaction of the file is written.
+            /// </summary>
+            public const int SizeIn4Kb = 1;
+
+            private byte* _buffer;
+            private NativeMemory.ThreadStats _threadStats;
+            private const int BufferSize = SizeIn4Kb * 4 * Constants.Size.Kilobyte;
+
+            /// <summary>
+            /// Record a Guid whenever we create / recycle a journal file. We XOR that value with the transaction 
+            /// ids, ensuring that we discard old transactions on journal recycle.
+            /// </summary>
+            public Pal.journal_entry CreateEntry(Guid incarnation)
+            {
+                if (_buffer == null)
+                    _buffer = PlatformSpecific.NativeMemory.Allocate4KbAlignedMemory(BufferSize, out _threadStats);
+
+                Memory.Set(_buffer, 0, BufferSize);
+                var header = (TransactionHeader*)_buffer;
+                header->HeaderMarker = Constants.TransactionHeaderMarker;
+                header->TransactionId = TransactionIdMarker;
+                header->Flags = TransactionPersistenceModeFlags.JournalHeaderRecord;
+                header->TxMarker = TransactionMarker.Commit;
+                header->CompressedSize = -1;
+                header->UncompressedSize = sizeof(Guid);
+                header->TimeStampTicksUtc = DateTime.UtcNow.Ticks;
+
+                var payload = (Guid*)(_buffer + sizeof(TransactionHeader));
+                *payload = incarnation;
+
+                header->Hash = Hashing.XXHash64.Calculate((byte*)payload, (ulong)sizeof(Guid), (ulong)header->TransactionId);
+
+                return new Pal.journal_entry
+                {
+                    Base = header,
+                    NumberOf4Kbs = SizeIn4Kb
+                };
+            }
+
+            public void Dispose()
+            {
+                if (_buffer is not null)
+                    PlatformSpecific.NativeMemory.Free4KbAlignedMemory(_buffer, BufferSize, _threadStats);
+                _buffer = null;
+            }
+        }
+
         public ScopeForSharedJournals SharedJournalsScope()
         {
             if (_rootJournalMergedCommitsCts != null)
@@ -238,10 +292,13 @@ namespace Voron.Impl.Journal
 
                 _files = ImmutableAppendOnlyList<JournalFile>.Empty;
                 _linkedJournalsRecord.Dispose();
+                _journalHeaderRecord.Dispose();
             });
         }
 
         public ImmutableAppendOnlyList<JournalFile> Files => _files;
+
+        internal StorageEnvironment Env => _env;
 
         public WriteAheadJournal.JournalApplicator Applicator => _journalApplicator;
         
@@ -268,15 +325,22 @@ namespace Voron.Impl.Journal
                 actualLogSize = _currentJournalFileSize;
             }
 
-            var journalPager = _env.Options.CreateJournalWriter(_journalIndex + 1, actualLogSize);
+            var incarnation = Guid.NewGuid();
+            var headerEntry = _journalHeaderRecord.CreateEntry(incarnation);
+            if (_env.Options.Encryption.IsEnabled)
+                EncryptTransaction((byte*)headerEntry.Base);
 
-            // we modify the in memory state _after_ we created the file, because we have to make sure that 
-            // we have created it successfully first. 
+            var journalPager = _env.Options.CreateNewJournalWriter(_journalIndex + 1, actualLogSize, headerEntry);
+
+            // we modify the in memory state _after_ we created the file, because we have to make sure that
+            // we have created it successfully first.
             _journalIndex++;
 
             _lastFile = now;
 
             var journal = new JournalFile(_env, journalPager, _journalIndex, FrozenSet<Guid>.Empty);
+            journal.Incarnation = incarnation;
+            journal.InitialWritePosIn4Kb = JournalHeaderRecord.SizeIn4Kb;
             journal.NewlyCreatedFile = true;
             journal.DoneWriting = new SingleUseFlag();
             journal.AddRef(); // one reference added by a creator - write ahead log
@@ -409,7 +473,8 @@ namespace Voron.Impl.Journal
 
                         var jrnlFile = new JournalFile(_env, jrnlWriter, journalNumber, journalReader.RecoveredJournalIds.ToFrozenSet())
                         {
-                            IsHardLinked = isHardLinked
+                            IsHardLinked = isHardLinked,
+                            Incarnation = journalReader.Incarnation
                         };
                         jrnlFile.DoneWriting = new SingleUseFlag();
                         
@@ -1499,6 +1564,8 @@ namespace Voron.Impl.Journal
 
                     _lastFlushed.DoneFlag.Raise();
 
+                    parent._waj._env.Options.SetLastReusedJournalCountOnSync(_lastFlushed.JournalsToDelete.Count);
+
                     return true;
                 }
 
@@ -2252,7 +2319,7 @@ namespace Voron.Impl.Journal
                 CurrentFile.GetAvailable4Kbs(tx.CurrentStateRecord) < requiredSizeIn4Kbs)
             {
                 CurrentFileIsDone();
-                CurrentFile = NextFile(requiredSizeIn4Kbs);
+                CurrentFile = NextFile(requiredSizeIn4Kbs + JournalHeaderRecord.SizeIn4Kb);
                 if (_logger.IsDebugEnabled)
                     _logger.Debug($"New journal file created {CurrentFile.Number:D19} with size {CurrentFile.JournalSize}");
             }
@@ -2330,6 +2397,14 @@ namespace Voron.Impl.Journal
             }
             
             var entries = SharedJournalState.Entries;
+
+            var currentIncarnation = CurrentFile.Incarnation;
+            foreach (var entry in entries) // stamp the tx headers with the file guid, to allow journal reuse
+            {
+                var entryHeader = (TransactionHeader*)entry.Base;
+                entryHeader->JournalId = entryHeader->JournalId.Xor(currentIncarnation);
+            }
+
             var start = Stopwatch.GetTimestamp();
 
             tx._forTestingPurposes?.ActionToCallJustBeforeWritingToJournal?.Invoke();
@@ -2416,7 +2491,8 @@ namespace Voron.Impl.Journal
                 var journalWriter = _env.Options.CreateJournalWriterForBranchEnvironment(index, existingJournalFileName, journalFile);
                 var journal = new JournalFile(_env, journalWriter, index, FrozenSet<Guid>.Empty)
                 {
-                    IsHardLinked = isHardLinked
+                    IsHardLinked = isHardLinked,
+                    Incarnation = journalFile.Incarnation
                 };
                 journal.NewlyCreatedFile = true;
                 journal.DoneWriting = journalFile.DoneWriting;
@@ -2883,6 +2959,7 @@ namespace Voron.Impl.Journal
         private readonly int _minimumSharedJournalsMergeCount;
 
         private readonly LinkedJournalsRecord _linkedJournalsRecord = new();
+        private readonly JournalHeaderRecord _journalHeaderRecord = new();
 
         internal TestingStuff ForTestingPurposesOnly()
         {

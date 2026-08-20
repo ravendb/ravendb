@@ -186,6 +186,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Storage.Encrypted.DisableBuffersPooling", ConfigurationEntryScope.ServerWideOnly)]
         public bool DisableEncryptionBuffersPooling { get; set; }
 
+        [Description("Max number of recyclable journals that will be reused. ")]
+        [DefaultValue(32)]
+        [MinValue(0)]
+        [ConfigurationEntry("Storage.MaxNumberOfRecyclableJournals", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int MaxNumberOfRecyclableJournals { get; set; }
+
         [Description("Disable further usage of sparse regions for the FS to reclaim free pages. In order to clear existing sparse regions you need to do that manually.")]
         [DefaultValue(false)]
         [ConfigurationEntry("Storage.DisableSparseRegions", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
