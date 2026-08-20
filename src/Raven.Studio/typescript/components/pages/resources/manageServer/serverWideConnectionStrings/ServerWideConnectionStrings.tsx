@@ -116,13 +116,18 @@ export default function ServerWideConnectionStrings({
 
 function ServerWideConnectionStringsBody() {
     const hasOperatorAccess = useAppSelector(accessManagerSelectors.isOperatorOrAbove);
+    const hasServerWideConnectionStrings = useAppSelector(
+        licenseSelectors.statusValue("HasServerWideConnectionStrings")
+    );
     const loadStatus = useAppSelector(connectionStringSelectors.loadStatus);
     const connections = useAppSelector(connectionStringSelectors.connections);
     const isEmpty = useAppSelector(connectionStringSelectors.isEmpty);
 
+    const isLoading = hasServerWideConnectionStrings && (loadStatus === "idle" || loadStatus === "loading");
+
     return (
         <div className={hasOperatorAccess ? null : "item-disabled pe-none"}>
-            <LazyLoad active={loadStatus === "idle" || loadStatus === "loading"} className="mt-2">
+            <LazyLoad active={isLoading} className="mt-2">
                 {isEmpty ? (
                     <div className="w-100">
                         <EmptySet>No server-wide connection strings have been defined</EmptySet>
