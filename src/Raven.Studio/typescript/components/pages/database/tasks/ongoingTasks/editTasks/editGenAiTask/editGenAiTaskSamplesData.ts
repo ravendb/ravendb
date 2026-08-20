@@ -1,5 +1,6 @@
 import { SampleScript, SamplesTab } from "components/common/sampleQueries/partials/sampleQueriesTypes";
-import { createSampleScriptsTab } from "components/common/sampleQueries/partials/samplesTabFactories";
+import { createMethodsTab, createSampleScriptsTab } from "components/common/sampleQueries/partials/samplesTabFactories";
+import { contextScriptMethodGroups, updateScriptMethodGroups } from "./editGenAiTaskMethodsData";
 
 // Placeholder samples migrated from the previous syntax-help modals.
 
@@ -157,12 +158,24 @@ const queryToolParametersSchemaSamples: SampleScript[] = [
     },
 ];
 
-export const contextScriptSamplesTabs: SamplesTab[] = [createSampleScriptsTab(contextScriptSamples)];
-export const promptSamplesTabs: SamplesTab[] = [createSampleScriptsTab(promptSamples)];
-export const sampleObjectSamplesTabs: SamplesTab[] = [createSampleScriptsTab(sampleObjectSamples)];
-export const jsonSchemaSamplesTabs: SamplesTab[] = [createSampleScriptsTab(jsonSchemaSamples)];
-export const updateScriptSamplesTabs: SamplesTab[] = [createSampleScriptsTab(updateScriptSamples)];
-export const queryToolParametersSamplesTabs: SamplesTab[] = [createSampleScriptsTab(queryToolParametersSamples)];
+export const contextScriptSamplesTabs: SamplesTab[] = [
+    createSampleScriptsTab(contextScriptSamples),
+    createMethodsTab(contextScriptMethodGroups, { language: "javascript" }),
+];
+export const promptSamplesTabs: SamplesTab[] = [createSampleScriptsTab(promptSamples, { label: "Sample prompt" })];
+export const sampleObjectSamplesTabs: SamplesTab[] = [
+    createSampleScriptsTab(sampleObjectSamples, { label: "Sample object" }),
+];
+export const jsonSchemaSamplesTabs: SamplesTab[] = [
+    createSampleScriptsTab(jsonSchemaSamples, { label: "Sample schema" }),
+];
+export const updateScriptSamplesTabs: SamplesTab[] = [
+    createSampleScriptsTab(updateScriptSamples),
+    createMethodsTab(updateScriptMethodGroups, { language: "javascript" }),
+];
+export const queryToolParametersSamplesTabs: SamplesTab[] = [
+    createSampleScriptsTab(queryToolParametersSamples, { label: "Sample object" }),
+];
 export const queryToolParametersSchemaSamplesTabs: SamplesTab[] = [
-    createSampleScriptsTab(queryToolParametersSchemaSamples),
+    createSampleScriptsTab(queryToolParametersSchemaSamples, { label: "Sample schema" }),
 ];
