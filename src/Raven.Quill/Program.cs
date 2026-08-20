@@ -111,6 +111,7 @@ builder.Services.AddSingleton<IDocumentStore>(sp =>
     RavenStoreFactory.Create(sp.GetRequiredService<IOptions<ApplianceOptions>>().Value));
 
 builder.Services.AddSingleton<IServerReady, ServerReadyFlag>();
+builder.Services.AddSingleton<IQuillExpiry>(_ => new QuillExpiry(DateTime.UtcNow));
 builder.Services.AddSingleton<IBootstrapState, BootstrapStateFlag>();
 builder.Services.AddSingleton<IAgentRouter, AgentRouter>();
 builder.Services.AddSingleton<WebhookActionExecutor>();
@@ -256,6 +257,8 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 
 app.UseForwardedHeaders();
+
+app.UseExpiryGate();
 
 app.UseWebSockets();
 
