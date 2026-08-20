@@ -1,41 +1,24 @@
-import { useState } from "react";
-import { ChevronDown, ChevronUp, Wrench } from "lucide-react";
+import { Wrench } from "lucide-react";
 import type { AiToolCallResult } from "@/api/generated/server-api";
 import { Parameters } from "@/components/data/parameters";
+import { CodeBlock, TranscriptDisclosure } from "@/pages/apps/conversations/transcript-disclosure";
 
 // A collapsed transcript entry for one tool the agent ran during a turn. Kept operator-friendly:
 // only the parameters the model filled in and the tool's response — no raw query internals.
-export function ConversationToolCall({ toolCall }: { toolCall: AiToolCallResult }) {
-    const [isExpanded, setIsExpanded] = useState(false);
-
+export function ConversationToolCall({
+    disclosureKey,
+    toolCall,
+}: {
+    disclosureKey: string;
+    toolCall: AiToolCallResult;
+}) {
     return (
-        <div className="w-full overflow-hidden rounded-lg border bg-muted/40 text-sm">
-            <button
-                type="button"
-                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left transition-colors hover:bg-muted/70"
-                aria-expanded={isExpanded}
-                onClick={() => setIsExpanded((expanded) => !expanded)}
-            >
-                <span className="flex min-w-0 items-center gap-2">
-                    <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary-strong">
-                        <Wrench className="size-3.5" aria-hidden />
-                    </span>
-                    <span className="truncate font-medium">{toolCall.name || "Tool call"}</span>
-                </span>
-                {isExpanded ? (
-                    <ChevronUp className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-                ) : (
-                    <ChevronDown className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-                )}
-            </button>
-
-            {isExpanded && (
-                <div className="grid gap-3 border-t px-3 py-3">
-                    <ToolCallParameters rawArguments={toolCall.arguments} />
-                    <ToolCallResponse result={toolCall.result} />
-                </div>
-            )}
-        </div>
+        <TranscriptDisclosure disclosureKey={disclosureKey} icon={Wrench} label={toolCall.name || "Tool call"}>
+            <div className="grid gap-3 border-t px-3 py-3">
+                <ToolCallParameters rawArguments={toolCall.arguments} />
+                <ToolCallResponse result={toolCall.result} />
+            </div>
+        </TranscriptDisclosure>
     );
 }
 
@@ -83,14 +66,6 @@ function ToolCallSection({ label, children }: { label: string; children: React.R
             <span className="text-xs font-medium text-muted-foreground">{label}</span>
             {children}
         </div>
-    );
-}
-
-function CodeBlock({ value }: { value: string }) {
-    return (
-        <pre className="max-h-60 overflow-auto rounded-md border bg-background p-2 font-mono text-xs whitespace-pre-wrap">
-            {value}
-        </pre>
     );
 }
 

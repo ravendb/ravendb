@@ -514,8 +514,7 @@ internal static class MetricsReadService
         var result = await store.AI.ForDatabase(database).GetConversationMessagesAsync(new GetConversationMessagesOptions
         {
             ConversationId = conversationId,
-            DetailLevel = AiConversationDetailLevel.Detailed,
-            PageSize = 25
+            DetailLevel = AiConversationDetailLevel.Detailed
         }, ct);
 
         if (result is null)
@@ -608,10 +607,14 @@ internal static class MetricsReadService
         {
             switch (m.Role)
             {
-                case AiMessageRole.System:
                 case AiMessageRole.Summary:
                 case AiMessageRole.Internal:
                     continue;
+                case AiMessageRole.System:
+                    if (string.IsNullOrWhiteSpace(m.Content))
+                        continue;
+
+                    break;
                 case AiMessageRole.User:
                     break;
                 case AiMessageRole.Assistant:

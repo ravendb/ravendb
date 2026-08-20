@@ -24,8 +24,9 @@ public class EmbedPageHistoryTests(ITestOutputHelper output) : QuillTestBase(out
 
         if (withHistory)
         {
+            // the seeded system prompt must never surface in the visitor-facing history
             await SeedConversationAsync(app.Store, app.Slug, conversationId, "demo", DateTime.UtcNow.AddMinutes(-5),
-                turns: [("user", "hello there"), ("assistant", "hi, how can I help?")]);
+                turns: [("system", "You help."), ("user", "hello there"), ("assistant", "hi, how can I help?")]);
         }
 
         await app.ProvisionAgentAsync(new AiAgentConfiguration

@@ -409,6 +409,8 @@ public static class EmbedEndpoints
             if (result is null)
                 return [];
             return MetricsReadService.MapTranscript(result.Messages, replyField)
+                // the visitor sees this thread - the agent's system prompt never belongs in it
+                .Where(m => m.Role != AiMessageRole.System)
                 .Select(m => new HistoryTurn(m.Role, m.Content ?? ""))
                 .ToArray();
         }
