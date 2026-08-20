@@ -10,8 +10,10 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Tests.Infrastructure;
+using Voron;
 using Voron.Global;
 using Voron.Impl.Journal;
+using Voron.Util;
 using Xunit;
 
 namespace SlowTests.Voron.Issues;
@@ -169,6 +171,7 @@ public class RavenDB_27278_e2e(ITestOutputHelper output) : RavenTestBase(output)
         var txs = new List<(long, Guid, long)>();
         fixed (byte* p = journal)
         {
+            var incarnation = Guid.Empty;
             long pos = 0;
             while (pos + TransactionHeader.SizeOf <= journal.Length)
             {
@@ -179,7 +182,16 @@ public class RavenDB_27278_e2e(ITestOutputHelper output) : RavenTestBase(output)
                     continue;
                 }
 
-                txs.Add((pos, header->JournalId, header->TransactionId));
+                if ((header->Flags & TransactionPersistenceModeFlags.JournalHeaderRecord) != 0)
+                {
+                    // RavenDB-27397: every journal opens with a header record whose payload is the
+                    // incarnation that the JournalId of all subsequent entries is XORed with
+                    incarnation = *(Guid*)((byte*)header + TransactionHeader.SizeOf);
+                    pos += 4 * 1024;
+                    continue;
+                }
+
+                txs.Add((pos, header->JournalId.Xor(incarnation), header->TransactionId));
 
                 long size = header->CompressedSize != -1 ? header->CompressedSize : header->UncompressedSize;
                 long sizeIn4Kb = (size + sizeof(TransactionHeader)) / (4 * 1024) +

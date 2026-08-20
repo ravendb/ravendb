@@ -804,6 +804,7 @@ namespace Raven.Server.Documents.Indexes
             options.IgnoreInvalidJournalErrors = documentDatabase.Configuration.Storage.IgnoreInvalidJournalErrors;
             options.SkipChecksumValidationOnDatabaseLoading = documentDatabase.Configuration.Storage.SkipChecksumValidationOnDatabaseLoading;
             options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions = documentDatabase.Configuration.Storage.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions;
+            options.MaxNumberOfRecyclableJournals = documentDatabase.Configuration.Storage.MaxNumberOfRecyclableJournals;
             options.DisableSparseRegions = documentDatabase.Configuration.Storage.DisableSparseRegions;
             options.JournalsCompressionAcceleration = documentDatabase.Configuration.Storage.JournalsCompressionAcceleration;
             options.MinimumSharedJournalsMergeCount = documentDatabase.Configuration.Indexing.MinimumSharedJournalsMergeCount;
@@ -2069,7 +2070,7 @@ namespace Raven.Server.Documents.Indexes
 
 
                         if (totalSizeOfJournals >= Configuration.MinimumTotalSizeOfJournalsToRunFlushAndSyncWhenReplacingSideBySideIndex)
-                            FlushAndSync(_environment, (int)Configuration.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndex.AsTimeSpan.TotalMilliseconds);
+                            FlushAndSync(_environment, (int)Configuration.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndex.AsTimeSpan.TotalMilliseconds, tryCleanupRecycledJournals: true);
 
                         // this side-by-side index will be replaced in a second, notify about indexing success
                         // so we know that indexing batch is no longer in progress
@@ -2342,7 +2343,7 @@ namespace Raven.Server.Documents.Indexes
                                        $"going to try flushing and syncing the environment to cleanup the storage. " +
                                        $"Will wait for flush for: {timeToWaitInMilliseconds}ms", dfe);
 
-                FlushAndSync(storageEnvironment, timeToWaitInMilliseconds);
+                FlushAndSync(storageEnvironment, timeToWaitInMilliseconds, tryCleanupRecycledJournals: true);
                 return;
             }
 
@@ -2352,10 +2353,11 @@ namespace Raven.Server.Documents.Indexes
             if (State == IndexState.Error)
                 return;
 
+            storageEnvironment.Options.TryCleanupRecycledJournals();
             SetErrorState($"State was changed due to excessive number of disk full errors ({diskFullErrors}).");
         }
 
-        private void FlushAndSync(StorageEnvironment storageEnvironment, int timeToWaitInMilliseconds)
+        private void FlushAndSync(StorageEnvironment storageEnvironment, int timeToWaitInMilliseconds, bool tryCleanupRecycledJournals = false)
         {
             try
             {
@@ -2383,7 +2385,7 @@ namespace Raven.Server.Documents.Indexes
                 return;
             }
 
-            storageEnvironment.Cleanup();
+            storageEnvironment.Cleanup(tryCleanupRecycledJournals);
         }
 
         private void SetErrorState(string reason)

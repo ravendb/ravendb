@@ -20,6 +20,7 @@ using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Logging;
 using Voron.Logging;
+using Voron.Util;
 using Voron.Util.PFor;
 
 namespace Voron.Impl.Journal
@@ -81,7 +82,7 @@ namespace Voron.Impl.Journal
             _readAt4Kb = 0;
             LastTransactionHeader = previous;
             _journalPagerNumberOfAllocated4Kb = _journalPagerState.TotalAllocatedSize / (4 * Constants.Size.Kilobyte);
-            
+
             JournalId = environment.HeaderAccessor.MetadataAccessor.JournalId;
 
             if (journalPager.Options.Encryption.IsEnabled)
@@ -433,7 +434,12 @@ namespace Voron.Impl.Journal
                     $"LastTransactionHeader->TransactionId: {LastTransactionHeader->TransactionId}, transactionHeaders.Last().TransactionId: {transactionHeaders.Last().TransactionId}");
 
                 if (LastTransactionHeader != null)
-                    transactionHeaders.Add(*LastTransactionHeader);
+                {
+                    // on-disk header carries JournalId XORed with the incarnation guid - the in-memory uses the plain environment id
+                    var copy = *LastTransactionHeader;
+                    copy.JournalId = copy.JournalId.Xor(Incarnation);
+                    transactionHeaders.Add(copy);
+                }
             }
 
             ZeroRecoveryBufferIfNeeded(recoveryPagerState, ref txState, options);
@@ -497,6 +503,12 @@ namespace Voron.Impl.Journal
             current = (TransactionHeader*)(_journalPager.AcquirePagePointer(_journalPagerState, ref txState, pageNumber) + positionInsidePage);
             if (current->HeaderMarker != Constants.TransactionHeaderMarker)
                 return false;
+
+            if ((current->Flags & TransactionPersistenceModeFlags.JournalHeaderRecord) != 0 &&
+                (_readAt4Kb != 0 || IsWellFormedJournalHeaderRecord(current) == false))
+            {
+                return false; // a *valid* journal header record can only be at the beginning of the journal file
+            }
 
             long actualTransactionSize = sizeof(TransactionHeader) + 
                               (current->CompressedSize != -1 ? current->CompressedSize : current->UncompressedSize);
@@ -686,32 +698,47 @@ namespace Voron.Impl.Journal
                     return false;
                 }
 
-                RecoveredJournalIds.Add(current->JournalId);
+                if ((current->Flags & TransactionPersistenceModeFlags.JournalHeaderRecord) != 0)
+                {
+                    Debug.Assert(_readAt4Kb == 0, "Journal header record can only be at the beginning of the file (verified in TryValidateTransaction)");
+                    Incarnation = *(Guid*)((byte*)current + sizeof(TransactionHeader));
+
+                    _next4Kb = _readAt4Kb + GetTransactionSizeIn4Kb(current);
+                    _readAt4Kb += GetTransactionSizeIn4Kb(current) - 1;
+                    continue;
+                }
+
+                // entries are written with their JournalId XORed by the incarnation of the file,
+                // entries of a previous life of a recycled file decode to a foreign id
+                var effectiveJournalId = current->JournalId.Xor(Incarnation);
+
+                RecoveredJournalIds.Add(effectiveJournalId);
 
                 _next4Kb = _readAt4Kb + GetTransactionSizeIn4Kb(current);
 
                 if (JournalId == Guid.Empty)
                 {
-                    JournalId = current->JournalId;
+                    JournalId = effectiveJournalId;
                 }
 
-                if (current->Flags == TransactionPersistenceModeFlags.LinkedJournalsRecord &&
+                if ((current->Flags & TransactionPersistenceModeFlags.LinkedJournalsRecord) != 0 &&
+                    effectiveJournalId == WriteAheadJournal.LinkedJournalsRecord.LinkedJournalId &&
                     _environment.Options.RootJournal is null) // this only applies to the _root_, not to branches
                 {
                     ProcessLinkedJournalsRecord(current);
                     _readAt4Kb += GetTransactionSizeIn4Kb(current) - 1;
                     continue;
                 }
-                
-                if ((current->JournalId == JournalId) is false &&
-                    current->JournalId != Guid.Empty) // this may be legacy
+
+                if ((effectiveJournalId == JournalId) is false &&
+                    effectiveJournalId != Guid.Empty) // this may be legacy
                 {
-                    // not our env, skip processing it
+                    // not our env (or a stale entry of a previous incarnation), skip processing it
                     _readAt4Kb += GetTransactionSizeIn4Kb(current) - 1;
                     continue;
                 }
 
-                if (Legacy_IsOldTransactionFromRecycledJournal(current))
+                if (Legacy_IsOldTransactionFromRecycledJournal(current, effectiveJournalId))
                 {
                     _readAt4Kb += GetTransactionSizeIn4Kb(current) - 1;
                     continue;
@@ -728,6 +755,13 @@ namespace Voron.Impl.Journal
 
             current = null;
             return false;
+        }
+
+        private static bool IsWellFormedJournalHeaderRecord(TransactionHeader* current)
+        {
+            return current->TransactionId == WriteAheadJournal.JournalHeaderRecord.TransactionIdMarker &&
+                   current->CompressedSize == -1 &&
+                   current->UncompressedSize >= sizeof(Guid);
         }
 
         private void ProcessLinkedJournalsRecord(TransactionHeader* current)
@@ -817,6 +851,10 @@ namespace Voron.Impl.Journal
         }
 
         public Guid JournalId;
+
+        // Unique value changed each time we recycle a journal file, to avoid confusing transactions from a previous incarnation with the current one
+        public Guid Incarnation { get; private set; }
+
         private RavenLogger _log;
 
         private bool CanIgnoreDataIntegrityErrorBecauseTxWasSynced(long transactionId, StorageEnvironmentOptions options)
@@ -828,11 +866,9 @@ namespace Voron.Impl.Journal
                    IsAlreadySyncTransaction(transactionId);
         }
         
-        // a transaction left over from a previous use of a recycled journal file (< 8.0 feature):
-        // a legacy tx (no JournalId) whose id is older than what we have already read
-        private bool Legacy_IsOldTransactionFromRecycledJournal(TransactionHeader* currentTx)
+        private bool Legacy_IsOldTransactionFromRecycledJournal(TransactionHeader* currentTx, Guid effectiveJournalId)
         {
-            if (currentTx->JournalId != Guid.Empty)
+            if (effectiveJournalId != Guid.Empty)
                 return false;
 
             if (_firstValidTransactionHeader != null && currentTx->TransactionId < _firstValidTransactionHeader->TransactionId)

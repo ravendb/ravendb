@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Utils;
+using Sparrow.Platform;
+using Sparrow.Server;
 using Tests.Infrastructure;
 using Voron;
 using Voron.Data.BTrees;
@@ -204,6 +206,82 @@ public class SharedJournalTests(ITestOutputHelper output) : RavenTestBase(output
                 Assert.Equal("2", branchTx.ReadTree("branchTree").Read("try").Reader.ToString());
             }
         }
+    }
+
+
+    [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Encryption)]
+    public void WillRestoreMissingHardLinksOnRootRecovery_Encrypted()
+    {
+        // Same scenario as WillRestoreMissingHardLinksOnRootRecovery, on an encrypted environment.
+        // EncryptTransaction ORs the Encrypted flag into the linked-journals record's own flags, so a
+        // recovery that tested Flags for equality against LinkedJournalsRecord never recognized the
+        // record on an encrypted database and silently skipped the link repair.
+        var masterKey = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
+
+        string rootPath = NewDataPath(suffix: "root-encrypted");
+        string branchPath = NewDataPath(suffix: "branch-encrypted");
+        IOExtensions.DeleteDirectory(rootPath);
+        IOExtensions.DeleteDirectory(branchPath);
+
+        {
+            using var rootOptions = CreateEncryptedOptions(rootPath, masterKey);
+            using var root = new StorageEnvironment(rootOptions);
+            using var _ = root.Journal.SharedJournalsScope();
+
+            using (var rootTx = root.WriteTransaction())
+            {
+                rootTx.CreateTree("rootTree").Add("root", "yes");
+                rootTx.Commit();
+            }
+
+            var mre = new ManualResetEventSlim(false);
+            root.Journal.BranchJournalMerger = new MyJournalMerger(mre);
+            var task = Task.Run(() =>
+            {
+                using var branchOptions = CreateEncryptedOptions(branchPath, masterKey);
+                branchOptions.RootJournal = root.Journal;
+                using var branch = new StorageEnvironment(branchOptions);
+                using (var branchTx = branch.WriteTransaction())
+                {
+                    branchTx.CreateTree("branchTree").Add("branch", "yes");
+                    branchTx.Commit();
+                }
+            });
+            task.ContinueWith(_ => mre.Set());
+
+            WaitForTaskAndExecuteBranchTransactions(task, mre, root);
+        }
+
+        // pretend a hard crash took out the branch's journal links
+        foreach (string journal in Directory.GetFiles(Path.Combine(branchPath, "Journals")))
+            File.Delete(journal);
+
+        {
+            using var rootOptions = CreateEncryptedOptions(rootPath, masterKey);
+
+            // root recovery replays the linked-journals record, which must rebuild the branch's link
+            using var root = new StorageEnvironment(rootOptions);
+            using var _ = root.Journal.SharedJournalsScope();
+
+            using var branchOptions = CreateEncryptedOptions(branchPath, masterKey);
+            branchOptions.RootJournal = root.Journal;
+            using var branch = new StorageEnvironment(branchOptions);
+
+            using (var rootTx = root.ReadTransaction())
+                Assert.Equal("yes", rootTx.ReadTree("rootTree").Read("root").Reader.ToString());
+
+            using (var branchTx = branch.ReadTransaction())
+                Assert.Equal("yes", branchTx.ReadTree("branchTree").Read("branch").Reader.ToString());
+        }
+    }
+
+    private static StorageEnvironmentOptions CreateEncryptedOptions(string path, byte[] masterKey)
+    {
+        var options = StorageEnvironmentOptions.ForPathForTests(path);
+        options.ManualFlushing = true;
+        options.ManualSyncing = true;
+        options.Encryption.MasterKey = masterKey.ToArray();
+        return options;
     }
 
 
@@ -547,7 +625,7 @@ public class SharedJournalTests(ITestOutputHelper output) : RavenTestBase(output
             using var rootOptions = StorageEnvironmentOptions.ForPathForTests(rootPath);
             rootOptions.ManualFlushing = true;
             rootOptions.ManualSyncing = true;
-            rootOptions.MaxLogFileSize = 4096 * 4;
+            rootOptions.MaxLogFileSize = 4096 * 5; // 4 entries per journal + the header record (RavenDB-27397)
 
             // journal 0 - 0
             using var root = new StorageEnvironment(rootOptions);
@@ -610,12 +688,14 @@ public class SharedJournalTests(ITestOutputHelper output) : RavenTestBase(output
 
             Assert.Null(root.Journal.CurrentFile);
 
-            int filesCountBefore = Directory.GetFiles(root.Options.JournalPath.FullPath).Length;
+            // count *.journal only - journals the root holds the last link of are renamed into the
+            // recycle pool instead of unlinked (RavenDB-27397)
+            int filesCountBefore = Directory.GetFiles(root.Options.JournalPath.FullPath, "*.journal").Length;
 
             root.FlushLogToDataFile();
             root.SyncDataFileImmediately();
 
-            int filesCountAfter = Directory.GetFiles(root.Options.JournalPath.FullPath).Length;
+            int filesCountAfter = Directory.GetFiles(root.Options.JournalPath.FullPath, "*.journal").Length;
             Assert.Equal(0, filesCountAfter);
 
             Assert.True(filesCountBefore > filesCountAfter, $"{filesCountBefore} > {+filesCountAfter}");
@@ -632,7 +712,7 @@ public class SharedJournalTests(ITestOutputHelper output) : RavenTestBase(output
             using var rootOptions = StorageEnvironmentOptions.ForPathForTests(rootPath);
             rootOptions.ManualFlushing = true;
             rootOptions.ManualSyncing = true;
-            rootOptions.MaxLogFileSize = 4096 * 3;
+            rootOptions.MaxLogFileSize = 4096 * 4; // +1 for the journal header record (RavenDB-27397)
 
             using var root = new StorageEnvironment(rootOptions);
             using var _ = root.Journal.SharedJournalsScope();
@@ -670,12 +750,15 @@ public class SharedJournalTests(ITestOutputHelper output) : RavenTestBase(output
             task.ContinueWith(_ => mre.Set());
 
             WaitForTaskAndExecuteBranchTransactions(task, mre, root);
-            int filesCountBefore = Directory.GetFiles(root.Options.JournalPath.FullPath).Length;
+
+            // count *.journal only - released journals the root holds the last link of are renamed
+            // into the recycle pool (recyclable-journal.*) instead of unlinked (RavenDB-27397)
+            int filesCountBefore = Directory.GetFiles(root.Options.JournalPath.FullPath, "*.journal").Length;
 
             root.FlushLogToDataFile();
             root.SyncDataFileImmediately();
 
-            int filesCountAfter = Directory.GetFiles(root.Options.JournalPath.FullPath).Length;
+            int filesCountAfter = Directory.GetFiles(root.Options.JournalPath.FullPath, "*.journal").Length;
 
             Assert.True(filesCountBefore > filesCountAfter, $"{filesCountBefore} > {+filesCountAfter}");
         }
@@ -832,7 +915,7 @@ public class SharedJournalTests(ITestOutputHelper output) : RavenTestBase(output
             using var rootOptions = StorageEnvironmentOptions.ForPathForTests(rootPath);
             rootOptions.ManualFlushing = true;
             rootOptions.ManualSyncing = true;
-            rootOptions.MaxLogFileSize = 4096 * 3;
+            rootOptions.MaxLogFileSize = 4096 * 4; // +1 for the journal header record (RavenDB-27397)
 
             using var root = new StorageEnvironment(rootOptions);
             using var _ = root.Journal.SharedJournalsScope();
@@ -847,12 +930,13 @@ public class SharedJournalTests(ITestOutputHelper output) : RavenTestBase(output
                 }
             }
 
-            // Previous 3 txs should cover all journal
+            // Previous 3 txs + the journal header record should cover all journal
             Assert.Null(root.Journal.CurrentFile);
             root.FlushLogToDataFile();
             root.SyncDataFileImmediately();
 
-            string[] rootJournals = Directory.GetFiles(root.Options.JournalPath.FullPath);
+            // released journals move into the recycle pool (recyclable-journal.*), count *.journal only
+            string[] rootJournals = Directory.GetFiles(root.Options.JournalPath.FullPath, "*.journal");
             Assert.Empty(rootJournals);
 
             var mre = new ManualResetEventSlim(false);
@@ -881,7 +965,7 @@ public class SharedJournalTests(ITestOutputHelper output) : RavenTestBase(output
             using var rootOptions = StorageEnvironmentOptions.ForPathForTests(rootPath);
             rootOptions.ManualFlushing = true;
             rootOptions.ManualSyncing = true;
-            rootOptions.MaxLogFileSize = 4096 * 3;
+            rootOptions.MaxLogFileSize = 4096 * 4;
             using var root = new StorageEnvironment(rootOptions);
 
             root.FlushLogToDataFile();

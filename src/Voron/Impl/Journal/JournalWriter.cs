@@ -107,6 +107,15 @@ namespace Voron.Impl.Journal
             }
         }
 
+     
+        public void WriteHeaderRecord(Pal.journal_entry entry)
+        {
+            var result = Pal.rvn_write_journal(_writeHandle, &entry, 1, 0L, out var error);
+            if (result != PalFlags.FailCodes.Success)
+                PalHelper.ThrowLastError(result, error,
+                    $"Attempted to write the journal header record - Path: {FileName.FullPath}");
+        }
+
         public (Pager Pager, Pager.State State) CreatePager()
         {
             var flags = Pal.OpenFileFlags.None;
