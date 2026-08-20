@@ -622,7 +622,6 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
             // _resolvedTables, so tables on a non-default schema stream too. Row events for uncached
             // table IDs are skipped automatically by the TryGetValue check.
             var tableMapCache = new Dictionary<long, TableInfo>();
-            // Reused across rows; CdcEvent is a struct the consumer copies out between yields.
             var events = new List<CdcEvent>();
 
             await foreach (var (header, binlogEvent) in client.Replicate(ct))

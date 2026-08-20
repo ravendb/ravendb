@@ -43,7 +43,6 @@ public class CdcSinkTableProcessor
     /// <summary>Pre-computed Key + "__on_delete" for the OnDelete dispatch path.</summary>
     public string KeyOnDelete { get; init; }
 
-    /// <summary>True when this mapping ignores deletes (IgnoreDeletes with no OnDelete patch), so a DELETE row produces no op.</summary>
     public bool IgnoresDeletes { get; init; }
 
     /// <summary>

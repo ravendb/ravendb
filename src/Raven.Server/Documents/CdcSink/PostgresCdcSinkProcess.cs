@@ -466,7 +466,6 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             ct,
             _lastLsn);
 
-        // Reused across messages; CdcEvent is a struct the consumer copies out between yields.
         var events = new List<CdcEvent>();
 
         await foreach (var message in replicationStream.WithCancellation(ct))
