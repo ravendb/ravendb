@@ -33,7 +33,7 @@
         --bs-btn-color: #{colors.$text-muted-var};
         --bs-btn-hover-color: #{colors.$text-color-var};
         padding: 6px 12px;
-        border-radius: var(--bs-border-radius);
+        border-radius: sizes.$border-radius;
         // Keep long labels inside the fixed-width sidebar rather than forcing it wider.
         white-space: normal;
         text-align: left;
@@ -79,7 +79,7 @@
     // Single-line description of what a Before/After selection filters.
     &__summary {
         padding: 8px 12px;
-        border-radius: var(--bs-border-radius);
+        border-radius: sizes.$border-radius;
         background-color: colors.$panel-bg-2-var;
         color: colors.$text-color-var;
         font-size: sizes.$font-size-sm;
@@ -138,7 +138,7 @@
         z-index: 6;
         overflow: hidden;
         border: 1px solid colors.$border-color-light-var;
-        border-radius: var(--bs-border-radius-sm);
+        border-radius: sizes.$border-radius-sm;
         background-color: colors.$panel-bg-1-var;
         box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
     }
@@ -221,9 +221,9 @@
     &__action {
         padding: 2px 6px;
         border: 0;
-        border-radius: var(--bs-border-radius-sm);
+        border-radius: sizes.$border-radius-sm;
         background-color: transparent;
-        color: var(--bs-primary);
+        color: colors.$primary-var;
         font-size: sizes.$font-size-sm;
         cursor: pointer;
 
@@ -276,7 +276,7 @@
         height: 28px;
         padding: 0;
         border: 0;
-        border-radius: var(--bs-border-radius);
+        border-radius: sizes.$border-radius;
         background-color: transparent;
         color: colors.$text-color-var;
 
@@ -318,7 +318,7 @@
         min-height: 32px;
         padding: 2px 8px;
         border: 1px solid colors.$border-color-light-var;
-        border-radius: var(--bs-border-radius-sm);
+        border-radius: sizes.$border-radius-sm;
         background-color: colors.$input-bg-var;
         color: colors.$text-color-var;
         cursor: pointer;
@@ -353,7 +353,7 @@
         overflow-y: auto;
         list-style: none;
         border: 1px solid colors.$border-color-light-var;
-        border-radius: var(--bs-border-radius);
+        border-radius: sizes.$border-radius;
         background-color: colors.$panel-bg-1-var;
         box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
     }

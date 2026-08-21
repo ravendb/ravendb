@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import moment from "moment";
+import { useAsyncCallback } from "react-async-hook";
 import Modal from "components/common/Modal";
 import { Icon } from "components/common/Icon";
 import Button from "react-bootstrap/Button";
@@ -69,7 +70,6 @@ export default function DeleteTimeSeriesRangeModal(props: DeleteTimeSeriesRangeM
         timezone: timezone ?? "local",
     }));
     const [countState, setCountState] = useState<CountState>({ loading: true, result: null });
-    const [deleting, setDeleting] = useState(false);
 
     // Latest range, read inside the debounced effect without making it a dependency.
     const rangeRef = useRef(range.range);
@@ -115,19 +115,17 @@ export default function DeleteTimeSeriesRangeModal(props: DeleteTimeSeriesRangeM
     const deleteLabel = showExactCount ? `Delete ${count.toLocaleString()} ${entryWord}` : "Delete range";
     const deleteDisabled = !range.canApply || loading || isEmptyRange;
 
-    const handleDelete = async () => {
-        if (deleteDisabled || deleting) {
+    const asyncDelete = useAsyncCallback(async () => {
+        await onDelete(range.range);
+        close();
+    });
+
+    const handleDelete = () => {
+        if (deleteDisabled || asyncDelete.loading) {
             return;
         }
-        setDeleting(true);
-        try {
-            await onDelete(range.range);
-            setDeleting(false);
-            close();
-        } catch {
-            // Failure is surfaced by the delete command itself; keep the dialog open to retry.
-            setDeleting(false);
-        }
+        // Failure is surfaced by the delete command itself; keep the dialog open to retry.
+        asyncDelete.execute().catch(() => {});
     };
 
     return (
@@ -186,18 +184,18 @@ export default function DeleteTimeSeriesRangeModal(props: DeleteTimeSeriesRangeM
                 )}
             </Modal.Body>
             <Modal.Footer>
-                <Button variant="link" className="link-muted" onClick={close} disabled={deleting}>
+                <Button variant="link" className="link-muted" onClick={close} disabled={asyncDelete.loading}>
                     Cancel
                 </Button>
                 <ButtonWithSpinner
                     variant="danger"
                     className="rounded-pill"
                     icon="trash"
-                    isSpinning={deleting}
+                    isSpinning={asyncDelete.loading}
                     disabled={deleteDisabled}
                     onClick={handleDelete}
                 >
-                    {deleting ? "Deleting…" : deleteLabel}
+                    {asyncDelete.loading ? "Deleting…" : deleteLabel}
                 </ButtonWithSpinner>
             </Modal.Footer>
         </Modal>
