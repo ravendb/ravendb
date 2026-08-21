@@ -34,7 +34,7 @@ export function DeleteChannelDialog({
         mutationFn: () => api.services.channels.delete(slug, channel.channelId),
         onSuccess: async () => {
             await Promise.all([
-                invalidateChannelQueries(queryClient, slug),
+                invalidateChannelQueries(queryClient, slug, channel.type),
                 // Deleting a channel orphans its embed links, so drop them from the active-links view.
                 queryClient.invalidateQueries({ queryKey: api.queries.embedLinks.list(slug).queryKey }),
             ]);

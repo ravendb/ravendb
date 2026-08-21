@@ -100,7 +100,7 @@ export function TelegramChannelBindings({
             }),
         onSuccess: async () => {
             unsavedChanges.markSaved();
-            await invalidateChannelQueries(queryClient, slug);
+            await invalidateChannelQueries(queryClient, slug, channel.type);
             toast.success("Parameter bindings saved");
             setIsEditing(false);
         },

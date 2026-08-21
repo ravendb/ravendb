@@ -49,7 +49,7 @@ export function TelegramMessagesTab({ slug, channel }: { slug: string; channel: 
             }),
         onSuccess: async () => {
             unsavedChanges.markSaved();
-            await invalidateChannelQueries(queryClient, slug);
+            await invalidateChannelQueries(queryClient, slug, channel.type);
             toast.success("Bot messages saved");
             setIsEditing(false);
         },

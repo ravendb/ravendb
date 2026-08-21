@@ -146,7 +146,7 @@ function LoadedSlackChannelForm({
             }),
         onSuccess: async () => {
             unsavedChanges.markSaved();
-            await invalidateChannelQueries(queryClient, slug);
+            await invalidateChannelQueries(queryClient, slug, "Slack");
             toast.success("Slack channel created");
         },
     });
