@@ -134,7 +134,7 @@ function EmptyAppsState() {
                 </div>
                 <h2 className="mt-4 text-sm font-semibold">No apps added yet</h2>
                 <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                    Create an app from a source database and its table mapping.
+                    Create an app from a source database and a table mapping.
                 </p>
                 <Button asChild size="sm" className="mt-5">
                     <Link to={appRoutes.addApp()}>

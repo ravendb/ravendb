@@ -27,15 +27,20 @@ Frontend for Raven Quill. It is a Vite + React + TypeScript app and is finally b
 One concept, one word, on every surface. These are the product's terms — use them in
 every label, heading, menu item, description, toast, `aria-label` and page title.
 
-| Term                  | Means                                        | Never                                              |
-| --------------------- | -------------------------------------------- | -------------------------------------------------- |
-| **App**               | a configured application                     | "Application"                                      |
-| **Data source**       | the source database and its ingestion        | "CDC" as a product noun                            |
-| **Dashboard API key** | the single dashboard credential              | "operator API key", "operator key", bare "API key" |
-| **Quill**             | the deployment                               | "appliance", "this Quill instance"                 |
-| **Sync**              | the running pipeline (performance, progress) | "CDC performance", "CDC feed"                      |
+| Term                  | Means                                        | Never                              |
+| --------------------- | -------------------------------------------- | ---------------------------------- |
+| **App**               | a configured application                     | "Application"                      |
+| **Data source**       | the source database and its ingestion        | "CDC" as a product noun            |
+| **Dashboard API key** | the single dashboard credential              | "operator API key", "operator key" |
+| **Quill**             | the deployment                               | "appliance", "this Quill instance" |
+| **Sync**              | the running pipeline (performance, progress) | "CDC performance", "CDC feed"      |
 
-Sentence case throughout, as elsewhere in the UI ("IP configuration", "Data source").
+**Dashboard API key** is the term when naming the dashboard credential in prose. Bare
+"API key" is fine in a field-level message sitting beneath a correctly labelled
+"Dashboard API key" field, and it is the correct term for a third-party provider's key
+(OpenAI, Azure, Google, Hugging Face, Mistral) — those are never the dashboard credential.
+
+New and changed labels should use sentence case ("IP configuration", "Data source").
 **Quill** is a proper noun and stays capitalised.
 
 `src/lib/vocabulary.test.ts` enforces this. It parses each file and checks only string

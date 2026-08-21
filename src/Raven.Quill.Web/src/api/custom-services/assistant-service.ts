@@ -119,7 +119,7 @@ export function isQuillSessionExpired(error: unknown) {
 }
 
 export const AI_LICENSE_UNAVAILABLE_MESSAGE =
-    "The AI assistant is not available for this appliance's license. Please contact support.";
+    "The AI assistant is not available for Quill's license. Please contact support.";
 
 const ASSISTANT_STATUS_MESSAGES: Partial<Record<AssistantChatStatus, string>> = {
     ConsentRequired: AI_CONSENT_REQUIRED_MESSAGE,

@@ -170,5 +170,5 @@ function getNeedsConfigurationReason(table: DiscoverTableResponse) {
         return "CDC is not enabled. Ask a database administrator to enable CDC for this table.";
     }
 
-    return "This table cannot be used as a data source.";
+    return "This table cannot be synced.";
 }
