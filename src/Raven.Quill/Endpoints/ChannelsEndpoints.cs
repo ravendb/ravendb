@@ -1,4 +1,4 @@
-using Raven.Client.Documents;
+﻿using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
@@ -134,8 +134,8 @@ public static class ChannelsEndpoints
 
         if (logger.IsInfoEnabled)
             logger.Info(
-                "Provisioned iFrame channel slug={Slug} channelId={ChannelId} agentId={AgentId}",
-                app.Slug, channelId, config.Identifier);
+                $"Provisioned iFrame channel slug={app.Slug} channelId={channelId} " +
+                $"agentId={config.Identifier}");
 
         if (logger.AuditEnabled)
             logger.Audit("POST",
@@ -214,8 +214,8 @@ public static class ChannelsEndpoints
 
         if (logger.IsInfoEnabled)
             logger.Info(
-                "Provisioned Telegram channel slug={Slug} channelId={ChannelId} agentId={AgentId} bot=@{Bot}",
-                app.Slug, channelId, config.Identifier, bot.Username);
+                $"Provisioned Telegram channel slug={app.Slug} channelId={channelId} " +
+                $"agentId={config.Identifier} bot=@{bot.Username}");
 
         if (logger.AuditEnabled)
             logger.Audit("PROVISION", $"Channel '{channelId}' in App '{app.Slug}'", ctx);
@@ -314,8 +314,7 @@ public static class ChannelsEndpoints
 
         if (logger.IsInfoEnabled)
             logger.Info(
-                "Updated iFrame channel slug={Slug} channelId={ChannelId} enabled={Enabled}",
-                slug, channelId, channel.Enabled);
+                $"Updated iFrame channel slug={slug} channelId={channelId} enabled={channel.Enabled}");
 
         if (logger.AuditEnabled)
             logger.Audit("PUT",
@@ -420,8 +419,8 @@ public static class ChannelsEndpoints
 
         if (logger.IsInfoEnabled)
             logger.Info(
-                "Updated Telegram channel slug={Slug} channelId={ChannelId} enabled={Enabled} tokenRotated={TokenRotated}",
-                app.Slug, channelId, channel.Enabled, tokenRotated);
+                $"Updated Telegram channel slug={app.Slug} channelId={channelId} " +
+                $"enabled={channel.Enabled} tokenRotated={tokenRotated}");
 
         if (logger.AuditEnabled)
             logger.Audit("UPDATE", $"Channel '{channelId}' in App '{app.Slug}'", ctx);
@@ -474,7 +473,7 @@ public static class ChannelsEndpoints
         await session.SaveChangesAsync(ct);
 
         if (logger.IsInfoEnabled)
-            logger.Info("Deleted iFrame channel slug={Slug} channelId={ChannelId}", slug, channelId);
+            logger.Info($"Deleted iFrame channel slug={slug} channelId={channelId}");
         if (logger.AuditEnabled)
             logger.Audit("DELETE", $"Channel '{channelId}' in App '{slug}'", ctx);
 
@@ -501,7 +500,7 @@ public static class ChannelsEndpoints
         telegramManager.Wake();
 
         if (logger.IsInfoEnabled)
-            logger.Info("Deleted Telegram channel slug={Slug} channelId={ChannelId}", app.Slug, channelId);
+            logger.Info($"Deleted Telegram channel slug={app.Slug} channelId={channelId}");
         if (logger.AuditEnabled)
             logger.Audit("DELETE", $"Channel '{channelId}' in App '{app.Slug}'", ctx);
         return Results.NoContent();
@@ -587,7 +586,8 @@ public static class ChannelsEndpoints
         {
             // an unreleased reservation is an orphan the next reserve attempt reclaims
             if (logger.IsWarnEnabled)
-                logger.Warn("Telegram bot reservation {ReservationId} was not released: {Error}", reservationId, e.Message);
+                logger.Warn(
+                    $"Telegram bot reservation {reservationId} was not released: {e.Message}");
         }
     }
 

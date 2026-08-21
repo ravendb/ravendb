@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.RateLimiting;
@@ -21,8 +21,9 @@ using Raven.Quill.Infrastructure;
 using Raven.Quill.Licensing;
 using Raven.Quill.Telegram;
 using Raven.Quill.Logging;
+using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Raven.Client.Documents;
-using NLog.Extensions.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 var isOpenApiDocumentGeneration = Assembly.GetEntryAssembly()?.GetName().Name == "GetDocument.Insider";
@@ -77,20 +78,14 @@ builder.Services.AddOpenApi(options =>
     });
 });
 
-var logOptions = QuillLogOptions.FromEnvironment();
+// NLog backs RavenLogManager, the way Raven.Server does it in its own Program.Main. The configuration
+// itself is applied after the host is built, once ApplianceOptions.Logs can be read.
+RavenLogManager.Set(RavenNLogLogManager.Instance);
 
-builder.Services.AddSingleton(logOptions);
-builder.Services.AddSingleton(_ => QuillLogging.CreateOrFallback(logOptions));
-
+// Nothing bridges ILogger to NLog - everything Quill logs goes through QuillLogger - so the framework's
+// own Microsoft.* and System.* output has nowhere to go. Clearing the providers is what stops the default
+// console one writing it out separately, in its own format, alongside what NLog renders.
 builder.Logging.ClearProviders();
-builder.Logging.AddNLog(
-    new NLogProviderOptions
-    {
-        IncludeScopes = false,
-        CaptureMessageTemplates = false,
-        IncludeActivityIdsWithBeginScope = false,
-    },
-    static sp => sp.GetRequiredService<QuillLogging>().Factory);
 
 builder.Services.AddSingleton(typeof(QuillLogger<>), typeof(QuillLogger<>));
 builder.Services.AddOptions<ApplianceOptions>()
@@ -119,6 +114,14 @@ builder.Services.AddOptions<ApplianceOptions>()
             options.ReadinessAttemptTimeout = ParsePositiveSeconds("RAVEN_QUILL_READINESS_ATTEMPT_TIMEOUT_SECONDS", v));
         ReadEnv("RAVEN_QUILL_READINESS_OVERALL_TIMEOUT_SECONDS", v =>
             options.ReadinessOverallTimeout = ParsePositiveSeconds("RAVEN_QUILL_READINESS_OVERALL_TIMEOUT_SECONDS", v));
+
+        ReadEnv("RAVEN_QUILL_LOGS_CONFIG_PATH", v => options.Logs.ConfigPath = v.Trim());
+        ReadEnv("RAVEN_QUILL_LOGS_PATH", v =>
+            options.Logs.Path = ParseAbsolutePath("RAVEN_QUILL_LOGS_PATH", v));
+        ReadEnv("RAVEN_QUILL_SECURITY_AUDITLOG_PATH", v =>
+            options.Logs.AuditPath = ParseAbsolutePath("RAVEN_QUILL_SECURITY_AUDITLOG_PATH", v));
+        ReadEnv("RAVEN_QUILL_LOGS_MINLEVEL", v =>
+            options.Logs.MinLevel = ParseLogLevel("RAVEN_QUILL_LOGS_MINLEVEL", v));
     })
     .ValidateDataAnnotations()
     .Validate(o => string.IsNullOrEmpty(o.Telegram.ApiUrl) ||
@@ -147,7 +150,7 @@ builder.Services.AddSingleton<IApiKeyStore, ApiKeyStore>();
 // worth logging loudly the moment the process starts rather than on the first visitor's request.
 builder.Services.AddSingleton(sp => WidgetAssets.Load(
     sp.GetRequiredService<IWebHostEnvironment>(),
-    sp.GetRequiredService<ILoggerFactory>().CreateLogger<WidgetAssets>()));
+    sp.GetRequiredService<QuillLogger<WidgetAssets>>()));
 builder.Services.AddTransient<IFeedbackSender, FeedbackSender>();
 builder.Services.AddTransient<ILicenseStatsProvider, LicenseStatsProvider>();
 builder.Services.AddSingleton<ITelegramBotClientFactory, TelegramBotClientFactory>();
@@ -283,7 +286,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 
 var app = builder.Build();
 
-ReportLoggingStatus(app.Services);
+RavenLogManager.Instance.ConfigureLogging(app.Services.GetRequiredService<IOptions<ApplianceOptions>>().Value.Logs);
 
 if (app.Environment.IsDevelopment())
     app.MapOpenApi();
@@ -327,64 +330,32 @@ static void ReadEnv(string name, Action<string> apply)
     if (!string.IsNullOrEmpty(v)) apply(v);
 }
 
+// Absolute only: a relative directory resolves inside the container image, where the next recreate
+// destroys whatever was written there.
+static string ParseAbsolutePath(string name, string value)
+{
+    var path = value.Trim();
+    if (Path.IsPathRooted(path) == false)
+        throw new InvalidOperationException(
+            $"{name} must be an absolute path, got '{path}'. A relative directory resolves inside the " +
+            "container image and is lost on the next recreate.");
+    return path;
+}
+
+static Sparrow.Logging.LogLevel ParseLogLevel(string name, string value)
+{
+    if (Enum.TryParse<Sparrow.Logging.LogLevel>(value.Trim(), ignoreCase: true, out var level) == false)
+        throw new InvalidOperationException(
+            $"{name} must be one of {string.Join(", ", Enum.GetNames<Sparrow.Logging.LogLevel>())}, " +
+            $"got '{value.Trim()}'");
+    return level;
+}
+
 static TimeSpan ParsePositiveSeconds(string name, string value)
 {
     if (int.TryParse(value, out var seconds) == false || seconds <= 0)
         throw new InvalidOperationException($"{name} must be a positive number of seconds, got '{value}'");
     return TimeSpan.FromSeconds(seconds);
-}
-
-static void ReportLoggingStatus(IServiceProvider services)
-{
-    var logging = services.GetRequiredService<QuillLogging>();
-    var logger = services.GetRequiredService<QuillLogger<QuillLogging>>();
-
-    var source = logging.LoadedFrom ?? "the built-in defaults";
-
-    if (logger.IsInfoEnabled)
-        logger.Info("Logging configured from {Source} at {MinLevel} level.", source, logging.CurrentMinLevel);
-
-    foreach (var problem in logging.ConfigurationProblems)
-    {
-        if (logger.IsWarnEnabled)
-            logger.Warn("A logging setting could not be applied, so it is running on the default for " +
-                        "it: {Problem}", problem);
-    }
-
-    if (logging.IsFileLogEnabled)
-    {
-        if (logging.CurrentLogFile is { } logFile)
-        {
-            if (logger.IsInfoEnabled)
-                logger.Info("Logging to '{Path}'.", logFile);
-        }
-        else if (logger.IsWarnEnabled)
-        {
-            logger.Warn("The file sink is on in {Source} but there is no '{Target}' target behind it, so " +
-                        "the log file cannot be reported or moved through the API.",
-                source, QuillLogging.NormalTargetName);
-        }
-    }
-    else if (logger.IsInfoEnabled)
-    {
-        logger.Info("The file sink is off in {Source}; logging to the console only.", source);
-    }
-
-    if (logging.IsAuditEnabled)
-    {
-        if (logging.CurrentAuditFile is { } auditFile)
-        {
-            if (logger.IsInfoEnabled)
-                logger.Info("Audit log enabled: '{Path}'.", auditFile);
-        }
-        else if (logger.IsWarnEnabled)
-        {
-            logger.Warn("The audit log is enabled in {Source} by a target other than '{Target}', so its " +
-                        "file cannot be reported here.", source, QuillLogging.AuditTargetName);
-        }
-
-        logging.Audit("AUDIT", "log started", context: null);
-    }
 }
 
 static string GetJsonPropertyName(System.Reflection.PropertyInfo property)

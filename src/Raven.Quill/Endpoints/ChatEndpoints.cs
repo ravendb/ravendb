@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Raven.Client.Documents;
@@ -88,7 +88,7 @@ public static class ChatEndpoints
         catch (Exception e)
         {
             if (logger.IsErrorEnabled)
-                logger.Error(e, "Chat stream failed for agentId={AgentId}", body.AgentId);
+                logger.Error(e, $"Chat stream failed for agentId={body.AgentId}");
             try
             {
                 await NdjsonStream.WriteLineAsync(ctx, new { type = "error", message = "Chat stream failed. See server logs for details." });

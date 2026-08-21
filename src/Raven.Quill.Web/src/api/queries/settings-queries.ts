@@ -16,11 +16,6 @@ export function createSettingsQueries(api: ServerApi["settings"]) {
                 queryKey: [baseKey, "usage", period.year, period.month, period.day],
                 queryFn: () => api.usage(datePeriodToSearchParams(period)),
             }),
-        logConfiguration: () =>
-            queryOptions({
-                queryKey: [baseKey, "log-configuration"],
-                queryFn: () => api.logConfiguration(),
-            }),
     };
 }
 

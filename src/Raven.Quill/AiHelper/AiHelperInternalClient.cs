@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Text;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -111,15 +111,15 @@ public sealed class AiHelperInternalClient(
 
             if (logger.IsInfoEnabled)
                 logger.Info(
-                    "AI Helper {Path} failed: upstream {Code}, mapped {Status}. Body: {Body}",
-                    path, (int)response.StatusCode, status, TruncateForLog(text));
+                    $"AI Helper {path} failed: upstream {(int)response.StatusCode}, mapped {status}. " +
+                    $"Body: {TruncateForLog(text)}");
             return (status, text);
         }
         catch (Exception e) when (e is HttpRequestException ||
                                   (e is OperationCanceledException && ct.IsCancellationRequested == false))
         {
             if (logger.IsWarnEnabled)
-                logger.Warn(e, "AI Helper {Path} failed (transport).", path);
+                logger.Warn(e, $"AI Helper {path} failed (transport).");
             return (AiHelperStatus.InternalError, string.Empty);
         }
     }
@@ -153,8 +153,8 @@ public sealed class AiHelperInternalClient(
             {
                 if (logger.IsInfoEnabled)
                     logger.Info(
-                        "AI Helper {Path}: upstream {Code}, mapped {Status}. Body: {Body}",
-                        path, (int)response.StatusCode, status, TruncateForLog(text));
+                        $"AI Helper {path}: upstream {(int)response.StatusCode}, mapped {status}. " +
+                        $"Body: {TruncateForLog(text)}");
             }
 
             return status;
@@ -163,7 +163,7 @@ public sealed class AiHelperInternalClient(
                                   (e is OperationCanceledException && ct.IsCancellationRequested == false))
         {
             if (logger.IsWarnEnabled)
-                logger.Warn(e, "AI Helper give-consent failed (transport).");
+                logger.Warn(e, $"AI Helper {path} failed (transport).");
             return AiHelperStatus.InternalError;
         }
     }

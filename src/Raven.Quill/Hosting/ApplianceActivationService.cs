@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO.Compression;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Options;
@@ -31,8 +31,8 @@ public sealed class ApplianceActivationService(
         {
             if (logger.IsInfoEnabled)
                 logger.Info(
-                    "Setup package already applied (bootstrap phase {Phase}); skipping startup activation.",
-                    bootstrap.Phase);
+                    $"Setup package already applied (bootstrap phase {bootstrap.Phase}); " +
+                    "skipping startup activation.");
             return;
         }
 
@@ -54,12 +54,12 @@ public sealed class ApplianceActivationService(
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
                     if (logger.IsDebugEnabled)
-                        logger.Debug(ex, "Failed to delete temp zip {Path}", tempZipPath);
+                        logger.Debug(ex, $"Failed to delete temp zip {tempZipPath}");
                 }
             }
 
             if (logger.IsInfoEnabled)
-                logger.Info("Setup package activated and unpacked to {Path}.", opts.SetupPackagePath);
+                logger.Info($"Setup package activated and unpacked to {opts.SetupPackagePath}.");
             if (logger.AuditEnabled)
                 logger.Audit("ACTIVATION", $"setup package unpacked to '{opts.SetupPackagePath}'", context: null);
 
@@ -109,10 +109,10 @@ public sealed class ApplianceActivationService(
         {
             if (logger.IsWarnEnabled)
                 logger.Warn(
-                    "No admin client certificate (admin.client.certificate.*.pfx) found under {Path}; " +
-                    "skipping the admin-thumbprint marker — RavenDB will not trust the admin cert and the " +
-                    "secure store may fail to authenticate (appliance can hang in Restarting).",
-                    opts.SetupPackagePath);
+                    $"No admin client certificate (admin.client.certificate.*.pfx) found under " +
+                    $"{opts.SetupPackagePath}; skipping the admin-thumbprint marker — RavenDB will not " +
+                    "trust the admin cert and the secure store may fail to authenticate (appliance can " +
+                    "hang in Restarting).");
             return;
         }
 
@@ -135,7 +135,9 @@ public sealed class ApplianceActivationService(
         catch (Exception ex)
         {
             if (logger.IsErrorEnabled)
-                logger.Error(ex, "Could not signal s6 to restart RavenDB ({Service}); an s6 supervisor must restart the host.", opts.RavenDbS6Service);
+                logger.Error(ex,
+                    $"Could not signal s6 to restart RavenDB ({opts.RavenDbS6Service}); an s6 supervisor " +
+                    "must restart the host.");
         }
 
         if (logger.IsInfoEnabled)

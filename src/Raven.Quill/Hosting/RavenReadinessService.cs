@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 using Polly;
 using Polly.Registry;
 using Polly.Retry;
@@ -51,8 +51,8 @@ public sealed class RavenReadinessService(
             {
                 if (logger.IsInfoEnabled)
                     logger.Info(
-                        "Waiting {Delay} for RavenDB to start before probing readiness...",
-                        opts.ReadinessInitialDelay);
+                        $"Waiting {opts.ReadinessInitialDelay} for RavenDB to start before probing " +
+                        "readiness...");
                 await Task.Delay(opts.ReadinessInitialDelay, stoppingToken);
             }
 
@@ -68,8 +68,8 @@ public sealed class RavenReadinessService(
                     var r = await RavenStoreFactory.EnsureDatabaseAsync(store, opts.ConfigDatabase, DatabaseLockMode.PreventDeletesError, stoppingToken);
                     if (logger.IsInfoEnabled)
                         logger.Info(
-                            "RavenDB ready at {Url}; config database {Database} {Action}.",
-                            opts.RavenUrl, opts.ConfigDatabase, r.Created ? "created" : "already present");
+                            $"RavenDB ready at {opts.RavenUrl}; config database {opts.ConfigDatabase} " +
+                            $"{(r.Created ? "created" : "already present")}.");
 
                     ready.MarkReady();
 
@@ -84,9 +84,9 @@ public sealed class RavenReadinessService(
                     {
                         if (logger.IsInfoEnabled)
                             logger.Info(
-                                "RavenDB reachable but the process started without a setup package at {Path}; " +
-                                "bootstrap stays in its current phase until startup activation completes.",
-                                opts.SetupPackagePath);
+                                "RavenDB reachable but the process started without a setup package at " +
+                                $"{opts.SetupPackagePath}; bootstrap stays in its current phase until " +
+                                "startup activation completes.");
                     }
 
                     return;
@@ -95,8 +95,8 @@ public sealed class RavenReadinessService(
                 {
                     if (logger.IsErrorEnabled)
                         logger.Error(ex,
-                            "RavenDB readiness probe failed after {Timeout}; retrying in {Delay}.",
-                            opts.ReadinessOverallTimeout, opts.ReadinessInitialDelay);
+                            $"RavenDB readiness probe failed after {opts.ReadinessOverallTimeout}; " +
+                            $"retrying in {opts.ReadinessInitialDelay}.");
                     ready.MarkFailed(ex.Message);
 
                     if (File.Exists(GetSetupSettingsPath(opts)))

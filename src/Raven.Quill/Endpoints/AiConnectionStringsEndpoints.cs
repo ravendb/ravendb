@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -71,7 +71,7 @@ public static class AiConnectionStringsEndpoints
             .SendAsync(new RemoveServerWideConnectionStringOperation<AiConnectionString>(new AiConnectionString { Name = name }), ct);
 
         if (logger.IsInfoEnabled)
-            logger.Info("Deleted AI connection string name={Name}", name);
+            logger.Info($"Deleted AI connection string name={name}");
 
         if (logger.AuditEnabled)
             logger.Audit("DELETE", $"AiConnectionString '{name}'", ctx);
@@ -143,7 +143,8 @@ public static class AiConnectionStringsEndpoints
 
         if (logger.IsInfoEnabled)
             logger.Info(
-                "Created AI connection string name={Name} provider={Provider}", connectionString.Name, connectionString.GetActiveProvider());
+                $"Created AI connection string name={connectionString.Name} " +
+                $"provider={connectionString.GetActiveProvider()}");
 
         if (logger.AuditEnabled)
             logger.Audit("POST",
@@ -179,8 +180,8 @@ public static class AiConnectionStringsEndpoints
         {
             if (logger.IsWarnEnabled)
                 logger.Warn(
-                    "Could not run the AI model test for connection string name={Name}: transport {Transport}.",
-                    body.Name, transport);
+                    $"Could not run the AI model test for connection string name={body.Name}: " +
+                    $"transport {transport}.");
             response = new AiConnectionStringTestResponse(
                 Success: false, Error: "Could not reach the provider to verify the model.");
         }

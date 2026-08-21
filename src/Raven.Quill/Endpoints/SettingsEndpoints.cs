@@ -1,8 +1,7 @@
-using System.Net.Mail;
+﻿using System.Net.Mail;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.ServerWide.Operations.Certificates;
-using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Quill.Contracts;
 using Raven.Quill.Feedback;
 using Raven.Quill.Licensing;
@@ -37,23 +36,6 @@ public static class SettingsEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status502BadGateway);
-
-        group.MapGet("/logs/configuration", GetLogConfiguration)
-            .WithName("settings.logConfiguration")
-            .WithDescription("Reports what the live log sinks are doing. A path is null when that sink " +
-                             "is off, and auditLogs.level is Off when the audit log is disabled.")
-            .Produces<LogConfigurationResponse>();
-
-        group.MapPost("/logs/configuration", UpdateLogConfiguration)
-            .WithName("settings.updateLogConfiguration")
-            .WithDescription("Changes log levels and the log file path on the running appliance. Send " +
-                             "the whole state, not a patch: a logs block with no path switches the file " +
-                             "sink off. Changes revert on restart unless persist is true.")
-            .Accepts<UpdateLogConfigurationRequest>("application/json")
-            .Produces(StatusCodes.Status204NoContent)
-            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
-            .Produces<ApiErrorResponse>(StatusCodes.Status409Conflict)
-            .Produces<ApiErrorResponse>(StatusCodes.Status500InternalServerError);
 
         group.MapGet("/certificates/get", async (IDocumentStore store, int start, int pageSize, CancellationToken token) =>
             {
@@ -126,86 +108,6 @@ public static class SettingsEndpoints
             source.NotBefore,
             new Dictionary<string, DatabaseAccess>(source.Permissions, StringComparer.OrdinalIgnoreCase),
             source.Disabled);
-    }
-
-    private static IResult GetLogConfiguration(QuillLogging logging) =>
-        Results.Ok(new LogConfigurationResponse(
-            logging.GetLogsConfiguration(),
-            logging.GetAuditLogsConfiguration(),
-            logging.GetMicrosoftLogsConfiguration(),
-            CanPersist: logging.ConfigPath is not null));
-
-    private static IResult UpdateLogConfiguration(
-        UpdateLogConfigurationRequest body,
-        QuillLogging logging,
-        QuillLogger<SettingsLogger> logger,
-        HttpContext ctx)
-    {
-        if (body is null || body.IsEmpty)
-            return Results.BadRequest(new ApiErrorResponse("logs or microsoftLogs is required"));
-
-        if (body.Persist && logging.ConfigPath is null)
-        {
-            if (logger.AuditEnabled)
-                logger.Audit("POST", $"LogConfiguration {Describe(body)} rejected (cannot persist)", ctx);
-
-            return Results.Json(new ApiErrorResponse(
-                    "Configuration cannot be persisted because no writable quill.nlog.config is configured."),
-                statusCode: StatusCodes.Status409Conflict);
-        }
-
-        try
-        {
-            logging.AssertCanApply(body);
-        }
-        catch (Exception e) when (e is InvalidOperationException or ArgumentOutOfRangeException)
-        {
-            return Results.BadRequest(new ApiErrorResponse(e.Message));
-        }
-
-        logging.ConfigureLogging(body);
-
-        if (body.Persist)
-        {
-            try
-            {
-                QuillNLogFile.Persist(logging);
-            }
-            catch (Exception e)
-            {
-                if (logger.IsErrorEnabled)
-                    logger.Error(e, "Persisting the log configuration to '{Path}' failed.", logging.ConfigPath);
-
-                if (logger.AuditEnabled)
-                    logger.Audit("POST", $"LogConfiguration {Describe(body)} failed to persist", ctx);
-
-                return Results.Json(new ApiErrorResponse(
-                        "The log configuration was modified but couldn't be persisted. " +
-                        "The configuration will be reverted on restart."),
-                    statusCode: StatusCodes.Status500InternalServerError);
-            }
-        }
-
-        if (logger.AuditEnabled)
-            logger.Audit("POST", $"LogConfiguration {Describe(body)} persisted={body.Persist}", ctx);
-
-        return Results.NoContent();
-    }
-
-    private static string Describe(UpdateLogConfigurationRequest body)
-    {
-        var parts = new List<string>();
-
-        if (body.Logs is { } logs)
-        {
-            parts.Add(string.IsNullOrWhiteSpace(logs.Path) ? "logsPath=(off)" : $"logsPath='{logs.Path}'");
-            parts.Add($"minLevel={logs.MinLevel}");
-        }
-
-        if (body.MicrosoftLogs is { } microsoftLogs)
-            parts.Add($"microsoftMinLevel={microsoftLogs.MinLevel}");
-
-        return string.Join(" ", parts);
     }
 
     private static async Task<IResult> SendFeedbackAsync(

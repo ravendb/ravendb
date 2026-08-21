@@ -1,6 +1,8 @@
-using Microsoft.AspNetCore.Http.Features;
+﻿using Microsoft.AspNetCore.Http.Features;
 using Raven.Quill.AiHelper;
 using Raven.Quill.Contracts;
+
+using Raven.Quill.Logging;
 
 namespace Raven.Quill.Endpoints;
 
@@ -42,12 +44,12 @@ public static class AssistantEndpoints
     // the assistant panel, and nothing else in Quill grants it for them.
     private static async Task<IResult> GiveConsentAsync(
         IAiHelperClient aiClient,
-        ILogger<AssistantLogger> logger,
+        QuillLogger<AssistantLogger> logger,
         CancellationToken ct)
     {
         var status = await aiClient.GiveConsentAsync(ct);
-        if (status == AiHelperStatus.Success)
-            logger.LogInformation("AI assistant consent granted for this appliance's license.");
+        if (status == AiHelperStatus.Success && logger.IsInfoEnabled)
+            logger.Info("AI assistant consent granted for this appliance's license.");
 
         return ToConsentResult(status);
     }
@@ -73,7 +75,7 @@ public static class AssistantEndpoints
         HttpContext ctx,
         AssistantChatRequest body,
         IAiHelperClient aiClient,
-        ILogger<AssistantLogger> logger,
+        QuillLogger<AssistantLogger> logger,
         CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(body?.Message))
@@ -110,7 +112,8 @@ public static class AssistantEndpoints
         }
         catch (Exception e)
         {
-            logger.LogError(e, "AI assistant chat failed.");
+            if (logger.IsErrorEnabled)
+                logger.Error(e, "AI assistant chat failed.");
 
             // Once the relay has started there is no way left to say so, and the client reads the
             // missing Done frame as the failure.

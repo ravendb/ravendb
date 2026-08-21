@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Options;
 using Raven.Client.Documents;
@@ -79,8 +79,8 @@ public sealed class ApiKeyStore(
                 if (envKey.Length < MinRecommendedApiKeyLength)
                     if (logger.IsWarnEnabled)
                         logger.Warn(
-                            "QUILL_API_KEY is shorter than {Min} characters; use a high-entropy key in production.",
-                            MinRecommendedApiKeyLength);
+                            $"QUILL_API_KEY is shorter than {MinRecommendedApiKeyLength} characters; " +
+                            "use a high-entropy key in production.");
 
                 var salt = RandomNumberGenerator.GetBytes(SaltBytes);
                 var hash = SHA256.HashData(Combine(salt, Encoding.UTF8.GetBytes(envKey)));

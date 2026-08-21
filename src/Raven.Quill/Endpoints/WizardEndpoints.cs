@@ -1,4 +1,4 @@
-using Raven.Client.Documents;
+﻿using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.CdcSink.Schema;
 using Raven.Client.Documents.Operations.CdcSink.Test;
@@ -220,7 +220,7 @@ public static class WizardEndpoints
         if (scaffoldErrors.Count > 0)
         {
             if (logger.IsInfoEnabled)
-                logger.Info("VerifyCdc: {Count} selected table(s) cannot be captured", scaffoldErrors.Count);
+                logger.Info($"VerifyCdc: {scaffoldErrors.Count} selected table(s) cannot be captured");
             return Results.Ok(VerifyCdcResponse.Failed([.. scaffoldErrors]));
         }
 
@@ -249,8 +249,9 @@ public static class WizardEndpoints
 
         if (logger.IsInfoEnabled)
             logger.Info(
-                "VerifyCdc: success={Success} completedTables={CompletedTables}/{RequestedTables} warnings={Warnings}",
-                result.Success, result.CompletedTables.Count, configuration.Tables.Count, result.Warnings.Count);
+                $"VerifyCdc: success={result.Success} " +
+                $"completedTables={result.CompletedTables.Count}/{configuration.Tables.Count} " +
+                $"warnings={result.Warnings.Count}");
 
         return Results.Ok(VerifyCdcResponse.From(result));
     }
@@ -363,7 +364,7 @@ public static class WizardEndpoints
         if (!cdcConfig.Validate(out var errors, validateName: true, validateConnection: false))
         {
             if (logger.IsInfoEnabled)
-                logger.Info("Map: configuration rejected by Validate ({Count} errors)", errors.Count);
+                logger.Info($"Map: configuration rejected by Validate ({errors.Count} errors)");
             return Results.BadRequest(new ApiErrorResponse(Errors: errors.ToArray()));
         }
 
@@ -427,7 +428,7 @@ public static class WizardEndpoints
         if (!result.Configuration.Validate(out var errors, validateName: false, validateConnection: false))
         {
             if (logger.IsInfoEnabled)
-                logger.Info("SuggestCdc: returned configuration failed validation ({Count} errors)", errors.Count);
+                logger.Info($"SuggestCdc: returned configuration failed validation ({errors.Count} errors)");
             return Results.UnprocessableEntity(new ApiErrorResponse(Errors: errors.ToArray()));
         }
 
@@ -435,7 +436,9 @@ public static class WizardEndpoints
         if (errors.Count > 0)
         {
             if (logger.IsInfoEnabled)
-                logger.Info("SuggestCdc: returned configuration has {Count} join column(s) the source schema does not have", errors.Count);
+                logger.Info(
+                    $"SuggestCdc: returned configuration has {errors.Count} join column(s) the source " +
+                    "schema does not have");
             return Results.UnprocessableEntity(new ApiErrorResponse(Errors: errors.ToArray()));
         }
 
@@ -575,8 +578,8 @@ public static class WizardEndpoints
 
         await CreateOrUpdateCdcAsync(store, app, state.LastMapConfiguration, ct);
         if (logger.IsInfoEnabled)
-            logger.Info("Provisioned app slug={Slug} id={Id} cdcTask={CdcTaskName}",
-                app.Slug, app.Id, app.CdcTaskName);
+            logger.Info(
+                $"Provisioned app slug={app.Slug} id={app.Id} cdcTask={app.CdcTaskName}");
 
         if (logger.AuditEnabled)
             logger.Audit("POST",

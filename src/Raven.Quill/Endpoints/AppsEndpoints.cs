@@ -1,4 +1,4 @@
-using Raven.Client.Documents;
+﻿using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.CdcSink;
@@ -105,7 +105,7 @@ public static class AppsEndpoints
         CancellationToken ct)
     {
         if (logger.IsInfoEnabled) 
-            logger.Info("Deleting app with slug={Slug}", slug);
+            logger.Info($"Deleting app with slug={slug}");
 
         var app = await AppLookup.LoadAppAsync(store, slug, ct);
 
@@ -161,7 +161,7 @@ public static class AppsEndpoints
         if (valid.Length == 0)
         {
             if (logger.IsInfoEnabled)
-                logger.Info("SuggestAgent: no structurally valid candidate returned for slug={Slug}", slug);
+                logger.Info($"SuggestAgent: no structurally valid candidate returned for slug={slug}");
             return Results.UnprocessableEntity(new ApiErrorResponse("AI service returned no structurally valid agent configuration"));
         }
 
@@ -217,9 +217,10 @@ public static class AppsEndpoints
         
         if (logger.IsInfoEnabled)
             logger.Info(
-                "Provisioning agent for app slug={Slug} name={Name} identifier={Identifier} cs={ConnectionStringName} queries={QueryCount}, webhooks={WebHooksCount}",
-                app.Slug, body.Name, string.IsNullOrWhiteSpace(body.Identifier) ? "(server-assigned)" : body.Identifier,
-                body.ConnectionStringName, body.Queries?.Count ?? 0, request.ActionBindings?.Count ?? 0);
+                $"Provisioning agent for app slug={app.Slug} name={body.Name} " +
+                $"identifier={(string.IsNullOrWhiteSpace(body.Identifier) ? "(server-assigned)" : body.Identifier)} " +
+                $"cs={body.ConnectionStringName} queries={body.Queries?.Count ?? 0}, " +
+                $"webhooks={request.ActionBindings?.Count ?? 0}");
 
         try
         {
@@ -237,7 +238,7 @@ public static class AppsEndpoints
         {
             if (logger.IsWarnEnabled)
                 logger.Warn(ex,
-                    "Agent provisioning rejected by RavenDB for app slug={Slug} name={Name}", app.Slug, body.Name);
+                    $"Agent provisioning rejected by RavenDB for app slug={app.Slug} name={body.Name}");
             return Results.BadRequest(new ApiErrorResponse("agent configuration rejected; see server logs for details"));
         }
     }
@@ -399,7 +400,7 @@ public static class AppsEndpoints
         catch (Exception e)
         {
             if (logger.IsErrorEnabled)
-                logger.Error(e, "setup/try failed for slug={Slug}", slug);
+                logger.Error(e, $"setup/try failed for slug={slug}");
             try
             {
                 await NdjsonStream.WriteLineAsync(ctx, new { type = "error", message = "Agent test failed. See server logs for details." });

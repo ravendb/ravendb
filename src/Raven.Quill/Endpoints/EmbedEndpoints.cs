@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
@@ -226,7 +226,7 @@ public static class EmbedEndpoints
         catch (Exception e)
         {
             if (logger.IsErrorEnabled)
-                logger.Error(e, "embed chat failed for tokenPrefix={TokenPrefix}", EmbedLink.RedactToken(token));
+                logger.Error(e, $"embed chat failed for tokenPrefix={EmbedLink.RedactToken(token)}");
 
             // refund the reserved invocation only if nothing streamed (mid-stream abort stays consumed)
             if (streamedAny == false)
@@ -316,7 +316,8 @@ public static class EmbedEndpoints
         catch (Exception e)
         {
             if (logger.IsWarnEnabled)
-                logger.Warn(e, "failed to refund invocation for tokenPrefix={TokenPrefix}", EmbedLink.RedactToken(token));
+                logger.Warn(e,
+                    $"failed to refund invocation for tokenPrefix={EmbedLink.RedactToken(token)}");
         }
     }
 
@@ -420,7 +421,7 @@ public static class EmbedEndpoints
         {
             // the page still works without history, but the visitor's transcript is gone - say so in the logs
             if (logger.IsWarnEnabled)
-                logger.Warn(e, "failed to load embed history for conversationId={ConversationId}", conversationId);
+                logger.Warn(e, $"failed to load embed history for conversationId={conversationId}");
             return [];
         }
     }

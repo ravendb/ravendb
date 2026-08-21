@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import type { LicenseResponse, LogConfigurationResponse, QuillUsageResponse } from "@/api/generated/server-api";
+import type { LicenseResponse, QuillUsageResponse } from "@/api/generated/server-api";
 import type { CertificateItem } from "@/api/custom-services/certificates-service";
 import { apiHttp } from "./api-http";
 
@@ -21,69 +21,6 @@ export const settingsMocks = {
     certificatesGenerateError: (message = "A certificate with this name already exists.") =>
         http.post("/api/settings/certificates/generate", () => HttpResponse.json({ error: message }, { status: 400 })),
     certificatesEdit: () => http.post("/api/settings/certificates/edit", () => new HttpResponse(null, { status: 200 })),
-    logConfiguration: (response: LogConfigurationResponse = sampleLogConfiguration) =>
-        apiHttp.get("/api/settings/logs/configuration", ({ response: res }) => res(200).json(response)),
-    // The GET only documents a 200, so a load failure has to go through plain msw.
-    logConfigurationError: () =>
-        http.get("/api/settings/logs/configuration", () => new HttpResponse(null, { status: 500 })),
-    updateLogConfiguration: () =>
-        apiHttp.post("/api/settings/logs/configuration", ({ response }) => response(204).empty()),
-    updateLogConfigurationError: (message = "'logs.path' '/nope' could not be created or written to.") =>
-        apiHttp.post("/api/settings/logs/configuration", ({ response }) => response(400).json({ error: message })),
-    // The live change landed and only writing the file failed, which the appliance reports as a 500.
-    updateLogConfigurationNotPersisted: () =>
-        apiHttp.post("/api/settings/logs/configuration", ({ response }) =>
-            response(500).json({
-                error:
-                    "The log configuration was modified but couldn't be persisted. " +
-                    "The configuration will be reverted on restart.",
-            }),
-        ),
-};
-
-export const sampleLogConfiguration: LogConfigurationResponse = {
-    logs: {
-        path: "/var/lib/quill/logs",
-        // The live level differs from the startup one so the "At startup" fact is visibly distinct.
-        currentMinLevel: "Debug",
-        minLevel: "Info",
-        currentFilters: [],
-        currentLogFilterDefaultAction: "Neutral",
-        archiveAboveSizeInMb: 128,
-        maxArchiveDays: 3,
-        maxArchiveFiles: null,
-        enableArchiveFileCompression: false,
-    },
-    auditLogs: {
-        path: "/var/lib/quill/logs",
-        level: "Info",
-        archiveAboveSizeInMb: 128,
-        maxArchiveDays: 3,
-        maxArchiveFiles: null,
-        enableArchiveFileCompression: false,
-    },
-    microsoftLogs: {
-        currentMinLevel: "Warn",
-        minLevel: "Warn",
-    },
-    canPersist: true,
-};
-
-// What the appliance actually ships as: every optional sink off, nothing customised.
-export const sampleShippedLogConfiguration: LogConfigurationResponse = {
-    logs: {
-        path: null,
-        currentMinLevel: "Info",
-        minLevel: "Info",
-        currentFilters: [],
-        archiveAboveSizeInMb: 128,
-        maxArchiveDays: 3,
-        maxArchiveFiles: null,
-        enableArchiveFileCompression: false,
-    },
-    auditLogs: { path: null, level: "Off" },
-    microsoftLogs: { currentMinLevel: "Off", minLevel: "Off" },
-    canPersist: true,
 };
 
 export const sampleLicense: LicenseResponse = {

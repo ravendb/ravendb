@@ -1,4 +1,4 @@
-using System.Buffers;
+﻿using System.Buffers;
 using System.Text;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Sparrow;
@@ -73,13 +73,13 @@ internal sealed class WebhookActionExecutor(
         catch (OperationCanceledException) when (ct.IsCancellationRequested == false)
         {
             if (logger.IsWarnEnabled)
-                logger.Warn("Action webhook '{Action}' timed out", action.Name);
+                logger.Warn($"Action webhook '{action.Name}' timed out");
             return "action failed: webhook timed out";
         }
         catch (Exception e)
         {
             if (logger.IsWarnEnabled)
-                logger.Warn(e, "Action webhook '{Action}' failure", action.Name);
+                logger.Warn(e, $"Action webhook '{action.Name}' failure");
             return $"action failed: {e.Message}";
         }
         finally

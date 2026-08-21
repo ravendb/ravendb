@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Raven.Client.Documents;
@@ -93,8 +93,7 @@ public static class IFrameCustomizationEndpoints
         var defaults = await session.LoadAsync<WidgetThemeDefaults>(WidgetThemeDefaults.DocumentId, ct);
         if (logger.IsInfoEnabled)
             logger.Info(
-            "Updated web widget theme slug={Slug} channelId={ChannelId} follows={FollowsAppDefault}",
-            app.Slug, channelId, theme is null);
+                $"Updated web widget theme slug={app.Slug} channelId={channelId} follows={theme is null}");
         return Results.Ok(BuildThemeResponse(channel, defaults));
     }
 
@@ -144,7 +143,7 @@ public static class IFrameCustomizationEndpoints
         await session.SaveChangesAsync(ct);
 
         if (logger.IsInfoEnabled)
-            logger.Info("Updated default web widget theme slug={Slug}", app.Slug);
+            logger.Info($"Updated default web widget theme slug={app.Slug}");
         return Results.Ok(new WidgetDefaultThemeResponse(defaults.Theme, WidgetFonts.Curated));
     }
 

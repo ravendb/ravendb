@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -103,7 +103,6 @@ internal static class QuillRoutes
     public const string Apps = "/api/apps";
     public static string App(string slug) => $"{Apps}/{slug}";
     public const string AuthLogin = "/api/auth/login";
-    public const string AuthLogout = "/api/auth/logout";
     public const string AuthStatus = "/api/auth/status";
     public const string ConnectionStrings = "/api/ai/connection-strings";
     public const string ConnectionStringsTest = $"{ConnectionStrings}/test";
@@ -111,7 +110,6 @@ internal static class QuillRoutes
     public const string AiModels = "/api/ai/models";
     public const string SettingsLicense = "/api/settings/license";
     public const string SettingsUsage = "/api/settings/usage";
-    public const string SettingsLogConfiguration = "/api/settings/logs/configuration";
 
     // wizard (config-DB scoped)
     public const string SetupConnect = "/api/setup/connect";

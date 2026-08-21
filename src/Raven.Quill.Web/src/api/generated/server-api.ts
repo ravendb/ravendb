@@ -716,24 +716,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/settings/logs/configuration": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description Reports what the live log sinks are doing. A path is null when that sink is off, and auditLogs.level is Off when the audit log is disabled. */
-        get: operations["settings.logConfiguration"];
-        put?: never;
-        /** @description Changes log levels and the log file path on the running appliance. Send the whole state, not a patch: a logs block with no path switches the file sink off. Changes revert on restart unless persist is true. */
-        post: operations["settings.updateLogConfiguration"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/settings/certificates/get": {
         parameters: {
             query?: never;
@@ -1165,17 +1147,6 @@ export interface components {
         AssistantConsentResponse: {
             status: components["schemas"]["AiHelperStatus"];
         };
-        AuditLogsConfiguration: {
-            path?: null | string;
-            level?: components["schemas"]["LogLevel"];
-            /** Format: int64 */
-            archiveAboveSizeInMb?: number;
-            /** Format: int32 */
-            maxArchiveDays?: null | number;
-            /** Format: int32 */
-            maxArchiveFiles?: null | number;
-            enableArchiveFileCompression?: boolean;
-        };
         AuthStatusResponse: {
             authenticated: boolean;
         };
@@ -1497,37 +1468,8 @@ export interface components {
             connectivity: components["schemas"]["ConnectivityStatus"];
             plans: components["schemas"]["LicensePlan"][];
         };
-        LogConfigurationResponse: {
-            logs: components["schemas"]["LogsConfiguration"];
-            auditLogs: components["schemas"]["AuditLogsConfiguration"];
-            microsoftLogs: components["schemas"]["MicrosoftLogsConfiguration"];
-            canPersist: boolean;
-        };
-        LogFilter: Record<string, unknown>;
-        /** @enum {unknown} */
-        LogFilterAction: "Neutral" | "Log" | "Ignore" | "LogFinal" | "IgnoreFinal";
         LoginRequest: {
             apiKey: string;
-        };
-        /** @enum {string} */
-        LogLevel: "Trace" | "Debug" | "Info" | "Warn" | "Error" | "Fatal" | "Off";
-        LogsConfiguration: {
-            path?: null | string;
-            currentMinLevel?: components["schemas"]["LogLevel"];
-            currentFilters?: null | components["schemas"]["LogFilter"][];
-            currentLogFilterDefaultAction?: components["schemas"]["LogFilterAction"];
-            minLevel?: components["schemas"]["LogLevel"];
-            /** Format: int64 */
-            archiveAboveSizeInMb?: number;
-            /** Format: int32 */
-            maxArchiveDays?: null | number;
-            /** Format: int32 */
-            maxArchiveFiles?: null | number;
-            enableArchiveFileCompression?: boolean;
-        };
-        LogsUpdate: {
-            path?: null | string;
-            minLevel?: components["schemas"]["LogLevel"];
         };
         MapRequest: {
             slug?: string;
@@ -1548,10 +1490,6 @@ export interface components {
             /** Format: double */
             delta: number;
             sparkline: number[];
-        };
-        MicrosoftLogsConfiguration: {
-            currentMinLevel?: components["schemas"]["LogLevel"];
-            minLevel?: components["schemas"]["LogLevel"];
         };
         MintEmbedLinkRequest: {
             channelId: string;
@@ -1802,12 +1740,6 @@ export interface components {
             allowedOrigins: null | string[];
             enabled: null | boolean;
             telegram?: null | components["schemas"]["TelegramUpdateRequest"];
-        };
-        UpdateLogConfigurationRequest: {
-            logs?: null | components["schemas"]["LogsUpdate"];
-            microsoftLogs?: null | components["schemas"]["MicrosoftLogsConfiguration"];
-            /** @default false */
-            persist: boolean;
         };
         UpdateWidgetThemeRequest: {
             theme: null | components["schemas"]["WidgetTheme"];
@@ -3707,75 +3639,6 @@ export interface operations {
             };
         };
     };
-    "settings.logConfiguration": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LogConfigurationResponse"];
-                };
-            };
-        };
-    };
-    "settings.updateLogConfiguration": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateLogConfigurationRequest"];
-            };
-        };
-        responses: {
-            /** @description No Content */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Internal Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
     "settings.certificates": {
         parameters: {
             query: {
@@ -4199,7 +4062,6 @@ export type AppUsageResponse = components["schemas"]["AppUsageResponse"];
 export type AppWrites = components["schemas"]["AppWrites"];
 export type AssistantChatRequest = components["schemas"]["AssistantChatRequest"];
 export type AssistantConsentResponse = components["schemas"]["AssistantConsentResponse"];
-export type AuditLogsConfiguration = components["schemas"]["AuditLogsConfiguration"];
 export type AuthStatusResponse = components["schemas"]["AuthStatusResponse"];
 export type AzureOpenAiSettings = components["schemas"]["AzureOpenAiSettings"];
 export type BootstrapPhase = components["schemas"]["BootstrapPhase"];
@@ -4244,16 +4106,9 @@ export type HuggingFaceSettings = components["schemas"]["HuggingFaceSettings"];
 export type JsonElement = components["schemas"]["JsonElement"];
 export type LicensePlan = components["schemas"]["LicensePlan"];
 export type LicenseResponse = components["schemas"]["LicenseResponse"];
-export type LogConfigurationResponse = components["schemas"]["LogConfigurationResponse"];
-export type LogFilter = components["schemas"]["LogFilter"];
-export type LogFilterAction = components["schemas"]["LogFilterAction"];
 export type LoginRequest = components["schemas"]["LoginRequest"];
-export type LogLevel = components["schemas"]["LogLevel"];
-export type LogsConfiguration = components["schemas"]["LogsConfiguration"];
-export type LogsUpdate = components["schemas"]["LogsUpdate"];
 export type MapRequest = components["schemas"]["MapRequest"];
 export type MetricCard = components["schemas"]["MetricCard"];
-export type MicrosoftLogsConfiguration = components["schemas"]["MicrosoftLogsConfiguration"];
 export type MintEmbedLinkRequest = components["schemas"]["MintEmbedLinkRequest"];
 export type MintEmbedLinkResponse = components["schemas"]["MintEmbedLinkResponse"];
 export type MistralAiSettings = components["schemas"]["MistralAiSettings"];
@@ -4293,7 +4148,6 @@ export type TestMappingRowResponse = components["schemas"]["TestMappingRowRespon
 export type TokensByAppResponse = components["schemas"]["TokensByAppResponse"];
 export type TopCapability = components["schemas"]["TopCapability"];
 export type UpdateChannelRequest = components["schemas"]["UpdateChannelRequest"];
-export type UpdateLogConfigurationRequest = components["schemas"]["UpdateLogConfigurationRequest"];
 export type UpdateWidgetThemeRequest = components["schemas"]["UpdateWidgetThemeRequest"];
 export type UsagePoint = components["schemas"]["UsagePoint"];
 export type UsageResponse = components["schemas"]["UsageResponse"];
@@ -4382,8 +4236,6 @@ export const API_ENDPOINTS = {
         certificatesGenerate: "/settings/certificates/generate",
         feedback: "/settings/feedback",
         license: "/settings/license",
-        logConfiguration: "/settings/logs/configuration",
-        updateLogConfiguration: "/settings/logs/configuration",
         usage: "/settings/usage",
     },
     setup: {
@@ -4480,8 +4332,6 @@ export function createServerApi(client: ApiClient) {
             certificatesGenerate: (request: Record<string, DatabaseAccess>, searchParams: { clearance: SecurityClearance; name: string; password?: string; }) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.settings.certificatesGenerate, request, { searchParams }),
             feedback: (request: SendFeedbackRequest) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.settings.feedback, request),
             license: () => client.get<LicenseResponse>(API_ENDPOINTS.settings.license),
-            logConfiguration: () => client.get<LogConfigurationResponse>(API_ENDPOINTS.settings.logConfiguration),
-            updateLogConfiguration: (request: UpdateLogConfigurationRequest) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.settings.updateLogConfiguration, request),
             usage: (searchParams: { day?: string; month?: string; year: string; }) => client.get<QuillUsageResponse, ApiErrorResponse>(API_ENDPOINTS.settings.usage, { searchParams }),
         },
         setup: {

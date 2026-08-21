@@ -1,8 +1,10 @@
-using System.Text;
+﻿using System.Text;
 using Raven.Quill.Hosting;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types.Enums;
+
+using Raven.Quill.Logging;
 
 namespace Raven.Quill.Telegram;
 
@@ -10,7 +12,7 @@ internal sealed class TelegramStreamingReply(
     ITelegramBotClient bot,
     long chatId,
     TelegramOptions options,
-    ILogger logger,
+    QuillLogger<TelegramChannelManager> logger,
     CancellationToken ct)
 {
     private readonly StringBuilder _buffer = new();
@@ -35,7 +37,8 @@ internal sealed class TelegramStreamingReply(
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
-            logger.LogDebug("Telegram streaming flush failed for chat {ChatId}: {Error}", chatId, e.Message);
+            if (logger.IsDebugEnabled)
+                logger.Debug($"Telegram streaming flush failed for chat {chatId}: {e.Message}");
         }
         finally
         {

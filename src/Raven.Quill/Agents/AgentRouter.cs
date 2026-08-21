@@ -1,4 +1,4 @@
-using Raven.Client.Documents;
+﻿using Raven.Client.Documents;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Quill.Metrics;
@@ -99,8 +99,8 @@ internal sealed class AgentRouter(
 
         if (logger.IsWarnEnabled)
             logger.Warn(
-                "Agent '{AgentId}' invoked action '{Action}' (toolId {ToolId}) with no binding configured",
-                config.Identifier, action.Name, action.ToolId);
+                $"Agent '{config.Identifier}' invoked action '{action.Name}' (toolId {action.ToolId}) " +
+                "with no binding configured");
 
         return Task.FromResult($"action failed: no binding configured for '{action.Name}'");
     }

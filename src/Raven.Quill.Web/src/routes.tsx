@@ -13,7 +13,6 @@ import {
     Settings,
     ShieldCheck,
     Sparkles,
-    SquareText,
     type LucideIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -38,7 +37,6 @@ import { DashboardConnectionStrings } from "@/pages/dashboard/connection-strings
 import { DashboardHome } from "@/pages/dashboard/dashboard-home";
 import { DashboardIpConfiguration } from "@/pages/dashboard/ip-configuration";
 import { DashboardLicense } from "@/pages/dashboard/license";
-import { DashboardLogs } from "@/pages/dashboard/logs";
 import { DashboardUsage } from "@/pages/dashboard/usage";
 import { appRoutes as appRouteBuilders, ROUTE_PATTERNS } from "@/lib/app-routes";
 import { RequireApp } from "@/pages/apps/require-app";
@@ -165,17 +163,6 @@ const dashboardPages: AppRouteDefinition[] = [
         },
         isPageTitleHidden: true,
         element: <DashboardIpConfiguration />,
-    },
-    {
-        path: "logs",
-        title: "Logs",
-        navigation: {
-            label: "Logs",
-            icon: SquareText,
-            section: "settings",
-        },
-        isPageTitleHidden: true,
-        element: <DashboardLogs />,
     },
 ];
 

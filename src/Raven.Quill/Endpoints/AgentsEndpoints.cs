@@ -1,4 +1,4 @@
-using Raven.Client.Documents;
+﻿using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Exceptions;
 using Raven.Quill.Agents;
@@ -144,7 +144,7 @@ public static class AgentsEndpoints
 
         if (logger.IsInfoEnabled)
             logger.Info(
-                "Editing agent slug={Slug} agentId={AgentId} name={Name}", app.Slug, body.Identifier, body.Name);
+                $"Editing agent slug={app.Slug} agentId={body.Identifier} name={body.Name}");
 
         try
         {
@@ -162,7 +162,7 @@ public static class AgentsEndpoints
         {
             if (logger.IsWarnEnabled)
                 logger.Warn(ex,
-                    "Agent edit rejected by RavenDB for app slug={Slug} agentId={AgentId}", app.Slug, body.Identifier);
+                    $"Agent edit rejected by RavenDB for app slug={app.Slug} agentId={body.Identifier}");
             return Results.BadRequest(new ApiErrorResponse("agent configuration rejected; see server logs for details"));
         }
     }
@@ -199,7 +199,7 @@ public static class AgentsEndpoints
         }
 
         if (logger.IsInfoEnabled)
-            logger.Info("Deleted agent slug={Slug} agentId={AgentId}", app.Slug, agent.Identifier);
+            logger.Info($"Deleted agent slug={app.Slug} agentId={agent.Identifier}");
         if (logger.AuditEnabled)
             logger.Audit("DELETE", $"AiAgentConfiguration '{agent.Identifier}' in App '{app.Slug}'", ctx);
         return Results.NoContent();

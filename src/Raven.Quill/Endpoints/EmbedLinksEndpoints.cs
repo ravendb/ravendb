@@ -1,4 +1,4 @@
-using Raven.Client.Documents;
+﻿using Raven.Client.Documents;
 using Raven.Quill.Agents;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
@@ -142,8 +142,8 @@ public static class EmbedLinksEndpoints
         var url = $"{ctx.Request.Scheme}://{publicHost.ToUriComponent()}{ctx.Request.PathBase}/apps/{app.Slug}/embed/{token}";
         if (logger.IsInfoEnabled)
             logger.Info(
-                "Minted embed link slug={Slug} channelId={ChannelId} agentId={AgentId} ttlSeconds={Ttl} maxInvocations={Max}",
-                app.Slug, body.ChannelId, config.Identifier, ttlSeconds, maxInvocations);
+                $"Minted embed link slug={app.Slug} channelId={body.ChannelId} agentId={config.Identifier} " +
+                $"ttlSeconds={ttlSeconds} maxInvocations={maxInvocations}");
 
         if (logger.AuditEnabled)
             logger.Audit("POST",
@@ -181,7 +181,8 @@ public static class EmbedLinksEndpoints
                 link.Revoked = true;
                 await session.SaveChangesAsync(ct);
                 if (logger.IsInfoEnabled)
-                    logger.Info("Revoked embed link slug={Slug} tokenPrefix={TokenPrefix}", app.Slug, EmbedLink.RedactToken(token));
+                    logger.Info(
+                        $"Revoked embed link slug={app.Slug} tokenPrefix={EmbedLink.RedactToken(token)}");
                 if (logger.AuditEnabled)
                     logger.Audit("DELETE",
                         $"EmbedLink revoked token={EmbedLink.RedactToken(token)} in App '{app.Slug}'", ctx);
