@@ -285,7 +285,6 @@ public static class ChannelsEndpoints
                 TeamId = auth.TeamId,
                 TeamName = auth.TeamName,
                 BotUserId = auth.BotUserId,
-                BotId = auth.BotId,
                 BotToken = botToken,
                 SigningSecret = signingSecret,
                 WebhookToken = Guid.NewGuid().ToString("N"),
@@ -583,7 +582,6 @@ public static class ChannelsEndpoints
 
             settings.BotToken = botToken;
             settings.TeamName = auth.TeamName;
-            settings.BotId = auth.BotId;
             tokenRotated = true;
         }
 

@@ -4,9 +4,7 @@ internal sealed record SlackAuthInfo(
     string TeamId,
     string TeamName,
     string BotUserId,
-    string? BotId,
-    string BotName,
-    string? Url);
+    string BotName);
 
 internal sealed class SlackApiException(
     string message, string? error = null, TimeSpan? retryAfter = null, Exception? inner = null)
