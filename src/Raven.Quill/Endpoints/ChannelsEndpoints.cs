@@ -1,4 +1,4 @@
-using Raven.Client.Documents;
+﻿using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
@@ -89,6 +89,12 @@ public static class ChannelsEndpoints
         };
     }
 
+    private static IResult? RejectForeignSettings(ChannelType type, ProvisionChannelRequest body) =>
+        RejectForeignSettings(type, body.Telegram is not null, body.Slack is not null);
+
+    private static IResult? RejectForeignSettings(ChannelType type, UpdateChannelRequest body) =>
+        RejectForeignSettings(type, body.Telegram is not null, body.Slack is not null);
+
     private static IResult? RejectForeignSettings(ChannelType type, bool hasTelegram, bool hasSlack)
     {
         if (type != ChannelType.Telegram && hasTelegram)
@@ -111,7 +117,7 @@ public static class ChannelsEndpoints
         if (config is null)
             return Results.BadRequest(new ApiErrorResponse($"unknown agentId '{body.AgentId}'"));
 
-        if (RejectForeignSettings(ChannelType.IFrame, body.Telegram is not null, body.Slack is not null) is { } foreignSettings)
+        if (RejectForeignSettings(ChannelType.IFrame, body) is { } foreignSettings)
             return foreignSettings;
 
         // open embed must be explicit (allowedOrigins: []); an omitted list => 400
@@ -162,7 +168,7 @@ public static class ChannelsEndpoints
         if (config is null)
             return Results.BadRequest(new ApiErrorResponse($"unknown agentId '{body.AgentId}'"));
 
-        if (RejectForeignSettings(ChannelType.Telegram, body.Telegram is not null, body.Slack is not null) is { } foreignSettings)
+        if (RejectForeignSettings(ChannelType.Telegram, body) is { } foreignSettings)
             return foreignSettings;
 
         if (string.IsNullOrWhiteSpace(body.Telegram?.BotToken))
@@ -241,7 +247,7 @@ public static class ChannelsEndpoints
         if (config is null)
             return Results.BadRequest(new ApiErrorResponse($"unknown agentId '{body.AgentId}'"));
 
-        if (RejectForeignSettings(ChannelType.Slack, body.Telegram is not null, body.Slack is not null) is { } foreignSettings)
+        if (RejectForeignSettings(ChannelType.Slack, body) is { } foreignSettings)
             return foreignSettings;
 
         if (body.AllowedOrigins is { Length: > 0 })
@@ -402,7 +408,7 @@ public static class ChannelsEndpoints
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
-        if (RejectForeignSettings(ChannelType.IFrame, body.Telegram is not null, body.Slack is not null) is { } foreignSettings)
+        if (RejectForeignSettings(ChannelType.IFrame, body) is { } foreignSettings)
             return foreignSettings;
 
         if (body.AllowedOrigins is not null)
@@ -443,7 +449,7 @@ public static class ChannelsEndpoints
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
-        if (RejectForeignSettings(ChannelType.Telegram, body.Telegram is not null, body.Slack is not null) is { } foreignSettings)
+        if (RejectForeignSettings(ChannelType.Telegram, body) is { } foreignSettings)
             return foreignSettings;
 
         if (body.AllowedOrigins is { Length: > 0 })
@@ -549,7 +555,7 @@ public static class ChannelsEndpoints
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
-        if (RejectForeignSettings(ChannelType.Slack, body.Telegram is not null, body.Slack is not null) is { } foreignSettings)
+        if (RejectForeignSettings(ChannelType.Slack, body) is { } foreignSettings)
             return foreignSettings;
 
         if (body.AllowedOrigins is { Length: > 0 })
