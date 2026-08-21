@@ -1719,6 +1719,16 @@ namespace Voron
 
         public int SyncWritebackDrainQueueDepthThreshold { get; set; } = 5;
 
+        public const int MaxSupportedConcurrentJournalWrites = 64;
+
+        private int _maxConcurrentJournalWrites = 4;
+
+        public int MaxConcurrentJournalWrites
+        {
+            get => _maxConcurrentJournalWrites;
+            set => _maxConcurrentJournalWrites = Math.Clamp(value, 1, MaxSupportedConcurrentJournalWrites);
+        }
+
         internal WritebackPacingGate WritebackGate { get; private set; }
 
         private protected unsafe void InitializeWritebackGate(Pager.State state, string dataFilePath)
@@ -1898,6 +1908,10 @@ namespace Voron
             internal bool SimulateCannotLinkJournals;
 
             internal Func<long, PartialJournalWriteFailure> SimulatePartialJournalWriteFailure;
+
+            internal Action<long, long> OnJournalWrite;
+
+            internal Action<long, long> OnJournalWriteCompleted;
 
             internal sealed class PartialJournalWriteFailure
             {

@@ -222,11 +222,13 @@ rvn_writer rvn_get_writer(void *handle)
 }
 
 EXPORT int32_t
-rvn_write_journal(void *handle, struct journal_entry *buffer, int64_t count_of_entries, int64_t offset, int32_t *detailed_error_code)
+rvn_write_journal(void *handle, void *context, struct journal_entry *buffer, int64_t count_of_entries, int64_t offset, int32_t *detailed_error_code)
 {
+    (void)context; // context is unused in posix
     struct journal_handle *jfh = handle;
     struct iovec elements[IOV_MAX];
     int32_t index = 0;
+    int64_t bytes_in_batch = 0;
     for (size_t i = 0; i < count_of_entries; i++)
     {
         elements[index].iov_base = buffer[i].base;
@@ -236,13 +238,15 @@ rvn_write_journal(void *handle, struct journal_entry *buffer, int64_t count_of_e
             *detailed_error_code = EOVERFLOW;
             return FAIL_MATH_OVERFLOW;
         }
+        bytes_in_batch += (int64_t)elements[index].iov_len;
         index++;
         if (index == IOV_MAX)
         {
             int32_t rc = _pwritev(jfh->fd, elements, index, offset, detailed_error_code);
             if (rc != SUCCESS)
                 return rc;
-            offset += index * SYS_PAGE_SIZE;
+            offset += bytes_in_batch;
+            bytes_in_batch = 0;
             index = 0;
         }
     }

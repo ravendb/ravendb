@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Buffers;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -10,7 +10,7 @@ namespace Sparrow.Server.Platform
 {
     public static unsafe class Pal
     {
-        public const int PAL_VER = 70896; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
+        public const int PAL_VER = 70897; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
         static Pal()
         {
@@ -421,8 +421,21 @@ namespace Sparrow.Server.Platform
         }
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_create_journal_write_context(
+            out SafeJournalWriteContext context,
+            out Int32 errorCode
+        );
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_free_journal_write_context(
+            IntPtr context,
+            out Int32 errorCode
+        );
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_write_journal(
             SafeJournalHandle handle,
+            SafeJournalWriteContext context,
             journal_entry* entries,
             Int64 countOfEntries,
             Int64 offset,

@@ -127,6 +127,22 @@ error_clean_With_error:
 }
 
 EXPORT int32_t
+rvn_create_journal_write_context(void** context, int32_t* detailed_error_code)
+{
+    // nothing to do here
+    *context = NULL;
+    return SUCCESS;
+}
+
+EXPORT int32_t
+rvn_free_journal_write_context(void* context, int32_t* detailed_error_code)
+{
+    (void)context;
+    (void)detailed_error_code;
+    return SUCCESS;
+}
+
+EXPORT int32_t
 rvn_close_journal(void *handle, int32_t *detailed_error_code)
 {
     int32_t rc;
