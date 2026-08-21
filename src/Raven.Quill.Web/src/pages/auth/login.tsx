@@ -48,9 +48,7 @@ export function Login() {
             <section className="w-full rounded-xl border bg-card p-6 shadow-sm">
                 <header className="space-y-1.5 text-center">
                     <h1 className="text-xl font-semibold tracking-tight">Sign in</h1>
-                    <p className="text-sm text-muted-foreground">
-                        Enter the Dashboard API key to manage Quill.
-                    </p>
+                    <p className="text-sm text-muted-foreground">Enter the Dashboard API key to manage Quill.</p>
                 </header>
 
                 {formError && (
