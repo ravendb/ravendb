@@ -25,8 +25,8 @@ export function EditAppWizard() {
             <ApiState
                 isLoading={appQuery.isPending || configurationQuery.isPending}
                 isError={appQuery.isError || configurationQuery.isError}
-                errorTitle="Could not load the application configuration"
-                loadingLabel="Loading the application configuration..."
+                errorTitle="Could not load the app configuration"
+                loadingLabel="Loading the app configuration..."
                 onRetry={() => {
                     void appQuery.refetch();
                     void configurationQuery.refetch();
@@ -46,13 +46,13 @@ function EditAppWizardForm({ app, cdc }: { app: ApplianceAppResponse; cdc: AppCd
         return (
             <div className="p-8">
                 <Alert variant="destructive" className="max-w-2xl">
-                    <AlertTitle>This application&rsquo;s mapping cannot be edited here</AlertTitle>
+                    <AlertTitle>This app&rsquo;s mapping cannot be edited here</AlertTitle>
                     <AlertDescription>
                         {seed.error}
                         <div className="mt-3">
                             <Button asChild type="button" variant="outline" size="sm">
                                 <Link to={appRoutes.app(app.slug)} className="!no-underline">
-                                    Back to the application
+                                    Back to the app
                                 </Link>
                             </Button>
                         </div>

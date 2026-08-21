@@ -33,7 +33,7 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
             <FormInput
                 control={control}
                 name="externalConnection.appName"
-                label="Application name"
+                label="App name"
                 placeholder="e.g. AcmeShop"
                 disabled={isBusy}
                 afterChange={(event) => {

@@ -357,9 +357,9 @@ const utilityRoutes: RouteObject[] = [
         path: ROUTE_PATTERNS.addApp,
         element: <AddAppWizard />,
         handle: {
-            title: "Add new application",
-            subtitle: "Application connection wizard",
-            breadcrumb: "Add new application",
+            title: "Add new app",
+            subtitle: "App connection wizard",
+            breadcrumb: "Add new app",
             isBareLayout: true,
             isPageTitleHidden: true,
             isSidebarCollapsed: true,
@@ -426,7 +426,7 @@ export const router = createBrowserRouter([
                                 path: ROUTE_PATTERNS.editApp,
                                 element: <EditAppWizard />,
                                 handle: {
-                                    title: "Edit application",
+                                    title: "Edit app",
                                     appScoped: true,
                                     isBareLayout: true,
                                     isPageTitleHidden: true,

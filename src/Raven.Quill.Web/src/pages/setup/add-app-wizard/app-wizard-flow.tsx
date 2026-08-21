@@ -40,7 +40,7 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
     return {
         dataSource: {
             title: "Choose data source",
-            description: "Where is the data this application will work with?",
+            description: "Where is the data this app will work with?",
             bodyComponent: ChooseDataSourceStep,
             validate: "dataSource",
             badgeFields: ["dataSource.source"],
@@ -68,7 +68,7 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
         verifySchema: {
             title: "Verify your schema",
             description:
-                "Choose the tables this application will work with. Only the selected tables are carried into the " +
+                "Choose the tables this app will work with. Only the selected tables are carried into the " +
                 "mapping and the task configuration - unselected tables, and relationships pointing to them, are " +
                 "ignored. Continuing runs a configuration validation dry run against the source database.",
             bodyComponent: VerifySchemaStep,

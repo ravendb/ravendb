@@ -87,7 +87,7 @@ export function CommandPalette({ slug, appName }: CommandPaletteProps) {
                             </CommandGroup>
                         )}
                         {apps.length > 0 && (
-                            <CommandGroup heading="Applications">
+                            <CommandGroup heading="Apps">
                                 {apps.map((app) => (
                                     <CommandItem
                                         key={app.slug}
@@ -118,7 +118,7 @@ export function CommandPalette({ slug, appName }: CommandPaletteProps) {
                         <CommandGroup heading="Actions">
                             <CommandItem onSelect={() => runCommand(() => navigate(appRoutes.addApp()))}>
                                 <Plus aria-hidden="true" />
-                                <span>Add application</span>
+                                <span>Add app</span>
                             </CommandItem>
                             {THEME_OPTIONS.map((option) => (
                                 <CommandItem

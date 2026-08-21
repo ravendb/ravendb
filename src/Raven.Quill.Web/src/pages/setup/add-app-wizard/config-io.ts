@@ -11,7 +11,7 @@ import { resolveProviderFromSourceType } from "@/pages/setup/add-app-wizard/step
 import { mapFormTablesToDto } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-dto";
 
 /** The portable wizard configuration: connection details plus the CDC Sink table mapping, in the
- * canonical DTO shape (matching `/setup/map`). The application name and slug are excluded - a slug
+ * canonical DTO shape (matching `/setup/map`). The app name and slug are excluded - a slug
  * is unique per app, so an imported one could only conflict. */
 export type WizardConfig = {
     provider: AppFormData["externalConnection"]["provider"];
