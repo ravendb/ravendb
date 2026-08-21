@@ -12,10 +12,7 @@ import ReactAce from "react-ace";
 import Button from "react-bootstrap/Button";
 import { useFormContext, useWatch } from "react-hook-form";
 import { EditGenAiTaskFormData } from "../../utils/editGenAiTaskValidation";
-import {
-    queryToolParametersSamplesTabs,
-    queryToolParametersSchemaSamplesTabs,
-} from "../../editGenAiTaskSamplesData";
+import { queryToolParametersSamplesTabs, queryToolParametersSchemaSamplesTabs } from "../../editGenAiTaskSamplesData";
 import { SelectOption } from "components/common/select/Select";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import Accordion from "react-bootstrap/Accordion";

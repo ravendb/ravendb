@@ -30,10 +30,7 @@ export interface CreateMethodsTabOptions extends SamplesTabOverrides {
     language?: CodeLanguage;
 }
 
-export function createSampleScriptsTab(
-    scripts: SampleScript[],
-    options?: CreateSampleScriptsTabOptions
-): SamplesTab {
+export function createSampleScriptsTab(scripts: SampleScript[], options?: CreateSampleScriptsTabOptions): SamplesTab {
     return {
         key: options?.key ?? "scripts",
         label: options?.label ?? "Sample scripts",
