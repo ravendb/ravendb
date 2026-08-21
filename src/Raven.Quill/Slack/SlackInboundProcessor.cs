@@ -9,7 +9,7 @@ namespace Raven.Quill.Slack;
 internal sealed class SlackInboundProcessor(
     IDocumentStore store,
     IAgentRouter router,
-    ISlackClient slack,
+    IServiceScopeFactory scopes,
     SlackHealthRegistry health,
     IOptions<ApplianceOptions> options,
     ILogger<SlackInboundProcessor> logger)
@@ -102,9 +102,12 @@ internal sealed class SlackInboundProcessor(
 
         var shortChannelId = channel.ShortId;
 
+        await using var scope = scopes.CreateAsyncScope();
+        var slack = scope.ServiceProvider.GetRequiredService<ISlackClient>();
+
         if (kind != "text")
         {
-            await TrySendAsync(database, shortChannelId, settings, dmChannel, UnsupportedKindReply, ct);
+            await TrySendAsync(slack, database, shortChannelId, settings, dmChannel, UnsupportedKindReply, ct);
             return;
         }
 
@@ -121,7 +124,7 @@ internal sealed class SlackInboundProcessor(
         if (SlackParameterBindings.TryBind(
                 config, settings.ParameterBindings, sender, out var parameters, out var bindError) == false)
         {
-            await TrySendAsync(database, shortChannelId, settings, dmChannel, ErrorReply, ct);
+            await TrySendAsync(slack, database, shortChannelId, settings, dmChannel, ErrorReply, ct);
             throw new InvalidOperationException(bindError);
         }
 
@@ -147,13 +150,14 @@ internal sealed class SlackInboundProcessor(
             if (e is SlackApiException apiError)
                 health.RecordSendError(database, shortChannelId, apiError.Message);
 
-            await TrySendAsync(database, shortChannelId, settings, dmChannel, ErrorReply, ct);
+            await TrySendAsync(slack, database, shortChannelId, settings, dmChannel, ErrorReply, ct);
             throw;
         }
     }
 
     private async Task TrySendAsync(
-        string database, string shortChannelId, SlackSettings settings, string dmChannel, string text, CancellationToken ct)
+        ISlackClient slack, string database, string shortChannelId, SlackSettings settings, string dmChannel, string text,
+        CancellationToken ct)
     {
         try
         {
