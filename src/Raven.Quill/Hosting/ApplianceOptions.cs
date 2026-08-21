@@ -24,6 +24,10 @@ public sealed class ApplianceOptions
 
     public string? RavenDbS6Service { get; set; }
 
+    /// <summary>
+    /// Base URL of the AI Helper service; unset, the RavenDB URL already connected to is used. No
+    /// environment variable sets this - it is the seam the tests point at their AI Helper mock.
+    /// </summary>
     [Url]
     public string? AiApiUrl { get; set; }
 

@@ -24,12 +24,15 @@ using Raven.Quill.Logging;
 using Sparrow.Logging;
 using Sparrow.Server.Logging;
 using Raven.Client.Documents;
+// top-level statements live in the global namespace, where an unqualified Constants would find
+// Polly's internal one instead
+using Constants = Raven.Quill.Constants;
 
 var builder = WebApplication.CreateBuilder(args);
 var isOpenApiDocumentGeneration = Assembly.GetEntryAssembly()?.GetName().Name == "GetDocument.Insider";
 
-// loopback by default; the container sets the bind via RAVEN_QUILL_WEB_LISTEN_URL
-var listenUrl = Environment.GetEnvironmentVariable("RAVEN_QUILL_WEB_LISTEN_URL") ?? "http://127.0.0.1:5000";
+// loopback by default; the container sets the bind via Constants.Configuration.WebListenUrl
+var listenUrl = Environment.GetEnvironmentVariable(Constants.Configuration.WebListenUrl) ?? "http://127.0.0.1:5000";
 builder.WebHost.UseUrls(listenUrl);
 
 // enums as string names so operators can paste Studio JSON
@@ -91,37 +94,34 @@ builder.Services.AddSingleton(typeof(QuillLogger<>), typeof(QuillLogger<>));
 builder.Services.AddOptions<ApplianceOptions>()
     .Configure(options =>
     {
-        ReadEnv("RAVEN_QUILL_RAVEN_URL", v => options.RavenUrl = v);
-        ReadEnv("RAVEN_QUILL_WEB_LISTEN_URL", v => options.WebListenUrl = v);
-        ReadEnv("RAVEN_QUILL_CONFIG_DB", v => options.ConfigDatabase = v);
-        ReadEnv("RAVEN_QUILL_SETUP_PACKAGE_PATH", v => options.SetupPackagePath = v);
-        ReadEnv("RAVEN_QUILL_RAVENDB_S6_SERVICE", v => options.RavenDbS6Service = v);
-        ReadEnv("RAVEN_QUILL_API_URL", v => options.AiApiUrl = v);
-        ReadEnv("RAVEN_QUILL_TELEGRAM_API_URL", v => options.Telegram.ApiUrl = v);
-        ReadEnv("QUILL_LICENSE_KEY", v => options.LicenseKey = v);
-        ReadEnv("QUILL_API_KEY", v => options.ApiKey = v);
-        ReadEnv("RAVEN_QUILL_RAVENDB_INTERNAL_PORT", v =>
+        ReadEnv(Constants.Configuration.RavenUrl, v => options.RavenUrl = v);
+        ReadEnv(Constants.Configuration.WebListenUrl, v => options.WebListenUrl = v);
+        ReadEnv(Constants.Configuration.ConfigDatabase, v => options.ConfigDatabase = v);
+        ReadEnv(Constants.Configuration.SetupPackagePath, v => options.SetupPackagePath = v);
+        ReadEnv(Constants.Configuration.RavenDbS6Service, v => options.RavenDbS6Service = v);
+        ReadEnv(Constants.Configuration.TelegramApiUrl, v => options.Telegram.ApiUrl = v);
+        ReadEnv(Constants.Configuration.LicenseKey, v => options.LicenseKey = v);
+        ReadEnv(Constants.Configuration.ApiKey, v => options.ApiKey = v);
+        ReadEnv(Constants.Configuration.RavenDbInternalPort, v =>
         {
             if (int.TryParse(v, out var p)) options.RavenInternalPort = p;
         });
-        ReadEnv("RAVEN_QUILL_AI_ASSIST_TIMEOUT_SECONDS", v =>
+        ReadEnv(Constants.Configuration.AiAssistTimeoutSeconds, v =>
         {
             if (int.TryParse(v, out var s) && s > 0) options.AiAssistTimeout = TimeSpan.FromSeconds(s);
         });
-        ReadEnv("RAVEN_QUILL_READINESS_INITIAL_DELAY_SECONDS", v =>
-            options.ReadinessInitialDelay = ParsePositiveSeconds("RAVEN_QUILL_READINESS_INITIAL_DELAY_SECONDS", v));
-        ReadEnv("RAVEN_QUILL_READINESS_ATTEMPT_TIMEOUT_SECONDS", v =>
-            options.ReadinessAttemptTimeout = ParsePositiveSeconds("RAVEN_QUILL_READINESS_ATTEMPT_TIMEOUT_SECONDS", v));
-        ReadEnv("RAVEN_QUILL_READINESS_OVERALL_TIMEOUT_SECONDS", v =>
-            options.ReadinessOverallTimeout = ParsePositiveSeconds("RAVEN_QUILL_READINESS_OVERALL_TIMEOUT_SECONDS", v));
+        ParseEnv(Constants.Configuration.ReadinessInitialDelaySeconds, ParsePositiveSeconds,
+            t => options.ReadinessInitialDelay = t);
+        ParseEnv(Constants.Configuration.ReadinessAttemptTimeoutSeconds, ParsePositiveSeconds,
+            t => options.ReadinessAttemptTimeout = t);
+        ParseEnv(Constants.Configuration.ReadinessOverallTimeoutSeconds, ParsePositiveSeconds,
+            t => options.ReadinessOverallTimeout = t);
 
-        ReadEnv("RAVEN_QUILL_LOGS_CONFIG_PATH", v => options.Logs.ConfigPath = v.Trim());
-        ReadEnv("RAVEN_QUILL_LOGS_PATH", v =>
-            options.Logs.Path = ParseAbsolutePath("RAVEN_QUILL_LOGS_PATH", v));
-        ReadEnv("RAVEN_QUILL_SECURITY_AUDITLOG_PATH", v =>
-            options.Logs.AuditPath = ParseAbsolutePath("RAVEN_QUILL_SECURITY_AUDITLOG_PATH", v));
-        ReadEnv("RAVEN_QUILL_LOGS_MINLEVEL", v =>
-            options.Logs.MinLevel = ParseLogLevel("RAVEN_QUILL_LOGS_MINLEVEL", v));
+        ReadEnv(Constants.Configuration.LogsConfigPath, v => options.Logs.ConfigPath = v.Trim());
+        ParseEnv(Constants.Configuration.LogsPath, ParseAbsolutePath, p => options.Logs.Path = p);
+        ParseEnv(Constants.Configuration.SecurityAuditLogPath, ParseAbsolutePath,
+            p => options.Logs.AuditPath = p);
+        ParseEnv(Constants.Configuration.LogsMinLevel, ParseLogLevel, l => options.Logs.MinLevel = l);
     })
     .ValidateDataAnnotations()
     .Validate(o => string.IsNullOrEmpty(o.Telegram.ApiUrl) ||
@@ -328,6 +328,15 @@ static void ReadEnv(string name, Action<string> apply)
 {
     var v = Environment.GetEnvironmentVariable(name);
     if (!string.IsNullOrEmpty(v)) apply(v);
+}
+
+// For a value that has to be parsed before it can be assigned. The parser is handed the variable
+// name so a rejection can quote it, which is why the call site names it only once: two copies drift,
+// and the message then blames the wrong variable.
+static void ParseEnv<T>(string name, Func<string, string, T> parse, Action<T> assign)
+{
+    var v = Environment.GetEnvironmentVariable(name);
+    if (!string.IsNullOrEmpty(v)) assign(parse(name, v));
 }
 
 // Absolute only: a relative directory resolves inside the container image, where the next recreate

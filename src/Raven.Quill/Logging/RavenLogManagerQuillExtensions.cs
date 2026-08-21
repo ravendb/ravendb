@@ -4,12 +4,15 @@ using NLog.Layouts;
 using NLog.Targets;
 using NLog.Targets.Wrappers;
 using Raven.Server.Logging;
-using Sparrow.Global;
 using Sparrow.Logging;
 using Sparrow.Server.Logging;
 using LogLevel = NLog.LogLevel;
 
 namespace Raven.Quill.Logging;
+
+// Raven.Quill.Constants would otherwise shadow this for every file in a Raven.Quill.* sub-namespace,
+// and an alias only outranks an enclosing namespace type from inside the namespace body.
+using Constants = Sparrow.Global.Constants;
 
 /// <summary>
 /// Quill's half of <see cref="RavenLogManager"/>, the counterpart of RavenDB's
