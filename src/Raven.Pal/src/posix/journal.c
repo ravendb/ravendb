@@ -236,6 +236,87 @@ rvn_hard_link_non_durable(const char *src, const char *dst, int32_t *detailed_er
 }
 
 EXPORT int32_t
+rvn_move_file_durable(const char *src, const char *dst, int32_t *detailed_error_code)
+{
+    if (rename(src, dst))
+    {
+        *detailed_error_code = errno;
+        return FAIL_MOVE_FILE;
+    }
+
+    int32_t rc = _sync_directory_for(dst, detailed_error_code);
+    if (rc != SUCCESS)
+        return rc;
+
+    return _sync_directory_for(src, detailed_error_code);
+}
+
+static int32_t
+_open_file_for_zeroing(const char *path, int32_t *detailed_error_code)
+{
+    // This will land in the .bss, so these all will be mapped to the same physical page (zero). 
+    static char _zeroed_file_buffer[1024 * 1024] __attribute__((aligned(4096)));
+
+    // we intentionally skip the page cache with O_DIRECT, to avoid polluting it with lot of nonesense.
+    int fd = open(path, O_WRONLY | O_CREAT | O_EXCL | O_DIRECT, S_IWUSR | S_IRUSR);
+    if (fd == -1)
+    {
+        *detailed_error_code = errno;
+        return -1;
+    }
+    if (_finish_open_file_with_odirect(fd) == -1)
+    {
+        *detailed_error_code = errno;
+        close(fd);
+        unlink(path);
+        return -1;
+    }
+    return fd;
+}
+
+EXPORT int32_t
+rvn_create_zeroed_file(const char *path, int64_t size, int32_t *detailed_error_code)
+{
+    int fd = _open_file_for_zeroing(path, detailed_error_code);
+    if (fd == -1)
+        return FAIL_OPEN_FILE;
+
+    int32_t rc = _allocate_file_space(fd, size, detailed_error_code);
+    if (rc != SUCCESS)
+        goto error;
+
+    int64_t offset = 0;
+    while (offset < size)
+    {
+        int64_t len = size - offset < ZEROED_FILE_CHUNK ? size - offset : ZEROED_FILE_CHUNK;
+        rc = _pwrite(fd, (void *)_zeroed_file_buffer, (uint64_t)len, (uint64_t)offset, detailed_error_code);
+        if (rc != SUCCESS)
+            goto error;
+        offset += len;
+    }
+
+    if (fsync(fd) == -1)
+    {
+        *detailed_error_code = errno;
+        rc = FAIL_SYNC_FILE;
+        goto error;
+    }
+
+    if (close(fd) == -1)
+    {
+        *detailed_error_code = errno;
+        return FAIL_CLOSE;
+    }
+
+    return SUCCESS;
+
+error:
+    close(fd);
+    unlink(path);
+    return rc;
+}
+
+EXPORT int32_t
 rvn_is_same_hard_link(const char *src, const char *dst, char *is_same, int32_t *detailed_error_code)
 {
     struct stat src_stat, dst_stat;

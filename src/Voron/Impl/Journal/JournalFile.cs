@@ -26,6 +26,9 @@ namespace Voron.Impl.Journal
         // 1 for a newly created file - the first write goes past the journal header record at position 0
         public long InitialWritePosIn4Kb;
 
+        // the half-fill pool-preparation trigger fires once per file; merger thread only
+        public bool PrewarmChecked;
+
         public bool IsHardLinked { get; init; }
 
         public override string ToString()

@@ -249,6 +249,12 @@ rvn_write_journal(void* handle, struct journal_entry* buffer, int64_t count_of_e
 EXPORT int32_t 
 rvn_hard_link_non_durable(const char *src, const char *dst, int32_t *detailed_error_code);
 
+EXPORT int32_t
+rvn_move_file_durable(const char *src, const char *dst, int32_t *detailed_error_code);
+
+EXPORT int32_t
+rvn_create_zeroed_file(const char *path, int64_t size, int32_t *detailed_error_code);
+
 EXPORT int32_t 
 rvn_ensure_hard_link_non_durable(const char *src, const char *dst, int32_t *detailed_error_code);
 
