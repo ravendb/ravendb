@@ -147,6 +147,7 @@ if (!isOpenApiDocumentGeneration)
     builder.Services.AddHostedService<RavenReadinessService>();
     builder.Services.AddHostedService<ApplianceActivationService>();
     builder.Services.AddHostedService(sp => sp.GetRequiredService<TelegramChannelManager>());
+    builder.Services.AddHostedService(sp => sp.GetRequiredService<SlackInboundProcessor>());
 }
 
 builder.Services.ConfigureHttpClientDefaults(httpBuilder =>
