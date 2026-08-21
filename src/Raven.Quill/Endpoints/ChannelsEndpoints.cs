@@ -241,7 +241,7 @@ public static class ChannelsEndpoints
         if (config is null)
             return Results.BadRequest(new ApiErrorResponse($"unknown agentId '{body.AgentId}'"));
 
-        if (RejectForeignSettings(ChannelType.Slack, body.Telegram is not null, hasSlack: false) is { } foreignSettings)
+        if (RejectForeignSettings(ChannelType.Slack, body.Telegram is not null, body.Slack is not null) is { } foreignSettings)
             return foreignSettings;
 
         if (body.AllowedOrigins is { Length: > 0 })
@@ -382,8 +382,8 @@ public static class ChannelsEndpoints
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
-        if (body.Telegram is not null)
-            return Results.BadRequest(new ApiErrorResponse("telegram settings apply to Telegram channels only"));
+        if (RejectForeignSettings(ChannelType.IFrame, body.Telegram is not null, body.Slack is not null) is { } foreignSettings)
+            return foreignSettings;
 
         if (body.AllowedOrigins is not null)
         {
@@ -423,6 +423,9 @@ public static class ChannelsEndpoints
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
+        if (RejectForeignSettings(ChannelType.Telegram, body.Telegram is not null, body.Slack is not null) is { } foreignSettings)
+            return foreignSettings;
+
         if (body.AllowedOrigins is { Length: > 0 })
             return Results.BadRequest(new ApiErrorResponse("allowedOrigins does not apply to Telegram channels"));
 
@@ -526,7 +529,7 @@ public static class ChannelsEndpoints
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
-        if (RejectForeignSettings(ChannelType.Slack, body.Telegram is not null, hasSlack: false) is { } foreignSettings)
+        if (RejectForeignSettings(ChannelType.Slack, body.Telegram is not null, body.Slack is not null) is { } foreignSettings)
             return foreignSettings;
 
         if (body.AllowedOrigins is { Length: > 0 })
