@@ -165,36 +165,46 @@ public static class SlackEndpoints
         using var session = store.OpenAsyncSession(app.Database);
         var channels = await session.LoadAllStartingWithAsync<Channel>(Channel.IdPrefix, ct);
 
-        var rows = new List<SlackChannelHealthResponse>();
-        foreach (var channel in channels.OrderByDescending(c => c.CreatedAt))
-        {
-            if (channel is not { Type: ChannelType.Slack, Slack: { } settings })
-                continue;
+        var slackChannels = channels
+            .Where(c => c is { Type: ChannelType.Slack, Slack: not null })
+            .OrderByDescending(c => c.CreatedAt)
+            .ToArray();
 
+        var checks = new (bool? Valid, string? Error)[slackChannels.Length];
+        await Task.WhenAll(slackChannels.Select(async (channel, i) =>
+        {
             if (health.TryGetFreshTokenCheck(app.Database, channel.ShortId, out var tokenValid, out var tokenError) == false)
             {
-                var (info, error, slackResponded) = await slackClient.AuthTestAsync(settings.BotToken, ct);
+                var (info, error, slackResponded) = await slackClient.AuthTestAsync(channel.Slack!.BotToken, ct);
                 tokenValid = info is not null ? true : slackResponded ? false : null;
                 tokenError = info is null ? error : null;
                 health.StoreTokenCheck(app.Database, channel.ShortId, tokenValid, tokenError);
             }
 
+            checks[i] = (tokenValid, tokenError);
+        }));
+
+        var rows = new SlackChannelHealthResponse[slackChannels.Length];
+        for (var i = 0; i < slackChannels.Length; i++)
+        {
+            var channel = slackChannels[i];
+            var settings = channel.Slack!;
             var snapshot = health.SnapshotFor(app.Database, channel.ShortId);
-            rows.Add(new SlackChannelHealthResponse(
+            rows[i] = new SlackChannelHealthResponse(
                 channel.ShortId,
                 settings.TeamId,
                 settings.TeamName,
                 settings.BotUserId,
                 channel.Enabled,
-                tokenValid,
-                tokenError,
+                checks[i].Valid,
+                checks[i].Error,
                 snapshot.LastInboundAt,
                 snapshot.LastSignatureFailureAt,
                 snapshot.LastSendErrorAt,
-                snapshot.LastSendError));
+                snapshot.LastSendError);
         }
 
-        return Results.Ok(rows.ToArray());
+        return Results.Ok(rows);
     }
 
     private static async Task<(string Database, Channel Channel, SlackSettings Settings)?> ResolveTokenChannelAsync(
