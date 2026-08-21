@@ -64,7 +64,7 @@ internal sealed class SlackInboundProcessor(
         if (IsDuplicate(eventId))
             return;
 
-        var chainKey = $"{database}/{ShortChannelId(channelId)}/{sender}";
+        var chainKey = $"{database}/{Channel.ShortIdFor(channelId)}/{sender}";
         var notifyOverload = false;
 
         lock (_chainsLock)
@@ -251,9 +251,4 @@ internal sealed class SlackInboundProcessor(
                 shortChannelId, dmChannel, e.Message);
         }
     }
-
-    private static string ShortChannelId(string channelId) =>
-        channelId.StartsWith(Channel.IdPrefix, StringComparison.Ordinal)
-            ? channelId[Channel.IdPrefix.Length..]
-            : channelId;
 }

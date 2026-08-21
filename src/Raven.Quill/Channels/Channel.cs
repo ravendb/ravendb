@@ -6,10 +6,10 @@ internal sealed class Channel
 
     public string? Id { get; set; }
 
-    internal string ShortId =>
-        Id is not null && Id.StartsWith(IdPrefix, StringComparison.Ordinal)
-            ? Id[IdPrefix.Length..]
-            : Id ?? "";
+    internal string ShortId => ShortIdFor(Id ?? "");
+
+    internal static string ShortIdFor(string id) =>
+        id.StartsWith(IdPrefix, StringComparison.Ordinal) ? id[IdPrefix.Length..] : id;
 
     public ChannelType Type { get; set; }
 
