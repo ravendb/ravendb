@@ -63,8 +63,6 @@ internal static class ChannelBotReservations
         }
     }
 
-    // The claim commits before the channel document does, so a concurrent claim can read the window
-    // as an orphan and take over. Both writes carry the same change vector, so only one survives.
     internal static async Task<bool> TryConfirmAsync<TReservation>(
         IDocumentStore store,
         string reservationId,
