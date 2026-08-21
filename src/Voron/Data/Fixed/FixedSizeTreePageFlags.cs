@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace Voron.Data.Fixed
 {
@@ -9,5 +9,6 @@ namespace Voron.Data.Fixed
         Branch = 1,
         Leaf = 2,
         Value = 4,
+        HasTombstonesBitmap = 8,
     }
 }

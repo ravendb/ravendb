@@ -236,18 +236,27 @@ namespace Voron.Data.Fixed
             public bool Seek(TVal key)
             {
                 _currentPage = _parent.FindPageFor(key);
-                return _currentPage.LastMatch <= 0 || MoveNext();
+                if (_currentPage.LastMatch > 0 || _currentPage.IsTombstoned(_currentPage.LastSearchPosition))
+                    return MoveNext();
+
+                return true;
             }
 
             public bool SeekBackward(TVal key)
             {
                 _currentPage = _parent.FindPageFor(key);
-                return _currentPage.LastMatch >= 0 || MovePrev();
+                if (_currentPage.LastMatch < 0 || _currentPage.IsTombstoned(_currentPage.LastSearchPosition))
+                    return MovePrev();
+
+                return true;
             }
 
             public bool SeekToLast()
             {
                 _currentPage = _parent.FindPageFor(TVal.MaxValue);
+                if (_currentPage.IsTombstoned(_currentPage.LastSearchPosition))
+                    return MovePrev();
+
                 return true;
             }
 
@@ -339,6 +348,10 @@ namespace Voron.Data.Fixed
 
                             _currentPage.LastSearchPosition = 0;
                         }
+
+                        if (_currentPage.IsTombstoned(_currentPage.LastSearchPosition))
+                            continue; // the entry is only physically there, move past it
+
                         return true;// there is another entry in this page
                     }
                     if (_parent._cursor.Count == 0)
@@ -348,6 +361,50 @@ namespace Voron.Data.Fixed
                 _currentPage = null;
 
                 return false;
+            }
+
+            private static bool HasTombstones(in FixedSizeTreePageHeader header)
+            {
+                return (header.TreeFlags & FixedSizeTreePageFlags.HasTombstonesBitmap) == FixedSizeTreePageFlags.HasTombstonesBitmap &&
+                       header.NumberOfTombstones != 0;
+            }
+
+            private int ActiveEntriesFrom(in FixedSizeTreePageHeader header, int position)
+            {
+                if (position >= header.NumberOfEntries)
+                    return 0;
+
+                if (HasTombstones(header))
+                    return _parent.GetReadOnlyPage(header.PageNumber).CountActiveEntriesFrom(position);
+
+                return header.NumberOfEntries - position;
+            }
+
+            private int ActiveEntriesBefore(in FixedSizeTreePageHeader header, int position)
+            {
+                if (position <= 0)
+                    return 0;
+
+                if (HasTombstones(header))
+                    return _parent.GetReadOnlyPage(header.PageNumber).CountActiveEntriesBefore(position);
+
+                return position;
+            }
+
+            private int AdvanceToActiveEntry(in FixedSizeTreePageHeader header, int position, int count)
+            {
+                if (HasTombstones(header))
+                    return _parent.GetReadOnlyPage(header.PageNumber).AdvanceToActiveEntry(position, count);
+
+                return Math.Min(position + count, header.NumberOfEntries);
+            }
+
+            private int RetreatToActiveEntry(in FixedSizeTreePageHeader header, int position, int count)
+            {
+                if (HasTombstones(header))
+                    return _parent.GetReadOnlyPage(header.PageNumber).RetreatToActiveEntry(position, count);
+
+                return position - count;
             }
 
             private bool MovePrev(long skip)
@@ -362,9 +419,9 @@ namespace Voron.Data.Fixed
 
                 while (skip >= 0)
                 {
-                    var skipInPage = (int)Math.Min(lastSearchPosition, skip);
+                    var skipInPage = (int)Math.Min(ActiveEntriesBefore(currentPageHeader, lastSearchPosition), skip);
                     skip -= skipInPage;
-                    lastSearchPosition -= skipInPage;
+                    lastSearchPosition = RetreatToActiveEntry(currentPageHeader, lastSearchPosition, skipInPage);
 
                     if (skip == 0)
                     {
@@ -429,9 +486,9 @@ namespace Voron.Data.Fixed
 
                 while (skip >= 0)
                 {
-                    var skipInPage = (int)Math.Min(currentPageHeader.NumberOfEntries - lastSearchPosition, skip);
+                    var skipInPage = (int)Math.Min(ActiveEntriesFrom(currentPageHeader, lastSearchPosition), skip);
                     skip -= skipInPage;
-                    lastSearchPosition += skipInPage;
+                    lastSearchPosition = AdvanceToActiveEntry(currentPageHeader, lastSearchPosition, skipInPage);
 
                     if (skip == 0)
                     {
@@ -508,6 +565,10 @@ namespace Voron.Data.Fixed
 
                             _currentPage.LastSearchPosition = _currentPage.NumberOfEntries - 1;
                         }
+
+                        if (_currentPage.IsTombstoned(_currentPage.LastSearchPosition))
+                            continue; // the entry is only physically there, move past it
+
                         return true;// there is another entry in this page
                     }
                     if (_parent._cursor.Count == 0)
