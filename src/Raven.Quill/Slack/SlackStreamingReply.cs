@@ -1,4 +1,3 @@
-﻿using System.Text;
 using Raven.Quill.Channels;
 using Raven.Quill.Hosting;
 
@@ -10,96 +9,29 @@ internal sealed class SlackStreamingReply(
     string dmChannel,
     SlackOptions options,
     ILogger logger,
-    CancellationToken ct)
+    CancellationToken ct) : ChannelStreamingReply(options.MessageLimit, options.EditDebounce)
 {
     private static readonly TimeSpan MaxRetryDelay = TimeSpan.FromSeconds(60);
 
-    private readonly StringBuilder _buffer = new();
     private string _currentTs = "";
-    private int _flushedUpTo;
-    private string _lastShownText = "";
-    private DateTime _lastFlushAt;
 
-    private int PendingLength => _buffer.Length - _flushedUpTo;
+    protected override bool HasOpenMessage => _currentTs.Length > 0;
 
-    public bool IsEmpty => _buffer.Length == 0;
+    protected override void CloseCurrentMessage() => _currentTs = "";
 
-    public async ValueTask OnChunkAsync(string chunk)
+    protected override void LogFlushFailure(Exception error) =>
+        logger.LogDebug("Slack streaming flush failed for channel {DmChannel}: {Error}", dmChannel, error.Message);
+
+    protected override async Task ShowPreviewAsync(string text)
     {
-        _buffer.Append(chunk);
-
-        if (PendingLength <= options.MessageLimit &&
-            DateTime.UtcNow - _lastFlushAt < options.EditDebounce)
-            return;
-
-        try
-        {
-            await FlushPreviewAsync();
-        }
-        catch (Exception e) when (e is not OperationCanceledException)
-        {
-            logger.LogDebug("Slack streaming flush failed for channel {DmChannel}: {Error}", dmChannel, e.Message);
-        }
-        finally
-        {
-            _lastFlushAt = DateTime.UtcNow;
-        }
-    }
-
-    private async Task FlushPreviewAsync()
-    {
-        while (PendingLength > options.MessageLimit)
-        {
-            var pending = _buffer.ToString(_flushedUpTo, PendingLength);
-            var cut = MessageSplitter.CutPoint(pending, options.MessageLimit);
-
-            var segment = pending[..cut].TrimEnd();
-            if (_currentTs.Length == 0)
-                await SendSafeAsync(segment);
-            else
-                await EditSafeAsync(_currentTs, segment);
-            _flushedUpTo += cut;
-            while (PendingLength > 0 && char.IsWhiteSpace(_buffer[_flushedUpTo]))
-                _flushedUpTo++;
-
-            _currentTs = "";
-            _lastShownText = "";
-        }
-
-        await ShowPreviewAsync(_buffer.ToString(_flushedUpTo, PendingLength));
-    }
-
-    private async Task ShowPreviewAsync(string text)
-    {
-        if (text.Length == 0 || text == _lastShownText)
-            return;
-
         var escaped = SlackMrkdwn.Escape(text);
         if (_currentTs.Length == 0)
             _currentTs = await slack.PostMessageAsync(botToken, dmChannel, escaped, ct);
         else
             await slack.UpdateMessageAsync(botToken, dmChannel, _currentTs, escaped, ct);
-
-        _lastShownText = text;
     }
 
-    public async Task FinalizeAsync()
-    {
-        var pending = _buffer.ToString(_flushedUpTo, PendingLength);
-        if (string.IsNullOrWhiteSpace(pending))
-            return;
-
-        var parts = MessageSplitter.Split(pending, options.MessageLimit);
-        for (var i = 0; i < parts.Count; i++)
-        {
-            if (i == 0 && _currentTs.Length > 0)
-                await EditSafeAsync(_currentTs, parts[i]);
-            else
-                await SendSafeAsync(parts[i]);
-        }
-    }
-
-    private async Task SendSafeAsync(string text)
+    protected override async Task SendFinalAsync(string text)
     {
         var converted = SlackMrkdwn.Convert(text);
         try
@@ -112,21 +44,21 @@ internal sealed class SlackStreamingReply(
         }
     }
 
-    private async Task EditSafeAsync(string ts, string text)
+    protected override async Task EditFinalAsync(string text)
     {
         var converted = SlackMrkdwn.Convert(text);
-        if (converted == _lastShownText)
+        if (converted == LastShownText)
             return;
 
         try
         {
-            await UpdateWithRetryAsync(ts, converted);
+            await UpdateWithRetryAsync(_currentTs, converted);
         }
         catch (SlackApiException e) when (e.Error != SlackApiException.RateLimitedError && converted != text)
         {
-            if (text == _lastShownText)
+            if (text == LastShownText)
                 return;
-            await UpdateWithRetryAsync(ts, SlackMrkdwn.Escape(text));
+            await UpdateWithRetryAsync(_currentTs, SlackMrkdwn.Escape(text));
         }
     }
 
