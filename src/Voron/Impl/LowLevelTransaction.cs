@@ -52,7 +52,8 @@ namespace Voron.Impl
         private readonly ScratchPagesSnapshot _scratchPagesForReads;
         private HashSet<long> _sparsePageRanges;
         private readonly GetPageMethod _getPageMethod;
-        private readonly long _id;
+        private readonly long _id = -1; // 0 is a valid value, so we need to use -1 to indicate that it is not set yet
+        internal long ScratchSnapshotSeq = -1; // 0 is a valid value, so we need to use -1 to indicate that it is not set yet
 
         internal long DecompressedBufferBytes;
         internal TestingStuff _forTestingPurposes;
@@ -80,7 +81,6 @@ namespace Voron.Impl
 
         public ScratchPagesSnapshot ScratchTableSnapshot;
 
-        internal long ScratchSnapshotSeq;
 
         internal sealed class WriteTransactionPool
         {
@@ -307,9 +307,10 @@ namespace Voron.Impl
             Flags = flags;
 
             var provisionalRecord = env.CurrentStateRecord;
-            // we must set the _id to a valid tx id *before* adding to ActiveTransactions. 
+            // we must set the _id and ScratchSnapshotSeq to valid values *before* adding to ActiveTransactions. 
             // Afterward, we may move to a _later_ state (which is fine)
             _id = flags == TransactionFlags.ReadWrite ? provisionalRecord.TransactionId + 1 : provisionalRecord.TransactionId;
+            ScratchSnapshotSeq = provisionalRecord.ScratchPagesTable.VisibleAsOfSeq;
 
             env.ActiveTransactions.Add(this);
 
