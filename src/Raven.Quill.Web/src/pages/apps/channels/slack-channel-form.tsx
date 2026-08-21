@@ -6,17 +6,22 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { ChevronDown } from "lucide-react";
 import { api } from "@/api/api";
-import type { AgentSummaryResponse, TelegramParameterBinding } from "@/api/generated/server-api";
+import type { AgentSummaryResponse } from "@/api/generated/server-api";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/shadcn/ui/collapsible";
-import { FieldDescription } from "@/components/shadcn/ui/field";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { SheetClose, SheetFooter } from "@/components/shadcn/ui/sheet";
 import { ApiState } from "@/components/data/api-state";
 import { CopyableCode } from "@/components/data/copyable-code";
 import { FormInput } from "@/components/form/form-input";
 import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
+import { ParameterBindingFields } from "@/pages/apps/channels/parameter-binding-fields";
+import {
+    hasSameParameterNames,
+    seedParameterRows,
+    toParameterBindings,
+} from "@/pages/apps/channels/parameter-bindings";
 import { useFormUnsavedChanges } from "@/components/form/unsaved-changes/use-unsaved-changes";
 import { withNestedSubmit } from "@/lib/form-utils";
 import { invalidateChannelQueries } from "@/lib/query-invalidation";
@@ -50,19 +55,6 @@ const slackChannelSchema = z.object({
 });
 
 type SlackChannelFormData = z.infer<typeof slackChannelSchema>;
-
-function toParameterBindings(parameters: SlackChannelFormData["parameters"]) {
-    const bindings: Record<string, TelegramParameterBinding> = {};
-    for (const { name, source, value } of parameters) {
-        bindings[name] = { source, value: source === "Constant" ? value.trim() : null };
-    }
-    return bindings;
-}
-
-function seedParameterRows(agents: AgentSummaryResponse[], agentId: string): SlackChannelFormData["parameters"] {
-    const selected = agents.find((candidate) => candidate.agentId === agentId);
-    return (selected?.parameters ?? []).map((name) => ({ name, source: "Constant" as const, value: "" }));
-}
 
 export function SlackChannelForm({ slug, agent, onDone }: { slug: string; agent?: FixedAgent; onDone: () => void }) {
     const agentsQuery = useQuery(api.queries.agents.list(slug));
@@ -124,8 +116,7 @@ function LoadedSlackChannelForm({
     const { getValues } = form;
     useEffect(() => {
         const seeded = seedParameterRows(agents, selectedAgentId);
-        const rows = getValues("parameters") ?? [];
-        if (rows.length === seeded.length && seeded.every((row, index) => rows[index]?.name === row.name)) {
+        if (hasSameParameterNames(getValues("parameters") ?? [], seeded)) {
             return;
         }
         replace(seeded);
@@ -256,38 +247,14 @@ function LoadedSlackChannelForm({
                             placeholder="Defaults to the bot's Slack name"
                             description="Shown in the channels list. Optional."
                         />
-                        {parameterFields.fields.length > 0 && (
-                            <div className="flex flex-col gap-3">
-                                <p className="text-xs text-muted-foreground">
-                                    Map each agent parameter to a constant value bound once for the whole channel, or to
-                                    the Slack user id of the sender of each message.
-                                </p>
-                                {parameterFields.fields.map((field, index) => {
-                                    const hint = slackParameterSourceHint(parameters[index]?.source);
-                                    return (
-                                        <div key={field.id} className="grid gap-2">
-                                            <div className="grid gap-2 sm:grid-cols-2">
-                                                <FormSelect
-                                                    control={form.control}
-                                                    name={`parameters.${index}.source`}
-                                                    label={field.name}
-                                                    options={SLACK_PARAMETER_SOURCES}
-                                                />
-                                                {parameters[index]?.source === "Constant" && (
-                                                    <FormInput
-                                                        control={form.control}
-                                                        name={`parameters.${index}.value`}
-                                                        label="Value"
-                                                        placeholder="e.g. customers/1"
-                                                    />
-                                                )}
-                                            </div>
-                                            {hint && <FieldDescription>{hint}</FieldDescription>}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
+                        <ParameterBindingFields
+                            control={form.control}
+                            fields={parameterFields.fields}
+                            rows={parameters}
+                            sources={SLACK_PARAMETER_SOURCES}
+                            sourceHint={slackParameterSourceHint}
+                            description="Map each agent parameter to a constant value bound once for the whole channel, or to the Slack user id of the sender of each message."
+                        />
                     </>
                 )}
 
