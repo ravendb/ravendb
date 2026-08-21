@@ -12,5 +12,7 @@ public sealed class SlackOptions
 
     public TimeSpan EditDebounce { get; set; } = TimeSpan.FromSeconds(2);
 
+    public int SenderQueueCapacity { get; set; } = 8;
+
     public TimeSpan SignatureTolerance { get; set; } = TimeSpan.FromMinutes(5);
 }

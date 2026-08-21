@@ -16,12 +16,21 @@ internal sealed class SlackInboundProcessor(
 {
     internal const string UnsupportedKindReply = "I can only read text messages right now.";
     internal const string ErrorReply = "Sorry - something went wrong handling that message. Please try again.";
+    internal const string OverloadReply =
+        "I'm still working through your earlier messages, so that one didn't make it. Please resend it once I've replied.";
 
     private const int DedupeCapacity = 4096;
     private static readonly TimeSpan DedupeTtl = TimeSpan.FromMinutes(15);
     private static readonly TimeSpan StopDrainTimeout = TimeSpan.FromSeconds(10);
 
-    private readonly Dictionary<string, Task> _senderChains = new();
+    private sealed class SenderChain
+    {
+        public Task Tail = Task.CompletedTask;
+        public int Pending;
+        public bool OverloadNotified;
+    }
+
+    private readonly Dictionary<string, SenderChain> _senderChains = new();
     private readonly object _chainsLock = new();
     private readonly CancellationTokenSource _stopping = new();
 
@@ -37,7 +46,7 @@ internal sealed class SlackInboundProcessor(
 
         Task[] tails;
         lock (_chainsLock)
-            tails = _senderChains.Values.ToArray();
+            tails = _senderChains.Values.Select(c => c.Tail).ToArray();
 
         try
         {
@@ -56,24 +65,47 @@ internal sealed class SlackInboundProcessor(
             return;
 
         var chainKey = $"{database}/{ShortChannelId(channelId)}/{sender}";
+        var notifyOverload = false;
 
         lock (_chainsLock)
         {
-            var tail = _senderChains.GetValueOrDefault(chainKey) ?? Task.CompletedTask;
-            var next = tail
-                .ContinueWith(_ => HandleMessageSafeAsync(database, channelId, sender, dmChannel, kind, text),
-                    CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.Default)
-                .Unwrap();
-            _senderChains[chainKey] = next;
+            if (_senderChains.TryGetValue(chainKey, out var chain) == false)
+                _senderChains[chainKey] = chain = new SenderChain();
 
-            next.ContinueWith(_ =>
+            if (chain.Pending >= options.Value.Slack.SenderQueueCapacity)
             {
-                lock (_chainsLock)
-                {
-                    if (_senderChains.TryGetValue(chainKey, out var current) && current == next)
-                        _senderChains.Remove(chainKey);
-                }
-            }, TaskScheduler.Default);
+                notifyOverload = chain.OverloadNotified == false;
+                chain.OverloadNotified = true;
+            }
+            else
+            {
+                chain.Pending++;
+                var next = chain.Tail
+                    .ContinueWith(_ => HandleMessageSafeAsync(database, channelId, sender, dmChannel, kind, text),
+                        CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.Default)
+                    .Unwrap();
+                chain.Tail = next;
+
+                next.ContinueWith(_ => OnTurnCompleted(chainKey, next), TaskScheduler.Default);
+            }
+        }
+
+        if (notifyOverload)
+            _ = SendOverloadNoticeAsync(database, channelId, dmChannel);
+    }
+
+    private void OnTurnCompleted(string chainKey, Task completed)
+    {
+        lock (_chainsLock)
+        {
+            if (_senderChains.TryGetValue(chainKey, out var chain) == false)
+                return;
+
+            chain.Pending--;
+            if (chain.Pending == 0)
+                chain.OverloadNotified = false;
+            if (chain.Tail == completed)
+                _senderChains.Remove(chainKey);
         }
     }
 
@@ -177,6 +209,27 @@ internal sealed class SlackInboundProcessor(
 
             await TrySendAsync(slack, database, shortChannelId, settings, dmChannel, ErrorReply, ct);
             throw;
+        }
+    }
+
+    private async Task SendOverloadNoticeAsync(string database, string channelId, string dmChannel)
+    {
+        try
+        {
+            Channel? channel;
+            using (var session = store.OpenAsyncSession(database))
+                channel = await session.LoadAsync<Channel>(channelId, _stopping.Token);
+
+            if (channel is not { Type: ChannelType.Slack, Enabled: true, Slack: { } settings })
+                return;
+
+            await using var scope = scopes.CreateAsyncScope();
+            var slack = scope.ServiceProvider.GetRequiredService<ISlackClient>();
+            await TrySendAsync(slack, database, channel.ShortId, settings, dmChannel, OverloadReply, _stopping.Token);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            logger.LogDebug("Slack overload notice failed for channel {ChannelId}: {Error}", channelId, e.Message);
         }
     }
 
