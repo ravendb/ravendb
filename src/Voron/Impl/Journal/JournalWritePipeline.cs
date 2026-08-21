@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.ExceptionServices;
@@ -236,9 +236,10 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
         {
             var reaped = Volatile.Read(ref _reapedSequence);
             var completed = Volatile.Read(ref _completedSlots);
+            var submitted = Volatile.Read(ref _nextSequence);
 
             var run = 0;
-            while (run < _maxConcurrentWrites && (completed & SlotMask(reaped + run)) != 0)
+            while (run < _maxConcurrentWrites && reaped + run < submitted && (completed & SlotMask(reaped + run)) != 0)
                 run++;
 
             if (run == 0)
@@ -322,7 +323,7 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
             throw;
         }
 
-        _nextSequence = sequence + 1;
+        Volatile.Write(ref _nextSequence, sequence + 1);
 
         return pending;
     }
