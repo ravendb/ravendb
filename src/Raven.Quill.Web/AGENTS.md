@@ -21,3 +21,30 @@ Frontend for Raven Quill. It is a Vite + React + TypeScript app and is finally b
 - Boolean names must clearly read as booleans, e.g. `is`, `has`, `can`, `should`, `was`.
 - Use kebab-case filenames, PascalCase React components, `@/*` imports, and `SCREAMING_SNAKE_CASE` module constants.
 - Install new dependencies only when they remove real complexity. Prefer popular, maintained packages and latest versions.
+
+## Glossary
+
+One concept, one word, on every surface. These are the product's terms — use them in
+every label, heading, menu item, description, toast, `aria-label` and page title.
+
+| Term                  | Means                                        | Never                                              |
+| --------------------- | -------------------------------------------- | -------------------------------------------------- |
+| **App**               | a configured application                     | "Application"                                      |
+| **Data source**       | the source database and its ingestion        | "CDC" as a product noun                            |
+| **Dashboard API key** | the single dashboard credential              | "operator API key", "operator key", bare "API key" |
+| **Quill**             | the deployment                               | "appliance", "this Quill instance"                 |
+| **Sync**              | the running pipeline (performance, progress) | "CDC performance", "CDC feed"                      |
+
+Sentence case throughout, as elsewhere in the UI ("IP configuration", "Data source").
+**Quill** is a proper noun and stays capitalised.
+
+`src/lib/vocabulary.test.ts` enforces this. It parses each file and checks only string
+literals and JSX text, so internal code comments and identifiers keep the technical
+names of the mechanisms they describe — `CdcSinkConfiguration` is still CDC, and a
+comment about the CDC dry run is still correct. Only what the operator reads is
+governed here.
+
+Adding an allowlist entry to that test is the wrong first move. It is right only when
+a word is genuinely the name of something outside our control — the one current entry
+covers an instruction to enable the PostgreSQL / SQL Server CDC feature, where any
+other wording leaves the operator unable to act.
