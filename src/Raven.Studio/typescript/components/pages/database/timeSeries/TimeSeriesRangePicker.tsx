@@ -3,14 +3,14 @@ import moment from "moment";
 import classNames from "classnames";
 import { Icon } from "components/common/Icon";
 import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
 import DatePicker from "components/common/DatePicker";
 import Select, { SelectOption } from "components/common/select/Select";
 import { MultiRadioToggle } from "components/common/toggles/MultiRadioToggle";
 import { InputItem } from "components/models/common";
+import TimePicker, { TIME_FORMAT, TIME_PARSE_FORMATS } from "./TimePicker";
+import RangeDatePickerHeader from "./RangeDatePickerHeader";
 import "./TimeSeriesRangePicker.scss";
 
-const TIME_FORMAT = "HH:mm:ss.SSS";
 const FULL_FORMAT = "YYYY-MM-DD HH:mm:ss.SSS";
 
 type FilterMode = "between" | "before" | "after";
@@ -35,7 +35,8 @@ interface TimeSeriesRangePickerProps {
     endDate: moment.Moment | null;
     // Zone the picker opens in. The time series grid owns this setting, so the
     // filter always starts out speaking the same zone the timestamps are shown in.
-    // Changing it inside the picker is local to the picker and does not affect the grid.
+    // Changing it inside the picker is reported back via onChange, and the caller
+    // (see editTimeSeries.ts's onApply) pushes it onto the grid when the user applies.
     initialTimezone?: FilterTimezone;
     onChange: (state: TimeSeriesRangeState) => void;
 }
@@ -48,35 +49,37 @@ const modeItems: InputItem<FilterMode>[] = [
 
 interface PresetDef {
     label: string;
-    range: () => { start?: moment.Moment; end?: moment.Moment };
+    // `now` and `startOf` are given in the selected timezone's wall-clock, so e.g. "Today" starts
+    // at midnight in that zone rather than midnight local time regardless of the zone shown.
+    range: (now: moment.Moment) => { start?: moment.Moment; end?: moment.Moment };
 }
 
 const presetsByMode: Record<FilterMode, PresetDef[]> = {
     between: [
-        { label: "Today", range: () => ({ start: moment().startOf("day"), end: moment() }) },
-        { label: "Last 3 days", range: () => ({ start: moment().subtract(3, "days"), end: moment() }) },
-        { label: "Last 7 days", range: () => ({ start: moment().subtract(7, "days"), end: moment() }) },
-        { label: "This week", range: () => ({ start: moment().startOf("week"), end: moment() }) },
-        { label: "This month", range: () => ({ start: moment().startOf("month"), end: moment() }) },
-        { label: "Last year", range: () => ({ start: moment().subtract(1, "year"), end: moment() }) },
+        { label: "Today", range: (now) => ({ start: now.clone().startOf("day"), end: now }) },
+        { label: "Last 3 days", range: (now) => ({ start: now.clone().subtract(3, "days"), end: now }) },
+        { label: "Last 7 days", range: (now) => ({ start: now.clone().subtract(7, "days"), end: now }) },
+        { label: "This week", range: (now) => ({ start: now.clone().startOf("week"), end: now }) },
+        { label: "This month", range: (now) => ({ start: now.clone().startOf("month"), end: now }) },
+        { label: "Last year", range: (now) => ({ start: now.clone().subtract(1, "year"), end: now }) },
     ],
     before: [
-        { label: "Until Today", range: () => ({ end: moment() }) },
-        { label: "Until 3 days ago", range: () => ({ end: moment().subtract(3, "days") }) },
-        { label: "Until 7 days ago", range: () => ({ end: moment().subtract(7, "days") }) },
-        { label: "Until 30 days ago", range: () => ({ end: moment().subtract(30, "days") }) },
-        { label: "Until start of week", range: () => ({ end: moment().startOf("week") }) },
-        { label: "Until start of month", range: () => ({ end: moment().startOf("month") }) },
-        { label: "Until start of year", range: () => ({ end: moment().startOf("year") }) },
+        { label: "Until Today", range: (now) => ({ end: now }) },
+        { label: "Until 3 days ago", range: (now) => ({ end: now.clone().subtract(3, "days") }) },
+        { label: "Until 7 days ago", range: (now) => ({ end: now.clone().subtract(7, "days") }) },
+        { label: "Until 30 days ago", range: (now) => ({ end: now.clone().subtract(30, "days") }) },
+        { label: "Until start of week", range: (now) => ({ end: now.clone().startOf("week") }) },
+        { label: "Until start of month", range: (now) => ({ end: now.clone().startOf("month") }) },
+        { label: "Until start of year", range: (now) => ({ end: now.clone().startOf("year") }) },
     ],
     after: [
-        { label: "Since Today", range: () => ({ start: moment().startOf("day") }) },
-        { label: "Since 3 days ago", range: () => ({ start: moment().subtract(3, "days") }) },
-        { label: "Since 7 days ago", range: () => ({ start: moment().subtract(7, "days") }) },
-        { label: "Since 30 days ago", range: () => ({ start: moment().subtract(30, "days") }) },
-        { label: "Since start of week", range: () => ({ start: moment().startOf("week") }) },
-        { label: "Since start of month", range: () => ({ start: moment().startOf("month") }) },
-        { label: "Since start of year", range: () => ({ start: moment().startOf("year") }) },
+        { label: "Since Today", range: (now) => ({ start: now.clone().startOf("day") }) },
+        { label: "Since 3 days ago", range: (now) => ({ start: now.clone().subtract(3, "days") }) },
+        { label: "Since 7 days ago", range: (now) => ({ start: now.clone().subtract(7, "days") }) },
+        { label: "Since 30 days ago", range: (now) => ({ start: now.clone().subtract(30, "days") }) },
+        { label: "Since start of week", range: (now) => ({ start: now.clone().startOf("week") }) },
+        { label: "Since start of month", range: (now) => ({ start: now.clone().startOf("month") }) },
+        { label: "Since start of year", range: (now) => ({ start: now.clone().startOf("year") }) },
     ],
 };
 
@@ -121,7 +124,7 @@ function buildInstant(date: Date | null, time: string, tz: FilterTimezone): Buil
         return { value: null, invalid: false };
     }
     const trimmed = time?.trim();
-    const parsedTime = trimmed ? moment(trimmed, TIME_FORMAT, true) : moment("00:00:00.000", TIME_FORMAT, true);
+    const parsedTime = trimmed ? moment(trimmed, TIME_PARSE_FORMATS, true) : moment("00:00:00.000", TIME_FORMAT, true);
     if (trimmed && !parsedTime.isValid()) {
         return { value: null, invalid: true };
     }
@@ -216,7 +219,7 @@ export default function TimeSeriesRangePicker({
             return { start: startDate ?? defaultNow, end: endDate ?? defaultNow, preset: null as string | null };
         }
         const today = firstPresetFor(initialMode(startDate, endDate));
-        const todayRange = today.range();
+        const todayRange = today.range(wallOf(defaultNow, initialTimezone));
         return { start: todayRange.start ?? defaultNow, end: todayRange.end ?? defaultNow, preset: today.label };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -237,6 +240,11 @@ export default function TimeSeriesRangePicker({
         toPickerDate(initialFields.end, initialTimezone)
     );
     const [endTime, setEndTime] = useState<string>(() => toTimeText(initialFields.end, initialTimezone));
+
+    // Whether the user (or an incoming filter value) has given this slot a meaning of its own,
+    // as opposed to it just holding the "Today" placeholder for a mode that doesn't use it yet.
+    // Mode switches only overwrite a slot when it's still untouched - see changeMode.
+    const [touched, setTouched] = useState({ start: !!startDate, end: !!endDate });
 
     const startBuild = useMemo(() => buildInstant(startPickerDate, startTime, tz), [startPickerDate, startTime, tz]);
     const endBuild = useMemo(() => buildInstant(endPickerDate, endTime, tz), [endPickerDate, endTime, tz]);
@@ -264,38 +272,56 @@ export default function TimeSeriesRangePicker({
     };
 
     const applyPreset = (preset: PresetDef) => {
-        const { start, end } = preset.range();
+        const { start, end } = preset.range(wallOf(moment(), tz));
         if (start !== undefined) {
             setStartField(start);
+            setTouched((prev) => ({ ...prev, start: true }));
         }
         if (end !== undefined) {
             setEndField(end);
+            setTouched((prev) => ({ ...prev, end: true }));
         }
         setSelectedPreset(preset.label);
     };
 
     const changeMode = (next: FilterMode) => {
         setMode(next);
-        // Reset the newly-selected option to its "Today" preset by default.
-        applyPreset(firstPresetFor(next));
+        // Default the newly-selected option's slots to "Today" - but only the ones the user
+        // hasn't given a value of their own, so switching tabs never discards a typed date or a
+        // range prefilled from the active filter (see PR #23363 review).
+        const preset = firstPresetFor(next);
+        const { start, end } = preset.range(wallOf(moment(), tz));
+        if (start !== undefined && !touched.start) {
+            setStartField(start);
+        }
+        if (end !== undefined && !touched.end) {
+            setEndField(end);
+        }
+        const fullyDefaulted = (start === undefined || !touched.start) && (end === undefined || !touched.end);
+        setSelectedPreset(fullyDefaulted ? preset.label : null);
     };
 
-    // Manual edits to the fields invalidate the active preset highlight.
+    // Manual edits to the fields invalidate the active preset highlight and mark the slot as the
+    // user's own, so a later mode switch won't overwrite it with a default.
     const editStartDate = (d: Date | null) => {
         setStartPickerDate(d);
         setSelectedPreset(null);
+        setTouched((prev) => ({ ...prev, start: true }));
     };
     const editStartTime = (t: string) => {
         setStartTime(t);
         setSelectedPreset(null);
+        setTouched((prev) => ({ ...prev, start: true }));
     };
     const editEndDate = (d: Date | null) => {
         setEndPickerDate(d);
         setSelectedPreset(null);
+        setTouched((prev) => ({ ...prev, end: true }));
     };
     const editEndTime = (t: string) => {
         setEndTime(t);
         setSelectedPreset(null);
+        setTouched((prev) => ({ ...prev, end: true }));
     };
 
     const usesStart = mode === "between" || mode === "after";
@@ -480,7 +506,7 @@ function DateTimeField({
                             calendarClassName="ts-range-datepicker"
                             popperClassName="ts-range-datepicker-popper"
                             renderCustomHeader={(headerProps) => (
-                                <DatePickerHeader
+                                <RangeDatePickerHeader
                                     date={headerProps.date}
                                     changeMonth={headerProps.changeMonth}
                                     changeYear={headerProps.changeYear}
@@ -501,319 +527,6 @@ function DateTimeField({
             <div className="text-muted small mt-1" style={{ minHeight: "1.2em" }}>
                 {helper}
             </div>
-        </div>
-    );
-}
-
-interface TimePickerProps {
-    value: string;
-    invalid: boolean;
-    onChange: (time: string) => void;
-}
-
-interface TimeParts {
-    h: number;
-    m: number;
-    s: number;
-    ms: number;
-}
-
-const HOUR_VALUES = Array.from({ length: 24 }, (_, i) => i);
-const MINUTE_VALUES = Array.from({ length: 60 }, (_, i) => i);
-const SECOND_VALUES = Array.from({ length: 60 }, (_, i) => i);
-
-function pad2(n: number): string {
-    return String(n).padStart(2, "0");
-}
-
-// Parse the typed time into its components. Lenient about missing seconds/ms so the column
-// highlight tracks partially-typed values; returns null only when nothing usable is present.
-function parseTimeParts(text: string): TimeParts | null {
-    const trimmed = text?.trim();
-    if (!trimmed) {
-        return null;
-    }
-    const parsed = moment(trimmed, ["HH:mm:ss.SSS", "HH:mm:ss", "HH:mm"], true);
-    if (!parsed.isValid()) {
-        return null;
-    }
-    return { h: parsed.hour(), m: parsed.minute(), s: parsed.second(), ms: parsed.millisecond() };
-}
-
-// Replace a single component (hour/minute/second) while preserving the rest — crucially the
-// millisecond part the columns don't expose, so clicking a column never discards typed ms.
-function withTimePart(text: string, unit: keyof TimeParts, value: number): string {
-    const parts = parseTimeParts(text) ?? { h: 0, m: 0, s: 0, ms: 0 };
-    parts[unit] = value;
-    return `${pad2(parts.h)}:${pad2(parts.m)}:${pad2(parts.s)}.${String(parts.ms).padStart(3, "0")}`;
-}
-
-interface TimeColumnDef {
-    label: string;
-    unit: keyof TimeParts;
-    values: number[];
-    current: number | null;
-}
-
-// A single scrollable column of two-digit values (hours / minutes / seconds). Scrolls the active
-// value into the middle when the menu opens so the current selection is visible without hunting.
-function TimeColumn({ label, values, current, onPick }: TimeColumnDef & { onPick: (value: number) => void }) {
-    const listRef = useRef<HTMLUListElement>(null);
-    const activeRef = useRef<HTMLButtonElement>(null);
-
-    useEffect(() => {
-        const list = listRef.current;
-        const active = activeRef.current;
-        if (list && active) {
-            list.scrollTop = active.offsetTop - list.clientHeight / 2 + active.clientHeight / 2;
-        }
-    }, []);
-
-    return (
-        <div className="ts-time-picker__col">
-            <ul className="ts-time-picker__list" ref={listRef} aria-label={label}>
-                {values.map((v) => (
-                    <li key={v}>
-                        <button
-                            type="button"
-                            ref={v === current ? activeRef : undefined}
-                            className={classNames("ts-time-picker__option", {
-                                "ts-time-picker__option--active": v === current,
-                            })}
-                            onClick={() => onPick(v)}
-                        >
-                            {pad2(v)}
-                        </button>
-                    </li>
-                ))}
-            </ul>
-        </div>
-    );
-}
-
-// Time entry that keeps a free-form text input (the source of truth, so exact HH:mm:ss.SSS —
-// including milliseconds — can always be typed) and adds a click-to-pick dropdown of Hour/Minute/
-// Second columns for quick coarse selection. 24-hour, no AM/PM. No native <select> for the same
-// reason as HeaderSelect above.
-function TimePicker({ value, invalid, onChange }: TimePickerProps) {
-    const [open, setOpen] = useState(false);
-    const ref = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        if (!open) {
-            return;
-        }
-        const handleOutside = (e: MouseEvent) => {
-            if (ref.current && !ref.current.contains(e.target as Node)) {
-                setOpen(false);
-            }
-        };
-        document.addEventListener("mousedown", handleOutside);
-        return () => document.removeEventListener("mousedown", handleOutside);
-    }, [open]);
-
-    const parts = parseTimeParts(value);
-    const columns: TimeColumnDef[] = [
-        { label: "Hour", unit: "h", values: HOUR_VALUES, current: parts?.h ?? null },
-        { label: "Min", unit: "m", values: MINUTE_VALUES, current: parts?.m ?? null },
-        { label: "Sec", unit: "s", values: SECOND_VALUES, current: parts?.s ?? null },
-    ];
-
-    return (
-        <div className="ts-range-picker__input-icon ts-time-picker" ref={ref}>
-            <Icon icon="clock" margin="m-0" className="ts-range-picker__input-icon-glyph" />
-            <Form.Control
-                value={value}
-                isInvalid={invalid}
-                placeholder={TIME_FORMAT}
-                onChange={(e) => onChange(e.target.value)}
-                onFocus={() => setOpen(true)}
-            />
-            {open && (
-                <div className="ts-time-picker__menu">
-                    <div className="ts-time-picker__columns">
-                        {columns.map((col) => (
-                            <TimeColumn
-                                key={col.unit}
-                                {...col}
-                                onPick={(v) => onChange(withTimePart(value, col.unit, v))}
-                            />
-                        ))}
-                    </div>
-                    <div className="ts-time-picker__footer">
-                        <button
-                            type="button"
-                            className="ts-time-picker__action"
-                            onClick={() => onChange(moment().format(TIME_FORMAT))}
-                        >
-                            Now
-                        </button>
-                        <Button variant="primary" size="sm" onClick={() => setOpen(false)}>
-                            Apply
-                        </Button>
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-}
-
-const MONTH_NAMES = moment.months();
-
-const monthOptions: SelectOption<number>[] = MONTH_NAMES.map((name, i) => ({ label: name, value: i }));
-
-interface HeaderSelectProps {
-    ariaLabel: string;
-    value: number;
-    options: SelectOption<number>[];
-    onChange: (value: number) => void;
-    className?: string;
-}
-
-// A controlled dropdown (button + list) styled to mirror Studio's react-select. Used instead of the
-// real Select / a native <select> because both misbehave inside react-datepicker's calendar (its
-// focus and outside-click handling fights them). This stays fully within our control.
-function HeaderSelect({ ariaLabel, value, options, onChange, className }: HeaderSelectProps) {
-    const [open, setOpen] = useState(false);
-    const ref = useRef<HTMLDivElement>(null);
-    const menuRef = useRef<HTMLUListElement>(null);
-    const activeRef = useRef<HTMLButtonElement>(null);
-
-    useEffect(() => {
-        if (!open) {
-            return;
-        }
-        const handleOutside = (e: MouseEvent) => {
-            if (ref.current && !ref.current.contains(e.target as Node)) {
-                setOpen(false);
-            }
-        };
-        document.addEventListener("mousedown", handleOutside);
-        return () => document.removeEventListener("mousedown", handleOutside);
-    }, [open]);
-
-    // Scroll the currently-selected option into the middle when the menu opens, so reopening a
-    // dropdown always shows the active value without scrolling to find it (matches TimeColumn).
-    useEffect(() => {
-        if (!open) {
-            return;
-        }
-        const menu = menuRef.current;
-        const active = activeRef.current;
-        if (menu && active) {
-            menu.scrollTop = active.offsetTop - menu.clientHeight / 2 + active.clientHeight / 2;
-        }
-    }, [open]);
-
-    const selected = options.find((o) => o.value === value);
-
-    return (
-        <div className={classNames("ts-dp-header__select", className)} ref={ref}>
-            <button
-                type="button"
-                className="ts-dp-header__control"
-                onClick={() => setOpen((o) => !o)}
-                aria-label={ariaLabel}
-                aria-expanded={open}
-            >
-                <span className="ts-dp-header__value">{selected?.label}</span>
-                <Icon icon={open ? "chevron-up" : "chevron-down"} margin="m-0" className="ts-dp-header__caret" />
-            </button>
-            {open && (
-                <ul className="ts-dp-header__menu" ref={menuRef}>
-                    {options.map((o) => (
-                        <li key={o.value}>
-                            <button
-                                type="button"
-                                ref={o.value === value ? activeRef : undefined}
-                                className={classNames("ts-dp-header__option", {
-                                    "ts-dp-header__option--active": o.value === value,
-                                })}
-                                onClick={() => {
-                                    onChange(o.value);
-                                    setOpen(false);
-                                }}
-                            >
-                                {o.label}
-                            </button>
-                        </li>
-                    ))}
-                </ul>
-            )}
-        </div>
-    );
-}
-
-interface DatePickerHeaderProps {
-    date: Date;
-    changeMonth: (month: number) => void;
-    changeYear: (year: number) => void;
-    decreaseMonth: () => void;
-    increaseMonth: () => void;
-    prevMonthButtonDisabled: boolean;
-    nextMonthButtonDisabled: boolean;
-}
-
-// Custom calendar header laying out prev/next arrows and two separate month/year select dropdowns
-// in a single flex row. Done as a custom header because react-datepicker's built-in arrows are
-// absolutely positioned and overlap the dropdowns once the redundant month label is removed.
-function DatePickerHeader({
-    date,
-    changeMonth,
-    changeYear,
-    decreaseMonth,
-    increaseMonth,
-    prevMonthButtonDisabled,
-    nextMonthButtonDisabled,
-}: DatePickerHeaderProps) {
-    const currentMonth = date.getMonth();
-    const currentYear = date.getFullYear();
-
-    const yearOptions = useMemo<SelectOption<number>[]>(() => {
-        const thisYear = new Date().getFullYear();
-        const start = Math.min(thisYear - 20, currentYear - 5);
-        const end = Math.max(thisYear + 5, currentYear + 5);
-        const list: SelectOption<number>[] = [];
-        for (let y = start; y <= end; y++) {
-            list.push({ label: String(y), value: y });
-        }
-        return list;
-    }, [currentYear]);
-
-    return (
-        <div className="ts-dp-header">
-            <button
-                type="button"
-                className="ts-dp-header__nav"
-                onClick={decreaseMonth}
-                disabled={prevMonthButtonDisabled}
-                aria-label="Previous month"
-            >
-                <Icon icon="chevron-left" margin="m-0" />
-            </button>
-            <HeaderSelect
-                ariaLabel="Month"
-                className="ts-dp-header__select--month"
-                value={currentMonth}
-                options={monthOptions}
-                onChange={changeMonth}
-            />
-            <HeaderSelect
-                ariaLabel="Year"
-                className="ts-dp-header__select--year"
-                value={currentYear}
-                options={yearOptions}
-                onChange={changeYear}
-            />
-            <button
-                type="button"
-                className="ts-dp-header__nav"
-                onClick={increaseMonth}
-                disabled={nextMonthButtonDisabled}
-                aria-label="Next month"
-            >
-                <Icon icon="chevron-right" margin="m-0" />
-            </button>
         </div>
     );
 }
