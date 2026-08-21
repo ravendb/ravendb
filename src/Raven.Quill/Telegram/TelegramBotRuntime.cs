@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using Raven.Client.Documents;
 using Raven.Quill.Agents;
 using Raven.Quill.Channels;
@@ -32,7 +32,7 @@ internal sealed class TelegramBotRuntime
         Client = client;
         ChannelChangeVector = channelChangeVector;
         _acceptsContactShares = channel.Telegram!.ParameterBindings.Values
-            .Any(binding => binding.Source == TelegramParameterSource.PhoneNumber);
+            .Any(binding => binding.Source == ChannelParameterSource.PhoneNumber);
         _context = new TelegramChatContext(database, channel, store, router, options, logger);
     }
 

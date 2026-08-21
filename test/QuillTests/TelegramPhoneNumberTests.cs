@@ -1,4 +1,4 @@
-using QuillTests.E2E.Fixtures;
+﻿using QuillTests.E2E.Fixtures;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
@@ -181,9 +181,9 @@ public class TelegramPhoneNumberTests(ITestOutputHelper output, QuillTelegramFix
         var token = NewBotToken();
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.Telegram, agentId, null,
-            Telegram: new(token, new Dictionary<string, TelegramParameterBinding>
+            Telegram: new(token, new Dictionary<string, ChannelParameterBinding>
             {
-                ["phone"] = new() { Source = TelegramParameterSource.PhoneNumber },
+                ["phone"] = new() { Source = ChannelParameterSource.PhoneNumber },
             })));
 
         return (app, created.ChannelId, token);

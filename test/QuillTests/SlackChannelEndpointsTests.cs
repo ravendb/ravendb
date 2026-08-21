@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using QuillTests.E2E.Fixtures;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Quill.Channels;
@@ -151,9 +151,9 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
         var unsupported = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
             new ProvisionChannelRequest(ChannelType.Slack, agentId, null,
                 Slack: new(botToken, "s",
-                    ParameterBindings: new Dictionary<string, TelegramParameterBinding>
+                    ParameterBindings: new Dictionary<string, ChannelParameterBinding>
                     {
-                        ["slackUser"] = new() { Source = TelegramParameterSource.PhoneNumber },
+                        ["slackUser"] = new() { Source = ChannelParameterSource.PhoneNumber },
                     }))));
         Assert.Equal(HttpStatusCode.BadRequest, unsupported.StatusCode);
         Assert.Contains("cannot bind PhoneNumber", unsupported.Body);
@@ -161,9 +161,9 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
         var created = await app.ProvisionChannelAsync(
             new ProvisionChannelRequest(ChannelType.Slack, agentId, null,
                 Slack: new(botToken, "s",
-                    ParameterBindings: new Dictionary<string, TelegramParameterBinding>
+                    ParameterBindings: new Dictionary<string, ChannelParameterBinding>
                     {
-                        ["slackUser"] = new() { Source = TelegramParameterSource.UserId },
+                        ["slackUser"] = new() { Source = ChannelParameterSource.UserId },
                     })));
         Assert.NotEmpty(created.ChannelId);
     }
@@ -278,21 +278,21 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.Slack, agentId, null,
             Slack: new(botToken, "s",
-                ParameterBindings: new Dictionary<string, TelegramParameterBinding>
+                ParameterBindings: new Dictionary<string, ChannelParameterBinding>
                 {
-                    ["slackUser"] = new() { Source = TelegramParameterSource.UserId },
+                    ["slackUser"] = new() { Source = ChannelParameterSource.UserId },
                 })));
 
         var updated = await app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(
             "Support line", null, false,
-            Slack: new(ParameterBindings: new Dictionary<string, TelegramParameterBinding>
+            Slack: new(ParameterBindings: new Dictionary<string, ChannelParameterBinding>
             {
-                ["slackUser"] = new() { Source = TelegramParameterSource.Constant, Value = "U000" },
+                ["slackUser"] = new() { Source = ChannelParameterSource.Constant, Value = "U000" },
             })));
 
         Assert.Equal("Support line", updated.DisplayName);
         Assert.False(updated.Enabled);
-        Assert.Equal(TelegramParameterSource.Constant, updated.Slack!.ParameterBindings["slackUser"].Source);
+        Assert.Equal(ChannelParameterSource.Constant, updated.Slack!.ParameterBindings["slackUser"].Source);
 
         var foreign = await Assert.ThrowsAsync<QuillHttpException>(() => app.UpdateChannelAsync(created.ChannelId,
             new UpdateChannelRequest(null, null, null, Telegram: new("123:tok"))));

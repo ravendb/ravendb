@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -340,9 +340,9 @@ public class SlackWebhookTests(ITestOutputHelper output, QuillSlackFixture fixtu
 
         var bindings = parameter is null
             ? null
-            : new Dictionary<string, TelegramParameterBinding>
+            : new Dictionary<string, ChannelParameterBinding>
             {
-                [parameter.Name] = new() { Source = TelegramParameterSource.UserId },
+                [parameter.Name] = new() { Source = ChannelParameterSource.UserId },
             };
 
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(

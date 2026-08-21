@@ -85,10 +85,10 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
     public async Task Message_dispatches_with_derived_conversation_id_and_bound_parameters()
     {
         var (app, channelId, token) = await ProvisionAsync(
-            bindings: new Dictionary<string, TelegramParameterBinding>
+            bindings: new Dictionary<string, ChannelParameterBinding>
             {
-                ["customerId"] = new() { Source = TelegramParameterSource.Constant, Value = "customers/42" },
-                ["senderId"] = new() { Source = TelegramParameterSource.UserId },
+                ["customerId"] = new() { Source = ChannelParameterSource.Constant, Value = "customers/42" },
+                ["senderId"] = new() { Source = ChannelParameterSource.UserId },
             },
             declared:
             [
@@ -120,10 +120,10 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
     public async Task Sender_values_are_injected_under_the_declared_parameter_casing()
     {
         var (app, channelId, token) = await ProvisionAsync(
-            bindings: new Dictionary<string, TelegramParameterBinding>
+            bindings: new Dictionary<string, ChannelParameterBinding>
             {
-                ["USERHANDLE"] = new() { Source = TelegramParameterSource.Username },
-                ["SENDERID"] = new() { Source = TelegramParameterSource.UserId },
+                ["USERHANDLE"] = new() { Source = ChannelParameterSource.Username },
+                ["SENDERID"] = new() { Source = ChannelParameterSource.UserId },
             },
             declared:
             [
@@ -148,9 +148,9 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
     public async Task Missing_telegram_username_sends_a_canned_nudge_and_skips_the_agent()
     {
         var (app, channelId, token) = await ProvisionAsync(
-            bindings: new Dictionary<string, TelegramParameterBinding>
+            bindings: new Dictionary<string, ChannelParameterBinding>
             {
-                ["handle"] = new() { Source = TelegramParameterSource.Username },
+                ["handle"] = new() { Source = ChannelParameterSource.Username },
             },
             declared:
             [
@@ -186,9 +186,9 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
     public async Task Parameter_added_after_provisioning_is_refused_before_the_agent_runs()
     {
         var (app, channelId, token) = await ProvisionAsync(
-            bindings: new Dictionary<string, TelegramParameterBinding>
+            bindings: new Dictionary<string, ChannelParameterBinding>
             {
-                ["customerId"] = new() { Source = TelegramParameterSource.Constant, Value = "customers/42" },
+                ["customerId"] = new() { Source = ChannelParameterSource.Constant, Value = "customers/42" },
             },
             declared: [new AiAgentParameter("customerId", "scope")]);
         await using var appGuard = app;
@@ -521,9 +521,9 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
     public async Task Message_overrides_apply_to_a_running_bot()
     {
         var (app, channelId, token) = await ProvisionAsync(
-            bindings: new Dictionary<string, TelegramParameterBinding>
+            bindings: new Dictionary<string, ChannelParameterBinding>
             {
-                ["handle"] = new() { Source = TelegramParameterSource.Username },
+                ["handle"] = new() { Source = ChannelParameterSource.Username },
             },
             declared: [new AiAgentParameter("handle", "sender's handle")]);
         await using var appGuard = app;
@@ -611,9 +611,9 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
     public async Task Start_command_nudges_for_a_missing_username_without_waiting_for_a_first_message()
     {
         var (app, channelId, token) = await ProvisionAsync(
-            bindings: new Dictionary<string, TelegramParameterBinding>
+            bindings: new Dictionary<string, ChannelParameterBinding>
             {
-                ["userHandle"] = new() { Source = TelegramParameterSource.Username },
+                ["userHandle"] = new() { Source = ChannelParameterSource.Username },
             },
             declared: [new AiAgentParameter("userHandle", "sender's handle")]);
         await using var appGuard = app;
@@ -634,9 +634,9 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
     public async Task Start_command_stays_quiet_when_every_binding_can_be_satisfied()
     {
         var (app, channelId, token) = await ProvisionAsync(
-            bindings: new Dictionary<string, TelegramParameterBinding>
+            bindings: new Dictionary<string, ChannelParameterBinding>
             {
-                ["userHandle"] = new() { Source = TelegramParameterSource.Username },
+                ["userHandle"] = new() { Source = ChannelParameterSource.Username },
             },
             declared: [new AiAgentParameter("userHandle", "sender's handle")]);
         await using var appGuard = app;
@@ -763,7 +763,7 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
     }
 
     private async Task<(QuillApp App, string ChannelId, string Token)> ProvisionAsync(
-        Dictionary<string, TelegramParameterBinding>? bindings = null, AiAgentParameter[]? declared = null)
+        Dictionary<string, ChannelParameterBinding>? bindings = null, AiAgentParameter[]? declared = null)
     {
         var app = await NewAppAsync();
         var agentId = "tg-agent-" + Guid.NewGuid().ToString("N")[..8];

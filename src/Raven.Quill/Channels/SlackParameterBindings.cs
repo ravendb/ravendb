@@ -1,19 +1,19 @@
-using Raven.Client.Documents.Operations.AI.Agents;
+﻿using Raven.Client.Documents.Operations.AI.Agents;
 
 namespace Raven.Quill.Channels;
 
 internal static class SlackParameterBindings
 {
-    internal static bool IsSupportedSource(TelegramParameterSource source) =>
-        source is TelegramParameterSource.Constant or TelegramParameterSource.UserId;
+    internal static bool IsSupportedSource(ChannelParameterSource source) =>
+        source is ChannelParameterSource.Constant or ChannelParameterSource.UserId;
 
     internal static bool TryResolve(
         AiAgentConfiguration config,
-        Dictionary<string, TelegramParameterBinding>? supplied,
-        out Dictionary<string, TelegramParameterBinding> bindings,
+        Dictionary<string, ChannelParameterBinding>? supplied,
+        out Dictionary<string, ChannelParameterBinding> bindings,
         out string? error)
     {
-        if (TelegramParameterBindings.TryResolve(config, supplied, out bindings, out error) == false)
+        if (ChannelParameterBindings.TryResolve(config, supplied, out bindings, out error) == false)
             return false;
 
         foreach (var (name, binding) in bindings)
@@ -22,8 +22,8 @@ internal static class SlackParameterBindings
                 continue;
 
             error = $"parameter binding for '{name}': Slack channels cannot bind {binding.Source}; " +
-                    $"use {nameof(TelegramParameterSource.Constant)} or {nameof(TelegramParameterSource.UserId)}";
-            bindings = new Dictionary<string, TelegramParameterBinding>();
+                    $"use {nameof(ChannelParameterSource.Constant)} or {nameof(ChannelParameterSource.UserId)}";
+            bindings = new Dictionary<string, ChannelParameterBinding>();
             return false;
         }
 
@@ -32,7 +32,7 @@ internal static class SlackParameterBindings
 
     internal static bool TryBind(
         AiAgentConfiguration config,
-        Dictionary<string, TelegramParameterBinding> channelBindings,
+        Dictionary<string, ChannelParameterBinding> channelBindings,
         string senderUserId,
         out Dictionary<string, string> parameters,
         out string? error)
@@ -45,11 +45,11 @@ internal static class SlackParameterBindings
         {
             switch (binding.Source)
             {
-                case TelegramParameterSource.Constant:
+                case ChannelParameterSource.Constant:
                     bound[name] = binding.Value ?? "";
                     break;
 
-                case TelegramParameterSource.UserId:
+                case ChannelParameterSource.UserId:
                     bound[name] = senderUserId;
                     break;
 

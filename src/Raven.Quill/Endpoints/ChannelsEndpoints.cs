@@ -180,7 +180,7 @@ public static class ChannelsEndpoints
         if (TryValidateDisplayName(body.DisplayName, out var nameError) == false)
             return Results.BadRequest(new ApiErrorResponse(nameError!));
 
-        if (TelegramParameterBindings.TryResolve(config, body.Telegram.ParameterBindings, out var bindings, out var paramError) == false)
+        if (ChannelParameterBindings.TryResolve(config, body.Telegram.ParameterBindings, out var bindings, out var paramError) == false)
             return Results.BadRequest(new ApiErrorResponse(paramError!, Code: "missing_parameters"));
 
         var botToken = body.Telegram.BotToken.Trim();
@@ -500,7 +500,7 @@ public static class ChannelsEndpoints
             if (config is null)
                 return Results.BadRequest(new ApiErrorResponse($"unknown agentId '{channel.AgentId}'"));
 
-            if (TelegramParameterBindings.TryResolve(config, suppliedBindings, out var bindings, out var paramError) == false)
+            if (ChannelParameterBindings.TryResolve(config, suppliedBindings, out var bindings, out var paramError) == false)
                 return Results.BadRequest(new ApiErrorResponse(paramError!, Code: "missing_parameters"));
 
             channel.Telegram ??= new TelegramSettings();

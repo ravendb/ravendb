@@ -1,6 +1,6 @@
-import type { TelegramParameterSource } from "@/api/generated/server-api";
+import type { ChannelParameterSource } from "@/api/generated/server-api";
 
-export const SLACK_PARAMETER_SOURCES: { value: TelegramParameterSource; label: string; hint?: string }[] = [
+export const SLACK_PARAMETER_SOURCES: { value: ChannelParameterSource; label: string; hint?: string }[] = [
     { value: "Constant", label: "Constant value" },
     {
         value: "UserId",
@@ -9,10 +9,10 @@ export const SLACK_PARAMETER_SOURCES: { value: TelegramParameterSource; label: s
     },
 ];
 
-export function slackParameterSourceLabel(source: TelegramParameterSource | undefined) {
+export function slackParameterSourceLabel(source: ChannelParameterSource | undefined) {
     return SLACK_PARAMETER_SOURCES.find((candidate) => candidate.value === source)?.label ?? (source || "—");
 }
 
-export function slackParameterSourceHint(source: TelegramParameterSource | undefined) {
+export function slackParameterSourceHint(source: ChannelParameterSource | undefined) {
     return SLACK_PARAMETER_SOURCES.find((candidate) => candidate.value === source)?.hint;
 }
