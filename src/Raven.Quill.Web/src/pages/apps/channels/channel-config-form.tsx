@@ -86,7 +86,7 @@ export function ChannelConfigForm({
             }),
         onSuccess: async () => {
             unsavedChanges.markSaved();
-            await invalidateChannelQueries(queryClient, slug);
+            await invalidateChannelQueries(queryClient, slug, channel.type);
             toast.success("Channel updated");
             onSaved?.();
         },

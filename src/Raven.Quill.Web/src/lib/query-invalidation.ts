@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { api } from "@/api/api";
 import { AI_CONSENT_REQUIRED_MESSAGE } from "@/api/custom-services/assistant-service";
+import type { ChannelType } from "@/api/generated/server-api";
 import { APP_AI_CONNECTION_STRINGS_KEY } from "@/api/queries/apps-queries";
 
 // The dashboard "My apps" table (stats.dashboardApps) summarizes each app's agent and
@@ -36,12 +37,23 @@ export function invalidateAiConnectionStringQueries(queryClient: QueryClient) {
     ]);
 }
 
-export function invalidateChannelQueries(queryClient: QueryClient, slug: string) {
+function channelTypeQueryKeys(slug: string, channelType: NonNullable<ChannelType>) {
+    switch (channelType) {
+        case "Slack":
+            return [api.queries.slack.health(slug).queryKey];
+        default:
+            return [];
+    }
+}
+
+export function invalidateChannelQueries(queryClient: QueryClient, slug: string, channelType?: ChannelType) {
     return Promise.all([
         queryClient.invalidateQueries({ queryKey: api.queries.channels.list(slug).queryKey }),
         queryClient.invalidateQueries({ queryKey: api.queries.stats.channels(slug).queryKey }),
         queryClient.invalidateQueries({ queryKey: api.queries.stats.dashboardApps().queryKey }),
-        queryClient.invalidateQueries({ queryKey: api.queries.slack.health(slug).queryKey }),
+        ...(channelType ? channelTypeQueryKeys(slug, channelType) : []).map((queryKey) =>
+            queryClient.invalidateQueries({ queryKey }),
+        ),
     ]);
 }
 

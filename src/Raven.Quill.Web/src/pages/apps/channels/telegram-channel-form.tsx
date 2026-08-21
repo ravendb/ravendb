@@ -144,7 +144,7 @@ function LoadedTelegramChannelForm({
             }),
         onSuccess: async () => {
             unsavedChanges.markSaved();
-            await invalidateChannelQueries(queryClient, slug);
+            await invalidateChannelQueries(queryClient, slug, "Telegram");
             toast.success("Telegram channel created");
             onCreated();
         },

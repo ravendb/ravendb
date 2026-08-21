@@ -264,7 +264,7 @@ function ChannelActions({ slug, channel }: { slug: string; channel: ChannelSumma
                 enabled: !channel.enabled,
             }),
         onSuccess: async () => {
-            await invalidateChannelQueries(queryClient, slug);
+            await invalidateChannelQueries(queryClient, slug, channel.type);
             toast.success(channel.enabled ? "Channel paused" : "Channel resumed");
         },
         onError: (error) => {

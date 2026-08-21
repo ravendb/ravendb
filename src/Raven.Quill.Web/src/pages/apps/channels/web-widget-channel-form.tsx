@@ -65,7 +65,7 @@ export function WebWidgetChannelForm({
             }),
         onSuccess: async () => {
             unsavedChanges.markSaved();
-            await invalidateChannelQueries(queryClient, slug);
+            await invalidateChannelQueries(queryClient, slug, "IFrame");
             toast.success("Web widget channel created");
             onCreated();
         },
