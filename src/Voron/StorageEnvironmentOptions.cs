@@ -1709,6 +1709,8 @@ namespace Voron
 
         public int SyncWritebackBlockSizeInMb { get; set; } = 32;
 
+        public int SyncWritebackMinContiguousSizeInKb { get; set; } = 64;
+
         public int SyncWritebackBarrierCostThresholdInMs { get; set; } = 100;
 
         internal long SyncWritebackBarrierCostThresholdTicks => SyncWritebackBarrierCostThresholdInMs * TimeSpan.TicksPerMillisecond;
