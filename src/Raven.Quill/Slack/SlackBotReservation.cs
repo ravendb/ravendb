@@ -1,6 +1,8 @@
+using Raven.Quill.Channels;
+
 namespace Raven.Quill.Slack;
 
-internal sealed class SlackBotReservation
+internal sealed class SlackBotReservation : IChannelBotReservation
 {
     internal const string IdPrefix = "slack-bots/";
 

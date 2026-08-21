@@ -207,7 +207,7 @@ public static class ChannelsEndpoints
             },
         };
 
-        var (reserved, owner) = await TryReserveBotAsync(store, bot.Id, app.Database, channel.Id!, ct);
+        var (reserved, owner, _) = await TryReserveBotAsync(store, bot.Id, app.Database, channel.Id!, ct);
         if (reserved == false)
             return Results.BadRequest(new ApiErrorResponse(AlreadyConnected(bot.Username, owner)));
 
@@ -512,7 +512,7 @@ public static class ChannelsEndpoints
 
         if (rotatedBot is not null)
         {
-            var (reserved, owner) = await TryReserveBotAsync(store, rotatedBot.Id, app.Database, channel.Id!, ct);
+            var (reserved, owner, _) = await TryReserveBotAsync(store, rotatedBot.Id, app.Database, channel.Id!, ct);
             if (reserved == false)
                 return Results.BadRequest(new ApiErrorResponse(AlreadyConnected(rotatedBot.Username, owner)));
         }
@@ -717,81 +717,16 @@ public static class ChannelsEndpoints
             ? $"bot @{botUsername} is already connected"
             : $"bot @{botUsername} is already connected in app '{ownerDatabase}'";
 
-    private static async Task<(bool Reserved, string? OwnerDatabase)> TryReserveBotAsync(
-        IDocumentStore store, long botId, string database, string channelId, CancellationToken ct)
-    {
-        using var configSession = store.OpenAsyncSession();
+    private static Task<ChannelBotReservations.Claim> TryReserveBotAsync(
+        IDocumentStore store, long botId, string database, string channelId, CancellationToken ct) =>
+        ChannelBotReservations.TryClaimAsync<TelegramBotReservation>(
+            store, TelegramBotReservation.IdFor(botId), database, channelId,
+            channel => channel?.Telegram?.BotId == botId, storeCompanions: null, ct);
 
-        var reservationId = TelegramBotReservation.IdFor(botId);
-        var reservation = await configSession.LoadAsync<TelegramBotReservation>(reservationId, ct);
-        if (reservation is not null && reservation.Database == database && reservation.ChannelId == channelId)
-            return (true, null);
-
-        if (reservation is null)
-        {
-            await configSession.StoreAsync(
-                new TelegramBotReservation { Database = database, ChannelId = channelId },
-                string.Empty, reservationId, ct);
-        }
-        else
-        {
-            if (await IsReservationLiveAsync(store, reservation, botId, ct))
-                return (false, reservation.Database);
-
-            // a reservation without a live matching channel is an orphan; reclaim it under its change vector
-            reservation.Database = database;
-            reservation.ChannelId = channelId;
-            await configSession.StoreAsync(
-                reservation, configSession.Advanced.GetChangeVectorFor(reservation), reservationId, ct);
-        }
-
-        try
-        {
-            await configSession.SaveChangesAsync(ct);
-            return (true, null);
-        }
-        catch (ConcurrencyException)
-        {
-            return (false, null);
-        }
-    }
-
-    // live = the reserved channel still exists and still uses this bot
-    private static async Task<bool> IsReservationLiveAsync(
-        IDocumentStore store, TelegramBotReservation reservation, long botId, CancellationToken ct)
-    {
-        try
-        {
-            using var session = store.OpenAsyncSession(reservation.Database);
-            var channel = await session.LoadAsync<Channel>(reservation.ChannelId, ct);
-            return channel?.Telegram?.BotId == botId;
-        }
-        catch (DatabaseDoesNotExistException)
-        {
-            return false;
-        }
-    }
-
-    private static async Task TryReleaseBotAsync(
-        IDocumentStore store, long botId, string database, string channelId, ILogger<ChannelsLogger> logger)
-    {
-        var reservationId = TelegramBotReservation.IdFor(botId);
-        try
-        {
-            using var configSession = store.OpenAsyncSession();
-            var reservation = await configSession.LoadAsync<TelegramBotReservation>(reservationId);
-            if (reservation is null || reservation.Database != database || reservation.ChannelId != channelId)
-                return;
-
-            configSession.Delete(reservation);
-            await configSession.SaveChangesAsync();
-        }
-        catch (Exception e)
-        {
-            // an unreleased reservation is an orphan the next reserve attempt reclaims
-            logger.LogWarning("Telegram bot reservation {ReservationId} was not released: {Error}", reservationId, e.Message);
-        }
-    }
+    private static Task TryReleaseBotAsync(
+        IDocumentStore store, long botId, string database, string channelId, ILogger<ChannelsLogger> logger) =>
+        ChannelBotReservations.ReleaseAsync<TelegramBotReservation>(
+            store, TelegramBotReservation.IdFor(botId), database, channelId, releaseCompanions: null, logger);
 
     private static IResult NotImplementedChannel(ChannelType type) =>
         Results.Problem(
@@ -806,107 +741,35 @@ public static class ChannelsEndpoints
             : $"Slack bot {bot} is already connected in app '{ownerDatabase}'";
     }
 
-    private static async Task<(bool Reserved, string? OwnerDatabase, string? ChangeVector)> TryReserveSlackBotAsync(
-        IDocumentStore store, string teamId, string botUserId, string database, string channelId, string webhookToken, CancellationToken ct)
-    {
-        using var configSession = store.OpenAsyncSession();
+    private static Task<ChannelBotReservations.Claim> TryReserveSlackBotAsync(
+        IDocumentStore store, string teamId, string botUserId, string database, string channelId, string webhookToken,
+        CancellationToken ct) =>
+        ChannelBotReservations.TryClaimAsync<SlackBotReservation>(
+            store, SlackBotReservation.IdFor(teamId, botUserId), database, channelId,
+            channel => channel?.Slack is { } settings && settings.TeamId == teamId && settings.BotUserId == botUserId,
+            session => session.StoreAsync(
+                new SlackWebhookRoute { Database = database, ChannelId = channelId },
+                SlackWebhookRoute.IdFor(webhookToken), ct),
+            ct);
 
-        var reservationId = SlackBotReservation.IdFor(teamId, botUserId);
-        var reservation = await configSession.LoadAsync<SlackBotReservation>(reservationId, ct);
-        if (reservation is not null && reservation.Database == database && reservation.ChannelId == channelId)
-            return (true, null, configSession.Advanced.GetChangeVectorFor(reservation));
-
-        if (reservation is null)
-        {
-            reservation = new SlackBotReservation { Database = database, ChannelId = channelId };
-            await configSession.StoreAsync(reservation, string.Empty, reservationId, ct);
-        }
-        else
-        {
-            if (await IsSlackReservationLiveAsync(store, reservation, teamId, botUserId, ct))
-                return (false, reservation.Database, null);
-
-            reservation.Database = database;
-            reservation.ChannelId = channelId;
-            await configSession.StoreAsync(
-                reservation, configSession.Advanced.GetChangeVectorFor(reservation), reservationId, ct);
-        }
-
-        await configSession.StoreAsync(
-            new SlackWebhookRoute { Database = database, ChannelId = channelId },
-            SlackWebhookRoute.IdFor(webhookToken), ct);
-
-        try
-        {
-            await configSession.SaveChangesAsync(ct);
-            return (true, null, configSession.Advanced.GetChangeVectorFor(reservation));
-        }
-        catch (ConcurrencyException)
-        {
-            return (false, null, null);
-        }
-    }
-
-    private static async Task<bool> ConfirmSlackReservationAsync(
+    private static Task<bool> ConfirmSlackReservationAsync(
         IDocumentStore store, string teamId, string botUserId, string database, string channelId, string changeVector,
-        CancellationToken ct)
-    {
-        try
-        {
-            using var configSession = store.OpenAsyncSession();
-            await configSession.StoreAsync(
-                new SlackBotReservation { Database = database, ChannelId = channelId },
-                changeVector, SlackBotReservation.IdFor(teamId, botUserId), ct);
-            await configSession.SaveChangesAsync(ct);
-            return true;
-        }
-        catch (ConcurrencyException)
-        {
-            return false;
-        }
-    }
+        CancellationToken ct) =>
+        ChannelBotReservations.TryConfirmAsync<SlackBotReservation>(
+            store, SlackBotReservation.IdFor(teamId, botUserId), database, channelId, changeVector, ct);
 
-    private static async Task<bool> IsSlackReservationLiveAsync(
-        IDocumentStore store, SlackBotReservation reservation, string teamId, string botUserId, CancellationToken ct)
-    {
-        try
-        {
-            using var session = store.OpenAsyncSession(reservation.Database);
-            var channel = await session.LoadAsync<Channel>(reservation.ChannelId, ct);
-            return channel?.Slack is { } settings && settings.TeamId == teamId && settings.BotUserId == botUserId;
-        }
-        catch (DatabaseDoesNotExistException)
-        {
-            return false;
-        }
-    }
-
-    private static async Task TryReleaseSlackAsync(
-        IDocumentStore store, string teamId, string botUserId, string webhookToken, string database, string channelId, ILogger<ChannelsLogger> logger)
-    {
-        try
-        {
-            using var configSession = store.OpenAsyncSession();
-
-            var reservation = await configSession.LoadAsync<SlackBotReservation>(
-                SlackBotReservation.IdFor(teamId, botUserId));
-            if (reservation is not null && reservation.Database == database && reservation.ChannelId == channelId)
-                configSession.Delete(reservation);
-
-            var route = await configSession.LoadAsync<SlackWebhookRoute>(
-                SlackWebhookRoute.IdFor(webhookToken));
-            if (route is not null && route.Database == database && route.ChannelId == channelId)
-                configSession.Delete(route);
-
-            await configSession.SaveChangesAsync();
-        }
-        catch (Exception e)
-        {
-            logger.LogWarning(
-                "Slack bot reservation for {TeamId}/{BotUserId} was not released: {Error}",
-                teamId, botUserId, e.Message);
-        }
-    }
+    private static Task TryReleaseSlackAsync(
+        IDocumentStore store, string teamId, string botUserId, string webhookToken, string database, string channelId,
+        ILogger<ChannelsLogger> logger) =>
+        ChannelBotReservations.ReleaseAsync<SlackBotReservation>(
+            store, SlackBotReservation.IdFor(teamId, botUserId), database, channelId,
+            async session =>
+            {
+                var route = await session.LoadAsync<SlackWebhookRoute>(SlackWebhookRoute.IdFor(webhookToken));
+                if (route is not null && route.Database == database && route.ChannelId == channelId)
+                    session.Delete(route);
+            },
+            logger);
 
     private static bool TryNormalizeOrigins(string[] origins, out string? error)
     {
