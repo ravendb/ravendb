@@ -72,13 +72,13 @@ async function verifyCdc(slug: string, selectedTables: SelectedTables) {
         const warningErrors = result.warnings.map((warning) => ({ message: warning }));
         throw toWizardStepError(
             [...result.errors, ...warningErrors],
-            "CDC verification failed for the selected tables.",
+            "Data source verification failed for the selected tables.",
         );
     }
 
     // Toasting from the fetcher stays a one-off: the entry never goes stale and is never retried.
     if (result.warnings.length > 0) {
-        toast.warning("CDC verification passed with warnings", {
+        toast.warning("Data source verification passed with warnings", {
             description: result.warnings.join("\n"),
         });
     }

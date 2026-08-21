@@ -15,9 +15,9 @@ import {
 
 export function CdcPerformanceSection({
     slug,
-    title = "Live CDC performance",
-    loadingLabel = "Connecting to live CDC performance...",
-    errorTitle = "Could not connect to the live CDC feed",
+    title = "Sync performance",
+    loadingLabel = "Connecting to the live data sync...",
+    errorTitle = "Could not connect to the live data sync",
 }: {
     slug: string;
     title?: string;
@@ -77,7 +77,7 @@ function CdcStatusBadge({ status }: { status: CdcLiveStatus }) {
 
 function CdcPerformanceContent({ performance }: { performance: CdcLivePerformance }) {
     const cards: DashboardStatCard[] = [
-        { label: "Recent CDC writes", value: performance.recentWrites, isLoading: false },
+        { label: "Recent writes", value: performance.recentWrites, isLoading: false },
         { label: "Errors", value: performance.errorCount, isLoading: false },
     ];
 

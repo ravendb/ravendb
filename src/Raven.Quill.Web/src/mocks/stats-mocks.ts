@@ -141,7 +141,7 @@ export const sampleDashboardApps: ApplianceAppResponse[] = [
         adaptersCount: 0,
         agentsCount: 2,
         channelsLabel: "Telegram",
-        statusSubtitle: "CDC failed · 2h ago",
+        statusSubtitle: "Sync failed · 2h ago",
         createdAt: "2026-04-28T12:00:00Z",
         updatedAt: "2026-06-25T07:05:00Z",
     },
