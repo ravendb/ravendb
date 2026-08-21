@@ -859,6 +859,7 @@ namespace Raven.Server.ServerWide
             options.PrefetchResetThreshold = Configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
             options.SyncJournalsCountThreshold = Configuration.Storage.SyncJournalsCountThreshold;
             options.SyncWritebackBlockSizeInMb = Configuration.Storage.SyncWritebackBlockSizeInMb;
+            options.SyncWritebackMinContiguousSizeInKb = Configuration.Storage.SyncWritebackMinContiguousSizeInKb;
             options.SyncWritebackBarrierCostThresholdInMs = Configuration.Storage.SyncWritebackBarrierCostThresholdInMs;
             options.SyncWritebackDrainQueueDepthThreshold = Configuration.Storage.SyncWritebackDrainQueueDepthThreshold;
             options.IgnoreInvalidJournalErrors = Configuration.Storage.IgnoreInvalidJournalErrors;

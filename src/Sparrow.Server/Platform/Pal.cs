@@ -10,7 +10,7 @@ namespace Sparrow.Server.Platform
 {
     public static unsafe class Pal
     {
-        public const int PAL_VER = 70894; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
+        public const int PAL_VER = 70895; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
         static Pal()
         {
@@ -113,6 +113,7 @@ namespace Sparrow.Server.Platform
             public long SetBitsRemaining;
             public long TotalWaitTicks;
             public long MaxRangeWaitTicks;
+            public long BytesSkipped;
         }
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
@@ -177,6 +178,7 @@ namespace Sparrow.Server.Platform
             void* handle,
             Int32 pipelineDepth,
             Int32 blockSizeBytes,
+            Int32 minWriteSizeBytes,
             out WritebackStats stats,
             out Int32 errorCode);
 

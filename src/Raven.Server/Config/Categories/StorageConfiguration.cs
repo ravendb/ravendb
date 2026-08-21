@@ -123,10 +123,15 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Storage.SyncWritebackBlockSizeInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int SyncWritebackBlockSizeInMb { get; set; }
 
-        [Description("Moving-average sync cost threshold per device; exceeding this value switches writeback from trickle to drain mode to handle elevated I/O latency or exhausted burst credits.")]  
+        [Description("Moving-average sync cost threshold per device; exceeding this value switches writeback from trickle to drain mode to handle elevated I/O latency or exhausted burst credits.")]
         [DefaultValue(100)]
         [ConfigurationEntry("Storage.SyncWritebackBarrierCostThresholdInMs", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int SyncWritebackBarrierCostThresholdInMs { get; set; }
+
+        [Description("Minimum contiguous dirty run for paced writeback; shorter runs are left to the OS writeback to avoid burning the device IOPS budget on unmergeable small requests. Set to 0 to write back every dirty run.")]
+        [DefaultValue(64)]
+        [ConfigurationEntry("Storage.SyncWritebackMinContiguousSizeInKb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int SyncWritebackMinContiguousSizeInKb { get; set; }
 
         [Description("Time-weighted device queue depth threshold (iostat aqu-sz) that switches writeback from trickle to paced drain mode; reverts when queue stays below 60% of this value for 30 seconds.")]
         [DefaultValue(5)]
