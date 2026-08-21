@@ -94,7 +94,7 @@ export function EmbedLinkApiDocs({ slug, channelId, parameterNames }: EmbedLinkA
                             content: (
                                 <>
                                     <p className="max-w-prose text-sm text-muted-foreground">
-                                        Your server POSTs to the embed-links endpoint with your operator key in the{" "}
+                                        Your server POSTs to the embed-links endpoint with your Dashboard API key in the{" "}
                                         <InlineCode>X-Api-Key</InlineCode> header, then hands the page nothing but the
                                         returned <InlineCode>url</InlineCode>. The app and channel are already filled in
                                         below - swap in your <InlineCode>QUILL_API_KEY</InlineCode>
@@ -120,8 +120,8 @@ export function EmbedLinkApiDocs({ slug, channelId, parameterNames }: EmbedLinkA
                                         <ShieldAlertIcon />
                                         <AlertTitle>Run this on your server, never in a browser</AlertTitle>
                                         <AlertDescription>
-                                            The operator key grants full access to every app, not just this widget, so
-                                            it must never be shipped to a page or called from client-side JavaScript.
+                                            The Dashboard API key grants full access to every app, not just this widget,
+                                            so it must never be shipped to a page or called from client-side JavaScript.
                                             <br /> The endpoint also sends no CORS headers, so a browser{" "}
                                             <InlineCode>fetch</InlineCode> to it fails on preflight regardless.
                                         </AlertDescription>

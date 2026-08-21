@@ -33,14 +33,14 @@ function listenerLines(sessionOrigin: string, reopen: string) {
     ];
 }
 
-/** Your backend holds the operator key and exposes a thin mint endpoint of its own. */
+/** Your backend holds the Dashboard API key and exposes a thin mint endpoint of its own. */
 export function buildBackedHostPageSnippet(embedOrigin: string) {
     return [
         IFRAME_MARKUP,
         '<script type="module">',
         ...indent([
             "// Your own endpoint. It calls the mint API server-side and returns just the `url`, so the",
-            "// operator key never reaches the browser.",
+            "// Dashboard API key never reaches the browser.",
             "async function openSession() {",
             '    const response = await fetch("/api/quill-session", { method: "POST" });',
             "    if (!response.ok) throw new Error(`Could not start the assistant: ${response.status}`);",
