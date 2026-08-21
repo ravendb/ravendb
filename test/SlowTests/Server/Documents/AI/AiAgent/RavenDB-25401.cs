@@ -99,4 +99,91 @@ public class RavenDB_25401 : RavenTestBase
             $"but the refusal was silently swallowed (no refusal was checked on the streamed response). " +
             $"Provider: {config.Connection.GetActiveProvider()}.{Environment.NewLine}{diagnostics}");
     }
+
+    private const string DummyConnectionStringName = "refusal-exception-type";
+
+    private const string ExpectedRefusal = "I'm sorry, I can't help with that.";
+    private const string ExpectedFinishReason = "content_filter";
+
+    /// <summary>
+    /// A refusal must reach the client as <see cref="RefusedToAnswerException"/>, with its <c>Refusal</c> and
+    /// <c>FinishReason</c> intact. The server already carries both across the wire:
+    /// <c>RavenServerStartup.MaybeAddAdditionalExceptionData</c> writes them into the error payload for a
+    /// <see cref="RefusedToAnswerException"/>, and <c>ExceptionDispatcher.FillException</c> reads them back.
+    /// <para>
+    /// What defeats it is <c>AbstractAiAgentProcessor.ExecuteInternalAsync</c>: its rethrow allowlist does not include
+    /// <see cref="RefusedToAnswerException"/>, so a refusal is wrapped in a generic <see cref="AiException"/>. The
+    /// <c>case RefusedToAnswerException</c> then never matches, the two fields are never serialized, and the refusal
+    /// survives only as text inside the wrapper's stack trace.
+    /// </para>
+    /// </summary>
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task RefusalShouldReachTheClientAsRefusedToAnswerException()
+    {
+        var (store, agentId) = await SetupAgentThatRefusesAsync();
+        using (store)
+        {
+            var chat = store.AI.Conversation(agentId, "chats/", new AiConversationCreationOptions());
+            chat.SetUserPrompt("hello");
+
+            var e = await Assert.ThrowsAnyAsync<Exception>(() => chat.RunAsync<OutputSchema>(CancellationToken.None));
+
+            AssertRefusalSurfaced(e);
+        }
+    }
+
+    /// <inheritdoc cref="RefusalShouldReachTheClientAsRefusedToAnswerException"/>
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task RefusalShouldReachTheClientAsRefusedToAnswerExceptionWhenStreaming()
+    {
+        var (store, agentId) = await SetupAgentThatRefusesAsync();
+        using (store)
+        {
+            var chat = store.AI.Conversation(agentId, "chats/", new AiConversationCreationOptions());
+            chat.SetUserPrompt("hello");
+
+            var e = await Assert.ThrowsAnyAsync<Exception>(() => chat.StreamAsync<OutputSchema>(
+                s => s.Answer,
+                _ => Task.CompletedTask,
+                CancellationToken.None));
+
+            AssertRefusalSurfaced(e);
+        }
+    }
+
+    private static void AssertRefusalSurfaced(Exception e)
+    {
+        var refused = Assert.IsType<RefusedToAnswerException>(e);
+
+        Assert.Equal(ExpectedRefusal, refused.Refusal);
+        Assert.Equal(ExpectedFinishReason, refused.FinishReason);
+    }
+
+    private async Task<(Raven.Client.Documents.IDocumentStore Store, string AgentId)> SetupAgentThatRefusesAsync()
+    {
+        var store = GetDocumentStore();
+
+        // A dummy connection string is enough: BeforeAiAgentTalk throws before a completion request is ever built,
+        // so nothing reaches a provider and this test needs no credentials.
+        await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(new AiConnectionString
+        {
+            Name = DummyConnectionStringName,
+            ModelType = AiModelType.Chat,
+            OpenAiSettings = new OpenAiSettings(apiKey: "sk-test-dummy", endpoint: "https://api.openai.com/", model: "gpt-4o")
+        }));
+
+        var agent = new AiAgentConfiguration("refusal-exception-type-agent", DummyConnectionStringName,
+            "You are a helpful assistant. Answer the user's question directly.");
+
+        var agentId = (await store.AI.CreateAgentAsync(agent, OutputSchema.Instance)).Identifier;
+
+        var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+        // Stands in for ChatCompletionClient raising a refusal: same call site inside TalkAsync, so it propagates out
+        // of HandleRequestAsync/HandleStreamingRequestAsync into AbstractAiAgentProcessor exactly as a real one does.
+        database.ForTestingPurposesOnly().BeforeAiAgentTalk = _ =>
+            RefusedToAnswerException.Throw(ExpectedRefusal, responseContent: "{}", ExpectedFinishReason, requestId: "req-refusal-123");
+
+        return (store, agentId);
+    }
 }
