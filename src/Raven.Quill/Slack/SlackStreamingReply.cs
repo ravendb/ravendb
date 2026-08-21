@@ -53,7 +53,11 @@ internal sealed class SlackStreamingReply(
             var pending = _buffer.ToString(_flushedUpTo, PendingLength);
             var cut = TelegramMessageSplitter.CutPoint(pending, options.MessageLimit);
 
-            await ShowPreviewAsync(pending[..cut].TrimEnd());
+            var segment = pending[..cut].TrimEnd();
+            if (_currentTs.Length == 0)
+                await SendSafeAsync(segment);
+            else
+                await EditSafeAsync(_currentTs, segment);
             _flushedUpTo += cut;
             while (PendingLength > 0 && char.IsWhiteSpace(_buffer[_flushedUpTo]))
                 _flushedUpTo++;
