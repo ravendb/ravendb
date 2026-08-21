@@ -77,18 +77,10 @@ public sealed class MockSlackApi : IAsyncDisposable
     }
 
     public Task WaitUntilAsync(Func<bool> condition, string what, TimeSpan? timeout = null) =>
-        WaitUntilAsync(() => Task.FromResult(condition()), what, timeout);
+        MockApiWait.UntilAsync(nameof(MockSlackApi), condition, what, timeout);
 
-    public async Task WaitUntilAsync(Func<Task<bool>> condition, string what, TimeSpan? timeout = null)
-    {
-        var deadline = DateTime.UtcNow + (timeout ?? TimeSpan.FromSeconds(15));
-        while (await condition() == false)
-        {
-            if (DateTime.UtcNow > deadline)
-                throw new TimeoutException($"MockSlackApi: timed out waiting for {what}");
-            await Task.Delay(25);
-        }
-    }
+    public Task WaitUntilAsync(Func<Task<bool>> condition, string what, TimeSpan? timeout = null) =>
+        MockApiWait.UntilAsync(nameof(MockSlackApi), condition, what, timeout);
 
     public static async Task<MockSlackApi> StartAsync()
     {
