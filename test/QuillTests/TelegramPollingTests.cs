@@ -1,9 +1,10 @@
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using QuillTests.E2E.Fixtures;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Quill.Agents;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
+using Raven.Quill.Hosting;
 using Raven.Quill.Metrics;
 using Raven.Quill.Telegram;
 using Tests.Infrastructure;
@@ -299,7 +300,7 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         Assert.True(reply.Length > 4096);
         Router.Chunks = [reply];
 
-        var parts = TelegramMessageSplitter.Split(reply, TelegramMessageSplitter.TelegramApiMessageLimit);
+        var parts = MessageSplitter.Split(reply, TelegramOptions.ApiMessageLimit);
         Assert.Equal(2, parts.Count);
 
         Mock.EnqueueTextMessage(token, chatId: 11, fromUserId: 11, "long please");

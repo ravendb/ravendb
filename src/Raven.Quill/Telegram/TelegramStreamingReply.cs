@@ -1,4 +1,5 @@
-using System.Text;
+﻿using System.Text;
+using Raven.Quill.Channels;
 using Raven.Quill.Hosting;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
@@ -48,7 +49,7 @@ internal sealed class TelegramStreamingReply(
         while (PendingLength > options.MessageLimit)
         {
             var pending = _buffer.ToString(_flushedUpTo, PendingLength);
-            var cut = TelegramMessageSplitter.CutPoint(pending, options.MessageLimit);
+            var cut = MessageSplitter.CutPoint(pending, options.MessageLimit);
 
             await ShowPreviewAsync(pending[..cut].TrimEnd());
             _flushedUpTo += cut;
@@ -86,7 +87,7 @@ internal sealed class TelegramStreamingReply(
         if (string.IsNullOrWhiteSpace(pending))
             return;
 
-        var parts = TelegramMessageSplitter.Split(pending, options.MessageLimit);
+        var parts = MessageSplitter.Split(pending, options.MessageLimit);
         for (var i = 0; i < parts.Count; i++)
         {
             if (i == 0 && _currentMessageId != 0)
