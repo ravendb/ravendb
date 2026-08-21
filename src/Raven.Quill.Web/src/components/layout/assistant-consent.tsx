@@ -131,8 +131,8 @@ function AssistantConsentDialogBody({ onGranted }: { onGranted: () => void }) {
             <DialogHeader>
                 <DialogTitle>Get started with the AI assistant</DialogTitle>
                 <DialogDescription>
-                    The assistant answers questions about RavenDB and this appliance. Your messages are sent to the
-                    RavenDB AI service, so it is available only once you accept its Terms of Use.
+                    The assistant answers questions about RavenDB and Quill. Your messages are sent to the RavenDB AI
+                    service, so it is available only once you accept its Terms of Use.
                 </DialogDescription>
             </DialogHeader>
             <label className="flex items-start gap-2 text-sm">

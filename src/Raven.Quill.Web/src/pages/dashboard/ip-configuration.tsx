@@ -57,7 +57,7 @@ export function DashboardIpConfiguration({ hostname = window.location.hostname }
             <Card>
                 <CardHeader>
                     <CardTitle>Current IP binding</CardTitle>
-                    <CardDescription>The IP address the appliance domain currently resolves to.</CardDescription>
+                    <CardDescription>The IP address Quill&rsquo;s domain currently resolves to.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     {hasResolvableDomain ? (
@@ -108,7 +108,7 @@ function ChangeIpCard({ hostname }: { hostname: string }) {
             <CardHeader>
                 <CardTitle>Change the IP</CardTitle>
                 <CardDescription>
-                    Run this command on the Docker host to point the appliance domains (dashboard, db, public, api) at a
+                    Run this command on the Docker host to point Quill&rsquo;s domains (dashboard, db, public, api) at a
                     new IP address.
                 </CardDescription>
             </CardHeader>
