@@ -1,8 +1,8 @@
-using Raven.Client.Documents.Operations.AI.Agents;
+﻿using Raven.Client.Documents.Operations.AI.Agents;
 
 namespace Raven.Quill.Channels;
 
-public enum TelegramParameterSource
+public enum ChannelParameterSource
 {
     Constant,
     UserId,
@@ -10,23 +10,23 @@ public enum TelegramParameterSource
     PhoneNumber,
 }
 
-public sealed class TelegramParameterBinding
+public sealed class ChannelParameterBinding
 {
-    public TelegramParameterSource Source { get; set; }
+    public ChannelParameterSource Source { get; set; }
 
     public string? Value { get; set; }
 }
 
-internal static class TelegramParameterBindings
+internal static class ChannelParameterBindings
 {
     /// Keys of the returned dictionary carry the casing the agent declares, whatever casing was supplied.
     internal static bool TryResolve(
         AiAgentConfiguration config,
-        Dictionary<string, TelegramParameterBinding>? supplied,
-        out Dictionary<string, TelegramParameterBinding> bindings,
+        Dictionary<string, ChannelParameterBinding>? supplied,
+        out Dictionary<string, ChannelParameterBinding> bindings,
         out string? error)
     {
-        bindings = new Dictionary<string, TelegramParameterBinding>();
+        bindings = new Dictionary<string, ChannelParameterBinding>();
         error = null;
 
         var declared = (config.Parameters ?? [])
@@ -34,8 +34,8 @@ internal static class TelegramParameterBindings
             .Where(name => string.IsNullOrWhiteSpace(name) == false)
             .ToArray();
 
-        var suppliedByName = new Dictionary<string, TelegramParameterBinding>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (name, binding) in supplied ?? new Dictionary<string, TelegramParameterBinding>())
+        var suppliedByName = new Dictionary<string, ChannelParameterBinding>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (name, binding) in supplied ?? new Dictionary<string, ChannelParameterBinding>())
         {
             if (binding is not null)
                 suppliedByName[name] = binding;
@@ -59,7 +59,7 @@ internal static class TelegramParameterBindings
                 continue;
             }
 
-            if (binding.Source == TelegramParameterSource.Constant)
+            if (binding.Source == ChannelParameterSource.Constant)
             {
                 if (string.IsNullOrWhiteSpace(binding.Value))
                 {

@@ -1,15 +1,11 @@
-import type {
-    AgentSummaryResponse,
-    TelegramParameterBinding,
-    TelegramParameterSource,
-} from "@/api/generated/server-api";
+import type { AgentSummaryResponse, ChannelParameterBinding, ChannelParameterSource } from "@/api/generated/server-api";
 
-export type ParameterSource = NonNullable<TelegramParameterSource>;
+export type ParameterSource = NonNullable<ChannelParameterSource>;
 
 export type ParameterBindingRow = { name: string; source: ParameterSource; value: string };
 
 export function toParameterBindings(parameters: readonly ParameterBindingRow[]) {
-    const bindings: Record<string, TelegramParameterBinding> = {};
+    const bindings: Record<string, ChannelParameterBinding> = {};
     for (const { name, source, value } of parameters) {
         bindings[name] = { source, value: source === "Constant" ? value.trim() : null };
     }

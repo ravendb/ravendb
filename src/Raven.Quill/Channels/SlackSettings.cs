@@ -1,4 +1,4 @@
-namespace Raven.Quill.Channels;
+﻿namespace Raven.Quill.Channels;
 
 internal sealed class SlackSettings
 {
@@ -16,5 +16,5 @@ internal sealed class SlackSettings
 
     public DateTime ConnectedAt { get; set; }
 
-    public Dictionary<string, TelegramParameterBinding> ParameterBindings { get; set; } = new();
+    public Dictionary<string, ChannelParameterBinding> ParameterBindings { get; set; } = new();
 }

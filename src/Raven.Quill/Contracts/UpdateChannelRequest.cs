@@ -1,4 +1,4 @@
-using Raven.Quill.Channels;
+﻿using Raven.Quill.Channels;
 
 namespace Raven.Quill.Contracts;
 
@@ -12,9 +12,9 @@ public sealed record UpdateChannelRequest(
 public sealed record TelegramUpdateRequest(
     string? BotToken = null,
     TelegramChannelMessages? Messages = null,
-    Dictionary<string, TelegramParameterBinding>? ParameterBindings = null);
+    Dictionary<string, ChannelParameterBinding>? ParameterBindings = null);
 
 public sealed record SlackUpdateRequest(
     string? BotToken = null,
     string? SigningSecret = null,
-    Dictionary<string, TelegramParameterBinding>? ParameterBindings = null);
+    Dictionary<string, ChannelParameterBinding>? ParameterBindings = null);

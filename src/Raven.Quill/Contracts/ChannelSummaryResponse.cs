@@ -39,11 +39,11 @@ public sealed record ChannelSummaryResponse(
 
 public sealed record TelegramSummaryResponse(
     string BotUsername,
-    Dictionary<string, TelegramParameterBinding> ParameterBindings,
+    Dictionary<string, ChannelParameterBinding> ParameterBindings,
     TelegramChannelMessages? Messages);
 
 public sealed record SlackSummaryResponse(
     string TeamId,
     string TeamName,
     string BotUserId,
-    Dictionary<string, TelegramParameterBinding> ParameterBindings);
+    Dictionary<string, ChannelParameterBinding> ParameterBindings);

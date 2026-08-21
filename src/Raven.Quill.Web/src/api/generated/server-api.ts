@@ -1317,6 +1317,12 @@ export interface components {
             };
             disabled: boolean;
         };
+        ChannelParameterBinding: {
+            source?: components["schemas"]["ChannelParameterSource"];
+            value?: null | string;
+        };
+        /** @enum {unknown} */
+        ChannelParameterSource: "Constant" | "UserId" | "Username" | "PhoneNumber";
         ChannelStatsResponse: {
             /** Format: int32 */
             total: number;
@@ -1698,7 +1704,7 @@ export interface components {
             botToken: null | string;
             signingSecret: null | string;
             parameterBindings?: null | {
-                [key: string]: components["schemas"]["TelegramParameterBinding"];
+                [key: string]: components["schemas"]["ChannelParameterBinding"];
             };
         };
         SlackSummaryResponse: {
@@ -1706,14 +1712,14 @@ export interface components {
             teamName: string;
             botUserId: string;
             parameterBindings: {
-                [key: string]: components["schemas"]["TelegramParameterBinding"];
+                [key: string]: components["schemas"]["ChannelParameterBinding"];
             };
         };
         SlackUpdateRequest: {
             botToken?: null | string;
             signingSecret?: null | string;
             parameterBindings?: null | {
-                [key: string]: components["schemas"]["TelegramParameterBinding"];
+                [key: string]: components["schemas"]["ChannelParameterBinding"];
             };
         };
         SlackWebhookInfoResponse: {
@@ -1752,22 +1758,16 @@ export interface components {
             somethingWentWrong?: null | string;
             groupChatRefusal?: null | string;
         };
-        TelegramParameterBinding: {
-            source?: components["schemas"]["TelegramParameterSource"];
-            value?: null | string;
-        };
-        /** @enum {unknown} */
-        TelegramParameterSource: "Constant" | "UserId" | "Username" | "PhoneNumber";
         TelegramProvisionRequest: {
             botToken: null | string;
             parameterBindings?: null | {
-                [key: string]: components["schemas"]["TelegramParameterBinding"];
+                [key: string]: components["schemas"]["ChannelParameterBinding"];
             };
         };
         TelegramSummaryResponse: {
             botUsername: string;
             parameterBindings: {
-                [key: string]: components["schemas"]["TelegramParameterBinding"];
+                [key: string]: components["schemas"]["ChannelParameterBinding"];
             };
             messages: null | components["schemas"]["TelegramChannelMessages"];
         };
@@ -1775,7 +1775,7 @@ export interface components {
             botToken?: null | string;
             messages?: null | components["schemas"]["TelegramChannelMessages"];
             parameterBindings?: null | {
-                [key: string]: components["schemas"]["TelegramParameterBinding"];
+                [key: string]: components["schemas"]["ChannelParameterBinding"];
             };
         };
         TestMappingRequest: {
@@ -4222,6 +4222,8 @@ export type CdcSinkPostgresSettings = components["schemas"]["CdcSinkPostgresSett
 export type CdcSinkRelationType = components["schemas"]["CdcSinkRelationType"];
 export type CdcSinkTableConfig = components["schemas"]["CdcSinkTableConfig"];
 export type CertificateItem = components["schemas"]["CertificateItem"];
+export type ChannelParameterBinding = components["schemas"]["ChannelParameterBinding"];
+export type ChannelParameterSource = components["schemas"]["ChannelParameterSource"];
 export type ChannelStatsResponse = components["schemas"]["ChannelStatsResponse"];
 export type ChannelSummaryResponse = components["schemas"]["ChannelSummaryResponse"];
 export type ChannelType = components["schemas"]["ChannelType"];
@@ -4285,8 +4287,6 @@ export type SuggestAgentResponse = components["schemas"]["SuggestAgentResponse"]
 export type SuggestCdcRequest = components["schemas"]["SuggestCdcRequest"];
 export type SuggestCdcResponse = components["schemas"]["SuggestCdcResponse"];
 export type TelegramChannelMessages = components["schemas"]["TelegramChannelMessages"];
-export type TelegramParameterBinding = components["schemas"]["TelegramParameterBinding"];
-export type TelegramParameterSource = components["schemas"]["TelegramParameterSource"];
 export type TelegramProvisionRequest = components["schemas"]["TelegramProvisionRequest"];
 export type TelegramSummaryResponse = components["schemas"]["TelegramSummaryResponse"];
 export type TelegramUpdateRequest = components["schemas"]["TelegramUpdateRequest"];

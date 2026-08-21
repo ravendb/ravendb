@@ -1,4 +1,4 @@
-using QuillTests.E2E.Fixtures;
+﻿using QuillTests.E2E.Fixtures;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.ServerWide.Operations.ConnectionStrings;
@@ -112,9 +112,9 @@ public class TelegramAgentScopingTests(ITestOutputHelper output, QuillTelegramFi
         var token = NewBotToken();
         await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.Telegram, agentId, null,
-            Telegram: new(token, new Dictionary<string, TelegramParameterBinding>
+            Telegram: new(token, new Dictionary<string, ChannelParameterBinding>
             {
-                ["TelegramUsername"] = new() { Source = TelegramParameterSource.Username },
+                ["TelegramUsername"] = new() { Source = ChannelParameterSource.Username },
             })));
 
         return (app, token);
