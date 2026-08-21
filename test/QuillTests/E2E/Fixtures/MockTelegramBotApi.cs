@@ -155,16 +155,11 @@ public sealed class MockTelegramBotApi : IAsyncDisposable
         }
     }
 
-    public async Task WaitUntilAsync(Func<bool> condition, string what, TimeSpan? timeout = null)
-    {
-        var deadline = DateTime.UtcNow + (timeout ?? TimeSpan.FromSeconds(15));
-        while (condition() == false)
-        {
-            if (DateTime.UtcNow > deadline)
-                throw new TimeoutException($"MockTelegramBotApi: timed out waiting for {what}");
-            await Task.Delay(25);
-        }
-    }
+    public Task WaitUntilAsync(Func<bool> condition, string what, TimeSpan? timeout = null) =>
+        MockApiWait.UntilAsync(nameof(MockTelegramBotApi), condition, what, timeout);
+
+    public Task WaitUntilAsync(Func<Task<bool>> condition, string what, TimeSpan? timeout = null) =>
+        MockApiWait.UntilAsync(nameof(MockTelegramBotApi), condition, what, timeout);
 
     public void Reset()
     {
