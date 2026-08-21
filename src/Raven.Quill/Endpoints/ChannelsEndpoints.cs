@@ -294,7 +294,7 @@ public static class ChannelsEndpoints
             },
         };
 
-        var (reserved, owner) = await TryReserveSlackBotAsync(
+        var (reserved, owner, reservationCv) = await TryReserveSlackBotAsync(
             store, auth.TeamId, auth.BotUserId, app.Database, channel.Id!, channel.Slack.WebhookToken, ct);
         if (reserved == false)
             return Results.BadRequest(new ApiErrorResponse(SlackBotAlreadyConnected(auth.TeamName, auth.BotUserId, owner)));
@@ -310,6 +310,27 @@ public static class ChannelsEndpoints
             await TryReleaseSlackAsync(
                 store, auth.TeamId, auth.BotUserId, channel.Slack.WebhookToken, app.Database, channel.Id!, logger);
             throw;
+        }
+
+        if (await ConfirmSlackReservationAsync(
+                store, auth.TeamId, auth.BotUserId, app.Database, channel.Id!, reservationCv!, ct) == false)
+        {
+            try
+            {
+                using var session = store.OpenAsyncSession(app.Database);
+                session.Delete(channel.Id!);
+                await session.SaveChangesAsync(ct);
+            }
+            catch (Exception e)
+            {
+                logger.LogWarning(
+                    "Slack channel {ChannelId} was not rolled back after losing the bot reservation: {Error}",
+                    channelId, e.Message);
+            }
+
+            await TryReleaseSlackAsync(
+                store, auth.TeamId, auth.BotUserId, channel.Slack.WebhookToken, app.Database, channel.Id!, logger);
+            return Results.BadRequest(new ApiErrorResponse(SlackBotAlreadyConnected(auth.TeamName, auth.BotUserId, null)));
         }
 
         logger.LogInformation(
@@ -781,7 +802,7 @@ public static class ChannelsEndpoints
             : $"Slack bot {bot} is already connected in app '{ownerDatabase}'";
     }
 
-    private static async Task<(bool Reserved, string? OwnerDatabase)> TryReserveSlackBotAsync(
+    private static async Task<(bool Reserved, string? OwnerDatabase, string? ChangeVector)> TryReserveSlackBotAsync(
         IDocumentStore store, string teamId, string botUserId, string database, string channelId, string webhookToken, CancellationToken ct)
     {
         using var configSession = store.OpenAsyncSession();
@@ -789,18 +810,17 @@ public static class ChannelsEndpoints
         var reservationId = SlackBotReservation.IdFor(teamId, botUserId);
         var reservation = await configSession.LoadAsync<SlackBotReservation>(reservationId, ct);
         if (reservation is not null && reservation.Database == database && reservation.ChannelId == channelId)
-            return (true, null);
+            return (true, null, configSession.Advanced.GetChangeVectorFor(reservation));
 
         if (reservation is null)
         {
-            await configSession.StoreAsync(
-                new SlackBotReservation { Database = database, ChannelId = channelId },
-                string.Empty, reservationId, ct);
+            reservation = new SlackBotReservation { Database = database, ChannelId = channelId };
+            await configSession.StoreAsync(reservation, string.Empty, reservationId, ct);
         }
         else
         {
             if (await IsSlackReservationLiveAsync(store, reservation, teamId, botUserId, ct))
-                return (false, reservation.Database);
+                return (false, reservation.Database, null);
 
             reservation.Database = database;
             reservation.ChannelId = channelId;
@@ -815,11 +835,30 @@ public static class ChannelsEndpoints
         try
         {
             await configSession.SaveChangesAsync(ct);
-            return (true, null);
+            return (true, null, configSession.Advanced.GetChangeVectorFor(reservation));
         }
         catch (ConcurrencyException)
         {
-            return (false, null);
+            return (false, null, null);
+        }
+    }
+
+    private static async Task<bool> ConfirmSlackReservationAsync(
+        IDocumentStore store, string teamId, string botUserId, string database, string channelId, string changeVector,
+        CancellationToken ct)
+    {
+        try
+        {
+            using var configSession = store.OpenAsyncSession();
+            await configSession.StoreAsync(
+                new SlackBotReservation { Database = database, ChannelId = channelId },
+                changeVector, SlackBotReservation.IdFor(teamId, botUserId), ct);
+            await configSession.SaveChangesAsync(ct);
+            return true;
+        }
+        catch (ConcurrencyException)
+        {
+            return false;
         }
     }
 
