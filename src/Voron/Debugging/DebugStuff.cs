@@ -261,9 +261,11 @@ namespace Voron.Debugging
         private static async Task RenderFixedSizeTreePageAsync<TVal>(LowLevelTransaction tx, FixedSizeTreePage<TVal> page, TextWriter sw, FixedSizeTreeSafe.LargeFixedSizeTreeSafe tree, string text, bool open)
             where TVal : unmanaged, IBinaryNumber<TVal>, IMinMaxValue<TVal>
         {
+            var tombstones = page.NumberOfTombstones == 0 ? string.Empty : $" ({page.NumberOfTombstones:#,#} tombstoned)";
+
             await sw.WriteLineAsync(
-                string.Format("<ul><li><input type='checkbox' id='page-{0}' {3} /><label for='page-{0}'>{4}: Page {0:#,#;;0} - {1} - {2:#,#;;0} entries</label><ul>",
-                page.PageNumber, page.IsLeaf ? "Leaf" : "Branch", page.NumberOfEntries, open ? "checked" : "", text));
+                string.Format("<ul><li><input type='checkbox' id='page-{0}' {3} /><label for='page-{0}'>{4}: Page {0:#,#;;0} - {1} - {2:#,#;;0} entries{5}</label><ul>",
+                page.PageNumber, page.IsLeaf ? "Leaf" : "Branch", page.NumberOfEntries, open ? "checked" : "", text, tombstones));
 
             for (int i = 0; i < page.NumberOfEntries; i++)
             {
@@ -271,7 +273,11 @@ namespace Voron.Debugging
 
                 if (page.IsLeaf)
                 {
-                    await sw.WriteAsync(string.Format("{0:#,#;;0}, ", key));
+                    // an entry that was tombstoned in place is still there, show it struck through
+                    if (page.IsTombstoned(i))
+                        await sw.WriteAsync(string.Format("<s>{0:#,#;;0}</s>, ", key));
+                    else
+                        await sw.WriteAsync(string.Format("{0:#,#;;0}, ", key));
                 }
                 else
                 {
