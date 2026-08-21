@@ -41,7 +41,7 @@ export function DashboardAppsTable({
                 <Button asChild size="sm">
                     <Link to={appRoutes.addApp()}>
                         <Plus className="size-3.5" aria-hidden="true" />
-                        Add application
+                        Add app
                     </Link>
                 </Button>
             </div>
@@ -134,12 +134,12 @@ function EmptyAppsState() {
                 </div>
                 <h2 className="mt-4 text-sm font-semibold">No apps added yet</h2>
                 <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                    Create an app from a source database and CDC mapping.
+                    Create an app from a source database and its table mapping.
                 </p>
                 <Button asChild size="sm" className="mt-5">
                     <Link to={appRoutes.addApp()}>
                         <Plus className="size-3.5" aria-hidden="true" />
-                        Add application
+                        Add app
                     </Link>
                 </Button>
             </div>

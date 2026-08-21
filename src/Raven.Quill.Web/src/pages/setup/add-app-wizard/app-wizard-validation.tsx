@@ -258,7 +258,7 @@ export const createExternalConnectionSchema = (takenSlugs: string[] = []) => {
 
     return z
         .object({
-            appName: z.string().trim().min(1, "Application name is required"),
+            appName: z.string().trim().min(1, "App name is required"),
             slug: slugSchema,
             // Empty until the operator picks a source database type; superRefine rejects it so the
             // connect step can't advance without a choice.
