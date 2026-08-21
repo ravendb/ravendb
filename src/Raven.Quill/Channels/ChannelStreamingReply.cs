@@ -70,7 +70,6 @@ internal abstract class ChannelStreamingReply(int messageLimit, TimeSpan editDeb
             var pending = _buffer.ToString(_flushedUpTo, PendingLength);
             var cut = MessageSplitter.CutPoint(pending, messageLimit);
 
-            // no later edit reaches this message, so it is published in its final form now
             var segment = pending[..cut].TrimEnd();
             if (HasOpenMessage)
                 await EditFinalAsync(segment);
