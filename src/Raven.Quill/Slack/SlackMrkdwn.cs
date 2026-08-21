@@ -7,10 +7,17 @@ internal static partial class SlackMrkdwn
 {
     private const char Mask = '\uE000';
 
+    internal static string Escape(string text) =>
+        string.IsNullOrEmpty(text)
+            ? text
+            : text.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
+
     internal static string Convert(string markdown)
     {
         if (string.IsNullOrEmpty(markdown))
             return markdown;
+
+        markdown = Escape(markdown);
 
         var result = new StringBuilder(markdown.Length + 16);
         var inFence = false;
