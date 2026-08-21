@@ -1,12 +1,10 @@
 using System.Buffers;
 using System.Text;
 
-namespace Raven.Quill.Telegram;
+namespace Raven.Quill.Channels;
 
-internal static class TelegramMessageSplitter
+internal static class MessageSplitter
 {
-    internal const int TelegramApiMessageLimit = 4096;
-
     internal static IReadOnlyList<string> Split(string text, int limit)
     {
         if (text.Length <= limit)
