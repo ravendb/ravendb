@@ -12,7 +12,7 @@ internal sealed class SlackStreamingReply(
     ILogger logger,
     CancellationToken ct)
 {
-    private static readonly TimeSpan MaxRetryDelay = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan MaxRetryDelay = TimeSpan.FromSeconds(60);
 
     private readonly StringBuilder _buffer = new();
     private string _currentTs = "";
