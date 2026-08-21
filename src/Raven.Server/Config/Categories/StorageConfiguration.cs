@@ -133,6 +133,18 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Storage.SyncWritebackMinContiguousSizeInKb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int SyncWritebackMinContiguousSizeInKb { get; set; }
 
+        [Description("Amount of unsynced data that triggers a sync of the data file.")]
+        [DefaultValue(256)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [ConfigurationEntry("Storage.MaxUnsyncedSizeBeforeSyncInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public Size MaxUnsyncedSizeBeforeSync { get; set; }
+
+        [Description("Hard bound on delaying the sync of the data file. A sparse dirty set may delay the sync past Storage.MaxUnsyncedSizeBeforeSyncInMb to consolidate scattered writes, but never past this.")]
+        [DefaultValue(2048)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [ConfigurationEntry("Storage.MaxUnsyncedSizeBeforeMandatorySyncInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public Size MaxUnsyncedSizeBeforeMandatorySync { get; set; }
+
         [Description("Time-weighted device queue depth threshold (iostat aqu-sz) that switches writeback from trickle to paced drain mode; reverts when queue stays below 60% of this value for 30 seconds.")]
         [DefaultValue(5)]
         [ConfigurationEntry("Storage.SyncWritebackDrainQueueDepthThreshold", ConfigurationEntryScope.ServerWideOrPerDatabase)]

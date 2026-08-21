@@ -41,6 +41,7 @@ using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
 using Voron.Logging;
+using Sparrow.Server.Platform;
 using Voron.Schema;
 using Voron.Util;
 using Voron.Util.Conversion;
@@ -1550,6 +1551,22 @@ namespace Voron
                     CommittedTransactionId = CurrentReadTransactionId,
                 };
             }
+        }
+
+        internal unsafe bool ShouldDelaySyncToConsolidateWrites()
+        {
+            var options = Options;
+            if (options.SyncWritebackMinContiguousSizeInKb <= 0 || options.ForceUsing32BitsPager)
+                return false;
+
+            if (_journal.Applicator.TotalWrittenButUnsyncedBytes > options.MaxUnsyncedBytesBeforeMandatorySync)
+                return false;
+
+            var rc = Pal.rvn_pager_dirty_stats(CurrentStateRecord.DataPagerState.Handle, out var dirtyBytes, out var runCount, out _);
+            if (rc != PalFlags.FailCodes.Success || runCount == 0)
+                return false; // untracked pager (in-memory, temp) or nothing dirty - keep the old behavior
+
+            return dirtyBytes / runCount < options.SyncWritebackMinContiguousSizeInKb * Constants.Size.Kilobyte;
         }
 
         internal void BackgroundFlushWritesToDataFile()

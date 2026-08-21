@@ -232,6 +232,37 @@ _writeback_finish_run(struct writeback_ctx *ctx, int64_t start_bit, int64_t bit_
 }
 
 EXPORT int32_t
+rvn_pager_dirty_stats(void *handle,
+                      int64_t *dirty_bytes,
+                      int64_t *run_count,
+                      int32_t *detailed_error_code)
+{
+    struct handle *handle_ptr = handle;
+    struct handle_global_state *global_state = handle_ptr->global_state;
+    *dirty_bytes = 0;
+    *run_count = 0;
+    *detailed_error_code = 0;
+
+    struct dirty_bitmap *bm = rvn_atomic_load_ptr(&global_state->dirty_bitmap);
+    if (bm == NULL)
+        return SUCCESS;
+
+    /* racy plain loads by design - this feeds a pacing heuristic, not durability */
+    int64_t pages = 0, runs = 0;
+    uint64_t carry = 0; /* msb of the previous word, to not double-count a run crossing words */
+    for (int64_t w = 0; w < bm->number_of_words; w++)
+    {
+        uint64_t bits = bm->words[w];
+        pages += rvn_popcnt64(bits);
+        runs += rvn_popcnt64(bits & ~((bits << 1) | carry));
+        carry = bits >> 63;
+    }
+    *dirty_bytes = pages * WRITEBACK_BYTES_PER_BIT;
+    *run_count = runs;
+    return SUCCESS;
+}
+
+EXPORT int32_t
 rvn_pager_writeback_dirty(void *handle,
                           int32_t pipeline_depth,
                           int32_t block_size_bytes,
