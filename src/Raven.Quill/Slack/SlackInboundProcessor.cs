@@ -12,20 +12,42 @@ internal sealed class SlackInboundProcessor(
     IServiceScopeFactory scopes,
     SlackHealthRegistry health,
     IOptions<ApplianceOptions> options,
-    ILogger<SlackInboundProcessor> logger)
+    ILogger<SlackInboundProcessor> logger) : IHostedService
 {
     internal const string UnsupportedKindReply = "I can only read text messages right now.";
     internal const string ErrorReply = "Sorry - something went wrong handling that message. Please try again.";
 
     private const int DedupeCapacity = 4096;
     private static readonly TimeSpan DedupeTtl = TimeSpan.FromMinutes(15);
+    private static readonly TimeSpan StopDrainTimeout = TimeSpan.FromSeconds(10);
 
     private readonly Dictionary<string, Task> _senderChains = new();
     private readonly object _chainsLock = new();
+    private readonly CancellationTokenSource _stopping = new();
 
     private readonly HashSet<string> _seenEventIds = new(StringComparer.Ordinal);
     private readonly Queue<(string EventId, DateTime SeenAt)> _seenOrder = new();
     private readonly object _dedupeLock = new();
+
+    public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    public async Task StopAsync(CancellationToken cancellationToken)
+    {
+        await _stopping.CancelAsync();
+
+        Task[] tails;
+        lock (_chainsLock)
+            tails = _senderChains.Values.ToArray();
+
+        try
+        {
+            await Task.WhenAll(tails).WaitAsync(StopDrainTimeout, cancellationToken);
+        }
+        catch (TimeoutException)
+        {
+            logger.LogWarning("Slack sender chains did not drain within {Timeout}", StopDrainTimeout);
+        }
+    }
 
     public void Enqueue(
         string database, string channelId, string sender, string dmChannel, string eventId, string kind, string? text)
@@ -80,7 +102,10 @@ internal sealed class SlackInboundProcessor(
     {
         try
         {
-            await HandleMessageAsync(database, channelId, sender, dmChannel, kind, text, CancellationToken.None);
+            await HandleMessageAsync(database, channelId, sender, dmChannel, kind, text, _stopping.Token);
+        }
+        catch (OperationCanceledException) when (_stopping.IsCancellationRequested)
+        {
         }
         catch (Exception e)
         {
