@@ -165,12 +165,7 @@ function AppCreatedDialog({ app, onContinue }: { app: CreatedApp | null; onConti
                             have to wait for it to finish.
                         </DialogDescription>
                     </DialogHeader>
-                    <CdcPerformanceSection
-                        slug={app.slug}
-                        title="Sync progress"
-                        loadingLabel="Connecting to the live data sync..."
-                        errorTitle="Could not connect to the live data sync"
-                    />
+                    <CdcPerformanceSection slug={app.slug} title="Sync progress" />
                     <DialogFooter>
                         <Button onClick={onContinue}>Continue</Button>
                     </DialogFooter>

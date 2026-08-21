@@ -445,7 +445,7 @@ export const VerifySchemaCdcVerificationFailed: Story = {
         const canvas = within(canvasElement);
         // The failed run reports an error and a warning, so the alert shows the two-entry summary
         // and keeps the individual blockers in its collapsible details.
-        const findAlert = () => canvas.queryByText(/cdc verification failed for the selected tables/i);
+        const findAlert = () => canvas.queryByText(/data source verification failed for the selected tables/i);
 
         await userEvent.click(canvas.getByRole("button", { name: /next/i }));
         await waitFor(() => expect(findAlert()).toBeInTheDocument());

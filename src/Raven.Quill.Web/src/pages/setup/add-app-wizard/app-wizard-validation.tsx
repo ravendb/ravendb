@@ -219,7 +219,7 @@ export const tablesSchema = z
             ctx.addIssue({
                 code: "custom",
                 path: [index, "sourceTableName"],
-                message: `Source table "${getSourceTableLabel(table)}" is already configured as another root table. CDC Sink can process a source table only once.`,
+                message: `Source table "${getSourceTableLabel(table)}" is already configured as another root table. A source table can be mapped only once.`,
             });
         });
     });
