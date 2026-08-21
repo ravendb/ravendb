@@ -29,6 +29,9 @@ public class RavenDB_27397 : StorageTest
         options.ManualSyncing = true;
         options.MaxLogFileSize = 256 * 1024;
         options.MaxNumberOfRecyclableJournals = 32;
+        // these tests assert exact recyclable-file counts - the background pool preparation would
+        // add files of its own
+        options.EnableJournalPoolPrewarming = false;
     }
 
     private string JournalPath => ((StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)Env.Options).JournalPath.FullPath;
@@ -345,6 +348,54 @@ public class RavenDB_27397 : StorageTest
         }
     }
 
+    [RavenFact(RavenTestCategory.Voron)]
+    public void Pool_preparation_creates_a_zeroed_journal_and_the_next_roll_consumes_it()
+    {
+        RequireFileBasedPager();
+        Options.EnableJournalPoolPrewarming = true;
+
+        // a prepared file appears after the half-fill trigger fires, and every roll consumes it
+        // again - so probe between small write batches, when no roll can take it away
+        var next = 0;
+        Assert.True(SpinWait.SpinUntil(() =>
+        {
+            if (GetRecyclableJournalFiles().Length > 0)
+                return true;
+            WriteItems(next, 2);
+            next += 2;
+            return GetRecyclableJournalFiles().Length > 0;
+        }, TimeSpan.FromSeconds(60)), "the half-fill trigger did not prepare a pool file");
+
+        var prepared = GetRecyclableJournalFiles()[0];
+        var file = new FileInfo(prepared);
+        Assert.True(file.Length >= 128 * 1024, $"prepared file is too small: {file.Length}");
+
+        // fully written (zeroed), not sparse - the writes are what convert the extents
+        Assert.True(GetAllocatedBytes(prepared) >= file.Length, "prepared file is sparse - the zeros were not written");
+
+        // the next roll must take the prepared file instead of creating a fresh one
+        var journalsBefore = Directory.GetFiles(JournalPath, "*.journal").Length;
+        Assert.True(SpinWait.SpinUntil(() =>
+        {
+            WriteItems(next, 5);
+            next += 5;
+            return Directory.GetFiles(JournalPath, "*.journal").Length > journalsBefore;
+        }, TimeSpan.FromSeconds(60)), "no journal roll happened");
+
+        Assert.False(File.Exists(prepared), "the roll did not consume the prepared pool file");
+
+        AssertItems(next);
+    }
+
+    private static long GetAllocatedBytes(string path)
+    {
+        var psi = new System.Diagnostics.ProcessStartInfo("du", $"-B1 \"{path}\"") { RedirectStandardOutput = true };
+        using var proc = System.Diagnostics.Process.Start(psi);
+        var line = proc.StandardOutput.ReadLine();
+        proc.WaitForExit();
+        return long.Parse(line.Split('\t')[0]);
+    }
+
     private void RestartDatabase(bool disposeOnly)
     {
         // StorageTest.RestartDatabase disposes the options, which also removes the recycle pool
@@ -388,6 +439,7 @@ public class RavenDB_27397_SharedJournals(ITestOutputHelper output) : RavenTestB
         rootOptions.ManualFlushing = true;
         rootOptions.ManualSyncing = true;
         rootOptions.MaxLogFileSize = 4096 * 8;
+        rootOptions.EnableJournalPoolPrewarming = false; // the test asserts exact pool contents
 
         using var root = new StorageEnvironment(rootOptions);
         using var scope = root.Journal.SharedJournalsScope();

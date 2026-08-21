@@ -310,7 +310,7 @@ namespace Voron.Impl.Journal
             
             long maxLogFileSize = _env.Options.MaxLogFileSize;
 
-            if ((now - _lastFile).TotalSeconds < 90)
+            if (now - _lastFile < JournalSizeDoublingWindow)
             {
                 _currentJournalFileSize = Math.Min(maxLogFileSize, _currentJournalFileSize * 2);
             }
@@ -330,7 +330,7 @@ namespace Voron.Impl.Journal
             if (_env.Options.Encryption.IsEnabled)
                 EncryptTransaction((byte*)headerEntry.Base);
 
-            var journalPager = _env.Options.CreateNewJournalWriter(_journalIndex + 1, actualLogSize, headerEntry);
+            var journalPager = _env.Options.CreateNewJournalWriter(_journalIndex + 1, minRequiredSize, actualLogSize, headerEntry);
 
             // we modify the in memory state _after_ we created the file, because we have to make sure that
             // we have created it successfully first.
@@ -348,6 +348,28 @@ namespace Voron.Impl.Journal
             _files = _files.Append(journal);
 
             return journal;
+        }
+
+        // NextFile doubles the journal size when the previous file filled in under this time
+        internal static readonly TimeSpan JournalSizeDoublingWindow = TimeSpan.FromSeconds(90);
+
+        private void MaybePrepareNextJournal(long positionIn4Kbs)
+        {
+            var current = CurrentFile;
+            if (current.PrewarmChecked == false && positionIn4Kbs * 2 >= current.JournalWriter.NumberOfAllocated4Kb)
+            {
+                current.PrewarmChecked = true;
+                PrepareNextJournalInBackground(DateTime.UtcNow - _lastFile >= JournalSizeDoublingWindow / 2);
+            }
+        }
+
+        private void PrepareNextJournalInBackground(bool sameSize)
+        {
+            var size = sameSize
+                ? _currentJournalFileSize
+                : Math.Min(_currentJournalFileSize * 2, _env.Options.MaxLogFileSize);
+
+            _env.Options.PrepareRecyclableJournalInBackground(size);
         }
 
         public bool RecoverDatabase(TransactionHeader* txHeader, Action<LogLevel, string> addToInitLog, out long lastJournalNumber, out bool skippedInvalidJournals)
@@ -2416,6 +2438,8 @@ namespace Voron.Impl.Journal
 
             var elapsed = Stopwatch.GetElapsedTime(start);
 
+            MaybePrepareNextJournal(positionIn4Kbs);
+
             foreach (var rec in SharedJournalState.JournalRecords)
             {
                 if (failedBranchRecords != null && failedBranchRecords.ContainsKey(rec))
@@ -2443,6 +2467,8 @@ namespace Voron.Impl.Journal
 
             if (CurrentFile.GetAvailable4Kbs(tx.CurrentStateRecord) == 0)
             {
+                // the file is complete, the next batch rolls - last chance to have the pool ready
+                PrepareNextJournalInBackground(DateTime.UtcNow - _lastFile >= JournalSizeDoublingWindow);
                 CurrentFileIsDone();
             }
         }

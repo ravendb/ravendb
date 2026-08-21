@@ -275,6 +275,59 @@ rvn_truncate_journal(void* handle, int64_t size, int32_t* detailed_error_code)
     return _truncate_file(jrnl_handle->hFile, size, detailed_error_code);
 }
 
+EXPORT int32_t
+rvn_create_zeroed_file(const char *path, int64_t size, int32_t *detailed_error_code)
+{
+    // This will land in the .bss, so these all will be mapped to the same physical page (zero). 
+    static char _zeroed_file_buffer[1024 * 1024] __attribute__((aligned(4096)));
+
+    HANDLE h = CreateFileW((LPCWSTR)path, GENERIC_WRITE, 0, NULL, CREATE_NEW,
+                           FILE_ATTRIBUTE_NORMAL | FILE_FLAG_NO_BUFFERING, NULL);
+    if (h == INVALID_HANDLE_VALUE)
+    {
+        *detailed_error_code = GetLastError();
+        return FAIL_OPEN_FILE;
+    }
+
+    int64_t offset = 0;
+    while (offset < size)
+    {
+        DWORD len = (DWORD)(size - offset < (int64_t)sizeof(_zeroed_file_buffer) ? size - offset : (int64_t)sizeof(_zeroed_file_buffer));
+        DWORD written = 0;
+        OVERLAPPED ov = {0};
+        ov.Offset = (DWORD)(offset & 0xFFFFFFFF);
+        ov.OffsetHigh = (DWORD)(offset >> 32);
+        if (WriteFile(h, _zeroed_file_buffer, len, &written, &ov) == FALSE || written != len)
+        {
+            *detailed_error_code = GetLastError();
+            CloseHandle(h);
+            DeleteFileW((LPCWSTR)path);
+            return FAIL_WRITE_FILE;
+        }
+        offset += len;
+    }
+
+    if (FlushFileBuffers(h) == FALSE)
+    {
+        *detailed_error_code = GetLastError();
+        CloseHandle(h);
+        DeleteFileW((LPCWSTR)path);
+        return FAIL_SYNC_FILE;
+    }
+
+    CloseHandle(h);
+    return SUCCESS;
+}
+
+EXPORT int32_t
+rvn_move_file_durable(const char *src, const char *dst, int32_t *detailed_error_code)
+{
+    if (MoveFileExW((LPCWSTR)src, (LPCWSTR)dst, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
+        return SUCCESS;
+    *detailed_error_code = GetLastError();
+    return FAIL_MOVE_FILE;
+}
+
 EXPORT int32_t 
 rvn_hard_link_non_durable(const char *src, const char *dst, int32_t *detailed_error_code)
 {

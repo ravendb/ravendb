@@ -73,6 +73,7 @@ namespace Sparrow.Server.Platform
             FailMutexLock = 63,
             FailMutexUnlock = 64,
             FailWritebackNotSupported = 65,
+            FailMoveFile = 66,
         };
 
         [Flags]
