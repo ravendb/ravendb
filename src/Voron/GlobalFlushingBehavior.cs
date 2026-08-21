@@ -120,7 +120,8 @@ namespace Voron
 
                 if (force == false && envSyncReq.Value.IsRequired == false &&
                     env.Journal.Files.Count + env.Journal.Applicator.JournalsToDeleteCount <= env.Options.SyncJournalsCountThreshold &&
-                    env.Journal.Applicator.TotalWrittenButUnsyncedBytes <= env.Options.MaxUnsyncedBytesBeforeSync)
+                    (env.Journal.Applicator.TotalWrittenButUnsyncedBytes <= env.Options.MaxUnsyncedBytesBeforeSync ||
+                     env.ShouldDelaySyncToConsolidateWrites()))
                     continue;
 
                 var isSyncRun = Interlocked.CompareExchange(ref envSyncReq.Value.IsSyncRun, 1, 0);
