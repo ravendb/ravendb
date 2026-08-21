@@ -49,7 +49,7 @@ export function Login() {
                 <header className="space-y-1.5 text-center">
                     <h1 className="text-xl font-semibold tracking-tight">Sign in</h1>
                     <p className="text-sm text-muted-foreground">
-                        Enter the operator API key to manage this Quill instance.
+                        Enter the Dashboard API key to manage Quill.
                     </p>
                 </header>
 
@@ -86,7 +86,7 @@ export function Login() {
             </section>
 
             <p className="mt-6 max-w-sm text-center text-xs text-muted-foreground">
-                The operator API key was issued when this Quill instance was provisioned.
+                The Dashboard API key was issued when Quill was provisioned.
             </p>
         </AuthScreenLayout>
     );
