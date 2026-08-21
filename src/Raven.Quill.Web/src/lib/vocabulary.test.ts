@@ -11,8 +11,6 @@ import { describe, expect, it } from "vitest";
 
 const SRC_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-const SCANNED_DIRECTORIES = ["pages", "components", "lib"];
-const SCANNED_FILES = ["routes.tsx"];
 const SKIPPED_DIRECTORIES = new Set(["generated", "mocks"]);
 
 type BannedTerm = {
@@ -24,8 +22,13 @@ type BannedTerm = {
 };
 
 const BANNED_TERMS: BannedTerm[] = [
-    // The negative lookahead exempts `application/json` MIME strings.
-    { name: "application", pattern: /\bapplications?\b(?!\/json)/gi, use: '"app" / "apps"' },
+    // Exempts any `application/...` MIME type (not just JSON) and the ADO.NET
+    // `Application Name=` connection-string keyword, which this repo genuinely parses.
+    {
+        name: "application",
+        pattern: /\bapplications?\b(?!\/)(?!\s+Name=)/gi,
+        use: '"app" / "apps"',
+    },
     // Case-sensitive on purpose: `Cdc`-cased identifiers and `CDC_`-prefixed
     // constants never match, because `_` is a word character.
     { name: "CDC", pattern: /\bCDC\b/g, use: '"data source", or "sync" for the running pipeline' },
@@ -33,8 +36,9 @@ const BANNED_TERMS: BannedTerm[] = [
     { name: "appliance", pattern: /\bappliance\b/gi, use: '"Quill"' },
     { name: "billing", pattern: /\bbilling\b/gi, use: "nothing — Quill has no billing" },
     // Bare "operator" is deliberately allowed: the role concept is kept, only the
-    // labels that conflate the role with the credential are not.
-    { name: "operator key", pattern: /operator\s+(?:API\s+)?key/gi, use: '"Dashboard API key"' },
+    // labels that conflate the role with the credential are not. Anchored at the end
+    // so "operator keyword" (a real sentence in the codebase) is not mistaken for it.
+    { name: "operator key", pattern: /\boperator\s+(?:API\s+)?keys?\b/gi, use: '"Dashboard API key"' },
 ];
 
 type Allowance = {
@@ -110,12 +114,11 @@ function findUserFacingText(sourceFile: ts.SourceFile) {
     return texts;
 }
 
-function findViolations() {
-    const files = [
-        ...SCANNED_DIRECTORIES.flatMap((directory) => collectSourceFiles(path.join(SRC_DIR, directory), [])),
-        ...SCANNED_FILES.map((file) => path.join(SRC_DIR, file)),
-    ];
+function collectScannedFiles() {
+    return collectSourceFiles(SRC_DIR, []);
+}
 
+function findViolations(files: string[]) {
     const violations: string[] = [];
 
     for (const file of files) {
@@ -148,15 +151,15 @@ function findViolations() {
 }
 
 describe("product vocabulary", () => {
+    const files = collectScannedFiles();
+
     it("keeps retired terms out of user-facing text", () => {
-        expect(findViolations()).toEqual([]);
+        expect(findViolations(files)).toEqual([]);
     });
 
     it("scans a meaningful number of files", () => {
         // Guards against a silently-broken walk reporting zero violations because it
         // found zero files.
-        const files = SCANNED_DIRECTORIES.flatMap((directory) => collectSourceFiles(path.join(SRC_DIR, directory), []));
-
         expect(files.length).toBeGreaterThan(100);
     });
 });
