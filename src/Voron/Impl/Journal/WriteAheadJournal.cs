@@ -1311,7 +1311,8 @@ namespace Voron.Impl.Journal
                 var depth = PinnedWritebackDepth ?? DefaultWritebackPipelineDepth;
 
                 var rc = Pal.rvn_pager_writeback_dirty(dataPagerState.Handle, depth,
-                    options.SyncWritebackBlockSizeInMb * Constants.Size.Megabyte, out var stats, out var error);
+                    options.SyncWritebackBlockSizeInMb * Constants.Size.Megabyte,
+                    options.SyncWritebackMinContiguousSizeInKb * Constants.Size.Kilobyte, out var stats, out var error);
 
                 if (rc == PalFlags.FailCodes.FailWritebackNotSupported)
                 {
@@ -1327,7 +1328,8 @@ namespace Voron.Impl.Journal
                     _waj._logger.Debug(
                         $"Writeback of {stats.BytesWritten / Constants.Size.Kilobyte:#,#0} kb in {stats.RangesWritten:#,#} ranges " +
                         $"(depth {depth}, waited {TimeSpan.FromTicks(stats.TotalWaitTicks).TotalMilliseconds:#,#0} ms, max range {TimeSpan.FromTicks(stats.MaxRangeWaitTicks).TotalMilliseconds:#,#0} ms, " +
-                        $"{stats.SetBitsRemaining:#,#0} dirty chunks remain) for {dataPager.FileName}");
+                        $"{stats.BytesSkipped / Constants.Size.Kilobyte:#,#0} kb in sparse runs left to the kernel, " +
+                        $"{stats.SetBitsRemaining:#,#0} dirty pages remain) for {dataPager.FileName}");
                 }
             }
 
@@ -1354,7 +1356,8 @@ namespace Voron.Impl.Journal
                     return; // drain mode - the sync owns the writeback now
 
                 var rc = Pal.rvn_pager_writeback_dirty(dataPagerState.Handle, pipelineDepth: 0 /* initiate only */,
-                    options.SyncWritebackBlockSizeInMb * Constants.Size.Megabyte, out _, out var error);
+                    options.SyncWritebackBlockSizeInMb * Constants.Size.Megabyte,
+                    options.SyncWritebackMinContiguousSizeInKb * Constants.Size.Kilobyte, out _, out var error);
 
                 if (rc == PalFlags.FailCodes.FailWritebackNotSupported)
                 {

@@ -7,13 +7,13 @@
     This is an _optimization_, not correctness issue. We stil rely on fdatasync for durability, but
     we want to ensure that it has little to do by the time we call it.
 
-    This uses a bitmap with 1 MB per bit (set when a page is dirtied) to track the dirty ranges. 
+    This uses a bitmap with one bit per page (set when a page is dirtied) to track the dirty ranges.
     Rely on Voron's single writer for concurrency, with a known race when reading (during flush / sync).
     This is acceptable because the bitmap for pacing the I/O, not for durability. That remains on fdatasync.
 */
 
 
-#define WRITEBACK_BYTES_PER_BIT (1024 * 1024)
+#define WRITEBACK_BYTES_PER_BIT VORON_PAGE_SIZE
 #define WRITEBACK_DEFAULT_BLOCK_SIZE (32 * 1024 * 1024)
 #define WRITEBACK_MAX_PIPELINE_DEPTH 16
 
@@ -40,7 +40,7 @@ static int32_t rvn_ctz64(uint64_t v)
 #define rvn_popcnt64(v) ((int32_t)__builtin_popcountll(v))
 #endif
 
-#define WRITEBACK_MIN_BITMAP_WORDS 128 /* 1KB of bitmap = 8GB of file */
+#define WRITEBACK_MIN_BITMAP_WORDS 128 /* 1KB of bitmap = 64MB of file */
 
 struct dirty_bitmap
 {
@@ -218,10 +218,24 @@ _writeback_emit_run(struct writeback_ctx *ctx, int64_t start_bit, int64_t bit_co
     return SUCCESS;
 }
 
+static int32_t
+_writeback_finish_run(struct writeback_ctx *ctx, int64_t start_bit, int64_t bit_count,
+                      int64_t block_bits, int64_t min_bits, bool partially_emitted,
+                      int32_t *detailed_error_code)
+{
+    if (partially_emitted == false && bit_count < min_bits)
+    {
+        ctx->stats->bytes_skipped += bit_count * WRITEBACK_BYTES_PER_BIT;
+        return SUCCESS;
+    }
+    return _writeback_emit_run(ctx, start_bit, bit_count, block_bits, detailed_error_code);
+}
+
 EXPORT int32_t
 rvn_pager_writeback_dirty(void *handle,
                           int32_t pipeline_depth,
                           int32_t block_size_bytes,
+                          int32_t min_write_size_bytes,
                           struct rvn_writeback_stats *stats,
                           int32_t *detailed_error_code)
 {
@@ -246,6 +260,7 @@ rvn_pager_writeback_dirty(void *handle,
     if (block_size_bytes < WRITEBACK_BYTES_PER_BIT)
         block_size_bytes = WRITEBACK_BYTES_PER_BIT;
     int64_t block_bits = block_size_bytes / WRITEBACK_BYTES_PER_BIT;
+    int64_t min_bits = min_write_size_bytes > 0 ? min_write_size_bytes / WRITEBACK_BYTES_PER_BIT : 0;
 
     struct writeback_ctx ctx = {
         .handle = handle_ptr,
@@ -257,6 +272,7 @@ rvn_pager_writeback_dirty(void *handle,
     int32_t rc = SUCCESS;
     int64_t run_start_bit = -1;
     int64_t run_bits = 0;
+    bool run_emitted = false;
 
     for (int64_t w = 0; w < bm->number_of_words; w++)
     {
@@ -271,9 +287,10 @@ rvn_pager_writeback_dirty(void *handle,
         {
             if (run_start_bit >= 0)
             {
-                rc = _writeback_emit_run(&ctx, run_start_bit, run_bits, block_bits, detailed_error_code);
+                rc = _writeback_finish_run(&ctx, run_start_bit, run_bits, block_bits, min_bits, run_emitted, detailed_error_code);
                 run_start_bit = -1;
                 run_bits = 0;
+                run_emitted = false;
                 if (rc != SUCCESS)
                     goto done;
             }
@@ -291,9 +308,10 @@ rvn_pager_writeback_dirty(void *handle,
 
             if (run_start_bit >= 0 && segment_start != run_start_bit + run_bits)
             {
-                rc = _writeback_emit_run(&ctx, run_start_bit, run_bits, block_bits, detailed_error_code);
+                rc = _writeback_finish_run(&ctx, run_start_bit, run_bits, block_bits, min_bits, run_emitted, detailed_error_code);
                 run_start_bit = -1;
                 run_bits = 0;
+                run_emitted = false;
                 if (rc != SUCCESS)
                     goto done;
             }
@@ -309,6 +327,7 @@ rvn_pager_writeback_dirty(void *handle,
                     goto done;
                 run_start_bit += block_bits;
                 run_bits -= block_bits;
+                run_emitted = true;
             }
 
             if (first + segment >= 64)
@@ -320,7 +339,7 @@ rvn_pager_writeback_dirty(void *handle,
 
     if (run_start_bit >= 0)
     {
-        rc = _writeback_emit_run(&ctx, run_start_bit, run_bits, block_bits, detailed_error_code);
+        rc = _writeback_finish_run(&ctx, run_start_bit, run_bits, block_bits, min_bits, run_emitted, detailed_error_code);
         if (rc != SUCCESS)
             goto done;
     }

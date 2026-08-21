@@ -177,16 +177,19 @@ struct rvn_writeback_stats
     int64_t set_bits_remaining;
     int64_t total_wait_ticks;
     int64_t max_range_wait_ticks;
+    int64_t bytes_skipped;
 };
 
 /* Walks the pager's dirty pages and pushes the corresponding ranges to the device as a pipelined stream:
     Blocking; returns once all dirty ranges have been pushed AND completed.
    pipeline_depth == 0 is trickle mode: initiate the writeback without waiting (background work).
+   Contiguous dirty runs shorter than min_write_size_bytes are left to the kernel's writeback (0 = no minimum).
    Any failure *must* be treated as catastrophic, see fsync-gate*/
 EXPORT int32_t
 rvn_pager_writeback_dirty(void* handle,
     int32_t pipeline_depth,
     int32_t block_size_bytes,
+    int32_t min_write_size_bytes,
     struct rvn_writeback_stats* stats,
     int32_t* detailed_error_code);
 
