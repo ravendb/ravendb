@@ -140,7 +140,7 @@ namespace Raven.Server.Config.Categories
         
         [Description("EXPERT: Determine the acceleration level that Voron will use when compressing journals.")]
         [DefaultValue(1)]
-        [ConfigurationEntry("Storage.JournalsCompressionAcceleration", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        [ConfigurationEntry("Storage.JournalsCompressionAcceleration", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int JournalsCompressionAcceleration { get; set; }
 
         /// <summary>
