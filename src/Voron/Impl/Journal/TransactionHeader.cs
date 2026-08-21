@@ -98,12 +98,12 @@ namespace Voron.Impl.Journal
         public void SetLastDurableTxIdAtSubmit(long lastDurableTxId)
         {
             var delta = TransactionId - lastDurableTxId;
-            if (delta <= 0)
+            if (delta < 0)
                 ThrowInvalidLastDurableTxIdAtSubmit(lastDurableTxId, delta);
 
-            // a distance we cannot express is recorded as unknown, which makes recovery treat any preceding
-            // hole as corruption instead of an expected pipelining gap - the safe direction
-            DurableTxIdDeltaAtSubmit = delta > byte.MaxValue ? (byte)0 : (byte)delta;
+            // delta too high cannot be represented in a byte, so we will just set it to 0, and trust the recovery for this.
+            // > 255 is *really* rare, and adding a corruption handling to recover from this isn't worth it
+            DurableTxIdDeltaAtSubmit = delta is 0 or > byte.MaxValue ? (byte)0 : (byte)delta;
         }
 
         [DoesNotReturn]
@@ -111,8 +111,8 @@ namespace Voron.Impl.Journal
         {
             throw new InvalidOperationException(
                 $"Cannot record the durability watermark of transaction {TransactionId}: the last durable transaction of its environment is {lastDurableTxId}, " +
-                $"which is {delta} transactions away. A transaction cannot be durable before it has even been submitted, " +
-                "so the durability tracking of this environment no longer matches its journal.");
+                $"which is {-delta} transactions ahead of it. Journal transaction ids are handed out in order under the write lock, " +
+                "so a later transaction cannot already be durable - the durability tracking of this environment no longer matches its journal.");
         }
     }
     
