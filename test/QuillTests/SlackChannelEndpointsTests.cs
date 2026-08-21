@@ -300,6 +300,42 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Update_rejects_slack_settings_on_non_slack_channels()
+    {
+        await using var app = await NewAppAsync();
+        var agentId = await SeedAgentAsync(app);
+
+        var iframe = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
+            ChannelType.IFrame, agentId, new[] { "https://a.example" }));
+
+        var onIFrame = await Assert.ThrowsAsync<QuillHttpException>(() => app.UpdateChannelAsync(iframe.ChannelId,
+            new UpdateChannelRequest(null, null, null, Slack: new(SigningSecret: "rotated"))));
+        Assert.Equal(HttpStatusCode.BadRequest, onIFrame.StatusCode);
+        Assert.Contains("slack settings apply to Slack channels only", onIFrame.Body);
+
+        var telegramChannelId = Guid.NewGuid().ToString("N");
+        using (var session = app.Store.OpenAsyncSession(app.Slug))
+        {
+            await session.StoreAsync(new Channel
+            {
+                Id = Channel.IdPrefix + telegramChannelId,
+                Type = ChannelType.Telegram,
+                DisplayName = "tg",
+                AgentId = agentId,
+                AllowedOrigins = [],
+                Enabled = true,
+                CreatedAt = DateTime.UtcNow,
+            });
+            await session.SaveChangesAsync();
+        }
+
+        var onTelegram = await Assert.ThrowsAsync<QuillHttpException>(() => app.UpdateChannelAsync(telegramChannelId,
+            new UpdateChannelRequest(null, null, null, Slack: new(SigningSecret: "rotated"))));
+        Assert.Equal(HttpStatusCode.BadRequest, onTelegram.StatusCode);
+        Assert.Contains("slack settings apply to Slack channels only", onTelegram.Body);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Delete_releases_the_bot_and_the_webhook_route()
     {
         await using var app = await NewAppAsync();
