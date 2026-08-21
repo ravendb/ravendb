@@ -81,17 +81,18 @@ function AceEditor(props: AceEditorProps) {
 
     const hasSamplesPanel = samplesPanel?.tabs.length > 0;
 
-    const samplesToggleAction: ActionItem | null = hasSamplesPanel && !disabled && !readOnly
-        ? {
-              component: (
-                  <AceEditorSamplesToggleAction
-                      tooltipTitle={samplesPanel.tooltipTitle}
-                      onClick={() => setIsSamplesPanelOpen((prev) => !prev)}
-                  />
-              ),
-              position: "bottom",
-          }
-        : null;
+    const samplesToggleAction: ActionItem | null =
+        hasSamplesPanel && !disabled && !readOnly
+            ? {
+                  component: (
+                      <AceEditorSamplesToggleAction
+                          tooltipTitle={samplesPanel.tooltipTitle}
+                          onClick={() => setIsSamplesPanelOpen((prev) => !prev)}
+                      />
+                  ),
+                  position: "bottom",
+              }
+            : null;
 
     const effectiveActions = [...validActions, samplesToggleAction].filter(Boolean);
 

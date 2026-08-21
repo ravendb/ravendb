@@ -135,9 +135,7 @@ export default function SampleObjectAndSchemaFields<
         {
             component: (
                 <AceEditor.LoadFileAction
-                    onLoad={(value) =>
-                        setValue(jsonSchemaName, value as TFieldValues[TName], { shouldValidate: true })
-                    }
+                    onLoad={(value) => setValue(jsonSchemaName, value as TFieldValues[TName], { shouldValidate: true })}
                 />
             ),
         },

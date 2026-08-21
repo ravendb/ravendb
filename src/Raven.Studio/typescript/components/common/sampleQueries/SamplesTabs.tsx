@@ -38,13 +38,7 @@ export default function SamplesTabs({ tabs, onSelect, onClose }: SamplesTabsProp
 
     return (
         <Card className="panel-bg-1 border border-color-light sample-queries-tabs">
-            <Tab.Container
-                mountOnEnter
-                unmountOnExit
-                id={tabsId}
-                activeKey={activeTabKey}
-                onSelect={handleTabSelect}
-            >
+            <Tab.Container mountOnEnter unmountOnExit id={tabsId} activeKey={activeTabKey} onSelect={handleTabSelect}>
                 <Nav variant="pills" className="gap-1 panel-bg-2 sample-queries-nav">
                     {tabs.map((tab) => (
                         <Nav.Item key={tab.key}>

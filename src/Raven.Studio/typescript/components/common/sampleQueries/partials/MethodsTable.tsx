@@ -11,8 +11,6 @@ import { Icon } from "components/common/Icon";
 import { MethodEntry, MethodGroup } from "./sampleQueriesTypes";
 import LoadButton from "./LoadButton";
 
-const defaultExampleLanguage: CodeLanguage = "rql";
-
 interface MethodsTableProps {
     methodGroups: MethodGroup[];
     search: string;
@@ -20,12 +18,7 @@ interface MethodsTableProps {
     language?: CodeLanguage;
 }
 
-export default function MethodsTable({
-    methodGroups,
-    search,
-    onSelect,
-    language = defaultExampleLanguage,
-}: MethodsTableProps) {
+export default function MethodsTable({ methodGroups, search, onSelect, language = "rql" }: MethodsTableProps) {
     const filteredGroups = methodGroups
         .map((group) => ({
             ...group,
