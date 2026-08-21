@@ -539,6 +539,53 @@
     }
 }
 
+/* Two-column settings rows, for a `FieldGroup` wrapping fields with `orientation="responsive"`.
+
+   Deliberately unlayered: `FieldGroup` and `FieldContent` carry Tailwind's `gap-5` and `flex-1`, and
+   @layer utilities outranks @layer components regardless of specificity, so a components-layer rule
+   here would never apply. */
+
+/* Symmetric breathing room around each divider. `gap` alone cannot do this: the border sits on the
+   top edge of every row after the first, so the whole gap lands above the line and none below it. */
+.settings-rows {
+    gap: 0;
+}
+
+/* Padding on the rows rather than their container, so each divider spans the panel edge to edge the
+   way a table's row borders do, and so the panel needs no padding of its own. Same 1rem as the
+   read-only table's cells, which puts both on one rhythm. */
+.settings-rows > * {
+    padding: 1rem;
+}
+
+/* Below 60rem the label column is already bounded by the control's intrinsic width, so it only needs
+   pinning once the container is wide enough for the slack to stretch a description into an unreadable
+   180-character line. Controls then sit against the trailing edge, the way settings rows read. */
+@container field-group (min-width: 60rem) {
+    .settings-rows > [data-slot="field"][data-orientation="responsive"] {
+        justify-content: space-between;
+        gap: 3rem;
+    }
+
+    .settings-rows > [data-slot="field"][data-orientation="responsive"] > [data-slot="field-content"] {
+        flex: 0 1 26rem;
+    }
+}
+
+/* The shared toggle paints both hover and the selected state with `bg-muted`, which leaves a selected
+   segment at 1.14:1 against its neighbours - far below the 3:1 WCAG 1.4.11 asks of a state indicator -
+   and makes hovering an unselected segment look like selecting it. In a settings row the selected
+   segment is the current value, so it has to be unmistakable. Tokens, so both themes follow. */
+.settings-rows [data-slot="toggle-group-item"][data-state="on"] {
+    background-color: var(--color-foreground);
+    color: var(--color-background);
+}
+
+.settings-rows [data-slot="toggle-group-item"][data-state="on"]:hover {
+    background-color: color-mix(in oklab, var(--color-foreground) 86%, transparent);
+    color: var(--color-background);
+}
+
 /* Rows a pending shift-click range would cover. The wash is forced because the row's own selected
    and hover backgrounds are more specific, and the whole range has to read as one block. */
 @utility table-row-range-preview {

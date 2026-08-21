@@ -10,10 +10,10 @@ import {
     MessagesSquare,
     Network,
     Plug,
-    ScrollText,
     Settings,
     ShieldCheck,
     Sparkles,
+    SquareText,
     type LucideIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -171,7 +171,7 @@ const dashboardPages: AppRouteDefinition[] = [
         title: "Logs",
         navigation: {
             label: "Logs",
-            icon: ScrollText,
+            icon: SquareText,
             section: "settings",
         },
         isPageTitleHidden: true,

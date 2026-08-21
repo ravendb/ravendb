@@ -88,6 +88,16 @@ type RotationFields = {
  * A size of 0 means unknown, not "no rotation": a target NLog could not configure reports -1 bytes,
  * which divides down to 0 MB, so a broken setting is indistinguishable from an unset one.
  */
+/** LogFilter generates as an opaque record, so only the count and the default action are readable. */
+export function describeFilters(configuration: LogConfigurationResponse): string {
+    const count = configuration.logs.currentFilters?.length ?? 0;
+    if (count === 0) {
+        return "None";
+    }
+    const defaultAction = configuration.logs.currentLogFilterDefaultAction;
+    return defaultAction ? `${count} active (default action: ${defaultAction})` : `${count} active`;
+}
+
 export function describeRotation(rotation: RotationFields): string {
     const parts = [
         rotation.archiveAboveSizeInMb ? `${rotation.archiveAboveSizeInMb.toLocaleString()} MB per file` : null,
