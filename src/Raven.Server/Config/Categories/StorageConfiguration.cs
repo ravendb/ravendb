@@ -140,7 +140,7 @@ namespace Raven.Server.Config.Categories
         
         [Description("EXPERT: Determine the acceleration level that Voron will use when compressing journals.")]
         [DefaultValue(1)]
-        [ConfigurationEntry("Storage.JournalsCompressionAcceleration", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        [ConfigurationEntry("Storage.JournalsCompressionAcceleration", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int JournalsCompressionAcceleration { get; set; }
 
         /// <summary>
@@ -199,7 +199,7 @@ namespace Raven.Server.Config.Categories
 
         [Description("Disable further usage of sparse regions for the FS to reclaim free pages. In order to clear existing sparse regions you need to do that manually.")]
         [DefaultValue(false)]
-        [ConfigurationEntry("Storage.DisableSparseRegions", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        [ConfigurationEntry("Storage.DisableSparseRegions", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public bool DisableSparseRegions { get; set; }
 
         [Description("EXPERT: I/O for flush and sync operation is issued for a low priority thread, giving transaction commits higher priority")]
