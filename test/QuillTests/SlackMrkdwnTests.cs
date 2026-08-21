@@ -54,11 +54,33 @@ public class SlackMrkdwnTests(ITestOutputHelper output) : NoDisposalNeeded(outpu
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public void Single_emphasis_bullets_and_quotes_pass_through()
+    public void Single_emphasis_and_bullets_pass_through()
     {
-        var text = "*already mrkdwn bold*\n- a bullet\n> a quote";
+        var text = "*already mrkdwn bold*\n- a bullet";
 
         Assert.Equal(text, SlackMrkdwn.Convert(text));
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public void Quotes_are_escaped_into_the_form_slack_renders_as_blockquotes()
+    {
+        Assert.Equal("&gt; a quote", SlackMrkdwn.Convert("> a quote"));
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public void Angle_brackets_and_ampersands_are_escaped()
+    {
+        Assert.Equal("use HashMap&lt;String, Integer&gt; &amp; friends",
+            SlackMrkdwn.Convert("use HashMap<String, Integer> & friends"));
+        Assert.Equal("&lt;!here&gt;", SlackMrkdwn.Convert("<!here>"));
+        Assert.Equal("var x = a &lt; b;", SlackMrkdwn.Escape("var x = a < b;"));
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public void Escaping_does_not_break_generated_links()
+    {
+        Assert.Equal("<https://example.org/?a=1&amp;b=2|docs>",
+            SlackMrkdwn.Convert("[docs](https://example.org/?a=1&b=2)"));
     }
 
     [RavenFact(RavenTestCategory.Quill)]

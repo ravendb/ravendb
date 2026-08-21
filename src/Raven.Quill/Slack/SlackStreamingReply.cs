@@ -70,10 +70,11 @@ internal sealed class SlackStreamingReply(
         if (text.Length == 0 || text == _lastShownText)
             return;
 
+        var escaped = SlackMrkdwn.Escape(text);
         if (_currentTs.Length == 0)
-            _currentTs = await slack.PostMessageAsync(botToken, dmChannel, text, ct);
+            _currentTs = await slack.PostMessageAsync(botToken, dmChannel, escaped, ct);
         else
-            await slack.UpdateMessageAsync(botToken, dmChannel, _currentTs, text, ct);
+            await slack.UpdateMessageAsync(botToken, dmChannel, _currentTs, escaped, ct);
 
         _lastShownText = text;
     }
@@ -103,7 +104,7 @@ internal sealed class SlackStreamingReply(
         }
         catch (SlackApiException e) when (e.Error != SlackApiException.RateLimitedError && converted != text)
         {
-            await PostWithRetryAsync(text);
+            await PostWithRetryAsync(SlackMrkdwn.Escape(text));
         }
     }
 
@@ -121,7 +122,7 @@ internal sealed class SlackStreamingReply(
         {
             if (text == _lastShownText)
                 return;
-            await UpdateWithRetryAsync(ts, text);
+            await UpdateWithRetryAsync(ts, SlackMrkdwn.Escape(text));
         }
     }
 
