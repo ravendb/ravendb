@@ -45,9 +45,7 @@ internal sealed class SlackApiClient(HttpClient http) : ISlackClient
                 payload.TeamId,
                 payload.Team ?? "",
                 payload.UserId,
-                payload.BotId,
-                payload.User ?? "",
-                payload.Url), null, true);
+                payload.User ?? ""), null, true);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested == false)
         {
@@ -170,13 +168,7 @@ internal sealed class SlackApiClient(HttpClient http) : ISlackClient
         [JsonPropertyName("user_id")]
         public string? UserId { get; set; }
 
-        [JsonPropertyName("bot_id")]
-        public string? BotId { get; set; }
-
         [JsonPropertyName("user")]
         public string? User { get; set; }
-
-        [JsonPropertyName("url")]
-        public string? Url { get; set; }
     }
 }

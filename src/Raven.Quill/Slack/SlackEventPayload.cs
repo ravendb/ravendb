@@ -42,7 +42,4 @@ internal sealed class SlackEvent
 
     [JsonPropertyName("text")]
     public string? Text { get; set; }
-
-    [JsonPropertyName("ts")]
-    public string? Ts { get; set; }
 }

@@ -8,8 +8,6 @@ internal sealed class SlackSettings
 
     public string BotUserId { get; set; } = "";
 
-    public string? BotId { get; set; }
-
     public string BotToken { get; set; } = "";
 
     public string SigningSecret { get; set; } = "";
