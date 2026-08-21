@@ -76,13 +76,15 @@ namespace Voron.Impl.Journal
             NumberOfAllocated4Kb = (int)(size / Constants.Storage.JournalPageSize);
         }
 
-        public void Write(long posBy4Kb, Span<Pal.journal_entry> entries, long totalNumberOf4Kbs)
+        public void Write(long posBy4Kb, Span<Pal.journal_entry> entries, long totalNumberOf4Kbs, SafeJournalWriteContext context)
         {
             Debug.Assert(_options.IoMetrics != null);
 
+            _options.ForTestingPurposes?.OnJournalWrite?.Invoke(posBy4Kb, totalNumberOf4Kbs);
+
             if (_options.ForTestingPurposes?.SimulatePartialJournalWriteFailure?.Invoke(totalNumberOf4Kbs) is { } failure)
             {
-                SimulatePartialWriteAndThrow(posBy4Kb, entries, failure);
+                SimulatePartialWriteAndThrow(posBy4Kb, entries, failure, context);
                 return;
             }
 
@@ -90,7 +92,7 @@ namespace Voron.Impl.Journal
             {
                 using var metrics = _options.IoMetrics.MeterIoRate(FileName.FullPath, IoMetrics.MeterType.JournalWrite,
                     totalNumberOf4Kbs * Constants.Storage.JournalPageSize);
-                var result = Pal.rvn_write_journal(_writeHandle, pEntries, entries.Length, posBy4Kb * Constants.Storage.JournalPageSize, out var error);
+                var result = Pal.rvn_write_journal(_writeHandle, context, pEntries, entries.Length, posBy4Kb * Constants.Storage.JournalPageSize, out var error);
                 if (result != PalFlags.FailCodes.Success)
                     PalHelper.ThrowLastError(result, error,
                         $"Attempted to write to journal file - Path: {FileName.FullPath} Size: {totalNumberOf4Kbs * Constants.Storage.JournalPageSize}, numberOf4Kb={totalNumberOf4Kbs}");
@@ -104,13 +106,17 @@ namespace Voron.Impl.Journal
                 }
 
                 metrics.SetFileSize(NumberOfAllocated4Kb * Constants.Storage.JournalPageSize);
+
+                _options.ForTestingPurposes?.OnJournalWriteCompleted?.Invoke(posBy4Kb, totalNumberOf4Kbs);
             }
         }
 
      
         public void WriteHeaderRecord(Pal.journal_entry entry)
         {
-            var result = Pal.rvn_write_journal(_writeHandle, &entry, 1, 0L, out var error);
+            using var context = SafeJournalWriteContext.Create();
+
+            var result = Pal.rvn_write_journal(_writeHandle, context, &entry, 1, 0L, out var error);
             if (result != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(result, error,
                     $"Attempted to write the journal header record - Path: {FileName.FullPath}");
@@ -225,7 +231,7 @@ namespace Voron.Impl.Journal
             }
         }
 
-        private void SimulatePartialWriteAndThrow(long posBy4Kb, Span<Pal.journal_entry> entries, StorageEnvironmentOptions.TestingStuff.PartialJournalWriteFailure failure)
+        private void SimulatePartialWriteAndThrow(long posBy4Kb, Span<Pal.journal_entry> entries, StorageEnvironmentOptions.TestingStuff.PartialJournalWriteFailure failure, SafeJournalWriteContext context)
         {
             var remaining = failure.NumberOf4KbsToWrite;
             if (remaining > 0)
@@ -243,7 +249,7 @@ namespace Voron.Impl.Journal
                 var partialSpan = CollectionsMarshal.AsSpan(partial);
                 fixed (Pal.journal_entry* pEntries = partialSpan)
                 {
-                    var result = Pal.rvn_write_journal(_writeHandle, pEntries, partialSpan.Length, posBy4Kb * Constants.Storage.JournalPageSize, out var error);
+                    var result = Pal.rvn_write_journal(_writeHandle, context, pEntries, partialSpan.Length, posBy4Kb * Constants.Storage.JournalPageSize, out var error);
                     if (result != PalFlags.FailCodes.Success)
                         PalHelper.ThrowLastError(result, error, $"Attempted to write (simulated partial write) to journal file - Path: {FileName.FullPath}");
                 }

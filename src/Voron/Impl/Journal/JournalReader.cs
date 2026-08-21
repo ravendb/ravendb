@@ -48,8 +48,13 @@ namespace Voron.Impl.Journal
         private long? _lastSkippedTx;
         private long? _resyncedFromInvalid4KbPosition;
         private long? _resyncedToValid4KbPosition;
+        private long? _unexplainedInvalid4KbPosition;
 
         public bool RequireHeaderUpdate { get; private set; }
+
+        // An invalid region was found and valid data after it. We don't know which env used that, in the case of shared journals.
+        // Each env will deal with it on its own, but we don't want to keep writing to this file, we'll need a new one.
+        public bool BypassedInvalidRegion => _resyncedFromInvalid4KbPosition != null;
 
         public long Next4Kb => _next4Kb;
 
@@ -747,14 +752,55 @@ namespace Voron.Impl.Journal
                 // transaction belongs to this environment - it either carries our JournalId or it has none
                 // at all, meaning a pre-8.0 (legacy) transaction
 
+                if (_unexplainedInvalid4KbPosition is { } holeAt4Kb && IsExpectedPipeliningHole(current))
+                {
+                    if (_log.IsInfoEnabled)
+                    {
+                        _log.Info(
+                            $"Journal {_journalPager.FileName} has no transaction {(LastTransactionHeader != null ? LastTransactionHeader->TransactionId : _journalInfo.LastSyncedTransactionId) + 1} at position " +
+                            $"{holeAt4Kb * 4 * Constants.Size.Kilobyte}, while transaction {current->TransactionId} ahead of it is valid and states that only transactions up to " +
+                            $"{current->LastDurableTxIdAtSubmit} were durable when it was submitted. This is an in-flight journal write lost to a crash - " +
+                            "recovery ends before the hole and discards everything after it.");
+                    }
+
+                    _next4Kb = holeAt4Kb;
+                    current = null;
+                    return false;
+                }
+
                 VerifyTransactionSequence(options, current);
-                
+
+                _unexplainedInvalid4KbPosition = null;
+
                 LastTransactionHeader = current;
                 return true;
             }
 
             current = null;
             return false;
+        }
+
+        private bool IsExpectedPipeliningHole(TransactionHeader* current)
+        {
+            var lastReadTxId = LastTransactionHeader != null
+                ? LastTransactionHeader->TransactionId
+                : _journalInfo.LastSyncedTransactionId;
+
+            if (lastReadTxId == -1)
+                return false;
+
+            var firstMissingTxId = lastReadTxId + 1;
+
+            if (current->TransactionId <= firstMissingTxId)
+                return false;
+
+            if (firstMissingTxId <= _journalInfo.LastSyncedTransactionId)
+                return false;
+
+            if (current->LastDurableTxIdAtSubmit <= 0)
+                return false;
+
+            return current->LastDurableTxIdAtSubmit < firstMissingTxId;
         }
 
         private static bool IsWellFormedJournalHeaderRecord(TransactionHeader* current)
@@ -844,6 +890,7 @@ namespace Voron.Impl.Journal
 
                 _resyncedFromInvalid4KbPosition ??= invalid4KbPosition;
                 _resyncedToValid4KbPosition ??= _readAt4Kb;
+                _unexplainedInvalid4KbPosition ??= invalid4KbPosition;
                 return true;
             }
 

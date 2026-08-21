@@ -80,6 +80,10 @@ namespace Voron.Impl.Journal
         private readonly RavenLogger _logger;
 
         private readonly object _writeLock = new object();
+        private readonly JournalWritePipeline _writePipeline;
+
+        // write lock only - the acks of the journal write that is being assembled
+        private readonly List<JournalWritePipeline.Ack> _acksForCurrentWrite = [];
         private int _maxNumberOfPagesRequiredForCompressionBuffer;
         private int _numberOfUsedCompressionBufferPagesSinceZeroing;
 
@@ -274,10 +278,13 @@ namespace Voron.Impl.Journal
 
             (_compressionPager, _compressionPagerState) = CreateCompressionPager(_env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize);
             _journalApplicator = new WriteAheadJournal.JournalApplicator(this);
+            _writePipeline = new JournalWritePipeline(_env);
 
             _disposeRunner = new DisposeOnce<SingleAttempt>(() =>
             {
                 RejectCommitsToMerge();
+
+                _writePipeline.Dispose();
 
                 _compressionPager.Dispose();
 
@@ -303,6 +310,8 @@ namespace Voron.Impl.Journal
         public WriteAheadJournal.JournalApplicator Applicator => _journalApplicator;
         
         public bool HasBranchCommits => SharedJournalState.HasBranchCommits;
+
+        internal int MaxConcurrentJournalWrites => _writePipeline.MaxConcurrentWrites;
 
         private JournalFile NextFile(long numberOf4Kbs)
         {
@@ -499,8 +508,15 @@ namespace Voron.Impl.Journal
                             Incarnation = journalReader.Incarnation
                         };
                         jrnlFile.DoneWriting = new SingleUseFlag();
-                        
-                        
+                
+                        if (journalReader.BypassedInvalidRegion)
+                        {
+                            jrnlFile.DoneWriting.Raise();
+
+                            addToInitLog?.Invoke(LogLevel.Info,
+                                $"Journal '{jrnlWriter.FileName.FullPath}' has an invalid region that recovery had to bypass, it will not be used for further writes.");
+                        }
+
                         if (isHardLinked || _env.Options.RootJournal != null)
                         {
                             // a hard link is read-only and a branch writes via the root's merger - in both cases mark the journal
@@ -687,7 +703,7 @@ namespace Voron.Impl.Journal
                     lastFile.DoneWriting.Raise();
                     if (mustRollToNewFile)
                         addToInitLog?.Invoke(LogLevel.Info,
-                            $"Journal '{lastFile.JournalWriter.FileName.FullPath}' is hard-linked or owned by a branch; rolling to a new file.");
+                            $"Journal '{lastFile.JournalWriter.FileName.FullPath}' is not fit for further writes; rolling to a new file.");
                 }
             }
 
@@ -713,6 +729,7 @@ namespace Voron.Impl.Journal
 
                     var ptr = PlatformSpecific.NativeMemory.Allocate4KbAlignedMemory( fourKb, out var threadStats);
 
+                    using var eraseContext = SafeJournalWriteContext.Create();
                     try
                     {
                         Memory.Set(ptr, 0, fourKb);
@@ -722,7 +739,7 @@ namespace Voron.Impl.Journal
                         entries[0].Base = ptr;
                         for (long pos = CurrentFile.GetWritePosIn4KbPosition(_env.CurrentStateRecord); pos < CurrentFile.JournalWriter.NumberOfAllocated4Kb; pos++)
                         {
-                            CurrentFile.JournalWriter.Write(pos, entries, 1);
+                            CurrentFile.JournalWriter.Write(pos, entries, 1, eraseContext);
                         }
                     }
                     finally
@@ -2171,6 +2188,8 @@ namespace Voron.Impl.Journal
 
         private void CurrentFileIsDone()
         {
+            _writePipeline.Drain();
+
             // Note, if this is a root/branch situation, the same
             // flag is used by all instances of this journal file
             CurrentFile?.DoneWriting.Raise();
@@ -2415,6 +2434,7 @@ namespace Voron.Impl.Journal
                 if (available4Kbs < requiredSizeIn4Kbs)
                 {
                     long newSize = (CurrentFile.JournalWriter.NumberOfAllocated4Kb - available4Kbs + requiredSizeIn4Kbs) * 4 * Constants.Size.Kilobyte;
+                    _writePipeline.Drain();
                     CurrentFile.JournalWriter.Truncate(newSize);
                     if (_logger.IsDebugEnabled)
                         _logger.Debug($"Journal file {CurrentFile.Number:D19} was extended to size {CurrentFile.JournalSize} to allow the linked journals entry");
@@ -2430,31 +2450,57 @@ namespace Voron.Impl.Journal
                 entryHeader->JournalId = entryHeader->JournalId.Xor(currentIncarnation);
             }
 
-            var start = Stopwatch.GetTimestamp();
+            long totalNumberOf4Kbs = 0;
+            foreach (var entry in entries)
+                totalNumberOf4Kbs += entry.NumberOf4Kbs;
 
-            tx._forTestingPurposes?.ActionToCallJustBeforeWritingToJournal?.Invoke();
-            long positionIn4Kbs = CurrentFile.Write(tx, entries);
-            // We must update the _root_ transaction as well here, since if we have a batch
-            // that does not include the root env, then we have to update the position of 
-            // the journal writer
-            tx.UpdateJournal(CurrentFile.Number, positionIn4Kbs);
+            var writePosIn4Kbs = CurrentFile.GetWritePosIn4KbPosition(tx.CurrentStateRecord);
+            long positionIn4Kbs = writePosIn4Kbs + totalNumberOf4Kbs;
 
-            var elapsed = Stopwatch.GetElapsedTime(start);
-
-            MaybePrepareNextJournal(positionIn4Kbs);
+            _acksForCurrentWrite.Clear();
 
             foreach (var rec in SharedJournalState.JournalRecords)
             {
                 if (failedBranchRecords != null && failedBranchRecords.ContainsKey(rec))
                     continue; // hard-link fallback: exception will be set below, after the write.
 
-                if (rec.Tcs.Task.IsCompleted)
-                    continue;
-
                 var llt = rec.Transaction;
+                var environment = llt.Environment;
+                var header = (TransactionHeader*)rec.Entry.Base;
+
+                if (rec.Tcs.Task.IsCompleted)
+                {
+                    // indicates that there is no env _to_ report to, we still write to the jounral, but we'll let recovery deal with any holes as corruption
+                    header->DurableTxIdDeltaAtSubmit = 0;
+                    continue;
+                }
+
+                header->SetLastDurableTxIdAtSubmit(environment.DurableTransactionId);
+
+                _acksForCurrentWrite.Add(new JournalWritePipeline.Ack(environment, llt.Id, rec.Tcs));
+
                 llt.UpdateJournal(llt.WrittenToJournalNumber, positionIn4Kbs);
-                rec.Tcs.TrySetResult();
             }
+
+            CurrentFile.LastTransactionId = tx.Id;
+
+            // We must update the _root_ transaction as well here, since if we have a batch
+            // that does not include the root env, then we have to update the position of
+            // the journal writer
+            tx.UpdateJournal(CurrentFile.Number, positionIn4Kbs);
+
+            var start = Stopwatch.GetTimestamp();
+
+            tx._forTestingPurposes?.ActionToCallJustBeforeWritingToJournal?.Invoke();
+
+            if (tx.IsAsyncCommit && _writePipeline.CanPipeline(totalNumberOf4Kbs))
+                _writePipeline.SubmitPipelined(CurrentFile, writePosIn4Kbs, entries, totalNumberOf4Kbs, _acksForCurrentWrite);
+            else
+                _writePipeline.WriteInline(CurrentFile, writePosIn4Kbs, entries, totalNumberOf4Kbs, _acksForCurrentWrite);
+
+            var elapsed = Stopwatch.GetElapsedTime(start);
+
+            MaybePrepareNextJournal(positionIn4Kbs);
 
             SharedJournalState.Reset();
 
@@ -2995,13 +3041,15 @@ namespace Voron.Impl.Journal
             if (_forTestingPurposes != null)
                 return _forTestingPurposes;
 
-            return _forTestingPurposes = new TestingStuff();
+            return _forTestingPurposes = new TestingStuff(this);
         }
 
-        internal sealed class TestingStuff
+        internal sealed class TestingStuff(WriteAheadJournal journal)
         {
             internal Action OnReduceSizeOfCompressionBufferIfNeeded_RightAfterDisposingCompressionPager;
             internal Action<ConcurrentQueue<WriteAheadJournal.PendingJournalStateRecord>> OnWriteBuffersToJournal;
+
+            internal int InFlightJournalWrites => journal._writePipeline.ForTestingPurposesOnly().InFlightCount;
         }
 
         private void RejectCommitsToMerge() => SharedJournalState.SetCancel();
