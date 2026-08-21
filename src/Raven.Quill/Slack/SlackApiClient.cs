@@ -18,6 +18,9 @@ internal sealed class SlackApiClient(HttpClient http) : ISlackClient
             using var response = await http.SendAsync(request, ct);
             var body = await response.Content.ReadAsStringAsync(ct);
 
+            if (response.StatusCode == HttpStatusCode.TooManyRequests)
+                return (null, "slack is rate-limiting the token check; try again shortly", false);
+
             if ((int)response.StatusCode >= 500)
                 return (null, $"the Slack API is unavailable (status {(int)response.StatusCode})", false);
 
@@ -27,6 +30,9 @@ internal sealed class SlackApiClient(HttpClient http) : ISlackClient
 
             if (payload.Ok == false)
             {
+                if (payload.Error == SlackApiException.RateLimitedError)
+                    return (null, "slack is rate-limiting the token check; try again shortly", false);
+
                 return (null, payload.Error is "invalid_auth" or "token_revoked" or "account_inactive"
                     ? "slack rejected the bot token; copy the xoxb- token from the app's OAuth page and try again"
                     : $"slack refused the token check: {payload.Error ?? "unknown error"}", true);
