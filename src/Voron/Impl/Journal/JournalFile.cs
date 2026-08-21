@@ -3,7 +3,6 @@ using System;
 using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.ExceptionServices;
 using Sparrow.Server.Platform;
 using Sparrow.Threading;
 using Constants = Voron.Global.Constants;
@@ -122,7 +121,7 @@ namespace Voron.Impl.Journal
         /// <summary>
         /// Write a buffer of transactions (from lazy, usually) to the file
         /// </summary>
-        public long Write(long posBy4Kb, Span<Pal.journal_entry> entries)
+        public long Write(long posBy4Kb, Span<Pal.journal_entry> entries, SafeJournalWriteContext context)
         {
             Debug.Assert(DoneWriting is null || DoneWriting.IsRaised() == false, $"Journal {Number} was written after DoneWriting was raised.");
 
@@ -134,31 +133,9 @@ namespace Voron.Impl.Journal
                 Debug.Assert(readTxHeader->HeaderMarker == Constants.TransactionHeaderMarker);
             }
 
-            JournalWriter.Write(posBy4Kb, entries, totalNumberOf4Kbs);
+            JournalWriter.Write(posBy4Kb, entries, totalNumberOf4Kbs, context);
             
             return totalNumberOf4Kbs;
-        }
-
-        /// <summary>
-        /// write transaction's raw page data into journal
-        /// </summary>
-        public long Write(LowLevelTransaction tx, Span<Pal.journal_entry> pages)
-        {
-            var cur4KbPos = GetWritePosIn4KbPosition(tx.CurrentStateRecord);
-
-            Debug.Assert(pages.IsEmpty is false && pages[0].NumberOf4Kbs > 0, "pages.IsEmpty is false && pages[0].NumberOf4Kbs > 0");
-
-            try
-            {
-                long totalSizeIn4Kbs = Write(cur4KbPos, pages);
-                LastTransactionId = tx.Id;
-                return cur4KbPos + totalSizeIn4Kbs;
-            }
-            catch (Exception e)
-            {
-                env.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
-                throw;
-            }
         }
 
         public void InitFrom(StorageEnvironment storageEnvironment, JournalReader journalReader, List<TransactionHeader> transactionHeaders)

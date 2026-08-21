@@ -151,8 +151,9 @@ rvn_writer rvn_get_writer(void *handle)
 }
 
 EXPORT int32_t
-rvn_write_journal(void *handle, struct journal_entry *buffer, int64_t count_of_entries, int64_t offset, int32_t *detailed_error_code)
+rvn_write_journal(void *handle, void *context, struct journal_entry *buffer, int64_t count_of_entries, int64_t offset, int32_t *detailed_error_code)
 {
+    (void)context; // context is unused in posix
     struct journal_handle *jfh = (struct journal_handle *)handle;
     for (size_t i = 0; i < count_of_entries; i++)
     {

@@ -1002,6 +1002,8 @@ namespace Voron.Impl
                 PagerTransactionState.InvokeDispose(_env, ref DataPagerState, ref PagerTransactionState);
                 OnDispose?.Invoke(this);
 
+                _asyncCommitPreviousTransaction = null;
+
                 _envRecord = null; // RavenDB-22972 - it prevents from having a possible reference cycle via EnvironmentStateRecord.ClientState
             }
         }
@@ -1140,6 +1142,8 @@ namespace Voron.Impl
             if (Flags != TransactionFlags.ReadWrite)
                 return;// nothing to do
 
+            WaitForPreviousTxToBeginJournalWrite();
+
             CommitStage1_CompleteTransaction();
 
             Debug.Assert(_writeToJournalState is not WriteToJournalState.None, "_writeToJournalState is not WriteToJournalState.None");
@@ -1151,7 +1155,7 @@ namespace Voron.Impl
                     Environment.LastWorkTime = DateTime.UtcNow;
                 }
                 
-                CommitStage2_WriteToJournal();
+                CommitStage2_WriteToJournal(waitForDurability: true);
             }
 
             BeforeCommitFinalization?.Invoke(this);
@@ -1160,6 +1164,8 @@ namespace Voron.Impl
 
         internal Task<bool> AsyncCommit;
         private LowLevelTransaction _asyncCommitNextTransaction;
+        private LowLevelTransaction _asyncCommitPreviousTransaction;
+        private bool _asyncCommitSubmissionEnded;
         private static readonly Task<bool> NoWriteToJournalRequiredTask = Task.FromResult(false);
 
         /// <summary>
@@ -1174,19 +1180,23 @@ namespace Voron.Impl
             if (_asyncCommitNextTransaction != null)
                 ThrowAsyncCommitAlreadyCalled();
 
+            WaitForPreviousTxToBeginJournalWrite();
+
             CommitStage1_CompleteTransaction();
 
             Debug.Assert(_writeToJournalState is not WriteToJournalState.None, "_writeToJournalState is not WriteToJournalState.None");
             bool writeToJournalIsRequired = _writeToJournalState is not WriteToJournalState.Skip;
+            bool writesOwnJournalRecord = _writeToJournalState is WriteToJournalState.ModifiedPages;
 
             FreePageLocator(persistentContext, ref _pageLocator);
 
             var nextTx = new LowLevelTransaction(this, persistentContext,
-                writeToJournalIsRequired ? Id + 1 : Id
+                writesOwnJournalRecord ? Id + 1 : Id
             );
             _asyncCommitNextTransaction = nextTx;
+            nextTx._asyncCommitPreviousTransaction = this;
             AsyncCommit = writeToJournalIsRequired
-                  ? Task.Run(() => { CommitStage2_WriteToJournal(); return true; })
+                  ? Task.Run(() => { CommitStage2_WriteToJournal(waitForDurability: false); return true; })
                   : NoWriteToJournalRequiredTask;
 
             var usageIncremented = false;
@@ -1240,12 +1250,20 @@ namespace Voron.Impl
             throw new InvalidOperationException("Only write transactions can do async commit");
         }
 
-        /// <summary>
-        /// Completes the async commit began previously. Must be called *within* the 
-        /// write lock, and must happen *before* the new transaction call its own commit
-        /// method.
-        /// </summary>
-        public void EndAsyncCommit()
+        private void WaitForPreviousTxToBeginJournalWrite()
+        {
+            var producer = _asyncCommitPreviousTransaction;
+            _asyncCommitPreviousTransaction = null;
+
+            // if we had a previous tx, we need to wait for it to build its journal entry
+            // and start writing it. This is so we know the size, of the last written journal
+            // position, so we know where *our* write goes (parallel journal writes)
+
+            if (producer?.AsyncCommit != null)
+                producer.EndAsyncCommitSubmission();
+        }
+
+        private void EndAsyncCommitSubmission()
         {
             if (AsyncCommit == null)
             {
@@ -1253,6 +1271,11 @@ namespace Voron.Impl
                 ThrowInvalidAsyncEndWithoutBegin();
                 return;// never reached
             }
+
+            if (_asyncCommitSubmissionEnded)
+                return;
+
+            _asyncCommitSubmissionEnded = true;
 
             try
             {
@@ -1274,11 +1297,28 @@ namespace Voron.Impl
             // we need to update the state of the file position in the journal file, which happens in stage2 (async)
             // before we can actually commit the current transaction
             _asyncCommitNextTransaction.UpdateJournal(CurrentStateRecord.Journal.Number, CurrentStateRecord.Journal.Last4KWritePosition);
-            
+        }
+
+        public void EndAsyncCommit()
+        {
+            EndAsyncCommitSubmission();
+
             if (AsyncCommit.Result)
             {
                 if (_updateLastWorkTime)
                     Environment.LastWorkTime = DateTime.UtcNow;
+            }
+
+            try
+            {
+                _env.WaitForCommitDurability(CommitDurabilityGateTransactionId);
+            }
+            catch (Exception e)
+            {
+                _txStatus |= TxStatus.Errored;
+                _env.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
+
+                throw;
             }
 
             BeforeCommitFinalization?.Invoke(this);
@@ -1309,7 +1349,12 @@ namespace Voron.Impl
             }
         }
 
-        private void CommitStage2_WriteToJournal()
+        internal bool IsAsyncCommit => _asyncCommitNextTransaction != null;
+
+        internal long CommitDurabilityGateTransactionId =>
+            WrittenToJournalNumber == -1 ? CurrentStateRecord.TransactionId - 1 : CurrentStateRecord.TransactionId;
+
+        private void CommitStage2_WriteToJournal(bool waitForDurability)
         {
             try
             {
@@ -1317,6 +1362,9 @@ namespace Voron.Impl
 
                 if (_forTestingPurposes?.SimulateThrowingOnCommitStage2 == true)
                     _forTestingPurposes.ThrowSimulateErrorOnCommitStage2();
+
+                if (waitForDurability)
+                    _env.WaitForCommitDurability(CommitDurabilityGateTransactionId);
 
                 if (_requestedCommitStats == null)
                     return;

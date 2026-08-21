@@ -59,6 +59,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Storage.MaxConcurrentFlushes", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int MaxConcurrentFlushes { get; set; }
 
+        [Description("Number of journal writes that may be in flight concurrently (in flight transactions).")]
+        [MinValue(1)]
+        [DefaultValue(4)]
+        [ConfigurationEntry("Storage.MaxConcurrentJournalWrites", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int MaxConcurrentJournalWrites { get; set; }
+
         [Description("Time to sync after flush in seconds")]
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]

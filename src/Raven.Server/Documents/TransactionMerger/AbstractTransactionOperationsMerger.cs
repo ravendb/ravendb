@@ -49,6 +49,10 @@ namespace Raven.Server.Documents.TransactionMerger
         private StorageEnvironment _env;
 
         private readonly ConcurrentQueue<List<MergedTransactionCommand<TOperationContext, TTransaction>>> _opsBuffers = new();
+
+        private readonly Queue<(TOperationContext Context, List<MergedTransactionCommand<TOperationContext, TTransaction>> PendingOps)> _asyncCommittedTransactions = new();
+        private int _maxConcurrentJournalWrites = 1;
+        
         private readonly ManualResetEventSlim _waitHandle = new(false);
         private ExceptionDispatchInfo _edi;
         private readonly RavenLogger _log;
@@ -89,6 +93,7 @@ namespace Raven.Server.Documents.TransactionMerger
             _isEncrypted = isEncrypted;
             _is32Bits = is32Bits;
             _env = GetStorageEnvironment(contextPool);
+            _maxConcurrentJournalWrites = Math.Max(1, _env.Journal.MaxConcurrentJournalWrites);
             _initialized = true;
         }
 
@@ -494,6 +499,9 @@ namespace Raven.Server.Documents.TransactionMerger
         {
             TOperationContext current = null;
             IDisposable currentReturnContext = null;
+
+            Debug.Assert(_asyncCommittedTransactions.Count == 0, "every async committed transaction of the previous chain must have been completed");
+
             try
             {
                 while (true)
@@ -510,65 +518,65 @@ namespace Raven.Server.Documents.TransactionMerger
                     }
                     catch (Exception e)
                     {
-                        foreach (var op in previousPendingOps)
+                        using (currentReturnContext)
                         {
-                            op.Exception = e;
-                        }
-                        NotifyOnThreadPool(previousPendingOps);
-
-                        if (e is OutOfMemoryException)
-                        {
-                            try
+                            foreach (var op in previousPendingOps)
                             {
-                                //already throwing, attempt to complete previous tx
-                                CompletePreviousTransaction(previous, returnPreviousContext, ref previousPendingOps, throwOnError: false);
+                                op.Exception = e;
                             }
-                            finally
-                            {
-                                current.Transaction?.Dispose();
-                                currentReturnContext.Dispose();
-                            }
-                        }
+                            NotifyOnThreadPool(previousPendingOps);
 
+                            //already throwing, attempt to complete previous txs
+                            CompleteAsyncCommittedTransactions(keep: 0, throwOnError: false);
+                        }
                         return;
                     }
 
+                    _asyncCommittedTransactions.Enqueue((previous, previousPendingOps));
+
                     var currentPendingOps = GetBufferForPendingOps();
                     PendingOperations result;
-                    bool calledCompletePreviousTx = false;
+                    bool startedCompletingInFlight = false;
                     try
                     {
                         var transactionMeter = TransactionPerformanceMetrics.MeterPerformanceRate();
                         try
                         {
+                            // accumulate operations into the current transaction while the journal pipeline is still busy at its head
+                            var oldestInFlightJournalWrite = _asyncCommittedTransactions.Peek().Context.Transaction.InnerTransaction.LowLevelTransaction.AsyncCommit;
                             result = ExecutePendingOperationsInTransaction(
                                 currentPendingOps, current,
-                                previous.Transaction.InnerTransaction.LowLevelTransaction.AsyncCommit, ref transactionMeter);
+                                oldestInFlightJournalWrite, ref transactionMeter);
                             UpdateGlobalReplicationInfoBeforeCommit(current);
                         }
                         finally
                         {
                             transactionMeter.Dispose();
                         }
-                        calledCompletePreviousTx = true;
-                        CompletePreviousTransaction(previous, previous.Transaction, ref previousPendingOps, throwOnError: true);
+                        startedCompletingInFlight = true;
+                        CompleteAsyncCommittedTransactions(keep: _maxConcurrentJournalWrites - 1, throwOnError: true);
                     }
                     catch (Exception e)
                     {
                         using (current.Transaction)
                         using (currentReturnContext)
                         {
-                            if (calledCompletePreviousTx == false)
+                            if (startedCompletingInFlight == false)
                             {
-                                CompletePreviousTransaction(
-                                    previous,
-                                    previous.Transaction,
-                                    ref previousPendingOps,
-                                    // if this previous threw, it won't throw again
-                                    throwOnError: false);
+                                // we didn't get to the previous CompleteAsyncCommittedTransactions, so let's ensure that
+                                // we complete the in flight transactions, then handle raising the error to the ops below
+                                CompleteAsyncCommittedTransactions(keep: 0, throwOnError: false);
                             }
                             else
                             {
+                                // we already started completing the in flight transactions, but a previous transaction failed,
+                                // therefor, _we_ failed, and need to report this to our callers
+                                foreach (var op in currentPendingOps)
+                                {
+                                    op.Exception = e;
+                                }
+                                NotifyOnThreadPool(currentPendingOps);
+
                                 throw;
                             }
                         }
@@ -604,6 +612,8 @@ namespace Raven.Server.Documents.TransactionMerger
                         case PendingOperations.CompletedAll:
                             try
                             {
+                                CompleteAsyncCommittedTransactions(keep: 0, throwOnError: true);
+
                                 _recording.State?.TryRecord(current, TxInstruction.Commit);
                                 previous.Transaction.Commit();
                             }
@@ -629,6 +639,8 @@ namespace Raven.Server.Documents.TransactionMerger
             }
             catch
             {
+                CompleteAsyncCommittedTransactions(keep: 0, throwOnError: false);
+
                 if (current?.Transaction != null)
                 {
                     _recording.State?.TryRecord(current, TxInstruction.DisposeTx, current.Transaction.Disposed == false);
@@ -639,43 +651,63 @@ namespace Raven.Server.Documents.TransactionMerger
             }
         }
 
-        private void CompletePreviousTransaction(
-            TOperationContext previous,
-            IDisposable returnPreviousContext,
-            ref List<MergedTransactionCommand<TOperationContext, TTransaction>> previousPendingOps,
-            bool throwOnError)
+        private void CompleteAsyncCommittedTransactions(int keep, bool throwOnError)
         {
-            try
-            {
-                _recording.State?.TryRecord(previous, TxInstruction.EndAsyncCommit);
-                previous.Transaction.EndAsyncCommit();
+            ExceptionDispatchInfo failure = null;
 
-                if (_log.IsDebugEnabled)
-                    _log.Debug($"EndAsyncCommit on {previous.Transaction.InnerTransaction.LowLevelTransaction.Id}");
-                
-                _recording.State?.TryRecord(previous, TxInstruction.DisposePrevTx, previous.Disposed == false);
-                
-                previous.Transaction.Dispose();
-                returnPreviousContext.Dispose();
-                
-                NotifyOnThreadPool(previousPendingOps);
-            }
-            catch (Exception e)
+            // once one of them failed, all the following ones are also failed
+            while (_asyncCommittedTransactions.Count > (failure == null ? keep : 0))
             {
-                foreach (var op in previousPendingOps)
+                var (context, pendingOps) = _asyncCommittedTransactions.Dequeue();
+
+                var error = failure?.SourceException;
+
+                try
                 {
-                    op.Exception = e;
+                    _recording.State?.TryRecord(context, TxInstruction.EndAsyncCommit);
+                    context.Transaction.EndAsyncCommit();
+
+                    if (_log.IsDebugEnabled)
+                        _log.Debug($"EndAsyncCommit on {context.Transaction.InnerTransaction.LowLevelTransaction.Id}");
+
+                    _recording.State?.TryRecord(context, TxInstruction.DisposePrevTx, context.Disposed == false);
+                }
+                catch (Exception e)
+                {
+                    error ??= e; // propagate the first error to all future transactions & operations
+                    failure ??= ExceptionDispatchInfo.Capture(e);
                 }
 
-                // it's safe to call this twice
-                previous.Transaction.Dispose();
-                returnPreviousContext.Dispose();
-                
-                NotifyOnThreadPool(previousPendingOps);
-                previousPendingOps = null; // RavenDB-7417
-                if (throwOnError)
-                    throw;
+                try
+                {
+                    context.Transaction.Dispose();
+                }
+                catch (Exception e)
+                {
+                    error ??= e;
+                    failure ??= ExceptionDispatchInfo.Capture(e);
+                }
+
+                if (error != null)
+                {
+                    foreach (var op in pendingOps)
+                    {
+                        op.Exception = error;
+                    }
+                }
+
+                try
+                {
+                    NotifyOnThreadPool(pendingOps);
+                }
+                catch (Exception e)
+                {
+                    failure ??= ExceptionDispatchInfo.Capture(e);
+                }
             }
+
+            if (throwOnError)
+                failure?.Throw();
         }
 
         private enum PendingOperations
