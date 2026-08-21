@@ -784,33 +784,9 @@ namespace Raven.Server.Documents.Indexes
             options.OnRecoveryError += (s, e) => documentDatabase.HandleOnIndexRecoveryError(name, s, e);
             options.OnIntegrityErrorOfAlreadySyncedData += (s, e) => documentDatabase.HandleOnIndexIntegrityErrorOfAlreadySyncedData(name, s, e);
             options.OnRecoverableFailure += documentDatabase.HandleRecoverableFailure;
-            options.CompressTxAboveSizeInBytes = documentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
-            options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
-            options.EnablePrefetching = documentDatabase.Configuration.Storage.EnablePrefetching;
-            options.DiscardVirtualMemory = documentDatabase.Configuration.Storage.DiscardVirtualMemory;
-            options.UseSequentialReadAheadHintForJournalRecovery = documentDatabase.Configuration.Storage.UseSequentialReadAheadHintForJournalRecovery;
-            options.TimeToSyncAfterFlushInSec = (int)documentDatabase.Configuration.Storage.TimeToSyncAfterFlush.AsTimeSpan.TotalSeconds;
             options.Encryption.MasterKey = documentDatabase.MasterKey?.ToArray(); //clone
             options.Encryption.RegisterForJournalCompressionHandler();
-            options.DoNotConsiderMemoryLockFailureAsCatastrophicError = documentDatabase.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
-            if (documentDatabase.Configuration.Storage.MaxScratchBufferSize.HasValue)
-                options.MaxScratchBufferSize = documentDatabase.Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
-            options.PrefetchSegmentSize = documentDatabase.Configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
-            options.PrefetchResetThreshold = documentDatabase.Configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
-            options.SyncJournalsCountThreshold = documentDatabase.Configuration.Storage.SyncJournalsCountThreshold;
-            options.SyncWritebackBlockSizeInMb = documentDatabase.Configuration.Storage.SyncWritebackBlockSizeInMb;
-            options.SyncWritebackMinContiguousSizeInKb = documentDatabase.Configuration.Storage.SyncWritebackMinContiguousSizeInKb;
-            options.SyncWritebackBarrierCostThresholdInMs = documentDatabase.Configuration.Storage.SyncWritebackBarrierCostThresholdInMs;
-            options.SyncWritebackDrainQueueDepthThreshold = documentDatabase.Configuration.Storage.SyncWritebackDrainQueueDepthThreshold;
-            options.IgnoreInvalidJournalErrors = documentDatabase.Configuration.Storage.IgnoreInvalidJournalErrors;
-            options.SkipChecksumValidationOnDatabaseLoading = documentDatabase.Configuration.Storage.SkipChecksumValidationOnDatabaseLoading;
-            options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions = documentDatabase.Configuration.Storage.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions;
-            options.MaxNumberOfRecyclableJournals = documentDatabase.Configuration.Storage.MaxNumberOfRecyclableJournals;
-            options.DisableSparseRegions = documentDatabase.Configuration.Storage.DisableSparseRegions;
-            options.JournalsCompressionAcceleration = documentDatabase.Configuration.Storage.JournalsCompressionAcceleration;
-            options.MinimumSharedJournalsMergeCount = documentDatabase.Configuration.Indexing.MinimumSharedJournalsMergeCount;
-            options.MaxLogFileSize = documentDatabase.Configuration.Storage.MaxJournalFileSize.GetValue(SizeUnit.Bytes);
-
+            VoronOptionsFromConfiguration.Apply(options, documentDatabase.Configuration);
 
             if (documentDatabase.ServerStore.GlobalIndexingScratchSpaceMonitor != null)
                 options.ScratchSpaceUsage.AddMonitor(documentDatabase.ServerStore.GlobalIndexingScratchSpaceMonitor);

@@ -54,7 +54,6 @@ class configurationItem {
         "Indexing.Corax.VectorSearch.OrderByScoreAutomatically",
         "Indexing.Corax.VectorSearch.MaximumConcurrentBatchesForHnswAcceleration",
         "Indexing.Corax.VectorSearch.OrderByScoreAutomatically",
-        "Storage.JournalsCompressionAcceleration",
         "Indexing.Storage.DisableSharedJournals",
         "Indexing.Corax.UnmanagedAllocationsBatchSizeLimitInMb",
         "Indexing.ElapsedSinceQueriedPersistIntervalInMin",
