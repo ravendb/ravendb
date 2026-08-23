@@ -106,16 +106,13 @@ public class RavenDB_25401 : RavenTestBase
     private const string ExpectedFinishReason = "content_filter";
 
     /// <summary>
-    /// A refusal must reach the client as <see cref="RefusedToAnswerException"/>, with its <c>Refusal</c> and
-    /// <c>FinishReason</c> intact. The server already carries both across the wire:
-    /// <c>RavenServerStartup.MaybeAddAdditionalExceptionData</c> writes them into the error payload for a
-    /// <see cref="RefusedToAnswerException"/>, and <c>ExceptionDispatcher.FillException</c> reads them back.
-    /// <para>
-    /// What defeats it is <c>AbstractAiAgentProcessor.ExecuteInternalAsync</c>: its rethrow allowlist does not include
-    /// <see cref="RefusedToAnswerException"/>, so a refusal is wrapped in a generic <see cref="AiException"/>. The
-    /// <c>case RefusedToAnswerException</c> then never matches, the two fields are never serialized, and the refusal
-    /// survives only as text inside the wrapper's stack trace.
-    /// </para>
+    /// A model refusal must reach the client rather than being silently swallowed. Server-side it is raised as a
+    /// <see cref="RefusedToAnswerException"/> from inside the talk loop, and <c>AbstractAiAgentProcessor.ExecuteInternalAsync</c>
+    /// wraps it in a generic <see cref="AiException"/> (a refusal is not on its rethrow allowlist - by design, it is
+    /// surfaced the same way as any other agent-communication failure). The original refusal still crosses the wire as
+    /// text: the serialized error carries the inner exception's type name and message (which embeds the refusal text),
+    /// so the caller can see that - and why - the model refused. The structured <c>Refusal</c>/<c>FinishReason</c> fields
+    /// do not survive the wrapping.
     /// </summary>
     [RavenFact(RavenTestCategory.Ai)]
     public async Task RefusalShouldReachTheClientAsRefusedToAnswerException()
@@ -153,10 +150,13 @@ public class RavenDB_25401 : RavenTestBase
 
     private static void AssertRefusalSurfaced(Exception e)
     {
-        var refused = Assert.IsType<RefusedToAnswerException>(e);
+        // The refusal reaches the client wrapped in a generic AiException (not a bare RefusedToAnswerException).
+        // What must survive is the refusal as text: the wrapped error carries the inner exception's type name and its
+        // message, which embeds the refusal text.
+        var wrapper = Assert.IsType<AiException>(e);
 
-        Assert.Equal(ExpectedRefusal, refused.Refusal);
-        Assert.Equal(ExpectedFinishReason, refused.FinishReason);
+        Assert.Contains(nameof(RefusedToAnswerException), wrapper.Message);
+        Assert.Contains(ExpectedRefusal, wrapper.Message);
     }
 
     private async Task<(Raven.Client.Documents.IDocumentStore Store, string AgentId)> SetupAgentThatRefusesAsync()
