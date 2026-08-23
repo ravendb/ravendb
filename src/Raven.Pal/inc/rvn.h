@@ -180,12 +180,6 @@ struct rvn_writeback_stats
     int64_t bytes_skipped;
 };
 
-EXPORT int32_t
-rvn_pager_dirty_stats(void* handle,
-    int64_t* dirty_bytes,
-    int64_t* run_count,
-    int32_t* detailed_error_code);
-
 /* Walks the pager's dirty pages and pushes the corresponding ranges to the device as a pipelined stream:
     Blocking; returns once all dirty ranges have been pushed AND completed.
    pipeline_depth == 0 is trickle mode: initiate the writeback without waiting (background work).

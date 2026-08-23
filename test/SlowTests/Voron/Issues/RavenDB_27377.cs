@@ -302,6 +302,7 @@ public class RavenDB_27377(ITestOutputHelper output) : RavenTestBase(output)
         options.ManualFlushing = true;
         options.ManualSyncing = true;
         options.MaxConcurrentJournalWrites = maxConcurrentJournalWrites;
+        options.PipelineJournalWritesAboveLatencyInTicks = 0; // these tests exercise the pipeline itself - always engage it
         return options;
     }
 

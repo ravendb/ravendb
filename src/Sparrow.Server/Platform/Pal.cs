@@ -172,13 +172,6 @@ namespace Sparrow.Server.Platform
             void* handle, out Int32 errorCode);
 
         
-        [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern PalFlags.FailCodes rvn_pager_dirty_stats(
-            void* handle,
-            out Int64 dirtyBytes,
-            out Int64 runCount,
-            out Int32 errorCode);
-
         // This is advisory in general, for performance. but any failure MUST be treated as a sync failure (see fsync-gate)
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_pager_writeback_dirty(
