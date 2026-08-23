@@ -40,9 +40,20 @@ public sealed class ApplianceActivationService(
                 await using (var tempFile = File.Create(tempZipPath))
                     await licenseClient.DownloadSetupPackageToAsync(opts.LicenseKey ?? string.Empty, tempFile, stoppingToken);
 
-                Directory.CreateDirectory(opts.SetupPackagePath);
+                var staging = opts.SetupPackagePath + ".incoming";
+                if (Directory.Exists(staging))
+                    Directory.Delete(staging, recursive: true);
+
+                Directory.CreateDirectory(staging);
                 // zip-slip guard: ExtractToDirectory rejects ../ and absolute entries
-                ZipFile.ExtractToDirectory(tempZipPath, opts.SetupPackagePath, overwriteFiles: true);
+                ZipFile.ExtractToDirectory(tempZipPath, staging, overwriteFiles: true);
+
+                WriteAdminThumbprint(staging);
+
+                if (Directory.Exists(opts.SetupPackagePath))
+                    Directory.Delete(opts.SetupPackagePath, recursive: true);
+
+                Directory.Move(staging, opts.SetupPackagePath);
             }
             finally
             {
@@ -54,8 +65,6 @@ public sealed class ApplianceActivationService(
             }
 
             logger.LogInformation("Setup package activated and unpacked to {Path}.", opts.SetupPackagePath);
-
-            WriteAdminThumbprint(opts);
 
             if (string.IsNullOrEmpty(opts.RavenDbS6Service) == false)
             {
@@ -86,10 +95,10 @@ public sealed class ApplianceActivationService(
         }
     }
 
-    private void WriteAdminThumbprint(ApplianceOptions opts)
+    private void WriteAdminThumbprint(string packagePath)
     {
         var adminPfx = Directory
-            .GetFiles(opts.SetupPackagePath, "admin.client.certificate.*.pfx")
+            .GetFiles(packagePath, "admin.client.certificate.*.pfx")
             .OrderBy(p => p, StringComparer.Ordinal)
             .FirstOrDefault();
         if (adminPfx is null)
@@ -98,12 +107,12 @@ public sealed class ApplianceActivationService(
                 "No admin client certificate (admin.client.certificate.*.pfx) found under {Path}; " +
                 "skipping the admin-thumbprint marker — RavenDB will not trust the admin cert and the " +
                 "secure store may fail to authenticate (appliance can hang in Restarting).",
-                opts.SetupPackagePath);
+                packagePath);
             return;
         }
 
         using var cert = X509CertificateLoader.LoadPkcs12FromFile(adminPfx, password: "");
-        File.WriteAllText(Path.Combine(opts.SetupPackagePath, "admin-thumbprint"), cert.Thumbprint);
+        File.WriteAllText(Path.Combine(packagePath, "admin-thumbprint"), cert.Thumbprint);
     }
 
     private void RestartIntoSecureMode(ApplianceOptions opts)
