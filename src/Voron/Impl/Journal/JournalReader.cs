@@ -1,4 +1,5 @@
 using Sparrow;
+using ZstdLib = Sparrow.Utils.ZstdLib;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -133,8 +134,16 @@ namespace Voron.Impl.Journal
             {
                 try
                 {
-                    LZ4.Decode64LongBuffers((byte*)current + sizeof(TransactionHeader), current->CompressedSize, outputPage,
-                        current->UncompressedSize, true);
+                    if ((current->TxMarker & TransactionMarker.ZstdCompressed) != 0)
+                    {
+                        ZstdLib.DecompressToBuffer((byte*)current + sizeof(TransactionHeader), current->CompressedSize, outputPage,
+                            current->UncompressedSize);
+                    }   
+                    else
+                    {
+                        LZ4.Decode64LongBuffers((byte*)current + sizeof(TransactionHeader), current->CompressedSize, outputPage,
+                            current->UncompressedSize, true);
+                    }
                 }
                 catch (Exception e)
                 {

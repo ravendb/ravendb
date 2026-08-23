@@ -1707,7 +1707,7 @@ namespace Voron
 
         public long MaxUnsyncedBytesBeforeSync { get; set; } = 256 * Constants.Size.Megabyte;
 
-        public long MaxUnsyncedBytesBeforeMandatorySync { get; set; } = 2L * Constants.Size.Gigabyte;
+        public long MaxUnsyncedBytesBeforeMandatorySync { get; set; } = 768L * Constants.Size.Megabyte;
 
         public int SyncWritebackBlockSizeInMb { get; set; } = 32;
 
@@ -1720,6 +1720,8 @@ namespace Voron
         public int SyncWritebackDrainQueueDepthThreshold { get; set; } = 5;
 
         public const int MaxSupportedConcurrentJournalWrites = 64;
+
+        public long PipelineJournalWritesAboveLatencyInTicks { get; set; } = 2 * TimeSpan.TicksPerMillisecond;
 
         private int _maxConcurrentJournalWrites = 4;
 
@@ -1748,6 +1750,8 @@ namespace Voron
         public bool DiscardVirtualMemory { get; set; } = true;
         public bool DisableSparseRegions { get; set; }
         public int JournalsCompressionAcceleration { get; set; } = 1;
+
+        public JournalCompressionAlgorithm JournalCompressionAlgorithm { get; set; } = JournalCompressionAlgorithm.Lz4;
         public int MinimumSharedJournalsMergeCount { get; set; } = 8;
         public bool UseSequentialReadAheadHintForJournalRecovery { get; set; } = true;
 

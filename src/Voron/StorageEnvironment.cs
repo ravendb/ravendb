@@ -1554,20 +1554,13 @@ namespace Voron
             }
         }
 
-        internal unsafe bool ShouldDelaySyncToConsolidateWrites()
+        internal bool ShouldDelaySyncToConsolidateWrites()
         {
             var options = Options;
-            if (options.SyncWritebackMinContiguousSizeInKb <= 0 || options.ForceUsing32BitsPager)
+            if (options.SyncWritebackBlockSizeInMb <= 0 || options.RunningOn32Bits)
                 return false;
 
-            if (_journal.Applicator.TotalWrittenButUnsyncedBytes > options.MaxUnsyncedBytesBeforeMandatorySync)
-                return false;
-
-            var rc = Pal.rvn_pager_dirty_stats(CurrentStateRecord.DataPagerState.Handle, out var dirtyBytes, out var runCount, out _);
-            if (rc != PalFlags.FailCodes.Success || runCount == 0)
-                return false; // untracked pager (in-memory, temp) or nothing dirty - keep the old behavior
-
-            return dirtyBytes / runCount < options.SyncWritebackMinContiguousSizeInKb * Constants.Size.Kilobyte;
+            return _journal.Applicator.TotalWrittenButUnsyncedBytes <= options.MaxUnsyncedBytesBeforeMandatorySync;
         }
 
         internal void BackgroundFlushWritesToDataFile()
@@ -1848,7 +1841,7 @@ namespace Voron
 
         internal long DurableTransactionId => Volatile.Read(ref _durableTransactionId);
 
-        internal void NoteJournalWriteSubmitted(long transactionId) =>
+        internal void RecordJournalWriteSubmitted(long transactionId) =>
             ThreadingHelper.InterlockedExchangeMax(ref _submittedJournalTransactionId, transactionId);
 
         internal void MarkJournalWriteDurable(long transactionId)

@@ -9,6 +9,8 @@ using Sparrow;
 using Sparrow.Platform;
 using Sparrow.Server.Platform;
 
+using Voron;
+
 namespace Raven.Server.Config.Categories
 {
     [ConfigurationCategory(ConfigurationCategoryType.Storage)]
@@ -64,6 +66,11 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(4)]
         [ConfigurationEntry("Storage.MaxConcurrentJournalWrites", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int MaxConcurrentJournalWrites { get; set; }
+
+        [Description("EXPERT: Journal writes become eligible for pipelining once their measured write latency exceeds this value (ticks, 10,000 per millisecond). Pipelining also requires small write batches - large batches are bandwidth bound and stay on the group-commit path. Set to 0 to make writes always eligible.")]
+        [DefaultValue(20_000)]
+        [ConfigurationEntry("Storage.PipelineJournalWritesAboveLatencyInTicks", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public long PipelineJournalWritesAboveLatencyInTicks { get; set; }
 
         [Description("Time to sync after flush in seconds")]
         [DefaultValue(30)]
@@ -146,7 +153,7 @@ namespace Raven.Server.Config.Categories
         public Size MaxUnsyncedSizeBeforeSync { get; set; }
 
         [Description("Hard bound on delaying the sync of the data file. A sparse dirty set may delay the sync past Storage.MaxUnsyncedSizeBeforeSyncInMb to consolidate scattered writes, but never past this.")]
-        [DefaultValue(2048)]
+        [DefaultValue(768)]
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Storage.MaxUnsyncedSizeBeforeMandatorySyncInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size MaxUnsyncedSizeBeforeMandatorySync { get; set; }
@@ -160,6 +167,11 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(1)]
         [ConfigurationEntry("Storage.JournalsCompressionAcceleration", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int JournalsCompressionAcceleration { get; set; }
+
+        [Description("Compression algorithm for journal transactions. Zstd compresses better at a comparable cost, which pays on bandwidth-capped volumes.")]
+        [DefaultValue(JournalCompressionAlgorithm.Lz4)]
+        [ConfigurationEntry("Storage.JournalsCompressionAlgorithm", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public JournalCompressionAlgorithm JournalsCompressionAlgorithm { get; set; }
 
         /// <summary>
         /// Specifies the time interval between each IoMetrics Cleaner run
