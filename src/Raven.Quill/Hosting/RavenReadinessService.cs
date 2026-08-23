@@ -44,6 +44,9 @@ public sealed class RavenReadinessService(
 
         try
         {
+            if (string.IsNullOrEmpty(opts.RavenDbS6Service) == false)
+                await WaitForSetupPackageAsync(opts, stoppingToken);
+
             // grace period: RavenDB needs ~10-15s; earlier probes just spam errors
             if (opts.ReadinessInitialDelay > TimeSpan.Zero)
             {
@@ -113,6 +116,18 @@ public sealed class RavenReadinessService(
 
         ready.MarkFailed("shutting down");
         await base.StopAsync(cancellationToken);
+    }
+
+    private async Task WaitForSetupPackageAsync(ApplianceOptions opts, CancellationToken ct)
+    {
+        var settings = GetSetupSettingsPath(opts);
+        if (File.Exists(settings))
+            return;
+
+        logger.LogInformation("Waiting for the setup package at {Path} before probing RavenDB.", settings);
+
+        while (File.Exists(settings) == false)
+            await Task.Delay(TimeSpan.FromSeconds(2), ct);
     }
 
     private static string GetSetupSettingsPath(ApplianceOptions options) =>
