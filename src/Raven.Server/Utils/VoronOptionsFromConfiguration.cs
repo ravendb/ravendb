@@ -27,6 +27,7 @@ namespace Raven.Server.Utils
             options.MaxUnsyncedBytesBeforeSync = configuration.Storage.MaxUnsyncedSizeBeforeSync.GetValue(SizeUnit.Bytes);
             options.MaxUnsyncedBytesBeforeMandatorySync = configuration.Storage.MaxUnsyncedSizeBeforeMandatorySync.GetValue(SizeUnit.Bytes);
             options.MaxConcurrentJournalWrites = configuration.Storage.MaxConcurrentJournalWrites;
+            options.PipelineJournalWritesAboveLatencyInTicks = configuration.Storage.PipelineJournalWritesAboveLatencyInTicks;
             options.SyncWritebackBlockSizeInMb = configuration.Storage.SyncWritebackBlockSizeInMb;
             options.SyncWritebackMinContiguousSizeInKb = configuration.Storage.SyncWritebackMinContiguousSizeInKb;
             options.SyncWritebackBarrierCostThresholdInMs = configuration.Storage.SyncWritebackBarrierCostThresholdInMs;
@@ -37,6 +38,7 @@ namespace Raven.Server.Utils
             options.MaxNumberOfRecyclableJournals = configuration.Storage.MaxNumberOfRecyclableJournals;
             options.DisableSparseRegions = configuration.Storage.DisableSparseRegions;
             options.JournalsCompressionAcceleration = configuration.Storage.JournalsCompressionAcceleration;
+            options.JournalCompressionAlgorithm = configuration.Storage.JournalsCompressionAlgorithm;
             options.MinimumSharedJournalsMergeCount = configuration.Indexing.MinimumSharedJournalsMergeCount;
             options.MaxLogFileSize = configuration.Storage.MaxJournalFileSize.GetValue(SizeUnit.Bytes);
         }

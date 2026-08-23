@@ -423,7 +423,7 @@ public unsafe partial class Pager : IDisposable
         // the file size increases, we will reserve more & more from the OS.
         // This also avoids "I added 300 records and the file size is 64MB" problems that occur when we are too
         // eager to reserve space
-        var actualIncrease = Math.Min(_increaseSize, current / 2);
+        var actualIncrease = Math.Min(_increaseSize, current >= IncreaseByPowerOf2Threshold ? current : current / 2);
 
         // we then want to get the next power of two number, to get pretty file size
         var totalSize = current + actualIncrease;

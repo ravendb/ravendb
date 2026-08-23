@@ -31,6 +31,7 @@ namespace FastTests.Issues
             nameof(StorageEnvironmentOptions.MaxUnsyncedBytesBeforeSync),
             nameof(StorageEnvironmentOptions.MaxUnsyncedBytesBeforeMandatorySync),
             nameof(StorageEnvironmentOptions.MaxConcurrentJournalWrites),
+            nameof(StorageEnvironmentOptions.PipelineJournalWritesAboveLatencyInTicks),
             nameof(StorageEnvironmentOptions.SyncWritebackBlockSizeInMb),
             nameof(StorageEnvironmentOptions.SyncWritebackMinContiguousSizeInKb),
             nameof(StorageEnvironmentOptions.SyncWritebackBarrierCostThresholdInMs),
@@ -41,6 +42,7 @@ namespace FastTests.Issues
             nameof(StorageEnvironmentOptions.MaxNumberOfRecyclableJournals),
             nameof(StorageEnvironmentOptions.DisableSparseRegions),
             nameof(StorageEnvironmentOptions.JournalsCompressionAcceleration),
+            nameof(StorageEnvironmentOptions.JournalCompressionAlgorithm),
             nameof(StorageEnvironmentOptions.MinimumSharedJournalsMergeCount),
             nameof(StorageEnvironmentOptions.MaxLogFileSize),
         };

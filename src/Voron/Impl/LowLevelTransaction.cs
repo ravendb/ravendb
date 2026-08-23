@@ -1148,7 +1148,10 @@ namespace Voron.Impl
             CommitStage3_DisposeTransactionResources();
         }
 
+        // This task completes when the journal write is submitted, but not necessarily durable yet. Next tx can start, but this tx isn't published yet.
         internal Task<bool> AsyncCommit;
+        // This task completes when the journal write for this transaction is durably stored on disk.
+        internal Task DurableCommit;
         private LowLevelTransaction _asyncCommitNextTransaction;
         private LowLevelTransaction _asyncCommitPreviousTransaction;
         private bool _asyncCommitSubmissionEnded;

@@ -63,6 +63,9 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
     private readonly ulong _allSlots;
     private ulong _completedSlots;
     private long _nextSequence;    // submitter only, serialized by the journal write lock
+    private SimpleEwma _writeLatencyTicks = new(smoothing: 8);
+    private SimpleEwma _writeSizeBytes = new(smoothing: 8);
+    private readonly long _pipelineAboveLatencyTicks;
     private long _reapedSequence;  // claimed by reapers with a CAS
     private long _lowestFailedSequence = long.MaxValue;
     private ExceptionDispatchInfo _failure;
@@ -76,22 +79,45 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
         _maxConcurrentWrites = Math.Clamp(env.Options.MaxConcurrentJournalWrites, 1, StorageEnvironmentOptions.MaxSupportedConcurrentJournalWrites);
         _slots = new PendingWrite[_maxConcurrentWrites];
         _allSlots = _maxConcurrentWrites == 64 ? ulong.MaxValue : (1UL << _maxConcurrentWrites) - 1;
+        _pipelineAboveLatencyTicks = env.Options.PipelineJournalWritesAboveLatencyInTicks;
     }
 
-    public bool IsPipelining => _maxConcurrentWrites > 1;
+    public bool PipeliningEnabled => _maxConcurrentWrites > 1;
+
+    internal bool ShouldPipelineNow =>
+        PipeliningEnabled &&                                          
+        // the device is slow enough that overlapping writes pays for the smaller batches
+        _writeLatencyTicks.Current >= _pipelineAboveLatencyTicks &&   
+        // if we are bounded by device bandwidth, pipelining won't help
+        IsCommitLatencyBound;                                         
+
+    internal long WriteLatencyEwmaTicks => _writeLatencyTicks.Current;
+
+    internal bool IsMeasuredFastDevice
+    {
+        get
+        {
+            // small writes can be fast on a slow device, so we can't estimate from small writes only
+            // gp3 writes small batches in 1.3-1.9ms, gp2 in 3-4ms, we need more than that...
+            if (_writeSizeBytes.Current < 256 * Constants.Size.Kilobyte)
+                return false;
+
+            var ewma = _writeLatencyTicks.Current;
+            return ewma != 0 && ewma < _pipelineAboveLatencyTicks / 2;
+        }
+    }
 
     public int MaxConcurrentWrites => _maxConcurrentWrites;
 
-    public bool CanPipeline(long totalNumberOf4Kbs) => IsPipelining && totalNumberOf4Kbs <= MaxPipelinedBatch4Kbs;
+    public bool CanPipeline(long totalNumberOf4Kbs) =>
+        PipeliningEnabled &&                                          
+        // < 1MB, otherwise we'll be copying to our own buffer, then we have large write, etc. Doesn't pay off. 
+        totalNumberOf4Kbs <= MaxPipelinedBatch4Kbs &&                 
+        // the device is slow enough that overlapping writes pays for the smaller batches
+        _writeLatencyTicks.Current >= _pipelineAboveLatencyTicks;     
 
     public void SubmitPipelined(JournalFile file, long posBy4Kb, Span<Pal.journal_entry> entries, long totalNumberOf4Kbs, List<Ack> acks)
     {
-        // for this to make sense, we have to copy the data to *our own buffer*, if this is too large, the caller should use WriteInline instead
-        if (CanPipeline(totalNumberOf4Kbs) == false)
-            throw new InvalidOperationException(
-                $"Refusing to pipeline a journal write of {totalNumberOf4Kbs} 4KB blocks (limit is {MaxPipelinedBatch4Kbs}, pipelining enabled: {IsPipelining}) - such a write must go through {nameof(WriteInline)}");
-
-
         var write = RentWrite(file, posBy4Kb, (int)totalNumberOf4Kbs, acks);
 
         file.AddRef();
@@ -112,7 +138,7 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
 
             Debug.Assert(copied4Kbs == write.NumberOf4Kbs, $"copied {copied4Kbs} of {write.NumberOf4Kbs} 4KB blocks");
 
-            NoteSubmitted(write);
+            RecordSubmitted(acks);
 
             ThreadPool.UnsafeQueueUserWorkItem(write, preferLocal: false);
         }
@@ -126,28 +152,56 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
 
     public void WriteInline(JournalFile file, long posBy4Kb, Span<Pal.journal_entry> entries, long totalNumberOf4Kbs, List<Ack> acks)
     {
-        // we mustn't have anything else concurrently running with us
-        Drain(throwOnFailure: false);
+        Drain(throwOnFailure: false); // we mustn't have anything else concurrently running with us
+        Debug.Assert(_disposed is false, "WriteInline called after the pipeline was disposed");
 
-        var write = RentWrite(file, posBy4Kb, checked((int)totalNumberOf4Kbs), acks);
+        var failure = Volatile.Read(ref _failure);
+        if (failure != null) // previous error, fail
+        {
+            ErrorAck(acks, failure.SourceException);
+            failure.Throw();
+        }
+        
+        WriteDirect(file, posBy4Kb, entries, totalNumberOf4Kbs, acks);
+    }
 
-        file.AddRef();
+    private SafeJournalWriteContext _inlineContext;
+
+    private void WriteDirect(JournalFile file, long posBy4Kb, Span<Pal.journal_entry> entries, long totalNumberOf4Kbs, List<Ack> acks)
+    {
+        RecordSubmitted(acks);
 
         try
         {
-            NoteSubmitted(write);
+            _inlineContext ??= SafeJournalWriteContext.Create();
 
-            if (IsAfterFailure(write.Sequence) == false) // otherwise, Complete will raise the error
-                file.Write(posBy4Kb, entries, write.Context);
+            var start = Stopwatch.GetTimestamp();
+            file.Write(posBy4Kb, entries, _inlineContext);
+            RecordWriteLatency(Stopwatch.GetElapsedTime(start).Ticks, totalNumberOf4Kbs);
         }
         catch (Exception e)
         {
-            write.Error = e;
+            ErrorAck(acks, e);
+            throw;
         }
 
-        Complete(write);
+        foreach (var ack in acks)
+        {
+            ack.Environment.MarkJournalWriteDurable(ack.TransactionId);
+            ack.CommitCompleted?.TrySetResult();
+        }
+    }
 
-        Volatile.Read(ref _failure)?.Throw();
+    private void ErrorAck(List<Ack> acks, Exception e)
+    {
+        var error = ExceptionDispatchInfo.Capture(e);
+        Interlocked.CompareExchange(ref _failure, error, null);
+        MarkFailed(_env, Volatile.Read(ref _failure));
+        foreach (var ack in acks)
+        {
+            MarkFailed(ack.Environment, Volatile.Read(ref _failure));
+            ack.CommitCompleted?.TrySetException(e);
+        }
     }
 
     public void Drain(bool throwOnFailure = true)
@@ -182,15 +236,26 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
             Monitor.PulseAll(_waiters);
     }
 
-    private static void NoteSubmitted(PendingWrite write)
+    private static void RecordSubmitted(List<Ack> acks)
     {
-        foreach (var ack in write.Acks)
+        foreach (var ack in acks)
         {
-            ack.Environment.NoteJournalWriteSubmitted(ack.TransactionId);
+            ack.Environment.RecordJournalWriteSubmitted(ack.TransactionId);
         }
     }
 
     private bool IsAfterFailure(long sequence) => sequence > Volatile.Read(ref _lowestFailedSequence);
+
+    private void RecordWriteLatency(long ticks, long numberOf4Kbs)
+    {
+        _writeLatencyTicks.Update(ticks);
+        _writeSizeBytes.Update(numberOf4Kbs * 4 * Constants.Size.Kilobyte);
+    }
+
+    internal bool IsCommitLatencyBound => 
+        // if we are making large writes, we'll be limited by device bandwidth, not latency.
+        // latency is meaningful if we have many small commits, not large ones
+        _writeSizeBytes.Current < 256 * Constants.Size.Kilobyte;
 
     private void Execute(PendingWrite write)
     {
@@ -199,7 +264,9 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
             if (IsAfterFailure(write.Sequence) == false)
             {
                 var entry = new Pal.journal_entry { Base = write.Buffer, NumberOf4Kbs = write.NumberOf4Kbs };
+                var start = Stopwatch.GetTimestamp();
                 write.File.Write(write.PosBy4Kb, MemoryMarshal.CreateSpan(ref entry, 1), write.Context);
+                RecordWriteLatency(Stopwatch.GetElapsedTime(start).Ticks, write.NumberOf4Kbs);
             }
             else
             {
@@ -420,5 +487,8 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
 
         foreach (var write in _slots)
             write?.Dispose();
+
+        _inlineContext?.Dispose();
+        _inlineContext = null;
     }
 }

@@ -285,6 +285,22 @@ namespace Sparrow.Utils
             }
         }
 
+        public static long CompressWithLevel(byte* src, long srcLen, byte* dst, long dstLen, int level)
+        {
+            _threadCompressContext ??= new CompressContext(level: 0);
+            var result = ZSTD_compressCCtx(_threadCompressContext.Compression, dst, (UIntPtr)dstLen, src, (UIntPtr)srcLen, level);
+            AssertSuccess(result, null);
+            return (long)result;
+        }
+
+        public static long DecompressToBuffer(byte* srcPtr, long srcSize, byte* dstPtr, long dstSize)
+        {
+            _threadCompressContext ??= new CompressContext(level: 0);
+            var result = ZSTD_decompressDCtx(_threadCompressContext.Decompression, dstPtr, (UIntPtr)dstSize, srcPtr, (UIntPtr)srcSize);
+            AssertSuccess(result, null);
+            return (long)result;
+        }
+
         public static int Decompress(ReadOnlySpan<byte> src, Span<byte> dst, CompressionDictionary dictionary)
         {
             fixed (byte* srcPtr = src)

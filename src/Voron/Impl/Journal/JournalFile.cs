@@ -88,34 +88,30 @@ namespace Voron.Impl.Journal
             return (first, last, count);
         }
 
-        public TransactionHeader GetLastReadTxHeader(long maxTransactionId)
+
+        public TransactionHeader GetLastReadTxHeader(long maxTransactionId, Guid journalId)
         {
-            int low = 0;
-            int high = _transactionHeaders.Count - 1;
+            long lastSeenTxId = long.MaxValue;
 
-            while (low <= high)
+            // we have to scan here, since we get transactions from multiple environments
+            for (int i = _transactionHeaders.Count - 1; i >= 0; i--)
             {
-                int mid = (low + high) >> 1;
-                long midValTxId = _transactionHeaders[mid].TransactionId;
+                var header = _transactionHeaders[i];
 
-                if (midValTxId < maxTransactionId)
-                    low = mid + 1;
-                else if (midValTxId > maxTransactionId)
-                    high = mid - 1;
-                else // found the max tx id
-                {
-                    return _transactionHeaders[mid];
-                }
+                // an empty journal id is a pre-8.0 transaction, from before journals could be shared, so it
+                // can only belong to the environment that owns this file
+                if (header.JournalId != journalId && header.JournalId != Guid.Empty)
+                    continue;
+
+                Debug.Assert(header.TransactionId < lastSeenTxId,
+                    $"Transactions of a single journal id are appended in order, but {header.TransactionId} came before {lastSeenTxId}");
+                lastSeenTxId = header.TransactionId;
+
+                if (header.TransactionId <= maxTransactionId)
+                    return header;
             }
-            if (low == 0)
-            {
-                return new TransactionHeader{ TransactionId = -1}; // not found
-            }
-            if (high != _transactionHeaders.Count - 1)
-            {
-                throw new InvalidOperationException("Found a gap in the transaction headers held by this journal file in memory, shouldn't be possible");
-            }
-            return _transactionHeaders[^1];
+
+            return new TransactionHeader { TransactionId = -1 };
         }
 
         /// <summary>

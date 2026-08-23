@@ -25,6 +25,7 @@ using Sparrow.Server.LowMemory;
 using Sparrow.Server.Meters;
 using Sparrow.Server.Platform;
 using Sparrow.Server.Utils;
+using Sparrow.Utils;
 using Sparrow.Server.Utils.VxSort;
 using Sparrow.Threading;
 using Voron.Data.BTrees;
@@ -58,6 +59,8 @@ namespace Voron.Impl.Journal
         {
             public JournalStateRecord JournalStateRecord => new JournalStateRecord(Transaction, Tcs, Entry);
         }
+
+        private const int FastDeviceCompressTxAboveSizeInBytes = 512 * Constants.Size.Kilobyte;
 
         private long _currentJournalFileSize;
         private DateTime _lastFile;
@@ -312,6 +315,12 @@ namespace Voron.Impl.Journal
         public bool HasBranchCommits => SharedJournalState.HasBranchCommits;
 
         internal int MaxConcurrentJournalWrites => _writePipeline.MaxConcurrentWrites;
+
+        internal bool ShouldPipelineJournalNow => _writePipeline.ShouldPipelineNow;
+
+        internal bool IsCommitLatencyBound => _writePipeline.IsCommitLatencyBound;
+
+        public long WriteLatencyEwmaTicks => _writePipeline.WriteLatencyEwmaTicks;
 
         private JournalFile NextFile(long numberOf4Kbs)
         {
@@ -2143,7 +2152,7 @@ namespace Voron.Impl.Journal
 
             public void SetLastFlushed(long lastTransactionId, JournalFile journalFile, List<JournalFile> journalFiles, List<string> pathsToSync)
             {
-                var lastFlushedTxHeader = journalFile.GetLastReadTxHeader(lastTransactionId);
+                var lastFlushedTxHeader = journalFile.GetLastReadTxHeader(lastTransactionId, _waj._env.HeaderAccessor.JournalId);
          
                 var newState = new LastFlushState(lastTransactionId, 
                     journalFile, journalFiles, pathsToSync,
@@ -2221,6 +2230,7 @@ namespace Voron.Impl.Journal
                         var start = Stopwatch.GetTimestamp();
                         var entry = PrepareToWriteToJournal(tx, ref tempTxState, out numberOfUncompressedPages, out var numberOfUsedCompressionBufferPages);
                         branchCommit = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                        tx.DurableCommit = branchCommit.Task;
                         numberOf4Kbs = entry.NumberOf4Kbs;
                         var pendingJournalStateRecord = new PendingJournalStateRecord(tx, branchCommit, entry);
                         journalStateRecord = pendingJournalStateRecord.JournalStateRecord;
@@ -2742,14 +2752,17 @@ namespace Voron.Impl.Journal
             long compressedLen = 0;
 
             // We want to do compression when the size of the data to store is bigger than the threshold.
-            // This is essentially a threshold between IO blocks usage and the CPU consumption of LZ4
-            // PERF: Before v7.0 we would avoid doing the diff if the amount of pages was big, however,
-            // the speed of diffing is roughly that of a memory copy, which is so fast that the benefit of always doing
-            // it is big enough to just do it every time. 
-            var performCompression = totalSizeWritten > _env.Options.CompressTxAboveSizeInBytes;
+            // On NVMe devices, writing the full data to disk is _faster_ than compressing it first.
+            var compressTxAboveSizeInBytes = _env.Options.CompressTxAboveSizeInBytes;
+            if (_writePipeline.IsMeasuredFastDevice)
+                compressTxAboveSizeInBytes = Math.Max(compressTxAboveSizeInBytes, FastDeviceCompressTxAboveSizeInBytes);
+            var performCompression = totalSizeWritten > compressTxAboveSizeInBytes;
+            var compressionAlgorithm = _env.Options.JournalCompressionAlgorithm;
             if (performCompression)
             {
-                var outputBufferSize = LZ4.MaximumOutputLength(totalSizeWritten);
+                var outputBufferSize = compressionAlgorithm == JournalCompressionAlgorithm.Zstd
+                    ? ZstdLib.GetMaxCompression(totalSizeWritten)
+                    : LZ4.MaximumOutputLength(totalSizeWritten);
                 int outputBufferInPages = checked((int)((outputBufferSize + sizeof(TransactionHeader)) / Constants.Storage.PageSize +
                                                         ((outputBufferSize + sizeof(TransactionHeader)) % Constants.Storage.PageSize == 0 ? 0 : 1)));
 
@@ -2792,12 +2805,9 @@ namespace Voron.Impl.Journal
                 using (var metrics = _env.Options.IoMetrics.MeterIoRate(path, IoMetrics.MeterType.Compression, 0)) // Note that the last journal may be replaced if we switch journals, however it doesn't affect web graph
                 {
                     int compressionAcceleration = _env.Options.JournalsCompressionAcceleration;
-                    compressedLen = LZ4.Encode64LongBuffer(
-                        txPageInfoPtr,
-                        compressionBuffer,
-                        totalSizeWritten,
-                        outputBufferSize,
-                        compressionAcceleration);
+                    compressedLen = compressionAlgorithm == JournalCompressionAlgorithm.Zstd
+                        ? ZstdLib.CompressWithLevel(txPageInfoPtr, totalSizeWritten, compressionBuffer, outputBufferSize, level: 1)
+                        : LZ4.Encode64LongBuffer(txPageInfoPtr, compressionBuffer, totalSizeWritten, outputBufferSize, compressionAcceleration);
 
                     metrics.SetCompressionResults(totalSizeWritten, compressedLen, compressionAcceleration);
                 }
@@ -2823,6 +2833,8 @@ namespace Voron.Impl.Journal
             var reportedCompressionLength = performCompression ? compressedLen : -1;
 
             txHeader.CompressedSize = reportedCompressionLength;
+            if (performCompression && compressionAlgorithm == JournalCompressionAlgorithm.Zstd)
+                txHeader.TxMarker |= TransactionMarker.ZstdCompressed;
             txHeader.UncompressedSize = totalSizeWritten;
             txHeader.PageCount = numberOfPages;
             txHeader.JournalId = _headerAccessor.JournalId;
