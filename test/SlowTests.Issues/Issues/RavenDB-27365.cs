@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -163,7 +164,7 @@ namespace SlowTests.Issues
                 // Wait for a tick that carries all three.
                 await WaitForValueAsync(() =>
                 {
-                    var reported = SnapshotEntryByDatabase(leader, store.Database)?.SystemCollections;
+                    var reported = SnapshotEntryByDatabase(leader, store.Database)?.SystemCollectionsList?.SingleOrDefault()?.SystemCollections;
                     return reported != null && expected.All(reported.ContainsKey);
                 }, true, timeout: 30_000, interval: 100);
 
@@ -172,13 +173,19 @@ namespace SlowTests.Issues
 
                 var entry = SnapshotEntryByDatabase(leader, store.Database);
                 Assert.NotNull(entry);
-                Assert.NotNull(entry.SystemCollections);
 
-                var actual = string.Join(", ", entry.SystemCollections.Keys);
+                // One entry per member, each carrying its own database id and its own stats.
+                var reportedByMember = entry.SystemCollectionsList.Single();
+                Assert.NotNull(reportedByMember.SystemCollections);
+
+                // Keyed by the same database id the last-etag tuple uses, so the two line up per member.
+                Assert.Equal(entry.Nodes.Single().DatabaseId, reportedByMember.DatabaseId);
+
+                var actual = string.Join(", ", reportedByMember.SystemCollections.Keys);
 
                 foreach (var collection in expected)
                 {
-                    Assert.True(entry.SystemCollections.TryGetValue(collection, out var stats),
+                    Assert.True(reportedByMember.SystemCollections.TryGetValue(collection, out var stats),
                         $"Expected '{collection}' in the report, got: {actual}.");
                     Assert.True(stats.Count > 0, $"Expected a document count for '{collection}', got {stats.Count}.");
                     Assert.True(stats.Etag > 0, $"Expected a last etag for '{collection}', got {stats.Etag}.");
@@ -186,9 +193,83 @@ namespace SlowTests.Issues
 
                 // Not reported: the user's own collection, and '@empty' - which carries the '@' prefix but
                 // holds the user documents that were written without a collection.
-                Assert.DoesNotContain(Constants.Documents.Collections.EmptyCollection, entry.SystemCollections.Keys);
-                Assert.DoesNotContain(Constants.Documents.Collections.AllDocumentsCollection, entry.SystemCollections.Keys);
-                Assert.DoesNotContain(SourceCollection, entry.SystemCollections.Keys);
+                Assert.DoesNotContain(Constants.Documents.Collections.EmptyCollection, reportedByMember.SystemCollections.Keys);
+                Assert.DoesNotContain(Constants.Documents.Collections.AllDocumentsCollection, reportedByMember.SystemCollections.Keys);
+                Assert.DoesNotContain(SourceCollection, reportedByMember.SystemCollections.Keys);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Licensing | RavenTestCategory.Cluster, LicenseRequired = true)]
+        public async Task SystemCollections_AreReportedPerDatabaseId_Unmerged()
+        {
+            var (nodes, leader) = await CreateRaftCluster(2, watcherCluster: true);
+
+            using (var store = GetDocumentStore(new Options { ReplicationFactor = 2, Server = leader }))
+            {
+                // '@hilo' comes for free: storing an entity without an id makes the client ask the server for
+                // a HiLo range, and the server writes the range document into '@hilo', which then replicates.
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 1);
+                    await session.StoreAsync(new Dto { Name = "a name" });
+                    await session.SaveChangesAsync();
+                }
+
+                // The '@hilo' values each member should be reporting, read straight from its own storage.
+                // Etags are node-local, so every member is checked against its own numbers - not the group's.
+                var expectedEtagByDatabaseId = new Dictionary<string, long>();
+                foreach (var node in nodes)
+                {
+                    var database = await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (var tx = context.OpenReadTransaction())
+                    {
+                        expectedEtagByDatabaseId[database.DbBase64Id] =
+                            database.DocumentsStorage.GetLastDocumentEtag(tx.InnerTransaction, CollectionName.HiLoCollection);
+                    }
+                }
+
+                Assert.Equal(2, expectedEtagByDatabaseId.Count);
+
+                // Wait for a tick where both members have reported their own '@hilo' stats.
+                await WaitForValueAsync(() =>
+                {
+                    var reported = SnapshotEntryByDatabase(leader, store.Database)?.SystemCollectionsList;
+                    if (reported == null || reported.Count != expectedEtagByDatabaseId.Count)
+                        return false;
+
+                    return reported.All(s => s.SystemCollections != null &&
+                                             expectedEtagByDatabaseId.TryGetValue(s.DatabaseId, out var expectedEtag) &&
+                                             s.SystemCollections.TryGetValue(CollectionName.HiLoCollection, out var stats) &&
+                                             stats.Etag == expectedEtag);
+                }, true, timeout: 30_000, interval: 100);
+
+                // Freeze ticks for a deterministic read of the published snapshot.
+                leader.ServerStore.Observer.Suspended = true;
+
+                var entry = SnapshotEntryByDatabase(leader, store.Database);
+                Assert.NotNull(entry);
+
+                // One entry per member, keyed by its database id and carrying that member's own values - the
+                // group is not collapsed into a single summary, so the backend aggregates it itself.
+                Assert.Equal(expectedEtagByDatabaseId.Count, entry.SystemCollectionsList.Count);
+                Assert.Equal(expectedEtagByDatabaseId.Keys.OrderBy(id => id),
+                    entry.SystemCollectionsList.Select(s => s.DatabaseId).OrderBy(id => id));
+
+                // The same database ids the last-etag tuples use, so the two lists line up per member.
+                Assert.Equal(entry.Nodes.Select(n => n.DatabaseId).OrderBy(id => id),
+                    entry.SystemCollectionsList.Select(s => s.DatabaseId).OrderBy(id => id));
+
+                foreach (var reported in entry.SystemCollectionsList)
+                {
+                    Assert.NotNull(reported.SystemCollections);
+                    Assert.True(reported.SystemCollections.TryGetValue(CollectionName.HiLoCollection, out var stats),
+                        $"Expected '{CollectionName.HiLoCollection}' for database id '{reported.DatabaseId}', " +
+                        $"got: {string.Join(", ", reported.SystemCollections.Keys)}.");
+
+                    Assert.Equal(expectedEtagByDatabaseId[reported.DatabaseId], stats.Etag);
+                    Assert.True(stats.Count > 0, $"Expected a document count for '{CollectionName.HiLoCollection}', got {stats.Count}.");
+                }
             }
         }
     }
