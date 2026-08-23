@@ -249,12 +249,12 @@ namespace Raven.Server.ServerWide.Maintenance
                             var state = new DatabaseObservationState(topology.Name, rawRecord, topology.Topology, clusterTopology, newStats, prevStats, etag, _iteration);
 
                             // Collect the current write-usage values for this topology (database or shard):
-                            // the MEMBER change vectors merged into a single cluster-wide change vector, each
-                            // member's own (database id, last etag) kept unmerged for per-node metering, and the
-                            // system collection stats merged over the members.
+                            // the MEMBER change vectors merged into a single cluster-wide change vector, and each
+                            // member's own (database id, last etag) and (database id, system collection stats)
+                            // kept unmerged - the backend gets every member's raw values and aggregates them.
                             var memberChangeVectors = new List<string>();
                             var dbLastEtag = new List<LastEtagSnapshot>();
-                            var systemCollections = new Dictionary<string, SystemCollectionStats>(StringComparer.OrdinalIgnoreCase);
+                            var systemCollectionsList = new List<SystemCollectionsSnapshot>();
                             foreach (var member in state.DatabaseTopology.Members)
                             {
                                 var memberReport = state.GetCurrentDatabaseReport(member);
@@ -263,27 +263,16 @@ namespace Raven.Server.ServerWide.Maintenance
 
                                 memberChangeVectors.Add(ChangeVector.StripMoveTag(memberReport.DatabaseChangeVector, context).AsString());
 
-                                if (memberReport.SystemCollections != null)
-                                {
-                                    foreach (var (collection, memberStats) in memberReport.SystemCollections)
-                                    {
-                                        if (systemCollections.TryGetValue(collection, out var merged) == false)
-                                            systemCollections[collection] = merged = new SystemCollectionStats();
-
-                                        merged.Etag = Math.Max(merged.Etag, memberStats.Etag);
-                                        merged.Count = Math.Max(merged.Count, memberStats.Count);
-                                    }
-                                }
-
                                 if (string.IsNullOrEmpty(memberReport.DatabaseId))
                                     continue;
 
                                 dbLastEtag.Add(new LastEtagSnapshot(memberReport.DatabaseId, memberReport.LastEtag));
+                                systemCollectionsList.Add(new SystemCollectionsSnapshot(memberReport.DatabaseId, memberReport.SystemCollections));
                             }
 
                             var mergedChangeVector = ChangeVectorUtils.MergeVectors(memberChangeVectors);
                             writeUsageSnapshots.Add(new WriteUsageApplicationSnapshot(state.Name, state.DatabaseTopology.DatabaseTopologyIdBase64, mergedChangeVector,
-                                dbLastEtag, systemCollections));
+                                dbLastEtag, systemCollectionsList));
 
                             try
                             {
