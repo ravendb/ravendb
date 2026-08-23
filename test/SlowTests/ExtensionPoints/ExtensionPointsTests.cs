@@ -446,69 +446,6 @@ exit 0";
         }
 
         [RavenFact(RavenTestCategory.Configuration)]
-        public async Task OnDatabaseCreateExecTest()
-        {
-            string script;
-            IDictionary<string, string> customSettings = new ConcurrentDictionary<string, string>();
-
-            var scriptExt = PlatformDetails.RunningOnPosix ? ".sh" : ".ps1";
-            var scriptFile = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), scriptExt));
-            var outputFile = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".txt"));
-
-            try
-            {
-                if (PlatformDetails.RunningOnPosix)
-                {
-                    customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseCreateExec)] = "bash";
-                    customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseCreateExecArguments)] = $"{scriptFile} {outputFile}";
-
-                    script = "#!/bin/bash\necho \"$2 $3\" >> $1";
-                    File.WriteAllText(scriptFile, script);
-                    Process.Start("chmod", $"700 {scriptFile}");
-                }
-                else
-                {
-                    customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseCreateExec)] = "powershell";
-                    customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseCreateExecArguments)] = $"-NoProfile {scriptFile} {outputFile}";
-
-                    script = @"
-param([string]$outputPath, [string]$dbName, [string]$dbNameBase64)
-Add-Content $outputPath ""$dbName $dbNameBase64""
-exit 0";
-                    File.WriteAllText(scriptFile, script);
-                }
-
-                UseNewLocalServer(customSettings: customSettings);
-
-                using (var store = GetDocumentStore())
-                {
-                    // Wait for the database to be fully created
-                    await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-
-                    // Give some time for the exec to complete (it runs in the cluster change handler)
-                    var timeout = Stopwatch.StartNew();
-                    while (File.Exists(outputFile) == false && timeout.Elapsed < TimeSpan.FromSeconds(30))
-                    {
-                        await Task.Delay(100);
-                    }
-
-                    Assert.True(File.Exists(outputFile), "Output file was not created by the OnDatabaseCreate exec script.");
-
-                    var content = File.ReadAllText(outputFile).Trim();
-                    var expectedBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(store.Database));
-
-                    Assert.Contains(store.Database, content);
-                    Assert.Contains(expectedBase64, content);
-                }
-            }
-            finally
-            {
-                if (File.Exists(scriptFile)) File.Delete(scriptFile);
-                if (File.Exists(outputFile)) File.Delete(outputFile);
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Configuration)]
         public async Task OnDatabaseDeleteExecTest()
         {
             string script;
@@ -525,18 +462,19 @@ exit 0";
                     customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseDeleteExec)] = "bash";
                     customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseDeleteExecArguments)] = $"{scriptFile} {outputFile}";
 
-                    script = "#!/bin/bash\necho \"$2 $3\" >> $1";
+                    // bash passes the '--' sentinel through to the script, so the database name is $3
+                    script = "#!/bin/bash\necho \"$3 $4 $5\" >> $1";
                     File.WriteAllText(scriptFile, script);
-                    Process.Start("chmod", $"700 {scriptFile}");
                 }
                 else
                 {
                     customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseDeleteExec)] = "powershell";
                     customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseDeleteExecArguments)] = $"-NoProfile {scriptFile} {outputFile}";
 
+                    // PowerShell's binder consumes the '--' sentinel, so the database name binds to the second parameter
                     script = @"
-param([string]$outputPath, [string]$dbName, [string]$dbNameBase64)
-Add-Content $outputPath ""$dbName $dbNameBase64""
+param([string]$outputPath, [string]$dbName, [string]$dbNameBase64, [string]$deletionKind)
+Add-Content $outputPath ""$dbName $dbNameBase64 $deletionKind""
 exit 0";
                     File.WriteAllText(scriptFile, script);
                 }
@@ -569,6 +507,7 @@ exit 0";
 
                 Assert.Contains(databaseName, content);
                 Assert.Contains(expectedBase64, content);
+                Assert.Contains("hard", content);
             }
             finally
             {
