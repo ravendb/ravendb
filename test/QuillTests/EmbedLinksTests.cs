@@ -9,6 +9,8 @@ using Raven.Quill.Contracts;
 using Tests.Infrastructure;
 using Xunit;
 
+using static QuillTests.E2E.Fixtures.AgentParameterFixtures;
+
 namespace QuillTests;
 
 public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
@@ -121,7 +123,7 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
         Assert.Equal(HttpStatusCode.BadRequest, missing.StatusCode);
 
         var ok = await h.App.MintEmbedLinkAsync(new MintEmbedLinkRequest(
-            channelId, new Dictionary<string, string> { ["customerId"] = "companies/1-A" }, 3600, 10));
+            channelId, Parameters(("customerId", "companies/1-A")), 3600, 10));
         Assert.False(string.IsNullOrEmpty(ok.Token));
     }
 
@@ -132,13 +134,13 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
         var channelId = await ProvisionParamAgentChannelAsync(h.App);
 
         var older = await MintAsync(h.App, channelId,
-            parameters: new Dictionary<string, string> { ["customerId"] = "companies/1-A" });
+            parameters: Parameters(("customerId", "companies/1-A")));
         var newer = await MintAsync(h.App, channelId,
-            parameters: new Dictionary<string, string> { ["customerId"] = "companies/2-A" });
+            parameters: Parameters(("customerId", "companies/2-A")));
         var expired = await MintAsync(h.App, channelId,
-            parameters: new Dictionary<string, string> { ["customerId"] = "companies/3-A" });
+            parameters: Parameters(("customerId", "companies/3-A")));
         var revoked = await MintAsync(h.App, channelId,
-            parameters: new Dictionary<string, string> { ["customerId"] = "companies/4-A" });
+            parameters: Parameters(("customerId", "companies/4-A")));
 
         // Pin distinct CreatedAt so the newest-first ordering doesn't ride on clock resolution.
         using (var session = h.Store.OpenAsyncSession(h.Database))
@@ -409,7 +411,7 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
         await using var h = await HarnessAsync(provisionChannel: false);
         var channelId = await ProvisionParamAgentChannelAsync(h.App);
         var token = await MintAsync(h.App, channelId,
-            parameters: new Dictionary<string, string> { ["customerId"] = "companies/1-A" });
+            parameters: Parameters(("customerId", "companies/1-A")));
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         // body carries no customerId — the declared param is satisfied by the link, not the request body
@@ -441,10 +443,10 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
 
     private static async Task<string> MintAsync(
         QuillApp app, string channelId,
-        int ttlSeconds = 3600, int maxInvocations = 50, Dictionary<string, string>? parameters = null)
+        int ttlSeconds = 3600, int maxInvocations = 50, Dictionary<string, JsonElement>? parameters = null)
     {
         var minted = await app.MintEmbedLinkAsync(
-            new MintEmbedLinkRequest(channelId, parameters ?? new Dictionary<string, string>(), ttlSeconds, maxInvocations));
+            new MintEmbedLinkRequest(channelId, parameters ?? [], ttlSeconds, maxInvocations));
         return minted.Token;
     }
 

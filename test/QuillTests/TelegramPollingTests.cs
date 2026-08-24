@@ -106,8 +106,8 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         Assert.Equal("hello there", request.Prompt);
         Assert.StartsWith($"chats/tg/{channelId}/555/", request.ConversationId);
         Assert.True(AgentRouter.TryNormalizeConversationId(request.ConversationId, out _, out _));
-        Assert.Equal("customers/42", request.Parameters["customerId"]);
-        Assert.Equal("777", request.Parameters["senderId"]);
+        Assert.Equal("customers/42", request.Parameters["customerId"].GetString());
+        Assert.Equal("777", request.Parameters["senderId"].GetString());
 
         await Mock.WaitUntilAsync(() => Mock.SentMessages.Any(m => m.ChatId == 555), "the reply");
         var typing = Assert.Single(Mock.ChatActions, a => a.ChatId == 555);
@@ -136,8 +136,8 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         await Mock.WaitUntilAsync(() => Router.Requests.Count >= 1, "the agent run");
 
         var request = Assert.Single(Router.Requests);
-        Assert.Equal("Alice_42", request.Parameters["userHandle"]);
-        Assert.Equal("501", request.Parameters["senderId"]);
+        Assert.Equal("Alice_42", request.Parameters["userHandle"].GetString());
+        Assert.Equal("501", request.Parameters["senderId"].GetString());
 
         await Mock.WaitUntilAsync(() => Mock.SentMessages.Any(m => m.ChatId == 500), "the reply");
 

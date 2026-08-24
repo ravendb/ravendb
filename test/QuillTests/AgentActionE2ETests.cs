@@ -10,6 +10,8 @@ using Tests.Infrastructure;
 using Xunit;
 using static QuillTests.E2E.Fixtures.ActionFixtures;
 
+using static QuillTests.E2E.Fixtures.AgentParameterFixtures;
+
 namespace QuillTests;
 
 [Collection(QuillAgentActionsCollection.Name)]
@@ -174,7 +176,7 @@ public class AgentActionE2ETests(ITestOutputHelper output, QuillCollectionHost c
 
         var minted = await app.MintEmbedLinkAsync(new MintEmbedLinkRequest(
             channel.ChannelId,
-            new Dictionary<string, string> { ["userId"] = "users/42" },
+            Parameters(("userId", "users/42")),
             TtlSeconds: 3600,
             MaxInvocations: 50));
 

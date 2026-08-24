@@ -264,7 +264,10 @@ internal sealed class TelegramChat
         {
             await _context.Router.RunAsync(
                 new AgentRequest(
-                    _context.Database, config.Identifier, conversationId, prompt, _context.ChannelDoc.Id!, parameters),
+                    _context.Database, config.Identifier, conversationId, prompt, _context.ChannelDoc.Id!,
+                    parameters.ToDictionary(
+                        parameter => parameter.Key,
+                        parameter => AgentParameterValue.FromString(parameter.Value))),
                 reply.OnChunkAsync, config, _ct);
 
             await reply.FinalizeAsync();

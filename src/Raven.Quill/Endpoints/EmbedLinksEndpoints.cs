@@ -103,9 +103,11 @@ public static class EmbedLinksEndpoints
                 $"agent '{channel.AgentId}' is no longer registered in app '{slug}'"));
 
         // bind params at mint: removes the old ?customerId= impersonation
-        if (AgentParameters.TryResolve(config, body.Parameters, out var parameters, out var missing) == false)
+        var resolution = AgentParameters.Resolve(config, body.Parameters);
+        if (resolution.IsValid == false)
             return Results.BadRequest(new ApiErrorResponse(
-                $"missing agent parameter(s): {string.Join(", ", missing)}", Code: "missing_parameters"));
+                AgentParameters.Describe(resolution),
+                Code: resolution.Missing.Count > 0 ? "missing_parameters" : "invalid_parameters"));
 
         var ttlSeconds = body.TtlSeconds ?? EmbedLinkLimits.DefaultTtlSeconds;
         if (ttlSeconds < EmbedLinkLimits.MinTtlSeconds || ttlSeconds > EmbedLinkLimits.MaxTtlSeconds)
@@ -127,7 +129,7 @@ public static class EmbedLinksEndpoints
                 Id = EmbedLink.IdPrefix + token,
                 ChannelId = channel.Id!.Substring(Channel.IdPrefix.Length),
                 AgentId = config.Identifier,
-                Parameters = parameters,
+                Parameters = resolution.Resolved,
                 ExpiresAt = expiresAt,
                 MaxInvocations = maxInvocations,
                 InvocationCount = 0,

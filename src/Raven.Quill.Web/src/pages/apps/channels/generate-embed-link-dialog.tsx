@@ -1,17 +1,13 @@
 import { useState, type ReactNode } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, useWatch } from "react-hook-form";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useForm, useWatch, type Control } from "react-hook-form";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { api } from "@/api/api";
 import { cn } from "@/lib/utils";
-import { getAgentParameterPlaceholder, getAgentParameterValueError } from "@/lib/agent-parameter-values";
-import type {
-    AiAgentParameterValueType,
-    MintEmbedLinkRequest,
-    MintEmbedLinkResponse,
-} from "@/api/generated/server-api";
+import type { AgentParameterSummary, MintEmbedLinkRequest, MintEmbedLinkResponse } from "@/api/generated/server-api";
 import { Alert } from "@/components/shadcn/ui/alert";
+import { Field, FieldDescription, FieldLabel } from "@/components/shadcn/ui/field";
 import { Button } from "@/components/shadcn/ui/button";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import {
@@ -27,6 +23,18 @@ import { GuardedDialog } from "@/components/form/unsaved-changes/guarded-overlay
 import { useFormUnsavedChanges } from "@/components/form/unsaved-changes/use-unsaved-changes";
 import { FormInput } from "@/components/form/form-input";
 import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
+import { FormStringList } from "@/components/form/form-string-list";
+import { FormSwitch } from "@/components/form/form-switch";
+import {
+    defaultFormValue,
+    elementTypeOf,
+    isArrayType,
+    PARAMETER_VALUE_TYPES,
+    placeholderFor,
+    scalarError,
+    toJsonValue,
+    typeLabelFor,
+} from "@/pages/apps/channels/agent-parameter-values";
 import { EmbedLinkPreview } from "@/pages/apps/channels/embed-link-preview";
 import {
     DEFAULT_MAX_INVOCATIONS,
@@ -39,11 +47,9 @@ import {
 type GenerateEmbedLinkDialogProps = {
     slug: string;
     channelId: string;
-    /** Agent the channel is bound to; its declared parameter types drive the value inputs. */
-    agentId: string | undefined;
     displayName: string;
-    /** The agent's declared parameter names — one value is bound per name at mint time. */
-    parameterNames: string[];
+    /** The agent's declared parameters — one value is bound per parameter at mint time. */
+    parameters: AgentParameterSummary[];
     trigger: ReactNode;
 };
 
@@ -59,84 +65,98 @@ const TTL_PRESET_OPTIONS: readonly FormSelectOption<z.infer<typeof ttlPresetSche
     { value: "custom", label: "Custom" },
 ];
 
-// Rebuilt whenever the agent's declared parameter types (re)load; until then unknown
-// names skip the typed value check and only the "required" rule applies.
-const buildGenerateEmbedLinkSchema = (parameterTypeByName: ReadonlyMap<string, AiAgentParameterValueType>) =>
-    z
-        .object({
-            parameters: z.array(z.object({ name: z.string(), value: z.string().trim().min(1, "Required") })),
-            ttlPreset: ttlPresetSchema,
-            customTtlSeconds: z.number().int().nullable(),
-            maxInvocations: z
-                .number({ message: "Enter a number" })
-                .int()
-                .min(MIN_INVOCATIONS, `Minimum is ${MIN_INVOCATIONS}`)
-                .max(MAX_INVOCATIONS, `Maximum is ${MAX_INVOCATIONS.toLocaleString()}`),
-        })
-        .superRefine((values, ctx) => {
-            values.parameters.forEach((parameter, index) => {
-                const type = parameterTypeByName.get(parameter.name);
-                if (!parameter.value || !type) {
-                    return;
-                }
-                const error = getAgentParameterValueError(parameter.value, type);
-                if (error) {
-                    ctx.addIssue({ code: "custom", path: ["parameters", index, "value"], message: error });
-                }
-            });
+const generateEmbedLinkSchema = z
+    .object({
+        parameters: z.array(
+            z.object({
+                name: z.string(),
+                type: z.enum(PARAMETER_VALUE_TYPES),
+                text: z.string(),
+                flag: z.boolean(),
+                items: z.array(z.object({ value: z.string() })),
+            }),
+        ),
+        ttlPreset: ttlPresetSchema,
+        customTtlSeconds: z.number().int().nullable(),
+        maxInvocations: z
+            .number({ message: "Enter a number" })
+            .int()
+            .min(MIN_INVOCATIONS, `Minimum is ${MIN_INVOCATIONS}`)
+            .max(MAX_INVOCATIONS, `Maximum is ${MAX_INVOCATIONS.toLocaleString()}`),
+    })
+    .superRefine((values, ctx) => {
+        values.parameters.forEach((parameter, index) => {
+            const type = parameter.type;
 
-            if (values.ttlPreset !== "custom") {
+            if (type === "Null" || type === "Boolean") {
                 return;
             }
-            if (values.customTtlSeconds == null) {
-                ctx.addIssue({
-                    code: "custom",
-                    path: ["customTtlSeconds"],
-                    message: "Enter a duration in seconds",
+
+            if (isArrayType(type)) {
+                if (parameter.items.length === 0) {
+                    ctx.addIssue({
+                        code: "custom",
+                        path: ["parameters", index, "items"],
+                        message: "Add at least one value",
+                    });
+                }
+                parameter.items.forEach((item, itemIndex) => {
+                    const message = scalarError(elementTypeOf(type), item.value);
+                    if (message) {
+                        ctx.addIssue({
+                            code: "custom",
+                            path: ["parameters", index, "items", itemIndex, "value"],
+                            message,
+                        });
+                    }
                 });
-            } else if (values.customTtlSeconds < MIN_TTL_SECONDS || values.customTtlSeconds > MAX_TTL_SECONDS) {
-                ctx.addIssue({
-                    code: "custom",
-                    path: ["customTtlSeconds"],
-                    message: `Enter ${MIN_TTL_SECONDS}–${MAX_TTL_SECONDS.toLocaleString()} seconds`,
-                });
+                return;
+            }
+
+            const message = scalarError(type, parameter.text);
+            if (message) {
+                ctx.addIssue({ code: "custom", path: ["parameters", index, "text"], message });
             }
         });
 
-type GenerateEmbedLinkFormData = z.infer<ReturnType<typeof buildGenerateEmbedLinkSchema>>;
+        if (values.ttlPreset !== "custom") {
+            return;
+        }
+        if (values.customTtlSeconds == null) {
+            ctx.addIssue({
+                code: "custom",
+                path: ["customTtlSeconds"],
+                message: "Enter a duration in seconds",
+            });
+        } else if (values.customTtlSeconds < MIN_TTL_SECONDS || values.customTtlSeconds > MAX_TTL_SECONDS) {
+            ctx.addIssue({
+                code: "custom",
+                path: ["customTtlSeconds"],
+                message: `Enter ${MIN_TTL_SECONDS}–${MAX_TTL_SECONDS.toLocaleString()} seconds`,
+            });
+        }
+    });
+
+type GenerateEmbedLinkFormData = z.infer<typeof generateEmbedLinkSchema>;
 
 export function GenerateEmbedLinkDialog({
     slug,
     channelId,
-    agentId,
     displayName,
-    parameterNames,
+    parameters,
     trigger,
 }: GenerateEmbedLinkDialogProps) {
     const [isOpen, setIsOpen] = useState(false);
 
-    // The channel list only carries parameter names; the declared types come from the agent
-    // details, fetched lazily when the dialog opens. Until they load (or if the fetch fails)
-    // the inputs keep a generic placeholder and skip the typed value check.
-    const agentDetailsQuery = useQuery({
-        ...api.queries.agents.detail(slug, agentId ?? ""),
-        enabled: isOpen && !!agentId,
-    });
-    const parameterTypeByName = new Map<string, AiAgentParameterValueType>(
-        (agentDetailsQuery.data?.configuration.parameters ?? [])
-            .filter((parameter) => parameter.name)
-            .map((parameter) => [parameter.name!, parameter.type ?? "Default"]),
-    );
-
     const getDefaultValues = (): GenerateEmbedLinkFormData => ({
-        parameters: parameterNames.map((name) => ({ name, value: "" })),
+        parameters: parameters.map(defaultFormValue),
         ttlPreset: DEFAULT_TTL_PRESET,
         customTtlSeconds: null,
         maxInvocations: DEFAULT_MAX_INVOCATIONS,
     });
 
     const form = useForm<GenerateEmbedLinkFormData>({
-        resolver: zodResolver(buildGenerateEmbedLinkSchema(parameterTypeByName)),
+        resolver: zodResolver(generateEmbedLinkSchema),
         defaultValues: getDefaultValues(),
     });
 
@@ -161,11 +181,13 @@ export function GenerateEmbedLinkDialog({
             values.ttlPreset === "custom" && values.customTtlSeconds != null
                 ? values.customTtlSeconds
                 : Number(values.ttlPreset);
-        const parameters = Object.fromEntries(values.parameters.map(({ name, value }) => [name, value.trim()]));
+        const bound = Object.fromEntries(
+            values.parameters.map((parameter) => [parameter.name, toJsonValue(parameter)]),
+        );
 
         mintMutation.mutate({
             channelId,
-            parameters: values.parameters.length > 0 ? parameters : undefined,
+            parameters: values.parameters.length > 0 ? bound : undefined,
             ttlSeconds,
             maxInvocations: values.maxInvocations,
         });
@@ -208,17 +230,14 @@ export function GenerateEmbedLinkDialog({
                     <MintedLink result={result} onGenerateAnother={() => mintMutation.reset()} />
                 ) : (
                     <form className="grid gap-4" onSubmit={submit}>
-                        {parameterNames.length > 0 && (
+                        {parameters.length > 0 && (
                             <div className="grid gap-3">
-                                {parameterNames.map((name, index) => (
-                                    <FormInput
-                                        key={name}
+                                {parameters.map((parameter, index) => (
+                                    <ParameterField
+                                        key={parameter.name}
                                         control={form.control}
-                                        name={`parameters.${index}.value`}
-                                        label={name}
-                                        placeholder={getAgentParameterPlaceholder(
-                                            parameterTypeByName.get(name) ?? "Default",
-                                        )}
+                                        parameter={parameter}
+                                        index={index}
                                     />
                                 ))}
                             </div>
@@ -275,6 +294,64 @@ export function GenerateEmbedLinkDialog({
                 )}
             </DialogContent>
         </GuardedDialog>
+    );
+}
+
+function ParameterField({
+    control,
+    parameter,
+    index,
+}: {
+    control: Control<GenerateEmbedLinkFormData>;
+    parameter: AgentParameterSummary;
+    index: number;
+}) {
+    const typeLabel = typeLabelFor(parameter.type);
+    const description = [parameter.description, typeLabel].filter(Boolean).join(" · ") || undefined;
+
+    if (parameter.type === "Null") {
+        return (
+            <Field>
+                <FieldLabel>{parameter.name}</FieldLabel>
+                <FieldDescription>Always bound as null.</FieldDescription>
+            </Field>
+        );
+    }
+
+    if (parameter.type === "Boolean") {
+        return (
+            <Field>
+                <FormSwitch control={control} name={`parameters.${index}.flag`} label={parameter.name} />
+                {description && <FieldDescription>{description}</FieldDescription>}
+            </Field>
+        );
+    }
+
+    if (isArrayType(parameter.type)) {
+        return (
+            <FormStringList
+                control={control}
+                name={`parameters.${index}.items`}
+                label={parameter.name}
+                description={description}
+                addButtonLabel="Add value"
+                emptyLabel="No values."
+                defaultValue={{ value: "" }}
+                fieldName={(itemIndex) => `parameters.${index}.items.${itemIndex}.value`}
+                itemLabel={(itemIndex) => `Value ${itemIndex + 1}`}
+                placeholder={placeholderFor(parameter.type)}
+            />
+        );
+    }
+
+    return (
+        <FormInput
+            control={control}
+            name={`parameters.${index}.text`}
+            label={parameter.name}
+            description={description}
+            placeholder={placeholderFor(parameter.type)}
+        />
     );
 }
 
