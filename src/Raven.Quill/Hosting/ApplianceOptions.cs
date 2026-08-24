@@ -17,6 +17,8 @@ public sealed class ApplianceOptions
 
     public string SetupPackagePath { get; set; } = "/setup";
 
+    public string SetupNodeSettingsPath => Path.Combine(SetupPackagePath, "A", "settings.json");
+
     public string? LicenseKey { get; set; }
 
     public string? ApiKey { get; set; }

@@ -28,6 +28,10 @@ public sealed class LicenseHttpClient : ILicenseClient
 
         using (response)
         {
+            if (response.StatusCode == HttpStatusCode.NotFound)
+                throw new LicenseKeyNotFoundException(
+                    "license API has no setup package for this key; check QUILL_LICENSE_KEY.");
+
             if (response.IsSuccessStatusCode == false)
                 throw new LicenseRetrievalException(
                     $"license API returned {(int)response.StatusCode} {response.ReasonPhrase} retrieving the setup package.");
@@ -37,15 +41,34 @@ public sealed class LicenseHttpClient : ILicenseClient
         }
     }
 
+    private static readonly TimeSpan RetryAfterFallback = TimeSpan.FromSeconds(30);
+
+    private static TimeSpan RetryDelay(DelegateResult<HttpResponseMessage> outcome)
+    {
+        var retryAfter = outcome.Result?.Headers.RetryAfter;
+        if (retryAfter is null)
+            return RetryAfterFallback;
+
+        // Retry-After is either a delta (Retry-After: 30) or an HTTP date; Delta is null for the date form.
+        if (retryAfter.Delta is { } delta)
+            return delta;
+        if (retryAfter.Date is { } date)
+            return date - DateTimeOffset.UtcNow is { Ticks: > 0 } until ? until : RetryAfterFallback;
+
+        return RetryAfterFallback;
+    }
+
     private static readonly AsyncRetryPolicy<HttpResponseMessage> SetupPackageRetryPolicy = Policy
-        .HandleResult<HttpResponseMessage>(r => r.StatusCode is HttpStatusCode.ServiceUnavailable && r.Headers.RetryAfter != null)
+        .HandleResult<HttpResponseMessage>(r => r.StatusCode is HttpStatusCode.ServiceUnavailable or HttpStatusCode.TooManyRequests)
+        .OrResult(r => r.StatusCode is HttpStatusCode.BadGateway or HttpStatusCode.GatewayTimeout)
+        .Or<HttpRequestException>()
         .WaitAndRetryAsync(
-            retryCount: 5,
-            sleepDurationProvider: (_, result, _) => result.Result.Headers.RetryAfter.Delta.Value,
+            retryCount: 40,
+            sleepDurationProvider: (_, outcome, _) => RetryDelay(outcome),
             onRetryAsync: (outcome, _, _, _) =>
             {
                 // ResponseHeadersRead holds the connection until the message is disposed
-                using (outcome.Result)
-                    return Task.CompletedTask;
+                outcome.Result?.Dispose();
+                return Task.CompletedTask;
             });
 }

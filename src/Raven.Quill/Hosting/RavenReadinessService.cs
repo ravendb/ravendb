@@ -44,8 +44,11 @@ public sealed class RavenReadinessService(
 
         try
         {
-            if (string.IsNullOrEmpty(opts.RavenDbS6Service) == false)
-                await WaitForSetupPackageAsync(opts, stoppingToken);
+            if (string.IsNullOrEmpty(opts.RavenDbS6Service) == false && bootstrap.StartedWithSetupPackage == false)
+            {
+                logger.LogInformation("Started without the setup package; waiting for activation to restart the host before probing RavenDB.");
+                await Task.Delay(Timeout.Infinite, stoppingToken);
+            }
 
             // grace period: RavenDB needs ~10-15s; earlier probes just spam errors
             if (opts.ReadinessInitialDelay > TimeSpan.Zero)
@@ -95,7 +98,7 @@ public sealed class RavenReadinessService(
                         opts.ReadinessOverallTimeout, opts.ReadinessInitialDelay);
                     ready.MarkFailed(ex.Message);
 
-                    if (File.Exists(GetSetupSettingsPath(opts)))
+                    if (File.Exists(opts.SetupNodeSettingsPath))
                         bootstrap.MarkRestarting("ravendb is not reachable: " + ex.Message);
                     else
                         bootstrap.MarkFailed("ravendb is not reachable: " + ex.Message);
@@ -118,18 +121,4 @@ public sealed class RavenReadinessService(
         await base.StopAsync(cancellationToken);
     }
 
-    private async Task WaitForSetupPackageAsync(ApplianceOptions opts, CancellationToken ct)
-    {
-        var settings = GetSetupSettingsPath(opts);
-        if (File.Exists(settings))
-            return;
-
-        logger.LogInformation("Waiting for the setup package at {Path} before probing RavenDB.", settings);
-
-        while (File.Exists(settings) == false)
-            await Task.Delay(TimeSpan.FromSeconds(2), ct);
-    }
-
-    private static string GetSetupSettingsPath(ApplianceOptions options) =>
-        Path.Combine(options.SetupPackagePath, "A", "settings.json");
 }
