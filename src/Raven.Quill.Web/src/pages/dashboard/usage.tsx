@@ -1,17 +1,22 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { ChevronRight } from "lucide-react";
 import { api } from "@/api/api";
 import type { QuillApplicationUsage, QuillPeriodUsage } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
 import { WritesBarChart } from "@/components/data/charts";
 import { DatePeriodPicker } from "@/components/data/date-period-picker";
+import { InfoHint } from "@/components/data/info-hint";
 import { WruLabel } from "@/components/data/wru-label";
+import { Badge } from "@/components/shadcn/ui/badge";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/shadcn/ui/card";
 import { canDrillInto, drillInto, formatPeriodLabel, getDefaultDatePeriod, type DatePeriod } from "@/lib/date-period";
 import { useSetupStartDate } from "@/lib/use-start-date";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/ui/table";
 import { formatCompact } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import { rowKey, SYSTEM_GROUP_DESCRIPTION, toUsageGroups, type UsageGroup } from "@/pages/dashboard/usage-groups";
 
 export function DashboardUsage() {
     const [period, setPeriod] = useState(getDefaultDatePeriod);
@@ -113,7 +118,108 @@ function toChartData(byPeriod: QuillPeriodUsage[], period: DatePeriod) {
         }));
 }
 
+// The name column reserves the chevron's width on every row, expandable or not, so all the names
+// line up in one column and the chevrons sit in a gutter of their own.
+const CHEVRON_GUTTER = "size-3.5 shrink-0";
+
+// Inter's font box sits high in a text-sm line box - more of the leading falls below the letters
+// than above - so an icon centred on that line box reads a hair low against them. `leading-none`
+// collapses the line box onto the font box, which centres the letters and the chevron on the same
+// axis, and the fixed height keeps every row as tall as it was.
+const NAME_ROW = "flex h-5 items-center gap-1.5 leading-none";
+
+// Where the names land: pl-4 + the gutter + the gap. Members of an expanded group indent to it, so
+// they read as sitting under the name they belong to.
+const NAME_INDENT = "pl-9";
+
+function UsageCell({ usage, className }: { usage: number; className?: string }) {
+    return (
+        <TableCell className={cn("py-3 pr-4 text-right text-muted-foreground tabular-nums", className)}>
+            {usage.toLocaleString()}
+        </TableCell>
+    );
+}
+
+// The group's own row: its shared name (or "System"), how many rows it stands for, and their
+// combined usage. The whole row toggles it; the button carries the state and the keyboard, and lets
+// its click bubble to the row so one handler serves both. Groups standing for a single app have
+// nothing to expand and render as the plain row they always were.
+function GroupRow({ group, isOpen, onToggle }: { group: UsageGroup; isOpen: boolean; onToggle: () => void }) {
+    return (
+        <TableRow
+            onClick={group.isExpandable ? onToggle : undefined}
+            className={cn(group.isExpandable && "cursor-pointer")}
+        >
+            <TableCell className="py-3 pl-4 font-medium">
+                <span className={NAME_ROW}>
+                    {group.isExpandable ? (
+                        <>
+                            <button
+                                type="button"
+                                aria-expanded={isOpen}
+                                className={cn(
+                                    "-mx-0.5 flex items-center gap-1.5 rounded-sm px-0.5",
+                                    "focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
+                                )}
+                            >
+                                <ChevronRight
+                                    aria-hidden="true"
+                                    className={cn(
+                                        CHEVRON_GUTTER,
+                                        "text-muted-foreground transition-transform",
+                                        isOpen && "rotate-90",
+                                    )}
+                                />
+                                {group.label}
+                            </button>
+                            {group.isSystem && (
+                                // The hint explains the group; it doesn't toggle it.
+                                <span onClick={(event) => event.stopPropagation()}>
+                                    <InfoHint content={SYSTEM_GROUP_DESCRIPTION} />
+                                </span>
+                            )}
+                            <Badge variant="secondary" className="tabular-nums">
+                                {group.rows.length}
+                            </Badge>
+                        </>
+                    ) : (
+                        <>
+                            <span aria-hidden="true" className={CHEVRON_GUTTER} />
+                            {group.label}
+                        </>
+                    )}
+                </span>
+            </TableCell>
+            <UsageCell usage={group.usage} />
+        </TableRow>
+    );
+}
+
+// One row per database behind an expanded group, labelled by the topology id - the only thing that
+// tells apart rows that share a name.
+function GroupMemberRow({ usage, topologyId }: { usage: number; topologyId: string }) {
+    return (
+        <TableRow className="hover:bg-transparent">
+            <TableCell className={cn("py-2 font-mono text-xs text-muted-foreground", NAME_INDENT)}>
+                {topologyId}
+            </TableCell>
+            <UsageCell usage={usage} className="py-2" />
+        </TableRow>
+    );
+}
+
 function PerAppUsageTable({ apps }: { apps: QuillApplicationUsage[] }) {
+    const [openGroups, setOpenGroups] = useState<ReadonlySet<string>>(new Set());
+    const groups = toUsageGroups(apps);
+
+    const toggle = (key: string) =>
+        setOpenGroups((open) => {
+            const next = new Set(open);
+            if (next.has(key)) next.delete(key);
+            else next.add(key);
+            return next;
+        });
+
     return (
         <Table>
             <TableHeader>
@@ -125,23 +231,29 @@ function PerAppUsageTable({ apps }: { apps: QuillApplicationUsage[] }) {
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {apps.length === 0 ? (
+                {groups.length === 0 ? (
                     <TableRow className="hover:bg-transparent">
                         <TableCell colSpan={2} className="h-20 text-center text-muted-foreground">
                             No usage tracked yet.
                         </TableCell>
                     </TableRow>
                 ) : (
-                    apps.map((app) => (
-                        <TableRow key={`${app.topologyId}/${app.applicationName}`}>
-                            <TableCell className="py-3 pl-4 font-medium">{app.applicationName}</TableCell>
-                            <TableCell className="py-3 pr-4">
-                                <span className="w-16 text-right text-muted-foreground tabular-nums">
-                                    {app.usage.toLocaleString()}
-                                </span>
-                            </TableCell>
-                        </TableRow>
-                    ))
+                    groups.map((group) => {
+                        const isOpen = openGroups.has(group.key);
+                        return (
+                            <Fragment key={group.key}>
+                                <GroupRow group={group} isOpen={isOpen} onToggle={() => toggle(group.key)} />
+                                {isOpen &&
+                                    group.rows.map((row) => (
+                                        <GroupMemberRow
+                                            key={rowKey(row)}
+                                            usage={row.usage}
+                                            topologyId={row.topologyId}
+                                        />
+                                    ))}
+                            </Fragment>
+                        );
+                    })
                 )}
             </TableBody>
         </Table>
