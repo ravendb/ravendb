@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { AiAgentParameterValueType } from "@/api/generated/server-api";
-import { scalarError, toJsonValue, type ParameterFormValue } from "@/pages/apps/channels/agent-parameter-values";
+import {
+    scalarError,
+    snippetLiteralFor,
+    toJsonValue,
+    type ParameterFormValue,
+} from "@/pages/apps/channels/agent-parameter-values";
 
 function formValue(type: AiAgentParameterValueType, overrides: Partial<ParameterFormValue> = {}): ParameterFormValue {
     return { name: "p", type, text: "", flag: false, items: [], ...overrides };
@@ -52,5 +57,27 @@ describe("scalarError", () => {
         expect(scalarError("Number", "-3.5")).toBeNull();
         expect(scalarError("Boolean", "TRUE")).toBeNull();
         expect(scalarError("String", "users/1")).toBeNull();
+    });
+});
+
+describe("snippetLiteralFor", () => {
+    it("writes Python's own literals rather than JSON's", () => {
+        expect(snippetLiteralFor("python", true)).toBe("True");
+        expect(snippetLiteralFor("python", false)).toBe("False");
+        expect(snippetLiteralFor("python", null)).toBe("None");
+        expect(snippetLiteralFor("python", [true, false])).toBe("[True, False]");
+    });
+
+    it("writes a C# array the compiler accepts in an object slot", () => {
+        expect(snippetLiteralFor("csharp", ["<value>"])).toBe('new[] { "<value>" }');
+        expect(snippetLiteralFor("csharp", [0])).toBe("new[] { 0 }");
+        expect(snippetLiteralFor("csharp", true)).toBe("true");
+        expect(snippetLiteralFor("csharp", null)).toBe("null");
+    });
+
+    it("leaves JSON-compatible syntax as JSON", () => {
+        expect(snippetLiteralFor("json", true)).toBe("true");
+        expect(snippetLiteralFor("json", null)).toBe("null");
+        expect(snippetLiteralFor("json", ["<value>"])).toBe('["<value>"]');
     });
 });
