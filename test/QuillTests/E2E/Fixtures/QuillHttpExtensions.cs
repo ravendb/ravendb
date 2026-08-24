@@ -162,6 +162,8 @@ internal static class QuillRoutes
     public static string SlackWebhookInfo(string slug, string channelId) =>
         $"/api/apps/{slug}/channels/{channelId}/slack/webhook";
     public static string SlackHealth(string slug) => $"/api/apps/{slug}/slack/health";
+
+    public static string DiscordHealth(string slug) => $"/api/apps/{slug}/discord/health";
 }
 
 /// The <c>year[&amp;month[&amp;day]]</c> query shared by the usage/stats endpoints.
