@@ -19,23 +19,37 @@ type CodeBlockTabsProps = {
     // Cap the code viewport at this many lines; taller snippets scroll. Omit to size the viewport to the
     // shortest snippet (so a multi-language block never resizes when the language changes).
     maxLines?: number;
+    // Let the code viewport grow with its content instead of being fixed, but never below this many
+    // lines. Takes precedence over `maxLines`.
+    minLines?: number;
     className?: string;
 };
 
 // A code block whose language selector lives in the card's header toolbar (tabs on the left, copy on
 // the right) rather than as a detached row above it — the standard dev-docs pattern. With a single tab
 // the selector is dropped and only the copy button remains, so it doubles as a plain code block.
-export function CodeBlockTabs({ tabs, value, onValueChange, copyLabel, maxLines, className }: CodeBlockTabsProps) {
+export function CodeBlockTabs({
+    tabs,
+    value,
+    onValueChange,
+    copyLabel,
+    maxLines,
+    minLines,
+    className,
+}: CodeBlockTabsProps) {
     const activeTab = tabs.find((tab) => tab.value === value);
     const activeCode = activeTab?.code ?? "";
     const hasSelector = tabs.length > 1;
 
     // Fix the code viewport height so switching languages never resizes the card: size it to the shortest
     // snippet, capped by `maxLines`. `1lh` is the pre's own line height and `1rem` is the py-2 padding
-    // (border-box), so the box holds exactly that many lines; anything taller scrolls.
-    const minLines = Math.min(...tabs.map((tab) => tab.code.split("\n").length));
-    const bodyLines = maxLines ? Math.min(minLines, maxLines) : minLines;
-    const bodyHeight = `calc(${bodyLines} * 1lh + 1rem)`;
+    // (border-box), so the box holds exactly that many lines; anything taller scrolls. With `minLines`
+    // the height is a floor instead, so the block fits its content and only reserves that many lines.
+    const shortestSnippetLines = Math.min(...tabs.map((tab) => tab.code.split("\n").length));
+    const bodyLines = maxLines ? Math.min(shortestSnippetLines, maxLines) : shortestSnippetLines;
+    const bodyStyle = minLines
+        ? { minHeight: `calc(${minLines} * 1lh + 1rem)` }
+        : { height: `calc(${bodyLines} * 1lh + 1rem)` };
 
     return (
         <Tabs
@@ -72,7 +86,7 @@ export function CodeBlockTabs({ tabs, value, onValueChange, copyLabel, maxLines,
                 <TabsContent key={tab.value} value={tab.value}>
                     <pre
                         className="overflow-y-auto px-3 py-2 text-xs break-all whitespace-pre-wrap [font-variant-ligatures:none]"
-                        style={{ height: bodyHeight }}
+                        style={bodyStyle}
                     >
                         <code dangerouslySetInnerHTML={{ __html: highlightCode(tab.code, tab.language) }} />
                     </pre>
