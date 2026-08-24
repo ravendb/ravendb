@@ -68,3 +68,9 @@ public class QuillSlackCollection : ICollectionFixture<QuillSlackFixture>
 {
     public const string Name = "quill-slack";
 }
+
+[CollectionDefinition(Name)]
+public class QuillDiscordCollection : ICollectionFixture<QuillDiscordFixture>
+{
+    public const string Name = "quill-discord";
+}
