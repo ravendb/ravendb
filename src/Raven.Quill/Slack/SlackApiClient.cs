@@ -73,10 +73,27 @@ internal sealed class SlackApiClient(HttpClient http) : ISlackClient
         await SendAsync("chat.update", botToken, new { channel, ts, text }, ct);
     }
 
-    private async Task<ApiResponse> SendAsync(string method, string botToken, object body, CancellationToken ct)
+    public async Task<SlackUserInfo> UserInfoAsync(string botToken, string userId, CancellationToken ct)
     {
-        using var request = NewRequest(method, botToken);
+        var request = NewRequest(HttpMethod.Get, $"users.info?user={Uri.EscapeDataString(userId)}", botToken);
+        var payload = await SendAsync<UserInfoResponse>(request, "users.info", ct);
+
+        var email = payload.User?.Profile?.Email;
+        return new SlackUserInfo(userId, string.IsNullOrWhiteSpace(email) ? null : email);
+    }
+
+    private Task<ApiResponse> SendAsync(string method, string botToken, object body, CancellationToken ct)
+    {
+        var request = NewRequest(HttpMethod.Post, method, botToken);
         request.Content = JsonContent.Create(body);
+        return SendAsync<ApiResponse>(request, method, ct);
+    }
+
+    private async Task<TResponse> SendAsync<TResponse>(
+        HttpRequestMessage request, string method, CancellationToken ct)
+        where TResponse : ApiResponse
+    {
+        using var pending = request;
 
         HttpResponseMessage response;
         try
@@ -103,7 +120,7 @@ internal sealed class SlackApiClient(HttpClient http) : ISlackClient
             if ((int)response.StatusCode >= 500)
                 throw new SlackApiException($"the Slack API is unavailable (status {(int)response.StatusCode})");
 
-            var payload = Deserialize<ApiResponse>(raw);
+            var payload = Deserialize<TResponse>(raw);
             if (payload is null)
                 throw new SlackApiException($"slack returned an unrecognized {method} payload");
 
@@ -117,9 +134,12 @@ internal sealed class SlackApiClient(HttpClient http) : ISlackClient
         }
     }
 
-    private static HttpRequestMessage NewRequest(string method, string botToken)
+    private static HttpRequestMessage NewRequest(string method, string botToken) =>
+        NewRequest(HttpMethod.Post, method, botToken);
+
+    private static HttpRequestMessage NewRequest(HttpMethod verb, string pathAndQuery, string botToken)
     {
-        var request = new HttpRequestMessage(HttpMethod.Post, method);
+        var request = new HttpRequestMessage(verb, pathAndQuery);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", botToken);
         return request;
     }
@@ -139,7 +159,7 @@ internal sealed class SlackApiClient(HttpClient http) : ISlackClient
         }
     }
 
-    private sealed class ApiResponse
+    private class ApiResponse
     {
         [JsonPropertyName("ok")]
         public bool Ok { get; set; }
@@ -149,6 +169,24 @@ internal sealed class SlackApiClient(HttpClient http) : ISlackClient
 
         [JsonPropertyName("ts")]
         public string? Ts { get; set; }
+    }
+
+    private sealed class UserInfoResponse : ApiResponse
+    {
+        [JsonPropertyName("user")]
+        public UserPayload? User { get; set; }
+
+        internal sealed class UserPayload
+        {
+            [JsonPropertyName("profile")]
+            public ProfilePayload? Profile { get; set; }
+        }
+
+        internal sealed class ProfilePayload
+        {
+            [JsonPropertyName("email")]
+            public string? Email { get; set; }
+        }
     }
 
     private sealed class AuthTestResponse

@@ -13,6 +13,8 @@ oauth_config:
     bot:
       - chat:write
       - im:history
+      - users:read
+      - users:read.email
 settings:
   interactivity:
     is_enabled: false

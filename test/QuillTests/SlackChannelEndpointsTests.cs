@@ -169,6 +169,27 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Provision_accepts_an_email_binding()
+    {
+        await using var app = await NewAppAsync();
+        var agentId = await SeedAgentAsync(app, new AiAgentParameter("senderEmail", "the sender's email"));
+        var botToken = NewBotToken();
+        Slack.AddBot(botToken, NewTeamId(), "Acme", NewBotUserId());
+
+        var created = await app.ProvisionChannelAsync(
+            new ProvisionChannelRequest(ChannelType.Slack, agentId, null,
+                Slack: new(botToken, "s",
+                    ParameterBindings: new Dictionary<string, ChannelParameterBinding>
+                    {
+                        ["senderEmail"] = new() { Source = ChannelParameterSource.Email },
+                    })));
+
+        var channels = await app.GetChannelsAsync();
+        var summary = Assert.Single(channels, c => c.ChannelId == created.ChannelId);
+        Assert.Equal(ChannelParameterSource.Email, summary.Slack!.ParameterBindings["senderEmail"].Source);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Provision_rejects_foreign_settings_and_allowed_origins()
     {
         await using var app = await NewAppAsync();

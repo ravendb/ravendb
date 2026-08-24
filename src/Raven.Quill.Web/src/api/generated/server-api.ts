@@ -1322,7 +1322,7 @@ export interface components {
             value?: null | string;
         };
         /** @enum {unknown} */
-        ChannelParameterSource: "Constant" | "UserId" | "Username" | "PhoneNumber";
+        ChannelParameterSource: "Constant" | "UserId" | "Username" | "PhoneNumber" | "Email";
         ChannelStatsResponse: {
             /** Format: int32 */
             total: number;

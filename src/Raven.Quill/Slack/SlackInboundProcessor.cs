@@ -11,6 +11,7 @@ internal sealed class SlackInboundProcessor(
     IAgentRouter router,
     IServiceScopeFactory scopes,
     SlackHealthRegistry health,
+    SlackUserDirectory users,
     IOptions<ApplianceOptions> options,
     ILogger<SlackInboundProcessor> logger) : IHostedService
 {
@@ -178,8 +179,10 @@ internal sealed class SlackInboundProcessor(
         if (config is null)
             throw new InvalidOperationException($"agent '{channel.AgentId}' is no longer registered in this app");
 
-        if (SlackParameterBindings.TryBind(
-                config, settings.ParameterBindings, sender, out var parameters, out var bindError) == false)
+        var (parameters, bindError) = await SlackParameterBindings.BindAsync(
+            config, settings.ParameterBindings, sender,
+            () => users.GetAsync(slack, settings.BotToken, settings.TeamId, sender, ct));
+        if (parameters is null)
         {
             await TrySendAsync(slack, database, shortChannelId, settings, dmChannel, ErrorReply, ct);
             throw new InvalidOperationException(bindError);

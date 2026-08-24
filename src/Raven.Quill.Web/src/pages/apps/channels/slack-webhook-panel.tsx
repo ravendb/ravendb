@@ -38,8 +38,10 @@ export function SlackWebhookPanel({ slug, channelId }: { slug: string; channelId
                         <li>Open a DM with the bot in Slack and send it a message.</li>
                     </ol>
                     <p className="text-xs text-muted-foreground">
-                        The appliance must be reachable from the internet on this URL. Apps created from the Quill
-                        manifest already carry the im:history scope, so adding the event needs no reinstall.
+                        The appliance must be reachable from the internet on this URL. Apps created from the current
+                        Quill manifest already carry the im:history scope, so adding the event needs no reinstall. An
+                        app created before users:read and users:read.email were added to the manifest must be
+                        reinstalled to the workspace before a parameter can bind to the sender&apos;s email.
                     </p>
                     <SlackHealthStrip slug={slug} channelId={channelId} />
                 </div>
