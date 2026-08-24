@@ -89,12 +89,15 @@ internal static class ChannelParameterBindings
             {
                 if (string.IsNullOrWhiteSpace(binding.Value))
                 {
-                    error = $"parameter binding for '{name}': a Constant binding requires a value";
-                    return false;
+                    if (parameter.Type != AiAgentParameterValueType.Null)
+                    {
+                        error = $"parameter binding for '{name}': a Constant binding requires a value";
+                        return false;
+                    }
                 }
-
-                if (AgentParameterValue.TryNormalize(
-                        parameter.Type, AgentParameterValue.FromString(binding.Value), out _, out var invalid) == false)
+                else if (AgentParameterValue.TryNormalize(
+                             parameter.Type, AgentParameterValue.FromString(binding.Value),
+                             out _, out var invalid) == false)
                 {
                     error = $"parameter binding for '{name}': {invalid}";
                     return false;
@@ -103,6 +106,14 @@ internal static class ChannelParameterBindings
             else if (string.IsNullOrWhiteSpace(binding.Value) == false)
             {
                 error = $"parameter binding for '{name}': a value applies only to Constant bindings";
+                return false;
+            }
+            else if (AgentParameterValue.TryNormalize(
+                         parameter.Type, AgentParameterValue.FromString(SampleValueOf(channelType, binding.Source)),
+                         out _, out _) == false)
+            {
+                error =
+                    $"parameter binding for '{name}': a {binding.Source} binding cannot satisfy a {parameter.Type} parameter";
                 return false;
             }
 
@@ -120,4 +131,13 @@ internal static class ChannelParameterBindings
 
     private static string FormatSources(ChannelParameterSource[] sources) =>
         $"{string.Join(", ", sources[..^1])} or {sources[^1]}";
+
+    private static string SampleValueOf(ChannelType channelType, ChannelParameterSource source) =>
+        source switch
+        {
+            ChannelParameterSource.UserId => channelType == ChannelType.Slack ? "U0000000000" : "1",
+            ChannelParameterSource.PhoneNumber => "+10000000000",
+            ChannelParameterSource.Email => "user@example.com",
+            _ => "username",
+        };
 }

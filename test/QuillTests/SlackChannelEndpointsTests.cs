@@ -191,6 +191,31 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Provision_rejects_a_user_id_binding_for_a_number_parameter()
+    {
+        await using var app = await NewAppAsync();
+        var agentId = await SeedAgentAsync(app,
+            new AiAgentParameter("orderLimit", "how many orders to consider")
+            {
+                Type = AiAgentParameterValueType.Number,
+            });
+        var botToken = NewBotToken();
+        Slack.AddBot(botToken, NewTeamId(), "Acme", NewBotUserId());
+
+        var invalid = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
+            new ProvisionChannelRequest(ChannelType.Slack, agentId, null,
+                Slack: new(botToken, "s",
+                    ParameterBindings: new Dictionary<string, ChannelParameterBinding>
+                    {
+                        ["orderLimit"] = new() { Source = ChannelParameterSource.UserId },
+                    }))));
+
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+        Assert.Contains("orderLimit", invalid.Body);
+        Assert.Contains("UserId", invalid.Body);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Provision_rejects_foreign_settings_and_allowed_origins()
     {
         await using var app = await NewAppAsync();
