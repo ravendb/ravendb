@@ -130,6 +130,26 @@ export function snippetValueFor(type: AiAgentParameterValueType): unknown {
     }
 }
 
+export type SnippetSyntax = "json" | "csharp" | "python";
+
+export function snippetLiteralFor(syntax: SnippetSyntax, value: unknown): string {
+    if (Array.isArray(value)) {
+        const items = value.map((item) => snippetLiteralFor(syntax, item)).join(", ");
+        return syntax === "csharp" ? `new[] { ${items} }` : `[${items}]`;
+    }
+
+    if (syntax === "python") {
+        if (value === null) {
+            return "None";
+        }
+        if (typeof value === "boolean") {
+            return value ? "True" : "False";
+        }
+    }
+
+    return JSON.stringify(value);
+}
+
 export function typeLabelFor(type: AiAgentParameterValueType): string | null {
     switch (type) {
         case "Default":

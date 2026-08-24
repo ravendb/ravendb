@@ -18,7 +18,12 @@ import { NumberedSteps } from "@/components/data/numbered-steps";
 import { SectionCard } from "@/pages/apps/section-card";
 import type { HighlightLanguage } from "@/components/ace-editor/static-highlight";
 import type { AgentParameterSummary } from "@/api/generated/server-api";
-import { snippetValueFor, typeLabelFor } from "@/pages/apps/channels/agent-parameter-values";
+import {
+    snippetLiteralFor,
+    snippetValueFor,
+    typeLabelFor,
+    type SnippetSyntax,
+} from "@/pages/apps/channels/agent-parameter-values";
 
 const LANGUAGE_STORAGE_KEY = "quill-embed-api-docs-language";
 
@@ -223,9 +228,12 @@ function snippetEntries(parameters: AgentParameterSummary[]): Record<string, unk
     return Object.fromEntries(parameters.map((parameter) => [parameter.name, snippetValueFor(parameter.type)]));
 }
 
-function inlineSnippetEntries(parameters: AgentParameterSummary[]): string {
+function inlineSnippetEntries(parameters: AgentParameterSummary[], syntax: SnippetSyntax): string {
     return parameters
-        .map((parameter) => `${JSON.stringify(parameter.name)}: ${JSON.stringify(snippetValueFor(parameter.type))}`)
+        .map(
+            (parameter) =>
+                `${JSON.stringify(parameter.name)}: ${snippetLiteralFor(syntax, snippetValueFor(parameter.type))}`,
+        )
         .join(", ");
 }
 
@@ -268,7 +276,10 @@ function buildCSharpSnippet(
     hasParameters: boolean,
 ) {
     const parameterEntries = parameters
-        .map((parameter) => `[${JSON.stringify(parameter.name)}] = ${JSON.stringify(snippetValueFor(parameter.type))}`)
+        .map(
+            (parameter) =>
+                `[${JSON.stringify(parameter.name)}] = ${snippetLiteralFor("csharp", snippetValueFor(parameter.type))}`,
+        )
         .join(", ");
 
     return [
@@ -300,7 +311,7 @@ function buildPythonSnippet(
     parameters: AgentParameterSummary[],
     hasParameters: boolean,
 ) {
-    const parameterEntries = inlineSnippetEntries(parameters);
+    const parameterEntries = inlineSnippetEntries(parameters, "python");
 
     return [
         "import requests",
@@ -321,7 +332,7 @@ function buildPythonSnippet(
 }
 
 function buildNodeSnippet(url: string, channelId: string, parameters: AgentParameterSummary[], hasParameters: boolean) {
-    const parameterEntries = inlineSnippetEntries(parameters);
+    const parameterEntries = inlineSnippetEntries(parameters, "json");
 
     return [
         `const response = await fetch("${url}", {`,
