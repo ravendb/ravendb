@@ -112,6 +112,8 @@ builder.Services.AddSingleton<IDocumentStore>(sp =>
 
 builder.Services.AddSingleton<IServerReady, ServerReadyFlag>();
 builder.Services.AddSingleton<IQuillExpiry>(_ => new QuillExpiry(DateTime.UtcNow));
+// Resolved only by an expired build's gate, so a live start never reads the file.
+builder.Services.AddSingleton(sp => ExpiryNotice.Load(sp.GetRequiredService<IWebHostEnvironment>()));
 builder.Services.AddSingleton<IBootstrapState, BootstrapStateFlag>();
 builder.Services.AddSingleton<IAgentRouter, AgentRouter>();
 builder.Services.AddSingleton<WebhookActionExecutor>();

@@ -11,7 +11,7 @@ import { UserMenu } from "@/components/layout/user-menu";
 import { appRoutes } from "@/lib/app-routes";
 import { COMPACT_LAYOUT_MEDIA_QUERY, useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
-import { QuillMark } from "@/components/brand/quill-logo.tsx";
+import QuillMark from "@/components/brand/quill-mark.svg?react";
 import { AssistantPanel } from "@/components/layout/assistant-panel";
 import { ASSISTANT_PANEL_TITLE_ID, useAssistantPinning, useAssistantStore } from "@/components/layout/assistant-store";
 import { FeedbackSheet } from "@/components/layout/feedback-sheet";
