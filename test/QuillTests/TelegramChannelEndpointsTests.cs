@@ -345,6 +345,49 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_constant_binding_must_match_the_declared_parameter_type()
+    {
+        await using var app = await NewAppAsync();
+        var agentId = await SeedAgentAsync(app);
+
+        var created = await app.ProvisionChannelAsync(
+            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, Telegram: new(NewBotToken())));
+
+        await app.EditAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = agentId,
+            Name = "Telegram Demo Agent",
+            SystemPrompt = "You are a placeholder demo agent.",
+            ConnectionStringName = app.Host.ConnectionStringName,
+            Parameters =
+            [
+                new AiAgentParameter("orderLimit", "how many orders to consider")
+                {
+                    Type = AiAgentParameterValueType.Number,
+                },
+            ],
+        });
+
+        var invalid = await Assert.ThrowsAsync<QuillHttpException>(() =>
+            app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
+                new(ParameterBindings: new Dictionary<string, ChannelParameterBinding>
+                {
+                    ["orderLimit"] = new() { Source = ChannelParameterSource.Constant, Value = "lots" },
+                }))));
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+        Assert.Contains("orderLimit", invalid.Body);
+
+        var summary = await app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
+            new(ParameterBindings: new Dictionary<string, ChannelParameterBinding>
+            {
+                ["orderLimit"] = new() { Source = ChannelParameterSource.Constant, Value = "25" },
+            })));
+        Assert.Equal("25", summary.Telegram!.ParameterBindings["orderLimit"].Value);
+
+        await app.DeleteChannelAsync(created.ChannelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Message_overrides_are_validated_normalized_and_projected()
     {
         await using var app = await NewAppAsync();
