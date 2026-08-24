@@ -54,7 +54,7 @@ namespace FastTests.Sparrow
         [RavenFact(RavenTestCategory.Core)]
         public void EnsureItThrowsWhenSizeIsNotSupported_WithoutTouchingTheParameters()
         {
-            Assert.Throws<NotSupportedException>(() => Memory.IsEqualConstant(new byte[64], null));
+            Assert.Throws<NotSupportedException>(() => Memory.IsEqualConstant(new byte[64], (byte*)null));
             Assert.Throws<NotSupportedException>(() => Memory.IsEqualConstant(new byte[64], null, 0));
             Assert.Throws<NotSupportedException>(() => Memory.IsEqualConstant(null, 64, null));
         }
