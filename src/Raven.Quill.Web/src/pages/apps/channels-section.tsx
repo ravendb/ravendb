@@ -119,6 +119,7 @@ export function ChannelsSection({ slug, agent: fixedAgent }: { slug: string; age
                                                 <GenerateEmbedLinkDialog
                                                     slug={slug}
                                                     channelId={channel.channelId}
+                                                    agentId={agent?.agentId}
                                                     displayName={channel.displayName}
                                                     parameterNames={agent?.parameters ?? []}
                                                     trigger={

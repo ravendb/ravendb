@@ -1,11 +1,16 @@
 import { useState, type ReactNode } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useWatch } from "react-hook-form";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { api } from "@/api/api";
 import { cn } from "@/lib/utils";
-import type { MintEmbedLinkRequest, MintEmbedLinkResponse } from "@/api/generated/server-api";
+import { getAgentParameterPlaceholder, getAgentParameterValueError } from "@/lib/agent-parameter-values";
+import type {
+    AiAgentParameterValueType,
+    MintEmbedLinkRequest,
+    MintEmbedLinkResponse,
+} from "@/api/generated/server-api";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
 import { Spinner } from "@/components/shadcn/ui/spinner";
@@ -34,6 +39,8 @@ import {
 type GenerateEmbedLinkDialogProps = {
     slug: string;
     channelId: string;
+    /** Agent the channel is bound to; its declared parameter types drive the value inputs. */
+    agentId: string | undefined;
     displayName: string;
     /** The agent's declared parameter names — one value is bound per name at mint time. */
     parameterNames: string[];
@@ -52,46 +59,74 @@ const TTL_PRESET_OPTIONS: readonly FormSelectOption<z.infer<typeof ttlPresetSche
     { value: "custom", label: "Custom" },
 ];
 
-const generateEmbedLinkSchema = z
-    .object({
-        parameters: z.array(z.object({ name: z.string(), value: z.string().trim().min(1, "Required") })),
-        ttlPreset: ttlPresetSchema,
-        customTtlSeconds: z.number().int().nullable(),
-        maxInvocations: z
-            .number({ message: "Enter a number" })
-            .int()
-            .min(MIN_INVOCATIONS, `Minimum is ${MIN_INVOCATIONS}`)
-            .max(MAX_INVOCATIONS, `Maximum is ${MAX_INVOCATIONS.toLocaleString()}`),
-    })
-    .superRefine((values, ctx) => {
-        if (values.ttlPreset !== "custom") {
-            return;
-        }
-        if (values.customTtlSeconds == null) {
-            ctx.addIssue({
-                code: "custom",
-                path: ["customTtlSeconds"],
-                message: "Enter a duration in seconds",
+// Rebuilt whenever the agent's declared parameter types (re)load; until then unknown
+// names skip the typed value check and only the "required" rule applies.
+const buildGenerateEmbedLinkSchema = (parameterTypeByName: ReadonlyMap<string, AiAgentParameterValueType>) =>
+    z
+        .object({
+            parameters: z.array(z.object({ name: z.string(), value: z.string().trim().min(1, "Required") })),
+            ttlPreset: ttlPresetSchema,
+            customTtlSeconds: z.number().int().nullable(),
+            maxInvocations: z
+                .number({ message: "Enter a number" })
+                .int()
+                .min(MIN_INVOCATIONS, `Minimum is ${MIN_INVOCATIONS}`)
+                .max(MAX_INVOCATIONS, `Maximum is ${MAX_INVOCATIONS.toLocaleString()}`),
+        })
+        .superRefine((values, ctx) => {
+            values.parameters.forEach((parameter, index) => {
+                const type = parameterTypeByName.get(parameter.name);
+                if (!parameter.value || !type) {
+                    return;
+                }
+                const error = getAgentParameterValueError(parameter.value, type);
+                if (error) {
+                    ctx.addIssue({ code: "custom", path: ["parameters", index, "value"], message: error });
+                }
             });
-        } else if (values.customTtlSeconds < MIN_TTL_SECONDS || values.customTtlSeconds > MAX_TTL_SECONDS) {
-            ctx.addIssue({
-                code: "custom",
-                path: ["customTtlSeconds"],
-                message: `Enter ${MIN_TTL_SECONDS}–${MAX_TTL_SECONDS.toLocaleString()} seconds`,
-            });
-        }
-    });
 
-type GenerateEmbedLinkFormData = z.infer<typeof generateEmbedLinkSchema>;
+            if (values.ttlPreset !== "custom") {
+                return;
+            }
+            if (values.customTtlSeconds == null) {
+                ctx.addIssue({
+                    code: "custom",
+                    path: ["customTtlSeconds"],
+                    message: "Enter a duration in seconds",
+                });
+            } else if (values.customTtlSeconds < MIN_TTL_SECONDS || values.customTtlSeconds > MAX_TTL_SECONDS) {
+                ctx.addIssue({
+                    code: "custom",
+                    path: ["customTtlSeconds"],
+                    message: `Enter ${MIN_TTL_SECONDS}–${MAX_TTL_SECONDS.toLocaleString()} seconds`,
+                });
+            }
+        });
+
+type GenerateEmbedLinkFormData = z.infer<ReturnType<typeof buildGenerateEmbedLinkSchema>>;
 
 export function GenerateEmbedLinkDialog({
     slug,
     channelId,
+    agentId,
     displayName,
     parameterNames,
     trigger,
 }: GenerateEmbedLinkDialogProps) {
     const [isOpen, setIsOpen] = useState(false);
+
+    // The channel list only carries parameter names; the declared types come from the agent
+    // details, fetched lazily when the dialog opens. Until they load (or if the fetch fails)
+    // the inputs keep a generic placeholder and skip the typed value check.
+    const agentDetailsQuery = useQuery({
+        ...api.queries.agents.detail(slug, agentId ?? ""),
+        enabled: isOpen && !!agentId,
+    });
+    const parameterTypeByName = new Map<string, AiAgentParameterValueType>(
+        (agentDetailsQuery.data?.configuration.parameters ?? [])
+            .filter((parameter) => parameter.name)
+            .map((parameter) => [parameter.name!, parameter.type ?? "Default"]),
+    );
 
     const getDefaultValues = (): GenerateEmbedLinkFormData => ({
         parameters: parameterNames.map((name) => ({ name, value: "" })),
@@ -101,7 +136,7 @@ export function GenerateEmbedLinkDialog({
     });
 
     const form = useForm<GenerateEmbedLinkFormData>({
-        resolver: zodResolver(generateEmbedLinkSchema),
+        resolver: zodResolver(buildGenerateEmbedLinkSchema(parameterTypeByName)),
         defaultValues: getDefaultValues(),
     });
 
@@ -181,7 +216,9 @@ export function GenerateEmbedLinkDialog({
                                         control={form.control}
                                         name={`parameters.${index}.value`}
                                         label={name}
-                                        placeholder="e.g. users/1"
+                                        placeholder={getAgentParameterPlaceholder(
+                                            parameterTypeByName.get(name) ?? "Default",
+                                        )}
                                     />
                                 ))}
                             </div>

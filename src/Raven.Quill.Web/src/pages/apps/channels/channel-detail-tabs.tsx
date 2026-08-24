@@ -50,6 +50,7 @@ const IFRAME_TABS: ChannelTabDef[] = [
                     <GenerateEmbedLinkDialog
                         slug={slug}
                         channelId={channel.channelId}
+                        agentId={agent?.agentId}
                         displayName={channel.displayName}
                         parameterNames={agent?.parameters ?? []}
                         trigger={
