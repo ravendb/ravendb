@@ -8,11 +8,17 @@ mkdir -p /var/lib/quill/ravendb
 SETUP_DIR="${RAVEN_QUILL_SETUP_PACKAGE_PATH:-/var/lib/quill/setup}"
 SETUP_SETTINGS="$SETUP_DIR/A/settings.json"
 
-# wait for activation (02-web) to unpack the setup package
+# Wait for activation (02-web) to unpack the setup package. Log a heartbeat every 60s: the wait is
+# unbounded (activation retries in 02-web until the package arrives)
 if [ ! -f "$SETUP_SETTINGS" ]; then
     echo "01-ravendb: waiting for the setup package at $SETUP_SETTINGS..."
+    waited=0
     while [ ! -f "$SETUP_SETTINGS" ]; do
         sleep 2
+        waited=$((waited + 2))
+        if [ $((waited % 60)) -eq 0 ]; then
+            echo "01-ravendb: still waiting for the setup package after ${waited}s (activation runs in 02-web; check its log)"
+        fi
     done
 fi
 

@@ -6,3 +6,5 @@ public interface ILicenseClient
 }
 
 public sealed class LicenseRetrievalException(string message) : Exception(message);
+
+public sealed class LicenseKeyNotFoundException(string message) : Exception(message);

@@ -49,8 +49,7 @@ public sealed class BootstrapStateFlag : IBootstrapState
 
     public BootstrapStateFlag(IOptions<ApplianceOptions> options)
     {
-        var setupSettings = Path.Combine(options.Value.SetupPackagePath, "A", "settings.json");
-        _startedWithSetupPackage = File.Exists(setupSettings);
+        _startedWithSetupPackage = File.Exists(options.Value.SetupNodeSettingsPath);
         _phase = _startedWithSetupPackage
             ? (int)BootstrapPhase.Restarting
             : (int)BootstrapPhase.NeedsActivation;

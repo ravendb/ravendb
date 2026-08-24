@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.IO.Compression;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Options;
@@ -38,9 +37,12 @@ public sealed class ApplianceActivationService(
             try
             {
                 await using (var tempFile = File.Create(tempZipPath))
-                    await licenseClient.DownloadSetupPackageToAsync(opts.LicenseKey ?? string.Empty, tempFile, stoppingToken);
+                    await DownloadWithRetryAsync(opts.LicenseKey ?? string.Empty, tempFile, stoppingToken);
 
-                var staging = opts.SetupPackagePath + ".incoming";
+                var target = Path.TrimEndingDirectorySeparator(opts.SetupPackagePath);
+                var staging = target + ".incoming";
+                var previous = target + ".old";
+
                 if (Directory.Exists(staging))
                     Directory.Delete(staging, recursive: true);
 
@@ -50,10 +52,19 @@ public sealed class ApplianceActivationService(
 
                 WriteAdminThumbprint(staging);
 
-                if (Directory.Exists(opts.SetupPackagePath))
-                    Directory.Delete(opts.SetupPackagePath, recursive: true);
+                // Promote staging by renaming the current package aside first, so a complete package is on
+                // disk at every instant: a crash between the renames leaves either the old or the new one
+                // intact, never nothing. Renaming (not deleting then moving) also frees the target name
+                // synchronously, avoiding the Windows NTFS delete-pending race that can make the Move throw.
+                if (Directory.Exists(previous))
+                    Directory.Delete(previous, recursive: true);
+                if (Directory.Exists(target))
+                    Directory.Move(target, previous);
 
-                Directory.Move(staging, opts.SetupPackagePath);
+                Directory.Move(staging, target);
+
+                if (Directory.Exists(previous))
+                    Directory.Delete(previous, recursive: true);
             }
             finally
             {
@@ -68,7 +79,7 @@ public sealed class ApplianceActivationService(
 
             if (string.IsNullOrEmpty(opts.RavenDbS6Service) == false)
             {
-                RestartIntoSecureMode(opts);
+                RestartIntoSecureMode();
                 return;
             }
 
@@ -83,15 +94,44 @@ public sealed class ApplianceActivationService(
             logger.LogWarning(ex, "Activation: setup package was not a valid zip.");
             bootstrap.MarkFailed("activation failed: the setup package was invalid");
         }
-        catch (LicenseRetrievalException ex)
+        catch (LicenseKeyNotFoundException ex)
         {
-            logger.LogError(ex, "Activation: failed to retrieve the setup package.");
-            bootstrap.MarkFailed("activation failed: could not retrieve the setup package");
+            logger.LogError(ex, "Activation: the license key has no setup package.");
+            bootstrap.MarkFailed("activation failed: the license key was not recognized");
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Activation failed.");
             bootstrap.MarkFailed("activation failed; see server logs for details");
+        }
+    }
+
+    private static readonly TimeSpan DownloadRetryDelay = TimeSpan.FromSeconds(30);
+
+    private async Task DownloadWithRetryAsync(string licenseKey, Stream destination, CancellationToken ct)
+    {
+        var attempt = 0;
+        while (true)
+        {
+            ct.ThrowIfCancellationRequested();
+            try
+            {
+                await licenseClient.DownloadSetupPackageToAsync(licenseKey, destination, ct);
+                return;
+            }
+            catch (LicenseRetrievalException ex)
+            {
+                attempt++;
+                logger.LogInformation(
+                    "Setup package not available yet (attempt {Attempt}: {Reason}); retrying in {Delay}s.",
+                    attempt, ex.Message, DownloadRetryDelay.TotalSeconds);
+
+                // A partial write from the failed attempt must not corrupt the next one.
+                destination.SetLength(0);
+                destination.Position = 0;
+
+                await Task.Delay(DownloadRetryDelay, ct);
+            }
         }
     }
 
@@ -115,22 +155,9 @@ public sealed class ApplianceActivationService(
         File.WriteAllText(Path.Combine(packagePath, "admin-thumbprint"), cert.Thumbprint);
     }
 
-    private void RestartIntoSecureMode(ApplianceOptions opts)
+    private void RestartIntoSecureMode()
     {
         bootstrap.TryMarkRestarting();
-
-        try
-        {
-            using var s6 = Process.Start(new ProcessStartInfo("s6-svc", "-r " + opts.RavenDbS6Service)
-            {
-                UseShellExecute = false,
-            });
-            s6?.WaitForExit(5000);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Could not signal s6 to restart RavenDB ({Service}); an s6 supervisor must restart the host.", opts.RavenDbS6Service);
-        }
 
         logger.LogInformation("Activation complete; restarting .NET host to bind the secure IDocumentStore.");
         lifetime.StopApplication();
