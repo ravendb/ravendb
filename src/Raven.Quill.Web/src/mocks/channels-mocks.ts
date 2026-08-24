@@ -75,6 +75,7 @@ export const sampleChannels: ChannelSummaryResponse[] = [
         displayName: "Acme workspace bot",
         enabled: true,
         createdAt: "2026-08-18T09:15:00Z",
+        allowedOrigins: [],
         slack: {
             teamId: "T0123456789",
             teamName: "Acme Coffee",

@@ -19,17 +19,14 @@ import { useFormUnsavedChanges } from "@/components/form/unsaved-changes/use-uns
 import { invalidateChannelQueries } from "@/lib/query-invalidation";
 import { SectionEditActions } from "@/pages/apps/channels/channel-tab-actions";
 import { EditableTabShell } from "@/pages/apps/channels/editable-tab-shell";
-import {
-    TELEGRAM_PARAMETER_SOURCES,
-    telegramParameterSourceHint,
-} from "@/pages/apps/channels/telegram-parameter-sources";
+import { SLACK_PARAMETER_SOURCES, slackParameterSourceHint } from "@/pages/apps/channels/slack-parameter-sources";
 
-const TELEGRAM_SOURCE_VALUES = ["Constant", "UserId", "Username", "PhoneNumber"] as const;
+const SLACK_SOURCE_VALUES = ["Constant", "UserId", "Email"] as const;
 
 const parameterBindingSchema = z
     .object({
         name: z.string(),
-        source: z.enum(TELEGRAM_SOURCE_VALUES),
+        source: z.enum(SLACK_SOURCE_VALUES),
         value: z.string().trim(),
     })
     .superRefine((parameter, ctx) => {
@@ -49,12 +46,9 @@ function toParameterBindings(parameters: BindingsFormData["parameters"]) {
     return bindings;
 }
 
-// The parameters to show are the ones the routed agent declares; each is pre-filled from the channel's
-// existing binding when it has one. Falls back to the stored binding keys if the agent can't be resolved,
-// so a channel never hides bindings it already has.
-// Email is a Slack-only source, so a binding carrying it falls back to Constant here
-function toTelegramSource(source: ChannelParameterSource | undefined) {
-    return TELEGRAM_SOURCE_VALUES.find((candidate) => candidate === source) ?? "Constant";
+// Username and PhoneNumber are Telegram-only sources, so a binding carrying one falls back to Constant
+function toSlackSource(source: ChannelParameterSource | undefined) {
+    return SLACK_SOURCE_VALUES.find((candidate) => candidate === source) ?? "Constant";
 }
 
 function seedRows(
@@ -66,15 +60,15 @@ function seedRows(
         const binding = bindings?.[name];
         return {
             name,
-            source: toTelegramSource(binding?.source),
+            source: toSlackSource(binding?.source),
             value: binding?.source === "Constant" ? (binding.value ?? "") : "",
         };
     });
 }
 
-// The Telegram channel's parameter bindings, edited in the detail's "Parameters" tab: each agent
-// parameter is filled from a constant value or a field of the Telegram user sending each message.
-export function TelegramChannelBindings({
+// The Slack channel's parameter bindings, edited in the detail's "Parameters" tab: each agent parameter
+// is filled from a constant value, or from the Slack user id or profile email of the message's sender.
+export function SlackChannelBindings({
     slug,
     channel,
     agent,
@@ -89,7 +83,7 @@ export function TelegramChannelBindings({
     const form = useForm<BindingsFormData>({
         mode: "onChange",
         resolver: zodResolver(bindingsFormSchema),
-        defaultValues: { parameters: seedRows(agent, channel.telegram?.parameterBindings) },
+        defaultValues: { parameters: seedRows(agent, channel.slack?.parameterBindings) },
     });
 
     const unsavedChanges = useFormUnsavedChanges(form);
@@ -97,14 +91,16 @@ export function TelegramChannelBindings({
     const parameters = useWatch({ control: form.control, name: "parameters" }) ?? [];
 
     const updateMutation = useMutation({
-        // Partial update: only the bindings change. Null telegram fields (botToken, messages) are left
-        // untouched on the server.
         mutationFn: (values: BindingsFormData) =>
             api.services.channels.update(slug, channel.channelId, {
                 displayName: null,
                 allowedOrigins: null,
                 enabled: null,
-                telegram: { botToken: null, parameterBindings: toParameterBindings(values.parameters) },
+                slack: {
+                    botToken: null,
+                    signingSecret: null,
+                    parameterBindings: toParameterBindings(values.parameters),
+                },
             }),
         onSuccess: async () => {
             unsavedChanges.markSaved();
@@ -143,7 +139,7 @@ export function TelegramChannelBindings({
                 {hasParameters ? (
                     <div className="flex flex-col gap-4">
                         {parameterFields.fields.map((field, index) => {
-                            const hint = telegramParameterSourceHint(parameters[index]?.source);
+                            const hint = slackParameterSourceHint(parameters[index]?.source);
                             return (
                                 <div key={field.id} className="grid gap-2 rounded-md border bg-card p-4">
                                     <div className="grid gap-2 sm:grid-cols-2">
@@ -151,7 +147,7 @@ export function TelegramChannelBindings({
                                             control={form.control}
                                             name={`parameters.${index}.source`}
                                             label={field.name}
-                                            options={TELEGRAM_PARAMETER_SOURCES}
+                                            options={SLACK_PARAMETER_SOURCES}
                                             disabled={!isEditing}
                                         />
                                         {parameters[index]?.source === "Constant" && (
