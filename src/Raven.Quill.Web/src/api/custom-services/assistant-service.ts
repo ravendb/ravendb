@@ -112,9 +112,18 @@ export function isAssistantConsentRequired(error: unknown) {
     return isApiError(error) && readStatus(error.details) === "ConsentRequired";
 }
 
+/** True for Quill's own authentication challenge: an expired operator session answers with a bare
+ * 401 and no body at all, while the AI service's relayed refusals carry a body. */
+export function isQuillSessionExpired(error: unknown) {
+    return isApiError(error) && error.status === 401 && error.details === undefined;
+}
+
+export const AI_LICENSE_UNAVAILABLE_MESSAGE =
+    "The AI assistant is not available for this appliance's license. Please contact support.";
+
 const ASSISTANT_STATUS_MESSAGES: Partial<Record<AssistantChatStatus, string>> = {
     ConsentRequired: AI_CONSENT_REQUIRED_MESSAGE,
-    InvalidCredentials: "The AI assistant is not available for this appliance's license.",
+    InvalidCredentials: AI_LICENSE_UNAVAILABLE_MESSAGE,
     InvalidData: "The AI assistant could not make sense of that request.",
     OutOfTokens: "The AI assistant has used up its quota for now. Please try again later.",
     RequestTooLarge: "That message is too large for the AI assistant. Please shorten it and try again.",

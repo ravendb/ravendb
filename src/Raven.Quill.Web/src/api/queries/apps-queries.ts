@@ -40,17 +40,22 @@ export function createAppsQueries(api: ServerApi["apps"]) {
                     recordFetchStartedAt(queryKey);
 
                     // Suggestions are an optional aid — the wizard works without them — so
-                    // failures degrade to an empty list instead of blocking navigation.
+                    // failures degrade to an empty list instead of blocking navigation. A missing
+                    // AI consent is reported alongside them so the step can name it instead of
+                    // blaming the operator's data.
                     const result = await api
                         .suggestAgent(slug, { mode: "from-data", intentPrompt: null })
                         .catch(() => null);
 
-                    return result?.status === "Success" ? result.configurations : [];
+                    return {
+                        configurations: result?.status === "Success" ? result.configurations : [],
+                        isConsentRequired: result?.status === "ConsentRequired",
+                    };
                 },
                 // A non-empty suggestion is an expensive AI call: never refetch it behind the
                 // wizard. An empty one (failure or no candidates) stays stale so the next
                 // fetch retries.
-                staleTime: (query) => ((query.state.data?.length ?? 0) > 0 ? Infinity : 0),
+                staleTime: (query) => (query.state.data?.configurations.length ? Infinity : 0),
             }),
         aiConnectionStringsList: (slug: string) =>
             queryOptions({

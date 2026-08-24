@@ -1,4 +1,5 @@
 import { useFormContext, useWatch } from "react-hook-form";
+import { AI_CONSENT_REQUIRED_MESSAGE } from "@/api/custom-services/assistant-service";
 import { cn } from "@/lib/utils";
 import {
     CARD_DESCRIPTION_CLASSES,
@@ -20,7 +21,7 @@ export function CreateAgentStep({ isBusy }: WizardBodyComponentProps) {
     const { control, setValue } = useFormContext<AgentFormData>();
     const suggestions = useCapabilityWizardStore((state) => state.suggestions);
     const mode = useWatch({ control, name: "create.mode" });
-    const { isSuggesting, startedAt: suggestionStartedAt } = useSuggestedAgents();
+    const { isSuggesting, startedAt: suggestionStartedAt, isConsentRequired } = useSuggestedAgents();
 
     // "Next" in prompt mode is the generation call itself, so the wizard is only ever busy here
     // while the agent is being generated.
@@ -50,7 +51,9 @@ export function CreateAgentStep({ isBusy }: WizardBodyComponentProps) {
                     <SuggestedAgentsProgress startedAt={suggestionStartedAt} />
                 ) : suggestions.length === 0 ? (
                     <Alert>
-                        AI could not suggest agents from your data. Describe your own below, or set one up manually.
+                        {isConsentRequired
+                            ? AI_CONSENT_REQUIRED_MESSAGE
+                            : "AI could not suggest agents from your data. Describe your own below, or set one up manually."}
                     </Alert>
                 ) : (
                     <SuggestionPicker />
