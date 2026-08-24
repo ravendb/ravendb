@@ -29,4 +29,6 @@ internal sealed class Channel
     public TelegramSettings? Telegram { get; set; }
 
     public SlackSettings? Slack { get; set; }
+
+    public DiscordSettings? Discord { get; set; }
 }

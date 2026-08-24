@@ -32,6 +32,7 @@ public sealed class ApplianceOptions
 
     public SlackOptions Slack { get; set; } = new();
 
+    public DiscordOptions Discord { get; set; } = new();
 
     public TimeSpan ReadinessInitialDelay { get; set; } = TimeSpan.FromSeconds(15);
 

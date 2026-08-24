@@ -2,7 +2,7 @@ using Raven.Quill.Channels;
 
 namespace Raven.Quill.Contracts;
 
-// no secrets: never projects binding id / bot token / Slack credentials
+// no secrets: never projects binding id / bot token / Slack or Discord credentials
 public sealed record ChannelSummaryResponse(
     string ChannelId,
     ChannelType Type,
@@ -12,7 +12,8 @@ public sealed record ChannelSummaryResponse(
     DateTime CreatedAt,
     string[] AllowedOrigins,
     TelegramSummaryResponse? Telegram = null,
-    SlackSummaryResponse? Slack = null)
+    SlackSummaryResponse? Slack = null,
+    DiscordSummaryResponse? Discord = null)
 {
     internal static ChannelSummaryResponse From(Channel channel) => new(
         channel.ShortId,
@@ -34,7 +35,14 @@ public sealed record ChannelSummaryResponse(
                 channel.Slack.TeamId,
                 channel.Slack.TeamName,
                 channel.Slack.BotUserId,
-                channel.Slack.ParameterBindings));
+                channel.Slack.ParameterBindings),
+        channel.Discord is null
+            ? null
+            : new DiscordSummaryResponse(
+                channel.Discord.ApplicationId,
+                channel.Discord.BotUserId,
+                channel.Discord.BotUsername,
+                channel.Discord.ParameterBindings));
 }
 
 public sealed record TelegramSummaryResponse(
@@ -46,4 +54,10 @@ public sealed record SlackSummaryResponse(
     string TeamId,
     string TeamName,
     string BotUserId,
+    Dictionary<string, ChannelParameterBinding> ParameterBindings);
+
+public sealed record DiscordSummaryResponse(
+    string ApplicationId,
+    string BotUserId,
+    string BotUsername,
     Dictionary<string, ChannelParameterBinding> ParameterBindings);
