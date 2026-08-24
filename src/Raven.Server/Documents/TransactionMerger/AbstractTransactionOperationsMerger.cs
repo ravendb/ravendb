@@ -128,6 +128,7 @@ namespace Raven.Server.Documents.TransactionMerger
             _consolidatingBatches = _consolidatingBatches
                 ? writeLatencyTicks >= ExitBatchConsolidationAtLatencyTicks
                 : writeLatencyTicks >= EnterBatchConsolidationAtLatencyTicks && _env.Journal.IsCommitLatencyBound;
+            _env.BatchConsolidationActive = _consolidatingBatches;
 
             if (_consolidatingBatches == false)
                 return _maxTimeToWaitForPreviousTxInMs;

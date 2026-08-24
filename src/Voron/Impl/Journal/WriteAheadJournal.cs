@@ -322,6 +322,8 @@ namespace Voron.Impl.Journal
 
         public long WriteLatencyEwmaTicks => _writePipeline.WriteLatencyEwmaTicks;
 
+        public bool IsJournalWriteActive => _writePipeline.JournalWriteRecentlyActive;
+
         private JournalFile NextFile(long numberOf4Kbs)
         {
             var now = DateTime.UtcNow;
@@ -348,7 +350,7 @@ namespace Voron.Impl.Journal
             if (_env.Options.Encryption.IsEnabled)
                 EncryptTransaction((byte*)headerEntry.Base);
 
-            var journalPager = _env.Options.CreateNewJournalWriter(_journalIndex + 1, minRequiredSize, actualLogSize, headerEntry);
+            var journalPager = _env.Options.CreateNewJournalWriter(_journalIndex + 1, minRequiredSize, actualLogSize, headerEntry, this);
 
             // we modify the in memory state _after_ we created the file, because we have to make sure that
             // we have created it successfully first.
@@ -387,7 +389,7 @@ namespace Voron.Impl.Journal
                 ? _currentJournalFileSize
                 : Math.Min(_currentJournalFileSize * 2, _env.Options.MaxLogFileSize);
 
-            _env.Options.PrepareRecyclableJournalInBackground(size);
+            _env.Options.PrepareRecyclableJournalInBackground(size, _env.Journal);
         }
 
         public bool RecoverDatabase(TransactionHeader* txHeader, Action<LogLevel, string> addToInitLog, out long lastJournalNumber, out bool skippedInvalidJournals)
@@ -879,7 +881,7 @@ namespace Voron.Impl.Journal
             }
             private long _totalWrittenButUnsyncedBytes;
             private bool _ignoreLockAlreadyTaken;
-            private Action<LowLevelTransaction> _updateJournalStateAfterFlush;
+            private Func<LowLevelTransaction, bool> _updateJournalStateAfterFlush;
             private DateTime _lastFlushTime;
             private DateTime _lastSyncTime;
 
@@ -893,14 +895,19 @@ namespace Voron.Impl.Journal
             public void OnTransactionCommitted(LowLevelTransaction tx)
             {
                 var action = _updateJournalStateAfterFlush;
-                action?.Invoke(tx);
+                if (action == null)
+                    return;
+                if (action.Invoke(tx)) // ensures that we know which transaction completed the flush
+                    tx.AppliedJournalStateAction = action;
             }
 
             public void OnTransactionCompleted(LowLevelTransaction tx)
             {
                 // we are getting the transaction here just to verify that the write lock is held
                 Debug.Assert(tx.Flags is TransactionFlags.ReadWrite);
-                if (tx.Committed && tx.AppliedJournalStateAfterFlush)
+                if (tx.Committed && tx.AppliedJournalStateAction != null &&
+                    // we may get a _previous_ transaction that _also_ applied a flush, but not the most recent one...
+                    ReferenceEquals(tx.AppliedJournalStateAction, _updateJournalStateAfterFlush))
                 {
                     _updateJournalStateAfterFlush = null;
                     _flusherShouldRecheckJournalState.Set();
@@ -1113,9 +1120,11 @@ namespace Voron.Impl.Journal
 
                 var applied = WaitForJournalStateToBeUpdated(token, transactionPersistentContext, txw =>
                 {
+                    if (executedSuccessfully) // no concurrency, the tx write lock ensures this
+                        return false; // a previous transaction in the async chain already applied this cycle
+
                     try
                     {
-                        txw.AppliedJournalStateAfterFlush = true;
                         txw.UpdateDataPagerState(dataPagerState);
                         UpdateJournalStateUnderWriteTransactionLock(txw, bufferOfPageFromScratchBuffersToFree, record);
 
@@ -1123,6 +1132,8 @@ namespace Voron.Impl.Journal
 
                         if (_waj._logger.IsDebugEnabled)
                             _waj._logger.Debug($"Updated journal state under write tx lock (txId: {txw.Id}) after waiting for {sp.Elapsed}");
+
+                        return true;
                     }
                     catch (Exception e)
                     {
@@ -1142,7 +1153,7 @@ namespace Voron.Impl.Journal
 
 
             private bool WaitForJournalStateToBeUpdated(CancellationToken token, TransactionPersistentContext transactionPersistentContext,
-                Action<LowLevelTransaction> currentAction, ByteStringContext byteStringContext)
+                Func<LowLevelTransaction, bool> currentAction, ByteStringContext byteStringContext)
             {
                 _forTestingPurposes?.OnWaitForJournalStateToBeUpdated_BeforeAssigning_updateJournalStateAfterFlush?.Invoke();
 
@@ -2215,7 +2226,7 @@ namespace Voron.Impl.Journal
                 Pager.PagerTransactionState tempTxState = new() { IsWriteTransaction = true };
                 long numberOfUncompressedPages = 0;
                 long numberOf4Kbs = 0;
-                TaskCompletionSource branchCommit = null;
+                TaskCompletionSource branchCommit = tx.PreparedDurableCommit;
                 try
                 {
                     var rootJournal = _env.Options.RootJournal ?? this;
@@ -2229,8 +2240,7 @@ namespace Voron.Impl.Journal
                     {
                         var start = Stopwatch.GetTimestamp();
                         var entry = PrepareToWriteToJournal(tx, ref tempTxState, out numberOfUncompressedPages, out var numberOfUsedCompressionBufferPages);
-                        branchCommit = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-                        tx.DurableCommit = branchCommit.Task;
+                        Debug.Assert(branchCommit != null, "stage 1 creates PreparedDurableCommit for every ModifiedPages commit");
                         numberOf4Kbs = entry.NumberOf4Kbs;
                         var pendingJournalStateRecord = new PendingJournalStateRecord(tx, branchCommit, entry);
                         journalStateRecord = pendingJournalStateRecord.JournalStateRecord;

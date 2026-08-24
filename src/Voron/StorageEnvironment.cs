@@ -1554,6 +1554,8 @@ namespace Voron
             }
         }
 
+        internal volatile bool BatchConsolidationActive;
+
         internal bool ShouldDelaySyncToConsolidateWrites()
         {
             var options = Options;

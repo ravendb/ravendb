@@ -234,9 +234,9 @@ namespace Voron
         
         public abstract JournalWriter CreateJournalWriter(long journalNumber, long journalSize);
 
-        public abstract JournalWriter CreateNewJournalWriter(long journalNumber, long minRequiredSize, long preferredSize, Pal.journal_entry journalHeaderRecord);
+        public abstract JournalWriter CreateNewJournalWriter(long journalNumber, long minRequiredSize, long preferredSize, Pal.journal_entry journalHeaderRecord, WriteAheadJournal journal);
 
-        public virtual void PrepareRecyclableJournalInBackground(long size)
+        public virtual void PrepareRecyclableJournalInBackground(long size, WriteAheadJournal journal)
         {
         }
 
@@ -555,7 +555,7 @@ namespace Voron
                 return result.Value;
             }
 
-            public override JournalWriter CreateNewJournalWriter(long journalNumber, long minRequiredSize, long preferredSize, Pal.journal_entry journalHeaderRecord)
+            public override JournalWriter CreateNewJournalWriter(long journalNumber, long minRequiredSize, long preferredSize, Pal.journal_entry journalHeaderRecord, WriteAheadJournal journal)
             {
                 Volatile.Write(ref _currentJournalSizeHint, preferredSize);
 
@@ -569,7 +569,7 @@ namespace Voron
                     if (reusedSize < preferredSize)
                     {
                         // next time, we want to already have a ready journal of this size
-                        PrepareRecyclableJournalInBackground(preferredSize);
+                        PrepareRecyclableJournalInBackground(preferredSize, journal);
                     }
                 }
                 else // nothing to reuse, we need to create a new one
@@ -586,7 +586,30 @@ namespace Voron
             private long _currentJournalSizeHint;
             private int _journalPoolPreparationInFlight;
 
-            public override void PrepareRecyclableJournalInBackground(long size)
+           
+            private sealed class JournalZeroingPacingState
+            {
+                public WriteAheadJournal Journal;
+                public int StalledMs;
+
+                private const int MaxJournalZeroingStallMs = 500;
+
+                [UnmanagedCallersOnly]
+                public static unsafe int JournalZeroingPacing(void* state)
+                {
+                    var pacing = (JournalZeroingPacingState)GCHandle.FromIntPtr((IntPtr)state).Target;
+                    if (pacing.Journal.IsJournalWriteActive == false)
+                        return 0; // write the next chunk immediately
+
+                    if (pacing.StalledMs >= MaxJournalZeroingStallMs)
+                        return -1; // no sign of going quiet - abort, the partial file is still banked
+
+                    pacing.StalledMs += JournalWritePipeline.RecentWriteActivityWindowMs;
+                    return JournalWritePipeline.RecentWriteActivityWindowMs;
+                }
+            }
+
+            public override void PrepareRecyclableJournalInBackground(long size, WriteAheadJournal journal)
             {
                 if (EnableJournalPoolPrewarming == false || Disposed)
                     return;
@@ -599,50 +622,90 @@ namespace Voron
                 if (Interlocked.CompareExchange(ref _journalPoolPreparationInFlight, 1, 0) != 0)
                     return;
 
-                Task.Run(() =>
+                EnsureJournalPoolPreparationThread();
+                JournalPoolPreparationQueue.Add(new JournalPoolPreparationRequest(this, size, journal));
+            }
+
+            private sealed record JournalPoolPreparationRequest(DirectoryStorageEnvironmentOptions Options, long Size, WriteAheadJournal Journal);
+
+            private static readonly BlockingCollection<JournalPoolPreparationRequest> JournalPoolPreparationQueue = new();
+            private static Thread _journalPoolPreparationThread;
+
+            private static void EnsureJournalPoolPreparationThread()
+            {
+                if (Volatile.Read(ref _journalPoolPreparationThread) != null)
+                    return;
+
+                var threadName = ThreadNames.GetNameToUse(ThreadNames.ForJournalZeroing("Voron Zero Journals"));
+                var thread = new Thread(JournalPoolPreparationLoop)
+                {
+                    IsBackground = true,
+                    Name = threadName
+                };
+
+                if (Interlocked.CompareExchange(ref _journalPoolPreparationThread, thread, null) == null)
+                    thread.Start();
+            }
+
+            private static void JournalPoolPreparationLoop()
+            {
+                ThreadNames.AddFullThreadName(Environment.CurrentManagedThreadId, "Voron Zero Journals");
+
+                foreach (var request in JournalPoolPreparationQueue.GetConsumingEnumerable())
                 {
                     try
                     {
-                        PrepareRecyclableJournal(size);
+                        if (request.Options.Disposed == false)
+                            request.Options.PrepareRecyclableJournal(request.Size, request.Journal);
                     }
                     catch (Exception ex)
                     {
-                        if (_log.IsDebugEnabled)
-                            _log.Debug($"Failed to prepare a recyclable journal of size {size}", ex);
+                        if (request.Options._log.IsDebugEnabled)
+                            request.Options._log.Debug($"Failed to prepare a recyclable journal of size {request.Size}", ex);
                     }
                     finally
                     {
-                        Volatile.Write(ref _journalPoolPreparationInFlight, 0);
-                    }
-                });
-            }
-
-            private void PrepareRecyclableJournal(long size)
-            {
-                var path = Path.Combine(JournalPath.FullPath, RecyclableJournalName(Interlocked.Increment(ref _reuseCounter)));
-                try
-                {
-                    var rc = Pal.rvn_create_zeroed_file(path, size, out var errorCode);
-                    if (rc != PalFlags.FailCodes.Success)
-                        PalHelper.ThrowLastError(rc, errorCode, $"Failed to create a zeroed pool journal {path} of size {size}");
-
-                    lock (_journalsForReuse)
-                    {
-                        if (Disposed)
-                        {
-                            TryDelete(path);
-                            return;
-                        }
-
-                        var ticks = new FileInfo(path).LastWriteTimeUtc.Ticks;
-                        while (_journalsForReuse.TryAdd(ticks, path) is false)
-                            ticks++;
+                        Volatile.Write(ref request.Options._journalPoolPreparationInFlight, 0);
                     }
                 }
-                catch
+            }
+
+            private unsafe void PrepareRecyclableJournal(long size, WriteAheadJournal journal)
+            {
+                var path = Path.Combine(JournalPath.FullPath, RecyclableJournalName(Interlocked.Increment(ref _reuseCounter)));
+
+                long zeroedBytes;
+                var pacingHandle = GCHandle.Alloc(new JournalZeroingPacingState { Journal = journal });
+                try
                 {
-                    TryDelete(path);
-                    throw;
+                    PalFlags.FailCodes rc;
+                    int errorCode;
+                    using (IoMetrics.MeterIoRate(path, IoMetrics.MeterType.JournalWrite, size))
+                    {
+                        rc = Pal.rvn_create_zeroed_file(path, size,
+                            &JournalZeroingPacingState.JournalZeroingPacing, (void*)GCHandle.ToIntPtr(pacingHandle),
+                            out zeroedBytes, out errorCode);
+                    }
+
+                    if (rc != PalFlags.FailCodes.Success)
+                        PalHelper.ThrowLastError(rc, errorCode, $"Failed to create a zeroed pool journal {path} of size {size}");
+                }
+                finally
+                {
+                    pacingHandle.Free();
+                }
+
+                lock (_journalsForReuse)
+                {
+                    if (Disposed)
+                    {
+                        TryDelete(path);
+                        return;
+                    }
+
+                    var ticks = new FileInfo(path).LastWriteTimeUtc.Ticks;
+                    while (_journalsForReuse.TryAdd(ticks, path) is false)
+                        ticks++;
                 }
             }
 
@@ -1429,7 +1492,7 @@ namespace Voron
                 return value;
             }
 
-            public override JournalWriter CreateNewJournalWriter(long journalNumber, long minRequiredSize, long preferredSize, Pal.journal_entry journalHeaderRecord)
+            public override JournalWriter CreateNewJournalWriter(long journalNumber, long minRequiredSize, long preferredSize, Pal.journal_entry journalHeaderRecord, WriteAheadJournal journal)
             {
                 var writer = CreateJournalWriter(journalNumber, preferredSize);
                 writer.WriteHeaderRecord(journalHeaderRecord);
