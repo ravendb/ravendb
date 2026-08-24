@@ -1,5 +1,7 @@
 ﻿using System;
+#if NET6_0_OR_GREATER
 using System.Diagnostics.CodeAnalysis;
+#endif
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -200,7 +202,9 @@ namespace Sparrow.Json
             return _lazyStringTempBuffer;
         }
 
+#if NET6_0_OR_GREATER
         [DoesNotReturn]
+#endif
         private static void ThrowTempBufferStillInScope()
         {
             throw new InvalidOperationException(
@@ -498,12 +502,15 @@ namespace Sparrow.Json
 
             var buffer = GetlazyStringTempBuffer(Encodings.Utf8.GetMaxCharCount(Size));
             _lazyStringTempBufferInUse = true;
+#if NETCOREAPP
+            var chars = Encodings.Utf8.GetChars(new ReadOnlySpan<byte>(_buffer, Size), buffer);
+#else
+            int chars;
             fixed (char* pBuffer = buffer)
-            {
-                var chars = Encodings.Utf8.GetChars(_buffer, Size, pBuffer, buffer.Length);
-                output = new ReadOnlySpan<char>(buffer, 0, chars);
-                return new TempCharSpanScope();
-            }
+                chars = Encodings.Utf8.GetChars(_buffer, Size, pBuffer, buffer.Length);
+#endif
+            output = new ReadOnlySpan<char>(buffer, 0, chars);
+            return new TempCharSpanScope();
         }
 
         public readonly ref struct TempCharSpanScope
