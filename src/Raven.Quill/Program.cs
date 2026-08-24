@@ -154,9 +154,12 @@ builder.Services.AddTransient<IFeedbackSender, FeedbackSender>();
 builder.Services.AddTransient<ILicenseStatsProvider, LicenseStatsProvider>();
 builder.Services.AddSingleton<ITelegramBotClientFactory, TelegramBotClientFactory>();
 builder.Services.AddSingleton<SlackHealthRegistry>();
-builder.Services.AddSingleton<DiscordHealthRegistry>();
 builder.Services.AddSingleton<SlackUserDirectory>();
 builder.Services.AddSingleton<SlackInboundProcessor>();
+builder.Services.AddSingleton<DiscordHealthRegistry>();
+builder.Services.AddSingleton<DiscordInboundProcessor>();
+builder.Services.AddSingleton<DiscordChannelManager>();
+builder.Services.AddSingleton<IDiscordChannelManager>(sp => sp.GetRequiredService<DiscordChannelManager>());
 builder.Services.AddSingleton<TelegramChannelManager>();
 builder.Services.AddSingleton<ITelegramChannelManager>(sp => sp.GetRequiredService<TelegramChannelManager>());
 if (!isOpenApiDocumentGeneration)
@@ -165,6 +168,8 @@ if (!isOpenApiDocumentGeneration)
     builder.Services.AddHostedService<ApplianceActivationService>();
     builder.Services.AddHostedService(sp => sp.GetRequiredService<TelegramChannelManager>());
     builder.Services.AddHostedService(sp => sp.GetRequiredService<SlackInboundProcessor>());
+    builder.Services.AddHostedService(sp => sp.GetRequiredService<DiscordInboundProcessor>());
+    builder.Services.AddHostedService(sp => sp.GetRequiredService<DiscordChannelManager>());
 }
 
 builder.Services.ConfigureHttpClientDefaults(httpBuilder =>
@@ -332,6 +337,7 @@ AuthEndpoints.Map(app);
 AppsEndpoints.Map(app);
 ChannelsEndpoints.Map(app);
 SlackEndpoints.Map(app);
+DiscordEndpoints.Map(app);
 IFrameCustomizationEndpoints.Map(app);
 EmbedLinksEndpoints.Map(app);
 AiConnectionStringsEndpoints.Map(app);
