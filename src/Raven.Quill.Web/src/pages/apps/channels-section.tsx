@@ -7,6 +7,7 @@ import { EnabledStatus } from "@/components/data/status-indicator";
 import { Button } from "@/components/shadcn/ui/button";
 import { Skeleton } from "@/components/shadcn/ui/skeleton";
 import { TableCell, TableRow } from "@/components/shadcn/ui/table";
+import { TableSkeleton } from "@/components/table/table-skeleton";
 import { appRoutes } from "@/lib/app-routes";
 import { CHANNEL_TYPE_LABELS } from "@/lib/channel-type-labels";
 import { formatDateTime } from "@/lib/utils";
@@ -43,6 +44,16 @@ export function ChannelsSection({ slug, agent: fixedAgent }: { slug: string; age
         ? (channelsQuery.data ?? []).filter((channel) => channel.agentId === fixedAgent.agentId)
         : channelsQuery.data;
 
+    const headers = [
+        "Channel name",
+        ...(fixedAgent ? [] : ["Agent name"]),
+        "Status",
+        "Type",
+        "Active links",
+        "Created",
+        "",
+    ];
+
     return (
         <SectionCard
             title={fixedAgent ? `Channels for “${fixedAgent.name}”` : "Channels"}
@@ -54,21 +65,10 @@ export function ChannelsSection({ slug, agent: fixedAgent }: { slug: string; age
                 errorTitle="Could not load channels"
                 onRetry={onRetry}
                 loadingLabel="Loading channels..."
+                skeleton={<TableSkeleton headers={headers} />}
             >
                 {channels && (
-                    <SectionTable
-                        headers={[
-                            "Channel name",
-                            ...(fixedAgent ? [] : ["Agent name"]),
-                            "Status",
-                            "Type",
-                            "Active links",
-                            "Created",
-                            "",
-                        ]}
-                        isEmpty={channels.length === 0}
-                        emptyMessage="No channels yet."
-                    >
+                    <SectionTable headers={headers} isEmpty={channels.length === 0} emptyMessage="No channels yet.">
                         {channels.map((channel) => {
                             const agent = agentsQuery.data?.find((x) => x.agentId === channel.agentId);
                             return (

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { ApiState } from "@/components/data/api-state";
+import { DetailGridSkeleton } from "@/components/data/loading-skeletons";
 import { CopyableCode } from "@/components/data/copyable-code";
 import { Button } from "@/components/shadcn/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/shadcn/ui/card";
@@ -67,6 +68,7 @@ export function DashboardIpConfiguration({ hostname = window.location.hostname }
                             errorTitle="Could not resolve the current IP binding"
                             onRetry={() => bindingQuery.refetch()}
                             loadingLabel="Resolving DNS…"
+                            skeleton={<DetailGridSkeleton count={2} />}
                         >
                             <div className="grid gap-6 sm:grid-cols-2">
                                 <div className="space-y-1">

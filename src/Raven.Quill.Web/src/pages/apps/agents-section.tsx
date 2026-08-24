@@ -6,11 +6,14 @@ import { ApiState } from "@/components/data/api-state";
 import { EnabledStatus } from "@/components/data/status-indicator";
 import { Button } from "@/components/shadcn/ui/button";
 import { TableCell, TableRow } from "@/components/shadcn/ui/table";
+import { TableSkeleton } from "@/components/table/table-skeleton";
 import { appRoutes } from "@/lib/app-routes";
 import { formatCompact } from "@/lib/format";
 import { formatDateTime } from "@/lib/utils";
 import { DeleteAgentDialog } from "@/pages/apps/agents/delete-agent-dialog";
 import { SectionCard, SectionTable } from "@/pages/apps/section-card";
+
+const AGENT_TABLE_HEADERS = ["Agent name", "Status", "Model", "Last run", "Conversations", "Messages", "Tokens", ""];
 
 export function AgentsSection({ slug }: { slug: string }) {
     return (
@@ -30,10 +33,11 @@ export function AgentsTable({ slug }: { slug: string }) {
             errorTitle="Could not load agents"
             onRetry={() => void agentsQuery.refetch()}
             loadingLabel="Loading agents..."
+            skeleton={<TableSkeleton headers={AGENT_TABLE_HEADERS} />}
         >
             {agentsQuery.data && (
                 <SectionTable
-                    headers={["Agent name", "Status", "Model", "Last run", "Conversations", "Messages", "Tokens", ""]}
+                    headers={AGENT_TABLE_HEADERS}
                     isEmpty={agentsQuery.data.length === 0}
                     emptyMessage="No agents yet."
                 >

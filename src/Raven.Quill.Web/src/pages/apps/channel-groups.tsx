@@ -5,6 +5,7 @@ import { Link } from "react-router";
 import { api } from "@/api/api";
 import type { AgentSummaryResponse, ChannelSummaryResponse, ChannelType } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
+import { CardListSkeleton } from "@/components/data/loading-skeletons";
 import { EnabledStatus } from "@/components/data/status-indicator";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
@@ -74,6 +75,7 @@ export function ChannelGroups({ slug }: { slug: string }) {
             errorTitle="Could not load channels"
             onRetry={onRetry}
             loadingLabel="Loading channels..."
+            skeleton={<CardListSkeleton count={2} />}
         >
             {channelsQuery.data &&
                 (channels.length === 0 ? (

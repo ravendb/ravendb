@@ -6,6 +6,7 @@ import { api } from "@/api/api";
 import type { AgentSummaryResponse } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
 import { DetailHeader, DetailHeaderMenu, DetailHeaderMetaItem } from "@/components/data/detail-header";
+import { FormFieldsSkeleton } from "@/components/data/loading-skeletons";
 import { EnabledStatus } from "@/components/data/status-indicator";
 import { DropdownMenuItem } from "@/components/shadcn/ui/dropdown-menu";
 import { appRoutes } from "@/lib/app-routes";
@@ -68,6 +69,7 @@ export function AppAgentEdit() {
                 errorTitle="Could not load agent"
                 onRetry={onRetry}
                 loadingLabel="Loading agent..."
+                skeleton={<FormFieldsSkeleton count={5} />}
             >
                 {agentQuery.data && connectionStringsQuery.data && (
                     <EditAgentForm

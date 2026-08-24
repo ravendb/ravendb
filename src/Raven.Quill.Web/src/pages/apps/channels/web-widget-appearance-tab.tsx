@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
 import { ApiState } from "@/components/data/api-state";
+import { FormFieldsSkeleton } from "@/components/data/loading-skeletons";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { useWebWidgetThemeSave } from "@/pages/apps/channels/use-web-widget-theme-save";
 import { WebWidgetThemeEditor } from "@/pages/apps/channels/web-widget-theme-editor";
@@ -29,6 +30,7 @@ export function WebWidgetAppearanceTab({ slug, channelId }: { slug: string; chan
                 errorTitle="Could not load the theme"
                 onRetry={themeQuery.refetch}
                 loadingLabel="Loading theme..."
+                skeleton={<FormFieldsSkeleton count={4} />}
             >
                 {themeQuery.data && (
                     <WebWidgetThemeEditor

@@ -4,6 +4,8 @@ import { format } from "date-fns";
 import { api } from "@/api/api";
 import type { QuillPeriodUsage } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
+import { ChartSkeleton } from "@/components/data/loading-skeletons";
+import { TableSkeleton } from "@/components/table/table-skeleton";
 import { WritesBarChart } from "@/components/data/charts";
 import { DatePeriodPicker } from "@/components/data/date-period-picker";
 import { WruLabel } from "@/components/data/wru-label";
@@ -12,6 +14,8 @@ import { canDrillInto, drillInto, formatPeriodLabel, getDefaultDatePeriod, type 
 import { useSetupStartDate } from "@/lib/use-start-date";
 import { formatCompact } from "@/lib/format";
 import { PerAppUsageTable } from "@/pages/dashboard/per-app-usage-table";
+
+const PER_APP_TABLE_HEADERS = ["Name", "Writes"];
 
 export function DashboardUsage() {
     const [period, setPeriod] = useState(getDefaultDatePeriod);
@@ -60,6 +64,7 @@ export function DashboardUsage() {
                         errorTitle="Could not load usage"
                         onRetry={() => usageQuery.refetch()}
                         loadingLabel="Loading chart…"
+                        skeleton={<ChartSkeleton />}
                     >
                         {usageQuery.data && (
                             <WritesBarChart
@@ -84,6 +89,7 @@ export function DashboardUsage() {
                         errorTitle="Could not load per-app usage"
                         onRetry={() => usageQuery.refetch()}
                         loadingLabel="Loading apps…"
+                        skeleton={<TableSkeleton headers={PER_APP_TABLE_HEADERS} rows={4} />}
                     >
                         {usageQuery.data && <PerAppUsageTable apps={usageQuery.data.perApplication ?? []} />}
                     </ApiState>

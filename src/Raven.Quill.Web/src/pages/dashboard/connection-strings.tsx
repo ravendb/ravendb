@@ -5,10 +5,13 @@ import { ApiState } from "@/components/data/api-state";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/ui/table";
+import { TableSkeleton } from "@/components/table/table-skeleton";
 import { AddAiConnectionString } from "@/components/ai-connection-string/add-ai-connection-string";
 import { EditAiConnectionString } from "@/components/ai-connection-string/edit-ai-connection-string";
 import { DeleteAiConnectionStringDialog } from "@/components/ai-connection-string/delete-ai-connection-string-dialog";
 import { getProviderLabel, MODEL_TYPE_LABELS } from "@/components/ai-connection-string/ai-connection-string-utils";
+
+const CONNECTION_STRING_TABLE_HEADERS = ["Name", "Provider", "Model type", ""];
 
 export function DashboardConnectionStrings() {
     const connectionStringsQuery = useQuery(api.queries.aiConnectionStrings.list());
@@ -43,6 +46,7 @@ export function DashboardConnectionStrings() {
                 errorTitle="Could not load connection strings"
                 onRetry={refetch}
                 loadingLabel="Loading connection strings..."
+                skeleton={<TableSkeleton headers={CONNECTION_STRING_TABLE_HEADERS} rows={4} />}
             >
                 <div className="overflow-hidden rounded-lg border">
                     <Table>

@@ -3,6 +3,7 @@ import { useParams } from "react-router";
 import { usePrefetchQuery, useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
 import { ApiState } from "@/components/data/api-state";
+import { FormFieldsSkeleton } from "@/components/data/loading-skeletons";
 import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
 import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
 import { AddAiConnectionString } from "@/components/ai-connection-string/add-ai-connection-string";
@@ -29,6 +30,7 @@ export function ConnectProviderStep({ isBusy }: WizardBodyComponentProps) {
             errorTitle="Could not load connection strings"
             onRetry={connectionStringsQuery.refetch}
             loadingLabel="Loading connection strings..."
+            skeleton={<FormFieldsSkeleton count={1} />}
         >
             {items.length === 0 ? (
                 <Field>

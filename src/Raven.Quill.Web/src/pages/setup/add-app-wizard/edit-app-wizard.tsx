@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router";
 import type { AppCdcConfigurationResponse, ApplianceAppResponse } from "@/api/generated/server-api";
 import { api } from "@/api/api";
 import { ApiState } from "@/components/data/api-state";
+import { FormFieldsSkeleton } from "@/components/data/loading-skeletons";
 import { Alert, AlertDescription, AlertTitle } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
 import { appRoutes } from "@/lib/app-routes";
@@ -27,6 +28,7 @@ export function EditAppWizard() {
                 isError={appQuery.isError || configurationQuery.isError}
                 errorTitle="Could not load the app configuration"
                 loadingLabel="Loading the app configuration..."
+                skeleton={<FormFieldsSkeleton count={4} />}
                 onRetry={() => {
                     void appQuery.refetch();
                     void configurationQuery.refetch();

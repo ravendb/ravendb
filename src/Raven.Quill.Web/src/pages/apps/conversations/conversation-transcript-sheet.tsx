@@ -5,6 +5,7 @@ import { Streamdown } from "streamdown";
 import { api } from "@/api/api";
 import type { AiConversationMessage, ConversationParam } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
+import { CardListSkeleton } from "@/components/data/loading-skeletons";
 import {
     Sheet,
     SheetContent,
@@ -69,6 +70,7 @@ export function ConversationTranscriptSheet({
                         errorTitle="Could not load conversation"
                         onRetry={() => void conversationQuery.refetch()}
                         loadingLabel="Loading conversation..."
+                        skeleton={<CardListSkeleton count={4} />}
                     >
                         {conversationQuery.data &&
                             (turns.length === 0 ? (

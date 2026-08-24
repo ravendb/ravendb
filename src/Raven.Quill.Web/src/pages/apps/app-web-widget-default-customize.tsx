@@ -3,6 +3,7 @@ import { useParams } from "react-router";
 import { api } from "@/api/api";
 import { ApiState } from "@/components/data/api-state";
 import { DetailHeader } from "@/components/data/detail-header";
+import { FormFieldsSkeleton } from "@/components/data/loading-skeletons";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { appRoutes } from "@/lib/app-routes";
 import { useWebWidgetThemeSave } from "@/pages/apps/channels/use-web-widget-theme-save";
@@ -39,6 +40,7 @@ export function AppWebWidgetDefaultCustomize() {
                     errorTitle="Could not load the default theme"
                     onRetry={() => defaultQuery.refetch()}
                     loadingLabel="Loading default theme..."
+                    skeleton={<FormFieldsSkeleton count={4} />}
                 >
                     <div className="grid gap-5">
                         {defaultQuery.data && (

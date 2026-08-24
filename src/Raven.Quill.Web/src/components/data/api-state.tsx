@@ -6,6 +6,7 @@ type ApiStateProps = {
     isError?: boolean;
     isLoading?: boolean;
     loadingLabel?: string;
+    skeleton?: ReactNode;
     onRetry?: () => void;
     children: ReactNode;
 };
@@ -16,10 +17,28 @@ export function ApiState({
     isError,
     isLoading,
     loadingLabel = "Loading...",
+    skeleton,
     onRetry,
 }: ApiStateProps) {
     if (isLoading) {
-        return <p className="text-sm text-muted-foreground">{loadingLabel}</p>;
+        // No skeleton means the shape is genuinely unknowable ahead of the data, or the wait
+        // itself is the message. Say it in words rather than promise a shape we cannot draw.
+        if (!skeleton) {
+            return (
+                <p role="status" className="text-sm text-muted-foreground">
+                    {loadingLabel}
+                </p>
+            );
+        }
+
+        // The skeleton is decoration, so the caller's label stays in the tree as the accessible
+        // name for the wait instead of being dropped along with the visible text.
+        return (
+            <div role="status">
+                <span className="sr-only">{loadingLabel}</span>
+                <div aria-hidden="true">{skeleton}</div>
+            </div>
+        );
     }
 
     if (isError) {

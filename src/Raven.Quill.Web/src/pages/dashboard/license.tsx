@@ -3,6 +3,7 @@ import { Check, LifeBuoy, RefreshCw } from "lucide-react";
 import { api } from "@/api/api";
 import type { ConnectivityStatus, LicensePlan, ServerLicenseResponse } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
+import { DetailGridSkeleton } from "@/components/data/loading-skeletons";
 import { ConnectivityMetric } from "@/components/data/connectivity-metric";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
@@ -39,6 +40,7 @@ export function DashboardLicense() {
                 errorTitle="Could not load license"
                 onRetry={() => licenseQuery.refetch()}
                 loadingLabel="Loading license…"
+                skeleton={<DetailGridSkeleton count={6} />}
             >
                 {licenseQuery.data && (
                     <div className="space-y-8">
