@@ -13,7 +13,7 @@ export function getHelpLinks(licenseId: string | undefined): { label: string; hr
     ];
 }
 
-function getSupportUrl(licenseId: string | undefined) {
+export function getSupportUrl(licenseId: string | undefined) {
     if (!licenseId) {
         return SUPPORT_URL;
     }

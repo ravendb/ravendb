@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 import { QuillMark } from "@/components/brand/quill-logo.tsx";
 import { AssistantPanel } from "@/components/layout/assistant-panel";
 import { ASSISTANT_PANEL_TITLE_ID, useAssistantPinning, useAssistantStore } from "@/components/layout/assistant-store";
-import { ContactSheet } from "@/components/layout/contact-sheet";
+import { FeedbackSheet } from "@/components/layout/feedback-sheet";
 import { Button } from "@/components/shadcn/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
 
@@ -102,7 +102,7 @@ function App() {
                 <CommandPalette slug={slug} appName={activeAppLabel} />
 
                 <nav className="ml-4 flex shrink-0 items-center gap-4 text-sm" aria-label="Top navigation">
-                    <ContactSheet
+                    <FeedbackSheet
                         trigger={
                             <Button variant="outline" size="sm">
                                 <MessageCircle aria-hidden="true" />
