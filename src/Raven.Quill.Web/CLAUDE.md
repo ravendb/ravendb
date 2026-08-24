@@ -21,3 +21,9 @@ Frontend for Raven Quill. It is a Vite + React + TypeScript app and is finally b
 - Boolean names must clearly read as booleans, e.g. `is`, `has`, `can`, `should`, `was`.
 - Use kebab-case filenames, PascalCase React components, `@/*` imports, and `SCREAMING_SNAKE_CASE` module constants.
 - Install new dependencies only when they remove real complexity. Prefer popular, maintained packages and latest versions.
+
+## Glossary
+
+Product vocabulary is a UX contract: one concept, one word, on every surface. See
+[GLOSSARY.md](GLOSSARY.md) and use those terms in every user-visible label, heading, menu
+item, description, toast, `aria-label` and page title.
