@@ -7,6 +7,11 @@ export const SLACK_PARAMETER_SOURCES: { value: ChannelParameterSource; label: st
         label: "Sender Slack user ID",
         hint: "Bound per message to the Slack user id (U...) the message came from.",
     },
+    {
+        value: "Email",
+        label: "Sender email",
+        hint: "Read from the sender's Slack profile. Needs the users:read and users:read.email scopes — apps installed before those were added must be reinstalled to the workspace. Senders with no email on their profile cannot use the bot.",
+    },
 ];
 
 export function slackParameterSourceLabel(source: ChannelParameterSource | undefined) {

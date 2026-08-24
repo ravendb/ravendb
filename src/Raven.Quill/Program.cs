@@ -139,6 +139,7 @@ builder.Services.AddTransient<IFeedbackSender, FeedbackSender>();
 builder.Services.AddTransient<ILicenseStatsProvider, LicenseStatsProvider>();
 builder.Services.AddSingleton<ITelegramBotClientFactory, TelegramBotClientFactory>();
 builder.Services.AddSingleton<SlackHealthRegistry>();
+builder.Services.AddSingleton<SlackUserDirectory>();
 builder.Services.AddSingleton<SlackInboundProcessor>();
 builder.Services.AddSingleton<TelegramChannelManager>();
 builder.Services.AddSingleton<ITelegramChannelManager>(sp => sp.GetRequiredService<TelegramChannelManager>());

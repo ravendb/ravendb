@@ -33,7 +33,7 @@ import type { FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
 const parameterBindingSchema = z
     .object({
         name: z.string(),
-        source: z.enum(["Constant", "UserId"]),
+        source: z.enum(["Constant", "UserId", "Email"]),
         value: z.string().trim(),
     })
     .superRefine((parameter, ctx) => {
@@ -253,7 +253,7 @@ function LoadedSlackChannelForm({
                             rows={parameters}
                             sources={SLACK_PARAMETER_SOURCES}
                             sourceHint={slackParameterSourceHint}
-                            description="Map each agent parameter to a constant value bound once for the whole channel, or to the Slack user id of the sender of each message."
+                            description="Map each agent parameter to a constant value bound once for the whole channel, or to the Slack user id or email of the sender of each message."
                         />
                     </>
                 )}

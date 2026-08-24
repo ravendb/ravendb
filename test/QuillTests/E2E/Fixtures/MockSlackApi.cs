@@ -16,6 +16,8 @@ public sealed class MockSlackApi : IAsyncDisposable
     private readonly object _lock = new();
 
     private readonly Dictionary<string, BotEntry> _bots = new();
+    private readonly Dictionary<string, string?> _userEmails = new();
+    private readonly List<string> _userInfoCalls = [];
     private readonly List<SentMessage> _sent = [];
     private readonly List<EditedMessage> _edited = [];
     private readonly List<string> _authTestCalls = [];
@@ -34,6 +36,8 @@ public sealed class MockSlackApi : IAsyncDisposable
     public string? SendError { get; set; }
 
     public bool NextUpdateRateLimit429 { get; set; }
+
+    public bool UsersReadScopeGranted { get; set; } = true;
 
     private MockSlackApi(WebApplication app, string baseAddress)
     {
@@ -56,6 +60,18 @@ public sealed class MockSlackApi : IAsyncDisposable
         get { lock (_lock) return _authTestCalls.ToArray(); }
     }
 
+    public IReadOnlyList<string> UserInfoCalls
+    {
+        get { lock (_lock) return _userInfoCalls.ToArray(); }
+    }
+
+    // a user known to Slack but with no email on their profile is registered with a null email
+    public void AddUser(string userId, string? email)
+    {
+        lock (_lock)
+            _userEmails[userId] = email;
+    }
+
     public void AddBot(string botToken, string teamId, string teamName, string botUserId, string botId = "B0MOCK")
     {
         lock (_lock)
@@ -70,10 +86,13 @@ public sealed class MockSlackApi : IAsyncDisposable
             _sent.Clear();
             _edited.Clear();
             _authTestCalls.Clear();
+            _userEmails.Clear();
+            _userInfoCalls.Clear();
         }
         Down = false;
         SendError = null;
         NextUpdateRateLimit429 = false;
+        UsersReadScopeGranted = true;
     }
 
     public Task WaitUntilAsync(Func<bool> condition, string what, TimeSpan? timeout = null) =>
@@ -103,6 +122,8 @@ public sealed class MockSlackApi : IAsyncDisposable
         });
 
         app.MapPost("/auth.test", (HttpContext ctx) => instance.HandleAuthTest(ctx));
+
+        app.MapGet("/users.info", (HttpContext ctx) => instance.HandleUserInfo(ctx));
 
         app.MapPost("/chat.postMessage", async (HttpContext ctx) =>
         {
@@ -148,6 +169,47 @@ public sealed class MockSlackApi : IAsyncDisposable
             ["team_id"] = entry.TeamId,
             ["user_id"] = entry.BotUserId,
             ["bot_id"] = entry.BotId,
+        });
+    }
+
+    private IResult HandleUserInfo(HttpContext ctx)
+    {
+        BotEntry? entry;
+        lock (_lock)
+            entry = _bots.GetValueOrDefault(BearerToken(ctx));
+
+        if (entry is null)
+            return SlackError("invalid_auth");
+
+        if (UsersReadScopeGranted == false)
+            return SlackError("missing_scope");
+
+        var userId = ctx.Request.Query["user"].ToString();
+
+        bool known;
+        string? email;
+        lock (_lock)
+        {
+            _userInfoCalls.Add(userId);
+            known = _userEmails.TryGetValue(userId, out email);
+        }
+
+        if (known == false)
+            return SlackError("user_not_found");
+
+        var profile = new JsonObject();
+        if (email is not null)
+            profile["email"] = email;
+
+        return Results.Json(new JsonObject
+        {
+            ["ok"] = true,
+            ["user"] = new JsonObject
+            {
+                ["id"] = userId,
+                ["team_id"] = entry.TeamId,
+                ["profile"] = profile,
+            },
         });
     }
 

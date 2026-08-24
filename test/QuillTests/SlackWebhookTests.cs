@@ -316,11 +316,81 @@ public class SlackWebhookTests(ITestOutputHelper output, QuillSlackFixture fixtu
             "the mrkdwn-converted finalized edit");
     }
 
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Email_bound_parameters_resolve_from_the_senders_slack_profile()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app,
+            new AiAgentParameter("senderEmail", "the sender's email"), ChannelParameterSource.Email);
+        Slack.AddUser(Sender, "dana@acme.example");
+
+        var raw = EventBytes(channel.TeamId, "Ev-mail-1", DmMessage(Sender, "who am i?"));
+        var response = await Host.Client.SendAsync(SignedPost(channel.WebhookToken, raw, channel.SigningSecret));
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        await Slack.WaitUntilAsync(() => Router.Requests.Count == 1, "the agent dispatch");
+        Assert.Equal("dana@acme.example", Assert.Single(Router.Requests).Parameters["senderEmail"]);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Repeat_senders_reuse_one_cached_profile_lookup()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app,
+            new AiAgentParameter("senderEmail", "the sender's email"), ChannelParameterSource.Email);
+        Slack.AddUser(Sender, "dana@acme.example");
+
+        foreach (var eventId in new[] { "Ev-mail-2", "Ev-mail-3" })
+        {
+            var raw = EventBytes(channel.TeamId, eventId, DmMessage(Sender, "again"));
+            await Host.Client.SendAsync(SignedPost(channel.WebhookToken, raw, channel.SigningSecret));
+        }
+
+        await Slack.WaitUntilAsync(() => Router.Requests.Count == 2, "both agent dispatches");
+        Assert.Equal(Sender, Assert.Single(Slack.UserInfoCalls));
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_sender_without_an_email_gets_the_error_reply_and_never_dispatches()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app,
+            new AiAgentParameter("senderEmail", "the sender's email"), ChannelParameterSource.Email);
+        Slack.AddUser(Sender, email: null);
+
+        var raw = EventBytes(channel.TeamId, "Ev-mail-4", DmMessage(Sender, "who am i?"));
+        await Host.Client.SendAsync(SignedPost(channel.WebhookToken, raw, channel.SigningSecret));
+
+        await Slack.WaitUntilAsync(
+            () => Slack.SentMessages.Any(m => m.Text == SlackInboundProcessor.ErrorReply), "the error reply");
+        Assert.Empty(Router.Requests);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task An_app_missing_the_users_read_scope_gets_the_error_reply_and_never_dispatches()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app,
+            new AiAgentParameter("senderEmail", "the sender's email"), ChannelParameterSource.Email);
+        Slack.AddUser(Sender, "dana@acme.example");
+        Slack.UsersReadScopeGranted = false;
+
+        var raw = EventBytes(channel.TeamId, "Ev-mail-5", DmMessage(Sender, "who am i?"));
+        await Host.Client.SendAsync(SignedPost(channel.WebhookToken, raw, channel.SigningSecret));
+
+        await Slack.WaitUntilAsync(
+            () => Slack.SentMessages.Any(m => m.Text == SlackInboundProcessor.ErrorReply), "the error reply");
+        Assert.Empty(Router.Requests);
+    }
+
     private sealed record ProvisionedChannel(
         string ChannelId, string BotToken, string SigningSecret, string WebhookToken,
         string TeamId, string BotUserId);
 
-    private async Task<ProvisionedChannel> NewChannelAsync(QuillApp app, AiAgentParameter? parameter = null)
+    private async Task<ProvisionedChannel> NewChannelAsync(
+        QuillApp app,
+        AiAgentParameter? parameter = null,
+        ChannelParameterSource source = ChannelParameterSource.UserId)
     {
         var agentId = "slack-agent-" + Guid.NewGuid().ToString("N")[..8];
         await app.ProvisionAgentAsync(new AiAgentConfiguration
@@ -342,7 +412,7 @@ public class SlackWebhookTests(ITestOutputHelper output, QuillSlackFixture fixtu
             ? null
             : new Dictionary<string, ChannelParameterBinding>
             {
-                [parameter.Name] = new() { Source = ChannelParameterSource.UserId },
+                [parameter.Name] = new() { Source = source },
             };
 
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(

@@ -8,6 +8,7 @@ public enum ChannelParameterSource
     UserId,
     Username,
     PhoneNumber,
+    Email,
 }
 
 public sealed class ChannelParameterBinding
