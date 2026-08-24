@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/shadcn/ui/skeleton";
 import { Heading, Text } from "@/components/typography";
 import { appRoutes } from "@/lib/app-routes";
 import { cn, formatDateTime, formatRelativeTime } from "@/lib/utils";
-import { SlackIcon } from "@/pages/apps/channels/channel-brand-icons";
+import { DiscordIcon, SlackIcon } from "@/pages/apps/channels/channel-brand-icons";
 import { DeleteChannelDialog } from "@/pages/apps/channels/delete-channel-dialog";
 import { GenerateEmbedLinkDialog } from "@/pages/apps/channels/generate-embed-link-dialog";
 
@@ -30,6 +30,7 @@ const CHANNEL_GROUPS: ChannelGroupConfig[] = [
     { type: "Telegram", label: "Telegram bots", icon: Send },
     { type: "WhatsApp", label: "WhatsApp", icon: MessageCircle },
     { type: "Slack", label: "Slack", icon: SlackIcon },
+    { type: "Discord", label: "Discord", icon: DiscordIcon },
 ];
 
 export function ChannelGroups({ slug }: { slug: string }) {
@@ -162,6 +163,11 @@ function ChannelCard({
                         <Text as="div" variant="caption" className="truncate font-normal">
                             {channel.slack.teamName}
                         </Text>
+                    )}
+                    {channel.discord?.botUsername && (
+                        <div className="truncate text-xs font-normal text-muted-foreground">
+                            {channel.discord.botUsername}
+                        </div>
                     )}
                 </CardTitle>
                 <CardAction>

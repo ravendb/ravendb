@@ -5,4 +5,5 @@ export const CHANNEL_TYPE_LABELS: Record<NonNullable<ChannelType>, string> = {
     Telegram: "Telegram",
     WhatsApp: "WhatsApp",
     Slack: "Slack",
+    Discord: "Discord",
 };

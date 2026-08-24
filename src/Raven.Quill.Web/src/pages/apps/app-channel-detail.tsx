@@ -21,7 +21,7 @@ import {
 } from "@/components/form/unsaved-changes/unsaved-changes-store";
 import { appRoutes } from "@/lib/app-routes";
 import { CHANNEL_TYPE_LABELS } from "@/lib/channel-type-labels";
-import { SlackIcon } from "@/pages/apps/channels/channel-brand-icons";
+import { DiscordIcon, SlackIcon } from "@/pages/apps/channels/channel-brand-icons";
 import { cn } from "@/lib/utils";
 import { invalidateChannelQueries } from "@/lib/query-invalidation";
 import { getChannelTabs, resolveActiveTab, type ChannelTabDef } from "@/pages/apps/channels/channel-detail-tabs";
@@ -36,6 +36,7 @@ const CHANNEL_TYPE_ICONS: Record<
     Telegram: Send,
     WhatsApp: MessageCircle,
     Slack: SlackIcon,
+    Discord: DiscordIcon,
 };
 
 // Roomier hit area than the default trigger padding. The active underline is a single sliding

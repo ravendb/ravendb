@@ -10,13 +10,14 @@ import {
 } from "@/components/shadcn/ui/dropdown-menu";
 import { SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/shadcn/ui/sheet";
 import { GuardedSheet } from "@/components/form/unsaved-changes/guarded-overlays";
-import { SlackIcon } from "@/pages/apps/channels/channel-brand-icons";
+import { DiscordIcon, SlackIcon } from "@/pages/apps/channels/channel-brand-icons";
+import { DiscordChannelForm } from "@/pages/apps/channels/discord-channel-form";
 import { SlackChannelForm } from "@/pages/apps/channels/slack-channel-form";
 import { TelegramChannelForm } from "@/pages/apps/channels/telegram-channel-form";
 import { WebWidgetChannelForm, type FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
 import { Text } from "@/components/typography";
 
-type ChannelOptionId = "web-widget" | "telegram" | "slack";
+type ChannelOptionId = "web-widget" | "telegram" | "slack" | "discord";
 
 type ChannelOption = {
     label: string;
@@ -24,7 +25,7 @@ type ChannelOption = {
     icon: ComponentType<SVGProps<SVGSVGElement>>;
 } & ({ id: ChannelOptionId; enabled: true } | { id: string; enabled: false });
 
-// The web widget, Telegram, and Slack are backed by the channels API today; the rest are previewed as disabled.
+// The web widget, Telegram, Slack, and Discord are backed by the channels API today; the rest are previewed as disabled.
 const CHANNEL_OPTIONS: ChannelOption[] = [
     {
         id: "web-widget",
@@ -59,6 +60,13 @@ const CHANNEL_OPTIONS: ChannelOption[] = [
         label: "Slack",
         description: "Connect a Slack app for DMs",
         icon: SlackIcon,
+        enabled: true,
+    },
+    {
+        id: "discord",
+        label: "Discord",
+        description: "Connect a Discord bot for DMs",
+        icon: DiscordIcon,
         enabled: true,
     },
 ];
@@ -144,6 +152,18 @@ export function AddChannelMenu({
                                 </SheetDescription>
                             </SheetHeader>
                             <SlackChannelForm slug={slug} agent={agent} onDone={() => setOpenOption(null)} />
+                        </>
+                    ) : openOption === "discord" ? (
+                        <>
+                            <SheetHeader className="border-b">
+                                <SheetTitle>New Discord channel</SheetTitle>
+                                <SheetDescription>
+                                    {agent
+                                        ? `Connect a Discord bot for direct messages, routed to “${agent.name}”.`
+                                        : "Connect a Discord bot and answer its direct messages with an agent."}
+                                </SheetDescription>
+                            </SheetHeader>
+                            <DiscordChannelForm slug={slug} agent={agent} onDone={() => setOpenOption(null)} />
                         </>
                     ) : (
                         <>

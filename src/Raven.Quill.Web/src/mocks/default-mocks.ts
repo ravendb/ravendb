@@ -7,6 +7,7 @@ import { assistantMocks } from "./assistant-mocks";
 import { authMocks } from "./auth-mocks";
 import { bootstrapMocks } from "./bootstrap-mocks";
 import { channelsMocks } from "./channels-mocks";
+import { discordMocks } from "./discord-mocks";
 import { dnsMocks } from "./dns-mocks";
 import { embedLinksMocks } from "./embed-links-mocks";
 import { iframeHandlers } from "./iframe-mocks";
@@ -53,6 +54,7 @@ export const defaultApiMocks = {
     bootstrap: [bootstrapMocks.status()],
     channels: [channelsMocks.list(), channelsMocks.create(), channelsMocks.update(), channelsMocks.delete()],
     slack: [slackMocks.webhookInfo(), slackMocks.health()],
+    discord: [discordMocks.health()],
     dns: [dnsMocks.resolve()],
     embedLinks: [embedLinksMocks.list(), embedLinksMocks.mint(), embedLinksMocks.revoke()],
     iframe: iframeHandlers(),

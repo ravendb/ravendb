@@ -5,6 +5,8 @@ import { Button } from "@/components/shadcn/ui/button";
 import { ChannelActiveLinks } from "@/pages/apps/channels/channel-active-links";
 import { EmbedLinkApiDocs } from "@/pages/apps/channels/embed-link-api-docs";
 import { GenerateEmbedLinkDialog } from "@/pages/apps/channels/generate-embed-link-dialog";
+import { DiscordChannelBindings } from "@/pages/apps/channels/discord-channel-bindings";
+import { DiscordConnectTab } from "@/pages/apps/channels/discord-connect-tab";
 import { SlackChannelBindings } from "@/pages/apps/channels/slack-channel-bindings";
 import { SlackConnectTab } from "@/pages/apps/channels/slack-connect-tab";
 import { TelegramChannelBindings } from "@/pages/apps/channels/telegram-channel-bindings";
@@ -116,11 +118,29 @@ const SLACK_TABS: ChannelTabDef[] = [
     },
 ];
 
+const DISCORD_TABS: ChannelTabDef[] = [
+    {
+        key: "connect",
+        label: "Connect",
+        icon: Plug,
+        layout: "padded",
+        render: ({ slug, channel }) => <DiscordConnectTab slug={slug} channel={channel} />,
+    },
+    {
+        key: "parameters",
+        label: "Parameters",
+        icon: Variable,
+        layout: "fill",
+        render: ({ slug, channel, agent }) => <DiscordChannelBindings slug={slug} channel={channel} agent={agent} />,
+    },
+];
+
 const TABS_BY_TYPE: Record<NonNullable<ChannelType>, ChannelTabDef[]> = {
     IFrame: IFRAME_TABS,
     Telegram: TELEGRAM_TABS,
     WhatsApp: [],
     Slack: SLACK_TABS,
+    Discord: DISCORD_TABS,
 };
 
 // The tabs a channel's detail view shows, chosen by its type. New channel types declare their tabs

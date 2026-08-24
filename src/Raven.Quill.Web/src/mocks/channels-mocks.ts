@@ -38,6 +38,7 @@ export const channelsMocks = {
 export const SAMPLE_CHANNEL_ID = "4a1f9c2b7d8e4f6a9b0c1d2e3f405162";
 export const SAMPLE_TELEGRAM_CHANNEL_ID = "tlg_2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e";
 export const SAMPLE_SLACK_CHANNEL_ID = "slk_4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f90";
+export const SAMPLE_DISCORD_CHANNEL_ID = "dsc_5e6f7a8b9c0d1e2f3a4b5c6d7e8f9012";
 
 export const sampleChannels: ChannelSummaryResponse[] = [
     {
@@ -82,6 +83,23 @@ export const sampleChannels: ChannelSummaryResponse[] = [
             botUserId: "U0QUILLBOT1",
             parameterBindings: {
                 slackUser: { source: "UserId", value: null },
+            },
+        },
+    },
+    {
+        channelId: SAMPLE_DISCORD_CHANNEL_ID,
+        type: "Discord",
+        agentId: "agents/support",
+        displayName: "acme-helper",
+        enabled: true,
+        createdAt: "2026-08-21T11:40:00Z",
+        allowedOrigins: [],
+        discord: {
+            applicationId: "412873098765432100",
+            botUserId: "412873098765432100",
+            botUsername: "acme-helper",
+            parameterBindings: {
+                discordUser: { source: "UserId", value: null },
             },
         },
     },
