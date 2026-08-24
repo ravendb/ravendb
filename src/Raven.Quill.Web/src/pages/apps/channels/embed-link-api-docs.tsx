@@ -1,8 +1,7 @@
-import { useState, type ReactNode } from "react";
-import { ChevronDown, ShieldAlertIcon } from "lucide-react";
+import { useState } from "react";
+import { ShieldAlertIcon } from "lucide-react";
 import { CodeBlockTabs } from "@/components/data/code-block-tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/shadcn/ui/alert";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/shadcn/ui/collapsible";
 import { originForSubdomain } from "@/lib/subdomain-origin";
 import {
     buildMintEmbedLinkUrl,
@@ -15,10 +14,15 @@ import {
 } from "@/pages/apps/channels/embed-link-utils";
 import { buildBackedHostPageSnippet } from "@/pages/apps/channels/embed-host-page-snippets";
 import { InlineCode } from "@/components/data/inline-code";
+import { NumberedSteps } from "@/components/data/numbered-steps";
+import { SectionCard } from "@/pages/apps/section-card";
 import type { HighlightLanguage } from "@/components/ace-editor/static-highlight";
 
-const OPEN_STORAGE_KEY = "quill-embed-api-docs-open";
 const LANGUAGE_STORAGE_KEY = "quill-embed-api-docs-language";
+
+// The host page snippet grows to its natural height, but never shrinks below this so the block still
+// reads as a code viewport.
+const HOST_PAGE_MIN_LINES = 16;
 
 type Language = "bash" | "powershell" | "csharp" | "python" | "node";
 
@@ -36,10 +40,6 @@ const LANGUAGE_OPTIONS: LanguageOption[] = [
     { value: "node", label: "Node.js", mode: "javascript" },
 ];
 
-function readIsOpen() {
-    return localStorage.getItem(OPEN_STORAGE_KEY) !== "false";
-}
-
 function readLanguage(): Language {
     const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
     return LANGUAGE_OPTIONS.some((language) => language.value === stored) ? (stored as Language) : "bash";
@@ -56,13 +56,7 @@ export function EmbedLinkApiDocs({ slug, channelId, parameterNames }: EmbedLinkA
     const requests = buildRequestSnippets(slug, channelId, parameterNames);
     const embedOrigin = originForSubdomain("public");
 
-    const [isOpen, setIsOpen] = useState(readIsOpen);
     const [language, setLanguage] = useState<Language>(readLanguage);
-
-    const onOpenChange = (open: boolean) => {
-        localStorage.setItem(OPEN_STORAGE_KEY, String(open));
-        setIsOpen(open);
-    };
 
     const onLanguageChange = (value: string) => {
         const next = value as Language;
@@ -91,108 +85,79 @@ export function EmbedLinkApiDocs({ slug, channelId, parameterNames }: EmbedLinkA
     ];
 
     return (
-        <Collapsible open={isOpen} onOpenChange={onOpenChange} className="rounded-md border bg-card p-4">
-            <h2 className="text-lg font-semibold tracking-tight">
-                <CollapsibleTrigger className="group flex w-full items-center justify-between gap-3 rounded-sm text-left focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none">
-                    Embed on your own site
-                    <ChevronDown
-                        className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180"
-                        aria-hidden="true"
-                    />
-                </CollapsibleTrigger>
-            </h2>
+        <SectionCard title="Embed on your own site" isRaised>
+            <div className="mt-4">
+                <NumberedSteps
+                    steps={[
+                        {
+                            title: "Mint links from your backend",
+                            content: (
+                                <>
+                                    <p className="max-w-prose text-sm text-muted-foreground">
+                                        Your server POSTs to the embed-links endpoint with your operator key in the{" "}
+                                        <InlineCode>X-Api-Key</InlineCode> header, then hands the page nothing but the
+                                        returned <InlineCode>url</InlineCode>. The app and channel are already filled in
+                                        below - swap in your <InlineCode>QUILL_API_KEY</InlineCode>
+                                        {hasParameters ? " and the parameter values" : ""}.
+                                    </p>
 
-            <CollapsibleContent className="mt-4">
-                <ol className="grid gap-0">
-                    <EmbedStep step={1} title="Mint links from your backend">
-                        <p className="max-w-prose text-sm text-muted-foreground">
-                            Your server POSTs to the embed-links endpoint with your operator key in the{" "}
-                            <InlineCode>X-Api-Key</InlineCode> header, then hands the page nothing but the returned{" "}
-                            <InlineCode>url</InlineCode>. The app and channel are already filled in below - swap in your{" "}
-                            <InlineCode>QUILL_API_KEY</InlineCode>
-                            {hasParameters ? " and the parameter values" : ""}.
-                        </p>
+                                    <div className="mt-3 grid gap-4 lg:grid-cols-2">
+                                        <CodeBlockTabs
+                                            value={language}
+                                            onValueChange={onLanguageChange}
+                                            copyLabel="Copy server-side mint request"
+                                            tabs={LANGUAGE_OPTIONS.map(({ value, label, mode }) => ({
+                                                value,
+                                                label,
+                                                language: mode,
+                                                code: requests[value],
+                                            }))}
+                                        />
+                                        <ParametersPanel fields={fields} />
+                                    </div>
 
-                        <div className="mt-3 grid gap-4 lg:grid-cols-2">
-                            <CodeBlockTabs
-                                value={language}
-                                onValueChange={onLanguageChange}
-                                copyLabel="Copy server-side mint request"
-                                tabs={LANGUAGE_OPTIONS.map(({ value, label, mode }) => ({
-                                    value,
-                                    label,
-                                    language: mode,
-                                    code: requests[value],
-                                }))}
-                            />
-                            <ParametersPanel fields={fields} />
-                        </div>
-
-                        <Alert variant="warning" className="mt-4">
-                            <ShieldAlertIcon />
-                            <AlertTitle>Run this on your server, never in a browser</AlertTitle>
-                            <AlertDescription>
-                                The operator key grants full access to every app, not just this widget, so it must never
-                                be shipped to a page or called from client-side JavaScript.
-                                <br /> The endpoint also sends no CORS headers, so a browser{" "}
-                                <InlineCode>fetch</InlineCode> to it fails on preflight regardless.
-                            </AlertDescription>
-                        </Alert>
-                    </EmbedStep>
-
-                    <EmbedStep step={2} title="Show the link in your page" isLast>
-                        <p className="max-w-prose text-sm text-muted-foreground">
-                            Then in the page, point an iframe at the <InlineCode>url</InlineCode> your endpoint
-                            returned:
-                        </p>
-                        <CodeBlockTabs
-                            value="html"
-                            copyLabel="Copy host page"
-                            maxLines={16}
-                            className="mt-3"
-                            tabs={[
-                                {
-                                    value: "html",
-                                    label: "Host page",
-                                    language: "html",
-                                    code: buildBackedHostPageSnippet(embedOrigin),
-                                },
-                            ]}
-                        />
-                    </EmbedStep>
-                </ol>
-            </CollapsibleContent>
-        </Collapsible>
-    );
-}
-
-// One numbered step in the embed walkthrough: a badge and a connector rail in the left column, the
-// step's title and content in the right. The rail is drawn on every step but the last so the steps
-// read as a single sequence.
-function EmbedStep({
-    step,
-    title,
-    isLast = false,
-    children,
-}: {
-    step: number;
-    title: string;
-    isLast?: boolean;
-    children: ReactNode;
-}) {
-    return (
-        <li className="grid grid-cols-[1.5rem_1fr] gap-x-3">
-            <div className="flex flex-col items-center">
-                <span className="flex size-6 items-center justify-center rounded-full border border-border bg-muted text-xs font-medium text-muted-foreground">
-                    {step}
-                </span>
-                {!isLast && <span aria-hidden="true" className="mt-1 w-px flex-1 bg-border" />}
+                                    <Alert variant="warning" className="mt-4">
+                                        <ShieldAlertIcon />
+                                        <AlertTitle>Run this on your server, never in a browser</AlertTitle>
+                                        <AlertDescription>
+                                            The operator key grants full access to every app, not just this widget, so
+                                            it must never be shipped to a page or called from client-side JavaScript.
+                                            <br /> The endpoint also sends no CORS headers, so a browser{" "}
+                                            <InlineCode>fetch</InlineCode> to it fails on preflight regardless.
+                                        </AlertDescription>
+                                    </Alert>
+                                </>
+                            ),
+                        },
+                        {
+                            title: "Show the link in your page",
+                            content: (
+                                <>
+                                    <p className="max-w-prose text-sm text-muted-foreground">
+                                        Then in the page, point an iframe at the <InlineCode>url</InlineCode> your
+                                        endpoint returned:
+                                    </p>
+                                    <CodeBlockTabs
+                                        value="html"
+                                        copyLabel="Copy host page"
+                                        minLines={HOST_PAGE_MIN_LINES}
+                                        className="mt-3"
+                                        tabs={[
+                                            {
+                                                value: "html",
+                                                label: "Host page",
+                                                language: "html",
+                                                code: buildBackedHostPageSnippet(embedOrigin),
+                                            },
+                                        ]}
+                                    />
+                                </>
+                            ),
+                        },
+                    ]}
+                />
             </div>
-            <div className={isLast ? "" : "pb-5"}>
-                <h3 className="mb-1.5 text-base font-medium">{title}</h3>
-                {children}
-            </div>
-        </li>
+        </SectionCard>
     );
 }
 
