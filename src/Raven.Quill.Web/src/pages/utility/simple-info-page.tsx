@@ -1,4 +1,5 @@
 import { PagePanel } from "@/components/data/page-panel";
+import { Heading, Text } from "@/components/typography";
 
 type SimpleInfoPageProps = {
     title: string;
@@ -9,8 +10,8 @@ export function SimpleInfoPage({ description, title }: SimpleInfoPageProps) {
     return (
         <PagePanel>
             <div className="max-w-2xl space-y-2">
-                <h2 className="text-base font-semibold">{title}</h2>
-                <p className="text-sm text-muted-foreground">{description}</p>
+                <Heading variant="subsection">{title}</Heading>
+                <Text variant="muted">{description}</Text>
             </div>
         </PagePanel>
     );

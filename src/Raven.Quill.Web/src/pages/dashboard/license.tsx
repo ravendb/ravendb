@@ -11,6 +11,7 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 import { formatDate } from "@/lib/format";
 import { getSupportUrl } from "@/lib/help-links";
 import { cn } from "@/lib/utils";
+import { Heading, Text } from "@/components/typography";
 
 // Subtle brand wash used to make the featured plan stand out.
 // Defined as a CSS class (see index.css) so it layers over the card's bg-color.
@@ -22,7 +23,9 @@ export function DashboardLicense() {
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between gap-3">
-                <h1 className="text-2xl font-semibold tracking-tight">License</h1>
+                <Heading as="h1" variant="page">
+                    License
+                </Heading>
                 <Button
                     variant="outline"
                     size="sm"
@@ -88,10 +91,10 @@ function PlansSection({ plans }: { plans: LicensePlan[] }) {
         <section className="space-y-4">
             <div>
                 <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-semibold">Available plans</h2>
+                    <Heading variant="section">Available plans</Heading>
                     <Badge variant="secondary">Coming soon</Badge>
                 </div>
-                <p className="text-sm text-muted-foreground">Talk to sales to install a license.</p>
+                <Text variant="muted">Talk to sales to install a license.</Text>
             </div>
             <div aria-disabled="true" className="pointer-events-none grid gap-4 opacity-60 grayscale md:grid-cols-3">
                 {plans.map((plan) => (
@@ -106,10 +109,8 @@ function HealthSection({ connectivity }: { connectivity: ConnectivityStatus }) {
     return (
         <section className="space-y-4">
             <div>
-                <h2 className="text-lg font-semibold">License health</h2>
-                <p className="text-sm text-muted-foreground">
-                    Check the status of your license, and connectivity with the API.
-                </p>
+                <Heading variant="section">License health</Heading>
+                <Text variant="muted">Check the status of your license, and connectivity with the API.</Text>
             </div>
             <Card>
                 <CardContent>

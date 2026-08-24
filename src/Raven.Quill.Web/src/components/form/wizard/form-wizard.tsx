@@ -12,6 +12,7 @@ import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { Button } from "@/components/shadcn/ui/button";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { useUnsavedChanges } from "@/components/form/unsaved-changes/use-unsaved-changes";
+import { Heading, Text } from "@/components/typography";
 import { WizardErrorAlert } from "@/components/form/wizard/wizard-error-alert";
 import { toError, WizardHandledError } from "@/components/form/wizard/wizard-step-error";
 import { cn } from "@/lib/utils";
@@ -239,9 +240,13 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
                         >
                             <div className="flex flex-wrap items-start justify-between gap-3">
                                 <div>
-                                    <h2 className="text-2xl font-semibold tracking-normal">{currentStep.title}</h2>
+                                    <Heading as="h1" variant="page">
+                                        {currentStep.title}
+                                    </Heading>
                                     {currentStep.description && (
-                                        <p className="mt-3 text-sm text-muted-foreground">{currentStep.description}</p>
+                                        <Text variant="muted" className="mt-3">
+                                            {currentStep.description}
+                                        </Text>
                                     )}
                                 </div>
                                 {currentStep.headerAction && <currentStep.headerAction isBusy={isBusy} />}

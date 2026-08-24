@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { Text } from "@/components/typography";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
 import { api } from "@/api/api";
@@ -29,10 +30,10 @@ export function AssistantConsentGate() {
     if (consentQuery.isPending) {
         return (
             <AssistantConsentFrame>
-                <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Text variant="muted" className="flex items-center gap-2">
                     <Spinner />
                     Checking consent…
-                </p>
+                </Text>
             </AssistantConsentFrame>
         );
     }
@@ -55,10 +56,10 @@ export function AssistantConsentGate() {
     if (consentQuery.data.status === "ConsentRequired") {
         return (
             <AssistantConsentFrame>
-                <p className="text-sm text-muted-foreground">
+                <Text variant="muted">
                     The AI assistant sends your questions to the RavenDB AI service. It stays unavailable until you
                     review and accept the Terms of Use.
-                </p>
+                </Text>
                 <AssistantConsentDialog />
             </AssistantConsentFrame>
         );

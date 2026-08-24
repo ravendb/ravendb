@@ -10,6 +10,7 @@ import { FormInput } from "@/components/form/form-input";
 import { Alert, AlertTitle } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
 import { Spinner } from "@/components/shadcn/ui/spinner";
+import { Heading, Text } from "@/components/typography";
 
 const INVALID_KEY_MESSAGE = "That API key wasn't accepted. Double-check it and try again.";
 const SIGN_IN_ERROR_MESSAGE = "We couldn't sign you in. Please try again in a moment.";
@@ -47,8 +48,10 @@ export function Login() {
         <AuthScreenLayout>
             <section className="w-full rounded-xl border bg-card p-6 shadow-sm">
                 <header className="space-y-1.5 text-center">
-                    <h1 className="text-xl font-semibold tracking-tight">Sign in</h1>
-                    <p className="text-sm text-muted-foreground">Enter the Dashboard API key to manage Quill.</p>
+                    <Heading as="h1" variant="title">
+                        Sign in
+                    </Heading>
+                    <Text variant="muted">Enter the Dashboard API key to manage Quill.</Text>
                 </header>
 
                 {formError && (
@@ -83,9 +86,9 @@ export function Login() {
                 </form>
             </section>
 
-            <p className="mt-6 max-w-sm text-center text-xs text-muted-foreground">
+            <Text variant="caption" className="mt-6 max-w-sm text-center">
                 The Dashboard API key was issued when Quill was provisioned.
-            </p>
+            </Text>
         </AuthScreenLayout>
     );
 }

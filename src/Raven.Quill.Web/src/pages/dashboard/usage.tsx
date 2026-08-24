@@ -13,6 +13,7 @@ import { canDrillInto, drillInto, formatPeriodLabel, getDefaultDatePeriod, type 
 import { useSetupStartDate } from "@/lib/use-start-date";
 import { formatCompact } from "@/lib/format";
 import { PerAppUsageTable, PerAppUsageTableSkeleton } from "@/pages/dashboard/per-app-usage-table";
+import { Heading } from "@/components/typography";
 
 export function DashboardUsage() {
     const [period, setPeriod] = useState(getDefaultDatePeriod);
@@ -35,14 +36,18 @@ export function DashboardUsage() {
     return (
         <div className="space-y-5">
             <div className="flex items-center justify-between gap-3">
-                <h1 className="text-2xl font-semibold tracking-tight">Usage</h1>
+                <Heading as="h1" variant="page">
+                    Usage
+                </Heading>
                 <DatePeriodPicker value={period} earliest={setupStartDate} onChange={setPeriod} />
             </div>
 
             <Card>
                 <CardHeader>
-                    <CardTitle>
-                        <WruLabel />
+                    <CardTitle asChild>
+                        <h2>
+                            <WruLabel />
+                        </h2>
                     </CardTitle>
                     <CardDescription>{periodLabel}</CardDescription>
                     {totalUsage !== undefined && (
@@ -76,7 +81,9 @@ export function DashboardUsage() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Usage per app</CardTitle>
+                    <CardTitle asChild>
+                        <h2>Usage per app</h2>
+                    </CardTitle>
                     <CardDescription>Totals for {periodLabel}.</CardDescription>
                 </CardHeader>
                 <CardContent>

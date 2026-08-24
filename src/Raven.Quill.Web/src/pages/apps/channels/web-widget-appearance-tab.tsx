@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Text } from "@/components/typography";
 import { api } from "@/api/api";
 import { ApiState } from "@/components/data/api-state";
 import { FormFieldsSkeleton } from "@/components/data/loading-skeletons";
@@ -19,10 +20,10 @@ export function WebWidgetAppearanceTab({ slug, channelId }: { slug: string; chan
 
     return (
         <div className="grid gap-5">
-            <p className="text-sm text-muted-foreground">
+            <Text variant="muted">
                 Choose how this web widget looks and reads. Pick an accent color and the rest of the palette is derived
                 from it, so light and dark both stay coherent.
-            </p>
+            </Text>
 
             <ApiState
                 isLoading={themeQuery.isPending}

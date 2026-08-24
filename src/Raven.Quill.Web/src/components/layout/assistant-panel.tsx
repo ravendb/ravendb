@@ -17,6 +17,7 @@ import {
 import { useAssistantConsent } from "@/components/layout/use-assistant-consent";
 import { Button } from "@/components/shadcn/ui/button";
 import { cn } from "@/lib/utils";
+import { Heading } from "@/components/typography";
 
 const RESIZE_KEYBOARD_STEP_PX = 16;
 
@@ -123,9 +124,9 @@ export function AssistantPanel() {
             {!isPinned && <AssistantResizeHandle axis="height" />}
             <header className="flex items-center gap-2 border-b px-3 py-2">
                 <Sparkles className="size-4 text-primary" aria-hidden="true" />
-                <h2 id={ASSISTANT_PANEL_TITLE_ID} className="text-sm font-semibold">
+                <Heading id={ASSISTANT_PANEL_TITLE_ID} variant="label">
                     AI assistant
-                </h2>
+                </Heading>
                 <div className="ml-auto flex items-center gap-1">
                     <Button
                         variant="ghost"

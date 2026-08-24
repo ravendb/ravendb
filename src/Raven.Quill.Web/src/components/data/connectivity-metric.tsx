@@ -1,4 +1,5 @@
 import type { ConnectivityStatus } from "@/api/generated/server-api";
+import { Text } from "@/components/typography";
 import { cn } from "@/lib/utils";
 
 // Healthy means the licensing API answered OK with no transport error.
@@ -23,7 +24,9 @@ export function ConnectivityMetric({ connectivity }: { connectivity: Connectivit
                 </div>
             </div>
             {connectivity.exception && (
-                <p className="text-sm break-words text-muted-foreground">{connectivity.exception}</p>
+                <Text variant="muted" className="break-words">
+                    {connectivity.exception}
+                </Text>
             )}
         </div>
     );

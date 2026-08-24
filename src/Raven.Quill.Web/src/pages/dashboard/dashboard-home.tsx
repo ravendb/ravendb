@@ -8,6 +8,7 @@ import { useSetupStartDate } from "@/lib/use-start-date";
 import { DashboardAppsTable, DashboardAppsTableSkeleton } from "@/pages/dashboard/dashboard-apps-table";
 import { StatCardsSection } from "@/pages/dashboard/dashboard-stat-cards";
 import { buildUsageStatCards } from "@/pages/dashboard/usage-stat-cards";
+import { Heading } from "@/components/typography";
 
 export function DashboardHome() {
     const [period, setPeriod] = useState(getDefaultDatePeriod);
@@ -21,7 +22,9 @@ export function DashboardHome() {
     return (
         <div className="space-y-6">
             <header className="flex items-center justify-between gap-3">
-                <h1 className="text-2xl font-semibold tracking-tight">My apps</h1>
+                <Heading as="h1" variant="page">
+                    My apps
+                </Heading>
             </header>
 
             {appsQuery.data && appsQuery.data.length > 0 && (

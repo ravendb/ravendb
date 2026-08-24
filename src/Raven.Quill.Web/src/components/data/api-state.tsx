@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Button } from "@/components/shadcn/ui/button";
+import { Heading, Text } from "@/components/typography";
 
 type ApiStateProps = {
     errorTitle?: string;
@@ -25,9 +26,9 @@ export function ApiState({
         // itself is the message. Say it in words rather than promise a shape we cannot draw.
         if (!skeleton) {
             return (
-                <p role="status" className="text-sm text-muted-foreground">
+                <Text variant="muted" role="status">
                     {loadingLabel}
-                </p>
+                </Text>
             );
         }
 
@@ -44,8 +45,8 @@ export function ApiState({
     if (isError) {
         return (
             <div className="max-w-md space-y-3">
-                <h2 className="text-sm font-semibold">{errorTitle}</h2>
-                <p className="text-sm text-muted-foreground">Refresh the page or try again in a moment.</p>
+                <Heading variant="label">{errorTitle}</Heading>
+                <Text variant="muted">Refresh the page or try again in a moment.</Text>
                 {onRetry && (
                     <Button type="button" variant="outline" size="sm" onClick={onRetry}>
                         Retry

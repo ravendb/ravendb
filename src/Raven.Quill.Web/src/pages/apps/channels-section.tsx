@@ -19,7 +19,17 @@ import { SectionCard } from "@/pages/apps/section-card";
 
 // When `agent` is set the section is scoped to that single agent: only its channels are listed,
 // the agent name column is dropped, and new channels are routed to it (e.g. the capability wizard).
-export function ChannelsSection({ slug, agent: fixedAgent }: { slug: string; agent?: FixedAgent }) {
+// `nested` renders the section under an existing heading (e.g. a wizard step title), so the
+// section title steps down to a sub-section instead of competing as a top-level section.
+export function ChannelsSection({
+    slug,
+    agent: fixedAgent,
+    nested = false,
+}: {
+    slug: string;
+    agent?: FixedAgent;
+    nested?: boolean;
+}) {
     const agentsQuery = useQuery(api.queries.agents.list(slug));
     const channelsQuery = useQuery(api.queries.channels.list(slug));
     // Active-link counts are supplementary — kept out of the ApiState gate so a
@@ -57,6 +67,8 @@ export function ChannelsSection({ slug, agent: fixedAgent }: { slug: string; age
     return (
         <SectionCard
             title={fixedAgent ? `Channels for “${fixedAgent.name}”` : "Channels"}
+            titleAs={nested ? "h3" : "h2"}
+            titleVariant={nested ? "subsection" : "section"}
             action={<AddChannelMenu slug={slug} agent={fixedAgent} />}
         >
             <ApiState

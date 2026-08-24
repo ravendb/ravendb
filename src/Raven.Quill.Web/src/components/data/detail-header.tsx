@@ -6,6 +6,7 @@ import { Button } from "@/components/shadcn/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/shadcn/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { Heading } from "@/components/typography";
 
 type BackTo = { to: string; label: string };
 
@@ -52,7 +53,9 @@ export function DetailHeader({
                         never indenting under the back arrow. */}
                     <div className="grid min-w-0 gap-1.5">
                         <div className="flex items-center gap-3">
-                            <h1 className="truncate text-2xl font-semibold tracking-tight">{title}</h1>
+                            <Heading as="h1" variant="page" className="truncate">
+                                {title}
+                            </Heading>
                             {status}
                         </div>
                         {meta && (

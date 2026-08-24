@@ -19,6 +19,7 @@ import {
     toMessagesDto,
     toMessagesFormValues,
 } from "@/pages/apps/channels/telegram-message-defaults";
+import { Heading, Text } from "@/components/typography";
 
 const messagesFormSchema = z.object({ messages: telegramMessagesSchema });
 type MessagesFormData = z.infer<typeof messagesFormSchema>;
@@ -84,8 +85,10 @@ export function TelegramMessagesTab({ slug, channel }: { slug: string; channel: 
                             className="grid gap-x-16 gap-y-4 rounded-md border bg-card p-4 md:grid-cols-[minmax(0,22rem)_1fr] md:p-5"
                         >
                             <div className="space-y-0.5">
-                                <h3 className="text-base font-medium">{group.title}</h3>
-                                <p className="text-sm text-muted-foreground">{group.description}</p>
+                                <Heading as="h3" variant="subsection">
+                                    {group.title}
+                                </Heading>
+                                <Text variant="muted">{group.description}</Text>
                             </div>
                             <div className="grid gap-4">
                                 {group.fields.map((field) =>

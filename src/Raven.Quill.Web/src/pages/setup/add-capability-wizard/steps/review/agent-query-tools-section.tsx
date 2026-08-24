@@ -1,4 +1,5 @@
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
+import { Text } from "@/components/typography";
 import { Plus, SearchCode } from "lucide-react";
 import { Button } from "@/components/shadcn/ui/button";
 import { FormAceEditor } from "@/components/form/form-ace-editor";
@@ -73,7 +74,9 @@ function QueryToolItem({ index, remove }: { index: number; remove: () => void })
                 <>
                     <p className="truncate text-sm font-medium">{tool.name || "(unnamed)"}</p>
                     {tool.description && (
-                        <p className="mt-0.5 truncate text-xs text-muted-foreground">{tool.description}</p>
+                        <Text variant="caption" className="mt-0.5 truncate">
+                            {tool.description}
+                        </Text>
                     )}
                 </>
             }

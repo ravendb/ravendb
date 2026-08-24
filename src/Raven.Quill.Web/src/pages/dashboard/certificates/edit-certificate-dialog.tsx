@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { Text } from "@/components/typography";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -142,9 +143,7 @@ function EditCertificateForm({
                 <div className="grid gap-3">
                     <div className="text-sm font-medium">App access</div>
                     {permissionRows.fields.length === 0 && (
-                        <p className="text-sm text-muted-foreground">
-                            No access granted — this certificate cannot reach any app.
-                        </p>
+                        <Text variant="muted">No access granted — this certificate cannot reach any app.</Text>
                     )}
                     {permissionRows.fields.map((row, index) => (
                         <div key={row.id} className="flex items-start gap-2">

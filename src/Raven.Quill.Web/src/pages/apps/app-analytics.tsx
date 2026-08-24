@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Text } from "@/components/typography";
 import { useParams } from "react-router";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
@@ -126,7 +127,9 @@ function AnalyticsSeriesSection({
         <SectionCard title={title}>
             <div className="rounded-lg border p-4">
                 {series.keys.length === 0 ? (
-                    <p className="py-8 text-center text-sm text-muted-foreground">No data for this period.</p>
+                    <Text variant="muted" className="py-8 text-center">
+                        No data for this period.
+                    </Text>
                 ) : (
                     <SeriesBarChart data={series} onBarClick={onBarClick} />
                 )}

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { Text } from "@/components/typography";
 import { ExternalLink, Sparkles } from "lucide-react";
 import { Streamdown } from "streamdown";
 import { useAssistantChatStore, type AssistantMessage } from "@/components/layout/assistant-chat-store";
@@ -53,7 +54,9 @@ function AssistantRelevantLinks({ links }: { links: AssistantMessage["relevantLi
 
     return (
         <div className="mt-2 border-t pt-2">
-            <p className="text-xs font-medium text-muted-foreground">Related documentation</p>
+            <Text variant="caption" className="font-medium">
+                Related documentation
+            </Text>
             <ul className="mt-1 flex flex-col gap-1">
                 {linkedSources.map((link) => (
                     <li key={link.Url}>
@@ -106,7 +109,7 @@ export function AssistantMessages() {
                     </div>
                     <div>
                         <p className="text-sm font-medium">How can I help?</p>
-                        <p className="text-sm text-muted-foreground">Ask about your apps, conversations, or setup.</p>
+                        <Text variant="muted">Ask about your apps, conversations, or setup.</Text>
                     </div>
                 </div>
             ) : (
