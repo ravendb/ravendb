@@ -191,6 +191,7 @@ function ChannelCard({
                     <GenerateEmbedLinkDialog
                         slug={slug}
                         channelId={channel.channelId}
+                        agentId={agent?.agentId}
                         displayName={channel.displayName}
                         parameterNames={agent?.parameters ?? []}
                         trigger={
