@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
@@ -430,7 +430,6 @@ namespace Raven.Server.Documents.Patch
 
         private unsafe void WriteBlittableInstance(BlittableObjectInstance obj, bool isRoot, bool filterProperties)
         {
-            HashSet<string> modifiedProperties = null;
             if (obj.DocumentId != null &&
                 _usageMode == BlittableJsonDocumentBuilder.UsageMode.None)
             {
@@ -439,6 +438,13 @@ namespace Raven.Server.Documents.Patch
             }
             if (obj.Blittable != null)
             {
+                var ownValuesLookup = obj.OwnValues is not null
+                    ? obj.OwnValues.GetAlternateLookup<ReadOnlySpan<char>>()
+                    : default;
+                var deletesLookup = obj.Deletes is not null
+                    ? obj.Deletes.GetAlternateLookup<ReadOnlySpan<char>>()
+                    : default;
+
                 using var propertiesByInsertionOrder = obj.Blittable.GetPropertiesByInsertionOrder();
                 for (int i = 0; i < propertiesByInsertionOrder.Size; i++)
                 {
@@ -446,22 +452,20 @@ namespace Raven.Server.Documents.Patch
                     var propIndex = propertiesByInsertionOrder.Properties[i];
                     obj.Blittable.GetPropertyByIndex(propIndex, ref prop);
 
+                    
                     BlittableObjectInstance.BlittableObjectProperty modifiedValue = default;
-                    string key = prop.Name.ToString();
-                    var existInObject = obj.OwnValues?
-                        .TryGetValue(key, out modifiedValue) == true;
-
-                    if (existInObject == false && obj.Deletes?.Contains(key) == true)
-                        continue;
-
-                    if (existInObject)
+                    string key = null;
+                    bool existInObject, skipProperty;
+                    using (var propNameScope = prop.Name.AsTempCharSpan(out var output)) // decode once
                     {
-                        modifiedProperties ??= new HashSet<string>();
+                        existInObject = obj.OwnValues is not null &&
+                                        ownValuesLookup.TryGetValue(output, out key, out modifiedValue);
 
-                        modifiedProperties.Add(key);
+                        skipProperty = (existInObject == false && obj.Deletes is not null && deletesLookup.Contains(output)) ||
+                                       ShouldFilterProperty(filterProperties, output);
                     }
 
-                    if (ShouldFilterProperty(filterProperties, key))
+                    if (skipProperty)
                         continue;
 
                     _writer.WritePropertyName(prop.Name);
@@ -483,7 +487,7 @@ namespace Raven.Server.Documents.Patch
             foreach (var modificationKvp in obj.OwnValues)
             {
                 //We already iterated through those properties while iterating the original properties set.
-                if (modifiedProperties != null && modifiedProperties.Contains(modificationKvp.Key))
+                if (obj.Blittable != null && obj.Blittable.GetPropertyIndex(modificationKvp.Key) != -1)
                     continue;
 
                 var propertyName = modificationKvp.Key;
@@ -499,6 +503,25 @@ namespace Raven.Server.Documents.Patch
                 WriteJsonValue(obj, isRoot, propertyNameAsString, blittableObjectProperty.Value);
             }
         }
+
+        private static readonly HashSet<string> FilteredProperties =
+        [
+            Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName,
+            Constants.Documents.Indexing.Fields.DocumentIdFieldName,
+            Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName,
+            Constants.Documents.Metadata.Id,
+            Constants.Documents.Metadata.LastModified,
+            Constants.Documents.Metadata.IndexScore,
+            Constants.Documents.Metadata.ChangeVector,
+            Constants.Documents.Metadata.Flags
+        ];
+
+        private static readonly HashSet<string>.AlternateLookup<ReadOnlySpan<char>> FilteredPropertiesLookup =
+            FilteredProperties.GetAlternateLookup<ReadOnlySpan<char>>();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool ShouldFilterProperty(bool filterProperties, ReadOnlySpan<char> property) 
+            => filterProperties && FilteredPropertiesLookup.Contains(property);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool ShouldFilterProperty(bool filterProperties, string property)
