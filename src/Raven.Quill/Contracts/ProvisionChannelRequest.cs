@@ -8,7 +8,8 @@ public sealed record ProvisionChannelRequest(
     string[]? AllowedOrigins,
     string? DisplayName = null,
     TelegramProvisionRequest? Telegram = null,
-    SlackProvisionRequest? Slack = null);
+    SlackProvisionRequest? Slack = null,
+    DiscordProvisionRequest? Discord = null);
 
 public sealed record TelegramProvisionRequest(
     string? BotToken,
@@ -17,4 +18,8 @@ public sealed record TelegramProvisionRequest(
 public sealed record SlackProvisionRequest(
     string? BotToken,
     string? SigningSecret,
+    Dictionary<string, ChannelParameterBinding>? ParameterBindings = null);
+
+public sealed record DiscordProvisionRequest(
+    string? BotToken,
     Dictionary<string, ChannelParameterBinding>? ParameterBindings = null);

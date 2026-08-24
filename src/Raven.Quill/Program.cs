@@ -18,6 +18,7 @@ using Raven.Quill.Feedback;
 using Raven.Quill.Hosting;
 using Raven.Quill.Infrastructure;
 using Raven.Quill.Licensing;
+using Raven.Quill.Discord;
 using Raven.Quill.Slack;
 using Raven.Quill.Telegram;
 using Raven.Client.Documents;
@@ -78,6 +79,7 @@ builder.Services.AddOptions<ApplianceOptions>()
         ReadEnv("RAVEN_QUILL_API_URL", v => options.AiApiUrl = v);
         ReadEnv("RAVEN_QUILL_TELEGRAM_API_URL", v => options.Telegram.ApiUrl = v);
         ReadEnv("RAVEN_QUILL_SLACK_API_URL", v => options.Slack.ApiUrl = v);
+        ReadEnv("RAVEN_QUILL_DISCORD_API_URL", v => options.Discord.ApiUrl = v);
         ReadEnv("QUILL_LICENSE_KEY", v => options.LicenseKey = v);
         ReadEnv("QUILL_API_KEY", v => options.ApiKey = v);
         ReadEnv("RAVEN_QUILL_RAVENDB_INTERNAL_PORT", v =>
@@ -118,6 +120,17 @@ builder.Services.AddOptions<ApplianceOptions>()
     .Validate(o => o.Slack.EditDebounce > TimeSpan.Zero, "Slack EditDebounce must be positive")
     .Validate(o => o.Slack.SenderQueueCapacity > 0, "Slack SenderQueueCapacity must be positive")
     .Validate(o => o.Slack.SignatureTolerance > TimeSpan.Zero, "Slack SignatureTolerance must be positive")
+    .Validate(o => Uri.TryCreate(o.Discord.ApiUrl, UriKind.Absolute, out var u) &&
+                   (u.Scheme == Uri.UriSchemeHttp || u.Scheme == Uri.UriSchemeHttps),
+        "Discord ApiUrl must be an absolute http(s) URL")
+    .Validate(o => o.Discord.RequestTimeout > TimeSpan.Zero, "Discord RequestTimeout must be positive")
+    .Validate(o => o.Discord.MessageLimit is > 0 and <= DiscordOptions.ApiMessageLimit,
+        $"Discord MessageLimit must be between 1 and {DiscordOptions.ApiMessageLimit}")
+    .Validate(o => o.Discord.EditDebounce > TimeSpan.Zero, "Discord EditDebounce must be positive")
+    .Validate(o => o.Discord.SenderQueueCapacity > 0, "Discord SenderQueueCapacity must be positive")
+    .Validate(o => o.Discord.ApplyChangesInterval > TimeSpan.Zero, "Discord ApplyChangesInterval must be positive")
+    .Validate(o => o.Discord.GatewayBackoffMax > TimeSpan.Zero, "Discord GatewayBackoffMax must be positive")
+    .Validate(o => o.Discord.MaxGatewayFrameBytes > 0, "Discord MaxGatewayFrameBytes must be positive")
     .ValidateOnStart();
 
 builder.Services.AddSingleton<IDocumentStore>(sp =>
@@ -171,6 +184,12 @@ builder.Services.AddHttpClient<ISlackClient, SlackApiClient>(static (sp, http) =
     http.Timeout = opts.RequestTimeout;
 });
 
+builder.Services.AddHttpClient<IDiscordClient, DiscordApiClient>(static (sp, http) =>
+{
+    var opts = sp.GetRequiredService<IOptions<ApplianceOptions>>().Value.Discord;
+    http.BaseAddress = new Uri(opts.ApiUrl.EndsWith('/') ? opts.ApiUrl : opts.ApiUrl + "/");
+    http.Timeout = opts.RequestTimeout;
+});
 
 builder.Services.AddHttpClient<IAiHelperClient, AiHelperInternalClient>(static (sp, http) =>
     {
