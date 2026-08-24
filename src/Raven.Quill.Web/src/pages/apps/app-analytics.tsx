@@ -4,6 +4,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
 import type { AppUsageResponse, SeriesData } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
+import { ChartSkeleton, DetailGridSkeleton } from "@/components/data/loading-skeletons";
 import { SeriesBarChart } from "@/components/data/charts";
 import { DatePeriodPicker } from "@/components/data/date-period-picker";
 import { PagePanel } from "@/components/data/page-panel";
@@ -42,6 +43,12 @@ export function AppAnalytics() {
                 errorTitle="Could not load analytics"
                 onRetry={() => void appUsageQuery.refetch()}
                 loadingLabel="Loading analytics..."
+                skeleton={
+                    <div className="space-y-8">
+                        <DetailGridSkeleton count={4} className="sm:grid-cols-4" />
+                        <ChartSkeleton />
+                    </div>
+                }
             >
                 {appUsageQuery.data && (
                     <div className="space-y-8">

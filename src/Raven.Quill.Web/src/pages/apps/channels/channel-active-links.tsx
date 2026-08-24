@@ -6,6 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { api } from "@/api/api";
 import { ApiState } from "@/components/data/api-state";
+import { getColumnHeaderLabels } from "@/components/table/column-headers";
+import { TableSkeleton } from "@/components/table/table-skeleton";
 import { VirtualDataTable } from "@/components/table/virtual-data-table";
 import { createActiveLinkColumns } from "@/pages/apps/channels/channel-active-links-columns";
 
@@ -34,6 +36,7 @@ export function ChannelActiveLinks({ slug, channelId }: { slug: string; channelI
             errorTitle="Could not load links"
             onRetry={() => void linksQuery.refetch()}
             loadingLabel="Loading links..."
+            skeleton={<TableSkeleton headers={getColumnHeaderLabels(columns)} rows={3} />}
         >
             <VirtualDataTable
                 table={table}

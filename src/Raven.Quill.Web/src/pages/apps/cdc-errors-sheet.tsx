@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
 import type { CdcError } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
+import { CardListSkeleton } from "@/components/data/loading-skeletons";
 import { ErrorDetails } from "@/components/data/error-details";
 import { Badge } from "@/components/shadcn/ui/badge";
 import {
@@ -39,6 +40,7 @@ export function CdcErrorsSheet({ slug, trigger }: { slug: string; trigger: React
                         errorTitle="Could not load errors"
                         onRetry={() => void errorsQuery.refetch()}
                         loadingLabel="Loading errors..."
+                        skeleton={<CardListSkeleton />}
                     >
                         {errorsQuery.data &&
                             (errorsQuery.data.length === 0 ? (

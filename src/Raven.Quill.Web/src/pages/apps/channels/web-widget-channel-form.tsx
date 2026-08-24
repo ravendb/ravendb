@@ -9,6 +9,7 @@ import { Button } from "@/components/shadcn/ui/button";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { SheetClose, SheetFooter } from "@/components/shadcn/ui/sheet";
 import { ApiState } from "@/components/data/api-state";
+import { FormFieldsSkeleton } from "@/components/data/loading-skeletons";
 import { FormInput } from "@/components/form/form-input";
 import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
 import { FormStringList } from "@/components/form/form-string-list";
@@ -91,6 +92,7 @@ export function WebWidgetChannelForm({
                     errorTitle="Could not load agents"
                     onRetry={() => void agentsQuery.refetch()}
                     loadingLabel="Loading agents..."
+                    skeleton={<FormFieldsSkeleton count={3} />}
                 >
                     {!hasAgentTarget ? (
                         <Alert>

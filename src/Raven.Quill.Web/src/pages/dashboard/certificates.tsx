@@ -5,6 +5,7 @@ import { api } from "@/api/api";
 import type { CertificateItem, SecurityClearance } from "@/api/custom-services/certificates-service";
 import type { AppResponse } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
+import { CardListSkeleton } from "@/components/data/loading-skeletons";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { CertificateCard } from "@/pages/dashboard/certificates/certificate-card";
@@ -93,6 +94,7 @@ export function DashboardCertificates() {
                 errorTitle="Could not load certificates"
                 onRetry={() => certificatesQuery.refetch()}
                 loadingLabel="Loading certificates…"
+                skeleton={<CardListSkeleton />}
             >
                 {visibleCertificates.length === 0 ? (
                     <div className="rounded-lg border p-8 text-center text-sm text-muted-foreground">
