@@ -965,7 +965,7 @@ namespace Voron.Impl
 
         public string CallerName { get; set; }
 
-        internal bool AppliedJournalStateAfterFlush { get; set; }
+        internal Func<LowLevelTransaction, bool> AppliedJournalStateAction;
 
         public void Dispose()
         {
@@ -1167,6 +1167,8 @@ namespace Voron.Impl
         internal Task<bool> AsyncCommit;
         // This task completes when the journal write for this transaction is durably stored on disk.
         internal Task DurableCommit;
+        internal TaskCompletionSource PreparedDurableCommit;
+        
         private LowLevelTransaction _asyncCommitNextTransaction;
         private LowLevelTransaction _asyncCommitPreviousTransaction;
         private bool _asyncCommitSubmissionEnded;
@@ -1292,6 +1294,8 @@ namespace Voron.Impl
                 // state of the journal is. We have to shut down and run recovery to 
                 // come to a known good state
                 _txStatus |= TxStatus.Errored;
+                // stage2 may have died before reaching the journal - nothing else will complete the window task
+                PreparedDurableCommit?.TrySetException(e);
                 _env.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
 
                 throw;
@@ -1424,7 +1428,15 @@ namespace Voron.Impl
             _env.Journal.Applicator.OnTransactionCommitted(this);
 
             if (_dirtyPages.Count > 0 || _hasFreePages)
+            {
                 _writeToJournalState = WriteToJournalState.ModifiedPages;
+                // all consumers of this task block on it (branch commits, the merger wait handle), so
+                // synchronous completion releases them directly instead of hopping through the pool
+#pragma warning disable RDB0008
+                PreparedDurableCommit = new TaskCompletionSource();
+#pragma warning restore RDB0008
+                DurableCommit = PreparedDurableCommit.Task;
+            }
             else if(_journal.HasBranchCommits)
                 _writeToJournalState = WriteToJournalState.BranchCommits;
             else

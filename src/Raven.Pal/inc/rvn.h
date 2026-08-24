@@ -261,8 +261,21 @@ rvn_hard_link_non_durable(const char *src, const char *dst, int32_t *detailed_er
 EXPORT int32_t
 rvn_move_file_durable(const char *src, const char *dst, int32_t *detailed_error_code);
 
+/* asked before each chunk of zeroing. Returns how many milliseconds to wait before asking again:
+   0 - keep going, write the next chunk now
+  <0 - abort the zeroing, leaving the file partially zeroed (*zeroed_bytes says how far it got)
+  >0 - sleep that long, then ask again
+   All pacing policy (activity detection, stall budgets) lives with the caller. */
+typedef int32_t (*rvn_zeroing_pacing)(void *state);
+
+/* This fills the journal file with zeroes, to avoid file system costs during future writes (which fallocate doesn't solve).
+   Problem is that this also takes I/O bandwidth, and we *don't* want to stall the real journal writes. Therefor, we fill
+   the file in chunks, and ask the pacing callback between chunks.
+*/
 EXPORT int32_t
-rvn_create_zeroed_file(const char *path, int64_t size, int32_t *detailed_error_code);
+rvn_create_zeroed_file(const char *path, int64_t size,
+                       rvn_zeroing_pacing pacing, void *pacing_state,
+                       int64_t *zeroed_bytes, int32_t *detailed_error_code);
 
 EXPORT int32_t 
 rvn_ensure_hard_link_non_durable(const char *src, const char *dst, int32_t *detailed_error_code);
