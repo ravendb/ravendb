@@ -113,13 +113,21 @@ public static class AgentParameterValue
         if (supplied.ValueKind == JsonValueKind.Number)
         {
             if (supplied.TryGetInt64(out var integer))
+            {
                 value = integer;
-            else if (supplied.TryGetDecimal(out var precise))
-                value = precise;
-            else
-                value = supplied.GetDouble();
+                return true;
+            }
 
-            return true;
+            if (supplied.TryGetDouble(out var approximate) && double.IsFinite(approximate))
+            {
+                value = supplied.TryGetDecimal(out var precise) && (double)precise == approximate
+                    ? precise
+                    : approximate;
+                return true;
+            }
+
+            error = $"expected a number a double can hold, got {Describe(supplied)}";
+            return false;
         }
 
         if (supplied.ValueKind == JsonValueKind.String && TryParseNumber(supplied.GetString(), out value))
@@ -131,12 +139,11 @@ public static class AgentParameterValue
 
     private static bool TryParseNumber(string? text, out object? value)
     {
+        value = null;
+
         var trimmed = text?.Trim();
-        if (string.IsNullOrEmpty(trimmed))
-        {
-            value = null;
+        if (string.IsNullOrEmpty(trimmed) || trimmed[0] == '+')
             return false;
-        }
 
         if (long.TryParse(trimmed, NumberStyles.Integer, CultureInfo.InvariantCulture, out var integer))
         {
@@ -144,20 +151,16 @@ public static class AgentParameterValue
             return true;
         }
 
-        if (decimal.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out var precise))
-        {
-            value = precise;
-            return true;
-        }
+        if (double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out var approximate) == false ||
+            double.IsFinite(approximate) == false)
+            return false;
 
-        if (double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out var approximate))
-        {
-            value = approximate;
-            return true;
-        }
+        value = decimal.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out var precise) &&
+                (double)precise == approximate
+            ? precise
+            : approximate;
 
-        value = null;
-        return false;
+        return true;
     }
 
     private static bool TryConvertBoolean(JsonElement supplied, out object? value, out string? error)

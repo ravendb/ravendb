@@ -65,6 +65,42 @@ public class AgentParameterValueTests
         Assert.False(string.IsNullOrWhiteSpace(error));
     }
 
+    [RavenTheory(RavenTestCategory.Quill)]
+    [InlineData("1e400")]
+    [InlineData("-1e400")]
+    [InlineData("NaN")]
+    [InlineData("Infinity")]
+    [InlineData("+48123456789")]
+    public void A_number_json_cannot_carry_is_rejected_instead_of_throwing(string supplied)
+    {
+        Assert.False(AgentParameterValue.TryNormalize(
+            AiAgentParameterValueType.Number, AgentParameterValue.FromString(supplied), out _, out var error));
+
+        Assert.False(string.IsNullOrWhiteSpace(error));
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public void A_json_number_past_double_is_rejected_instead_of_throwing()
+    {
+        Assert.False(AgentParameterValue.TryNormalize(
+            AiAgentParameterValueType.Number, Parse("1e400"), out _, out var error));
+
+        Assert.False(string.IsNullOrWhiteSpace(error));
+    }
+
+    [RavenTheory(RavenTestCategory.Quill)]
+    [InlineData("1e-40", "1E-40")]
+    [InlineData("1e30", "1E+30")]
+    [InlineData("0.1", "0.1")]
+    public void A_number_below_decimals_range_keeps_its_magnitude(string supplied, string expected)
+    {
+        Assert.True(AgentParameterValue.TryNormalize(
+            AiAgentParameterValueType.Number, AgentParameterValue.FromString(supplied),
+            out var normalized, out var error), error);
+
+        Assert.Equal(expected, normalized.GetRawText());
+    }
+
     [RavenFact(RavenTestCategory.Quill)]
     public void The_default_type_carries_any_json_through_unchanged()
     {
