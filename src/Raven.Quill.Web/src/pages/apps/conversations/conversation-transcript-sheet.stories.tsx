@@ -41,11 +41,16 @@ const requireRowAt = (sheet: HTMLElement, index: number) => {
 
 const scrollElementOf = (sheet: HTMLElement) => requireRowAt(sheet, 0).parentElement!.parentElement!;
 
+const SYSTEM_PROMPT_ROW = 1;
+const TOOL_CALL_ROW = 3;
+
 export const SystemPromptIsAnOrdinaryTranscriptRow: Story = {
     play: async ({ canvasElement }) => {
         const sheet = await openSheet(canvasElement);
 
-        const systemPrompt = within(requireRowAt(sheet, 0)).getByRole("button", { name: /system prompt/i });
+        const systemPrompt = within(requireRowAt(sheet, SYSTEM_PROMPT_ROW)).getByRole("button", {
+            name: /system prompt/i,
+        });
         expect(within(sheet).queryByText(/you are a helpful store assistant/i)).not.toBeInTheDocument();
 
         await userEvent.click(systemPrompt);
@@ -58,10 +63,12 @@ export const SystemPromptIsAnOrdinaryTranscriptRow: Story = {
 export const ExpandingARowRepositionsTheRowsBelowIt: Story = {
     play: async ({ canvasElement }) => {
         const sheet = await openSheet(canvasElement);
-        const topOfNextRow = () => requireRowAt(sheet, 3).style.top;
+        const topOfNextRow = () => requireRowAt(sheet, TOOL_CALL_ROW + 1).style.top;
         const before = topOfNextRow();
 
-        await userEvent.click(within(requireRowAt(sheet, 2)).getByRole("button", { name: /search-products/i }));
+        await userEvent.click(
+            within(requireRowAt(sheet, TOOL_CALL_ROW)).getByRole("button", { name: /search-products/i }),
+        );
 
         await waitFor(() => expect(parseFloat(topOfNextRow())).toBeGreaterThan(parseFloat(before)));
     },
@@ -72,20 +79,21 @@ export const ExpandingARowRepositionsTheRowsBelowIt: Story = {
 export const ExpandedRowsStayExpandedAcrossScrolling: Story = {
     play: async ({ canvasElement }) => {
         const sheet = await openSheet(canvasElement);
-        const toolCall = within(requireRowAt(sheet, 2)).getByRole("button", { name: /search-products/i });
+        const toolCall = within(requireRowAt(sheet, TOOL_CALL_ROW)).getByRole("button", {
+            name: /search-products/i,
+        });
 
         await userEvent.click(toolCall);
         await waitFor(() => expect(toolCall).toHaveAttribute("aria-expanded", "true"));
 
         const scrollElement = scrollElementOf(sheet);
         scrollElement.scrollTop = scrollElement.scrollHeight;
-        await waitFor(() => expect(rowAt(sheet, 2)).not.toBeInTheDocument());
+        await waitFor(() => expect(rowAt(sheet, TOOL_CALL_ROW)).not.toBeInTheDocument());
 
         scrollElement.scrollTop = 0;
-        await waitFor(() => expect(rowAt(sheet, 2)).toBeInTheDocument());
-        expect(within(requireRowAt(sheet, 2)).getByRole("button", { name: /search-products/i })).toHaveAttribute(
-            "aria-expanded",
-            "true",
-        );
+        await waitFor(() => expect(rowAt(sheet, TOOL_CALL_ROW)).toBeInTheDocument());
+        expect(
+            within(requireRowAt(sheet, TOOL_CALL_ROW)).getByRole("button", { name: /search-products/i }),
+        ).toHaveAttribute("aria-expanded", "true");
     },
 };
