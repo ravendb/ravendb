@@ -89,7 +89,13 @@ public static class ChatEndpoints
             logger.LogError(e, "Chat stream failed for agentId={AgentId}", body.AgentId);
             try
             {
-                await NdjsonStream.WriteLineAsync(ctx, new { type = "error", message = "Chat stream failed. See server logs for details." });
+                await NdjsonStream.WriteLineAsync(ctx, new
+                {
+                    type = "error",
+                    message = e is InvalidParameterValueException
+                        ? e.Message
+                        : "Chat stream failed. See server logs for details.",
+                });
             }
             catch
             {

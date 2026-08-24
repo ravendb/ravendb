@@ -234,7 +234,13 @@ public static class EmbedEndpoints
 
             try
             {
-                await NdjsonStream.WriteLineAsync(ctx, new { type = "error", message = "Chat failed. See server logs for details." });
+                await NdjsonStream.WriteLineAsync(ctx, new
+                {
+                    type = "error",
+                    message = e is InvalidParameterValueException
+                        ? e.Message
+                        : "Chat failed. See server logs for details.",
+                });
             }
             catch
             {
