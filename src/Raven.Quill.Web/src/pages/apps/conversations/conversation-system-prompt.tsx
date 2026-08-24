@@ -5,7 +5,7 @@ export function ConversationSystemPrompt({ disclosureKey, content }: { disclosur
     return (
         <TranscriptDisclosure disclosureKey={disclosureKey} icon={ScrollText} label="System prompt">
             <div className="border-t px-3 py-3">
-                <CodeBlock value={content} />
+                <CodeBlock value={content} className="border-none" />
             </div>
         </TranscriptDisclosure>
     );

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
 import { ChevronDown, type LucideIcon } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/shadcn/ui/collapsible";
+import { cn } from "@/lib/utils";
 
 type OpenDisclosures = {
     isOpen: (key: string) => boolean;
@@ -70,9 +71,14 @@ export function TranscriptDisclosure({
     );
 }
 
-export function CodeBlock({ value }: { value: string }) {
+export function CodeBlock({ value, className }: { value: string; className?: string }) {
     return (
-        <pre className="max-h-60 overflow-auto rounded-md border bg-background p-2 font-mono text-xs whitespace-pre-wrap">
+        <pre
+            className={cn(
+                "max-h-60 overflow-auto rounded-md border bg-background p-2 font-mono text-xs whitespace-pre-wrap",
+                className,
+            )}
+        >
             {value}
         </pre>
     );
