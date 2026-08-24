@@ -48,7 +48,6 @@ type GenerateEmbedLinkDialogProps = {
     slug: string;
     channelId: string;
     displayName: string;
-    /** The agent's declared parameters — one value is bound per parameter at mint time. */
     parameters: AgentParameterSummary[];
     trigger: ReactNode;
 };
