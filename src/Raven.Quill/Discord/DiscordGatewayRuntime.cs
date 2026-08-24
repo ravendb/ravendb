@@ -151,7 +151,10 @@ internal sealed class DiscordGatewayRuntime
         _frameBuffer.SetLength(0);
 
         var hello = await ReceiveFrameAsync(socket, ct);
-        if (hello is null || hello.Op != DiscordGatewayOpcode.Hello)
+        if (hello is null)
+            return FatalReasonFor(socket.CloseStatus);
+
+        if (hello.Op != DiscordGatewayOpcode.Hello)
             return null;
 
         var interval = TimeSpan.FromMilliseconds(
