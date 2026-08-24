@@ -1,4 +1,5 @@
 using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Quill.Agents;
 
 namespace Raven.Quill.Channels;
 
@@ -46,9 +47,9 @@ internal static class ChannelParameterBindings
         error = null;
 
         var declared = (config.Parameters ?? [])
-            .Select(parameter => parameter.Name)
-            .Where(name => string.IsNullOrWhiteSpace(name) == false)
+            .Where(parameter => string.IsNullOrWhiteSpace(parameter.Name) == false)
             .ToArray();
+        var declaredNames = declared.Select(parameter => parameter.Name).ToArray();
 
         var suppliedByName = new Dictionary<string, ChannelParameterBinding>(StringComparer.OrdinalIgnoreCase);
         foreach (var (name, binding) in supplied ?? new Dictionary<string, ChannelParameterBinding>())
@@ -58,7 +59,7 @@ internal static class ChannelParameterBindings
         }
 
         var unknown = suppliedByName.Keys
-            .Where(name => declared.Contains(name, StringComparer.OrdinalIgnoreCase) == false)
+            .Where(name => declaredNames.Contains(name, StringComparer.OrdinalIgnoreCase) == false)
             .ToArray();
         if (unknown.Length > 0)
         {
@@ -67,8 +68,10 @@ internal static class ChannelParameterBindings
         }
 
         var missing = new List<string>();
-        foreach (var name in declared)
+        foreach (var parameter in declared)
         {
+            var name = parameter.Name;
+
             if (suppliedByName.TryGetValue(name, out var binding) == false)
             {
                 missing.Add(name);
@@ -87,6 +90,13 @@ internal static class ChannelParameterBindings
                 if (string.IsNullOrWhiteSpace(binding.Value))
                 {
                     error = $"parameter binding for '{name}': a Constant binding requires a value";
+                    return false;
+                }
+
+                if (AgentParameterValue.TryNormalize(
+                        parameter.Type, AgentParameterValue.FromString(binding.Value), out _, out var invalid) == false)
+                {
+                    error = $"parameter binding for '{name}': {invalid}";
                     return false;
                 }
             }
