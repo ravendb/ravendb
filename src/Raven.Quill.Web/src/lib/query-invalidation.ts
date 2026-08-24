@@ -41,6 +41,8 @@ function channelTypeQueryKeys(slug: string, channelType: NonNullable<ChannelType
     switch (channelType) {
         case "Slack":
             return [api.queries.slack.health(slug).queryKey];
+        case "Discord":
+            return [api.queries.discord.health(slug).queryKey];
         default:
             return [];
     }

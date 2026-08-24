@@ -22,6 +22,7 @@ const editChannelSchema = z.object({
     botToken: z.string().trim(),
     slackBotToken: z.string().trim(),
     slackSigningSecret: z.string().trim(),
+    discordBotToken: z.string().trim(),
 });
 
 type EditChannelFormData = z.infer<typeof editChannelSchema>;
@@ -51,6 +52,7 @@ export function ChannelConfigForm({
 
     const isTelegram = channel.type === "Telegram";
     const isSlack = channel.type === "Slack";
+    const isDiscord = channel.type === "Discord";
     const isIFrame = channel.type === "IFrame";
     // Rotating the token is off by default: the field only appears once the switch is on, so the token
     // input can't be mistaken for a required field that must be filled to save other changes.
@@ -65,6 +67,7 @@ export function ChannelConfigForm({
             botToken: "",
             slackBotToken: "",
             slackSigningSecret: "",
+            discordBotToken: "",
         },
     });
 
@@ -77,6 +80,7 @@ export function ChannelConfigForm({
             form.resetField("botToken");
             form.resetField("slackBotToken");
             form.resetField("slackSigningSecret");
+            form.resetField("discordBotToken");
         }
     };
 
@@ -97,6 +101,7 @@ export function ChannelConfigForm({
                           signingSecret: values.slackSigningSecret.trim() || null,
                       }
                     : null,
+                discord: isDiscord ? { botToken: values.discordBotToken.trim() || null } : null,
             }),
         onSuccess: async () => {
             unsavedChanges.markSaved();
@@ -172,6 +177,29 @@ export function ChannelConfigForm({
                                     description="Must match the Slack app’s signing secret or event deliveries stop verifying."
                                 />
                             </>
+                        )}
+                    </div>
+                ) : isDiscord ? (
+                    <div className="flex flex-col gap-3">
+                        <div className="space-y-0.5">
+                            <div className="flex items-center gap-2">
+                                <FieldLabel htmlFor={rotateTokenId}>Rotate bot token</FieldLabel>
+                                <Switch id={rotateTokenId} checked={isRotatingToken} onCheckedChange={onRotateToggle} />
+                            </div>
+                            <FieldDescription>
+                                Turn on to replace the current token with a freshly reset one from the app’s Bot page.
+                                The current token is never shown.
+                            </FieldDescription>
+                        </div>
+                        {isRotatingToken && (
+                            <FormInput
+                                control={form.control}
+                                name="discordBotToken"
+                                type="password"
+                                label="New bot token"
+                                placeholder="Paste the reset token from the app’s Bot page"
+                                description="Must belong to the same Discord bot as the current token."
+                            />
                         )}
                     </div>
                 ) : (

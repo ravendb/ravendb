@@ -407,6 +407,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/apps/{slug}/discord/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Per-channel connection health for the app's Discord channels: bot token validity (cached a few minutes) plus the live gateway connection state and the inbound and send activity seen since the last restart. */
+        get: operations["discord.health"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/apps/{slug}/iframe/{channelId}/theme": {
         parameters: {
             query?: never;
@@ -1345,9 +1362,10 @@ export interface components {
             allowedOrigins: string[];
             telegram?: null | components["schemas"]["TelegramSummaryResponse"];
             slack?: null | components["schemas"]["SlackSummaryResponse"];
+            discord?: null | components["schemas"]["DiscordSummaryResponse"];
         };
         /** @enum {unknown} */
-        ChannelType: "IFrame" | "Telegram" | "WhatsApp" | "Slack" | null;
+        ChannelType: "IFrame" | "Telegram" | "WhatsApp" | "Slack" | "Discord" | null;
         ChatRequest: {
             agentId: string;
             prompt: string;
@@ -1409,6 +1427,44 @@ export interface components {
             /** Format: int64 */
             documentsCount: number;
             fields: unknown[];
+        };
+        DiscordChannelHealthResponse: {
+            channelId: string;
+            applicationId: string;
+            botUserId: string;
+            botUsername: string;
+            enabled: boolean;
+            tokenValid: null | boolean;
+            tokenError: null | string;
+            gatewayConnected: boolean;
+            /** Format: date-time */
+            lastConnectedAt: null | string;
+            lastGatewayError: null | string;
+            /** Format: date-time */
+            lastInboundAt: null | string;
+            /** Format: date-time */
+            lastSendErrorAt: null | string;
+            lastSendError: null | string;
+        };
+        DiscordProvisionRequest: {
+            botToken: null | string;
+            parameterBindings?: null | {
+                [key: string]: components["schemas"]["ChannelParameterBinding"];
+            };
+        };
+        DiscordSummaryResponse: {
+            applicationId: string;
+            botUserId: string;
+            botUsername: string;
+            parameterBindings: {
+                [key: string]: components["schemas"]["ChannelParameterBinding"];
+            };
+        };
+        DiscordUpdateRequest: {
+            botToken?: null | string;
+            parameterBindings?: null | {
+                [key: string]: components["schemas"]["ChannelParameterBinding"];
+            };
         };
         DiscoverColumnResponse: {
             name: string;
@@ -1612,6 +1668,7 @@ export interface components {
             displayName?: null | string;
             telegram?: null | components["schemas"]["TelegramProvisionRequest"];
             slack?: null | components["schemas"]["SlackProvisionRequest"];
+            discord?: null | components["schemas"]["DiscordProvisionRequest"];
         };
         ProvisionChannelResponse: {
             channelId: string;
@@ -1829,6 +1886,7 @@ export interface components {
             enabled: null | boolean;
             telegram?: null | components["schemas"]["TelegramUpdateRequest"];
             slack?: null | components["schemas"]["SlackUpdateRequest"];
+            discord?: null | components["schemas"]["DiscordUpdateRequest"];
         };
         UpdateWidgetThemeRequest: {
             theme: null | components["schemas"]["WidgetTheme"];
@@ -2837,6 +2895,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SlackChannelHealthResponse"][];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "discord.health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscordChannelHealthResponse"][];
                 };
             };
             /** @description Not Found */
@@ -4259,6 +4348,10 @@ export type ConversationParam = components["schemas"]["ConversationParam"];
 export type ConversationStatsResponse = components["schemas"]["ConversationStatsResponse"];
 export type DatabaseAccess = components["schemas"]["DatabaseAccess"];
 export type DataCollectionDto = components["schemas"]["DataCollectionDto"];
+export type DiscordChannelHealthResponse = components["schemas"]["DiscordChannelHealthResponse"];
+export type DiscordProvisionRequest = components["schemas"]["DiscordProvisionRequest"];
+export type DiscordSummaryResponse = components["schemas"]["DiscordSummaryResponse"];
+export type DiscordUpdateRequest = components["schemas"]["DiscordUpdateRequest"];
 export type DiscoverColumnResponse = components["schemas"]["DiscoverColumnResponse"];
 export type DiscoverForeignKeyResponse = components["schemas"]["DiscoverForeignKeyResponse"];
 export type DiscoverRequest = components["schemas"]["DiscoverRequest"];
@@ -4390,6 +4483,9 @@ export const API_ENDPOINTS = {
     chat: {
         stream: "/chat/stream",
     },
+    discord: {
+        health: (slug: string) => `/apps/${encodeURIComponent(slug)}/discord/health`,
+    },
     embedLinks: {
         list: (slug: string) => `/apps/${encodeURIComponent(slug)}/embed-links`,
         mint: (slug: string) => `/apps/${encodeURIComponent(slug)}/embed-links`,
@@ -4489,6 +4585,9 @@ export function createServerApi(client: ApiClient) {
         },
         chat: {
             stream: (request: ChatRequest) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.chat.stream, request),
+        },
+        discord: {
+            health: (slug: string) => client.get<DiscordChannelHealthResponse[], ApiErrorResponse>(API_ENDPOINTS.discord.health(slug)),
         },
         embedLinks: {
             list: (slug: string) => client.get<EmbedLinkSummaryResponse[], ApiErrorResponse>(API_ENDPOINTS.embedLinks.list(slug)),
