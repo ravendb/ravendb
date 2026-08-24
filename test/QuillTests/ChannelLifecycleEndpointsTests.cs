@@ -31,7 +31,9 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
         Assert.Equal("IFrame", item.GetProperty("type").GetString());
         Assert.Equal("demo-agent", item.GetProperty("agentId").GetString());
         Assert.True(item.GetProperty("enabled").GetBoolean());
-        Assert.False(item.TryGetProperty("allowedOrigins", out _));
+        var origins = item.GetProperty("allowedOrigins");
+        Assert.Equal(1, origins.GetArrayLength());
+        Assert.Equal("http://localhost", origins[0].GetString());
         Assert.False(item.TryGetProperty("bindingId", out _));
     }
 
