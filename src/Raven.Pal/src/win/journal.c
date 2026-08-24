@@ -192,10 +192,14 @@ rvn_truncate_journal(void* handle, int64_t size, int32_t* detailed_error_code)
 }
 
 EXPORT int32_t
-rvn_create_zeroed_file(const char *path, int64_t size, int32_t *detailed_error_code)
+rvn_create_zeroed_file(const char *path, int64_t size,
+                       rvn_zeroing_pacing pacing, void *pacing_state,
+                       int64_t *zeroed_bytes, int32_t *detailed_error_code)
 {
     // This will land in the .bss, so these all will be mapped to the same physical page (zero). 
     static char _zeroed_file_buffer[1024 * 1024] __attribute__((aligned(4096)));
+
+    *zeroed_bytes = 0;
 
     HANDLE h = CreateFileW((LPCWSTR)path, GENERIC_WRITE, 0, NULL, CREATE_NEW,
                            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_NO_BUFFERING, NULL);
@@ -208,6 +212,16 @@ rvn_create_zeroed_file(const char *path, int64_t size, int32_t *detailed_error_c
     int64_t offset = 0;
     while (offset < size)
     {
+        for (;;)
+        {
+            int32_t wait_ms = pacing(pacing_state);
+            if (wait_ms == 0)
+                break;
+            if (wait_ms < 0)
+                goto done;
+            Sleep((DWORD)wait_ms);
+        }
+
         DWORD len = (DWORD)(size - offset < (int64_t)sizeof(_zeroed_file_buffer) ? size - offset : (int64_t)sizeof(_zeroed_file_buffer));
         DWORD written = 0;
         OVERLAPPED ov = {0};
@@ -222,6 +236,9 @@ rvn_create_zeroed_file(const char *path, int64_t size, int32_t *detailed_error_c
         }
         offset += len;
     }
+
+done:
+    *zeroed_bytes = offset;
 
     if (FlushFileBuffers(h) == FALSE)
     {

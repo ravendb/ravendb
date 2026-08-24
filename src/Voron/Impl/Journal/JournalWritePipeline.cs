@@ -85,13 +85,26 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
     public bool PipeliningEnabled => _maxConcurrentWrites > 1;
 
     internal bool ShouldPipelineNow =>
-        PipeliningEnabled &&                                          
+        PipeliningEnabled &&
+        // the merger is waiting to get bigger batches, overlapping writes will do the reverse
+        _env.BatchConsolidationActive == false &&                                          
         // the device is slow enough that overlapping writes pays for the smaller batches
         _writeLatencyTicks.Current >= _pipelineAboveLatencyTicks &&   
         // if we are bounded by device bandwidth, pipelining won't help
         IsCommitLatencyBound;                                         
 
     internal long WriteLatencyEwmaTicks => _writeLatencyTicks.Current;
+
+    private long _lastWriteActivityTimestamp;
+
+    internal const int RecentWriteActivityWindowMs = 3;
+
+    // journal writes are user facing - background work (pool zeroing, etc.) uses this to stand down
+    // while a write is running or another is likely imminent
+    internal bool JournalWriteRecentlyActive =>
+        Volatile.Read(ref _nextSequence) - Volatile.Read(ref _reapedSequence) > 0 ||
+        Stopwatch.GetElapsedTime(Volatile.Read(ref _lastWriteActivityTimestamp)).TotalMilliseconds < RecentWriteActivityWindowMs;
+
 
     internal bool IsMeasuredFastDevice
     {
@@ -110,7 +123,8 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
     public int MaxConcurrentWrites => _maxConcurrentWrites;
 
     public bool CanPipeline(long totalNumberOf4Kbs) =>
-        PipeliningEnabled &&                                          
+        PipeliningEnabled &&
+        _env.BatchConsolidationActive == false &&                                          
         // < 1MB, otherwise we'll be copying to our own buffer, then we have large write, etc. Doesn't pay off. 
         totalNumberOf4Kbs <= MaxPipelinedBatch4Kbs &&                 
         // the device is slow enough that overlapping writes pays for the smaller batches
@@ -169,6 +183,7 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
 
     private void WriteDirect(JournalFile file, long posBy4Kb, Span<Pal.journal_entry> entries, long totalNumberOf4Kbs, List<Ack> acks)
     {
+        Volatile.Write(ref _lastWriteActivityTimestamp, Stopwatch.GetTimestamp());
         RecordSubmitted(acks);
 
         try
@@ -248,6 +263,7 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
 
     private void RecordWriteLatency(long ticks, long numberOf4Kbs)
     {
+        Volatile.Write(ref _lastWriteActivityTimestamp, Stopwatch.GetTimestamp());
         _writeLatencyTicks.Update(ticks);
         _writeSizeBytes.Update(numberOf4Kbs * 4 * Constants.Size.Kilobyte);
     }

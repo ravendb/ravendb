@@ -288,10 +288,14 @@ _open_file_for_zeroing(const char *path, int32_t *detailed_error_code)
 }
 
 EXPORT int32_t
-rvn_create_zeroed_file(const char *path, int64_t size, int32_t *detailed_error_code)
+rvn_create_zeroed_file(const char *path, int64_t size,
+                       rvn_zeroing_pacing pacing, void *pacing_state,
+                       int64_t *zeroed_bytes, int32_t *detailed_error_code)
 {
     // This will land in the .bss, so these all will be mapped to the same physical page (zero).
     static char _zeroed_file_buffer[1024 * 1024] __attribute__((aligned(4096)));
+
+    *zeroed_bytes = 0;
 
     int fd = _open_file_for_zeroing(path, detailed_error_code);
     if (fd == -1)
@@ -304,12 +308,25 @@ rvn_create_zeroed_file(const char *path, int64_t size, int32_t *detailed_error_c
     int64_t offset = 0;
     while (offset < size)
     {
+        for (;;)
+        {
+            int32_t wait_ms = pacing(pacing_state);
+            if (wait_ms == 0)
+                break;
+            if (wait_ms < 0)
+                goto done;
+            usleep((useconds_t)wait_ms * 1000);
+        }
+
         int64_t len = size - offset < (int64_t)sizeof(_zeroed_file_buffer) ? size - offset : (int64_t)sizeof(_zeroed_file_buffer);
         rc = _pwrite(fd, (void *)_zeroed_file_buffer, (uint64_t)len, (uint64_t)offset, detailed_error_code);
         if (rc != SUCCESS)
             goto error;
         offset += len;
     }
+
+done:
+    *zeroed_bytes = offset;
 
     if (fsync(fd) == -1)
     {

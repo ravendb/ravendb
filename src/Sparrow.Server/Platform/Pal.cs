@@ -10,7 +10,7 @@ namespace Sparrow.Server.Platform
 {
     public static unsafe class Pal
     {
-        public const int PAL_VER = 70897; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
+        public const int PAL_VER = 70898; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
         static Pal()
         {
@@ -393,14 +393,18 @@ namespace Sparrow.Server.Platform
         [DllImport(LIBRVNPAL, SetLastError = true)]
         private static extern PalFlags.FailCodes rvn_move_file_durable(byte* src, byte* dst, out Int32 errorCode);
 
-        public static PalFlags.FailCodes rvn_create_zeroed_file(string path, long size, out Int32 errorCode)
+        public static PalFlags.FailCodes rvn_create_zeroed_file(string path, long size,
+            delegate* unmanaged<void*, int> pacing, void* pacingState,
+            out Int64 zeroedBytes, out Int32 errorCode)
         {
             using var convertPath = new Converter(path);
-            return rvn_create_zeroed_file(convertPath.Pointer, size, out errorCode);
+            return rvn_create_zeroed_file(convertPath.Pointer, size, pacing, pacingState, out zeroedBytes, out errorCode);
         }
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
-        private static extern PalFlags.FailCodes rvn_create_zeroed_file(byte* path, Int64 size, out Int32 errorCode);
+        private static extern PalFlags.FailCodes rvn_create_zeroed_file(byte* path, Int64 size,
+            delegate* unmanaged<void*, int> pacing, void* pacingState,
+            out Int64 zeroedBytes, out Int32 errorCode);
 
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
