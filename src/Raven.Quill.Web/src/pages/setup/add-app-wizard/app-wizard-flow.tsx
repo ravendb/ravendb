@@ -72,7 +72,7 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
             description:
                 "Choose the tables this app will work with. Only the selected tables are carried into the " +
                 "mapping and the task configuration - unselected tables, and relationships pointing to them, are " +
-                "ignored. Continuing runs a configuration validation dry run against the source database.",
+                "ignored. Clicking Next runs a configuration validation dry run against the source database.",
             bodyComponent: VerifySchemaStep,
             isFullHeight: true,
             validate: "verifySchema",
