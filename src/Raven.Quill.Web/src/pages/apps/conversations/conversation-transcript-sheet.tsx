@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Streamdown } from "streamdown";
 import { api } from "@/api/api";
-import type { AiConversationMessage } from "@/api/generated/server-api";
+import type { AiConversationMessage, ConversationParam } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
 import {
     Sheet,
@@ -14,6 +14,7 @@ import {
     SheetTrigger,
 } from "@/components/shadcn/ui/sheet";
 import { cn, formatDateTime } from "@/lib/utils";
+import { ConversationParams } from "@/pages/apps/conversations/conversation-params";
 import { ConversationSystemPrompt } from "@/pages/apps/conversations/conversation-system-prompt";
 import { ConversationToolCall } from "@/pages/apps/conversations/conversation-tool-call";
 import { TranscriptDisclosureState } from "@/pages/apps/conversations/transcript-disclosure";
@@ -46,6 +47,11 @@ export function ConversationTranscriptSheet({
     const transcript = conversationQuery.data?.transcript ?? [];
     const allTurns = transcript.length > 0 ? transcript : (conversationQuery.data?.lastExchange ?? []);
     const turns = allTurns.filter(isDisplayableTurn);
+    const params = conversationQuery.data?.params ?? [];
+    const rows: TranscriptRow[] = [
+        ...(params.length > 0 ? [{ kind: "params", params } satisfies TranscriptRow] : []),
+        ...turns.map((turn) => ({ kind: "turn", turn }) satisfies TranscriptRow),
+    ];
 
     return (
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -69,7 +75,7 @@ export function ConversationTranscriptSheet({
                                 <p className="text-sm text-muted-foreground">No messages in this conversation.</p>
                             ) : (
                                 <TranscriptDisclosureState>
-                                    <TranscriptRows scrollElement={scrollElement} turns={turns} />
+                                    <TranscriptRows scrollElement={scrollElement} rows={rows} />
                                 </TranscriptDisclosureState>
                             ))}
                     </ApiState>
@@ -86,20 +92,16 @@ const ESTIMATED_ROW_HEIGHT_IN_PX = 60;
 const ROW_GAP_IN_PX = 16;
 const OVERSCAN = 12;
 
-function TranscriptRows({
-    scrollElement,
-    turns,
-}: {
-    scrollElement: HTMLDivElement | null;
-    turns: AiConversationMessage[];
-}) {
+type TranscriptRow = { kind: "params"; params: ConversationParam[] } | { kind: "turn"; turn: AiConversationMessage };
+
+function TranscriptRows({ scrollElement, rows }: { scrollElement: HTMLDivElement | null; rows: TranscriptRow[] }) {
     // The virtualizer returns fresh functions on every render, so memoizing this component would
     // freeze the visible window on its first value. The row contents stay compiled.
     "use no memo";
 
     // eslint-disable-next-line react-hooks/incompatible-library -- handled by "use no memo" above
     const virtualizer = useVirtualizer({
-        count: turns.length,
+        count: rows.length,
         estimateSize: () => ESTIMATED_ROW_HEIGHT_IN_PX,
         getScrollElement: () => scrollElement,
         gap: ROW_GAP_IN_PX,
@@ -119,7 +121,7 @@ function TranscriptRows({
                     className="absolute inset-x-0"
                     style={{ top: virtualRow.start }}
                 >
-                    <TranscriptTurn turn={turns[virtualRow.index]} turnKey={`turn-${virtualRow.index}`} />
+                    <TranscriptRowContent row={rows[virtualRow.index]} rowKey={`row-${virtualRow.index}`} />
                 </div>
             ))}
         </div>
@@ -134,6 +136,13 @@ function isDisplayableTurn(turn: AiConversationMessage): boolean {
         (turn.role === "system" || turn.role === "user" || turn.role === "assistant") && Boolean(turn.content?.trim());
     const isParametersMessage = turn.role === "user" && turn.content?.startsWith("AI Agent Parameters:");
     return (hasVisibleContent || hasToolCalls) && !isParametersMessage;
+}
+
+function TranscriptRowContent({ row, rowKey }: { row: TranscriptRow; rowKey: string }) {
+    if (row.kind === "params") {
+        return <ConversationParams disclosureKey={rowKey} params={row.params} />;
+    }
+    return <TranscriptTurn turn={row.turn} turnKey={rowKey} />;
 }
 
 function TranscriptTurn({ turn, turnKey }: { turn: AiConversationMessage; turnKey: string }) {
