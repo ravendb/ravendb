@@ -1,4 +1,6 @@
 using System.Net;
+using System.Text.Json;
+using FastTests;
 using QuillTests.E2E.Fixtures;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -17,15 +19,15 @@ public class AgentParameterTypeE2ETests(ITestOutputHelper output, QuillCollectio
     : QuillTestBase(output, collection)
 {
     [RavenTheory(RavenTestCategory.Quill)]
-    [InlineData(AiAgentParameterValueType.Default, "42")]
-    [InlineData(AiAgentParameterValueType.String, "42")]
-    [InlineData(AiAgentParameterValueType.Number, "42")]
-    [InlineData(AiAgentParameterValueType.Boolean, "true")]
-    [InlineData(AiAgentParameterValueType.ArrayOfString, "a,b")]
-    [InlineData(AiAgentParameterValueType.ArrayOfNumber, "1,2")]
-    [InlineData(AiAgentParameterValueType.ArrayOfBoolean, "true,false")]
-    public async Task Embed_chat_works_for_every_declared_parameter_type(
-        AiAgentParameterValueType type, string minted)
+    [InlineData(AiAgentParameterValueType.Default, "42", "\"42\"")]
+    [InlineData(AiAgentParameterValueType.String, "42", "\"42\"")]
+    [InlineData(AiAgentParameterValueType.Number, "42", "42")]
+    [InlineData(AiAgentParameterValueType.Boolean, "true", "true")]
+    [InlineData(AiAgentParameterValueType.ArrayOfString, "a,b", "[\"a\",\"b\"]")]
+    [InlineData(AiAgentParameterValueType.ArrayOfNumber, "1,2", "[1,2]")]
+    [InlineData(AiAgentParameterValueType.ArrayOfBoolean, "true,false", "[true,false]")]
+    public async Task Embed_chat_binds_every_declared_parameter_type_as_that_type(
+        AiAgentParameterValueType type, string minted, string expectedJson)
     {
         await using var mock = await MockQuillServices.StartAsync(new FinalTurn("""{"reply":"ok"}"""));
 
@@ -35,21 +37,22 @@ public class AgentParameterTypeE2ETests(ITestOutputHelper output, QuillCollectio
 
         Assert.DoesNotContain("\"type\":\"error\"", ndjson);
         Assert.Contains("ok", ndjson);
+        Assert.Equal(expectedJson, await BoundParameterJsonAsync(h.App, h.Token));
     }
 
-    public static TheoryData<AiAgentParameterValueType, object?> TypedJsonValues() => new()
+    public static TheoryData<AiAgentParameterValueType, object?, string> TypedJsonValues() => new()
     {
-        { AiAgentParameterValueType.Number, 42 },
-        { AiAgentParameterValueType.Boolean, true },
-        { AiAgentParameterValueType.ArrayOfString, new[] { "a", "b" } },
-        { AiAgentParameterValueType.ArrayOfNumber, new[] { 1, 2 } },
-        { AiAgentParameterValueType.ArrayOfBoolean, new[] { true, false } },
+        { AiAgentParameterValueType.Number, 42, "42" },
+        { AiAgentParameterValueType.Boolean, true, "true" },
+        { AiAgentParameterValueType.ArrayOfString, new[] { "a", "b" }, "[\"a\",\"b\"]" },
+        { AiAgentParameterValueType.ArrayOfNumber, new[] { 1, 2 }, "[1,2]" },
+        { AiAgentParameterValueType.ArrayOfBoolean, new[] { true, false }, "[true,false]" },
     };
 
     [RavenTheory(RavenTestCategory.Quill)]
     [MemberData(nameof(TypedJsonValues))]
-    public async Task Embed_chat_works_when_the_minted_value_is_already_typed_json(
-        AiAgentParameterValueType type, object? minted)
+    public async Task Embed_chat_binds_a_minted_value_that_is_already_typed_json(
+        AiAgentParameterValueType type, object? minted, string expectedJson)
     {
         await using var mock = await MockQuillServices.StartAsync(new FinalTurn("""{"reply":"ok"}"""));
 
@@ -59,6 +62,7 @@ public class AgentParameterTypeE2ETests(ITestOutputHelper output, QuillCollectio
 
         Assert.DoesNotContain("\"type\":\"error\"", ndjson);
         Assert.Contains("ok", ndjson);
+        Assert.Equal(expectedJson, await BoundParameterJsonAsync(h.App, h.Token));
     }
 
     [RavenTheory(RavenTestCategory.Quill)]
@@ -94,6 +98,7 @@ public class AgentParameterTypeE2ETests(ITestOutputHelper output, QuillCollectio
 
         Assert.DoesNotContain("\"type\":\"error\"", ndjson);
         Assert.Contains("ok", ndjson);
+        Assert.Equal("null", await BoundParameterJsonAsync(app, link.Token));
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -117,6 +122,32 @@ public class AgentParameterTypeE2ETests(ITestOutputHelper output, QuillCollectio
 
         Assert.DoesNotContain("\"type\":\"error\"", ndjson);
         Assert.Contains("ok", ndjson);
+        Assert.Equal("7", await BoundParameterJsonAsync(app, link.Token));
+    }
+
+    private static async Task<string> BoundParameterJsonAsync(QuillApp app, string token)
+    {
+        string conversationId;
+        using (var session = app.Store.OpenAsyncSession())
+        {
+            var stored = await session.LoadAsync<EmbedLink>(EmbedLink.IdPrefix + token);
+            conversationId = stored.ConversationId
+                             ?? throw new InvalidOperationException("the embed link carries no conversation id");
+        }
+
+        using var commands = app.Store.Commands();
+        var conversation = await commands.GetAsync(conversationId)
+                           ?? throw new InvalidOperationException($"no conversation document '{conversationId}'");
+
+        var json = conversation.BlittableJson.ToString();
+        using var parsed = JsonDocument.Parse(json);
+
+        if (parsed.RootElement.TryGetProperty("Parameters", out var parameters) == false ||
+            parameters.TryGetProperty("p", out var bound) == false ||
+            bound.TryGetProperty("Value", out var value) == false)
+            throw new InvalidOperationException($"conversation '{conversationId}' binds no parameter 'p': {json}");
+
+        return JsonSerializer.Serialize(value);
     }
 
     private sealed record Harness(QuillApp App, string Token);
