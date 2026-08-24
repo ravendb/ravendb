@@ -32,6 +32,10 @@ internal static class ChannelParameterBindings
         [
             ChannelParameterSource.Constant, ChannelParameterSource.UserId, ChannelParameterSource.Email,
         ],
+        [ChannelType.Discord] =
+        [
+            ChannelParameterSource.Constant, ChannelParameterSource.UserId, ChannelParameterSource.Username,
+        ],
     };
 
     /// Keys of the returned dictionary carry the casing the agent declares, whatever casing was supplied.
