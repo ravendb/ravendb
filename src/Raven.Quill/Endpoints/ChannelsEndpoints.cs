@@ -7,6 +7,7 @@ using Raven.Quill.Agents;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints.Helpers;
+using Raven.Quill.Discord;
 using Raven.Quill.Raven;
 using Raven.Quill.Slack;
 using Raven.Quill.Telegram;
@@ -67,6 +68,7 @@ public static class ChannelsEndpoints
         IDocumentStore store,
         ITelegramChannelManager telegramManager,
         ISlackClient slackClient,
+        IDiscordClient discordClient,
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
@@ -79,7 +81,7 @@ public static class ChannelsEndpoints
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
         if (body.Type is { } type &&
-            RejectForeignSettings(type, body.Telegram is not null, body.Slack is not null) is { } foreignSettings)
+            RejectForeignSettings(type, body) is { } foreignSettings)
             return foreignSettings;
 
         return body.Type switch
@@ -88,19 +90,35 @@ public static class ChannelsEndpoints
             ChannelType.Telegram => await ProvisionTelegramAsync(app, body, store, telegramManager, logger, ct),
             ChannelType.WhatsApp => ProvisionWhatsAppAsync(),
             ChannelType.Slack => await ProvisionSlackAsync(app, body, store, slackClient, logger, ct),
-            ChannelType.Discord => NotImplementedChannel(ChannelType.Discord),
+            ChannelType.Discord => await ProvisionDiscordAsync(app, body, store, discordClient, logger, ct),
             null => Results.BadRequest(new ApiErrorResponse("type is required")),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{body.Type}'")),
         };
     }
 
-    private static IResult? RejectForeignSettings(ChannelType type, bool hasTelegram, bool hasSlack)
-    {
-        if (type != ChannelType.Telegram && hasTelegram)
-            return Results.BadRequest(new ApiErrorResponse("telegram settings apply to Telegram channels only"));
+    private static IResult? RejectForeignSettings(ChannelType type, ProvisionChannelRequest body) =>
+        RejectForeignSettings(
+            type,
+            (ChannelType.Telegram, body.Telegram),
+            (ChannelType.Slack, body.Slack),
+            (ChannelType.Discord, body.Discord));
 
-        if (type != ChannelType.Slack && hasSlack)
-            return Results.BadRequest(new ApiErrorResponse("slack settings apply to Slack channels only"));
+    private static IResult? RejectForeignSettings(ChannelType type, UpdateChannelRequest body) =>
+        RejectForeignSettings(
+            type,
+            (ChannelType.Telegram, body.Telegram),
+            (ChannelType.Slack, body.Slack),
+            (ChannelType.Discord, body.Discord));
+
+    private static IResult? RejectForeignSettings(
+        ChannelType type, params (ChannelType Owner, object? Settings)[] supplied)
+    {
+        foreach (var (owner, settings) in supplied)
+        {
+            if (settings is not null && owner != type)
+                return Results.BadRequest(new ApiErrorResponse(
+                    $"{owner.ToString().ToLowerInvariant()} settings apply to {owner} channels only"));
+        }
 
         return null;
     }
@@ -336,6 +354,102 @@ public static class ChannelsEndpoints
         return Results.Ok(new ProvisionChannelResponse(channelId));
     }
 
+    private static async Task<IResult> ProvisionDiscordAsync(
+        App app,
+        ProvisionChannelRequest body,
+        IDocumentStore store,
+        IDiscordClient discordClient,
+        ILogger<ChannelsLogger> logger,
+        CancellationToken ct)
+    {
+        var config = await AgentLookup.FindAsync(store, app.Database, body.AgentId, ct);
+        if (config is null)
+            return Results.BadRequest(new ApiErrorResponse($"unknown agentId '{body.AgentId}'"));
+
+        if (body.AllowedOrigins is { Length: > 0 })
+            return Results.BadRequest(new ApiErrorResponse("allowedOrigins does not apply to Discord channels"));
+
+        var botToken = body.Discord?.BotToken?.Trim();
+        if (string.IsNullOrEmpty(botToken))
+            return Results.BadRequest(new ApiErrorResponse("discord.botToken is required for a Discord channel"));
+
+        if (TryValidateDisplayName(body.DisplayName, out var nameError) == false)
+            return Results.BadRequest(new ApiErrorResponse(nameError!));
+
+        if (ChannelParameterBindings.TryResolve(config, ChannelType.Discord, body.Discord!.ParameterBindings, out var bindings, out var paramError) == false)
+            return Results.BadRequest(new ApiErrorResponse(paramError!, Code: "missing_parameters"));
+
+        var (identity, identityError, _) = await discordClient.GetBotIdentityAsync(botToken, ct);
+        if (identity is null)
+            return Results.BadRequest(new ApiErrorResponse(identityError!));
+
+        var channelId = Guid.NewGuid().ToString("N");
+        var channel = new Channel
+        {
+            Id = Channel.IdPrefix + channelId,
+            Type = ChannelType.Discord,
+            DisplayName = body.DisplayName ?? identity.BotUsername,
+            AgentId = config.Identifier,
+            AllowedOrigins = [],
+            Enabled = true,
+            CreatedAt = DateTime.UtcNow,
+            Discord = new DiscordSettings
+            {
+                ApplicationId = identity.ApplicationId,
+                BotUserId = identity.BotUserId,
+                BotUsername = identity.BotUsername,
+                BotToken = botToken,
+                ConnectedAt = DateTime.UtcNow,
+                ParameterBindings = bindings,
+            },
+        };
+
+        var (reserved, owner, reservationCv) = await TryReserveDiscordBotAsync(
+            store, identity.BotUserId, app.Database, channel.Id!, ct);
+        if (reserved == false)
+            return Results.BadRequest(new ApiErrorResponse(
+                DiscordBotAlreadyConnected(identity.BotUsername, owner)));
+
+        try
+        {
+            using var session = store.OpenAsyncSession(app.Database);
+            await session.StoreAsync(channel, ct);
+            await session.SaveChangesAsync(ct);
+        }
+        catch
+        {
+            await TryReleaseDiscordAsync(store, identity.BotUserId, app.Database, channel.Id!, logger);
+            throw;
+        }
+
+        if (await ConfirmDiscordReservationAsync(
+                store, identity.BotUserId, app.Database, channel.Id!, reservationCv!, ct) == false)
+        {
+            try
+            {
+                using var session = store.OpenAsyncSession(app.Database);
+                session.Delete(channel.Id!);
+                await session.SaveChangesAsync(ct);
+            }
+            catch (Exception e)
+            {
+                logger.LogWarning(
+                    "Discord channel {ChannelId} was not rolled back after losing the bot reservation: {Error}",
+                    channelId, e.Message);
+            }
+
+            await TryReleaseDiscordAsync(store, identity.BotUserId, app.Database, channel.Id!, logger);
+            return Results.BadRequest(new ApiErrorResponse(
+                DiscordBotAlreadyConnected(identity.BotUsername, null)));
+        }
+
+        logger.LogInformation(
+            "Provisioned Discord channel slug={Slug} channelId={ChannelId} agentId={AgentId} applicationId={ApplicationId} botUserId={BotUserId}",
+            app.Slug, channelId, config.Identifier, identity.ApplicationId, identity.BotUserId);
+
+        return Results.Ok(new ProvisionChannelResponse(channelId));
+    }
+
     private static async Task<IResult> ListChannelsAsync(
         string slug,
         IDocumentStore store,
@@ -365,6 +479,8 @@ public static class ChannelsEndpoints
         ITelegramChannelManager telegramManager,
         ISlackClient slackClient,
         SlackHealthRegistry slackHealth,
+        IDiscordClient discordClient,
+        DiscordHealthRegistry discordHealth,
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
@@ -380,7 +496,7 @@ public static class ChannelsEndpoints
         if (channel is null)
             return Results.NotFound(new ApiErrorResponse($"no channel '{channelId}' in app '{slug}'"));
 
-        if (RejectForeignSettings(channel.Type, body.Telegram is not null, body.Slack is not null) is { } foreignSettings)
+        if (RejectForeignSettings(channel.Type, body) is { } foreignSettings)
             return foreignSettings;
 
         return channel.Type switch
@@ -389,7 +505,7 @@ public static class ChannelsEndpoints
             ChannelType.Telegram => await UpdateTelegramChannelAsync(session, channel, body, app, channelId, store, telegramManager, logger, ct),
             ChannelType.WhatsApp => UpdateWhatsAppChannelAsync(),
             ChannelType.Slack => await UpdateSlackChannelAsync(session, channel, body, app, channelId, store, slackClient, slackHealth, logger, ct),
-            ChannelType.Discord => NotImplementedChannel(ChannelType.Discord),
+            ChannelType.Discord => await UpdateDiscordChannelAsync(session, channel, body, app, channelId, store, discordClient, discordHealth, logger, ct),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{channel.Type}'")),
         };
     }
@@ -611,6 +727,76 @@ public static class ChannelsEndpoints
         return Results.Ok(ChannelSummaryResponse.From(channel));
     }
 
+    private static async Task<IResult> UpdateDiscordChannelAsync(
+        IAsyncDocumentSession session,
+        Channel channel,
+        UpdateChannelRequest body,
+        App app,
+        string channelId,
+        IDocumentStore store,
+        IDiscordClient discordClient,
+        DiscordHealthRegistry health,
+        ILogger<ChannelsLogger> logger,
+        CancellationToken ct)
+    {
+        if (body.AllowedOrigins is { Length: > 0 })
+            return Results.BadRequest(new ApiErrorResponse("allowedOrigins does not apply to Discord channels"));
+
+        if (body.DisplayName is not null)
+        {
+            if (TryValidateDisplayName(body.DisplayName, out var nameError) == false)
+                return Results.BadRequest(new ApiErrorResponse(nameError!));
+            channel.DisplayName = body.DisplayName;
+        }
+
+        var settings = channel.Discord ??= new DiscordSettings();
+
+        var tokenRotated = false;
+        if (string.IsNullOrWhiteSpace(body.Discord?.BotToken) == false)
+        {
+            var botToken = body.Discord.BotToken.Trim();
+
+            var (identity, identityError, _) = await discordClient.GetBotIdentityAsync(botToken, ct);
+            if (identity is null)
+                return Results.BadRequest(new ApiErrorResponse(identityError!));
+
+            if (identity.BotUserId != settings.BotUserId)
+                return Results.BadRequest(new ApiErrorResponse(
+                    "the token belongs to a different bot; connect it as a new channel instead"));
+
+            settings.BotToken = botToken;
+            settings.BotUsername = identity.BotUsername;
+            settings.ApplicationId = identity.ApplicationId;
+            tokenRotated = true;
+        }
+
+        if (body.Discord?.ParameterBindings is { } suppliedBindings)
+        {
+            var config = await AgentLookup.FindAsync(store, app.Database, channel.AgentId, ct);
+            if (config is null)
+                return Results.BadRequest(new ApiErrorResponse($"unknown agentId '{channel.AgentId}'"));
+
+            if (ChannelParameterBindings.TryResolve(config, ChannelType.Discord, suppliedBindings, out var bindings, out var paramError) == false)
+                return Results.BadRequest(new ApiErrorResponse(paramError!, Code: "missing_parameters"));
+
+            settings.ParameterBindings = bindings;
+        }
+
+        if (body.Enabled is not null)
+            channel.Enabled = body.Enabled.Value;
+
+        await session.SaveChangesAsync(ct);
+
+        if (tokenRotated)
+            health.InvalidateTokenCheck(app.Database, channel.ShortId);
+
+        logger.LogInformation(
+            "Updated Discord channel slug={Slug} channelId={ChannelId} enabled={Enabled} tokenRotated={TokenRotated}",
+            app.Slug, channelId, channel.Enabled, tokenRotated);
+
+        return Results.Ok(ChannelSummaryResponse.From(channel));
+    }
+
 
     private static async Task<IResult> DeleteChannelAsync(
         string slug,
@@ -636,7 +822,7 @@ public static class ChannelsEndpoints
             ChannelType.Telegram => await DeleteTelegramChannelAsync(session, channel, app, channelId, store, telegramManager, logger, ct),
             ChannelType.WhatsApp => DeleteWhatsAppChannelAsync(),
             ChannelType.Slack => await DeleteSlackChannelAsync(session, channel, app, channelId, store, slackHealth, logger, ct),
-            ChannelType.Discord => NotImplementedChannel(ChannelType.Discord),
+            ChannelType.Discord => await DeleteDiscordChannelAsync(session, channel, app, channelId, store, logger, ct),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{channel.Type}'")),
         };
     }
@@ -700,6 +886,25 @@ public static class ChannelsEndpoints
         health.Remove(app.Database, channel.ShortId);
 
         logger.LogInformation("Deleted Slack channel slug={Slug} channelId={ChannelId}", app.Slug, channelId);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> DeleteDiscordChannelAsync(
+        IAsyncDocumentSession session,
+        Channel channel,
+        App app,
+        string channelId,
+        IDocumentStore store,
+        ILogger<ChannelsLogger> logger,
+        CancellationToken ct)
+    {
+        session.Delete(channel);
+        await session.SaveChangesAsync(ct);
+
+        if (channel.Discord is { BotUserId.Length: > 0 } settings)
+            await TryReleaseDiscordAsync(store, settings.BotUserId, app.Database, channel.Id!, logger);
+
+        logger.LogInformation("Deleted Discord channel slug={Slug} channelId={ChannelId}", app.Slug, channelId);
         return Results.NoContent();
     }
 
@@ -770,6 +975,32 @@ public static class ChannelsEndpoints
                     session.Delete(route);
             },
             logger);
+
+    private static string DiscordBotAlreadyConnected(string botUsername, string? ownerDatabase) =>
+        ownerDatabase is null
+            ? $"Discord bot {botUsername} is already connected"
+            : $"Discord bot {botUsername} is already connected in app '{ownerDatabase}'";
+
+    private static Task<ChannelBotReservations.Claim> TryReserveDiscordBotAsync(
+        IDocumentStore store, string botUserId, string database, string channelId, CancellationToken ct) =>
+        ChannelBotReservations.TryClaimAsync<DiscordBotReservation>(
+            store, DiscordBotReservation.IdFor(botUserId), database, channelId,
+            channel => channel?.Discord is { } settings && settings.BotUserId == botUserId,
+            storeCompanions: null, ct);
+
+    private static Task<bool> ConfirmDiscordReservationAsync(
+        IDocumentStore store, string botUserId, string database, string channelId, string changeVector,
+        CancellationToken ct) =>
+        ChannelBotReservations.TryConfirmAsync(
+            store, DiscordBotReservation.IdFor(botUserId),
+            new DiscordBotReservation { Database = database, ChannelId = channelId },
+            changeVector, ct);
+
+    private static Task TryReleaseDiscordAsync(
+        IDocumentStore store, string botUserId, string database, string channelId,
+        ILogger<ChannelsLogger> logger) =>
+        ChannelBotReservations.ReleaseAsync<DiscordBotReservation>(
+            store, DiscordBotReservation.IdFor(botUserId), database, channelId, releaseCompanions: null, logger);
 
     private static bool TryNormalizeOrigins(string[] origins, out string? error)
     {
