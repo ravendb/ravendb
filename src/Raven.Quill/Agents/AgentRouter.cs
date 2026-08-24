@@ -86,9 +86,12 @@ internal sealed class AgentRouter(
 
     private static Dictionary<string, object?> ConvertParameters(AgentRequest request, AiAgentConfiguration config)
     {
-        var declaredType = (config.Parameters ?? [])
-            .Where(parameter => string.IsNullOrWhiteSpace(parameter.Name) == false)
-            .ToDictionary(parameter => parameter.Name, parameter => parameter.Type, StringComparer.OrdinalIgnoreCase);
+        var declaredType = new Dictionary<string, AiAgentParameterValueType>(StringComparer.OrdinalIgnoreCase);
+        foreach (var parameter in config.Parameters ?? [])
+        {
+            if (string.IsNullOrWhiteSpace(parameter.Name) == false)
+                declaredType[parameter.Name] = parameter.Type;
+        }
 
         var converted = new Dictionary<string, object?>();
         foreach (var (key, value) in request.Parameters)
