@@ -412,7 +412,8 @@ namespace Raven.Server.ServerWide.Maintenance
             }
         }
 
-        // Last etag and document count for every system collection of this database.
+        // Last etag and document count for every '@'-prefixed collection of this database, except '@hilo'.
+        // Nothing else is filtered out beyond the prefix - '@empty' included - so the backend sees everything and decides.
         private static Dictionary<string, SystemCollectionStats> GetSystemCollectionsStats(DocumentsTransaction tx, DocumentsOperationContext context,
             DocumentsStorage documentsStorage)
         {
@@ -420,8 +421,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             foreach (var collection in documentsStorage.GetCollectionsNames(context))
             {
-                if (collection.StartsWith('@') == false ||
-                    collection.Equals(Constants.Documents.Collections.EmptyCollection, StringComparison.OrdinalIgnoreCase))
+                if (collection.StartsWith('@') == false || CollectionName.IsHiLoCollection(collection))
                     continue;
 
                 stats[collection] = new SystemCollectionStats

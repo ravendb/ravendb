@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -136,8 +137,9 @@ namespace SlowTests.Issues
 
             using (var store = GetDocumentStore(new Options { ReplicationFactor = 1, Server = leader }))
             {
-                // '@hilo' comes for free: storing an entity without an id makes the client ask the server for
-                // a HiLo range, and the server writes the range document into '@hilo'.
+                // Storing an entity without an id makes the client ask the server for a HiLo range, and the
+                // server writes the range document into '@hilo' - the one '@' collection we filter out, so
+                // this also gives the exclusion below something real to check against.
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Dto { Name = "a name to embed" });
@@ -150,15 +152,16 @@ namespace SlowTests.Issues
 
                 // '@empty' has no feature that owns it - it is where a write that omits '@collection' lands,
                 // and a session always stamps one from the entity type, so a raw command is how it arises.
+                // It carries the '@' prefix, so it is reported like any other.
                 using (var commands = store.Commands())
                     commands.Put("no-collection/1", null, new { });
 
                 var embeddingsCollection = EmbeddingsHelper.GetEmbeddingDocumentCollectionName(SourceCollection);
                 var expected = new[]
                 {
-                    CollectionName.HiLoCollection,
                     Constants.Documents.Collections.EmbeddingsCacheCollection,
-                    embeddingsCollection
+                    embeddingsCollection,
+                    Constants.Documents.Collections.EmptyCollection
                 };
 
                 // Wait for a tick that carries all three.
@@ -191,11 +194,15 @@ namespace SlowTests.Issues
                     Assert.True(stats.Etag > 0, $"Expected a last etag for '{collection}', got {stats.Etag}.");
                 }
 
-                // Not reported: the user's own collection, and '@empty' - which carries the '@' prefix but
-                // holds the user documents that were written without a collection.
-                Assert.DoesNotContain(Constants.Documents.Collections.EmptyCollection, reportedByMember.SystemCollections.Keys);
-                Assert.DoesNotContain(Constants.Documents.Collections.AllDocumentsCollection, reportedByMember.SystemCollections.Keys);
+                // Not reported: the user's own collection, which carries no '@' prefix. And '@all_docs',
+                // which does carry the prefix but is a query-only pseudo-collection with no storage of
+                // its own, so it never reaches the report even though nothing filters it out.
                 Assert.DoesNotContain(SourceCollection, reportedByMember.SystemCollections.Keys);
+
+                // '@hilo' is the one '@' collection that is filtered out - the HiLo range documents are an
+                // internal bookkeeping detail of id generation, not something the backend should meter.
+                Assert.False(reportedByMember.SystemCollections.ContainsKey(CollectionName.HiLoCollection),
+                    $"Did not expect '{CollectionName.HiLoCollection}' in the report, got: {actual}.");
             }
         }
 
@@ -206,16 +213,15 @@ namespace SlowTests.Issues
 
             using (var store = GetDocumentStore(new Options { ReplicationFactor = 2, Server = leader }))
             {
-                // '@hilo' comes for free: storing an entity without an id makes the client ask the server for
-                // a HiLo range, and the server writes the range document into '@hilo', which then replicates.
-                using (var session = store.OpenAsyncSession())
-                {
-                    session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 1);
-                    await session.StoreAsync(new Dto { Name = "a name" });
-                    await session.SaveChangesAsync();
-                }
+                // A write that omits '@collection' lands in '@empty', which then replicates. A session always
+                // stamps a collection from the entity type, so a raw command is how it arises.
+                using (var commands = store.Commands())
+                    await commands.PutAsync("no-collection/1", null, new { });
 
-                // The '@hilo' values each member should be reporting, read straight from its own storage.
+                await WaitForDocumentInClusterAsync<object>(nodes, store.Database, "no-collection/1", x => x != null,
+                    TimeSpan.FromSeconds(30));
+
+                // The '@empty' values each member should be reporting, read straight from its own storage.
                 // Etags are node-local, so every member is checked against its own numbers - not the group's.
                 var expectedEtagByDatabaseId = new Dictionary<string, long>();
                 foreach (var node in nodes)
@@ -224,14 +230,14 @@ namespace SlowTests.Issues
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     using (var tx = context.OpenReadTransaction())
                     {
-                        expectedEtagByDatabaseId[database.DbBase64Id] =
-                            database.DocumentsStorage.GetLastDocumentEtag(tx.InnerTransaction, CollectionName.HiLoCollection);
+                        expectedEtagByDatabaseId[database.DbBase64Id] = database.DocumentsStorage.GetLastDocumentEtag(
+                            tx.InnerTransaction, Constants.Documents.Collections.EmptyCollection);
                     }
                 }
 
                 Assert.Equal(2, expectedEtagByDatabaseId.Count);
 
-                // Wait for a tick where both members have reported their own '@hilo' stats.
+                // Wait for a tick where both members have reported their own '@empty' stats.
                 await WaitForValueAsync(() =>
                 {
                     var reported = SnapshotEntryByDatabase(leader, store.Database)?.SystemCollectionsList;
@@ -240,7 +246,7 @@ namespace SlowTests.Issues
 
                     return reported.All(s => s.SystemCollections != null &&
                                              expectedEtagByDatabaseId.TryGetValue(s.DatabaseId, out var expectedEtag) &&
-                                             s.SystemCollections.TryGetValue(CollectionName.HiLoCollection, out var stats) &&
+                                             s.SystemCollections.TryGetValue(Constants.Documents.Collections.EmptyCollection, out var stats) &&
                                              stats.Etag == expectedEtag);
                 }, true, timeout: 30_000, interval: 100);
 
@@ -263,12 +269,13 @@ namespace SlowTests.Issues
                 foreach (var reported in entry.SystemCollectionsList)
                 {
                     Assert.NotNull(reported.SystemCollections);
-                    Assert.True(reported.SystemCollections.TryGetValue(CollectionName.HiLoCollection, out var stats),
-                        $"Expected '{CollectionName.HiLoCollection}' for database id '{reported.DatabaseId}', " +
+                    Assert.True(reported.SystemCollections.TryGetValue(Constants.Documents.Collections.EmptyCollection, out var stats),
+                        $"Expected '{Constants.Documents.Collections.EmptyCollection}' for database id '{reported.DatabaseId}', " +
                         $"got: {string.Join(", ", reported.SystemCollections.Keys)}.");
 
                     Assert.Equal(expectedEtagByDatabaseId[reported.DatabaseId], stats.Etag);
-                    Assert.True(stats.Count > 0, $"Expected a document count for '{CollectionName.HiLoCollection}', got {stats.Count}.");
+                    Assert.True(stats.Count > 0,
+                        $"Expected a document count for '{Constants.Documents.Collections.EmptyCollection}', got {stats.Count}.");
                 }
             }
         }
