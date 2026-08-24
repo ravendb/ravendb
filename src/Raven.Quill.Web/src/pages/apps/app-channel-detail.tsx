@@ -1,17 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ComponentType, type SVGProps } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ComponentType } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-    Bot,
-    CodeXml,
-    Fingerprint,
-    Globe,
-    MessageCircle,
-    Pause,
-    Pencil,
-    Play,
-    Send,
-    Trash2,
-} from "lucide-react";
+import { Bot, CodeXml, Fingerprint, Globe, MessageCircle, Pause, Pencil, Play, Send, Trash2 } from "lucide-react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { api } from "@/api/api";
@@ -38,7 +27,10 @@ import { getChannelTabs, resolveActiveTab, type ChannelTabDef } from "@/pages/ap
 import { DeleteChannelDialog } from "@/pages/apps/channels/delete-channel-dialog";
 import { EditChannelSheet } from "@/pages/apps/channels/edit-channel-sheet";
 
-const CHANNEL_TYPE_ICONS: Record<NonNullable<ChannelType>, ComponentType<SVGProps<SVGSVGElement>>> = {
+const CHANNEL_TYPE_ICONS: Record<
+    NonNullable<ChannelType>,
+    ComponentType<{ className?: string; "aria-hidden"?: boolean }>
+> = {
     IFrame: CodeXml,
     Telegram: Send,
     WhatsApp: MessageCircle,

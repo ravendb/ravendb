@@ -20,6 +20,8 @@ const editChannelSchema = z.object({
     displayName: z.string().trim().min(1, "Channel name is required"),
     allowedOrigins: z.array(z.object({ value: z.string().trim() })),
     botToken: z.string().trim(),
+    slackBotToken: z.string().trim(),
+    slackSigningSecret: z.string().trim(),
 });
 
 type EditChannelFormData = z.infer<typeof editChannelSchema>;
@@ -48,6 +50,8 @@ export function ChannelConfigForm({
     const rotateTokenId = useId();
 
     const isTelegram = channel.type === "Telegram";
+    const isSlack = channel.type === "Slack";
+    const isIFrame = channel.type === "IFrame";
     // Rotating the token is off by default: the field only appears once the switch is on, so the token
     // input can't be mistaken for a required field that must be filled to save other changes.
     const [isRotatingToken, setIsRotatingToken] = useState(false);
@@ -59,6 +63,8 @@ export function ChannelConfigForm({
             displayName: channel.displayName,
             allowedOrigins: (channel.allowedOrigins ?? []).map((value) => ({ value })),
             botToken: "",
+            slackBotToken: "",
+            slackSigningSecret: "",
         },
     });
 
@@ -69,6 +75,8 @@ export function ChannelConfigForm({
         // Turning the switch back off discards any typed token so nothing rotates on save.
         if (!checked) {
             form.resetField("botToken");
+            form.resetField("slackBotToken");
+            form.resetField("slackSigningSecret");
         }
     };
 
@@ -77,12 +85,18 @@ export function ChannelConfigForm({
             // Update is a partial edit: null fields are left unchanged on the server.
             api.services.channels.update(slug, channel.channelId, {
                 displayName: values.displayName.trim(),
-                allowedOrigins: isTelegram
-                    ? null
-                    : values.allowedOrigins.map((origin) => origin.value.trim()).filter(Boolean),
+                allowedOrigins: isIFrame
+                    ? values.allowedOrigins.map((origin) => origin.value.trim()).filter(Boolean)
+                    : null,
                 // Enabled state is owned by the header's Pause/Resume toggle; null leaves it untouched.
                 enabled: null,
                 telegram: isTelegram ? { botToken: values.botToken.trim() || null } : null,
+                slack: isSlack
+                    ? {
+                          botToken: values.slackBotToken.trim() || null,
+                          signingSecret: values.slackSigningSecret.trim() || null,
+                      }
+                    : null,
             }),
         onSuccess: async () => {
             unsavedChanges.markSaved();
@@ -125,6 +139,39 @@ export function ChannelConfigForm({
                                 label="New bot token"
                                 placeholder="Paste the new token from @BotFather"
                             />
+                        )}
+                    </div>
+                ) : isSlack ? (
+                    <div className="flex flex-col gap-3">
+                        <div className="space-y-0.5">
+                            <div className="flex items-center gap-2">
+                                <FieldLabel htmlFor={rotateTokenId}>Rotate credentials</FieldLabel>
+                                <Switch id={rotateTokenId} checked={isRotatingToken} onCheckedChange={onRotateToggle} />
+                            </div>
+                            <FieldDescription>
+                                Turn on to replace the Slack app’s bot token, signing secret, or both. Leave a field
+                                empty to keep the current value; neither is ever shown.
+                            </FieldDescription>
+                        </div>
+                        {isRotatingToken && (
+                            <>
+                                <FormInput
+                                    control={form.control}
+                                    name="slackBotToken"
+                                    type="password"
+                                    label="New bot token"
+                                    placeholder="xoxb-..."
+                                    description="Must belong to the same workspace and bot as the current token."
+                                />
+                                <FormInput
+                                    control={form.control}
+                                    name="slackSigningSecret"
+                                    type="password"
+                                    label="New signing secret"
+                                    placeholder="From Basic Information > App Credentials"
+                                    description="Must match the Slack app’s signing secret or event deliveries stop verifying."
+                                />
+                            </>
                         )}
                     </div>
                 ) : (
