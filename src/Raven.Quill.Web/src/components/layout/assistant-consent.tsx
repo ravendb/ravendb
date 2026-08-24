@@ -2,6 +2,8 @@ import { useState, type ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
 import { api } from "@/api/api";
+import { AI_LICENSE_UNAVAILABLE_MESSAGE } from "@/api/custom-services/assistant-service";
+import type { AiHelperStatus } from "@/api/generated/server-api";
 import { useAssistantConsent } from "@/components/layout/use-assistant-consent";
 import { Alert, AlertDescription } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
@@ -64,9 +66,7 @@ export function AssistantConsentGate() {
     return (
         <AssistantConsentFrame>
             <Alert variant="destructive" className="text-left">
-                <AlertDescription>
-                    The AI assistant is not available for this license. Please contact support.
-                </AlertDescription>
+                <AlertDescription>{AI_LICENSE_UNAVAILABLE_MESSAGE}</AlertDescription>
             </Alert>
         </AssistantConsentFrame>
     );
@@ -100,12 +100,24 @@ function AssistantConsentDialog() {
     );
 }
 
+function describeConsentFailure(status: AiHelperStatus) {
+    return status === "ConsentRequired"
+        ? "The AI service has not registered the consent yet. Please try again in a moment."
+        : AI_LICENSE_UNAVAILABLE_MESSAGE;
+}
+
 function AssistantConsentDialogBody({ onGranted }: { onGranted: () => void }) {
     const [isAccepted, setIsAccepted] = useState(false);
     const queryClient = useQueryClient();
 
     const consentMutation = useMutation({
-        mutationFn: () => api.services.assistant.giveConsent(),
+        mutationFn: async () => {
+            const result = await api.services.assistant.giveConsent();
+            if (result.status !== "Success") {
+                throw new Error(describeConsentFailure(result.status));
+            }
+            return result;
+        },
         onSuccess: (result) => {
             queryClient.setQueryData(api.queries.assistant.consent().queryKey, result);
             onGranted();

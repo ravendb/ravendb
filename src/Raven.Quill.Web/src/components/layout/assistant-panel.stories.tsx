@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, waitFor, within } from "storybook/test";
+import { AI_LICENSE_UNAVAILABLE_MESSAGE } from "@/api/custom-services/assistant-service";
 import { assistantMocks } from "@/mocks/assistant-mocks";
 import { defaultApiMocks } from "@/mocks/default-mocks";
 import { AssistantPanel } from "./assistant-panel";
@@ -60,7 +61,7 @@ export const LicenseWithoutAssistant: Story = {
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
 
-        await waitFor(() => expect(canvas.getByRole("alert")).toHaveTextContent(/not available for this license/i));
+        await waitFor(() => expect(canvas.getByRole("alert")).toHaveTextContent(AI_LICENSE_UNAVAILABLE_MESSAGE));
     },
 };
 

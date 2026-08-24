@@ -35,9 +35,17 @@ function AssistantMessageItem({ message }: { message: AssistantMessage }) {
     );
 }
 
+function isWebUrl(url: string | undefined) {
+    try {
+        const { protocol } = new URL(url ?? "");
+        return protocol === "http:" || protocol === "https:";
+    } catch {
+        return false;
+    }
+}
+
 function AssistantRelevantLinks({ links }: { links: AssistantMessage["relevantLinks"] }) {
-    // The links come straight from the AI service, so a blank url is possible and unlinkable.
-    const linkedSources = links?.filter((link) => link.Url?.trim());
+    const linkedSources = links?.filter((link) => isWebUrl(link.Url));
 
     if (!linkedSources || linkedSources.length === 0) {
         return null;

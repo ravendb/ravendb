@@ -13,7 +13,11 @@ import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capabili
  * same query, so this usually joins a call that is already in flight - and the caller renders
  * progress for however much of it is left.
  */
-export function useSuggestedAgents(): { isSuggesting: boolean; startedAt: number | undefined } {
+export function useSuggestedAgents(): {
+    isSuggesting: boolean;
+    startedAt: number | undefined;
+    isConsentRequired: boolean;
+} {
     const { slug = "" } = useParams();
     const { getValues, setValue } = useFormContext<AgentFormData>();
     const suggestions = useCapabilityWizardStore((state) => state.suggestions);
@@ -21,7 +25,7 @@ export function useSuggestedAgents(): { isSuggesting: boolean; startedAt: number
 
     const suggestQuery = api.queries.apps.suggestAgentFromData(slug);
     const query = useQuery(suggestQuery);
-    const suggestedAgents = query.data;
+    const suggestedAgents = query.data?.configurations;
 
     // The candidates arrive after this step is already on screen, so handing them to the store is a
     // genuine sync step. The store mirrors the cached array by reference, which applies each fetch
@@ -48,6 +52,7 @@ export function useSuggestedAgents(): { isSuggesting: boolean; startedAt: number
     return {
         isSuggesting: (query.isFetching || !suggestedAgents) && suggestions.length === 0,
         startedAt: getFetchStartedAt(suggestQuery.queryKey),
+        isConsentRequired: query.data?.isConsentRequired === true,
     };
 }
 
