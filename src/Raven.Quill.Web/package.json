@@ -6,7 +6,8 @@
     "packageManager": "pnpm@11.2.2",
     "scripts": {
         "dev": "pnpm generate:api && vite",
-        "build": "pnpm generate:api && tsc -b && vite build && pnpm build:widget",
+        "build": "pnpm generate:api && tsc -b && vite build && pnpm build:expired && pnpm build:widget",
+        "build:expired": "vite build --config vite.expired.config.ts",
         "build:widget": "pnpm --filter @raven-quill/widget build && node ./scripts/copy-widget-dist.mjs",
         "generate:api": "node ./scripts/generate-api.mjs",
         "typecheck": "tsc -b && pnpm --filter @raven-quill/widget typecheck",
@@ -88,6 +89,8 @@
         "typescript": "~6.0.3",
         "typescript-eslint": "^8.59.3",
         "vite": "^8.1.5",
+        "vite-plugin-singlefile": "^2.3.3",
+        "vite-plugin-svgr": "^5.2.0",
         "vitest": "^4.1.10"
     },
     "msw": {

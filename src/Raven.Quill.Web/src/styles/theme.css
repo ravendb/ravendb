@@ -1,0 +1,318 @@
+/* The theme itself - palette, semantic tokens, dark overrides and the Tailwind theme mapping - shared by
+   the SPA (index.css) and the self-contained expired-build notice (src/expired/expired.css), so both render
+   from the same tokens. App-wide base styles stay in index.css; nothing here may emit a utility. */
+
+@custom-variant dark (&:is(.dark *));
+
+/* Palette definition. Everything below derives from it, so a palette swap is this block alone.
+
+   `--brand-500` is the brand colour, #ff775f, written as the hex so it appears in the codebase
+   exactly as the brand defines it — it sits on the sRGB gamut edge, where an oklch triple would
+   be at the mercy of rounding. It fills: buttons, the widget launcher, the logo, chart series.
+   What it cannot do is carry light text, at 2.61:1 against near-white against 8.06:1 against
+   black, which is why `--primary-foreground` is ink rather than white.
+
+   Two steps below it exist for the cases the brand colour cannot serve. `--brand-600` (#c6432e,
+   4.74:1) is the lightest step that takes near-white text and the lightest that clears 3:1 as a
+   focus ring on a white page. `--brand-700` (#a83826, 6.19:1) is `--primary-strong`, the brand
+   rendered *as* text or an icon on a page background. The jump from 500 to 600 is wider than the
+   rest of the ramp for that reason: the steps between them fail on text and have no other use.
+
+   `--tint-h` / `--tint-c` are the hue and a chroma multiplier for the neutrals. `--tint-c: 0`
+   keeps every grey a true grey, matching the board, whose neutrals are black, white and grey
+   rather than warm grey. Tinting them toward the brand hue is what made the UI read as a single
+   colour, and it reads worst on dark surfaces, where there is no white nearby to judge against. */
+:root {
+    --tint-h: 31.73;
+    --tint-c: 0;
+
+    --brand-50: oklch(0.972 0.013 31.73);
+    --brand-100: oklch(0.945 0.027 31.73);
+    --brand-200: oklch(0.9 0.051 31.73);
+    --brand-300: oklch(0.845 0.083 31.73);
+    --brand-400: oklch(0.78 0.125 31.73);
+    --brand-500: #ff775f;
+    --brand-600: oklch(0.565 0.1708 31.73); /* #c6432e, the step that takes text */
+    --brand-700: oklch(0.5 0.15 31.73);
+    --brand-800: oklch(0.42 0.128 31.73);
+    --brand-900: oklch(0.345 0.102 31.73);
+    --brand-950: oklch(0.27 0.076 31.73);
+}
+
+:root {
+    --radius: 0.625rem;
+
+    --background: oklch(0.985 calc(0.005 * var(--tint-c)) var(--tint-h));
+    --foreground: oklch(0.18 calc(0.006 * var(--tint-c)) var(--tint-h));
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.18 calc(0.006 * var(--tint-c)) var(--tint-h));
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.18 calc(0.006 * var(--tint-c)) var(--tint-h));
+
+    /* The brand fills; text on it is ink, because #ff775f takes near-white at only 2.61:1 and
+       black at 8.06:1. That inverts the usual dark-button-light-text pairing, so anything that
+       renders brand colour *as* text or an icon on a page background cannot use `--primary` —
+       it would be that same 2.61:1. `--primary-strong` is the same hue at a legible weight, and
+       it is what the link variants, brand icons and active borders use. */
+    --primary: var(--brand-500);
+    --primary-foreground: oklch(0.22 0.03 31.73);
+    --primary-strong: var(--brand-700);
+    --secondary: oklch(0.955 calc(0.008 * var(--tint-c)) var(--tint-h));
+    --secondary-foreground: oklch(0.3 calc(0.03 * var(--tint-c)) var(--tint-h));
+    --muted: oklch(0.955 calc(0.006 * var(--tint-c)) var(--tint-h));
+    --muted-foreground: oklch(0.45 calc(0.015 * var(--tint-c)) var(--tint-h));
+    --accent: oklch(0.955 calc(0.01 * var(--tint-c)) var(--tint-h));
+    --accent-foreground: var(--text-strong);
+    --brand-subtle: var(--brand-100);
+    --brand-subtle-foreground: var(--text-strong);
+    /* Coral sits at H32, so amber warning (H75) and red destructive (H27) both used to land
+       inside the primary's arc. Warning moves to yellow and destructive to crimson, which puts
+       18deg between the primary and an error. */
+    --destructive: oklch(0.5 0.21 14);
+
+    --success: oklch(0.53 0.145 150);
+    --success-foreground: oklch(0.99 0 0);
+    --warning: oklch(0.8 0.16 95);
+    --warning-foreground: oklch(0.3 0.05 95);
+    /* H230 rather than 253: at 253 it was 3deg from chart-5, so an info badge and a data series
+       were the same blue. 26deg is enough to read as a different colour, and the chroma is what
+       sRGB actually holds at this lightness — asking for 0.15 clipped and dragged the hue to 229. */
+    --info: oklch(0.525 0.1 230);
+    --info-foreground: oklch(0.99 0 0);
+    --destructive-foreground: oklch(0.99 0 0);
+
+    /* Derived from the ramp and the semantic tokens rather than restated per colour, so badges
+       follow a palette swap. The default badge's foreground is brand-800 in place of the
+       hand-picked oklch(0.35 0.16) it replaces: a slight lightening, 7.6:1 on the card. */
+    --badge-default-bg: color-mix(in oklab, var(--brand-600) 15%, transparent);
+    --badge-default-fg: var(--brand-800);
+    --badge-default-border: color-mix(in oklab, var(--brand-800) 25%, transparent);
+    --badge-destructive-bg: color-mix(in oklab, var(--destructive) 15%, transparent);
+    --badge-destructive-fg: color-mix(in oklab, var(--destructive) 62%, black);
+    --badge-destructive-border: color-mix(in oklab, var(--badge-destructive-fg) 25%, transparent);
+    --badge-success-bg: color-mix(in oklab, var(--success) 15%, transparent);
+    --badge-success-fg: color-mix(in oklab, var(--success) 62%, black);
+    --badge-success-border: color-mix(in oklab, var(--badge-success-fg) 25%, transparent);
+    --badge-warning-bg: color-mix(in oklab, var(--warning) 15%, transparent);
+    --badge-warning-fg: color-mix(in oklab, var(--warning) 62%, black);
+    --badge-warning-border: color-mix(in oklab, var(--badge-warning-fg) 25%, transparent);
+    --badge-info-bg: color-mix(in oklab, var(--info) 15%, transparent);
+    --badge-info-fg: color-mix(in oklab, var(--info) 62%, black);
+    --badge-info-border: color-mix(in oklab, var(--badge-info-fg) 25%, transparent);
+
+    --border: oklch(0.3 calc(0.04 * var(--tint-c)) var(--tint-h) / 12%);
+    --input: oklch(0.3 calc(0.04 * var(--tint-c)) var(--tint-h) / 18%);
+    /* The brand coral is 2.61:1 on white, under the 3:1 WCAG 1.4.11 floor for a focus
+       indicator, so the ring uses the text-bearing step. */
+    --ring: var(--brand-600);
+
+    /* Series come from the website's own palette, alternating a cool colour with the brand. The
+       site's hexes are tuned for its dark surfaces — #afb0ff is 1.92:1 against a white card,
+       #e1c2ff 1.51:1, #c9e0ff 1.29:1 — so the light theme keeps each hue and re-weights it, while
+       `.dark` uses the hexes as the site does.
+
+       The re-weighting cuts chroma to about 60% and holds the lightness at ~0.68, which reads as
+       the site's soft pastels rather than the heavy, nearly-dark set that landing on 3.3:1 forced.
+       That costs contrast: these sit at ~2.9:1 against the card, just under the 3:1 WCAG 1.4.11
+       asks of a graphic carrying meaning, so the series depend on the legend and tooltip labels
+       as well as colour. Going brighter costs more — against white, brighter is strictly lower
+       contrast, and the pastel end of this hue family bottoms out around 2.4:1.
+
+       Series 4 is the site's lime rather than a second brand step. Two of five series in the brand
+       hue made 40% of a chart coral, which blunts coral as the colour that means "action", and the
+       light-theme brand step it used was the same value as `--primary-strong`, so a legend swatch
+       matched link text. Series 2 is therefore no longer literally a ramp step in this theme: it
+       is the brand hue re-weighted to match the rest of the set. */
+    --chart-1: oklch(0.68 0.067 283); /* #9293c1 periwinkle */
+    --chart-2: oklch(0.685 0.103 32); /* #d28171 brand hue */
+    --chart-3: oklch(0.685 0.085 307); /* #a88cc3 violet */
+    --chart-4: oklch(0.67 0.092 126); /* #87a060 lime */
+    --chart-5: oklch(0.675 0.048 256); /* #8499b5 blue */
+
+    /* Series past the fifth are generated by `seriesColor` in lib/palette.ts, which alternates
+       these two lightnesses. Both stay clear of the ~0.68 the defined series occupy — that gap is
+       the only thing keeping a generated colour from reading as one of them, now that the defined
+       five all sit at one lightness. */
+    --chart-extra-l: 0.54;
+    --chart-extra-l-deep: 0.41;
+    --chart-extra-c: 0.09;
+
+    --sidebar: oklch(0.97 calc(0.006 * var(--tint-c)) var(--tint-h));
+    --sidebar-foreground: oklch(0.18 calc(0.006 * var(--tint-c)) var(--tint-h));
+    --sidebar-primary: var(--brand-500);
+    --sidebar-primary-foreground: oklch(0.22 0.03 31.73);
+    --sidebar-accent: var(--brand-subtle);
+    --sidebar-accent-foreground: var(--brand-700);
+    --sidebar-border: oklch(0.3 calc(0.04 * var(--tint-c)) var(--tint-h) / 10%);
+    --sidebar-ring: var(--brand-600);
+
+    --surface1: oklch(0.988 calc(0.004 * var(--tint-c)) var(--tint-h));
+    --surface2: oklch(0.965 calc(0.008 * var(--tint-c)) var(--tint-h));
+    --text-strong: oklch(0.18 calc(0.006 * var(--tint-c)) var(--tint-h));
+    --text-muted: oklch(0.45 calc(0.015 * var(--tint-c)) var(--tint-h));
+    --text-soft: oklch(0.32 calc(0.01 * var(--tint-c)) var(--tint-h));
+    --on-accent: oklch(0.985 0 0);
+}
+
+.dark {
+    --background: oklch(0.145 calc(0.008 * var(--tint-c)) var(--tint-h));
+    --foreground: oklch(0.985 0 0);
+    --card: oklch(0.205 calc(0.01 * var(--tint-c)) var(--tint-h));
+    --card-foreground: oklch(0.985 0 0);
+    --popover: oklch(0.205 calc(0.01 * var(--tint-c)) var(--tint-h));
+    --popover-foreground: oklch(0.985 0 0);
+
+    --primary: var(--brand-500);
+    --primary-foreground: oklch(0.22 0.03 31.73);
+    --primary-strong: var(--brand-400);
+    --secondary: oklch(0.269 calc(0.012 * var(--tint-c)) var(--tint-h));
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.269 calc(0.012 * var(--tint-c)) var(--tint-h));
+    --muted-foreground: oklch(0.708 calc(0.012 * var(--tint-c)) var(--tint-h));
+    --accent: oklch(0.27 calc(0.025 * var(--tint-c)) var(--tint-h));
+    --accent-foreground: var(--text-strong);
+    --brand-subtle: color-mix(in oklab, var(--brand-500) 22%, var(--card));
+    --brand-subtle-foreground: var(--text-strong);
+    /* L0.7 for destructive: at 0.65 the badge wash dropped to 4.27:1 on the card. */
+    --destructive: oklch(0.7 0.2 14);
+
+    --success: oklch(0.7 0.15 150);
+    --success-foreground: oklch(0.16 0.03 150);
+    --warning: oklch(0.85 0.155 95);
+    --warning-foreground: oklch(0.22 0.05 95);
+    --info: oklch(0.7 0.13 230);
+    --info-foreground: oklch(0.14 0.04 230);
+    --destructive-foreground: oklch(0.14 0.04 14);
+
+    --badge-default-bg: color-mix(in oklab, var(--brand-500) 15%, transparent);
+    --badge-default-fg: var(--brand-400);
+    --badge-default-border: color-mix(in oklab, var(--brand-400) 30%, transparent);
+    --badge-destructive-bg: color-mix(in oklab, var(--destructive) 15%, transparent);
+    --badge-destructive-fg: var(--destructive);
+    --badge-destructive-border: color-mix(in oklab, var(--destructive) 30%, transparent);
+    --badge-success-bg: color-mix(in oklab, var(--success) 15%, transparent);
+    --badge-success-fg: var(--success);
+    --badge-success-border: color-mix(in oklab, var(--success) 30%, transparent);
+    --badge-warning-bg: color-mix(in oklab, var(--warning) 15%, transparent);
+    --badge-warning-fg: var(--warning);
+    --badge-warning-border: color-mix(in oklab, var(--warning) 30%, transparent);
+    --badge-info-bg: color-mix(in oklab, var(--info) 15%, transparent);
+    --badge-info-fg: var(--info);
+    --badge-info-border: color-mix(in oklab, var(--info) 30%, transparent);
+
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: var(--brand-500);
+
+    /* On a dark ground the website's colours need no adjustment: 9.87:1, 12.59:1, 14.69:1. */
+    --chart-1: #afb0ff;
+    --chart-2: var(--brand-400);
+    --chart-3: #e1c2ff;
+    /* The site's lime is #c7ff5a, but at C0.198 it is twice the chroma of every other series
+       here and reads as neon beside them. Same hue, chroma brought into the set's range. */
+    --chart-4: oklch(0.9 0.11 126);
+    --chart-5: #c9e0ff;
+
+    /* Below the defined series here too — they are pale on dark, so the generated ones go deeper. */
+    --chart-extra-l: 0.66;
+    --chart-extra-l-deep: 0.52;
+    --chart-extra-c: 0.12;
+
+    --sidebar: oklch(0.205 calc(0.01 * var(--tint-c)) var(--tint-h));
+    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar-primary: var(--brand-500);
+    --sidebar-primary-foreground: oklch(0.22 0.03 31.73);
+    --sidebar-accent: var(--brand-subtle);
+    --sidebar-accent-foreground: var(--brand-400);
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: var(--brand-500);
+
+    --surface1: oklch(0.205 calc(0.01 * var(--tint-c)) var(--tint-h));
+    --surface2: oklch(0.18 calc(0.01 * var(--tint-c)) var(--tint-h));
+    --text-strong: oklch(0.985 0 0);
+    --text-muted: oklch(0.708 calc(0.012 * var(--tint-c)) var(--tint-h));
+    --text-soft: oklch(0.9 calc(0.006 * var(--tint-c)) var(--tint-h));
+    --on-accent: oklch(0.16 calc(0.03 * var(--tint-c)) var(--tint-h));
+}
+
+@theme inline {
+    --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "Geist Mono Variable", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary-strong: var(--primary-strong);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-brand-subtle: var(--brand-subtle);
+    --color-brand-subtle-foreground: var(--brand-subtle-foreground);
+    --color-destructive: var(--destructive);
+    --color-success: var(--success);
+    --color-success-foreground: var(--success-foreground);
+    --color-warning: var(--warning);
+    --color-warning-foreground: var(--warning-foreground);
+    --color-info: var(--info);
+    --color-info-foreground: var(--info-foreground);
+    --color-destructive-foreground: var(--destructive-foreground);
+    --color-badge-default-bg: var(--badge-default-bg);
+    --color-badge-default-fg: var(--badge-default-fg);
+    --color-badge-default-border: var(--badge-default-border);
+    --color-badge-destructive-bg: var(--badge-destructive-bg);
+    --color-badge-destructive-fg: var(--badge-destructive-fg);
+    --color-badge-destructive-border: var(--badge-destructive-border);
+    --color-badge-success-bg: var(--badge-success-bg);
+    --color-badge-success-fg: var(--badge-success-fg);
+    --color-badge-success-border: var(--badge-success-border);
+    --color-badge-warning-bg: var(--badge-warning-bg);
+    --color-badge-warning-fg: var(--badge-warning-fg);
+    --color-badge-warning-border: var(--badge-warning-border);
+    --color-badge-info-bg: var(--badge-info-bg);
+    --color-badge-info-fg: var(--badge-info-fg);
+    --color-badge-info-border: var(--badge-info-border);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+    --color-surface1: var(--surface1);
+    --color-surface2: var(--surface2);
+    --color-text-strong: var(--text-strong);
+    --color-text-muted: var(--text-muted);
+    --color-text-soft: var(--text-soft);
+    --color-on-accent: var(--on-accent);
+    --color-brand-50: var(--brand-50);
+    --color-brand-100: var(--brand-100);
+    --color-brand-200: var(--brand-200);
+    --color-brand-300: var(--brand-300);
+    --color-brand-400: var(--brand-400);
+    --color-brand-500: var(--brand-500);
+    --color-brand-600: var(--brand-600);
+    --color-brand-700: var(--brand-700);
+    --color-brand-800: var(--brand-800);
+    --color-brand-900: var(--brand-900);
+    --color-brand-950: var(--brand-950);
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) + 4px);
+}

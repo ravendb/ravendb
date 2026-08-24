@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Quill build expired</title>
+        <script>
+            // Mirrors the SPA's ThemeProvider
+            var theme = localStorage.getItem("theme");
+            if (
+                theme === "dark" ||
+                ((theme === "system" || theme === null) && matchMedia("(prefers-color-scheme: dark)").matches)
+            ) {
+                document.documentElement.classList.add("dark");
+            }
+        </script>
+    </head>
+    <body class="bg-background">
+        <main
+            class="relative flex min-h-svh flex-col items-center justify-center overflow-hidden bg-background px-4 py-10 font-sans text-foreground antialiased"
+        >
+            <div aria-hidden="true" class="expiry-wash pointer-events-none absolute inset-0"></div>
+            <div class="relative z-10 flex w-full max-w-md flex-col items-center">
+                <!-- main.ts inlines src/components/brand/quill-logo.svg here, so the logo follows the theme via currentColor. -->
+                <div id="logo" class="mb-8 flex items-center text-foreground [&_svg]:w-[120px]"></div>
+                <!-- Mirrors the shadcn Alert (destructive) markup; this page cannot render React. -->
+                <div role="alert" class="grid w-full gap-0.5 rounded-lg border bg-card px-2.5 py-2 text-left text-sm">
+                    <div class="font-medium text-destructive">This Quill build has expired</div>
+                    <div class="text-sm text-muted-foreground">
+                        <p>Your Quill needs an update. Pull the latest image:</p>
+                        <div class="relative my-2">
+                            <pre
+                                id="command"
+                                class="overflow-x-auto rounded-md bg-muted py-2 pr-21 pl-2.5 font-mono text-[0.8125rem] text-foreground"
+                            >
+docker pull ravendb/quill:latest</pre
+                            >
+                            <button
+                                id="copy"
+                                type="button"
+                                class="absolute top-[0.3125rem] right-[0.3125rem] inline-flex h-7 items-center justify-center rounded-[min(var(--radius-md),12px)] border border-transparent px-2.5 text-[0.8rem] font-medium whitespace-nowrap text-muted-foreground transition-all outline-none select-none hover:bg-card hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:translate-y-px"
+                            >
+                                Copy
+                            </button>
+                        </div>
+                        <p>After a successful update, run the Docker container again.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+        <script type="module" src="/src/expired/main.ts"></script>
+    </body>
+</html>

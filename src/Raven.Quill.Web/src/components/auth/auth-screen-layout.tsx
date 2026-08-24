@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { QuillLogo } from "@/components/brand/quill-logo.tsx";
+import QuillLogo from "@/components/brand/quill-logo.svg?react";
 import { AuthBackground } from "@/components/auth/auth-background";
 import { cn } from "@/lib/utils";
 

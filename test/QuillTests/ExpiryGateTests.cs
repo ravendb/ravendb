@@ -1,8 +1,10 @@
+using System.IO;
 using System.Net;
-using System.Text.RegularExpressions;
 using FastTests;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.FileProviders;
 using QuillTests.E2E.Fixtures;
 using Raven.Client.Properties;
 using Raven.Quill.Auth;
@@ -19,6 +21,11 @@ public class ExpiryGateTests(ITestOutputHelper output) : RavenTestBase(output)
 {
     private static readonly DateTime StoppedOn = new(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc);
 
+    /// Stands in for wwwroot/expired.html, which only the web build emits: the gate serves whatever
+    /// ExpiryNotice loaded, and these tests pin that plumbing rather than the page.
+    private const string StubNoticePage =
+        "<!doctype html><html><body>This Quill build has expired (stub notice)</body></html>";
+
     [RavenFact(RavenTestCategory.Quill)]
     public async Task An_expired_build_answers_the_root_with_the_notice_page()
     {
@@ -28,12 +35,7 @@ public class ExpiryGateTests(ITestOutputHelper output) : RavenTestBase(output)
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
         Assert.StartsWith("text/html", response.Content.Headers.ContentType!.ToString());
-
-        var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("This Quill build has expired", body);
-        Assert.Contains("Your Quill needs an update. Pull the latest image:", body);
-        Assert.Contains("docker pull ravendb/quill:latest", body);
-        Assert.Contains("After a successful update, run the Docker container again.", body);
+        Assert.Equal(StubNoticePage, await response.Content.ReadAsStringAsync());
     }
 
     /// Proves the gate precedes authentication: an unauthenticated operator gets the reason, not a 401 they
@@ -49,7 +51,7 @@ public class ExpiryGateTests(ITestOutputHelper output) : RavenTestBase(output)
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
         Assert.StartsWith("text/html", response.Content.Headers.ContentType!.ToString());
-        Assert.Contains("This Quill build has expired", await response.Content.ReadAsStringAsync());
+        Assert.Equal(StubNoticePage, await response.Content.ReadAsStringAsync());
     }
 
     /// The anonymous embed surface is mapped ahead of the SPA fallback and answers visitors, not operators;
@@ -64,7 +66,7 @@ public class ExpiryGateTests(ITestOutputHelper output) : RavenTestBase(output)
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
         Assert.StartsWith("text/html", response.Content.Headers.ContentType!.ToString());
-        Assert.Contains("This Quill build has expired", await response.Content.ReadAsStringAsync());
+        Assert.Equal(StubNoticePage, await response.Content.ReadAsStringAsync());
     }
 
     /// 200 by choice: the container's HEALTHCHECK curls this and nothing else, and an expired appliance is
@@ -98,24 +100,28 @@ public class ExpiryGateTests(ITestOutputHelper output) : RavenTestBase(output)
         Assert.NotEqual("expired", await health.Content.ReadAsStringAsync());
     }
 
-    /// The command is the one thing on the page the operator has to reproduce exactly, and a 503 page gives
-    /// them nothing to click through to. The control ships inline for the same reason the rest of the page
-    /// does — there is no bundle to load it from — and it reads the block it sits on rather than carrying its
-    /// own copy of the command, so the button and the text it claims to copy cannot drift apart.
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task The_notice_page_carries_an_inline_copy_control_for_the_command()
+    public void The_notice_is_read_from_the_web_root()
     {
-        using var factory = NewFactory(expired: true);
+        var webRoot = NewDataPath(forceCreateDir: true);
+        File.WriteAllText(Path.Combine(webRoot, ExpiryNotice.FileRelativePath), StubNoticePage);
 
-        using var response = await factory.CreateClient().GetAsync("/");
-        var body = await response.Content.ReadAsStringAsync();
+        var notice = ExpiryNotice.Load(new StubWebHostEnvironment { WebRootPath = webRoot });
 
-        Assert.Contains("""<pre id="q-command">docker pull ravendb/quill:latest</pre>""", body);
-        Assert.Single(Regex.Matches(body, Regex.Escape("docker pull ravendb/quill")));
-        Assert.Contains("""<button class="q-copy" type="button">""", body);
-        Assert.Contains("navigator.clipboard", body);
-        // nothing to fetch: the page renders with the SPA build and the widget bundle both absent
-        Assert.DoesNotContain("<script src", body);
+        Assert.Equal(StubNoticePage, notice.Page);
+    }
+
+    /// The image always ships the page, so a missing one is a broken build - and an expired build has
+    /// nothing else to serve, so it must fail loudly rather than answer every request with nothing.
+    [RavenFact(RavenTestCategory.Quill)]
+    public void A_missing_notice_is_a_broken_build_and_throws()
+    {
+        var webRoot = NewDataPath(forceCreateDir: true);
+
+        var e = Assert.Throws<InvalidOperationException>(() =>
+            ExpiryNotice.Load(new StubWebHostEnvironment { WebRootPath = webRoot }));
+
+        Assert.Contains(ExpiryNotice.FileRelativePath, e.Message);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -143,5 +149,18 @@ public class ExpiryGateTests(ITestOutputHelper output) : RavenTestBase(output)
         {
             services.RemoveAll<IQuillExpiry>();
             services.AddSingleton<IQuillExpiry>(new FakeQuillExpiry(expired, StoppedOn));
+
+            services.RemoveAll<ExpiryNotice>();
+            services.AddSingleton(ExpiryNotice.FromHtml(StubNoticePage));
         });
+
+    private sealed class StubWebHostEnvironment : IWebHostEnvironment
+    {
+        public string WebRootPath { get; set; } = "";
+        public IFileProvider WebRootFileProvider { get; set; } = new NullFileProvider();
+        public string ApplicationName { get; set; } = "";
+        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
+        public string ContentRootPath { get; set; } = "";
+        public string EnvironmentName { get; set; } = "";
+    }
 }

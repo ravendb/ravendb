@@ -24,9 +24,11 @@ public static class ExpiryGateMiddleware
                 return;
             }
 
+            var notice = context.RequestServices.GetRequiredService<ExpiryNotice>();
+
             context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
             context.Response.ContentType = "text/html; charset=utf-8";
-            await context.Response.WriteAsync(ExpiryNotice.Page);
+            await context.Response.WriteAsync(notice.Page);
         });
 
         return pipeline;
