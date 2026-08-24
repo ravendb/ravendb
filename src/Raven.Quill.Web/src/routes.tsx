@@ -10,7 +10,6 @@ import {
     MessagesSquare,
     Network,
     Plug,
-    Settings,
     ShieldCheck,
     Sparkles,
     type LucideIcon,
@@ -28,7 +27,6 @@ import { AppWebWidgetDefaultCustomize } from "@/pages/apps/app-web-widget-defaul
 import { AppConversations } from "@/pages/apps/app-conversations";
 import { AppDataSource } from "@/pages/apps/app-data-source";
 import { AppOverview } from "@/pages/apps/app-overview";
-import { AppSettings } from "@/pages/apps/app-settings";
 import { AppAnalytics } from "@/pages/apps/app-analytics";
 import { Login } from "@/pages/auth/login";
 import { DashboardCertificates } from "@/pages/dashboard/certificates";
@@ -272,16 +270,6 @@ const appPages: AppRouteDefinition[] = [
             section: "settings",
         },
         element: <AppAnalytics />,
-    },
-    {
-        path: "settings",
-        title: "Settings",
-        navigation: {
-            label: "Settings",
-            icon: Settings,
-            section: "settings",
-        },
-        element: <AppSettings />,
     },
 ];
 
