@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Check, RefreshCw } from "lucide-react";
+import { Check, LifeBuoy, RefreshCw } from "lucide-react";
 import { api } from "@/api/api";
 import type { ConnectivityStatus, LicensePlan, ServerLicenseResponse } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
@@ -8,8 +8,8 @@ import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/shadcn/ui/card";
 import { formatDate } from "@/lib/format";
+import { getSupportUrl } from "@/lib/help-links";
 import { cn } from "@/lib/utils";
-import { ContactSheet } from "@/components/layout/contact-sheet";
 
 // Subtle brand wash used to make the featured plan stand out.
 // Defined as a CSS class (see index.css) so it layers over the card's bg-color.
@@ -59,13 +59,12 @@ function LicenseSummaryCard({ license }: { license: ServerLicenseResponse }) {
                 <CardTitle>Current license</CardTitle>
                 {license.expired && <CardDescription>This license has expired.</CardDescription>}
                 <CardAction>
-                    <ContactSheet
-                        trigger={
-                            <Button variant="outline" size="sm">
-                                Contact us
-                            </Button>
-                        }
-                    />
+                    <Button variant="outline" size="sm" asChild>
+                        <a href={getSupportUrl(license.id)} target="_blank" rel="noreferrer">
+                            <LifeBuoy aria-hidden="true" />
+                            Support
+                        </a>
+                    </Button>
                 </CardAction>
             </CardHeader>
             <CardContent className="grid gap-6 sm:grid-cols-2">
