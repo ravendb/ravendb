@@ -88,6 +88,7 @@ public static class ChannelsEndpoints
             ChannelType.Telegram => await ProvisionTelegramAsync(app, body, store, telegramManager, logger, ct),
             ChannelType.WhatsApp => ProvisionWhatsAppAsync(),
             ChannelType.Slack => await ProvisionSlackAsync(app, body, store, slackClient, logger, ct),
+            ChannelType.Discord => NotImplementedChannel(ChannelType.Discord),
             null => Results.BadRequest(new ApiErrorResponse("type is required")),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{body.Type}'")),
         };
@@ -388,6 +389,7 @@ public static class ChannelsEndpoints
             ChannelType.Telegram => await UpdateTelegramChannelAsync(session, channel, body, app, channelId, store, telegramManager, logger, ct),
             ChannelType.WhatsApp => UpdateWhatsAppChannelAsync(),
             ChannelType.Slack => await UpdateSlackChannelAsync(session, channel, body, app, channelId, store, slackClient, slackHealth, logger, ct),
+            ChannelType.Discord => NotImplementedChannel(ChannelType.Discord),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{channel.Type}'")),
         };
     }
@@ -634,6 +636,7 @@ public static class ChannelsEndpoints
             ChannelType.Telegram => await DeleteTelegramChannelAsync(session, channel, app, channelId, store, telegramManager, logger, ct),
             ChannelType.WhatsApp => DeleteWhatsAppChannelAsync(),
             ChannelType.Slack => await DeleteSlackChannelAsync(session, channel, app, channelId, store, slackHealth, logger, ct),
+            ChannelType.Discord => NotImplementedChannel(ChannelType.Discord),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{channel.Type}'")),
         };
     }

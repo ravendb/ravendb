@@ -6,4 +6,5 @@ public enum ChannelType
     Telegram,
     WhatsApp,
     Slack,
+    Discord,
 }
