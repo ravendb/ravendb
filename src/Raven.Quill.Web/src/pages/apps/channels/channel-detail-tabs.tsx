@@ -37,7 +37,7 @@ const IFRAME_TABS: ChannelTabDef[] = [
         icon: CodeXml,
         layout: "padded",
         render: ({ slug, channel, agent }) => (
-            <EmbedLinkApiDocs slug={slug} channelId={channel.channelId} parameterNames={agent?.parameters ?? []} />
+            <EmbedLinkApiDocs slug={slug} channelId={channel.channelId} parameters={agent?.parameters ?? []} />
         ),
     },
     {
@@ -52,9 +52,8 @@ const IFRAME_TABS: ChannelTabDef[] = [
                     <GenerateEmbedLinkDialog
                         slug={slug}
                         channelId={channel.channelId}
-                        agentId={agent?.agentId}
                         displayName={channel.displayName}
-                        parameterNames={agent?.parameters ?? []}
+                        parameters={agent?.parameters ?? []}
                         trigger={
                             <Button size="sm" variant="outline" disabled={!channel.enabled}>
                                 Generate link

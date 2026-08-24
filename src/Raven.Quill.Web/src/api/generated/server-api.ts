@@ -946,12 +946,17 @@ export interface components {
                 [key: string]: components["schemas"]["WebhookBinding"];
             };
         };
+        AgentParameterSummary: {
+            name: string;
+            description: null | string;
+            type: components["schemas"]["AiAgentParameterValueType"];
+        };
         AgentSummaryResponse: {
             agentId: string;
             name: string;
             model: null | string;
             disabled: boolean;
-            parameters: string[];
+            parameters: components["schemas"]["AgentParameterSummary"][];
             /** Format: date-time */
             lastInvokedAt: null | string;
             /** Format: int64 */
@@ -1347,9 +1352,7 @@ export interface components {
             agentId: string;
             prompt: string;
             conversationId: string;
-            parameters: {
-                [key: string]: string;
-            };
+            parameters: null | Record<string, unknown>;
         };
         ConnectivityStatus: {
             statusCode: string;
@@ -1542,9 +1545,7 @@ export interface components {
         };
         MintEmbedLinkRequest: {
             channelId: string;
-            parameters?: null | {
-                [key: string]: string;
-            };
+            parameters?: null | Record<string, unknown>;
             /** Format: int32 */
             ttlSeconds?: null | number;
             /** Format: int32 */
@@ -4188,6 +4189,7 @@ export interface operations {
 
 export type ActivityEventDto = components["schemas"]["ActivityEventDto"];
 export type AgentDetailsResponse = components["schemas"]["AgentDetailsResponse"];
+export type AgentParameterSummary = components["schemas"]["AgentParameterSummary"];
 export type AgentSummaryResponse = components["schemas"]["AgentSummaryResponse"];
 export type AiAgentChatTrimmingConfiguration = components["schemas"]["AiAgentChatTrimmingConfiguration"];
 export type AiAgentConfiguration = components["schemas"]["AiAgentConfiguration"];

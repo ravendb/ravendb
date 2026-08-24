@@ -346,7 +346,7 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
 
     private static async Task<string> MintLinkAsync(QuillApp app, string channelId)
     {
-        var minted = await app.MintEmbedLinkAsync(new MintEmbedLinkRequest(channelId, new Dictionary<string, string>(), 3600, 50));
+        var minted = await app.MintEmbedLinkAsync(new MintEmbedLinkRequest(channelId, [], 3600, 50));
         return minted.Token;
     }
 

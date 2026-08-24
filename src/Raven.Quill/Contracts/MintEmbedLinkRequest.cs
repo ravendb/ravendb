@@ -1,8 +1,10 @@
+using System.Text.Json;
+
 namespace Raven.Quill.Contracts;
 
 public sealed record MintEmbedLinkRequest(
     string ChannelId,
-    Dictionary<string, string>? Parameters = null,
+    Dictionary<string, JsonElement>? Parameters = null,
     int? TtlSeconds = null,
     int? MaxInvocations = null);
 

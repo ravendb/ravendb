@@ -1,37 +1,72 @@
+using System.Text.Json;
 using Raven.Client.Documents.Operations.AI.Agents;
 
 namespace Raven.Quill.Agents;
 
+public sealed record AgentParameterResolution(
+    Dictionary<string, string> Resolved,
+    List<string> Missing,
+    List<string> Invalid)
+{
+    public bool IsValid => Missing.Count == 0 && Invalid.Count == 0;
+}
+
 public static class AgentParameters
 {
-    public static bool TryResolve(
-        AiAgentConfiguration config,
-        IReadOnlyDictionary<string, string>? supplied,
-        out Dictionary<string, string> resolved,
-        out List<string> missing)
+    public static AgentParameterResolution Resolve(
+        AiAgentConfiguration config, IReadOnlyDictionary<string, JsonElement>? supplied)
     {
-        resolved = new Dictionary<string, string>();
-        missing = [];
+        var resolution = new AgentParameterResolution(new Dictionary<string, string>(), [], []);
 
         var declared = (config.Parameters ?? [])
-            .Select(parameter => parameter.Name)
-            .Where(name => string.IsNullOrWhiteSpace(name) == false)
+            .Where(parameter => string.IsNullOrWhiteSpace(parameter.Name) == false)
             .ToArray();
         if (declared.Length == 0)
-            return true;
+            return resolution;
 
-        var suppliedByName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (key, value) in supplied ?? new Dictionary<string, string>())
+        var suppliedByName = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (key, value) in supplied ?? new Dictionary<string, JsonElement>())
             suppliedByName[key] = value;
 
-        foreach (var name in declared)
+        foreach (var parameter in declared)
         {
-            if (suppliedByName.TryGetValue(name, out var value) && string.IsNullOrWhiteSpace(value) == false)
-                resolved[name] = value;
-            else
-                missing.Add(name);
+            var present = suppliedByName.TryGetValue(parameter.Name, out var value) &&
+                          AgentParameterValue.IsBlank(value) == false;
+
+            if (present == false)
+            {
+                if (parameter.Type == AiAgentParameterValueType.Null)
+                    resolution.Resolved[parameter.Name] = AgentParameterValue.ToStoredText(NullElement);
+                else
+                    resolution.Missing.Add(parameter.Name);
+
+                continue;
+            }
+
+            if (AgentParameterValue.TryNormalize(parameter.Type, value, out var normalized, out var error) == false)
+            {
+                resolution.Invalid.Add($"{parameter.Name}: {error}");
+                continue;
+            }
+
+            resolution.Resolved[parameter.Name] = AgentParameterValue.ToStoredText(normalized);
         }
 
-        return missing.Count == 0;
+        return resolution;
     }
+
+    public static string Describe(AgentParameterResolution resolution)
+    {
+        var parts = new List<string>();
+
+        if (resolution.Missing.Count > 0)
+            parts.Add($"missing agent parameter(s): {string.Join(", ", resolution.Missing)}");
+
+        if (resolution.Invalid.Count > 0)
+            parts.Add($"invalid agent parameter(s): {string.Join("; ", resolution.Invalid)}");
+
+        return string.Join(". ", parts);
+    }
+
+    private static readonly JsonElement NullElement = JsonSerializer.SerializeToElement<object?>(null);
 }

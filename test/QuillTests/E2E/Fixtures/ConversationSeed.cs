@@ -28,7 +28,9 @@ public static class ConversationSeed
         AgentRouter.UpsertPreviewAsync(store,
             new AgentRequest(database, AgentId: agent, ConversationId: conversationId, Prompt: lastUserPrompt,
                 ChannelId: channelId is null ? "" : Channel.IdPrefix + channelId,
-                Parameters: parameters ?? new Dictionary<string, string>()),
+                Parameters: (parameters ?? new Dictionary<string, string>()).ToDictionary(
+                    parameter => parameter.Key,
+                    parameter => AgentParameterValue.FromString(parameter.Value))),
             agent, conversationId, reply: lastAgentReply, nowUtc: lastMessageAt, CancellationToken.None);
 
     /// Seeds a <c>@conversations</c> doc so the metric index can aggregate it without running a live turn.

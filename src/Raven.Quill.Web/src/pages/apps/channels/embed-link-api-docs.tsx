@@ -17,6 +17,8 @@ import { InlineCode } from "@/components/data/inline-code";
 import { NumberedSteps } from "@/components/data/numbered-steps";
 import { SectionCard } from "@/pages/apps/section-card";
 import type { HighlightLanguage } from "@/components/ace-editor/static-highlight";
+import type { AgentParameterSummary } from "@/api/generated/server-api";
+import { snippetValueFor, typeLabelFor } from "@/pages/apps/channels/agent-parameter-values";
 
 const LANGUAGE_STORAGE_KEY = "quill-embed-api-docs-language";
 
@@ -48,12 +50,12 @@ function readLanguage(): Language {
 type EmbedLinkApiDocsProps = {
     slug: string;
     channelId: string;
-    parameterNames: string[];
+    parameters: AgentParameterSummary[];
 };
 
-export function EmbedLinkApiDocs({ slug, channelId, parameterNames }: EmbedLinkApiDocsProps) {
-    const hasParameters = parameterNames.length > 0;
-    const requests = buildRequestSnippets(slug, channelId, parameterNames);
+export function EmbedLinkApiDocs({ slug, channelId, parameters }: EmbedLinkApiDocsProps) {
+    const hasParameters = parameters.length > 0;
+    const requests = buildRequestSnippets(slug, channelId, parameters);
     const embedOrigin = originForSubdomain("public");
 
     const [language, setLanguage] = useState<Language>(readLanguage);
@@ -78,7 +80,7 @@ export function EmbedLinkApiDocs({ slug, channelId, parameterNames }: EmbedLinkA
             ? [
                   {
                       name: "parameters",
-                      description: `Values bound into the link for this agent (${parameterNames.join(", ")}); omitting a required one returns 400.`,
+                      description: `Values bound into the link for this agent (${describeParameters(parameters)}); each must match its declared type, and omitting a required one returns 400.`,
                   },
               ]
             : []),
@@ -191,17 +193,40 @@ function ParametersPanel({ fields }: { fields: { name: string; description: stri
 
 const API_KEY_PLACEHOLDER = "<your QUILL_API_KEY>";
 
-function buildRequestSnippets(slug: string, channelId: string, parameterNames: string[]): Record<Language, string> {
+function buildRequestSnippets(
+    slug: string,
+    channelId: string,
+    parameters: AgentParameterSummary[],
+): Record<Language, string> {
     const url = buildMintEmbedLinkUrl(slug);
-    const hasParameters = parameterNames.length > 0;
+    const hasParameters = parameters.length > 0;
 
     return {
-        bash: buildCurlSnippet(url, channelId, parameterNames, "curl", "\\"),
-        powershell: buildCurlSnippet(url, channelId, parameterNames, "curl.exe", "`"),
-        csharp: buildCSharpSnippet(url, channelId, parameterNames, hasParameters),
-        python: buildPythonSnippet(url, channelId, parameterNames, hasParameters),
-        node: buildNodeSnippet(url, channelId, parameterNames, hasParameters),
+        bash: buildCurlSnippet(url, channelId, parameters, "curl", "\\"),
+        powershell: buildCurlSnippet(url, channelId, parameters, "curl.exe", "`"),
+        csharp: buildCSharpSnippet(url, channelId, parameters, hasParameters),
+        python: buildPythonSnippet(url, channelId, parameters, hasParameters),
+        node: buildNodeSnippet(url, channelId, parameters, hasParameters),
     };
+}
+
+function describeParameters(parameters: AgentParameterSummary[]): string {
+    return parameters
+        .map((parameter) => {
+            const typeLabel = typeLabelFor(parameter.type);
+            return typeLabel ? `${parameter.name}: ${typeLabel}` : parameter.name;
+        })
+        .join(", ");
+}
+
+function snippetEntries(parameters: AgentParameterSummary[]): Record<string, unknown> {
+    return Object.fromEntries(parameters.map((parameter) => [parameter.name, snippetValueFor(parameter.type)]));
+}
+
+function inlineSnippetEntries(parameters: AgentParameterSummary[]): string {
+    return parameters
+        .map((parameter) => `${JSON.stringify(parameter.name)}: ${JSON.stringify(snippetValueFor(parameter.type))}`)
+        .join(", ");
 }
 
 // bash continues lines with "\", PowerShell with a backtick; PowerShell also needs curl.exe so
@@ -209,7 +234,7 @@ function buildRequestSnippets(slug: string, channelId: string, parameterNames: s
 function buildCurlSnippet(
     url: string,
     channelId: string,
-    parameterNames: string[],
+    parameters: AgentParameterSummary[],
     curl: string,
     continuation: string,
 ) {
@@ -218,8 +243,8 @@ function buildCurlSnippet(
         ttlSeconds: DEFAULT_TTL_SECONDS,
         maxInvocations: DEFAULT_MAX_INVOCATIONS,
     };
-    if (parameterNames.length > 0) {
-        body.parameters = Object.fromEntries(parameterNames.map((name) => [name, "<value>"]));
+    if (parameters.length > 0) {
+        body.parameters = snippetEntries(parameters);
     }
 
     const indentedBody = JSON.stringify(body, null, 2)
@@ -236,8 +261,15 @@ function buildCurlSnippet(
     ].join("\n");
 }
 
-function buildCSharpSnippet(url: string, channelId: string, parameterNames: string[], hasParameters: boolean) {
-    const parameterEntries = parameterNames.map((name) => `[${JSON.stringify(name)}] = "<value>"`).join(", ");
+function buildCSharpSnippet(
+    url: string,
+    channelId: string,
+    parameters: AgentParameterSummary[],
+    hasParameters: boolean,
+) {
+    const parameterEntries = parameters
+        .map((parameter) => `[${JSON.stringify(parameter.name)}] = ${JSON.stringify(snippetValueFor(parameter.type))}`)
+        .join(", ");
 
     return [
         "using System.Net.Http.Json;",
@@ -253,7 +285,7 @@ function buildCSharpSnippet(url: string, channelId: string, parameterNames: stri
         `        channelId = "${channelId}",`,
         `        ttlSeconds = ${DEFAULT_TTL_SECONDS},`,
         `        maxInvocations = ${DEFAULT_MAX_INVOCATIONS},`,
-        ...(hasParameters ? [`        parameters = new Dictionary<string, string> { ${parameterEntries} },`] : []),
+        ...(hasParameters ? [`        parameters = new Dictionary<string, object?> { ${parameterEntries} },`] : []),
         "    });",
         "response.EnsureSuccessStatusCode();",
         "",
@@ -262,8 +294,13 @@ function buildCSharpSnippet(url: string, channelId: string, parameterNames: stri
     ].join("\n");
 }
 
-function buildPythonSnippet(url: string, channelId: string, parameterNames: string[], hasParameters: boolean) {
-    const parameterEntries = parameterNames.map((name) => `${JSON.stringify(name)}: "<value>"`).join(", ");
+function buildPythonSnippet(
+    url: string,
+    channelId: string,
+    parameters: AgentParameterSummary[],
+    hasParameters: boolean,
+) {
+    const parameterEntries = inlineSnippetEntries(parameters);
 
     return [
         "import requests",
@@ -283,8 +320,8 @@ function buildPythonSnippet(url: string, channelId: string, parameterNames: stri
     ].join("\n");
 }
 
-function buildNodeSnippet(url: string, channelId: string, parameterNames: string[], hasParameters: boolean) {
-    const parameterEntries = parameterNames.map((name) => `${JSON.stringify(name)}: "<value>"`).join(", ");
+function buildNodeSnippet(url: string, channelId: string, parameters: AgentParameterSummary[], hasParameters: boolean) {
+    const parameterEntries = inlineSnippetEntries(parameters);
 
     return [
         `const response = await fetch("${url}", {`,

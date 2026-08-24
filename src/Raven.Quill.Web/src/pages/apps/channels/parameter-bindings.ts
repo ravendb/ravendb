@@ -38,7 +38,11 @@ export function toParameterBindings(parameters: readonly ParameterBindingRow[]) 
 
 export function seedParameterRows(agents: AgentSummaryResponse[], agentId: string) {
     const selected = agents.find((candidate) => candidate.agentId === agentId);
-    return (selected?.parameters ?? []).map((name) => ({ name, source: "Constant" as const, value: "" }));
+    return (selected?.parameters ?? []).map((parameter) => ({
+        name: parameter.name,
+        source: "Constant" as const,
+        value: "",
+    }));
 }
 
 // The rows to edit are the ones the routed agent declares; each is pre-filled from the channel's existing
@@ -50,7 +54,9 @@ export function seedEditRows(
     bindings: Record<string, ChannelParameterBinding> | null | undefined,
     sourceValues: readonly [ParameterSource, ...ParameterSource[]],
 ): ParameterBindingRow[] {
-    const names = agent?.parameters?.length ? agent.parameters : Object.keys(bindings ?? {});
+    const names = agent?.parameters?.length
+        ? agent.parameters.map((parameter) => parameter.name)
+        : Object.keys(bindings ?? {});
     return names.map((name) => {
         const binding = bindings?.[name];
         return {

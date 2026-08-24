@@ -27,7 +27,7 @@ public class CollectionNamingSmugglerTests(ITestOutputHelper output) : QuillTest
         var channelId = (await app.ProvisionChannelAsync(
             new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", new[] { "http://localhost" }))).ChannelId;
         var token = (await app.MintEmbedLinkAsync(
-            new MintEmbedLinkRequest(channelId, new Dictionary<string, string>(), 3600, 50))).Token;
+            new MintEmbedLinkRequest(channelId, [], 3600, 50))).Token;
 
         var channelDocId = Channel.IdPrefix + channelId;
         var embedLinkDocId = EmbedLink.IdPrefix + token;

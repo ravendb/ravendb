@@ -57,7 +57,7 @@ public class SlackWebhookTests(ITestOutputHelper output, QuillSlackFixture fixtu
         Assert.Equal("What are your hours?", request.Prompt);
         Assert.Equal(Channel.IdPrefix + channel.ChannelId, request.ChannelId);
         Assert.Matches($"^chats/slack/{channel.ChannelId}/{Sender}/\\d{{4}}-\\d{{2}}-\\d{{2}}$", request.ConversationId);
-        Assert.Equal(Sender, request.Parameters["slackUser"]);
+        Assert.Equal(Sender, request.Parameters["slackUser"].GetString());
 
         await Slack.WaitUntilAsync(
             () => Slack.EditedMessages.Any(e => e.Text == "Hello from the fake agent."), "the finalized edit");
@@ -332,7 +332,7 @@ public class SlackWebhookTests(ITestOutputHelper output, QuillSlackFixture fixtu
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         await Slack.WaitUntilAsync(() => Router.Requests.Count == 1, "the agent dispatch");
-        Assert.Equal("dana@acme.example", Assert.Single(Router.Requests).Parameters["senderEmail"]);
+        Assert.Equal("dana@acme.example", Assert.Single(Router.Requests).Parameters["senderEmail"].GetString());
     }
 
     [RavenFact(RavenTestCategory.Quill)]

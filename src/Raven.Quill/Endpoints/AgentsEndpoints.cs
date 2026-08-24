@@ -69,8 +69,9 @@ public static class AgentsEndpoints
                         : null,
                     agent.Disabled,
                     (agent.Parameters ?? [])
-                    .Select(parameter => parameter.Name)
-                    .Where(parameterName => string.IsNullOrWhiteSpace(parameterName) == false)
+                    .Where(parameter => string.IsNullOrWhiteSpace(parameter.Name) == false)
+                    .Select(parameter => new AgentParameterSummary(
+                        parameter.Name, parameter.Description, parameter.Type))
                     .ToArray(),
                     act?.LastInvokedAt,
                     act?.Conversations ?? 0,

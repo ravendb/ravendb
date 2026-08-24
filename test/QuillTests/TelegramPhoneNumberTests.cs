@@ -106,7 +106,7 @@ public class TelegramPhoneNumberTests(ITestOutputHelper output, QuillTelegramFix
         await Mock.WaitUntilAsync(() => Router.Requests.Count >= 1, "the agent run");
 
         var request = Assert.Single(Router.Requests);
-        Assert.Equal("+48123456789", request.Parameters["phone"]);
+        Assert.Equal("+48123456789", request.Parameters["phone"].GetString());
 
         await app.DeleteChannelAsync(channelId);
     }
