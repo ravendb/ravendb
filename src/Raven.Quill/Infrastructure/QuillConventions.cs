@@ -2,6 +2,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Quill.Agents;
 using Raven.Quill.Channels;
 using Raven.Quill.Metrics;
+using Raven.Quill.Slack;
 using Raven.Quill.Telegram;
 
 namespace Raven.Quill.Infrastructure;
@@ -16,6 +17,8 @@ public static class QuillConventions
         : type == typeof(EmbedLink) ? "@embed-links"
         : type == typeof(TelegramLink) ? "@telegram-links"
         : type == typeof(TelegramBotReservation) ? "@telegram-bots"
+        : type == typeof(SlackBotReservation) ? "@slack-bots"
+        : type == typeof(SlackWebhookRoute) ? "@slack-webhooks"
         : type == typeof(ConversationPreview) ? ConversationPreview.Collection // "@ConversationPreviews"
         : type == typeof(AgentActionBindings) ? "@agent-actions"
         : DocumentConventions.DefaultGetCollectionName(type);
