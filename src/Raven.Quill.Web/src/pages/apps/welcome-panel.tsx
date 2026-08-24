@@ -6,6 +6,7 @@ import { api } from "@/api/api";
 import { Button } from "@/components/shadcn/ui/button";
 import { appRoutes } from "@/lib/app-routes";
 import { cn } from "@/lib/utils";
+import { Heading, Text } from "@/components/typography";
 
 const DISMISSED_STORAGE_KEY_PREFIX = "quill-welcome-dismissed:";
 
@@ -60,10 +61,8 @@ export function WelcomePanel({ slug }: { slug: string }) {
         <section className="rounded-lg border bg-card p-4">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                 <div className="space-y-1">
-                    <h2 className="text-sm font-semibold">Welcome to Quill</h2>
-                    <p className="text-sm text-muted-foreground">
-                        Three steps to get your first agent answering questions in production.
-                    </p>
+                    <Heading variant="subsection">Welcome to Quill</Heading>
+                    <Text variant="muted">Three steps to get your first agent answering questions in production.</Text>
                 </div>
                 <Button size="sm" variant="ghost" className="text-muted-foreground" onClick={dismiss}>
                     Dismiss

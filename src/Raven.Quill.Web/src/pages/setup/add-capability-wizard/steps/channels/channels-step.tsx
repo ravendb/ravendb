@@ -15,5 +15,5 @@ export function ChannelsStep() {
         return <Alert>Create the agent first to add channels.</Alert>;
     }
 
-    return <ChannelsSection slug={slug} agent={createdAgent} />;
+    return <ChannelsSection slug={slug} agent={createdAgent} nested />;
 }

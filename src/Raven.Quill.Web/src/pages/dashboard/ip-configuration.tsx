@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Field, FieldError, FieldLabel } from "@/components/shadcn/ui/field";
 import { Input } from "@/components/shadcn/ui/input";
 import { containerNameForHost, isIpV4 } from "@/lib/subdomain-origin";
+import { Heading, Text } from "@/components/typography";
 
 const NEW_IP_PLACEHOLDER = "<new-ip>";
 const DNS_A_RECORD_TYPE = 1;
@@ -43,7 +44,9 @@ export function DashboardIpConfiguration({ hostname = window.location.hostname }
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between gap-3">
-                <h1 className="text-2xl font-semibold tracking-tight">IP configuration</h1>
+                <Heading as="h1" variant="page">
+                    IP configuration
+                </Heading>
                 <Button
                     variant="outline"
                     size="sm"
@@ -57,7 +60,9 @@ export function DashboardIpConfiguration({ hostname = window.location.hostname }
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Current IP binding</CardTitle>
+                    <CardTitle asChild>
+                        <h2>Current IP binding</h2>
+                    </CardTitle>
                     <CardDescription>The IP address Quill&rsquo;s domain currently resolves to.</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -86,9 +91,9 @@ export function DashboardIpConfiguration({ hostname = window.location.hostname }
                             </div>
                         </ApiState>
                     ) : (
-                        <p className="text-sm text-muted-foreground">
+                        <Text variant="muted">
                             This dashboard is opened directly by IP address, so there is no domain binding to show.
-                        </p>
+                        </Text>
                     )}
                 </CardContent>
             </Card>
@@ -108,7 +113,9 @@ function ChangeIpCard({ hostname }: { hostname: string }) {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Change the IP</CardTitle>
+                <CardTitle asChild>
+                    <h2>Change the IP</h2>
+                </CardTitle>
                 <CardDescription>
                     Run this command on the Docker host to point Quill&rsquo;s domains (dashboard, db, public, api) at a
                     new IP address.
@@ -129,10 +136,10 @@ function ChangeIpCard({ hostname }: { hostname: string }) {
                     {isInvalidIp && <FieldError>Enter a valid IPv4 address.</FieldError>}
                 </Field>
                 <CopyableCode code={command} language="sh" copyLabel="Copy update-dns command" />
-                <p className="text-xs text-muted-foreground">
+                <Text variant="caption">
                     DNS changes can take a few minutes to propagate. Refresh the current binding above to confirm the
                     update.
-                </p>
+                </Text>
             </CardContent>
         </Card>
     );

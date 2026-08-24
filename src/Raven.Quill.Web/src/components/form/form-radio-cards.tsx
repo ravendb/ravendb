@@ -15,7 +15,7 @@ export const SELECTED_CARD_CLASSES =
  * Type scale for a card's title and its supporting line. Exported for the same bespoke cards, which
  * used to hardcode it and drifted from these every time the scale here changed.
  */
-export const CARD_LABEL_CLASSES = "font-semibold";
+export const CARD_LABEL_CLASSES = "text-sm font-semibold";
 export const CARD_DESCRIPTION_CLASSES = "mt-1 block text-sm leading-5 text-muted-foreground";
 
 export type RadioCardOption<TValue extends string = string> = {

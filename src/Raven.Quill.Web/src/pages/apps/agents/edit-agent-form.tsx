@@ -22,6 +22,7 @@ import { FormErrorIcon } from "@/components/form/form-error-icon";
 import { FormInput } from "@/components/form/form-input";
 import { FormTextarea } from "@/components/form/form-textarea";
 import { useFormUnsavedChanges } from "@/components/form/unsaved-changes/use-unsaved-changes";
+import { Heading, Text } from "@/components/typography";
 import { appRoutes } from "@/lib/app-routes";
 import { invalidateAgentQueries } from "@/lib/query-invalidation";
 import {
@@ -252,11 +253,13 @@ function CollapsibleSection({
         <Collapsible open={isOpen} onOpenChange={onOpenChange} className="grid gap-3">
             <CollapsibleTrigger className="group flex w-full items-start justify-between gap-3 text-left">
                 <div>
-                    <h3 className="flex items-center gap-1.5 text-sm font-semibold">
+                    <Heading as="h2" variant="section" className="flex items-center gap-1.5">
                         {title}
                         {errorIcon}
-                    </h3>
-                    <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+                    </Heading>
+                    <Text variant="caption" className="mt-1">
+                        {description}
+                    </Text>
                 </div>
                 <ChevronDown
                     className="mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180"

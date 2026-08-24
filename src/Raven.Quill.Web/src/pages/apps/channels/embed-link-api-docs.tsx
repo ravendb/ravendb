@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Text } from "@/components/typography";
 import { ShieldAlertIcon } from "lucide-react";
 import { CodeBlockTabs } from "@/components/data/code-block-tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/shadcn/ui/alert";
@@ -100,13 +101,13 @@ export function EmbedLinkApiDocs({ slug, channelId, parameters }: EmbedLinkApiDo
                             title: "Mint links from your backend",
                             content: (
                                 <>
-                                    <p className="max-w-prose text-sm text-muted-foreground">
+                                    <Text variant="muted" className="max-w-prose">
                                         Your server POSTs to the embed-links endpoint with your Dashboard API key in the{" "}
                                         <InlineCode>X-Api-Key</InlineCode> header, then hands the page nothing but the
                                         returned <InlineCode>url</InlineCode>. The app and channel are already filled in
                                         below - swap in your <InlineCode>QUILL_API_KEY</InlineCode>
                                         {hasParameters ? " and the parameter values" : ""}.
-                                    </p>
+                                    </Text>
 
                                     <div className="mt-3 grid gap-4 lg:grid-cols-2">
                                         <CodeBlockTabs
@@ -140,10 +141,10 @@ export function EmbedLinkApiDocs({ slug, channelId, parameters }: EmbedLinkApiDo
                             title: "Show the link in your page",
                             content: (
                                 <>
-                                    <p className="max-w-prose text-sm text-muted-foreground">
+                                    <Text variant="muted" className="max-w-prose">
                                         Then in the page, point an iframe at the <InlineCode>url</InlineCode> your
                                         endpoint returned:
-                                    </p>
+                                    </Text>
                                     <CodeBlockTabs
                                         value="html"
                                         copyLabel="Copy host page"

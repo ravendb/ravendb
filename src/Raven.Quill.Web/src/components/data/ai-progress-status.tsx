@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { Text } from "@/components/typography";
 import { SparklesIcon } from "lucide-react";
 
 export type AiProgressStage = {
@@ -29,7 +30,7 @@ export function AiProgressStatus({
                     {formatElapsed(elapsedSeconds)}
                 </span>
             </div>
-            <p className="text-sm text-muted-foreground">{children}</p>
+            <Text variant="muted">{children}</Text>
         </div>
     );
 }

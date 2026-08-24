@@ -17,6 +17,7 @@ import {
 import { CertificatesToolbar, type CertificateSort } from "@/pages/dashboard/certificates/certificates-toolbar";
 import { GenerateCertificateDialog } from "@/pages/dashboard/certificates/generate-certificate-dialog";
 import { originForSubdomain } from "@/lib/subdomain-origin";
+import { Heading } from "@/components/typography";
 
 interface CertificateFilters {
     search: string;
@@ -47,7 +48,9 @@ export function DashboardCertificates() {
         <div className="space-y-6">
             <div className="flex items-center justify-between gap-3">
                 <div>
-                    <h1 className="text-2xl font-semibold tracking-tight">Certificates</h1>
+                    <Heading as="h1" variant="page">
+                        Certificates
+                    </Heading>
                 </div>
                 <div className="flex items-center gap-2">
                     <Button variant="outline" size="sm" asChild>
@@ -129,7 +132,7 @@ function CertificateSection({
     return (
         <section className="space-y-3">
             <div className="flex items-center gap-2">
-                <h2 className="text-sm font-semibold">{title}</h2>
+                <Heading variant="label">{title}</Heading>
                 <Badge variant="secondary">{certificates.length}</Badge>
             </div>
             <div className="space-y-3">

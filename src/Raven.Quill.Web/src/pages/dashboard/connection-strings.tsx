@@ -11,6 +11,7 @@ import { AddAiConnectionString } from "@/components/ai-connection-string/add-ai-
 import { EditAiConnectionString } from "@/components/ai-connection-string/edit-ai-connection-string";
 import { DeleteAiConnectionStringDialog } from "@/components/ai-connection-string/delete-ai-connection-string-dialog";
 import { getProviderLabel, MODEL_TYPE_LABELS } from "@/components/ai-connection-string/ai-connection-string-utils";
+import { Heading, Text } from "@/components/typography";
 
 const CONNECTION_STRINGS_COLUMN_COUNT = 4;
 
@@ -24,10 +25,12 @@ export function DashboardConnectionStrings() {
         <div className="space-y-6">
             <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1">
-                    <h1 className="text-2xl font-semibold tracking-tight">AI connection strings</h1>
-                    <p className="text-sm text-muted-foreground">
+                    <Heading as="h1" variant="page">
+                        AI connection strings
+                    </Heading>
+                    <Text variant="muted">
                         Provider credentials agents use to reach a model, shared by every app on this server.
-                    </p>
+                    </Text>
                 </div>
                 <AddAiConnectionString
                     modelType="Chat"

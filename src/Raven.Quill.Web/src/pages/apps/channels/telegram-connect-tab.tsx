@@ -1,4 +1,5 @@
 import { ExternalLink, Send } from "lucide-react";
+import { Text } from "@/components/typography";
 import type { ChannelSummaryResponse } from "@/api/generated/server-api";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
@@ -32,13 +33,15 @@ export function TelegramConnectTab({ channel }: { channel: ChannelSummaryRespons
                                 title: "Open the bot in Telegram",
                                 content: (
                                     <>
-                                        <p className="max-w-prose text-sm text-muted-foreground">
+                                        <Text variant="muted" className="max-w-prose">
                                             Open the bot in Telegram, or search for its username.
-                                        </p>
+                                        </Text>
                                         <div className="mt-3 flex max-w-prose items-center justify-between gap-3 rounded-md border bg-background p-3">
                                             <div className="min-w-0">
                                                 <p className="font-mono text-sm">@{botUsername}</p>
-                                                <p className="truncate text-xs text-muted-foreground">{botLink}</p>
+                                                <Text variant="caption" className="truncate">
+                                                    {botLink}
+                                                </Text>
                                             </div>
                                             <Button asChild size="sm" variant="outline" className="shrink-0">
                                                 <a href={botLink} target="_blank" rel="noreferrer">
@@ -54,19 +57,19 @@ export function TelegramConnectTab({ channel }: { channel: ChannelSummaryRespons
                             {
                                 title: "Start the conversation",
                                 content: (
-                                    <p className="max-w-prose text-sm text-muted-foreground">
+                                    <Text variant="muted" className="max-w-prose">
                                         Press <strong>Start</strong> (sends <InlineCode>/start</InlineCode>) to greet
                                         the bot and begin a conversation.
-                                    </p>
+                                    </Text>
                                 ),
                             },
                             {
                                 title: "Reset anytime",
                                 content: (
-                                    <p className="max-w-prose text-sm text-muted-foreground">
+                                    <Text variant="muted" className="max-w-prose">
                                         Send <InlineCode>/clear</InlineCode> anytime to wipe the current conversation
                                         and start fresh.
-                                    </p>
+                                    </Text>
                                 ),
                             },
                         ]}

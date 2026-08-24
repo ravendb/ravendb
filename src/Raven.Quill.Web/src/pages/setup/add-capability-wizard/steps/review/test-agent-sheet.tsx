@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Text } from "@/components/typography";
 import { type Control, useFieldArray, useForm, useFormContext, useWatch } from "react-hook-form";
 import { useParams } from "react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -421,7 +422,9 @@ function TestParametersSection({
                 )}
             </button>
             {isCollapsed ? (
-                <p className="truncate text-xs text-muted-foreground">{summary}</p>
+                <Text variant="caption" className="truncate">
+                    {summary}
+                </Text>
             ) : (
                 <div className="grid gap-2">
                     {fields.map((field, index) => {

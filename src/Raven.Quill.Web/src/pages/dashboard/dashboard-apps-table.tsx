@@ -15,6 +15,7 @@ import { datePeriodUnit, type DatePeriod } from "@/lib/date-period";
 import { formatCompact } from "@/lib/format";
 import { DeleteAppDialog } from "@/pages/apps/delete-app-dialog";
 import { EditAppConfirmDialog } from "@/pages/setup/add-app-wizard/edit-app-confirm-dialog";
+import { Heading, Text } from "@/components/typography";
 
 export function DashboardAppsTable({
     apps,
@@ -78,7 +79,7 @@ function AppsToolbar({ count, action }: { count: ReactNode; action: ReactNode })
     return (
         <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-                <h2 className="text-lg font-semibold tracking-tight">Apps</h2>
+                <Heading variant="section">Apps</Heading>
                 {count}
             </div>
             {action}
@@ -172,10 +173,12 @@ function EmptyAppsState() {
                 <div className="flex size-9 items-center justify-center rounded-md bg-accent text-accent-foreground">
                     <Database className="size-5" aria-hidden="true" />
                 </div>
-                <h2 className="mt-4 text-sm font-semibold">No apps added yet</h2>
-                <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                <Heading variant="label" className="mt-4">
+                    No apps added yet
+                </Heading>
+                <Text variant="caption" className="mt-3 leading-5">
                     Create an app from a source database and a table mapping.
-                </p>
+                </Text>
                 <Button asChild size="sm" className="mt-5">
                     <Link to={appRoutes.addApp()}>
                         <Plus className="size-3.5" aria-hidden="true" />

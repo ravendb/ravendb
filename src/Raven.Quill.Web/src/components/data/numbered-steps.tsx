@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Heading } from "@/components/typography";
 
 export type NumberedStep = {
     title: string;
@@ -22,7 +23,9 @@ export function NumberedSteps({ steps }: { steps: NumberedStep[] }) {
                             {!isLast && <span aria-hidden="true" className="mt-1 w-px flex-1 bg-border" />}
                         </div>
                         <div className={isLast ? "" : "pb-5"}>
-                            <h3 className="mb-1.5 text-base font-medium">{step.title}</h3>
+                            <Heading as="h3" variant="subsection" className="mb-1.5">
+                                {step.title}
+                            </Heading>
                             {step.content}
                         </div>
                     </li>

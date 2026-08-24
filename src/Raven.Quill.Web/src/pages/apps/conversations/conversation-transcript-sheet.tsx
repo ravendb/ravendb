@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { Text } from "@/components/typography";
 import { useQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Streamdown } from "streamdown";
@@ -74,7 +75,7 @@ export function ConversationTranscriptSheet({
                     >
                         {conversationQuery.data &&
                             (turns.length === 0 ? (
-                                <p className="text-sm text-muted-foreground">No messages in this conversation.</p>
+                                <Text variant="muted">No messages in this conversation.</Text>
                             ) : (
                                 <TranscriptDisclosureState>
                                     <TranscriptRows scrollElement={scrollElement} rows={rows} />

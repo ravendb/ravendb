@@ -11,6 +11,7 @@ import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { Card, CardAction, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/shadcn/ui/card";
 import { Skeleton } from "@/components/shadcn/ui/skeleton";
+import { Heading } from "@/components/typography";
 import { appRoutes } from "@/lib/app-routes";
 import { cn, formatDateTime, formatRelativeTime } from "@/lib/utils";
 import { SlackIcon } from "@/pages/apps/channels/channel-brand-icons";
@@ -88,7 +89,7 @@ export function ChannelGroups({ slug }: { slug: string }) {
                             <section key={group.label} className="min-w-0">
                                 <div className="mb-3 flex items-center gap-2">
                                     <group.icon className="size-4 text-muted-foreground" aria-hidden="true" />
-                                    <h2 className="text-sm font-semibold">{group.label}</h2>
+                                    <Heading variant="label">{group.label}</Heading>
                                     <Badge variant="secondary" className="tabular-nums">
                                         {group.channels.length}
                                     </Badge>
@@ -144,7 +145,7 @@ function ChannelCard({
             className="relative gap-3 transition-[background-color,box-shadow] hover:bg-muted/40 hover:ring-foreground/25 has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-ring"
         >
             <CardHeader>
-                <CardTitle className="min-w-0 truncate">
+                <CardTitle className="min-w-0 truncate font-medium tracking-normal">
                     <Link
                         to={appRoutes.app(slug, `channels/${channel.channelId}`)}
                         className="after:absolute after:inset-0 after:content-[''] hover:underline"

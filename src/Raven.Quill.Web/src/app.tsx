@@ -15,6 +15,7 @@ import QuillMark from "@/components/brand/quill-mark.svg?react";
 import { AssistantPanel } from "@/components/layout/assistant-panel";
 import { ASSISTANT_PANEL_TITLE_ID, useAssistantPinning, useAssistantStore } from "@/components/layout/assistant-store";
 import { FeedbackSheet } from "@/components/layout/feedback-sheet";
+import { Heading } from "@/components/typography";
 import { Button } from "@/components/shadcn/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
 
@@ -151,7 +152,9 @@ function App() {
                 )}
             >
                 {!isPageTitleHidden && (
-                    <h1 className="text-2xl font-semibold tracking-tight">{activeRoute?.title ?? "My apps"}</h1>
+                    <Heading as="h1" variant="page">
+                        {activeRoute?.title ?? "My apps"}
+                    </Heading>
                 )}
                 <div
                     className={cn(

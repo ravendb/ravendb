@@ -1,4 +1,5 @@
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
+import { Text } from "@/components/typography";
 import { Plus, Settings2 } from "lucide-react";
 import { Button } from "@/components/shadcn/ui/button";
 import { FormInput } from "@/components/form/form-input";
@@ -81,7 +82,9 @@ function ParameterItem({ index, remove }: { index: number; remove: () => void })
                         </span>
                     </div>
                     {parameter.description && (
-                        <p className="mt-0.5 truncate text-xs text-muted-foreground">{parameter.description}</p>
+                        <Text variant="caption" className="mt-0.5 truncate">
+                            {parameter.description}
+                        </Text>
                     )}
                 </>
             }

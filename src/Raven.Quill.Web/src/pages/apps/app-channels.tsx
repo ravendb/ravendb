@@ -4,6 +4,7 @@ import { api } from "@/api/api";
 import { DashboardStatCards, type DashboardStatCard } from "@/pages/dashboard/dashboard-stat-cards";
 import { AddChannelMenu } from "@/pages/apps/channels/add-channel-menu";
 import { ChannelGroups } from "@/pages/apps/channel-groups";
+import { Heading, Text } from "@/components/typography";
 
 export function AppChannels() {
     const { slug = "" } = useParams();
@@ -18,10 +19,12 @@ export function AppChannels() {
         <div className="space-y-6">
             <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1">
-                    <h1 className="text-2xl font-semibold tracking-tight">Channels</h1>
-                    <p className="max-w-prose text-sm text-muted-foreground">
+                    <Heading as="h1" variant="page">
+                        Channels
+                    </Heading>
+                    <Text variant="muted" className="max-w-prose">
                         Channels are the surfaces end users reach your agents through.
-                    </p>
+                    </Text>
                 </div>
                 <AddChannelMenu slug={slug} label="New channel" variant="default" />
             </div>

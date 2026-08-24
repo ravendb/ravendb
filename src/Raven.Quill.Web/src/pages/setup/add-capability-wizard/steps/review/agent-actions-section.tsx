@@ -1,4 +1,5 @@
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
+import { Text } from "@/components/typography";
 import { Plus, Webhook } from "lucide-react";
 import { Button } from "@/components/shadcn/ui/button";
 import { FormInput } from "@/components/form/form-input";
@@ -61,7 +62,11 @@ function ActionItem({ index, remove }: { index: number; remove: () => void }) {
             summary={
                 <>
                     <p className="truncate text-sm font-medium">{action.name || "(unnamed)"}</p>
-                    {action.url && <p className="mt-0.5 truncate text-xs text-muted-foreground">{action.url}</p>}
+                    {action.url && (
+                        <Text variant="caption" className="mt-0.5 truncate">
+                            {action.url}
+                        </Text>
+                    )}
                 </>
             }
             onToggleExpanded={(isExpanded) => setValue(`review.actions.${index}.isExpanded`, isExpanded)}
