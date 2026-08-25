@@ -256,6 +256,21 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task An_invalidated_resume_starts_a_new_session()
+    {
+        await using var app = await NewAppAsync();
+        await NewChannelAsync(app);
+        await Discord.WaitUntilConnectedAsync();
+
+        Discord.InvalidateResume = true;
+        await Discord.RequestReconnectAsync();
+
+        await Discord.WaitUntilAsync(() => Discord.Resumes.Count == 1, "the invalidated resume handshake");
+        await Discord.WaitUntilAsync(() => Discord.Identifies.Count >= 2, "a fresh identify after the dead session");
+        await Discord.WaitUntilConnectedAsync();
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task A_disallowed_intent_close_stops_reconnecting_and_surfaces_in_health()
     {
         await using var app = await NewAppAsync();
