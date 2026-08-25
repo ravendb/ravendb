@@ -4,8 +4,11 @@
 import { useMemo } from "react";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import type { ConversationDto } from "@/api/generated/server-api";
-import { VirtualDataTable } from "@/components/table/virtual-data-table";
+import { VirtualDataTable, VirtualDataTableSkeleton } from "@/components/table/virtual-data-table";
 import { createConversationColumns } from "@/pages/apps/conversations/conversations-columns";
+
+const ROW_HEIGHT_IN_PX = 60;
+const NO_CONVERSATIONS: ConversationDto[] = [];
 
 export function ConversationsTable({
     slug,
@@ -34,8 +37,21 @@ export function ConversationsTable({
             columnCount={columns.length}
             emptyMessage={emptyMessage}
             maxHeight={520}
-            rowHeightInPx={60}
+            rowHeightInPx={ROW_HEIGHT_IN_PX}
             className="bg-card"
         />
     );
+}
+
+export function ConversationsTableSkeleton({ slug }: { slug: string }) {
+    const columns = useMemo(() => createConversationColumns(slug), [slug]);
+
+    const table = useReactTable({
+        columns,
+        data: NO_CONVERSATIONS,
+        getCoreRowModel: getCoreRowModel(),
+        getRowId: (conversation) => conversation.id,
+    });
+
+    return <VirtualDataTableSkeleton table={table} rows={5} rowHeightInPx={ROW_HEIGHT_IN_PX} className="bg-card" />;
 }

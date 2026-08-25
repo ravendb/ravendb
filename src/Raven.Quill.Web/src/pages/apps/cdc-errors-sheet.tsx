@@ -3,8 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
 import type { CdcError } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
-import { CardListSkeleton } from "@/components/data/loading-skeletons";
 import { ErrorDetails } from "@/components/data/error-details";
+import { CardListSkeleton } from "@/components/data/loading-skeletons";
 import { Badge } from "@/components/shadcn/ui/badge";
 import {
     Sheet,

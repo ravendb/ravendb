@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { Database, Pencil, Plus, Trash2 } from "lucide-react";
 import type { ApplianceAppResponse, AppWrites } from "@/api/generated/server-api";
@@ -5,7 +6,9 @@ import { StatusIndicator } from "@/components/data/status-indicator";
 import { resolveStatusStyle } from "@/lib/app-status";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
+import { Skeleton } from "@/components/shadcn/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/ui/table";
+import { TableSkeletonRows } from "@/components/table/table-skeleton";
 import { WruLabel } from "@/components/data/wru-label";
 import { appRoutes } from "@/lib/app-routes";
 import { datePeriodUnit, type DatePeriod } from "@/lib/date-period";
@@ -31,44 +34,81 @@ export function DashboardAppsTable({
 
     return (
         <div className="space-y-4">
-            <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-semibold tracking-tight">Apps</h2>
+            <AppsToolbar
+                count={
                     <Badge variant="secondary" className="font-mono">
                         {apps.length}
                     </Badge>
-                </div>
-                <Button asChild size="sm">
-                    <Link to={appRoutes.addApp()}>
-                        <Plus className="size-3.5" aria-hidden="true" />
-                        Add app
-                    </Link>
-                </Button>
+                }
+                action={
+                    <Button asChild size="sm">
+                        <Link to={appRoutes.addApp()}>
+                            <Plus className="size-3.5" aria-hidden="true" />
+                            Add app
+                        </Link>
+                    </Button>
+                }
+            />
+            <AppsTableFrame period={period}>
+                {apps.map((app) => (
+                    <AppRow key={app.slug} app={app} writes={writesBySlug.get(app.slug)} />
+                ))}
+            </AppsTableFrame>
+        </div>
+    );
+}
+
+export function DashboardAppsTableSkeleton({ period }: { period: DatePeriod }) {
+    return (
+        <div className="space-y-4">
+            {/* The button is drawn rather than rendered: `ApiState` hides the skeleton from the
+                accessibility tree, and a real link in there would still take focus. */}
+            <AppsToolbar
+                count={<Skeleton className="h-5 w-8 rounded-md" />}
+                action={<Skeleton className="h-8 w-36 rounded-md" />}
+            />
+            <AppsTableFrame period={period}>
+                <TableSkeletonRows columnCount={APPS_COLUMN_COUNT} rows={4} hasActionColumn />
+            </AppsTableFrame>
+        </div>
+    );
+}
+
+function AppsToolbar({ count, action }: { count: ReactNode; action: ReactNode }) {
+    return (
+        <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold tracking-tight">Apps</h2>
+                {count}
             </div>
-            <div className="overflow-hidden rounded-lg border">
-                <Table>
-                    <TableHeader>
-                        <TableRow className="hover:bg-transparent">
-                            <TableHead className="w-[26%] text-xs font-medium text-muted-foreground">App</TableHead>
-                            <TableHead className="text-xs font-medium text-muted-foreground">Source</TableHead>
-                            <TableHead className="text-xs font-medium text-muted-foreground">Agents</TableHead>
-                            <TableHead className="text-xs font-medium text-muted-foreground">Channels</TableHead>
-                            <TableHead className="text-xs font-medium text-muted-foreground">
-                                <WruLabel suffix={` / ${datePeriodUnit(period)}`} />
-                            </TableHead>
-                            <TableHead className="w-[20%] text-xs font-medium text-muted-foreground">Status</TableHead>
-                            <TableHead className="w-0 text-right text-xs font-medium text-muted-foreground">
-                                <span className="sr-only">Actions</span>
-                            </TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {apps.map((app) => (
-                            <AppRow key={app.slug} app={app} writes={writesBySlug.get(app.slug)} />
-                        ))}
-                    </TableBody>
-                </Table>
-            </div>
+            {action}
+        </div>
+    );
+}
+
+const APPS_COLUMN_COUNT = 7;
+
+function AppsTableFrame({ period, children }: { period: DatePeriod; children: ReactNode }) {
+    return (
+        <div className="overflow-hidden rounded-lg border">
+            <Table>
+                <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                        <TableHead className="w-[26%] text-xs font-medium text-muted-foreground">App</TableHead>
+                        <TableHead className="text-xs font-medium text-muted-foreground">Source</TableHead>
+                        <TableHead className="text-xs font-medium text-muted-foreground">Agents</TableHead>
+                        <TableHead className="text-xs font-medium text-muted-foreground">Channels</TableHead>
+                        <TableHead className="text-xs font-medium text-muted-foreground">
+                            <WruLabel suffix={` / ${datePeriodUnit(period)}`} />
+                        </TableHead>
+                        <TableHead className="w-[20%] text-xs font-medium text-muted-foreground">Status</TableHead>
+                        <TableHead className="w-0 text-right text-xs font-medium text-muted-foreground">
+                            <span className="sr-only">Actions</span>
+                        </TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>{children}</TableBody>
+            </Table>
         </div>
     );
 }

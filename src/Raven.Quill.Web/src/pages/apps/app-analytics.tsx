@@ -4,16 +4,17 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
 import type { AppUsageResponse, SeriesData } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
-import { ChartSkeleton, DetailGridSkeleton } from "@/components/data/loading-skeletons";
 import { SeriesBarChart } from "@/components/data/charts";
 import { DatePeriodPicker } from "@/components/data/date-period-picker";
+import { ChartSkeleton, DetailGridSkeleton } from "@/components/data/loading-skeletons";
 import { PagePanel } from "@/components/data/page-panel";
 import { canDrillInto, drillInto, getDefaultDatePeriod, type DatePeriod } from "@/lib/date-period";
 import { useAppStartDate } from "@/lib/use-start-date";
 import { TableCell, TableRow } from "@/components/shadcn/ui/table";
+import { SectionTable } from "@/components/table/section-table";
 import { formatCompact } from "@/lib/format";
 import { StatCardsSection, type DashboardStatCard } from "@/pages/dashboard/dashboard-stat-cards";
-import { SectionCard, SectionTable } from "@/pages/apps/section-card";
+import { SectionCard } from "@/pages/apps/section-card";
 
 type BarClickHandler = (entry: Record<string, unknown>) => void;
 

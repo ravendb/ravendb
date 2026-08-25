@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { ApiState } from "./api-state";
 import { CardListSkeleton, ChartSkeleton, DetailGridSkeleton, FormFieldsSkeleton } from "./loading-skeletons";
-import { TableSkeleton } from "@/components/table/table-skeleton";
+import { SectionTableSkeleton } from "@/components/table/section-table";
 
 const AGENT_TABLE_HEADERS = ["Agent name", "Status", "Model", "Last run", "Conversations", "Tokens", ""];
 
@@ -45,7 +45,7 @@ export const Playground: Story = {
         skeleton: {
             options: ["table", "cardList", "form", "detailGrid", "chart", "none"],
             mapping: {
-                table: <TableSkeleton headers={AGENT_TABLE_HEADERS} />,
+                table: <SectionTableSkeleton headers={AGENT_TABLE_HEADERS} />,
                 cardList: <CardListSkeleton />,
                 form: <FormFieldsSkeleton />,
                 detailGrid: <DetailGridSkeleton count={2} />,
@@ -79,7 +79,7 @@ export const Playground: Story = {
 export const TableLoading: Story = {
     args: {
         loadingLabel: "Loading agents...",
-        skeleton: <TableSkeleton headers={AGENT_TABLE_HEADERS} />,
+        skeleton: <SectionTableSkeleton headers={AGENT_TABLE_HEADERS} />,
     },
 };
 

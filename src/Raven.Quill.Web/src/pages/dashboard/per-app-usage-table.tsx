@@ -16,7 +16,7 @@ import type { QuillApplicationUsage } from "@/api/generated/server-api";
 import { InfoHint } from "@/components/data/info-hint";
 import { WruLabel } from "@/components/data/wru-label";
 import { Badge } from "@/components/shadcn/ui/badge";
-import { VirtualDataTable } from "@/components/table/virtual-data-table";
+import { VirtualDataTable, VirtualDataTableSkeleton } from "@/components/table/virtual-data-table";
 import { cn } from "@/lib/utils";
 import { rowKey, SYSTEM_GROUP_DESCRIPTION, toUsageGroups, type UsageGroup } from "@/pages/dashboard/usage-groups";
 
@@ -35,6 +35,8 @@ const CHEVRON_GUTTER = "size-3.5 shrink-0";
 const NAME_ROW = "flex h-5 items-center gap-1.5 leading-none";
 
 const ROW_HEIGHT_IN_PX = 44;
+
+const NO_USAGE: UsageRow[] = [];
 
 // The usage column opts out of resizing, which is what keeps it at this width: auto-sizing hands
 // the leftover container width to the resizable columns, so the name column is the one that grows.
@@ -191,6 +193,25 @@ export function PerAppUsageTable({ apps }: { apps: QuillApplicationUsage[] }) {
             getCellClassName={(cellId) => cellClassNames.get(cellId) ?? ""}
             getRowClassName={(rowId) => (toggles.has(rowId) ? "cursor-pointer" : "")}
             onRowClick={(rowId) => toggles.get(rowId)?.()}
+        />
+    );
+}
+
+export function PerAppUsageTableSkeleton() {
+    const table = useReactTable({
+        columns: COLUMNS,
+        data: NO_USAGE,
+        getCoreRowModel: getCoreRowModel(),
+    });
+
+    return (
+        <VirtualDataTableSkeleton
+            table={table}
+            rows={4}
+            className="bg-card"
+            rowHeightInPx={ROW_HEIGHT_IN_PX}
+            getHeadClassName={headClassName}
+            getCellClassName={(columnId) => cellClassName(columnId, 0)}
         />
     );
 }
