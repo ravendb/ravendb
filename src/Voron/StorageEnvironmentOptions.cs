@@ -1825,7 +1825,7 @@ namespace Voron
         public bool DisableSparseRegions { get; set; }
         public int JournalsCompressionAcceleration { get; set; } = 1;
 
-        public JournalCompressionAlgorithm JournalCompressionAlgorithm { get; set; } = JournalCompressionAlgorithm.Lz4;
+        public JournalCompressionAlgorithm JournalCompressionAlgorithm { get; set; } = JournalCompressionAlgorithm.Auto;
         public int MinimumSharedJournalsMergeCount { get; set; } = 8;
         public bool UseSequentialReadAheadHintForJournalRecovery { get; set; } = true;
 

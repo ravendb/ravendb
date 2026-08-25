@@ -326,6 +326,18 @@ namespace Voron.Impl.Journal
 
         public bool IsMeasuredFastDevice => _writePipeline.IsMeasuredFastDevice;
 
+        internal JournalCompressionAlgorithm ResolveJournalCompressionAlgorithm()
+        {
+            var configured = _env.Options.JournalCompressionAlgorithm;
+            if (configured != JournalCompressionAlgorithm.Auto)
+                return configured; // pinned by the user, in either direction
+
+            // Zstd is 400MB/sec vs. LZ4 1.5GB/sec. It pays to pay for Zstd if the device is constrained.
+            return _writePipeline.MeasuredDeviceClass == JournalWritePipeline.DeviceClass.Budgeted
+                ? JournalCompressionAlgorithm.Zstd
+                : JournalCompressionAlgorithm.Lz4;
+        }
+
         private JournalFile NextFile(long numberOf4Kbs)
         {
             var now = DateTime.UtcNow;
@@ -2769,7 +2781,7 @@ namespace Voron.Impl.Journal
             if (_writePipeline.IsMeasuredFastDevice)
                 compressTxAboveSizeInBytes = Math.Max(compressTxAboveSizeInBytes, FastDeviceCompressTxAboveSizeInBytes);
             var performCompression = totalSizeWritten > compressTxAboveSizeInBytes;
-            var compressionAlgorithm = _env.Options.JournalCompressionAlgorithm;
+            var compressionAlgorithm = ResolveJournalCompressionAlgorithm();
             if (performCompression)
             {
                 var outputBufferSize = compressionAlgorithm == JournalCompressionAlgorithm.Zstd
