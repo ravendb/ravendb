@@ -72,7 +72,9 @@ function CodeField({
 }) {
     return (
         <div className="grid gap-1">
-            <span className="text-xs text-muted-foreground">{label}</span>
+            <Text variant="caption" as="span">
+                {label}
+            </Text>
             <div className="overflow-hidden rounded-md border">
                 <AceEditor mode={mode} value={value} readOnly height={height} maxHeight={300} />
             </div>

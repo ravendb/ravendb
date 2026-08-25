@@ -74,12 +74,20 @@ function LicenseSummaryCard({ license }: { license: ServerLicenseResponse }) {
             </CardHeader>
             <CardContent className="grid gap-6 sm:grid-cols-2">
                 <div className="space-y-1">
-                    <div className="text-xs text-muted-foreground">Expiration date</div>
-                    <div className="text-sm font-medium">{formatDate(license.expiration)}</div>
+                    <Text as="div" variant="caption">
+                        Expiration date
+                    </Text>
+                    <Text as="div" variant="label">
+                        {formatDate(license.expiration)}
+                    </Text>
                 </div>
                 <div className="space-y-1">
-                    <div className="text-xs text-muted-foreground">License ID</div>
-                    <div className="text-sm font-medium tabular-nums">{license.id}</div>
+                    <Text as="div" variant="caption">
+                        License ID
+                    </Text>
+                    <Text as="div" variant="label" className="tabular-nums">
+                        {license.id}
+                    </Text>
                 </div>
             </CardContent>
         </Card>
@@ -136,7 +144,11 @@ function PlanCard({ plan }: { plan: LicensePlan }) {
             <CardContent className="space-y-4">
                 <div className="flex items-baseline gap-1">
                     <span className="text-2xl font-bold">{plan.priceLabel}</span>
-                    {plan.priceSuffix && <span className="text-sm text-muted-foreground">{plan.priceSuffix}</span>}
+                    {plan.priceSuffix && (
+                        <Text as="span" variant="muted">
+                            {plan.priceSuffix}
+                        </Text>
+                    )}
                 </div>
                 <ul className="space-y-2">
                     {plan.features.map((feature) => (

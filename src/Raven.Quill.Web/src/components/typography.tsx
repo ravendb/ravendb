@@ -7,6 +7,10 @@ import { cn } from "@/lib/utils";
 // The app's single source of truth for heading and body-text styling. Prefer these over hand-written
 // `text-*`/`font-*` classes so the scale stays consistent.
 //
+// For a section header (title, optional description, optional action) prefer <SectionHeader> from
+// @/components/section-header — it picks `as`+`variant` from one semantic `level` so the same role
+// can't render at two sizes across call sites. Reach for <Heading> directly only for standalone titles.
+//
 // <Heading> — pick `as` for the document outline (the tag), `variant` for the look; they are independent
 // because the same visual level appears at different depths across the app. Keep one <h1> per page and
 // don't skip levels (h1 → h2 → h3).

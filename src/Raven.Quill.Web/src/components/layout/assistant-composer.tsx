@@ -5,6 +5,7 @@ import { useAssistantChatStore } from "@/components/layout/assistant-chat-store"
 import { useAssistantStore } from "@/components/layout/assistant-store";
 import { FormTextarea } from "@/components/form/form-textarea";
 import { Button } from "@/components/shadcn/ui/button";
+import { Text } from "@/components/typography";
 
 type PromptFormData = {
     prompt: string;
@@ -90,9 +91,9 @@ export function AssistantComposer() {
                     </Button>
                 )}
             </div>
-            <div className="pt-2 text-center text-xs text-muted-foreground">
+            <Text variant="caption" as="div" className="pt-2 text-center">
                 Responses are AI-generated and may require verification.
-            </div>
+            </Text>
         </form>
     );
 }

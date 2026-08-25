@@ -17,7 +17,7 @@ import {
 import { CertificatesToolbar, type CertificateSort } from "@/pages/dashboard/certificates/certificates-toolbar";
 import { GenerateCertificateDialog } from "@/pages/dashboard/certificates/generate-certificate-dialog";
 import { originForSubdomain } from "@/lib/subdomain-origin";
-import { Heading } from "@/components/typography";
+import { Heading, Text } from "@/components/typography";
 
 interface CertificateFilters {
     search: string;
@@ -100,11 +100,11 @@ export function DashboardCertificates() {
                 skeleton={<CardListSkeleton />}
             >
                 {visibleCertificates.length === 0 ? (
-                    <div className="rounded-lg border p-8 text-center text-sm text-muted-foreground">
+                    <Text as="div" variant="muted" className="rounded-lg border p-8 text-center">
                         {certificates.length === 0
                             ? "No certificates yet."
                             : "No certificates match the current filters."}
-                    </div>
+                    </Text>
                 ) : (
                     <div className="space-y-8">
                         {serverCertificates.length > 0 && (

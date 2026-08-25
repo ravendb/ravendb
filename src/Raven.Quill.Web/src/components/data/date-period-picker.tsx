@@ -17,6 +17,7 @@ import {
     stepYear,
     type DatePeriod,
 } from "@/lib/date-period";
+import { Text } from "@/components/typography";
 
 type Granularity = "year" | "month" | "day";
 
@@ -61,7 +62,9 @@ function PickerNav({
             >
                 <ChevronLeft aria-hidden="true" />
             </Button>
-            <span className="text-sm font-medium">{label}</span>
+            <Text variant="label" as="span">
+                {label}
+            </Text>
             <Button variant="ghost" size="icon-sm" aria-label={`Next ${unit}`} disabled={!canGoNext} onClick={onNext}>
                 <ChevronRight aria-hidden="true" />
             </Button>

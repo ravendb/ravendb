@@ -205,16 +205,16 @@ function CdcBatchRow({
                     )}
                 />
                 <StatusIndicator tone={state.tone} label={state.label} className="shrink-0 justify-start" />
-                <span className="shrink-0 font-mono text-xs text-muted-foreground tabular-nums">
+                <Text as="span" variant="caption" className="shrink-0 font-mono tabular-nums">
                     {formatBatchTime(batch.started)}
-                </span>
-                <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+                </Text>
+                <Text as="span" variant="caption" className="min-w-0 flex-1 truncate">
                     {describeBatch(batch, errorCount)}
-                </span>
+                </Text>
                 {/* The narrow layout keeps state, time and summary; the duration stays in the details below. */}
-                <span className="hidden shrink-0 font-mono text-xs text-muted-foreground tabular-nums sm:inline">
+                <Text as="span" variant="caption" className="hidden shrink-0 font-mono tabular-nums sm:inline">
                     {formatBatchDuration(batch.durationInMs)}
-                </span>
+                </Text>
             </button>
             {isExpanded && (
                 <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 px-3 pb-3 pl-10">

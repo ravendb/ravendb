@@ -26,7 +26,9 @@ export function AgentActionsSection({ className }: { className?: string }) {
             <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                     <Webhook className="size-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Actions</span>
+                    <Text variant="label" as="span">
+                        Actions
+                    </Text>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => fieldArray.append(emptyAgentAction())}>
                     <Plus />
@@ -61,7 +63,9 @@ function ActionItem({ index, remove }: { index: number; remove: () => void }) {
             editTitle="Configure action"
             summary={
                 <>
-                    <p className="truncate text-sm font-medium">{action.name || "(unnamed)"}</p>
+                    <Text variant="label" className="truncate">
+                        {action.name || "(unnamed)"}
+                    </Text>
                     {action.url && (
                         <Text variant="caption" className="mt-0.5 truncate">
                             {action.url}

@@ -108,7 +108,7 @@ export function AssistantMessages() {
                         <Sparkles className="size-5 text-primary" aria-hidden="true" />
                     </div>
                     <div>
-                        <p className="text-sm font-medium">How can I help?</p>
+                        <Text variant="label">How can I help?</Text>
                         <Text variant="muted">Ask about your apps, conversations, or setup.</Text>
                     </div>
                 </div>

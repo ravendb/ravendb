@@ -78,10 +78,10 @@ export function AppBreadcrumbSwitcher({ slug, appName }: AppBreadcrumbSwitcherPr
                         ))}
                     </DropdownMenuRadioGroup>
                 ) : appsQuery.isLoading ? (
-                    <div className="flex items-center gap-2 px-1.5 py-2 text-sm text-muted-foreground">
+                    <Text variant="muted" as="div" className="flex items-center gap-2 px-1.5 py-2">
                         <Spinner />
                         Loading apps…
-                    </div>
+                    </Text>
                 ) : (
                     <Text variant="muted" className="px-1.5 py-2">
                         {appsQuery.isError ? "Couldn't load apps." : "No apps yet."}

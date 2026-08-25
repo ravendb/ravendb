@@ -11,6 +11,7 @@ import {
 } from "@/components/shadcn/ui/dialog";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
+import { Text } from "@/components/typography";
 import { FileDropzone } from "@/components/form/file-dropzone";
 import { WizardErrorAlert } from "@/components/form/wizard/wizard-error-alert";
 import { useImportConfig } from "@/pages/setup/add-app-wizard/steps/connect/use-import-config";
@@ -74,9 +75,9 @@ export function ImportConfigDialog({ disabled }: ImportConfigDialogProps) {
                 {importMutation.isPending ? (
                     <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed px-6 py-8 text-center">
                         <Spinner className="size-6" />
-                        <p className="text-sm text-muted-foreground" aria-live="polite">
+                        <Text variant="muted" aria-live="polite">
                             {progressLabel}
-                        </p>
+                        </Text>
                     </div>
                 ) : (
                     <FileDropzone

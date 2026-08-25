@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { Button } from "@/components/shadcn/ui/button";
 import { Separator } from "@/components/shadcn/ui/separator";
+import { Text } from "@/components/typography";
 
 type ConfigItemCardProps = {
     isExpanded: boolean;
@@ -63,8 +64,12 @@ export function ConfigItemCard({
 
 export function ConfigListEmpty({ label }: { label: string }) {
     return (
-        <div className="flex items-center justify-center rounded-md border border-dashed py-6 text-xs text-muted-foreground">
+        <Text
+            variant="caption"
+            as="div"
+            className="flex items-center justify-center rounded-md border border-dashed py-6"
+        >
             {label}
-        </div>
+        </Text>
     );
 }

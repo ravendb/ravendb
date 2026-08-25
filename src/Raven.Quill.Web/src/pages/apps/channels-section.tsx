@@ -16,6 +16,7 @@ import type { FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
 import { GenerateEmbedLinkDialog } from "@/pages/apps/channels/generate-embed-link-dialog";
 import { DeleteChannelDialog } from "@/pages/apps/channels/delete-channel-dialog";
 import { SectionCard } from "@/pages/apps/section-card";
+import { Text } from "@/components/typography";
 
 // When `agent` is set the section is scoped to that single agent: only its channels are listed,
 // the agent name column is dropped, and new channels are routed to it (e.g. the capability wizard).
@@ -67,8 +68,7 @@ export function ChannelsSection({
     return (
         <SectionCard
             title={fixedAgent ? `Channels for “${fixedAgent.name}”` : "Channels"}
-            titleAs={nested ? "h3" : "h2"}
-            titleVariant={nested ? "subsection" : "section"}
+            level={nested ? "subsection" : "section"}
             action={<AddChannelMenu slug={slug} agent={fixedAgent} />}
         >
             <ApiState
@@ -94,14 +94,14 @@ export function ChannelsSection({
                                             {channel.displayName}
                                         </Link>
                                         {channel.telegram?.botUsername && (
-                                            <div className="text-xs font-normal text-muted-foreground">
+                                            <Text as="div" variant="caption" className="font-normal">
                                                 @{channel.telegram.botUsername}
-                                            </div>
+                                            </Text>
                                         )}
                                         {channel.slack?.teamName && (
-                                            <div className="text-xs font-normal text-muted-foreground">
+                                            <Text as="div" variant="caption" className="font-normal">
                                                 {channel.slack.teamName}
-                                            </div>
+                                            </Text>
                                         )}
                                     </TableCell>
                                     {!fixedAgent && <TableCell className="font-medium">{agent?.name}</TableCell>}

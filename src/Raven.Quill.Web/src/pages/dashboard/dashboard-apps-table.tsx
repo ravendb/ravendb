@@ -119,8 +119,12 @@ function AppRow({ app, writes }: { app: ApplianceAppResponse; writes: number | u
         <TableRow className="group">
             <TableCell className="py-3">
                 <Link to={appRoutes.app(app.slug)} className="flex flex-col gap-0.5">
-                    <span className="text-sm font-medium group-hover:underline">{app.name}</span>
-                    <span className="font-mono text-xs text-muted-foreground">{app.slug}</span>
+                    <Text as="span" variant="label" className="group-hover:underline">
+                        {app.name}
+                    </Text>
+                    <Text as="span" variant="caption" className="font-mono">
+                        {app.slug}
+                    </Text>
                 </Link>
             </TableCell>
             <TableCell className="text-sm">{app.source.type || "—"}</TableCell>
@@ -161,7 +165,11 @@ function AppStatusCell({ app }: { app: ApplianceAppResponse }) {
     return (
         <div className="flex flex-col items-start gap-1">
             <StatusIndicator tone={style.tone} label={style.label} />
-            {app.statusSubtitle && <span className="text-xs text-muted-foreground">{app.statusSubtitle}</span>}
+            {app.statusSubtitle && (
+                <Text as="span" variant="caption">
+                    {app.statusSubtitle}
+                </Text>
+            )}
         </div>
     );
 }

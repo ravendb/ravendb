@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { bootstrapMocks } from "@/mocks/bootstrap-mocks";
+import { Text } from "@/components/typography";
 import { BootGate } from "./boot-gate";
 
 const meta = {
@@ -7,7 +8,9 @@ const meta = {
     component: BootGate,
     args: {
         children: (
-            <div className="grid min-h-svh place-items-center text-sm text-muted-foreground">Operator dashboard</div>
+            <Text as="div" variant="muted" className="grid min-h-svh place-items-center">
+                Operator dashboard
+            </Text>
         ),
     },
 } satisfies Meta<typeof BootGate>;

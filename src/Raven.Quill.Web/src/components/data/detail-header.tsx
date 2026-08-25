@@ -6,7 +6,7 @@ import { Button } from "@/components/shadcn/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/shadcn/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { Heading } from "@/components/typography";
+import { Heading, Text } from "@/components/typography";
 
 type BackTo = { to: string; label: string };
 
@@ -59,9 +59,9 @@ export function DetailHeader({
                             {status}
                         </div>
                         {meta && (
-                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                            <Text variant="muted" as="div" className="flex flex-wrap items-center gap-x-4 gap-y-1">
                                 <TooltipProvider>{meta}</TooltipProvider>
-                            </div>
+                            </Text>
                         )}
                     </div>
                 </div>
