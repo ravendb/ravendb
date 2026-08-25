@@ -87,7 +87,7 @@ export function AppWizard({ defaultValues, editedApp }: AppWizardProps) {
         mutationFn: async (formValues: AppFormData) => {
             return await api.services.setup.provision({
                 appName: formValues.externalConnection.appName,
-                slug: formValues.externalConnection.slug || null,
+                slug: formValues.externalConnection.slug,
             });
         },
         onSuccess: async (result, formValues) => {
