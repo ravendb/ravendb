@@ -2,6 +2,8 @@ namespace Raven.Quill.Hosting;
 
 public sealed class SlackOptions
 {
+    public const int ApiMessageLimit = 40_000;
+
     public string ApiUrl { get; set; } = "https://slack.com/api";
 
     public TimeSpan RequestTimeout { get; set; } = TimeSpan.FromSeconds(15);
