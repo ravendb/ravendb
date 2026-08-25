@@ -7,17 +7,13 @@ import { MAX_SLUG_LENGTH, toSlug } from "@/pages/setup/add-app-wizard/slugify";
 const COLUMN_TYPES = ["Default", "Json", "Attachment"] as const satisfies readonly CdcColumnType[];
 const RELATION_TYPES = ["Array", "Map", "Value"] as const satisfies readonly CdcSinkRelationType[];
 
-// Optional override; when empty the server derives the slug from the app name. Mirrors the
-// server's normalization checks so obvious problems surface before provisioning (reserved
-// names are only known server-side and come back as a 400).
+// Mirrors the server's normalization checks so obvious problems surface before provisioning
+// (reserved names are only known server-side and come back as a 400).
 export const slugSchema = z
     .string()
     .trim()
+    .min(1, "Public URL slug is required")
     .superRefine((value, ctx) => {
-        if (value === "") {
-            return;
-        }
-
         const normalized = toSlug(value);
 
         if (normalized === "") {
@@ -276,15 +272,12 @@ export const createExternalConnectionSchema = (takenSlugs: string[] = []) => {
                 });
             }
 
-            const overrideSlug = values.slug.trim();
-            // With an empty override the server derives the slug from the app name, so the name is
-            // what has to be changed to free up the conflict.
-            const slug = toSlug(overrideSlug || values.appName);
+            const slug = toSlug(values.slug);
 
             if (slug !== "" && normalizedTakenSlugs.has(slug)) {
                 ctx.addIssue({
                     code: "custom",
-                    path: [overrideSlug === "" ? "appName" : "slug"],
+                    path: ["slug"],
                     message: `Slug "${slug}" is already used by another app`,
                 });
             }

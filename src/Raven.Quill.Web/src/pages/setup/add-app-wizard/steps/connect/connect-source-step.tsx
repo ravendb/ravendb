@@ -45,7 +45,7 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
             <FormInput
                 control={control}
                 name="externalConnection.slug"
-                label={isEditingApp ? "Public URL slug" : "Public URL slug (optional)"}
+                label="Public URL slug"
                 placeholder="e.g. acme-shop"
                 disabled={isBusy || isEditingApp}
                 description={
