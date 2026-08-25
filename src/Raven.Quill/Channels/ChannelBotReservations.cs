@@ -22,7 +22,7 @@ internal static class ChannelBotReservations
         string database,
         string channelId,
         Func<Channel?, bool> isLive,
-        Func<IAsyncDocumentSession, Task>? storeCompanions,
+        Func<IAsyncDocumentSession, TReservation, Task>? storeCompanions,
         CancellationToken ct)
         where TReservation : class, IChannelBotReservation, new()
     {
@@ -30,9 +30,14 @@ internal static class ChannelBotReservations
 
         var reservation = await configSession.LoadAsync<TReservation>(reservationId, ct);
         if (reservation is not null && reservation.Database == database && reservation.ChannelId == channelId)
-            return new Claim(true, null, configSession.Advanced.GetChangeVectorFor(reservation));
+        {
+            if (storeCompanions is null)
+                return new Claim(true, null, configSession.Advanced.GetChangeVectorFor(reservation));
 
-        if (reservation is null)
+            await configSession.StoreAsync(
+                reservation, configSession.Advanced.GetChangeVectorFor(reservation), reservationId, ct);
+        }
+        else if (reservation is null)
         {
             reservation = new TReservation { Database = database, ChannelId = channelId };
             await configSession.StoreAsync(reservation, string.Empty, reservationId, ct);
@@ -50,7 +55,7 @@ internal static class ChannelBotReservations
         }
 
         if (storeCompanions is not null)
-            await storeCompanions(configSession);
+            await storeCompanions(configSession, reservation);
 
         try
         {
@@ -66,17 +71,15 @@ internal static class ChannelBotReservations
     internal static async Task<bool> TryConfirmAsync<TReservation>(
         IDocumentStore store,
         string reservationId,
-        string database,
-        string channelId,
+        TReservation reservation,
         string changeVector,
         CancellationToken ct)
-        where TReservation : class, IChannelBotReservation, new()
+        where TReservation : class, IChannelBotReservation
     {
         try
         {
             using var configSession = store.OpenAsyncSession();
-            await configSession.StoreAsync(
-                new TReservation { Database = database, ChannelId = channelId }, changeVector, reservationId, ct);
+            await configSession.StoreAsync(reservation, changeVector, reservationId, ct);
             await configSession.SaveChangesAsync(ct);
             return true;
         }
