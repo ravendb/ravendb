@@ -106,19 +106,31 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
         Stopwatch.GetElapsedTime(Volatile.Read(ref _lastWriteActivityTimestamp)).TotalMilliseconds < RecentWriteActivityWindowMs;
 
 
-    internal bool IsMeasuredFastDevice
+    internal enum DeviceClass
+    {
+        Unknown, // no evidence yet, go for safe defaults
+        Fast,    // exmaple: nvme - very high limits, or we never hit them
+        Budgeted // example: gp3 - both bandwidth & IOPS limits that we hit
+    }
+
+    internal DeviceClass MeasuredDeviceClass
     {
         get
         {
             // small writes can be fast on a slow device, so we can't estimate from small writes only
             // gp3 writes small batches in 1.3-1.9ms, gp2 in 3-4ms, we need more than that...
             if (_writeSizeBytes.Current < 256 * Constants.Size.Kilobyte)
-                return false;
+                return DeviceClass.Unknown;
 
             var ewma = _writeLatencyTicks.Current;
-            return ewma != 0 && ewma < _pipelineAboveLatencyTicks / 2;
+            if (ewma == 0)
+                return DeviceClass.Unknown;
+
+            return ewma < _pipelineAboveLatencyTicks / 2 ? DeviceClass.Fast : DeviceClass.Budgeted;
         }
     }
+
+    internal bool IsMeasuredFastDevice => MeasuredDeviceClass == DeviceClass.Fast;
 
     public int MaxConcurrentWrites => _maxConcurrentWrites;
 
