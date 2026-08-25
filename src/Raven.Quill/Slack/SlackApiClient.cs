@@ -14,29 +14,8 @@ internal sealed class SlackApiClient(HttpClient http) : ISlackClient
     {
         try
         {
-            using var request = NewRequest("auth.test", botToken);
-            using var response = await http.SendAsync(request, ct);
-            var body = await response.Content.ReadAsStringAsync(ct);
-
-            if (response.StatusCode == HttpStatusCode.TooManyRequests)
-                return (null, "slack is rate-limiting the token check; try again shortly", false);
-
-            if ((int)response.StatusCode >= 500)
-                return (null, $"the Slack API is unavailable (status {(int)response.StatusCode})", false);
-
-            var payload = Deserialize<AuthTestResponse>(body);
-            if (payload is null)
-                return (null, "slack returned an unrecognized auth.test payload", true);
-
-            if (payload.Ok == false)
-            {
-                if (payload.Error == SlackApiException.RateLimitedError)
-                    return (null, "slack is rate-limiting the token check; try again shortly", false);
-
-                return (null, payload.Error is "invalid_auth" or "token_revoked" or "account_inactive"
-                    ? "slack rejected the bot token; copy the xoxb- token from the app's OAuth page and try again"
-                    : $"slack refused the token check: {payload.Error ?? "unknown error"}", true);
-            }
+            var request = NewRequest("auth.test", botToken);
+            var payload = await SendAsync<AuthTestResponse>(request, "auth.test", ct);
 
             if (string.IsNullOrEmpty(payload.TeamId) || string.IsNullOrEmpty(payload.UserId))
                 return (null, "slack returned an unrecognized auth.test payload", true);
@@ -47,13 +26,17 @@ internal sealed class SlackApiClient(HttpClient http) : ISlackClient
                 payload.UserId,
                 payload.User ?? ""), null, true);
         }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested == false)
+        catch (SlackApiException e)
         {
-            return (null, "the Slack API did not respond while validating the bot token", false);
-        }
-        catch (HttpRequestException e)
-        {
-            return (null, $"could not reach the Slack API: {e.Message}", false);
+            if (e.Error == SlackApiException.RateLimitedError)
+                return (null, "slack is rate-limiting the token check; try again shortly", false);
+
+            if (e.SlackResponded == false || e.Error is null)
+                return (null, e.Message, e.SlackResponded);
+
+            return (null, e.Error is "invalid_auth" or "token_revoked" or "account_inactive"
+                ? "slack rejected the bot token; copy the xoxb- token from the app's OAuth page and try again"
+                : $"slack refused the token check: {e.Error}", true);
         }
     }
 
@@ -122,13 +105,14 @@ internal sealed class SlackApiClient(HttpClient http) : ISlackClient
 
             var payload = Deserialize<TResponse>(raw);
             if (payload is null)
-                throw new SlackApiException($"slack returned an unrecognized {method} payload");
+                throw new SlackApiException($"slack returned an unrecognized {method} payload", slackResponded: true);
 
             if (payload.Ok == false)
                 throw new SlackApiException(
                     $"slack refused {method}: {payload.Error ?? "unknown error"}",
                     payload.Error,
-                    payload.Error == SlackApiException.RateLimitedError ? response.Headers.RetryAfter?.Delta : null);
+                    payload.Error == SlackApiException.RateLimitedError ? response.Headers.RetryAfter?.Delta : null,
+                    slackResponded: true);
 
             return payload;
         }
@@ -189,14 +173,8 @@ internal sealed class SlackApiClient(HttpClient http) : ISlackClient
         }
     }
 
-    private sealed class AuthTestResponse
+    private sealed class AuthTestResponse : ApiResponse
     {
-        [JsonPropertyName("ok")]
-        public bool Ok { get; set; }
-
-        [JsonPropertyName("error")]
-        public string? Error { get; set; }
-
         [JsonPropertyName("team_id")]
         public string? TeamId { get; set; }
 
