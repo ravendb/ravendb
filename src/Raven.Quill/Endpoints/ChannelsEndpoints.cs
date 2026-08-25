@@ -180,7 +180,7 @@ public static class ChannelsEndpoints
         if (TryValidateDisplayName(body.DisplayName, out var nameError) == false)
             return Results.BadRequest(new ApiErrorResponse(nameError!));
 
-        if (ChannelParameterBindings.TryResolve(config, body.Telegram.ParameterBindings, out var bindings, out var paramError) == false)
+        if (ChannelParameterBindings.TryResolve(config, ChannelType.Telegram, body.Telegram.ParameterBindings, out var bindings, out var paramError) == false)
             return Results.BadRequest(new ApiErrorResponse(paramError!, Code: "missing_parameters"));
 
         var botToken = body.Telegram.BotToken.Trim();
@@ -268,7 +268,7 @@ public static class ChannelsEndpoints
         if (TryValidateDisplayName(body.DisplayName, out var nameError) == false)
             return Results.BadRequest(new ApiErrorResponse(nameError!));
 
-        if (SlackParameterBindings.TryResolve(config, body.Slack.ParameterBindings, out var bindings, out var paramError) == false)
+        if (ChannelParameterBindings.TryResolve(config, ChannelType.Slack, body.Slack.ParameterBindings, out var bindings, out var paramError) == false)
             return Results.BadRequest(new ApiErrorResponse(paramError!, Code: "missing_parameters"));
 
         var (auth, authError, _) = await slackClient.AuthTestAsync(botToken, ct);
@@ -500,7 +500,7 @@ public static class ChannelsEndpoints
             if (config is null)
                 return Results.BadRequest(new ApiErrorResponse($"unknown agentId '{channel.AgentId}'"));
 
-            if (ChannelParameterBindings.TryResolve(config, suppliedBindings, out var bindings, out var paramError) == false)
+            if (ChannelParameterBindings.TryResolve(config, ChannelType.Telegram, suppliedBindings, out var bindings, out var paramError) == false)
                 return Results.BadRequest(new ApiErrorResponse(paramError!, Code: "missing_parameters"));
 
             channel.Telegram ??= new TelegramSettings();
@@ -604,7 +604,7 @@ public static class ChannelsEndpoints
             if (config is null)
                 return Results.BadRequest(new ApiErrorResponse($"unknown agentId '{channel.AgentId}'"));
 
-            if (SlackParameterBindings.TryResolve(config, suppliedBindings, out var bindings, out var paramError) == false)
+            if (ChannelParameterBindings.TryResolve(config, ChannelType.Slack, suppliedBindings, out var bindings, out var paramError) == false)
                 return Results.BadRequest(new ApiErrorResponse(paramError!, Code: "missing_parameters"));
 
             settings.ParameterBindings = bindings;
