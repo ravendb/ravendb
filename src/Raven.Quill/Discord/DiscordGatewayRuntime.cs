@@ -152,7 +152,7 @@ internal sealed class DiscordGatewayRuntime
 
         var hello = await ReceiveFrameAsync(socket, ct);
         if (hello is null)
-            return FatalReasonFor(socket.CloseStatus);
+            return OnClosed(socket.CloseStatus);
 
         if (hello.Op != DiscordGatewayOpcode.Hello)
             return null;
@@ -173,7 +173,7 @@ internal sealed class DiscordGatewayRuntime
             {
                 var frame = await ReceiveFrameAsync(socket, ct);
                 if (frame is null)
-                    return FatalReasonFor(socket.CloseStatus);
+                    return OnClosed(socket.CloseStatus);
 
                 switch (frame.Op)
                 {
@@ -393,6 +393,14 @@ internal sealed class DiscordGatewayRuntime
         op = DiscordGatewayOpcode.Resume,
         d = new { token = _botToken, session_id = _sessionId, seq = Interlocked.Read(ref _seq) },
     };
+
+    private string? OnClosed(WebSocketCloseStatus? status)
+    {
+        if ((int?)status is 4007 or 4009)
+            ForgetSession();
+
+        return FatalReasonFor(status);
+    }
 
     private void ForgetSession()
     {

@@ -70,6 +70,8 @@ public sealed class MockDiscordApi : IAsyncDisposable
 
     public int? CloseAfterIdentify { get; set; }
 
+    public int? CloseAfterResume { get; set; }
+
     public int HeartbeatIntervalMs { get; set; } = 30_000;
 
     private MockDiscordApi(WebApplication app, string baseAddress, string gatewayUrl)
@@ -141,6 +143,7 @@ public sealed class MockDiscordApi : IAsyncDisposable
         InvalidateResume = false;
         CloseOnConnect = null;
         CloseAfterIdentify = null;
+        CloseAfterResume = null;
         HeartbeatIntervalMs = 30_000;
     }
 
@@ -354,6 +357,12 @@ public sealed class MockDiscordApi : IAsyncDisposable
 
             lock (_lock)
                 _resumes.Add(new ResumeCall(token, resumedSession, seq));
+
+            if (CloseAfterResume is { } forcedAfterResume)
+            {
+                await CloseAsync(session, forcedAfterResume);
+                return;
+            }
 
             if (InvalidateResume)
             {
