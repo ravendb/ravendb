@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Raven.Client;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Sparrow.Json;
@@ -10,12 +10,12 @@ public sealed class ShardedAutoMapReduceIndexResultsAggregatorForIndexEntries : 
 {
     private string _reduceKeyHash;
 
-    internal override void HandleProperty(AutoMapReduceIndexDefinition indexDefinition, string propertyName, BlittableJsonReaderObject json, Dictionary<string, PropertyResult> aggregatedResult)
+    internal override void HandleProperty(AutoMapReduceIndexDefinition indexDefinition, in BlittableJsonReaderObject.PropertyDetails prop, BlittableJsonReaderObject json, Dictionary<string, PropertyResult> aggregatedResult)
     {
-        if (_reduceKeyHash == null && propertyName == Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName)
-            json.TryGet(propertyName, out _reduceKeyHash);
+        if (_reduceKeyHash == null && prop.Name == Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName)
+            BlittableJsonReaderObject.ConvertType(prop.Value, out _reduceKeyHash);
 
-        base.HandleProperty(indexDefinition, propertyName, json, aggregatedResult);
+        base.HandleProperty(indexDefinition, in prop, json, aggregatedResult);
     }
 
     internal override DynamicJsonValue BuildResult(KeyValuePair<BlittableJsonReaderObject, Dictionary<string, PropertyResult>> aggregationResult)

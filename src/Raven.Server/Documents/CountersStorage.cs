@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -1582,8 +1582,9 @@ namespace Raven.Server.Documents
                 for (var i = 0; i < names.Count; i++)
                 {
                     names.GetPropertyByIndex(i, ref prop);
-                    if (counterValues.TryGet(prop.Name, out object existing) == false ||
-                        existing is LazyStringValue) // skip names of 'dead' counters
+                    var valueIndex = counterValues.GetPropertyIndex(prop.Name);
+                    if (valueIndex == -1 ||
+                        counterValues.GetValueByIndex(valueIndex) is LazyStringValue) // skip names of 'dead' counters
                         continue;
                     var originalName = GetLazyStringCounterName(prop.Name, prop.Value);
                     all.Add(originalName);

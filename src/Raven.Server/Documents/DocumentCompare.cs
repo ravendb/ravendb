@@ -123,17 +123,17 @@ namespace Raven.Server.Documents
         
         private static bool IsSignificantMetadataProperty(ReadOnlySpan<byte> property, in DocumentCompareOptions options)
         {
-            if ("@collection"u8.IsEqualConstant(property) ||
-                "@expires"u8.IsEqualConstant(property) ||
-                "@refresh"u8.IsEqualConstant(property))
+            if (Constants.Documents.Metadata.CollectionAsSpan.IsEqualConstant(property) ||
+                Constants.Documents.Metadata.ExpiresAsSpan.IsEqualConstant(property) ||
+                Constants.Documents.Metadata.RefreshAsSpan.IsEqualConstant(property))
             {
                 return true;
             }
 
             // Archival properties are significant only when the option is enabled
             if (options.CompareDataArchivalMetadata &&
-                ("@archive-at"u8.IsEqualConstant(property) ||
-                 "@archived"u8.IsEqualConstant(property)))
+                (Constants.Documents.Metadata.ArchiveAtAsSpan.IsEqualConstant(property) ||
+                 Constants.Documents.Metadata.ArchivedAsSpan.IsEqualConstant(property)))
             {
                 return true;
             }
@@ -175,7 +175,7 @@ namespace Raven.Server.Documents
                     {
                         if (isMetadata)
                         {
-                            if ("@attachments"u8.IsEqualConstant(property))
+                            if (Constants.Documents.Metadata.AttachmentsAsSpan.IsEqualConstant(property))
                             {
                                 if (options.TryMergeMetadataConflicts)
                                 {
@@ -197,7 +197,7 @@ namespace Raven.Server.Documents
                                     return DocumentCompareResult.NotEqual;
                                 }
                             }
-                            else if ("@counters"u8.IsEqualConstant(property))
+                            else if (Constants.Documents.Metadata.CountersAsSpan.IsEqualConstant(property))
                             {
                                 if (options.TryMergeMetadataConflicts)
                                 {
@@ -212,7 +212,7 @@ namespace Raven.Server.Documents
                                     continue;
                                 }
                             }
-                            else if ("@timeseries"u8.IsEqualConstant(property))
+                            else if (Constants.Documents.Metadata.TimeSeriesAsSpan.IsEqualConstant(property))
                             {
                                 if (options.TryMergeMetadataConflicts)
                                 {
@@ -230,7 +230,7 @@ namespace Raven.Server.Documents
                             else if (IsSignificantMetadataProperty(property, options) == false)
                                 continue;
                         }
-                        else if ("@metadata"u8.IsEqualConstant(property))
+                        else if (Constants.Documents.Metadata.KeyAsSpan.IsEqualConstant(property))
                         {
                             continue;
                         }

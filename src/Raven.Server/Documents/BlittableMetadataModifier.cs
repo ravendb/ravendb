@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.CompilerServices;
+using Raven.Client;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Utils;
 using Sparrow;
@@ -176,7 +177,7 @@ namespace Raven.Server.Documents
 
                 if (_readingMetadataObject == false)
                 {
-                    if ("@metadata"u8.IsEqualConstant(state.StringBuffer, state.StringSize) == true)
+                    if (Constants.Documents.Metadata.KeyAsSpan.IsEqualConstant(state.StringBuffer, state.StringSize) == true)
                         _readingMetadataObject = true;
 
                     return true;
@@ -230,7 +231,7 @@ namespace Raven.Server.Documents
 
                 case 3: // @id
 
-                    if ("@id"u8.IsEqualConstant(state.StringBuffer) == false)
+                    if (Constants.Documents.Metadata.IdAsSpan.IsEqualConstant(state.StringBuffer) == false)
                     {
                         aboutToReadPropertyName = true;
                         return true;
@@ -248,7 +249,7 @@ namespace Raven.Server.Documents
                     break;
 
                 case 5: // @etag
-                    if ("@etag"u8.IsEqualConstant(state.StringBuffer) == false)
+                    if (Constants.Documents.Metadata.EtagAsSpan.IsEqualConstant(state.StringBuffer) == false)
                     {
                         aboutToReadPropertyName = true;
                         return true;
@@ -292,7 +293,7 @@ namespace Raven.Server.Documents
 
                     goto case -1;
                 case 6: // @flags
-                    if ("@flags"u8.IsEqualConstant(state.StringBuffer) == false)
+                    if (Constants.Documents.Metadata.FlagsAsSpan.IsEqualConstant(state.StringBuffer) == false)
                     {
                         aboutToReadPropertyName = true;
                         return true;
@@ -313,7 +314,7 @@ namespace Raven.Server.Documents
                     // always remove the @counters metadata
                     // not doing so might cause us to have counter on the document but not in the storage.
                     // the counters will be updated when we import the counters themselves
-                    if ("@counters"u8.IsEqualConstant(state.StringBuffer) == false)
+                    if (Constants.Documents.Metadata.CountersAsSpan.IsEqualConstant(state.StringBuffer) == false)
                     {
                         aboutToReadPropertyName = true;
                         return true;
@@ -331,7 +332,7 @@ namespace Raven.Server.Documents
                     goto case -2;
                 case 11: // @timeseries
                     // always remove the @timeseries metadata
-                    if ("@timeseries"u8.IsEqualConstant(state.StringBuffer) == false)
+                    if (Constants.Documents.Metadata.TimeSeriesAsSpan.IsEqualConstant(state.StringBuffer) == false)
                     {
                         aboutToReadPropertyName = true;
                         return true;
@@ -353,11 +354,11 @@ namespace Raven.Server.Documents
                 case 12: // @index-score OR @attachments
                     if (state.StringBuffer[0] == (byte)'@')
                     {   // @index-score
-                        if ("@index-score"u8.IsEqualConstant(state.StringBuffer))
+                        if (Constants.Documents.Metadata.IndexScoreAsSpan.IsEqualConstant(state.StringBuffer))
                             goto case -1;
 
                         // @attachments
-                        if ("@attachments"u8.IsEqualConstant(state.StringBuffer))
+                        if (Constants.Documents.Metadata.AttachmentsAsSpan.IsEqualConstant(state.StringBuffer))
                         {
                             SeenAttachments = true;
                             if (OperateOnTypes.HasFlag(DatabaseItemType.Attachments) == false)
@@ -390,7 +391,7 @@ namespace Raven.Server.Documents
                     if (state.StringBuffer[0] == (byte)'@')
                     {
                         // @change-vector
-                        if ("@change-vector"u8.IsEqualConstant(state.StringBuffer))
+                        if (Constants.Documents.Metadata.ChangeVectorAsSpan.IsEqualConstant(state.StringBuffer))
                         {
                             if (reader.Read() == false)
                             {
@@ -409,7 +410,7 @@ namespace Raven.Server.Documents
                         }
 
                         // @last-modified
-                        if ("@last-modified"u8.IsEqualConstant(state.StringBuffer))
+                        if (Constants.Documents.Metadata.LastModifiedAsSpan.IsEqualConstant(state.StringBuffer))
                         {
                             if (reader.Read() == false)
                             {

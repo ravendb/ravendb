@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Raven.Client.Exceptions;
 using Raven.Server.ServerWide.Context;
@@ -74,12 +74,13 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
         {
             var dic = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-            foreach (var key in trackedEntities.GetPropertyNames())
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+            for (int i = 0; i < trackedEntities.Count; i++)
             {
-                if (trackedEntities.TryGet(key, out string value) == false)
-                    continue;
+                trackedEntities.GetPropertyByIndex(i, ref prop);
+                BlittableJsonReaderObject.ConvertType(prop.Value, out string value);
 
-                dic[key] = value;
+                dic[prop.Name] = value;
             }
 
             return dic;
