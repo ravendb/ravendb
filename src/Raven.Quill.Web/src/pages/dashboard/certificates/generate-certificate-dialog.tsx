@@ -95,7 +95,7 @@ function GenerateCertificateForm({ apps, onGenerated }: { apps: AppResponse[]; o
             name: "",
             password: "",
             clearance: "ValidUser",
-            permissions: [{ database: "", access: "Read" }],
+            permissions: [{ database: "", access: "ReadWrite" }],
         },
     });
     const permissionRows = useFieldArray({ control: form.control, name: "permissions" });
@@ -174,7 +174,7 @@ function GenerateCertificateForm({ apps, onGenerated }: { apps: AppResponse[]; o
                         variant="outline"
                         size="sm"
                         className="w-fit"
-                        onClick={() => permissionRows.append({ database: "", access: "Read" })}
+                        onClick={() => permissionRows.append({ database: "", access: "ReadWrite" })}
                     >
                         <Plus className="size-3.5" aria-hidden="true" />
                         Add access
