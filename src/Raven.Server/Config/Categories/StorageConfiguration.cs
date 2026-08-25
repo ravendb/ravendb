@@ -168,8 +168,8 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Storage.JournalsCompressionAcceleration", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int JournalsCompressionAcceleration { get; set; }
 
-        [Description("Compression algorithm for journal transactions. Zstd compresses better at a comparable cost, which pays on bandwidth-capped volumes.")]
-        [DefaultValue(JournalCompressionAlgorithm.Lz4)]
+        [Description("Compression algorithm for journal transactions. Auto picks Zstd on a bandwidth-capped volume, where its better ratio buys back device budget, and Lz4 on a measured-fast device, where CPU is the constraint.")]
+        [DefaultValue(JournalCompressionAlgorithm.Auto)]
         [ConfigurationEntry("Storage.JournalsCompressionAlgorithm", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public JournalCompressionAlgorithm JournalsCompressionAlgorithm { get; set; }
 
