@@ -1,7 +1,11 @@
 import type { AppCdcConfigurationResponse, ApplianceAppResponse } from "@/api/generated/server-api";
 import { type AppFormData, tablesSchema } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { collectConfigSchemas } from "@/pages/setup/add-app-wizard/config-io";
-import { DEFAULT_PORT_BY_PROVIDER, parseConnectionString } from "@/pages/setup/add-app-wizard/connection-string";
+import {
+    DEFAULT_PORT_BY_PROVIDER,
+    type Provider,
+    parseConnectionString,
+} from "@/pages/setup/add-app-wizard/connection-string";
 import { resolveProviderFromSourceType } from "@/pages/setup/add-app-wizard/steps/connect/connect-source-options";
 import { wrapDtoTablesToFormShape } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-dto";
 import { getSourceTableLabel } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
@@ -63,7 +67,6 @@ export function buildEditAppSeed(
     };
 }
 
-type Provider = AppFormData["externalConnection"]["provider"];
 type ConnectionSeed = Pick<AppFormData["externalConnection"], "mode" | "fields" | "connectionString">;
 
 /** Mirrors the config import: parsed fields when the stored string parses cleanly, the raw string

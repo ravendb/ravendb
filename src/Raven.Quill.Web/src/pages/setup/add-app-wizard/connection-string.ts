@@ -1,7 +1,8 @@
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 
 type ExternalConnection = AppFormData["externalConnection"];
-type Provider = ExternalConnection["provider"];
+/** The chosen source database. The form's provider field also allows "" while unselected. */
+export type Provider = Exclude<ExternalConnection["provider"], "">;
 
 export type SslMode = ExternalConnection["fields"]["ssl"];
 
@@ -50,7 +51,12 @@ const SSL_BY_PROVIDER: Record<Provider, { keyword: string; require: string; disa
     MySqlConnectorFactory: { keyword: "SslMode", require: "Required", disable: "None" },
 };
 
-export function buildConnectionString(provider: Provider, values: ConnectionValues): string {
+export function buildConnectionString(provider: Provider | "", values: ConnectionValues): string {
+    // No provider chosen yet - there is no dialect to build a string in.
+    if (provider === "") {
+        return "";
+    }
+
     const keywords = KEYWORDS_BY_PROVIDER[provider];
     const host = values.host.trim();
     const hostValue = provider === "SqlClient" && values.port != null ? `${host},${values.port}` : host;

@@ -1,9 +1,6 @@
 import type { ReactNode } from "react";
-import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
-import { DEFAULT_PROVIDER } from "@/pages/setup/add-app-wizard/connection-string";
+import { DEFAULT_PROVIDER, type Provider } from "@/pages/setup/add-app-wizard/connection-string";
 import { MySqlIcon, PostgreSqlIcon, SqlServerIcon } from "@/pages/setup/add-app-wizard/steps/connect/provider-icons";
-
-type Provider = AppFormData["externalConnection"]["provider"];
 
 type ProviderOption = {
     value: Provider;
@@ -15,17 +12,17 @@ export const PROVIDER_OPTIONS: ProviderOption[] = [
     {
         value: "Npgsql",
         label: "PostgreSQL",
-        icon: <PostgreSqlIcon className="size-8" />,
+        icon: <PostgreSqlIcon className="size-5 shrink-0" />,
     },
     {
         value: "SqlClient",
         label: "SQL Server",
-        icon: <SqlServerIcon className="size-8" />,
+        icon: <SqlServerIcon className="size-5 shrink-0" />,
     },
     {
         value: "MySqlConnectorFactory",
         label: "MySQL",
-        icon: <MySqlIcon className="size-8" />,
+        icon: <MySqlIcon className="size-5 shrink-0" />,
     },
 ];
 

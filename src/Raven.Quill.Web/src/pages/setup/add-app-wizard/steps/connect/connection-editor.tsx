@@ -4,10 +4,8 @@ import { FormTextarea } from "@/components/form/form-textarea";
 import { FormToggleGroup, type FormToggleGroupOption } from "@/components/form/form-toggle-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/shadcn/ui/tabs";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
-import { DEFAULT_PORT_BY_PROVIDER, type SslMode } from "@/pages/setup/add-app-wizard/connection-string";
+import { DEFAULT_PORT_BY_PROVIDER, type Provider, type SslMode } from "@/pages/setup/add-app-wizard/connection-string";
 import { useConnectionSync } from "@/pages/setup/add-app-wizard/steps/connect/use-connection-sync";
-
-type Provider = AppFormData["externalConnection"]["provider"];
 
 const CONNECTION_STRING_PLACEHOLDER_BY_PROVIDER: Record<Provider, string> = {
     Npgsql: "Host=localhost;Port=5432;Database=my_db;Username=admin;Password=pass",
@@ -71,7 +69,7 @@ function ConnectionFieldsEditor({ isDisabled }: { isDisabled: boolean }) {
                     name="externalConnection.fields.port"
                     label="Port"
                     type="number"
-                    placeholder={String(DEFAULT_PORT_BY_PROVIDER[provider])}
+                    placeholder={provider ? String(DEFAULT_PORT_BY_PROVIDER[provider]) : undefined}
                     disabled={isDisabled}
                 />
             </div>
@@ -104,7 +102,7 @@ function ConnectionFieldsEditor({ isDisabled }: { isDisabled: boolean }) {
                 label="SSL/TLS"
                 options={SSL_OPTIONS}
                 canDeselect={false}
-                description={SSL_DEFAULT_DESCRIPTION_BY_PROVIDER[provider]}
+                description={provider ? SSL_DEFAULT_DESCRIPTION_BY_PROVIDER[provider] : undefined}
                 disabled={isDisabled}
             />
         </>
@@ -121,7 +119,7 @@ function ConnectionStringEditor({ isDisabled }: { isDisabled: boolean }) {
             name="externalConnection.connectionString"
             label="Connection string"
             labelClassName="sr-only"
-            placeholder={CONNECTION_STRING_PLACEHOLDER_BY_PROVIDER[provider]}
+            placeholder={provider ? CONNECTION_STRING_PLACEHOLDER_BY_PROVIDER[provider] : undefined}
             textareaClassName="font-mono text-xs"
             description="Switching to the connection details reads them from this string and keeps only the settings they can show."
             disabled={isDisabled}

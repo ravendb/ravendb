@@ -92,7 +92,7 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
                                 }
                                 disabled={isBusy}
                                 className={cn(
-                                    "flex min-h-28 flex-col items-center justify-center gap-3 rounded-lg border bg-background p-4 transition-colors",
+                                    "flex items-center gap-3 rounded-lg border bg-background px-4 py-3 transition-colors",
                                     isSelected && SELECTED_CARD_CLASSES,
                                     !isSelected && !isBusy && "hover:bg-accent hover:text-accent-foreground",
                                     isBusy && "cursor-not-allowed opacity-55",
