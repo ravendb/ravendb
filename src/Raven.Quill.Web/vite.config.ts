@@ -5,6 +5,8 @@ import babel from "@rolldown/plugin-babel";
 import tailwindcss from "@tailwindcss/vite";
 import svgr from "vite-plugin-svgr";
 
+const EMPTY_MODULE = path.resolve(__dirname, "./scripts/empty-module.js");
+
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, process.cwd(), "");
@@ -15,6 +17,14 @@ export default defineConfig(({ mode }) => {
         resolve: {
             alias: {
                 "@": path.resolve(__dirname, "./src"),
+                // The widget theme editor parses custom CSS with postcss, which reaches for these four
+                // only in its source map handling - dead weight for parsing a string. postcss drops them
+                // through its own `browser` field, but the dev dependency optimizer ignores that field and
+                // prebundles shims that warn on every property access.
+                fs: EMPTY_MODULE,
+                path: EMPTY_MODULE,
+                url: EMPTY_MODULE,
+                "source-map-js": EMPTY_MODULE,
             },
         },
         server: {
