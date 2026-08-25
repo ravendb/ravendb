@@ -7,7 +7,7 @@ import { EnabledStatus } from "@/components/data/status-indicator";
 import { Button } from "@/components/shadcn/ui/button";
 import { Skeleton } from "@/components/shadcn/ui/skeleton";
 import { TableCell, TableRow } from "@/components/shadcn/ui/table";
-import { TableSkeleton } from "@/components/table/table-skeleton";
+import { SectionTable, SectionTableSkeleton } from "@/components/table/section-table";
 import { appRoutes } from "@/lib/app-routes";
 import { CHANNEL_TYPE_LABELS } from "@/lib/channel-type-labels";
 import { formatDateTime } from "@/lib/utils";
@@ -15,7 +15,7 @@ import { AddChannelMenu } from "@/pages/apps/channels/add-channel-menu";
 import type { FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
 import { GenerateEmbedLinkDialog } from "@/pages/apps/channels/generate-embed-link-dialog";
 import { DeleteChannelDialog } from "@/pages/apps/channels/delete-channel-dialog";
-import { SectionCard, SectionTable } from "@/pages/apps/section-card";
+import { SectionCard } from "@/pages/apps/section-card";
 
 // When `agent` is set the section is scoped to that single agent: only its channels are listed,
 // the agent name column is dropped, and new channels are routed to it (e.g. the capability wizard).
@@ -65,7 +65,7 @@ export function ChannelsSection({ slug, agent: fixedAgent }: { slug: string; age
                 errorTitle="Could not load channels"
                 onRetry={onRetry}
                 loadingLabel="Loading channels..."
-                skeleton={<TableSkeleton headers={headers} />}
+                skeleton={<SectionTableSkeleton headers={headers} />}
             >
                 {channels && (
                     <SectionTable headers={headers} isEmpty={channels.length === 0} emptyMessage="No channels yet.">

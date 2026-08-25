@@ -5,12 +5,9 @@ import type { ConversationDto } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
 import { DatePeriodPicker } from "@/components/data/date-period-picker";
 import { TablePagination } from "@/components/table/table-pagination";
-import { getColumnHeaderLabels } from "@/components/table/column-headers";
-import { TableSkeleton } from "@/components/table/table-skeleton";
 import type { DatePeriod } from "@/lib/date-period";
 import { StatCardsSection, type DashboardStatCard } from "@/pages/dashboard/dashboard-stat-cards";
-import { ConversationsTable } from "@/pages/apps/conversations/conversations-table";
-import { createConversationColumns } from "@/pages/apps/conversations/conversations-columns";
+import { ConversationsTable, ConversationsTableSkeleton } from "@/pages/apps/conversations/conversations-table";
 import {
     ConversationsToolbar,
     type FilterOption,
@@ -94,7 +91,7 @@ export function ConversationsSection({ slug, period }: ConversationsSectionProps
                 errorTitle="Could not load conversations"
                 onRetry={() => void conversationsQuery.refetch()}
                 loadingLabel="Loading conversations..."
-                skeleton={<TableSkeleton headers={getColumnHeaderLabels(createConversationColumns(slug))} rows={5} />}
+                skeleton={<ConversationsTableSkeleton slug={slug} />}
             >
                 {conversationsQuery.data && (
                     <div className="space-y-4">
