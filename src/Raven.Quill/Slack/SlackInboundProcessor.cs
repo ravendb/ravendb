@@ -87,7 +87,7 @@ internal sealed class SlackInboundProcessor(
                     .Unwrap();
                 chain.Tail = next;
 
-                next.ContinueWith(_ => OnTurnCompleted(chainKey, next), TaskScheduler.Default);
+                next.ContinueWith(_ => OnTurnCompleted(chainKey, chain), TaskScheduler.Default);
             }
         }
 
@@ -95,17 +95,16 @@ internal sealed class SlackInboundProcessor(
             _ = SendOverloadNoticeAsync(database, channelId, dmChannel);
     }
 
-    private void OnTurnCompleted(string chainKey, Task completed)
+    private void OnTurnCompleted(string chainKey, SenderChain chain)
     {
         lock (_chainsLock)
         {
-            if (_senderChains.TryGetValue(chainKey, out var chain) == false)
+            chain.Pending--;
+            if (chain.Pending > 0)
                 return;
 
-            chain.Pending--;
-            if (chain.Pending == 0)
-                chain.OverloadNotified = false;
-            if (chain.Tail == completed)
+            chain.OverloadNotified = false;
+            if (_senderChains.TryGetValue(chainKey, out var current) && current == chain)
                 _senderChains.Remove(chainKey);
         }
     }
