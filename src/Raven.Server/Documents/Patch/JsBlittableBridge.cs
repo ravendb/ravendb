@@ -15,6 +15,7 @@ using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Extensions;
 using Sparrow;
+using Sparrow.Binary;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -428,6 +429,7 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
+        [SkipLocalsInit]
         private unsafe void WriteBlittableInstance(BlittableObjectInstance obj, bool isRoot, bool filterProperties)
         {
             if (obj.DocumentId != null &&
@@ -445,6 +447,8 @@ namespace Raven.Server.Documents.Patch
                     ? obj.Deletes.GetAlternateLookup<ReadOnlySpan<char>>()
                     : default;
 
+                Span<char> propNameBuffer = stackalloc char[256];
+
                 using var propertiesByInsertionOrder = obj.Blittable.GetPropertiesByInsertionOrder();
                 for (int i = 0; i < propertiesByInsertionOrder.Size; i++)
                 {
@@ -452,18 +456,23 @@ namespace Raven.Server.Documents.Patch
                     var propIndex = propertiesByInsertionOrder.Properties[i];
                     obj.Blittable.GetPropertyByIndex(propIndex, ref prop);
 
-                    
+
                     BlittableObjectInstance.BlittableObjectProperty modifiedValue = default;
                     string key = null;
-                    bool existInObject, skipProperty;
-                    using (var propNameScope = prop.Name.AsTempCharSpan(out var output)) // decode once
+                    if (prop.Name.TryAsCharSpan(propNameBuffer, out var propName, out int reqSize) == false)
                     {
-                        existInObject = obj.OwnValues is not null &&
-                                        ownValuesLookup.TryGetValue(output, out key, out modifiedValue);
-
-                        skipProperty = (existInObject == false && obj.Deletes is not null && deletesLookup.Contains(output)) ||
-                                       ShouldFilterProperty(filterProperties, output);
+                        // the name is longer than the buffer we have, grow it - the bigger buffer is
+                        // then reused for the rest of the properties on this object
+                        propNameBuffer = new char[Bits.PowerOf2(reqSize)];
+                        if(prop.Name.TryAsCharSpan(propNameBuffer, out propName, out reqSize) is false) // should always work
+                            throw new InvalidOperationException($"Failed to get property name '{prop.Name}' as char span, size {reqSize} does not fit into {propNameBuffer.Length} after extension.");
                     }
+
+                    var existInObject = obj.OwnValues is not null &&
+                                        ownValuesLookup.TryGetValue(propName, out key, out modifiedValue);
+
+                    var skipProperty = (existInObject == false && obj.Deletes is not null && deletesLookup.Contains(propName)) ||
+                                       ShouldFilterProperty(filterProperties, propName);
 
                     if (skipProperty)
                         continue;
