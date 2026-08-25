@@ -1028,6 +1028,15 @@ namespace Sparrow.Json
             private readonly JsonOperationContext _context;
             private AllocatedMemoryData _allocation;
 
+            public ReadOnlySpan<int> PropertiesSpan => new(Properties, Size);
+
+            public int GetPropertyIdByInsertionOrder(int index)
+            {
+                Debug.Assert(index >= 0 && index < Size, "index is out of range");
+
+                return Properties[index];
+            }
+
             public InsertionOrderProperties(JsonOperationContext context, int size)
             {
                 _context = context;

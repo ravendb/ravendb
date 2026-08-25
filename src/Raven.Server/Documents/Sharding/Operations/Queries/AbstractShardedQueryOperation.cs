@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
@@ -126,20 +126,23 @@ public abstract class AbstractShardedQueryOperation<TCombinedResult, TResult, TI
 
     public static void HandleDocumentIncludesInternal(BlittableJsonReaderObject includes, JsonOperationContext context, QueryResult<List<TResult>, List<TIncludes>> result, ref HashSet<string> missingDocumentIncludes)
     {
-        foreach (var id in includes.GetPropertyNames())
+        var prop = new BlittableJsonReaderObject.PropertyDetails();
+        for (int i = 0; i < includes.Count; i++)
         {
-            if (includes.TryGet(id, out BlittableJsonReaderObject include) && include != null)
+            includes.GetPropertyByIndex(i, ref prop);
+
+            if (prop.Value is BlittableJsonReaderObject include)
             {
                 if (result.Includes is List<BlittableJsonReaderObject> blittableIncludes)
                     blittableIncludes.Add(include.Clone(context));
                 else if (result.Includes is List<Document> documentIncludes)
-                    documentIncludes.Add(new Document { Id = context.GetLazyString(id), Data = include.Clone(context), ChangeVector = include.GetMetadata().GetChangeVector() });
+                    documentIncludes.Add(new Document { Id = prop.Name.Clone(context), Data = include.Clone(context), ChangeVector = include.GetMetadata().GetChangeVector() });
                 else
                     throw new NotSupportedException($"Unknown includes type: {result.Includes.GetType().FullName}");
             }
             else
             {
-                (missingDocumentIncludes ??= new HashSet<string>()).Add(id);
+                (missingDocumentIncludes ??= new HashSet<string>()).Add(prop.Name);
             }
         }
     }
