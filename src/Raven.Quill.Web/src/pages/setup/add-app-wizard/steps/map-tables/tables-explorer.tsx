@@ -9,6 +9,7 @@ import { ChevronsDownUp, ChevronsUpDown, Plus } from "lucide-react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { Button } from "@/components/shadcn/ui/button";
 import { Input } from "@/components/shadcn/ui/input";
+import { Text } from "@/components/typography";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { buildExplorerRows } from "@/pages/setup/add-app-wizard/steps/map-tables/build-explorer-rows";
@@ -39,7 +40,9 @@ export function TablesExplorer() {
     return (
         <div className="flex h-full min-h-0 flex-col gap-2 p-2">
             <div className="flex items-center gap-0.5">
-                <div className="mr-auto px-1 text-sm font-medium">Tables</div>
+                <Text variant="label" as="div" className="mr-auto px-1">
+                    Tables
+                </Text>
                 <Button
                     variant="ghost"
                     size="icon"
@@ -164,5 +167,9 @@ function getActiveSchemaLabel(rows: ExplorerRow[], firstVisibleIndex: number): s
 }
 
 function EmptyExplorerMessage({ children }: { children: React.ReactNode }) {
-    return <div className="px-2 py-6 text-center text-sm text-muted-foreground">{children}</div>;
+    return (
+        <Text variant="muted" as="div" className="px-2 py-6 text-center">
+            {children}
+        </Text>
+    );
 }

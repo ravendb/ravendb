@@ -141,7 +141,9 @@ function EditCertificateForm({
 
             {clearance === "ValidUser" && (
                 <div className="grid gap-3">
-                    <div className="text-sm font-medium">App access</div>
+                    <Text as="div" variant="label">
+                        App access
+                    </Text>
                     {permissionRows.fields.length === 0 && (
                         <Text variant="muted">No access granted — this certificate cannot reach any app.</Text>
                     )}

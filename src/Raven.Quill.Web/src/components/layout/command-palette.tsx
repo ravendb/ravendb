@@ -16,6 +16,7 @@ import {
 import { appNavigationSections, navigationItems } from "@/routes";
 import { appRoutes } from "@/lib/app-routes";
 import { THEME_OPTIONS } from "@/lib/theme-options";
+import { Text } from "@/components/typography";
 
 const IS_MAC = typeof navigator !== "undefined" && navigator.platform.toUpperCase().includes("MAC");
 const DOCS_URL = "https://docs.ravendb.net/quill";
@@ -96,7 +97,9 @@ export function CommandPalette({ slug, appName }: CommandPaletteProps) {
                                     >
                                         <AppWindow aria-hidden="true" />
                                         <span>{app.name}</span>
-                                        <span className="text-xs text-muted-foreground">{app.slug}</span>
+                                        <Text variant="caption" as="span">
+                                            {app.slug}
+                                        </Text>
                                     </CommandItem>
                                 ))}
                             </CommandGroup>
@@ -132,11 +135,11 @@ export function CommandPalette({ slug, appName }: CommandPaletteProps) {
                             ))}
                         </CommandGroup>
                     </CommandList>
-                    <div className="-mx-1 -mb-1 flex items-center gap-3 border-t px-3 py-2 text-xs text-muted-foreground">
+                    <Text variant="caption" as="div" className="-mx-1 -mb-1 flex items-center gap-3 border-t px-3 py-2">
                         <FooterHint keys="↑↓" label="navigate" />
                         <FooterHint keys="↵" label="select" />
                         <FooterHint keys="esc" label="close" />
-                    </div>
+                    </Text>
                 </Command>
             </CommandDialog>
         </>

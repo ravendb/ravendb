@@ -8,6 +8,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } f
 import { Skeleton } from "@/components/shadcn/ui/skeleton";
 import { formatCompact } from "@/lib/format";
 import { SectionCard } from "@/pages/apps/section-card";
+import { Text } from "@/components/typography";
 
 export type DashboardStatCard = {
     label: string;
@@ -55,10 +56,10 @@ function StatCard({ card }: { card: DashboardStatCard }) {
         <Card className="gap-3">
             <CardContent className="space-y-1">
                 <div className="flex items-center justify-between gap-2">
-                    <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <Text as="span" variant="muted" className="flex items-center gap-1">
                         {card.label}
                         {card.labelInfo && <InfoHint content={card.labelInfo} />}
-                    </span>
+                    </Text>
                     {card.delta !== undefined && card.delta !== 0 && !card.isLoading && (
                         <DeltaBadge delta={card.delta} />
                     )}
@@ -68,7 +69,11 @@ function StatCard({ card }: { card: DashboardStatCard }) {
                 ) : (
                     <div className="text-3xl font-semibold tracking-tight tabular-nums">{valueLabel}</div>
                 )}
-                {card.caption && <div className="text-xs text-muted-foreground">{card.caption}</div>}
+                {card.caption && (
+                    <Text as="div" variant="caption">
+                        {card.caption}
+                    </Text>
+                )}
             </CardContent>
             {card.series && card.series.length > 1 && (
                 <Sparkline series={card.series} dates={card.seriesDates} label={card.label} />

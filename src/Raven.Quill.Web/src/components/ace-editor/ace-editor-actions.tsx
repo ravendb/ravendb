@@ -5,6 +5,7 @@ import { Button } from "@/components/shadcn/ui/button";
 import { handleAutoResizeHeight, handleFormat } from "@/components/ace-editor/ace-editor-action-utils";
 import { useAceEditorContext } from "@/components/ace-editor/ace-editor-context";
 import { cn } from "@/lib/utils";
+import { Text } from "@/components/typography";
 
 type IconButtonProps = {
     children: ReactNode;
@@ -148,7 +149,9 @@ export function AceEditorHelpAction({
                             </Button>
                         </Dialog.Close>
                     </div>
-                    <div className="text-sm text-muted-foreground">{message}</div>
+                    <Text variant="muted" as="div">
+                        {message}
+                    </Text>
                 </Dialog.Content>
             </Dialog.Portal>
         </Dialog.Root>

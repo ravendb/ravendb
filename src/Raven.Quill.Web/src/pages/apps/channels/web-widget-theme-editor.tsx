@@ -396,7 +396,9 @@ export function WebWidgetThemeEditor({
 
                 <div className="grid gap-3 xl:sticky xl:top-14">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="text-sm font-medium">Live preview</span>
+                        <Text as="span" variant="label">
+                            Live preview
+                        </Text>
                         <div className="flex flex-wrap items-center gap-3">
                             <ToggleGroup
                                 type="single"

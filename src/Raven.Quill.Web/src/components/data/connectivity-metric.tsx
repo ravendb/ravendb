@@ -11,8 +11,10 @@ export function ConnectivityMetric({ connectivity }: { connectivity: Connectivit
     return (
         <div className="space-y-2">
             <div className="space-y-1">
-                <div className="text-xs text-muted-foreground">Connectivity</div>
-                <div className="flex items-center gap-2 text-sm font-medium">
+                <Text variant="caption" as="div">
+                    Connectivity
+                </Text>
+                <Text variant="label" as="div" className="flex items-center gap-2">
                     <span
                         className={cn(
                             "size-2 rounded-full",
@@ -21,7 +23,7 @@ export function ConnectivityMetric({ connectivity }: { connectivity: Connectivit
                         aria-hidden="true"
                     />
                     {connectivity.statusCode}
-                </div>
+                </Text>
             </div>
             {connectivity.exception && (
                 <Text variant="muted" className="break-words">

@@ -63,8 +63,12 @@ function CdcErrorCard({ error }: { error: CdcError }) {
     return (
         <div className="space-y-2 rounded-lg border p-3">
             <div className="flex items-center justify-between gap-2">
-                <span className="text-sm font-medium">{error.taskName}</span>
-                <span className="text-xs text-muted-foreground">{formatDateTime(error.createdAt)}</span>
+                <Text as="span" variant="label">
+                    {error.taskName}
+                </Text>
+                <Text as="span" variant="caption">
+                    {formatDateTime(error.createdAt)}
+                </Text>
             </div>
             <Badge variant="secondary">{error.step}</Badge>
             {shortMessage && <p className="text-sm break-words whitespace-pre-wrap text-destructive">{shortMessage}</p>}

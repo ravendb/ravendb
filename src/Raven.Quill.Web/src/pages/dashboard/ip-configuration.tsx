@@ -77,16 +77,22 @@ export function DashboardIpConfiguration({ hostname = window.location.hostname }
                         >
                             <div className="grid gap-6 sm:grid-cols-2">
                                 <div className="space-y-1">
-                                    <div className="text-xs text-muted-foreground">Domain</div>
-                                    <div className="text-sm font-medium break-all">{hostname}</div>
+                                    <Text as="div" variant="caption">
+                                        Domain
+                                    </Text>
+                                    <Text as="div" variant="label" className="break-all">
+                                        {hostname}
+                                    </Text>
                                 </div>
                                 <div className="space-y-1">
-                                    <div className="text-xs text-muted-foreground">IP address</div>
-                                    <div className="text-sm font-medium tabular-nums">
+                                    <Text as="div" variant="caption">
+                                        IP address
+                                    </Text>
+                                    <Text as="div" variant="label" className="tabular-nums">
                                         {bindingQuery.data?.length
                                             ? bindingQuery.data.join(", ")
                                             : "No DNS record found"}
-                                    </div>
+                                    </Text>
                                 </div>
                             </div>
                         </ApiState>

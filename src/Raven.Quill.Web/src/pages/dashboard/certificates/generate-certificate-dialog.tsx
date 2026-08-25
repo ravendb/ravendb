@@ -23,6 +23,7 @@ import {
 import { GuardedDialog } from "@/components/form/unsaved-changes/guarded-overlays";
 import { useFormUnsavedChanges } from "@/components/form/unsaved-changes/use-unsaved-changes";
 import { Spinner } from "@/components/shadcn/ui/spinner";
+import { Text } from "@/components/typography";
 import {
     CLEARANCE_OPTIONS,
     DATABASE_ACCESS_OPTIONS,
@@ -139,7 +140,9 @@ function GenerateCertificateForm({ apps, onGenerated }: { apps: AppResponse[]; o
 
             {clearance === "ValidUser" && (
                 <div className="grid gap-3">
-                    <div className="text-sm font-medium">App access</div>
+                    <Text as="div" variant="label">
+                        App access
+                    </Text>
                     {permissionRows.fields.map((row, index) => (
                         <div key={row.id} className="flex items-start gap-2">
                             <FormSelect

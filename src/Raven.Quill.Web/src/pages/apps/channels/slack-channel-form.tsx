@@ -10,6 +10,7 @@ import type { AgentSummaryResponse } from "@/api/generated/server-api";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/shadcn/ui/collapsible";
+import { Heading, Text } from "@/components/typography";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { SheetClose, SheetFooter } from "@/components/shadcn/ui/sheet";
 import { ApiState } from "@/components/data/api-state";
@@ -183,11 +184,13 @@ function LoadedSlackChannelForm({
                         <Collapsible open={isManifestOpen} onOpenChange={setIsManifestOpen} className="grid gap-3">
                             <CollapsibleTrigger className="group flex w-full items-start justify-between gap-3 text-left">
                                 <div>
-                                    <h3 className="text-sm font-semibold">No Slack app yet?</h3>
-                                    <p className="mt-1 text-xs text-muted-foreground">
+                                    <Heading as="h3" variant="label">
+                                        No Slack app yet?
+                                    </Heading>
+                                    <Text variant="caption" className="mt-1">
                                         Create one from this manifest, install it to your workspace, then paste its
                                         credentials below.
-                                    </p>
+                                    </Text>
                                 </div>
                                 <ChevronDown
                                     className="mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180"
@@ -212,10 +215,10 @@ function LoadedSlackChannelForm({
                                     </li>
                                 </ol>
                                 <CopyableCode code={SLACK_APP_MANIFEST} copyLabel="Copy app manifest" />
-                                <p className="text-xs text-muted-foreground">
+                                <Text variant="caption">
                                     Then <span className="font-medium">Install to Workspace</span>. The bot token is on
                                     the OAuth &amp; Permissions page, the signing secret under Basic Information.
-                                </p>
+                                </Text>
                             </CollapsibleContent>
                         </Collapsible>
                         {!agent && (

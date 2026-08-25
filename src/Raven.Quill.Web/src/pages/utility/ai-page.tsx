@@ -2,7 +2,7 @@ import { Bot, Send } from "lucide-react";
 import { PagePanel } from "@/components/data/page-panel";
 import { Button } from "@/components/shadcn/ui/button";
 import { Textarea } from "@/components/shadcn/ui/textarea";
-import { Heading } from "@/components/typography";
+import { Heading, Text } from "@/components/typography";
 
 export function AiPage() {
     return (
@@ -18,7 +18,7 @@ export function AiPage() {
                         <Bot className="size-6 text-muted-foreground" aria-hidden />
                     </div>
                     <div className="max-w-sm space-y-1">
-                        <p className="text-sm font-medium">AI Assistant is coming soon</p>
+                        <Text variant="label">AI Assistant is coming soon</Text>
                     </div>
                 </div>
 

@@ -2,6 +2,7 @@ import { Wrench } from "lucide-react";
 import type { AiToolCallResult } from "@/api/generated/server-api";
 import { Parameters } from "@/components/data/parameters";
 import { CodeBlock, TranscriptDisclosure } from "@/pages/apps/conversations/transcript-disclosure";
+import { Text } from "@/components/typography";
 
 // A collapsed transcript entry for one tool the agent ran during a turn. Kept operator-friendly:
 // only the parameters the model filled in and the tool's response — no raw query internals.
@@ -63,7 +64,9 @@ function ToolCallResponse({ result }: { result: string | null | undefined }) {
 function ToolCallSection({ label, children }: { label: string; children: React.ReactNode }) {
     return (
         <div className="grid gap-1.5">
-            <span className="text-xs font-medium text-muted-foreground">{label}</span>
+            <Text as="span" variant="caption" className="font-medium">
+                {label}
+            </Text>
             {children}
         </div>
     );

@@ -11,7 +11,8 @@ import { Alert } from "@/components/shadcn/ui/alert";
 import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
 import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
 import { AgentPromptProgress } from "@/pages/setup/add-capability-wizard/agent-prompt-progress";
-import { Heading, Text } from "@/components/typography";
+import { SectionHeader } from "@/components/section-header";
+import { Text } from "@/components/typography";
 import { emptyAgentConfiguration } from "@/pages/setup/add-capability-wizard/agent-config-form";
 import { useCapabilityWizardStore } from "@/pages/setup/add-capability-wizard/capability-wizard-store";
 import { SuggestedAgentsProgress } from "@/pages/setup/add-capability-wizard/steps/create/suggested-agents-progress";
@@ -47,9 +48,7 @@ export function CreateAgentStep({ isBusy }: WizardBodyComponentProps) {
     return (
         <div className="grid gap-6">
             <div className="grid gap-3">
-                <Heading as="h2" variant="label">
-                    AI-suggested agents based on your data
-                </Heading>
+                <SectionHeader level="section" title="AI-suggested agents based on your data" />
                 {isSuggesting ? (
                     <SuggestedAgentsProgress startedAt={suggestionStartedAt} />
                 ) : suggestions.length === 0 ? (

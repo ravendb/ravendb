@@ -11,7 +11,7 @@ import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { Card, CardAction, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/shadcn/ui/card";
 import { Skeleton } from "@/components/shadcn/ui/skeleton";
-import { Heading } from "@/components/typography";
+import { Heading, Text } from "@/components/typography";
 import { appRoutes } from "@/lib/app-routes";
 import { cn, formatDateTime, formatRelativeTime } from "@/lib/utils";
 import { SlackIcon } from "@/pages/apps/channels/channel-brand-icons";
@@ -80,9 +80,9 @@ export function ChannelGroups({ slug }: { slug: string }) {
         >
             {channelsQuery.data &&
                 (channels.length === 0 ? (
-                    <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+                    <Text as="div" variant="muted" className="rounded-lg border border-dashed p-10 text-center">
                         No channels yet. Add one to start reaching users.
-                    </div>
+                    </Text>
                 ) : (
                     <div className="space-y-6">
                         {groups.map((group) => (
@@ -145,7 +145,7 @@ function ChannelCard({
             className="relative gap-3 transition-[background-color,box-shadow] hover:bg-muted/40 hover:ring-foreground/25 has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-ring"
         >
             <CardHeader>
-                <CardTitle className="min-w-0 truncate font-medium tracking-normal">
+                <CardTitle variant="item" className="min-w-0 truncate">
                     <Link
                         to={appRoutes.app(slug, `channels/${channel.channelId}`)}
                         className="after:absolute after:inset-0 after:content-[''] hover:underline"
@@ -154,14 +154,14 @@ function ChannelCard({
                         {channel.displayName}
                     </Link>
                     {channel.telegram?.botUsername && (
-                        <div className="truncate text-xs font-normal text-muted-foreground">
+                        <Text as="div" variant="caption" className="truncate font-normal">
                             @{channel.telegram.botUsername}
-                        </div>
+                        </Text>
                     )}
                     {channel.slack?.teamName && (
-                        <div className="truncate text-xs font-normal text-muted-foreground">
+                        <Text as="div" variant="caption" className="truncate font-normal">
                             {channel.slack.teamName}
-                        </div>
+                        </Text>
                     )}
                 </CardTitle>
                 <CardAction>
@@ -173,7 +173,9 @@ function ChannelCard({
                 {agent ? (
                     <AgentChip name={agent.name} seed={agent.agentId} />
                 ) : (
-                    <span className="text-xs text-muted-foreground">Unassigned</span>
+                    <Text as="span" variant="caption">
+                        Unassigned
+                    </Text>
                 )}
 
                 <div className={cn("grid gap-2", isIFrame ? "grid-cols-2" : "grid-cols-1")}>
@@ -253,7 +255,9 @@ function StatBox({ label, value }: { label: string; value: ReactNode }) {
     return (
         <div className="rounded-md border bg-muted/30 px-2.5 py-1.5">
             <div className="text-[11px] text-muted-foreground">{label}</div>
-            <div className="text-sm font-medium tabular-nums">{value}</div>
+            <Text as="div" variant="label" className="tabular-nums">
+                {value}
+            </Text>
         </div>
     );
 }

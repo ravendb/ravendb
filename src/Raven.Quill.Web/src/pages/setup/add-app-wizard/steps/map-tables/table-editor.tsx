@@ -11,6 +11,7 @@ import {
 import { Alert } from "@/components/shadcn/ui/alert";
 import { Label } from "@/components/shadcn/ui/label";
 import { Switch } from "@/components/shadcn/ui/switch";
+import { Text } from "@/components/typography";
 import { cn } from "@/lib/utils";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
@@ -103,8 +104,8 @@ function ActiveTableEditor({ activeTable }: { activeTable: MapActiveTable }) {
 
 function EmptyEditorMessage() {
     return (
-        <div className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
+        <Text variant="muted" as="div" className="flex h-full items-center justify-center p-6">
             Select a table to view its configuration.
-        </div>
+        </Text>
     );
 }

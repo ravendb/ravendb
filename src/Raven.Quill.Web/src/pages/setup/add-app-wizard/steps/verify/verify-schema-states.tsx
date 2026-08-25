@@ -38,7 +38,7 @@ export function NoTablesFound({ schemas, onCustomizeSchemas }: { schemas: string
                 <CircleSlash2Icon className="size-5 text-muted-foreground" aria-hidden="true" />
             </div>
             <div className="text-center">
-                <p className="text-sm font-medium">We didn&apos;t find any tables in {scopeLabel}</p>
+                <Text variant="label">We didn&apos;t find any tables in {scopeLabel}</Text>
                 <Text variant="caption" className="mt-1">
                     Add other schemas to widen the table discovery scope.
                 </Text>

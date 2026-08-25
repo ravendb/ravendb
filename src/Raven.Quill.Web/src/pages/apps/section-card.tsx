@@ -1,6 +1,6 @@
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { Heading, Text } from "@/components/typography";
+import { SectionHeader } from "@/components/section-header";
 
 export function SectionCard({
     title,
@@ -12,31 +12,19 @@ export function SectionCard({
     children,
     // Defaults suit a top-level section under a page title. Nested contexts (e.g. a
     // wizard step that already has its own heading) can step the title down a level.
-    titleAs = "h2",
-    titleVariant = "section",
+    level = "section",
 }: {
     title?: ReactNode;
     description?: ReactNode;
     action?: ReactNode;
     isRaised?: boolean;
     children: ReactNode;
-    titleAs?: ComponentProps<typeof Heading>["as"];
-    titleVariant?: ComponentProps<typeof Heading>["variant"];
+    level?: ComponentProps<typeof SectionHeader>["level"];
 }) {
     return (
         <section className={cn("min-w-0", isRaised && "rounded-md border bg-card p-4")}>
             {(title || action) && (
-                <div className="mb-2 flex items-center justify-between gap-3">
-                    <div className="space-y-0.5">
-                        {title && (
-                            <Heading as={titleAs} variant={titleVariant}>
-                                {title}
-                            </Heading>
-                        )}
-                        {description && <Text variant="muted">{description}</Text>}
-                    </div>
-                    {action}
-                </div>
+                <SectionHeader className="mb-2" level={level} title={title} description={description} action={action} />
             )}
             {children}
         </section>

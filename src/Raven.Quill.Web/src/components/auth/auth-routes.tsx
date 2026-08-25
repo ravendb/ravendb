@@ -6,6 +6,7 @@ import { useAuth } from "@/components/auth/auth-context";
 import { AuthScreenLayout } from "@/components/auth/auth-screen-layout";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { appRoutes } from "@/lib/app-routes";
+import { Text } from "@/components/typography";
 
 export function RequireAuth({ children }: { children: ReactNode }) {
     const { isAuthenticated, isLoading } = useAuth();
@@ -52,10 +53,10 @@ function RedirectToLandingPage() {
 function AuthLoading() {
     return (
         <AuthScreenLayout>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Text variant="muted" as="div" className="flex items-center gap-2">
                 <Spinner className="size-4" />
                 Checking authentication…
-            </div>
+            </Text>
         </AuthScreenLayout>
     );
 }

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Heading, Text } from "@/components/typography";
+import { SectionHeader } from "@/components/section-header";
 
 // Layout for an editable channel-detail "fill" tab: a fixed header (title, description, and the
 // edit/save actions) that stays put while the body scrolls beneath it. Render inside a
@@ -17,13 +17,13 @@ export function EditableTabShell({
 }) {
     return (
         <>
-            <div className="flex items-start justify-between gap-3 pt-5 pb-4">
-                <div className="space-y-0.5">
-                    <Heading variant="section">{title}</Heading>
-                    <Text variant="muted">{description}</Text>
-                </div>
-                {actions}
-            </div>
+            <SectionHeader
+                className="pt-5 pb-4"
+                level="section"
+                title={title}
+                description={description}
+                action={actions}
+            />
             {/* -mx-2/px-2 keeps card borders and focus rings off the scroller's clip edge. */}
             <div className="-mx-2 min-h-0 flex-1 overflow-y-auto px-2 pb-5">{children}</div>
         </>

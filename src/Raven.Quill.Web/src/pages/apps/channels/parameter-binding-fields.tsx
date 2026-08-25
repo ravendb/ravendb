@@ -5,6 +5,7 @@ import { FieldDescription } from "@/components/shadcn/ui/field";
 import { FormInput } from "@/components/form/form-input";
 import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
 import type { ParameterSource } from "@/pages/apps/channels/parameter-bindings";
+import { Heading, Text } from "@/components/typography";
 
 export function ParameterBindingRow<TFieldValues extends FieldValues>({
     control,
@@ -75,8 +76,10 @@ export function ParameterBindingFields<TFieldValues extends FieldValues>({
     return (
         <div className="flex flex-col gap-3">
             <div className="space-y-0.5">
-                <h3 className="text-sm font-medium">Parameters</h3>
-                <p className="text-xs text-muted-foreground">{description}</p>
+                <Heading as="h3" variant="label">
+                    Parameters
+                </Heading>
+                <Text variant="caption">{description}</Text>
             </div>
             {fields.map((field, index) => (
                 <ParameterBindingRow

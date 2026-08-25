@@ -14,6 +14,7 @@ import { SlackIcon } from "@/pages/apps/channels/channel-brand-icons";
 import { SlackChannelForm } from "@/pages/apps/channels/slack-channel-form";
 import { TelegramChannelForm } from "@/pages/apps/channels/telegram-channel-form";
 import { WebWidgetChannelForm, type FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
+import { Text } from "@/components/typography";
 
 type ChannelOptionId = "web-widget" | "telegram" | "slack";
 
@@ -102,7 +103,9 @@ export function AddChannelMenu({
                                         </Badge>
                                     )}
                                 </span>
-                                <span className="text-xs text-muted-foreground">{option.description}</span>
+                                <Text as="span" variant="caption">
+                                    {option.description}
+                                </Text>
                             </div>
                         </DropdownMenuItem>
                     ))}

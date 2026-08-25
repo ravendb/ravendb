@@ -37,7 +37,9 @@ export function AgentQueryToolsSection({ className }: { className?: string }) {
             <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                     <SearchCode className="size-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Query tools</span>
+                    <Text variant="label" as="span">
+                        Query tools
+                    </Text>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => fieldArray.append(emptyAgentQueryTool())}>
                     <Plus />
@@ -72,7 +74,9 @@ function QueryToolItem({ index, remove }: { index: number; remove: () => void })
             editTitle="Configure query tool"
             summary={
                 <>
-                    <p className="truncate text-sm font-medium">{tool.name || "(unnamed)"}</p>
+                    <Text variant="label" className="truncate">
+                        {tool.name || "(unnamed)"}
+                    </Text>
                     {tool.description && (
                         <Text variant="caption" className="mt-0.5 truncate">
                             {tool.description}

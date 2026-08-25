@@ -175,7 +175,11 @@ function TranscriptTurn({ turn, turnKey }: { turn: AiConversationMessage; turnKe
                         <Streamdown>{content}</Streamdown>
                     </div>
                 ))}
-            {turn.timestamp && <span className="text-xs text-muted-foreground">{formatDateTime(turn.timestamp)}</span>}
+            {turn.timestamp && (
+                <Text as="span" variant="caption">
+                    {formatDateTime(turn.timestamp)}
+                </Text>
+            )}
         </div>
     );
 }

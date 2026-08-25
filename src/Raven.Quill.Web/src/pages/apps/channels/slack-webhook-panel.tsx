@@ -4,6 +4,7 @@ import { ApiState } from "@/components/data/api-state";
 import { CopyableCode } from "@/components/data/copyable-code";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { Badge } from "@/components/shadcn/ui/badge";
+import { Text } from "@/components/typography";
 import { formatDateTime, formatRelativeTime } from "@/lib/utils";
 
 export function SlackWebhookPanel({ slug, channelId }: { slug: string; channelId: string }) {
@@ -37,12 +38,12 @@ export function SlackWebhookPanel({ slug, channelId }: { slug: string; channelId
                         </li>
                         <li>Open a DM with the bot in Slack and send it a message.</li>
                     </ol>
-                    <p className="text-xs text-muted-foreground">
+                    <Text variant="caption">
                         The appliance must be reachable from the internet on this URL. Apps created from the current
                         Quill manifest already carry the im:history scope, so adding the event needs no reinstall. An
                         app created before users:read and users:read.email were added to the manifest must be
                         reinstalled to the workspace before a parameter can bind to the sender&apos;s email.
-                    </p>
+                    </Text>
                     <SlackHealthStrip slug={slug} channelId={channelId} />
                 </div>
             )}
@@ -67,11 +68,13 @@ export function SlackHealthStrip({ slug, channelId }: { slug: string; channelId:
             <div className="flex flex-wrap items-center gap-2 text-sm">
                 <SlackTokenBadge tokenValid={health.tokenValid} tokenError={health.tokenError} />
                 {health.lastInboundAt ? (
-                    <span className="text-xs text-muted-foreground" title={formatDateTime(health.lastInboundAt)}>
+                    <Text as="span" variant="caption" title={formatDateTime(health.lastInboundAt)}>
                         Last message {formatRelativeTime(health.lastInboundAt)}
-                    </span>
+                    </Text>
                 ) : (
-                    <span className="text-xs text-muted-foreground">Waiting for the first message...</span>
+                    <Text as="span" variant="caption">
+                        Waiting for the first message...
+                    </Text>
                 )}
             </div>
             {hasRecentSignatureFailure && (

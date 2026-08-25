@@ -3,6 +3,7 @@ import { highlightCode, type HighlightLanguage } from "@/components/ace-editor/s
 import { Button } from "@/components/shadcn/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/shadcn/ui/tabs";
 import { cn, copyToClipboard } from "@/lib/utils";
+import { Text } from "@/components/typography";
 
 export type CodeTab = {
     value: string;
@@ -69,7 +70,9 @@ export function CodeBlockTabs({
                 ) : (
                     // A single snippet has no selector; its label stands in as the code block's title so the
                     // header still reads as a labelled bar rather than a lone copy button.
-                    <span className="pl-2 text-xs font-medium text-muted-foreground">{activeTab?.label}</span>
+                    <Text variant="caption" as="span" className="pl-2 font-medium">
+                        {activeTab?.label}
+                    </Text>
                 )}
                 <Button
                     type="button"

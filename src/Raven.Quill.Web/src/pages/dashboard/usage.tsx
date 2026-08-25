@@ -13,7 +13,7 @@ import { canDrillInto, drillInto, formatPeriodLabel, getDefaultDatePeriod, type 
 import { useSetupStartDate } from "@/lib/use-start-date";
 import { formatCompact } from "@/lib/format";
 import { PerAppUsageTable, PerAppUsageTableSkeleton } from "@/pages/dashboard/per-app-usage-table";
-import { Heading } from "@/components/typography";
+import { Heading, Text } from "@/components/typography";
 
 export function DashboardUsage() {
     const [period, setPeriod] = useState(getDefaultDatePeriod);
@@ -54,7 +54,9 @@ export function DashboardUsage() {
                         <CardAction className="text-right">
                             <div className="text-2xl font-semibold">
                                 {formatCompact(totalUsage)}
-                                <span className="ml-1 text-sm font-normal text-muted-foreground">total</span>
+                                <Text as="span" variant="muted" className="ml-1 font-normal">
+                                    total
+                                </Text>
                             </div>
                         </CardAction>
                     )}

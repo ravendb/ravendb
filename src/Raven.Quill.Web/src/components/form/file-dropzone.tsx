@@ -1,6 +1,7 @@
 import { useRef, useState, type ReactNode } from "react";
 import { UploadIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Text } from "@/components/typography";
 
 type FileDropzoneProps = {
     /** Called with the first selected/dropped file. */
@@ -78,8 +79,14 @@ export function FileDropzone({
         >
             <span className="text-muted-foreground">{icon}</span>
             <div className="grid gap-0.5">
-                <span className="text-sm font-medium text-foreground">{title}</span>
-                {description && <span className="text-xs text-muted-foreground">{description}</span>}
+                <Text variant="label" as="span" className="text-foreground">
+                    {title}
+                </Text>
+                {description && (
+                    <Text variant="caption" as="span">
+                        {description}
+                    </Text>
+                )}
             </div>
             <input
                 ref={inputRef}

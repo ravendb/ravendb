@@ -17,6 +17,7 @@ import {
 import { FormInput } from "@/components/form/form-input";
 import { Button } from "@/components/shadcn/ui/button";
 import { Field, FieldDescription, FieldLabel } from "@/components/shadcn/ui/field";
+import { Text } from "@/components/typography";
 
 type FormStringListProps<TFieldValues extends FieldValues, TName extends ArrayPath<TFieldValues>> = UseFieldArrayProps<
     TFieldValues,
@@ -75,9 +76,9 @@ export function FormStringList<TFieldValues extends FieldValues, TName extends A
             </div>
 
             {fieldArray.fields.length === 0 ? (
-                <div className="rounded-md border bg-background px-3 py-4 text-center text-sm text-muted-foreground">
+                <Text variant="muted" as="div" className="rounded-md border bg-background px-3 py-4 text-center">
                     {emptyLabel}
-                </div>
+                </Text>
             ) : (
                 <div className="grid gap-2">
                     {fieldArray.fields.map((field, index) => (
