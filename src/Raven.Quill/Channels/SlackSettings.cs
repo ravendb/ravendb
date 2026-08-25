@@ -1,4 +1,4 @@
-﻿namespace Raven.Quill.Channels;
+namespace Raven.Quill.Channels;
 
 internal sealed class SlackSettings
 {

@@ -1,4 +1,4 @@
-﻿using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Quill.Slack;
 
 namespace Raven.Quill.Channels;

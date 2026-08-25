@@ -1,4 +1,4 @@
-﻿using Raven.Quill.Hosting;
+using Raven.Quill.Hosting;
 
 namespace Raven.Quill.Channels;
 

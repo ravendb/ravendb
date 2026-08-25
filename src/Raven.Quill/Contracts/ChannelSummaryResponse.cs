@@ -1,4 +1,4 @@
-﻿using Raven.Quill.Channels;
+using Raven.Quill.Channels;
 
 namespace Raven.Quill.Contracts;
 

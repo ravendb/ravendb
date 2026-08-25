@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using Raven.Client.Documents;
 using Raven.Quill.Agents;
 using Raven.Quill.Channels;
