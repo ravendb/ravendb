@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using Corax.Mappings;
 using Jint;
 using Jint.Native;
@@ -16,6 +17,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.JavaScript;
 using Raven.Server.Documents.Queries.Results;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
 using IndexSearcher = Corax.Querying.IndexSearcher;
@@ -644,18 +646,74 @@ namespace Raven.Server.Documents.Patch
             if (Blittable == null)
                 yield break;
 
-            foreach (var prop in Blittable.GetPropertyNames())
+            // ECMAScript orders Object.keys/for...in by insertion for string keys.
+            var filter = ShadowedPropertyFilter.Create(this);
+            using var propertiesByInsertionOrder = Blittable.GetPropertiesByInsertionOrder();
+            for (int i = 0; i < Blittable.Count; i++)
             {
-                if (Deletes?.Contains(prop) == true)
+                if (filter.TryGetNonShadowedPropertyName(propertiesByInsertionOrder.GetPropertyIdByInsertionOrder(i), out var prop) == false)
                     continue;
-                if (OwnValues?.ContainsKey(prop) == true)
-                    continue;
+
                 yield return new KeyValuePair<JsValue, PropertyDescriptor>(
                     prop,
                     GetOwnProperty(prop)
                     );
             }
         }
+      
+        private readonly struct ShadowedPropertyFilter(
+            BlittableJsonReaderObject blittable,
+            HashSet<string>.AlternateLookup<ReadOnlySpan<char>>? deletes,
+            Dictionary<string, BlittableObjectProperty>.AlternateLookup<ReadOnlySpan<char>>? ownValues)
+        {
+
+            public static ShadowedPropertyFilter Create(BlittableObjectInstance parent) 
+                => new(parent.Blittable,
+                    parent.Deletes?.GetAlternateLookup<ReadOnlySpan<char>>(),
+                    parent.OwnValues?.GetAlternateLookup<ReadOnlySpan<char>>());
+
+            [SkipLocalsInit]
+            public bool TryGetNonShadowedPropertyName(int index, out string name)
+            {
+                var utf8Name = blittable.GetPropertyNameByIndexAsSpan(index);
+
+                if (deletes is null && ownValues is null)
+                {
+                    name = Encodings.Utf8.GetString(utf8Name);
+                    return true;
+                }
+
+                Span<char> buffer = stackalloc char[256];
+
+                string materialized = null;
+                scoped ReadOnlySpan<char> chars;
+                if (Encodings.Utf8.GetMaxCharCount(utf8Name.Length) <= buffer.Length)
+                {
+                    chars = buffer[..Encodings.Utf8.GetChars(utf8Name, buffer)];
+                }
+                else
+                {
+                    materialized = Encodings.Utf8.GetString(utf8Name);
+                    chars = materialized.AsSpan();
+                }
+
+                if (deletes?.Contains(chars) is true)
+                {
+                    name = null;
+                    return false;
+                }
+
+                if (ownValues?.ContainsKey(chars) is true)
+                {
+                    name = null;
+                    return false;
+                }
+
+                name = materialized ?? new string(chars);
+                return true;
+            }
+        }
+
 
         public override List<JsValue> GetOwnPropertyKeys(Types types)
         {
@@ -670,11 +728,12 @@ namespace Raven.Server.Documents.Patch
             if (Blittable == null)
                 return list;
 
-            foreach (var prop in Blittable.GetPropertyNames())
+            var filter = ShadowedPropertyFilter.Create(this);
+            using var propertiesByInsertionOrder = Blittable.GetPropertiesByInsertionOrder();
+            var order = propertiesByInsertionOrder.PropertiesSpan;
+            for (int i = 0; i < order.Length; i++)
             {
-                if (Deletes?.Contains(prop) == true)
-                    continue;
-                if (OwnValues != null && OwnValues.ContainsKey(prop))
+                if (filter.TryGetNonShadowedPropertyName(order[i], out var prop) == false)
                     continue;
 
                 list.Add(prop);
