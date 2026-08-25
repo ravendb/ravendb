@@ -632,6 +632,7 @@ public static class ChannelsEndpoints
         string channelId,
         IDocumentStore store,
         ITelegramChannelManager telegramManager,
+        SlackHealthRegistry slackHealth,
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
@@ -649,7 +650,7 @@ public static class ChannelsEndpoints
             ChannelType.IFrame => await DeleteIFrameChannelAsync(session, channel, app.Slug, channelId, logger, ct),
             ChannelType.Telegram => await DeleteTelegramChannelAsync(session, channel, app, channelId, store, telegramManager, logger, ct),
             ChannelType.WhatsApp => DeleteWhatsAppChannelAsync(),
-            ChannelType.Slack => await DeleteSlackChannelAsync(session, channel, app, channelId, store, logger, ct),
+            ChannelType.Slack => await DeleteSlackChannelAsync(session, channel, app, channelId, store, slackHealth, logger, ct),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{channel.Type}'")),
         };
     }
@@ -699,6 +700,7 @@ public static class ChannelsEndpoints
         App app,
         string channelId,
         IDocumentStore store,
+        SlackHealthRegistry health,
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
@@ -708,6 +710,8 @@ public static class ChannelsEndpoints
         if (channel.Slack is { TeamId.Length: > 0, BotUserId.Length: > 0 } settings)
             await TryReleaseSlackAsync(
                 store, settings.TeamId, settings.BotUserId, settings.WebhookToken, app.Database, channel.Id!, logger);
+
+        health.Remove(app.Database, channel.ShortId);
 
         logger.LogInformation("Deleted Slack channel slug={Slug} channelId={ChannelId}", app.Slug, channelId);
         return Results.NoContent();

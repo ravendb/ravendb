@@ -92,6 +92,18 @@ internal sealed class SlackHealthRegistry
             entry.TokenCheckedAt = null;
     }
 
+    public void Remove(string database, string channelId) =>
+        _entries.TryRemove((database, channelId), out _);
+
+    public void RemoveDatabase(string database)
+    {
+        foreach (var key in _entries.Keys)
+        {
+            if (key.Database == database)
+                _entries.TryRemove(key, out _);
+        }
+    }
+
     private Entry EntryFor(string database, string channelId) =>
         _entries.GetOrAdd((database, channelId), static _ => new Entry());
 }

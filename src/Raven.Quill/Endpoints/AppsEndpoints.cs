@@ -14,6 +14,7 @@ using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints.Helpers;
 using Raven.Quill.Live;
 using Raven.Quill.Raven;
+using Raven.Quill.Slack;
 using Raven.Quill.Telegram;
 using Raven.Quill.Wizard;
 
@@ -98,6 +99,7 @@ public static class AppsEndpoints
         string slug,
         IDocumentStore store,
         ITelegramChannelManager telegramManager,
+        SlackHealthRegistry slackHealth,
         ILogger<AppsLogger> logger,
         CancellationToken ct)
     {
@@ -114,6 +116,7 @@ public static class AppsEndpoints
         await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(slug, true), ct);
         await AppLookup.DeleteAppAsync(store, slug, ct);
 
+        slackHealth.RemoveDatabase(app.Database);
         telegramManager.Wake();
 
         return Results.NoContent();
