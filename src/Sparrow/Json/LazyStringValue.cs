@@ -187,29 +187,13 @@ namespace Sparrow.Json
         private static char[] _lazyStringTempBuffer;
 
         [ThreadStatic]
-        private static bool _lazyStringTempBufferInUse;
-
-        [ThreadStatic]
         private static byte[] _lazyStringTempComparisonBuffer;
 
         private static char[] GetlazyStringTempBuffer(int charCount)
         {
-            if (_lazyStringTempBufferInUse)
-                ThrowTempBufferStillInScope();
-
             if (_lazyStringTempBuffer == null || _lazyStringTempBuffer.Length < charCount)
                 _lazyStringTempBuffer = new char[Bits.NextAllocationSize(charCount)];
             return _lazyStringTempBuffer;
-        }
-
-#if NET6_0_OR_GREATER
-        [DoesNotReturn]
-#endif
-        private static void ThrowTempBufferStillInScope()
-        {
-            throw new InvalidOperationException(
-                "The shared temp char buffer is still held by an undisposed TempCharSpanScope on this thread. " +
-                "Dispose the scope returned from AsTempCharSpan() before decoding or converting another LazyStringValue.");
         }
 
         private static byte[] GetLazyStringTempComparisonBuffer(int charCount)
@@ -482,42 +466,38 @@ namespace Sparrow.Json
             return (string)this; // invoke the implicit string conversion
         }
 
-        /// <summary>
-        /// Decodes the value into the shared thread-static char buffer, so a value that is about
-        /// to be compared against several strings pays for a single UTF-8 decode instead of
-        /// encoding each string.
-        /// 
-        /// The buffer is shared and can only be used by one consumer at a time.
-        /// </summary>
-        public TempCharSpanScope AsTempCharSpan(out ReadOnlySpan<char> output)
+
+       
+        public bool TryAsCharSpan(Span<char> buffer, out ReadOnlySpan<char> chars, out int required)
         {
             if (IsDisposed)
                 ThrowAlreadyDisposed();
 
             if (_string != null)
             {
-                output = _string.AsSpan();
-                return new TempCharSpanScope();
+                chars = _string.AsSpan();
+                required = _string.Length;
+                return true;
             }
 
-            var buffer = GetlazyStringTempBuffer(Encodings.Utf8.GetMaxCharCount(Size));
-            _lazyStringTempBufferInUse = true;
+            required = Encodings.Utf8.GetMaxCharCount(Size);
+            if (required > buffer.Length)
+            {
+                chars = default;
+                return false;
+            }
+
 #if NETCOREAPP
-            var chars = Encodings.Utf8.GetChars(new ReadOnlySpan<byte>(_buffer, Size), buffer);
+            var written = Encodings.Utf8.GetChars(new ReadOnlySpan<byte>(_buffer, Size), buffer);
 #else
-            int chars;
+            int written;
             fixed (char* pBuffer = buffer)
-                chars = Encodings.Utf8.GetChars(_buffer, Size, pBuffer, buffer.Length);
+                written = Encodings.Utf8.GetChars(_buffer, Size, pBuffer, buffer.Length);
 #endif
-            output = new ReadOnlySpan<char>(buffer, 0, chars);
-            return new TempCharSpanScope();
+            chars = buffer.Slice(0, written);
+            return true;
         }
 
-        public readonly ref struct TempCharSpanScope
-        {
-            public void Dispose() => _lazyStringTempBufferInUse = false;
-        }
-        
 #if NET8_0_OR_GREATER
         public string ToString(string format, IFormatProvider formatProvider) => ToString();
 
