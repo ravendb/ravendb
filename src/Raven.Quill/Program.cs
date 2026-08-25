@@ -115,6 +115,7 @@ builder.Services.AddOptions<ApplianceOptions>()
     .Validate(o => o.Slack.MessageLimit is > 0 and <= 40_000,
         "Slack MessageLimit must be between 1 and 40000")
     .Validate(o => o.Slack.EditDebounce > TimeSpan.Zero, "Slack EditDebounce must be positive")
+    .Validate(o => o.Slack.SenderQueueCapacity > 0, "Slack SenderQueueCapacity must be positive")
     .Validate(o => o.Slack.SignatureTolerance > TimeSpan.Zero, "Slack SignatureTolerance must be positive")
     .ValidateOnStart();
 
