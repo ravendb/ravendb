@@ -116,6 +116,12 @@ namespace SlowTests.Issues
                 var revisionsMetadata1 = await session.Advanced.Revisions.GetMetadataForAsync(user1.Id);
                 Assert.Contains(DocumentFlags.DeleteRevision.ToString(), revisionsMetadata1[0].GetString(Constants.Documents.Metadata.Flags));
 
+                // the adopted delete revision must not carry 'Revision'. A row with both flags is handled as a normal
+                // revision by incoming replication, which re-creates the deleted document on the nodes that receive it.
+                var adoptedFlags = Enum.Parse<DocumentFlags>(revisionsMetadata1[0].GetString(Constants.Documents.Metadata.Flags));
+                Assert.False(adoptedFlags.HasFlag(DocumentFlags.Revision),
+                    $"The adopted delete revision of '{user1.Id}' must not carry '{nameof(DocumentFlags.Revision)}', but its flags are '{adoptedFlags}'.");
+
                 var user2RevCount = await session.Advanced.Revisions.GetCountForAsync(user2.Id);
                 Assert.Equal(12, user2RevCount);
                 var revisionsMetadata2 = await session.Advanced.Revisions.GetMetadataForAsync(user2.Id);
