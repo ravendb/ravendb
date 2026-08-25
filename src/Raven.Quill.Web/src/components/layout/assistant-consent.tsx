@@ -4,6 +4,7 @@ import { Sparkles } from "lucide-react";
 import { api } from "@/api/api";
 import { AI_LICENSE_UNAVAILABLE_MESSAGE } from "@/api/custom-services/assistant-service";
 import type { AiHelperStatus } from "@/api/generated/server-api";
+import { invalidateConsentBlockedSuggestions } from "@/lib/query-invalidation";
 import { useAssistantConsent } from "@/components/layout/use-assistant-consent";
 import { Alert, AlertDescription } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
@@ -120,6 +121,7 @@ function AssistantConsentDialogBody({ onGranted }: { onGranted: () => void }) {
         },
         onSuccess: (result) => {
             queryClient.setQueryData(api.queries.assistant.consent().queryKey, result);
+            void invalidateConsentBlockedSuggestions(queryClient);
             onGranted();
         },
     });

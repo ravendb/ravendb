@@ -1,5 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { api } from "@/api/api";
+import { AI_CONSENT_REQUIRED_MESSAGE } from "@/api/custom-services/assistant-service";
 import { APP_AI_CONNECTION_STRINGS_KEY } from "@/api/queries/apps-queries";
 
 // The dashboard "My apps" table (stats.dashboardApps) summarizes each app's agent and
@@ -41,4 +42,18 @@ export function invalidateChannelQueries(queryClient: QueryClient, slug: string)
         queryClient.invalidateQueries({ queryKey: api.queries.stats.channels(slug).queryKey }),
         queryClient.invalidateQueries({ queryKey: api.queries.stats.dashboardApps().queryKey }),
     ]);
+}
+
+export function invalidateConsentBlockedSuggestions(queryClient: QueryClient) {
+    return queryClient.invalidateQueries({
+        predicate: (query) => isConsentRequiredResult(query.state.data) || isConsentRequiredFailure(query.state.error),
+    });
+}
+
+function isConsentRequiredResult(data: unknown) {
+    return typeof data === "object" && data != null && "isConsentRequired" in data && data.isConsentRequired === true;
+}
+
+function isConsentRequiredFailure(error: unknown) {
+    return error instanceof Error && error.message === AI_CONSENT_REQUIRED_MESSAGE;
 }
