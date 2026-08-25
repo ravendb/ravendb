@@ -1,6 +1,17 @@
 import type { ChannelParameterSource } from "@/api/generated/server-api";
 
-export const TELEGRAM_PARAMETER_SOURCES: { value: ChannelParameterSource; label: string; hint?: string }[] = [
+export const TELEGRAM_SOURCE_VALUES = [
+    "Constant",
+    "UserId",
+    "Username",
+    "PhoneNumber",
+] as const satisfies readonly ChannelParameterSource[];
+
+export const TELEGRAM_PARAMETER_SOURCES: {
+    value: (typeof TELEGRAM_SOURCE_VALUES)[number];
+    label: string;
+    hint?: string;
+}[] = [
     { value: "Constant", label: "Constant value" },
     { value: "UserId", label: "Telegram user id" },
     {

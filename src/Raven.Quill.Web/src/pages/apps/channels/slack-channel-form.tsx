@@ -26,14 +26,18 @@ import { useFormUnsavedChanges } from "@/components/form/unsaved-changes/use-uns
 import { withNestedSubmit } from "@/lib/form-utils";
 import { invalidateChannelQueries } from "@/lib/query-invalidation";
 import { SLACK_APP_MANIFEST } from "@/pages/apps/channels/slack-app-manifest";
-import { SLACK_PARAMETER_SOURCES, slackParameterSourceHint } from "@/pages/apps/channels/slack-parameter-sources";
+import {
+    SLACK_PARAMETER_SOURCES,
+    SLACK_SOURCE_VALUES,
+    slackParameterSourceHint,
+} from "@/pages/apps/channels/slack-parameter-sources";
 import { SlackWebhookPanel } from "@/pages/apps/channels/slack-webhook-panel";
 import type { FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
 
 const parameterBindingSchema = z
     .object({
         name: z.string(),
-        source: z.enum(["Constant", "UserId", "Email"]),
+        source: z.enum(SLACK_SOURCE_VALUES),
         value: z.string().trim(),
     })
     .superRefine((parameter, ctx) => {

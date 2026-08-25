@@ -24,6 +24,7 @@ import {
 } from "@/pages/apps/channels/parameter-bindings";
 import {
     TELEGRAM_PARAMETER_SOURCES,
+    TELEGRAM_SOURCE_VALUES,
     telegramParameterSourceHint,
 } from "@/pages/apps/channels/telegram-parameter-sources";
 import type { FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
@@ -31,7 +32,7 @@ import type { FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
 const parameterBindingSchema = z
     .object({
         name: z.string(),
-        source: z.enum(["Constant", "UserId", "Username", "PhoneNumber"]),
+        source: z.enum(TELEGRAM_SOURCE_VALUES),
         value: z.string().trim(),
     })
     .superRefine((parameter, ctx) => {
