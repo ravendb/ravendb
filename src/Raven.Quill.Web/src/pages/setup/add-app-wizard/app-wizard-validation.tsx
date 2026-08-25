@@ -260,12 +260,22 @@ export const createExternalConnectionSchema = (takenSlugs: string[] = []) => {
         .object({
             appName: z.string().trim().min(1, "Application name is required"),
             slug: slugSchema,
-            provider: providerSchema,
+            // Empty until the operator picks a source database type; superRefine rejects it so the
+            // connect step can't advance without a choice.
+            provider: providerSchema.or(z.literal("")),
             mode: connectionModeSchema,
             fields: z.object(connectionFieldsShape),
             connectionString: z.string(),
         })
         .superRefine((values, ctx) => {
+            if (values.provider === "") {
+                ctx.addIssue({
+                    code: "custom",
+                    path: ["provider"],
+                    message: "Select a source database type",
+                });
+            }
+
             const overrideSlug = values.slug.trim();
             // With an empty override the server derives the slug from the app name, so the name is
             // what has to be changed to free up the conflict.
