@@ -24,7 +24,17 @@ internal sealed class SlackUserDirectory
             return info;
 
         if (_entries.Count >= MaxEntries)
-            _entries.Clear();
+        {
+            var now = DateTime.UtcNow;
+            foreach (var (staleKey, entry) in _entries)
+            {
+                if (now - entry.CachedAt >= EntryMaxAge)
+                    _entries.TryRemove(staleKey, out _);
+            }
+
+            if (_entries.Count >= MaxEntries)
+                _entries.Clear();
+        }
 
         _entries[key] = (info, DateTime.UtcNow);
         return info;
