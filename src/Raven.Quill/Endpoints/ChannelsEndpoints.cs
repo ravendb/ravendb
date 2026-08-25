@@ -78,6 +78,10 @@ public static class ChannelsEndpoints
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
+        if (body.Type is { } type &&
+            RejectForeignSettings(type, body.Telegram is not null, body.Slack is not null) is { } foreignSettings)
+            return foreignSettings;
+
         return body.Type switch
         {
             ChannelType.IFrame => await ProvisionIFrameAsync(app, body, store, logger, ct),
@@ -88,12 +92,6 @@ public static class ChannelsEndpoints
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{body.Type}'")),
         };
     }
-
-    private static IResult? RejectForeignSettings(ChannelType type, ProvisionChannelRequest body) =>
-        RejectForeignSettings(type, body.Telegram is not null, body.Slack is not null);
-
-    private static IResult? RejectForeignSettings(ChannelType type, UpdateChannelRequest body) =>
-        RejectForeignSettings(type, body.Telegram is not null, body.Slack is not null);
 
     private static IResult? RejectForeignSettings(ChannelType type, bool hasTelegram, bool hasSlack)
     {
@@ -116,9 +114,6 @@ public static class ChannelsEndpoints
         var config = await AgentLookup.FindAsync(store, app.Database, body.AgentId, ct);
         if (config is null)
             return Results.BadRequest(new ApiErrorResponse($"unknown agentId '{body.AgentId}'"));
-
-        if (RejectForeignSettings(ChannelType.IFrame, body) is { } foreignSettings)
-            return foreignSettings;
 
         // open embed must be explicit (allowedOrigins: []); an omitted list => 400
         if (body.AllowedOrigins is null)
@@ -167,9 +162,6 @@ public static class ChannelsEndpoints
         var config = await AgentLookup.FindAsync(store, app.Database, body.AgentId, ct);
         if (config is null)
             return Results.BadRequest(new ApiErrorResponse($"unknown agentId '{body.AgentId}'"));
-
-        if (RejectForeignSettings(ChannelType.Telegram, body) is { } foreignSettings)
-            return foreignSettings;
 
         if (string.IsNullOrWhiteSpace(body.Telegram?.BotToken))
             return Results.BadRequest(new ApiErrorResponse("telegram.botToken is required for a Telegram channel"));
@@ -246,9 +238,6 @@ public static class ChannelsEndpoints
         var config = await AgentLookup.FindAsync(store, app.Database, body.AgentId, ct);
         if (config is null)
             return Results.BadRequest(new ApiErrorResponse($"unknown agentId '{body.AgentId}'"));
-
-        if (RejectForeignSettings(ChannelType.Slack, body) is { } foreignSettings)
-            return foreignSettings;
 
         if (body.AllowedOrigins is { Length: > 0 })
             return Results.BadRequest(new ApiErrorResponse("allowedOrigins does not apply to Slack channels"));
@@ -390,6 +379,9 @@ public static class ChannelsEndpoints
         if (channel is null)
             return Results.NotFound(new ApiErrorResponse($"no channel '{channelId}' in app '{slug}'"));
 
+        if (RejectForeignSettings(channel.Type, body.Telegram is not null, body.Slack is not null) is { } foreignSettings)
+            return foreignSettings;
+
         return channel.Type switch
         {
             ChannelType.IFrame => await UpdateIFrameChannelAsync(session, channel, body, app.Slug, channelId, logger, ct),
@@ -409,9 +401,6 @@ public static class ChannelsEndpoints
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
-        if (RejectForeignSettings(ChannelType.IFrame, body) is { } foreignSettings)
-            return foreignSettings;
-
         if (body.AllowedOrigins is not null)
         {
             var origins = body.AllowedOrigins;
@@ -450,9 +439,6 @@ public static class ChannelsEndpoints
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
-        if (RejectForeignSettings(ChannelType.Telegram, body) is { } foreignSettings)
-            return foreignSettings;
-
         if (body.AllowedOrigins is { Length: > 0 })
             return Results.BadRequest(new ApiErrorResponse("allowedOrigins does not apply to Telegram channels"));
 
@@ -556,9 +542,6 @@ public static class ChannelsEndpoints
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
-        if (RejectForeignSettings(ChannelType.Slack, body) is { } foreignSettings)
-            return foreignSettings;
-
         if (body.AllowedOrigins is { Length: > 0 })
             return Results.BadRequest(new ApiErrorResponse("allowedOrigins does not apply to Slack channels"));
 
