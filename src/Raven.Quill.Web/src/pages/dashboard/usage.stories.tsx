@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { sampleTopologyIds, settingsMocks } from "@/mocks/settings-mocks";
+import { SYSTEM_GROUP_LABEL } from "@/pages/dashboard/usage-groups";
 import { DashboardUsage } from "./usage";
 
 const meta = {
@@ -53,7 +54,7 @@ export const SystemRowsCollapseIntoOneCountedGroup: Story = {
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
 
-        const system = await waitFor(() => canvas.getByRole("button", { name: "System" }));
+        const system = await waitFor(() => canvas.getByRole("button", { name: SYSTEM_GROUP_LABEL }));
 
         // Collapsed: the group carries the combined usage of its three rows and none of their ids.
         expect(system).toHaveAttribute("aria-expanded", "false");
@@ -62,7 +63,7 @@ export const SystemRowsCollapseIntoOneCountedGroup: Story = {
 
         // Sorted last, behind every app.
         const names = canvas.getAllByRole("row").map((row) => row.textContent);
-        expect(names.at(-1)).toContain("System");
+        expect(names.at(-1)).toContain(SYSTEM_GROUP_LABEL);
 
         await userEvent.click(system);
         expect(system).toHaveAttribute("aria-expanded", "true");
@@ -116,7 +117,7 @@ export const ClickingAnywhereInTheRowToggles: Story = {
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
 
-        const trigger = await waitFor(() => canvas.getByRole("button", { name: "System" }));
+        const trigger = await waitFor(() => canvas.getByRole("button", { name: SYSTEM_GROUP_LABEL }));
         const row = rowFor(trigger);
 
         await userEvent.click(lastCell(row)); // the usage figure, well away from the label
@@ -128,16 +129,22 @@ export const ClickingAnywhereInTheRowToggles: Story = {
     },
 };
 
-// Figures are compared down the column, so they end-align whatever their width - including the
-// indented rows of an expanded group.
+// Figures are compared down the column, so their right edges line up whatever their width -
+// header included, and including the indented rows of an expanded group.
 export const UsageFiguresAreEndAligned: Story = {
     tags: ["!dev"],
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
 
-        await userEvent.click(await waitFor(() => canvas.getByRole("button", { name: "System" })));
+        await userEvent.click(await waitFor(() => canvas.getByRole("button", { name: SYSTEM_GROUP_LABEL })));
 
-        const alignments = canvas.getAllByRole("row").map((row) => getComputedStyle(lastCell(row)).textAlign);
-        expect(new Set(alignments)).toEqual(new Set(["right"]));
+        // Measured rather than asserted against a CSS property: the column has been laid out with
+        // text-align and with flex, and what the eye checks is where the digits end.
+        const edges = canvas
+            .getAllByRole("row")
+            .map((row) => Math.round(lastCell(row).firstElementChild!.getBoundingClientRect().right));
+
+        expect(edges.length).toBeGreaterThan(1);
+        expect(new Set(edges).size).toBe(1);
     },
 };
