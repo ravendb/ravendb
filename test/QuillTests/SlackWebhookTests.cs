@@ -314,6 +314,9 @@ public class SlackWebhookTests(ITestOutputHelper output, QuillSlackFixture fixtu
         await Slack.WaitUntilAsync(
             () => Slack.EditedMessages.Any(e => e.Text == "*Bold* and <https://example.org/a|docs>"),
             "the mrkdwn-converted finalized edit");
+
+        Assert.All(Slack.SentMessages, m => Assert.Equal("none", m.Parse));
+        Assert.All(Slack.EditedMessages, e => Assert.Equal("none", e.Parse));
     }
 
     [RavenFact(RavenTestCategory.Quill)]

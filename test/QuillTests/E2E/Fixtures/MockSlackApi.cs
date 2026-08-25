@@ -23,9 +23,9 @@ public sealed class MockSlackApi : IAsyncDisposable
     private readonly List<string> _authTestCalls = [];
     private int _nextTs = 1;
 
-    public sealed record SentMessage(string BotToken, string Channel, string Text, string Ts);
+    public sealed record SentMessage(string BotToken, string Channel, string Text, string Ts, string? Parse);
 
-    public sealed record EditedMessage(string BotToken, string Channel, string Ts, string Text);
+    public sealed record EditedMessage(string BotToken, string Channel, string Ts, string Text, string? Parse);
 
     private sealed record BotEntry(string TeamId, string TeamName, string BotUserId, string BotId);
 
@@ -227,12 +227,13 @@ public sealed class MockSlackApi : IAsyncDisposable
 
         var channel = body?["channel"]?.GetValue<string>() ?? "";
         var text = body?["text"]?.GetValue<string>() ?? "";
+        var parse = body?["parse"]?.GetValue<string>();
 
         string ts;
         lock (_lock)
         {
             ts = string.Create(CultureInfo.InvariantCulture, $"1700000000.{_nextTs++:D6}");
-            _sent.Add(new SentMessage(BearerToken(ctx), channel, text, ts));
+            _sent.Add(new SentMessage(BearerToken(ctx), channel, text, ts, parse));
         }
 
         return Results.Json(new JsonObject { ["ok"] = true, ["channel"] = channel, ["ts"] = ts });
@@ -260,13 +261,14 @@ public sealed class MockSlackApi : IAsyncDisposable
         var channel = body?["channel"]?.GetValue<string>() ?? "";
         var ts = body?["ts"]?.GetValue<string>() ?? "";
         var text = body?["text"]?.GetValue<string>() ?? "";
+        var parse = body?["parse"]?.GetValue<string>();
 
         lock (_lock)
         {
             if (_sent.Any(m => m.Ts == ts) == false)
                 return SlackError("message_not_found");
 
-            _edited.Add(new EditedMessage(BearerToken(ctx), channel, ts, text));
+            _edited.Add(new EditedMessage(BearerToken(ctx), channel, ts, text, parse));
         }
 
         return Results.Json(new JsonObject { ["ok"] = true, ["channel"] = channel, ["ts"] = ts });
