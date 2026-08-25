@@ -2808,6 +2808,7 @@ namespace Voron.Impl.Journal
 
                 _compressionPager.EnsureMapped(_compressionPagerState, ref tx.PagerTransactionState, pagesWritten, outputBufferInPages);
 
+                var rawTxHeaderPtr = txHeaderPtr;
                 txHeaderPtr = _compressionPager.MakeWritable(_compressionPagerState,
                     _compressionPager.AcquireRawPagePointer(_compressionPagerState, ref tx.PagerTransactionState, pagesWritten)
                 );
@@ -2822,6 +2823,13 @@ namespace Voron.Impl.Journal
                         : LZ4.Encode64LongBuffer(txPageInfoPtr, compressionBuffer, totalSizeWritten, outputBufferSize, compressionAcceleration);
 
                     metrics.SetCompressionResults(totalSizeWritten, compressedLen, compressionAcceleration);
+                }
+
+                if (compressedLen >= totalSizeWritten)
+                {
+                    // didn't compress, so let's use the raw output, instead
+                    txHeaderPtr = rawTxHeaderPtr;
+                    performCompression = false;
                 }
             }
             else
