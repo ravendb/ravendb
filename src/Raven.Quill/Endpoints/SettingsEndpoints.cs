@@ -94,20 +94,21 @@ public static class SettingsEndpoints
         catch (LicenseLimitException ex)
         {
             logger.LogWarning(ex, "certificate operation rejected by license");
-            return Results.Json(new ApiErrorResponse(FirstSentence(ex.Message)), statusCode: StatusCodes.Status403Forbidden);
+            var error = ex.LimitType switch
+            {
+                LimitType.ReadOnlyCertificates =>
+                    "your license does not include read-only certificates; grant at least one app ReadWrite access, or upgrade the license",
+                LimitType.InvalidLicense =>
+                    "the RavenDB license is in an invalid state, so certificates cannot be issued",
+                _ => "the RavenDB license does not allow this certificate operation",
+            };
+            return Results.Json(new ApiErrorResponse(error), statusCode: StatusCodes.Status403Forbidden);
         }
         catch (RavenException ex)
         {
             logger.LogWarning(ex, "certificate operation rejected by RavenDB");
             return Results.BadRequest(new ApiErrorResponse("certificate request rejected; see server logs for details"));
         }
-    }
-
-    private static string FirstSentence(string message)
-    {
-        var line = message.Split('\n', 2)[0].TrimEnd('\r');
-        var separator = line.IndexOf(": ", StringComparison.Ordinal);
-        return separator >= 0 ? line[(separator + 2)..] : line;
     }
 
     public record CertificateItem(
