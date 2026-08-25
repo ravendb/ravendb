@@ -58,7 +58,7 @@ print_urls() {
     say "Database:  https://db.$base"
 }
 
-printf '\033[35m'
+printf '\033[38;5;208m'
 cat <<'BANNER'
  _______  __   __  ___   ___      ___ 
 |       ||  | |  ||   | |   |    |   |
