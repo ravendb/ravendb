@@ -60,7 +60,7 @@ internal sealed class SlackApiClient(HttpClient http) : ISlackClient
     public async Task<string> PostMessageAsync(
         string botToken, string channel, string text, CancellationToken ct)
     {
-        var payload = await SendAsync("chat.postMessage", botToken, new { channel, text }, ct);
+        var payload = await SendAsync("chat.postMessage", botToken, new { channel, text, parse = "none" }, ct);
         if (string.IsNullOrEmpty(payload.Ts))
             throw new SlackApiException("slack returned a chat.postMessage payload without a message ts");
 
@@ -70,7 +70,7 @@ internal sealed class SlackApiClient(HttpClient http) : ISlackClient
     public async Task UpdateMessageAsync(
         string botToken, string channel, string ts, string text, CancellationToken ct)
     {
-        await SendAsync("chat.update", botToken, new { channel, ts, text }, ct);
+        await SendAsync("chat.update", botToken, new { channel, ts, text, parse = "none" }, ct);
     }
 
     public async Task<SlackUserInfo> UserInfoAsync(string botToken, string userId, CancellationToken ct)
