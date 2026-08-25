@@ -52,6 +52,10 @@ public static class SlackEndpoints
         ILogger<SlackLogger> logger,
         CancellationToken ct)
     {
+        var limit = options.Value.Slack.MaxWebhookBodyBytes;
+        if (ctx.Request.ContentLength is { } declared && declared > limit)
+            return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
+
         var resolved = await ResolveTokenChannelAsync(store, token, ct);
         if (resolved is null)
         {
@@ -61,10 +65,6 @@ public static class SlackEndpoints
         }
 
         var (database, channel, settings) = resolved.Value;
-
-        var limit = options.Value.Slack.MaxWebhookBodyBytes;
-        if (ctx.Request.ContentLength is { } declared && declared > limit)
-            return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
 
         var rawBody = await ReadCappedAsync(ctx.Request.Body, limit, ct);
         if (rawBody is null)
