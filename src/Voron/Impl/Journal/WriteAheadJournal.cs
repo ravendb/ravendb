@@ -324,6 +324,8 @@ namespace Voron.Impl.Journal
 
         public bool IsJournalWriteActive => _writePipeline.JournalWriteRecentlyActive;
 
+        public bool IsMeasuredFastDevice => _writePipeline.IsMeasuredFastDevice;
+
         private JournalFile NextFile(long numberOf4Kbs)
         {
             var now = DateTime.UtcNow;
