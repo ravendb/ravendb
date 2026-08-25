@@ -47,6 +47,11 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
 
     private int GetMaxNodesForVectorCache()
     {
+        // The cache is incompatible with encrypted databases: it reads through the committed
+        // write tx, whose pages are already encrypted by then. Encrypted databases read from disk.
+        if (_environment?.Options.Encryption.IsEnabled == true)
+            return 0;
+
         var cacheSizeBytes = _index.Configuration.CoraxVectorSearchCacheSize.GetValue(SizeUnit.Bytes);
         var bytesPerNode = HnswIndexCache.EstimateBytesPerNode(_index.Configuration.CoraxVectorDefaultNumberOfEdges);
         return (int)Math.Min(cacheSizeBytes / bytesPerNode, int.MaxValue);
@@ -208,11 +213,12 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
 
     public override void Initialize(StorageEnvironment environment)
     {
+        _environment = environment;
+
         using (var roTx = environment.ReadTransaction())
             WarmInitialCaches(roTx);
         _currentCache = BuildSnapshotWrapper();
 
-        _environment = environment;
         _newTransactionCreatedHandler = tx => tx.ImmutableExternalState = Volatile.Read(ref _currentCache);
         environment.NewTransactionCreated += _newTransactionCreatedHandler;
     }
