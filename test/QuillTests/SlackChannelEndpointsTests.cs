@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using QuillTests.E2E.Fixtures;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Quill.Channels;

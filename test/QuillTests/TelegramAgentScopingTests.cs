@@ -1,4 +1,4 @@
-﻿using QuillTests.E2E.Fixtures;
+using QuillTests.E2E.Fixtures;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.ServerWide.Operations.ConnectionStrings;

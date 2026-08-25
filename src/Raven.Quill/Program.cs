@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Text.Json;
 using System.Threading.RateLimiting;
 using System.Text.Json.Serialization;

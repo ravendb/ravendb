@@ -1,4 +1,4 @@
-﻿using FastTests;
+using FastTests;
 using Raven.Quill.Agents;
 using Raven.Quill.Channels;
 using Raven.Quill.Hosting;

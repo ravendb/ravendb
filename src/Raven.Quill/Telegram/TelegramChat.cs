@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Threading.Channels;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Quill.Agents;
