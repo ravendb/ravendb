@@ -3,6 +3,7 @@ using QuillTests.E2E.Fixtures;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
+using Raven.Quill.Slack;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -243,6 +244,7 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
 
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.Slack, agentId, null, Slack: new(botToken, "s")));
+        var orphanToken = await WebhookTokenAsync(app, created.ChannelId);
 
         using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
@@ -253,6 +255,23 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
         var reclaimed = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.Slack, agentId, null, Slack: new(botToken, "s")));
         Assert.NotEmpty(reclaimed.ChannelId);
+        var reclaimedToken = await WebhookTokenAsync(app, reclaimed.ChannelId);
+
+        using (var configSession = Host.Config.OpenAsyncSession())
+        {
+            Assert.Null(await configSession.LoadAsync<SlackWebhookRoute>(SlackWebhookRoute.IdFor(orphanToken)));
+
+            var route = await configSession.LoadAsync<SlackWebhookRoute>(SlackWebhookRoute.IdFor(reclaimedToken));
+            Assert.NotNull(route);
+            Assert.Equal(Channel.IdPrefix + reclaimed.ChannelId, route!.ChannelId);
+        }
+    }
+
+    private async Task<string> WebhookTokenAsync(QuillApp app, string channelId)
+    {
+        var info = await QuillHttp.GetAsync<SlackWebhookInfoResponse>(
+            Host.Client, QuillRoutes.SlackWebhookInfo(app.Slug, channelId));
+        return info.RequestUrl[(info.RequestUrl.LastIndexOf('/') + 1)..];
     }
 
     [RavenFact(RavenTestCategory.Quill)]

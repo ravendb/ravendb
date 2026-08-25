@@ -318,7 +318,8 @@ public static class ChannelsEndpoints
         }
 
         if (await ConfirmSlackReservationAsync(
-                store, auth.TeamId, auth.BotUserId, app.Database, channel.Id!, reservationCv!, ct) == false)
+                store, auth.TeamId, auth.BotUserId, app.Database, channel.Id!, channel.Slack.WebhookToken,
+                reservationCv!, ct) == false)
         {
             try
             {
@@ -747,16 +748,25 @@ public static class ChannelsEndpoints
         ChannelBotReservations.TryClaimAsync<SlackBotReservation>(
             store, SlackBotReservation.IdFor(teamId, botUserId), database, channelId,
             channel => channel?.Slack is { } settings && settings.TeamId == teamId && settings.BotUserId == botUserId,
-            session => session.StoreAsync(
-                new SlackWebhookRoute { Database = database, ChannelId = channelId },
-                SlackWebhookRoute.IdFor(webhookToken), ct),
+            async (session, reservation) =>
+            {
+                if (reservation.WebhookToken.Length > 0 && reservation.WebhookToken != webhookToken)
+                    session.Delete(SlackWebhookRoute.IdFor(reservation.WebhookToken));
+
+                reservation.WebhookToken = webhookToken;
+                await session.StoreAsync(
+                    new SlackWebhookRoute { Database = database, ChannelId = channelId },
+                    SlackWebhookRoute.IdFor(webhookToken), ct);
+            },
             ct);
 
     private static Task<bool> ConfirmSlackReservationAsync(
-        IDocumentStore store, string teamId, string botUserId, string database, string channelId, string changeVector,
-        CancellationToken ct) =>
-        ChannelBotReservations.TryConfirmAsync<SlackBotReservation>(
-            store, SlackBotReservation.IdFor(teamId, botUserId), database, channelId, changeVector, ct);
+        IDocumentStore store, string teamId, string botUserId, string database, string channelId, string webhookToken,
+        string changeVector, CancellationToken ct) =>
+        ChannelBotReservations.TryConfirmAsync(
+            store, SlackBotReservation.IdFor(teamId, botUserId),
+            new SlackBotReservation { Database = database, ChannelId = channelId, WebhookToken = webhookToken },
+            changeVector, ct);
 
     private static Task TryReleaseSlackAsync(
         IDocumentStore store, string teamId, string botUserId, string webhookToken, string database, string channelId,

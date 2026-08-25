@@ -13,4 +13,6 @@ internal sealed class SlackBotReservation : IChannelBotReservation
     public string Database { get; set; } = "";
 
     public string ChannelId { get; set; } = "";
+
+    public string WebhookToken { get; set; } = "";
 }
