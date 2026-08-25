@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Exceptions.Database;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
@@ -163,10 +164,13 @@ public static class SlackEndpoints
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
         using var session = store.OpenAsyncSession(app.Database);
-        var channels = await session.LoadAllStartingWithAsync<Channel>(Channel.IdPrefix, ct);
+        var channels = await session.Query<Channel>()
+            .Customize(x => x.WaitForNonStaleResults())
+            .Where(c => c.Type == ChannelType.Slack)
+            .ToArrayAsync(ct);
 
         var slackChannels = channels
-            .Where(c => c is { Type: ChannelType.Slack, Slack: not null })
+            .Where(c => c.Slack is not null)
             .OrderByDescending(c => c.CreatedAt)
             .ToArray();
 
