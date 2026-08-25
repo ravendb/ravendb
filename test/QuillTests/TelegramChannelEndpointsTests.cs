@@ -295,6 +295,18 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
         Assert.Equal(HttpStatusCode.BadRequest, undeclared.StatusCode);
         Assert.Contains("undeclared agent parameter(s): region", undeclared.Body);
 
+        var unsupported = await Assert.ThrowsAsync<QuillHttpException>(() =>
+            app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
+                new(ParameterBindings: new Dictionary<string, ChannelParameterBinding>
+                {
+                    ["customerId"] = new() { Source = ChannelParameterSource.Email },
+                }))));
+        Assert.Equal(HttpStatusCode.BadRequest, unsupported.StatusCode);
+        Assert.Contains("Telegram channels cannot bind Email", unsupported.Body);
+
+        var stillUsername = await app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null));
+        Assert.Equal(ChannelParameterSource.Username, stillUsername.Telegram!.ParameterBindings["customerId"].Source);
+
         await app.DeleteChannelAsync(created.ChannelId);
     }
 

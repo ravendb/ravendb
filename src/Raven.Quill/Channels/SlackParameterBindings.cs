@@ -5,33 +5,6 @@ namespace Raven.Quill.Channels;
 
 internal static class SlackParameterBindings
 {
-    internal static bool IsSupportedSource(ChannelParameterSource source) =>
-        source is ChannelParameterSource.Constant or ChannelParameterSource.UserId or ChannelParameterSource.Email;
-
-    internal static bool TryResolve(
-        AiAgentConfiguration config,
-        Dictionary<string, ChannelParameterBinding>? supplied,
-        out Dictionary<string, ChannelParameterBinding> bindings,
-        out string? error)
-    {
-        if (ChannelParameterBindings.TryResolve(config, supplied, out bindings, out error) == false)
-            return false;
-
-        foreach (var (name, binding) in bindings)
-        {
-            if (IsSupportedSource(binding.Source))
-                continue;
-
-            error = $"parameter binding for '{name}': Slack channels cannot bind {binding.Source}; " +
-                    $"use {nameof(ChannelParameterSource.Constant)}, {nameof(ChannelParameterSource.UserId)} " +
-                    $"or {nameof(ChannelParameterSource.Email)}";
-            bindings = new Dictionary<string, ChannelParameterBinding>();
-            return false;
-        }
-
-        return true;
-    }
-
     internal readonly record struct BindResult(Dictionary<string, string>? Parameters, string? Error);
 
     internal static async Task<BindResult> BindAsync(

@@ -20,13 +20,28 @@ public sealed class ChannelParameterBinding
 
 internal static class ChannelParameterBindings
 {
+    private static readonly Dictionary<ChannelType, ChannelParameterSource[]> SupportedSources = new()
+    {
+        [ChannelType.Telegram] =
+        [
+            ChannelParameterSource.Constant, ChannelParameterSource.UserId,
+            ChannelParameterSource.Username, ChannelParameterSource.PhoneNumber,
+        ],
+        [ChannelType.Slack] =
+        [
+            ChannelParameterSource.Constant, ChannelParameterSource.UserId, ChannelParameterSource.Email,
+        ],
+    };
+
     /// Keys of the returned dictionary carry the casing the agent declares, whatever casing was supplied.
     internal static bool TryResolve(
         AiAgentConfiguration config,
+        ChannelType channelType,
         Dictionary<string, ChannelParameterBinding>? supplied,
         out Dictionary<string, ChannelParameterBinding> bindings,
         out string? error)
     {
+        var supportedSources = SupportedSources[channelType];
         bindings = new Dictionary<string, ChannelParameterBinding>();
         error = null;
 
@@ -60,6 +75,13 @@ internal static class ChannelParameterBindings
                 continue;
             }
 
+            if (supportedSources.Contains(binding.Source) == false)
+            {
+                error = $"parameter binding for '{name}': {channelType} channels cannot bind {binding.Source}; " +
+                        $"use {FormatSources(supportedSources)}";
+                return false;
+            }
+
             if (binding.Source == ChannelParameterSource.Constant)
             {
                 if (string.IsNullOrWhiteSpace(binding.Value))
@@ -85,4 +107,7 @@ internal static class ChannelParameterBindings
 
         return true;
     }
+
+    private static string FormatSources(ChannelParameterSource[] sources) =>
+        $"{string.Join(", ", sources[..^1])} or {sources[^1]}";
 }
