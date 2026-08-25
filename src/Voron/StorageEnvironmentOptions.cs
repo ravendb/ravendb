@@ -598,6 +598,12 @@ namespace Voron
                 public static unsafe int JournalZeroingPacing(void* state)
                 {
                     var pacing = (JournalZeroingPacingState)GCHandle.FromIntPtr((IntPtr)state).Target;
+
+                    // zero-filling prepays the filesystem extent-conversion cost, on bandwidth-budgeted volumes 
+                    // (cloud disks) the fill competes with the journal and (gp3 at high write cost 8-17% of throughput).
+                    if (pacing.Journal.IsMeasuredFastDevice == false)
+                        return -1;
+
                     if (pacing.Journal.IsJournalWriteActive == false)
                         return 0; // write the next chunk immediately
 
@@ -612,6 +618,11 @@ namespace Voron
             public override void PrepareRecyclableJournalInBackground(long size, WriteAheadJournal journal)
             {
                 if (EnableJournalPoolPrewarming == false || Disposed)
+                    return;
+
+                // pre-zeroed pool files only pay off where filesystems extent-conversion cost (fast local device)
+                // On GP3 & similar, the fill competes with the journal for the whole budget, so we'll skip it.
+                if (journal.IsMeasuredFastDevice == false)
                     return;
 
                 size = Math.Min(size, MaxLogFileSize);
