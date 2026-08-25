@@ -16,9 +16,8 @@
             <div aria-hidden="true" class="expiry-wash pointer-events-none absolute inset-0"></div>
             <div class="relative z-10 flex w-full max-w-xl flex-col items-center">
                 <!-- main.ts inlines src/components/brand/quill-logo.svg here, so the logo follows the theme via
-                     currentColor. Width and entrance match the login screen (auth-screen-layout.tsx), so the two
-                     screens a build shows outside the app open the same way. The svg carries its own
-                     role="img" and label, so the wrapper must not aria-hide it. -->
+                     currentColor. Width and entrance match the login screen (auth-screen-layout.tsx). The svg
+                     carries its own role="img" and label, so the wrapper must not aria-hide it. -->
                 <div
                     id="logo"
                     class="mb-8 flex animate-in items-center text-foreground duration-600 fade-in-0 zoom-in-90 [&_svg]:h-auto [&_svg]:w-[120px]"
@@ -31,11 +30,9 @@
                     Pull the latest image to get back up and running.
                 </p>
 
-                <!-- The one bordered surface on the page, and it wraps the one thing that is genuinely a group:
-                     the two steps that replace the build. -->
                 <div class="w-full overflow-hidden rounded-lg border bg-card text-left">
                     <ol role="list" class="flex flex-col gap-3.5 p-3.5">
-                        <li role="listitem" class="grid grid-cols-[1.25rem_1fr] gap-x-2.5">
+                        <li class="grid grid-cols-[1.25rem_1fr] gap-x-2.5">
                             <span
                                 class="mt-px grid size-5 place-items-center rounded-full bg-muted font-mono text-[0.6875rem] leading-none text-foreground"
                                 aria-hidden="true"
@@ -44,11 +41,11 @@
                             <div class="flex min-w-0 flex-col gap-1">
                                 <div class="flex items-baseline justify-between gap-2">
                                     <span class="text-sm font-medium">Pull the latest image</span>
-                                    <!-- main.ts writes "Copied" / "Press Ctrl+C" here. Empty by default, and the row
-                                         already has the title's height, so filling it shifts nothing. -->
+                                    <!-- Empty by default, and the row already has the title's height, so main.ts
+                                         writing "Copied" / "Press Ctrl+C" here shifts nothing. -->
                                     <span
                                         role="status"
-                                        data-status-for="command-pull"
+                                        id="copy-status"
                                         class="shrink-0 text-[0.6875rem] text-muted-foreground"
                                     ></span>
                                 </div>
@@ -57,67 +54,55 @@
                                         class="flex min-w-0 flex-1 items-center overflow-x-auto py-1 pl-2.5 font-mono text-[0.8125rem]"
                                     >
                                         <span aria-hidden="true" class="pr-1 text-muted-foreground select-none">$</span>
-                                        <code id="command-pull" class="whitespace-nowrap text-foreground"
+                                        <code id="command" class="whitespace-nowrap text-foreground"
                                             >docker pull ravendb/quill:latest</code
                                         >
                                     </div>
                                     <!-- Mirrors Button variant="ghost" size="icon-sm", minus the `hover:bg-muted` it
                                          would use: this button sits on `bg-muted` already, so the hover needs to go
-                                         the other way. -->
+                                         the other way. The icons are lucide's Copy and Check at lucide's own
+                                         geometry, hand-inlined because this page cannot render lucide-react. -->
                                     <button
                                         type="button"
-                                        data-copies="command-pull"
+                                        id="copy"
                                         aria-label="Copy command"
                                         class="grid size-7 shrink-0 place-items-center rounded-[min(var(--radius-md),12px)] border border-transparent text-muted-foreground transition-all outline-none hover:bg-card hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 active:translate-y-px"
                                     >
                                         <svg
                                             data-icon="idle"
                                             class="size-3.5"
-                                            viewBox="0 0 16 16"
+                                            viewBox="0 0 24 24"
                                             fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
                                             aria-hidden="true"
                                         >
-                                            <rect
-                                                x="5.4"
-                                                y="5.4"
-                                                width="8.2"
-                                                height="8.2"
-                                                rx="2"
-                                                stroke="currentColor"
-                                                stroke-width="1.4"
-                                            />
-                                            <path
-                                                d="M10.6 5.4V4.4a2 2 0 0 0-2-2H4.4a2 2 0 0 0-2 2v4.2a2 2 0 0 0 2 2h1"
-                                                stroke="currentColor"
-                                                stroke-width="1.4"
-                                                stroke-linecap="round"
-                                            />
+                                            <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                                            <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
                                         </svg>
                                         <svg
                                             data-icon="done"
                                             class="hidden size-3.5"
-                                            viewBox="0 0 16 16"
+                                            viewBox="0 0 24 24"
                                             fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
                                             aria-hidden="true"
                                         >
-                                            <path
-                                                d="M3.2 8.6 6.3 11.7l6.5-7"
-                                                stroke="currentColor"
-                                                stroke-width="1.6"
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                            />
+                                            <path d="M20 6 9 17l-5-5" />
                                         </svg>
                                     </button>
                                 </div>
                             </div>
                         </li>
 
-                        <!-- The page's own wording for this step, kept verbatim, but promoted from a trailing
-                             sentence to a numbered step so it reads as work left to do. No command block: how the
-                             container is started is the operator's, not ours (compose, `docker run`, or an
-                             orchestrator), and guessing it wrong is worse than naming the step. -->
-                        <li role="listitem" class="grid grid-cols-[1.25rem_1fr] gap-x-2.5">
+                        <!-- No command block for this step: how the container is started belongs to the operator
+                             (compose, `docker run`, or an orchestrator), not to us. -->
+                        <li class="grid grid-cols-[1.25rem_1fr] gap-x-2.5">
                             <span
                                 class="mt-px grid size-5 place-items-center rounded-full bg-muted font-mono text-[0.6875rem] leading-none text-foreground"
                                 aria-hidden="true"
@@ -130,23 +115,20 @@
                     </ol>
                 </div>
 
-                <!-- Somewhere to go: the page was a dead end whose only control was a text label reading "Copy".
-                     Mirrors Button variant="default" size="lg", which this page cannot render as React. -->
+                <!-- Mirrors Button variant="default" size="lg", which this page cannot render as React. -->
                 <a
                     href="https://docs.ravendb.net/quill"
                     target="_blank"
                     rel="noreferrer"
                     class="mt-4 inline-flex h-9 w-full items-center justify-center rounded-lg border border-transparent bg-primary px-2.5 text-sm font-medium text-primary-foreground no-underline transition-all outline-none select-none hover:bg-primary/80 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:translate-y-px"
                 >
-                    <!-- No external-link glyph: an icon set to a 14px label's cap height would not survive being
-                         nudged into place, and the verb carries the destination on its own. -->
                     Read documentation
                 </a>
                 <p class="mt-3 text-center text-xs text-muted-foreground">
                     Still stuck?
-                    <!-- Same destination as the SPA's help menu (src/lib/help-links.ts); this page cannot import it,
-                         because that module pulls in lucide-react. `--primary-strong` rather than `--primary`, which
-                         as text is 2.61:1. -->
+                    <!-- Same destination as the SPA's help menu (src/lib/help-links.ts), which this page cannot
+                         import because that module pulls in lucide-react. `--primary-strong` rather than
+                         `--primary`, which as text is 2.61:1. -->
                     <a
                         href="https://ravendb.net/support"
                         target="_blank"
