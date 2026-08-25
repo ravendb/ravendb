@@ -1,6 +1,8 @@
 using System.Net.Mail;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Queries.MoreLikeThis;
+using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Commercial;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Quill.Contracts;
 using Raven.Quill.Feedback;
@@ -37,45 +39,75 @@ public static class SettingsEndpoints
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status502BadGateway);
 
-        group.MapGet("/certificates/get", async (IDocumentStore store, int start, int pageSize, CancellationToken token) =>
-            {
-                var op = new GetCertificatesOperation(start, pageSize);
-                var result = await store.Maintenance.Server.SendAsync(op, token);
-                return Results.Ok(result.Select(CertificateItem.From).ToArray());
-            })
+        group.MapGet("/certificates/get", (IDocumentStore store, int start, int pageSize, ILogger<SettingsLogger> logger, CancellationToken token) =>
+                GuardCertificateErrorsAsync(logger, async () =>
+                {
+                    var op = new GetCertificatesOperation(start, pageSize);
+                    var result = await store.Maintenance.Server.SendAsync(op, token);
+                    return Results.Ok(result.Select(CertificateItem.From).ToArray());
+                }))
             .Produces<CertificateItem[]>()
             .WithName("settings.certificates")
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
 
-        group.MapPost("/certificates/generate", async (IDocumentStore store, string name, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance, string? password, CancellationToken token) =>
-            {
-                var op = new CreateClientCertificateOperation(name, permissions, clearance, password);
-                var fileBytes = await store.Maintenance.Server.SendAsync(op, token);
-                return Results.File(fileBytes.RawData, "application/octet-stream", $"{name}_certificates.zip");
-            })
-            .WithName("settings.certificatesGenerate")
-            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
-
-        group.MapPost("/certificates/edit", async (IDocumentStore store, string thumbprint, string name, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance, bool disable, CancellationToken token) =>
-            {
-                var existing = await store.Maintenance.Server.SendAsync(new GetCertificateOperation(thumbprint), token);
-                if (existing is null)
-                    return Results.NotFound(new ApiErrorResponse($"no certificate with thumbprint '{thumbprint}'"));
-
-                var op = new EditClientCertificateOperation(new EditClientCertificateOperation.Parameters
+        group.MapPost("/certificates/generate", (IDocumentStore store, GenerateClientCertificateRequest body, ILogger<SettingsLogger> logger, CancellationToken token) =>
+                GuardCertificateErrorsAsync(logger, async () =>
                 {
-                    Thumbprint = thumbprint,
-                    Permissions = permissions,
-                    Disabled = disable,
-                    Name = name,
-                    Clearance = clearance
-                });
-                await store.Maintenance.Server.SendAsync(op, token);
-                return Results.Ok();
-            })
+                    var op = new CreateClientCertificateOperation(body.Name, body.Permissions, body.Clearance, body.Password);
+                    var fileBytes = await store.Maintenance.Server.SendAsync(op, token);
+                    return Results.File(fileBytes.RawData, "application/octet-stream", $"{body.Name}_certificates.zip");
+                }))
+            .WithName("settings.certificatesGenerate")
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ApiErrorResponse>(StatusCodes.Status403Forbidden);
+
+        group.MapPost("/certificates/edit", (IDocumentStore store, string thumbprint, string name, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance, bool disable, ILogger<SettingsLogger> logger, CancellationToken token) =>
+                GuardCertificateErrorsAsync(logger, async () =>
+                {
+                    var existing = await store.Maintenance.Server.SendAsync(new GetCertificateOperation(thumbprint), token);
+                    if (existing is null)
+                        return Results.NotFound(new ApiErrorResponse($"no certificate with thumbprint '{thumbprint}'"));
+
+                    var op = new EditClientCertificateOperation(new EditClientCertificateOperation.Parameters
+                    {
+                        Thumbprint = thumbprint,
+                        Permissions = permissions,
+                        Disabled = disable,
+                        Name = name,
+                        Clearance = clearance
+                    });
+                    await store.Maintenance.Server.SendAsync(op, token);
+                    return Results.Ok();
+                }))
             .WithName("settings.certificatesEdit")
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound)
-            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ApiErrorResponse>(StatusCodes.Status403Forbidden);
+    }
+
+    private static async Task<IResult> GuardCertificateErrorsAsync(ILogger logger, Func<Task<IResult>> action)
+    {
+        try
+        {
+            return await action();
+        }
+        catch (LicenseLimitException ex)
+        {
+            logger.LogWarning(ex, "certificate operation rejected by license");
+            return Results.Json(new ApiErrorResponse(FirstSentence(ex.Message)), statusCode: StatusCodes.Status403Forbidden);
+        }
+        catch (RavenException ex)
+        {
+            logger.LogWarning(ex, "certificate operation rejected by RavenDB");
+            return Results.BadRequest(new ApiErrorResponse("certificate request rejected; see server logs for details"));
+        }
+    }
+
+    private static string FirstSentence(string message)
+    {
+        var line = message.Split('\n', 2)[0].TrimEnd('\r');
+        var separator = line.IndexOf(": ", StringComparison.Ordinal);
+        return separator >= 0 ? line[(separator + 2)..] : line;
     }
 
     public record CertificateItem(
@@ -147,4 +179,6 @@ public static class SettingsEndpoints
         string? trimmed = value?.Trim();
         return string.IsNullOrEmpty(trimmed) ? null : trimmed;
     }
+
+    internal sealed class SettingsLogger;
 }
