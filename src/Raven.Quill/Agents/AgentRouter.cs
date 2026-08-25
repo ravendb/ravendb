@@ -24,7 +24,7 @@ public interface IAgentRouter
 public sealed class InvalidParameterValueException(string name, AiAgentParameterValueType type, string reason)
     : Exception($"parameter '{name}' declared as {type}: {reason}")
 {
-    public string ParameterName { get; } = name;
+    public string PublicMessage { get; } = $"the value bound for parameter '{name}' is not a valid {type}";
 }
 
 public sealed class UnknownAgentException(string agentId)

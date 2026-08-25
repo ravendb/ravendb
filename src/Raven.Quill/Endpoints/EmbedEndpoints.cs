@@ -237,8 +237,8 @@ public static class EmbedEndpoints
                 await NdjsonStream.WriteLineAsync(ctx, new
                 {
                     type = "error",
-                    message = e is InvalidParameterValueException
-                        ? e.Message
+                    message = e is InvalidParameterValueException invalid
+                        ? invalid.PublicMessage
                         : "Chat failed. See server logs for details.",
                 });
             }

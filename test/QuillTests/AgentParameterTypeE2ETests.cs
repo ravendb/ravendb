@@ -102,27 +102,25 @@ public class AgentParameterTypeE2ETests(ITestOutputHelper output, QuillCollectio
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task A_link_minted_before_the_values_were_json_still_chats()
+    public async Task An_error_frame_on_the_public_embed_endpoint_hides_the_bound_value()
     {
         await using var mock = await MockQuillServices.StartAsync(new FinalTurn("""{"reply":"ok"}"""));
 
-        var (app, channelId) = await ProvisionAsync(mock, AiAgentParameterValueType.Number);
+        var (app, channelId) = await ProvisionAsync(mock, AiAgentParameterValueType.Default);
 
-        var link = await app.MintEmbedLinkAsync(
-            new MintEmbedLinkRequest(channelId, Parameters(("p", 7)), TtlSeconds: 3600, MaxInvocations: 50));
+        var link = await app.MintEmbedLinkAsync(new MintEmbedLinkRequest(
+            channelId, Parameters(("p", "users/9911")), TtlSeconds: 3600, MaxInvocations: 50));
 
-        using (var session = app.Store.OpenAsyncSession())
-        {
-            var stored = await session.LoadAsync<EmbedLink>(EmbedLink.IdPrefix + link.Token);
-            stored.Parameters["p"] = "7";
-            await session.SaveChangesAsync();
-        }
+        var details = await app.GetAgentAsync(AgentId);
+        details.Configuration.Parameters =
+            [new AiAgentParameter { Name = "p", Description = "A parameter.", Type = AiAgentParameterValueType.Number }];
+        await app.EditAgentAsync(details.Configuration);
 
         var ndjson = await app.SendEmbedChatAsync(link.Token, "hello");
 
-        Assert.DoesNotContain("\"type\":\"error\"", ndjson);
-        Assert.Contains("ok", ndjson);
-        Assert.Equal("7", await BoundParameterJsonAsync(app, link.Token));
+        Assert.Contains("\"type\":\"error\"", ndjson);
+        Assert.DoesNotContain("users/9911", ndjson);
+        Assert.Contains("not a valid Number", ndjson);
     }
 
     private static async Task<string> BoundParameterJsonAsync(QuillApp app, string token)
@@ -149,6 +147,8 @@ public class AgentParameterTypeE2ETests(ITestOutputHelper output, QuillCollectio
 
         return JsonSerializer.Serialize(value);
     }
+
+    private const string AgentId = "typed";
 
     private sealed record Harness(QuillApp App, string Token);
 
@@ -179,10 +179,9 @@ public class AgentParameterTypeE2ETests(ITestOutputHelper output, QuillCollectio
             OpenAiSettings = new OpenAiSettings("test-key", mock.BaseAddress + "/", "mock-model"),
         });
 
-        const string agentId = "typed";
         await app.ProvisionAgentAsync(new AiAgentConfiguration
         {
-            Identifier = agentId,
+            Identifier = AgentId,
             Name = "Typed",
             SystemPrompt = "You answer questions.",
             ConnectionStringName =
@@ -191,7 +190,7 @@ public class AgentParameterTypeE2ETests(ITestOutputHelper output, QuillCollectio
         });
 
         var channel = await app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.IFrame, agentId, ["http://localhost"]));
+            new ProvisionChannelRequest(ChannelType.IFrame, AgentId, ["http://localhost"]));
 
         return (app, channel.ChannelId);
     }
