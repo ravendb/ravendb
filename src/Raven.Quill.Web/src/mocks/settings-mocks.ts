@@ -80,7 +80,7 @@ export const sampleCertificates: CertificateItem[] = [
         securityClearance: "ValidUser",
         notBefore: "2025-06-20T00:00:00Z",
         notAfter: "2026-06-20T00:00:00Z",
-        permissions: { "demo-shop": "Read" },
+        permissions: { "demo-shop": "ReadWrite" },
         disabled: false,
     },
     {

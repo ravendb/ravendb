@@ -177,7 +177,7 @@ function EditCertificateForm({
                         variant="outline"
                         size="sm"
                         className="w-fit"
-                        onClick={() => permissionRows.append({ database: "", access: "Read" })}
+                        onClick={() => permissionRows.append({ database: "", access: "ReadWrite" })}
                     >
                         <Plus className="size-3.5" aria-hidden="true" />
                         Add access
