@@ -7,6 +7,8 @@ internal static partial class SlackMrkdwn
 {
     private const char Mask = '\uE000';
 
+    internal const int MaxEscapeExpansion = 5;
+
     internal static string Escape(string text) =>
         string.IsNullOrEmpty(text)
             ? text
