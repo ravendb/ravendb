@@ -1472,6 +1472,14 @@ export interface components {
             /** Format: int32 */
             invocationCount: number;
         };
+        GenerateClientCertificateRequest: {
+            name: string;
+            clearance: components["schemas"]["SecurityClearance"];
+            password: null | string;
+            permissions: {
+                [key: string]: components["schemas"]["DatabaseAccess"];
+            };
+        };
         /** @enum {unknown} */
         GoogleAIVersion: "V1" | "V1_Beta" | null;
         GoogleSettings: {
@@ -3816,25 +3824,28 @@ export interface operations {
     };
     "settings.certificatesGenerate": {
         parameters: {
-            query: {
-                name: string;
-                clearance: components["schemas"]["SecurityClearance"];
-                password?: string;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": {
-                    [key: string]: components["schemas"]["DatabaseAccess"];
-                };
+                "application/json": components["schemas"]["GenerateClientCertificateRequest"];
             };
         };
         responses: {
             /** @description Bad Request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3866,6 +3877,15 @@ export interface operations {
         responses: {
             /** @description Bad Request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4245,6 +4265,7 @@ export type DiscoverTableResponse = components["schemas"]["DiscoverTableResponse
 export type EditAgentRequest = components["schemas"]["EditAgentRequest"];
 export type EmbeddedSettings = components["schemas"]["EmbeddedSettings"];
 export type EmbedLinkSummaryResponse = components["schemas"]["EmbedLinkSummaryResponse"];
+export type GenerateClientCertificateRequest = components["schemas"]["GenerateClientCertificateRequest"];
 export type GoogleAIVersion = components["schemas"]["GoogleAIVersion"];
 export type GoogleSettings = components["schemas"]["GoogleSettings"];
 export type HuggingFaceSettings = components["schemas"]["HuggingFaceSettings"];
@@ -4481,7 +4502,7 @@ export function createServerApi(client: ApiClient) {
         settings: {
             certificates: (searchParams: { pageSize: string; start: string; }) => client.get<CertificateItem[], ApiErrorResponse>(API_ENDPOINTS.settings.certificates, { searchParams }),
             certificatesEdit: (request: Record<string, DatabaseAccess>, searchParams: { clearance: SecurityClearance; disable: boolean; name: string; thumbprint: string; }) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.settings.certificatesEdit, request, { searchParams }),
-            certificatesGenerate: (request: Record<string, DatabaseAccess>, searchParams: { clearance: SecurityClearance; name: string; password?: string; }) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.settings.certificatesGenerate, request, { searchParams }),
+            certificatesGenerate: (request: GenerateClientCertificateRequest) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.settings.certificatesGenerate, request),
             feedback: (request: SendFeedbackRequest) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.settings.feedback, request),
             license: () => client.get<LicenseResponse>(API_ENDPOINTS.settings.license),
             usage: (searchParams: { day?: string; month?: string; year: string; }) => client.get<QuillUsageResponse, ApiErrorResponse>(API_ENDPOINTS.settings.usage, { searchParams }),

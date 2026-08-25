@@ -104,14 +104,12 @@ function GenerateCertificateForm({ apps, onGenerated }: { apps: AppResponse[]; o
 
     const generateMutation = useMutation({
         mutationFn: (values: GenerateCertificateFormData) =>
-            api.services.certificates.generate(
-                values.clearance === "ValidUser" ? toPermissionsRecord(values.permissions) : {},
-                {
-                    name: values.name,
-                    clearance: values.clearance,
-                    password: values.password || undefined,
-                },
-            ),
+            api.services.certificates.generate({
+                name: values.name,
+                clearance: values.clearance,
+                password: values.password || undefined,
+                permissions: values.clearance === "ValidUser" ? toPermissionsRecord(values.permissions) : {},
+            }),
         onSuccess: async (zip, values) => {
             unsavedChanges.markSaved();
             // Same filename the server sets in its Content-Disposition header.
