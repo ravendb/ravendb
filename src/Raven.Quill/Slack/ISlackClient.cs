@@ -11,7 +11,8 @@ internal sealed record SlackUserInfo(
     string? Email);
 
 internal sealed class SlackApiException(
-    string message, string? error = null, TimeSpan? retryAfter = null, Exception? inner = null)
+    string message, string? error = null, TimeSpan? retryAfter = null, Exception? inner = null,
+    bool slackResponded = false)
     : Exception(message, inner)
 {
     internal const string RateLimitedError = "ratelimited";
@@ -21,6 +22,8 @@ internal sealed class SlackApiException(
     public string? Error { get; } = error;
 
     public TimeSpan? RetryAfter { get; } = retryAfter;
+
+    public bool SlackResponded { get; } = slackResponded;
 }
 
 internal interface ISlackClient
