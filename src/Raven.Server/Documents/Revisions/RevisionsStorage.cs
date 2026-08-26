@@ -2666,7 +2666,7 @@ namespace Raven.Server.Documents.Revisions
                     if (before.HasValue && lastModified >= before.Value)
                         continue;
 
-                    var cv = TableValueToChangeVector(context, (int)RevisionsTable.ChangeVector, ref tvr.Result.Reader);
+                    var cv = ReadChangeVectorFromTvr(context, ref tvr.Result.Reader);
 
                     if (heap.Count < take)
                     {
