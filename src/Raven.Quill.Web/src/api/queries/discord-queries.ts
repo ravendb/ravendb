@@ -9,7 +9,10 @@ export function createDiscordQueries(api: ServerApi["discord"]) {
             queryOptions({
                 queryKey: [baseKey, "health", slug],
                 queryFn: () => api.health(slug),
-                refetchInterval: 30_000,
+                refetchInterval: (query) =>
+                    query.state.data?.some((row) => row.enabled && !row.gatewayConnected && !row.lastGatewayError)
+                        ? 3_000
+                        : 30_000,
             }),
     };
 }
