@@ -89,8 +89,12 @@ function DiscordGatewayBadge({ health }: { health: DiscordChannelHealthResponse 
         return <Badge variant="secondary">Paused</Badge>;
     }
 
+    if (!health.lastGatewayError) {
+        return <Badge variant="secondary">Connecting...</Badge>;
+    }
+
     return (
-        <Badge variant="destructive" title={health.lastGatewayError ?? undefined}>
+        <Badge variant="destructive" title={health.lastGatewayError}>
             Gateway disconnected
         </Badge>
     );

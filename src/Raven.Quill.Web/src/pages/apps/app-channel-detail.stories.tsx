@@ -104,8 +104,7 @@ export const DiscordGatewayDisconnected: Story = {
                         {
                             ...sampleDiscordHealth[0],
                             gatewayConnected: false,
-                            lastGatewayError:
-                                "the Direct Messages intent is not enabled for this app; turn it on under Bot > Privileged Gateway Intents in the Developer Portal",
+                            lastGatewayError: "discord rejected the direct messages intent for this app",
                             lastInboundAt: null,
                         },
                     ]),
@@ -158,5 +157,35 @@ export const DiscordSendErrorOlderThanTheLastMessage: Story = {
 
         await canvas.findByText(/last message/i);
         expect(canvas.queryByText(/could not be delivered/i)).not.toBeInTheDocument();
+    },
+};
+
+export const DiscordConnecting: Story = {
+    parameters: {
+        router: {
+            initialPath: `/apps/demo/channels/${SAMPLE_DISCORD_CHANNEL_ID}`,
+            path: "/apps/:slug/channels/:channelId",
+        },
+        msw: {
+            handlers: {
+                discord: [
+                    discordMocks.health([
+                        {
+                            ...sampleDiscordHealth[0],
+                            gatewayConnected: false,
+                            lastConnectedAt: null,
+                            lastGatewayError: null,
+                            lastInboundAt: null,
+                        },
+                    ]),
+                ],
+            },
+        },
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        await canvas.findByText(/connecting/i);
+        expect(canvas.queryByText(/gateway disconnected/i)).not.toBeInTheDocument();
     },
 };
