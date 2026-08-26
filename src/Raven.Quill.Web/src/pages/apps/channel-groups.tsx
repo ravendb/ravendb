@@ -165,9 +165,9 @@ function ChannelCard({
                         </Text>
                     )}
                     {channel.discord?.botUsername && (
-                        <div className="truncate text-xs font-normal text-muted-foreground">
+                        <Text as="div" variant="caption" className="truncate font-normal">
                             {channel.discord.botUsername}
-                        </div>
+                        </Text>
                     )}
                 </CardTitle>
                 <CardAction>
