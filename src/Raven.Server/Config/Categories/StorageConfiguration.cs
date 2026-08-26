@@ -72,6 +72,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Storage.PipelineJournalWritesAboveLatencyInTicks", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public long PipelineJournalWritesAboveLatencyInTicks { get; set; }
 
+        [Description("EXPERT: The journal write size that batch consolidation aims for. 0 (the default) lets the server adapt the target at runtime from measured throughput.")]
+        [DefaultValue(0)]
+        [SizeUnit(SizeUnit.Kilobytes)]
+        [ConfigurationEntry("Storage.ConsolidationTargetWriteSizeInKb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public Size ConsolidationTargetWriteSize { get; set; }
+
         [Description("Time to sync after flush in seconds")]
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
