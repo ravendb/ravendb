@@ -256,7 +256,8 @@ public static class AppsEndpoints
             if (logger.IsWarnEnabled)
                 logger.Warn(ex,
                     $"Agent provisioning rejected by RavenDB for app slug={app.Slug} name={body.Name}");
-            return Results.BadRequest(new ApiErrorResponse("agent configuration rejected; see server logs for details"));
+            return Results.BadRequest(new ApiErrorResponse(
+                $"agent configuration rejected: {RavenErrorText.Reason(ex)}"));
         }
     }
 
