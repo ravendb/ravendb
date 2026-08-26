@@ -241,7 +241,7 @@ namespace Raven.Analyzers.Shared
         /// Returns true when <paramref name="type"/> is, or implements, IDocumentStore.
         /// </summary>
         public static bool IsDocumentStore(ITypeSymbol? type) =>
-            IsTypeOrImplements(type, KnownTypes.IDocumentStoreName);
+            IsTypeOrImplements(type, KnownTypes.DocumentStoreName);
 
         /// <summary>
         /// Returns true when <paramref name="type"/> is, or implements, the Raven.Client

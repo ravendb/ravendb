@@ -36,32 +36,10 @@ namespace Raven.Analyzers.CodeFixes.Sessions
             SyntaxNode? node = token.Parent;
 
             // Walk up to find the InvocationExpressionSyntax
-            InvocationExpressionSyntax? invocation = null;
-            while (node != null)
-            {
-                if (node is InvocationExpressionSyntax inv)
-                {
-                    invocation = inv;
-                    break;
-                }
-                node = node.Parent;
-            }
-
-            if (invocation == null)
-                return;
+            InvocationExpressionSyntax? invocation = node?.FirstAncestorOrSelf<InvocationExpressionSyntax>();
 
             // Find the containing block (method body)
-            BlockSyntax? block = null;
-            node = invocation.Parent;
-            while (node != null)
-            {
-                if (node is BlockSyntax b)
-                {
-                    block = b;
-                    break;
-                }
-                node = node.Parent;
-            }
+            BlockSyntax? block = invocation?.Parent?.FirstAncestorOrSelf<BlockSyntax>();
 
             if (block == null)
                 return;

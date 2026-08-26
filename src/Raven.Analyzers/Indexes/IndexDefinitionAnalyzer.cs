@@ -126,7 +126,7 @@ namespace Raven.Analyzers.Indexes
                 return;
 
             foreach (AssignmentExpressionSyntax assignment in
-                body.DescendantNodesAndSelf().OfType<AssignmentExpressionSyntax>())
+                     body.DescendantNodesAndSelf().OfType<AssignmentExpressionSyntax>())
             {
                 SimpleNameSyntax? nameNode = SyntaxHelpers.TryGetSimpleMemberName(assignment.Left);
                 if (nameNode == null)
@@ -148,6 +148,5 @@ namespace Raven.Analyzers.Indexes
                 }
             }
         }
-
     }
 }
