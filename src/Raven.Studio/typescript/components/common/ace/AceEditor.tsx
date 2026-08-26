@@ -1,4 +1,4 @@
-import { ReactNode, RefObject, useEffect, useRef, useState } from "react";
+import { MouseEvent, ReactNode, RefObject, useEffect, useRef, useState } from "react";
 import { AceEditorMode, LanguageService } from "components/models/aceEditor";
 import { Ace } from "ace-builds";
 import { setCompleters } from "ace-builds/src-noconflict/ext-language_tools";
@@ -18,7 +18,6 @@ import useResizableHeight from "components/hooks/useResizableHeight";
 import AceEditorSamplesPanel, {
     AceEditorSamplesPanelConfig,
     AceEditorSamplesToggleAction,
-    confirmSampleLoad,
 } from "./AceEditorSamplesPanel";
 import useConfirm from "components/common/ConfirmDialog";
 
@@ -40,6 +39,7 @@ export interface AceEditorProps extends IAceEditorProps {
     maxHeight?: number | string;
     disabled?: boolean;
     samplesPanel?: AceEditorSamplesPanelConfig;
+    aiAssistantSlot?: ReactNode;
 }
 
 function AceEditor(props: AceEditorProps) {
@@ -58,7 +58,10 @@ function AceEditor(props: AceEditorProps) {
         readOnly,
         disabled,
         samplesPanel,
+        aiAssistantSlot,
         onChange,
+        value,
+        placeholder,
         ...rest
     } = props;
 
@@ -77,10 +80,9 @@ function AceEditor(props: AceEditorProps) {
 
     const validActions = actions.filter(Boolean);
 
-    const [internalSamplesPanelOpen, setInternalSamplesPanelOpen] = useState(false);
+    const [isSamplesPanelOpen, setIsSamplesPanelOpen] = useState(false);
 
-    const isSamplesPanelOpen = samplesPanel?.isOpen ?? internalSamplesPanelOpen;
-    const toggleSamplesPanel = samplesPanel?.onToggle ?? (() => setInternalSamplesPanelOpen((prev) => !prev));
+    const toggleSamplesPanel = () => setIsSamplesPanelOpen((prev) => !prev);
 
     const hasSamplesPanel = samplesPanel?.tabs.length > 0;
 
@@ -169,10 +171,32 @@ function AceEditor(props: AceEditorProps) {
     const confirm = useConfirm();
 
     const handleSampleSelect = async (script: string) => {
-        if (await confirmSampleLoad(confirm, aceRef.current?.editor.getValue() ?? "")) {
-            onChange?.(script);
+        const currentValue = aceRef.current?.editor.getValue() ?? "";
+
+        if (currentValue.trim() && confirm) {
+            const isConfirmed = await confirm({
+                title: "Load sample into the editor?",
+                message: "The current editor content will be replaced.",
+                actionColor: "warning",
+                confirmText: "Load",
+            });
+
+            if (!isConfirmed) {
+                return;
+            }
         }
+
+        onChange?.(script);
     };
+
+    const handleBrowseSamplesClick = (e: MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleSamplesPanel();
+        aceRef.current?.editor.focus();
+    };
+
+    const showSamplesPlaceholder = hasSamplesPanel && !readOnly && !disabled && !placeholder && !value;
 
     const handleLoad = (editor: Ace.Editor) => {
         // (ctrl+k is used for studio search)
@@ -221,6 +245,8 @@ function AceEditor(props: AceEditorProps) {
                         commands={commands}
                         onLoad={handleLoad}
                         onChange={onChange}
+                        value={value}
+                        placeholder={placeholder}
                         readOnly={disabled || readOnly}
                         {...rest}
                     />
@@ -247,12 +273,27 @@ function AceEditor(props: AceEditorProps) {
                     {!isFullScreenLabelHidden && (
                         <span className="fullScreenModeLabel">Press Shift+F11 to enter full screen mode</span>
                     )}
+                    {showSamplesPlaceholder && (
+                        <div className="ace-samples-placeholder">
+                            <span className="ace-samples-placeholder__text">
+                                {"// Start writing, or "}
+                                <button
+                                    type="button"
+                                    className="ace-samples-placeholder__link"
+                                    onClick={handleBrowseSamplesClick}
+                                >
+                                    browse samples
+                                </button>
+                            </span>
+                        </div>
+                    )}
                 </div>
                 {errorMessage && (
                     <div className="bg-faded-danger py-1 px-2">
                         <small>{errorMessage}</small>
                     </div>
                 )}
+                {aiAssistantSlot}
                 <div
                     style={{
                         position: "absolute",

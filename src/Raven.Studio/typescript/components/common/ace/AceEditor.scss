@@ -51,6 +51,46 @@ $pre-bg: colors.$well-bg-var;
             border-bottom-right-radius: var(--bs-border-radius);
             border-left: 1px solid colors.$border-color-light-var;
         }
+
+        .ace-samples-placeholder {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            display: flex;
+            align-items: flex-start;
+            // gutter 42px + 1px border + 4px ace line padding = 47px to align with first char
+            padding-top: 2px;
+            padding-left: 47px;
+
+            &__text {
+                font-family: var(--monospace-font, var(--bs-font-monospace));
+                font-size: 14px;
+                color: var(--token-boolean);
+                opacity: 0.6;
+                white-space: pre;
+                line-height: 26px;
+            }
+
+            &__link {
+                pointer-events: auto;
+                background: none;
+                border: none;
+                padding: 0;
+                font-family: inherit;
+                font-size: inherit;
+                line-height: inherit;
+                color: var(--token-keyword);
+                opacity: 0.8;
+                cursor: pointer;
+                text-decoration: none;
+                font-weight: bold;
+
+                &:hover {
+                    text-decoration: underline;
+                    opacity: 1;
+                }
+            }
+        }
     }
     .ace_autocomplete {
         line-height: 2;

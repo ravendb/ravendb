@@ -15,7 +15,6 @@ const patchSamplesTabs = [createSampleScriptsTab(scripts), createMethodsTab(meth
 
 export default function PatchAceEditor({ query, languageService, validationErrorMessage }: PatchAceEditorProps) {
     const [value, setValue] = useState(() => query());
-    const [showSamples, setShowSamples] = useState(false);
     const aceRef = useRef<ReactAce>(null);
 
     useEffect(() => {
@@ -64,54 +63,24 @@ export default function PatchAceEditor({ query, languageService, validationError
         checkSyntax(query());
     }, [query, checkSyntax]);
 
-    const toggleSamples = useCallback(() => {
-        setShowSamples((prev) => !prev);
-    }, []);
-
-    const handleBrowseSamplesClick = useCallback(
-        (e: React.MouseEvent) => {
-            e.preventDefault();
-            e.stopPropagation();
-            toggleSamples();
-            aceRef.current?.editor.focus();
-        },
-        [toggleSamples]
-    );
-
     return (
-        <div className="patch-ace-editor-wrapper">
-            <AceEditor
-                aceRef={aceRef}
-                mode="rql"
-                value={value}
-                onChange={handleChange}
-                onLoad={handleEditorLoad}
-                languageService={languageService}
-                validationErrorMessage={validationErrorMessage}
-                height="300px"
-                minHeight={300}
-                maxHeight={300}
-                actions={[
-                    { component: <AceEditor.FullScreenAction /> },
-                    { component: <AceEditor.FormatAction /> },
-                    { component: <AceEditor.LoadFileAction onLoad={handleLoadScript} /> },
-                ]}
-                samplesPanel={{ tabs: patchSamplesTabs, isOpen: showSamples, onToggle: toggleSamples }}
-            />
-            {!value && (
-                <div className="patch-ace-placeholder">
-                    <span className="patch-ace-placeholder__text">
-                        {"// Start writing, or "}
-                        <button
-                            type="button"
-                            className="patch-ace-placeholder__link"
-                            onClick={handleBrowseSamplesClick}
-                        >
-                            browse samples
-                        </button>
-                    </span>
-                </div>
-            )}
-        </div>
+        <AceEditor
+            aceRef={aceRef}
+            mode="rql"
+            value={value}
+            onChange={handleChange}
+            onLoad={handleEditorLoad}
+            languageService={languageService}
+            validationErrorMessage={validationErrorMessage}
+            height="300px"
+            minHeight={300}
+            maxHeight={300}
+            actions={[
+                { component: <AceEditor.FullScreenAction /> },
+                { component: <AceEditor.FormatAction /> },
+                { component: <AceEditor.LoadFileAction onLoad={handleLoadScript} /> },
+            ]}
+            samplesPanel={{ tabs: patchSamplesTabs }}
+        />
     );
 }
