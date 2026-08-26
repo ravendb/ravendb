@@ -1,8 +1,10 @@
-import { useId, useRef, useState, type ReactNode } from "react";
-import { ImageIcon } from "lucide-react";
+import { useId, useRef, useState, type DragEvent, type ReactNode } from "react";
+import { ImageIcon, Trash2 } from "lucide-react";
 import { type FieldPath, type FieldValues, type UseControllerProps, useController } from "react-hook-form";
+import { InfoHint } from "@/components/data/info-hint";
 import { Button } from "@/components/shadcn/ui/button";
 import { Field, FieldDescription, FieldLabel } from "@/components/shadcn/ui/field";
+import { cn } from "@/lib/utils";
 
 /** Raster formats only: an SVG data URI can carry script, and the widget CSP would let it through as data:. */
 const ACCEPTED_TYPES = "image/png,image/jpeg,image/webp";
@@ -32,18 +34,27 @@ type FormImagePickerProps<TFieldValues extends FieldValues, TName extends FieldP
     className?: string;
     description?: ReactNode;
     disabled?: boolean;
+    /** Sits behind a help icon next to the label, for the format and size rules. */
+    hint?: string;
     label?: ReactNode;
     /** The stored image is downscaled to fit this box, so the data URI stays small. */
     maxDimension?: number;
 };
 
-/** An image field storing a small data URI: upload with client-side downscaling, thumbnail, remove. */
+/**
+ * An image field storing a small data URI: upload with client-side downscaling, thumbnail, remove.
+ *
+ * Laid out as one row - thumbnail, name, action - rather than a stack, so a panel of these reads as a
+ * list of slots to fill. The thumbnail doubles as the drop target and the click-to-browse control,
+ * which is what its dashed empty state has always looked like.
+ */
 export function FormImagePicker<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>({
     className,
     control,
     defaultValue,
     description,
     disabled,
+    hint,
     label,
     maxDimension = 128,
     name,
@@ -51,6 +62,7 @@ export function FormImagePicker<TFieldValues extends FieldValues, TName extends 
     const id = useId();
     const inputRef = useRef<HTMLInputElement>(null);
     const [readError, setReadError] = useState<string | null>(null);
+    const [isDragActive, setIsDragActive] = useState(false);
     const {
         field: { onChange, value },
         fieldState: { error, invalid },
@@ -68,42 +80,76 @@ export function FormImagePicker<TFieldValues extends FieldValues, TName extends 
         }
     };
 
+    const onDrop = (event: DragEvent<HTMLButtonElement>) => {
+        if (disabled) return;
+        event.preventDefault();
+        setIsDragActive(false);
+        void onFileSelected(event.dataTransfer.files.item(0));
+    };
+
     return (
         <Field className={className} data-invalid={invalid || undefined}>
-            {label && <FieldLabel htmlFor={id}>{label}</FieldLabel>}
-            <div className="flex items-center gap-3">
-                {hasImage ? (
-                    <img src={value} alt="" className="size-12 shrink-0 rounded-md border object-contain" />
-                ) : (
-                    <span className="flex size-12 shrink-0 items-center justify-center rounded-md border border-dashed text-muted-foreground">
+            <div className="flex items-center gap-3 rounded-lg border p-3">
+                <button
+                    type="button"
+                    disabled={disabled}
+                    aria-label={hasImage ? "Replace image" : "Upload image"}
+                    onClick={() => inputRef.current?.click()}
+                    onDragOver={(event) => {
+                        if (disabled) return;
+                        event.preventDefault();
+                        setIsDragActive(true);
+                    }}
+                    onDragLeave={() => setIsDragActive(false)}
+                    onDrop={onDrop}
+                    className={cn(
+                        "flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md border text-muted-foreground transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none",
+                        !hasImage && "border-dashed",
+                        !disabled && "hover:border-ring hover:bg-accent",
+                        isDragActive && !disabled && "border-primary-strong bg-primary/5",
+                        disabled && "cursor-not-allowed opacity-60",
+                    )}
+                >
+                    {hasImage ? (
+                        <img src={value} alt="" className="size-full object-contain" />
+                    ) : (
                         <ImageIcon className="size-5" aria-hidden="true" />
-                    </span>
-                )}
-                <div className="flex gap-2">
+                    )}
+                </button>
+                <div className="grid min-w-0 flex-1 gap-0.5">
+                    {label != null && (
+                        <span className="flex items-center gap-1.5">
+                            <FieldLabel htmlFor={id}>{label}</FieldLabel>
+                            {hint && <InfoHint content={hint} />}
+                        </span>
+                    )}
+                    {description && <FieldDescription className="text-xs">{description}</FieldDescription>}
+                </div>
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={disabled}
+                    onClick={() => inputRef.current?.click()}
+                >
+                    {hasImage ? "Replace" : "Upload"}
+                </Button>
+                {hasImage && (
                     <Button
                         type="button"
-                        variant="outline"
-                        size="sm"
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label="Remove image"
+                        title="Remove image"
                         disabled={disabled}
-                        onClick={() => inputRef.current?.click()}
+                        onClick={() => {
+                            onChange("");
+                            setReadError(null);
+                        }}
                     >
-                        {hasImage ? "Replace" : "Upload image"}
+                        <Trash2 aria-hidden="true" />
                     </Button>
-                    {hasImage && (
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            disabled={disabled}
-                            onClick={() => {
-                                onChange("");
-                                setReadError(null);
-                            }}
-                        >
-                            Remove
-                        </Button>
-                    )}
-                </div>
+                )}
             </div>
             <input
                 ref={inputRef}
@@ -121,7 +167,6 @@ export function FormImagePicker<TFieldValues extends FieldValues, TName extends 
             {(readError ?? error?.message) && (
                 <FieldDescription className="text-destructive">{readError ?? error?.message}</FieldDescription>
             )}
-            {description && <FieldDescription>{description}</FieldDescription>}
         </Field>
     );
 }

@@ -43,6 +43,12 @@ const RADIUS_VALUES = ["None", "Small", "Medium", "Large"] as const;
 const LOGO_RADIUS_VALUES = ["None", "Small", "Medium", "Large", "Pill"] as const;
 const LOGO_FIT_VALUES = ["Contain", "Cover"] as const;
 const SUGGESTED_PROMPTS_LAYOUT_VALUES = ["Stacked", "Inline"] as const;
+
+// A theme saved before these two fields shipped comes back without them. The generated type says they are
+// always present, so nothing coalesces them and the required enum rejects `undefined` on a field the
+// operator never touched. Both start from the value the widget itself falls back to.
+const DEFAULT_LOGO_FIT: WidgetLogoFit = "Contain";
+const DEFAULT_SUGGESTED_PROMPTS_LAYOUT: WidgetSuggestedPromptsLayout = "Stacked";
 const FONT_SIZE_VALUES = ["Small", "Medium", "Large", "Custom"] as const;
 
 const optionalText = (max: number, label: string) =>
@@ -227,14 +233,14 @@ export function toFormData(theme: WidgetTheme): WidgetThemeFormData {
         customFontSizeRem: theme.customFontSizeRem,
         logo: theme.logo ?? "",
         logoRadius: theme.logoRadius,
-        logoFit: theme.logoFit,
+        logoFit: logoFitOrDefault(theme.logoFit),
         headerTitle: theme.headerTitle,
         headerSubtitle: theme.headerSubtitle,
         showHeader: theme.showHeader,
         greetingTitle: theme.greetingTitle,
         greetingBody: theme.greetingBody,
         suggestedPrompts: theme.suggestedPrompts.map((value) => ({ value })),
-        suggestedPromptsLayout: theme.suggestedPromptsLayout,
+        suggestedPromptsLayout: suggestedPromptsLayoutOrDefault(theme.suggestedPromptsLayout),
         inputPlaceholder: theme.inputPlaceholder,
         disclaimer: theme.disclaimer,
         customCss: theme.customCss ?? "",
@@ -294,6 +300,14 @@ function isSuggestedPromptsLayout(value: unknown): value is WidgetSuggestedPromp
     return SUGGESTED_PROMPTS_LAYOUT_VALUES.includes(value as WidgetSuggestedPromptsLayout);
 }
 
+function logoFitOrDefault(value: unknown): WidgetLogoFit {
+    return isLogoFit(value) ? value : DEFAULT_LOGO_FIT;
+}
+
+function suggestedPromptsLayoutOrDefault(value: unknown): WidgetSuggestedPromptsLayout {
+    return isSuggestedPromptsLayout(value) ? value : DEFAULT_SUGGESTED_PROMPTS_LAYOUT;
+}
+
 function isFontSize(value: unknown): value is WidgetFontSize {
     return FONT_SIZE_VALUES.includes(value as WidgetFontSize);
 }
@@ -347,7 +361,7 @@ export function toPreviewTheme(values: PartialFormData, fallback: WidgetTheme): 
         customFontSizeRem: fontSize === "Custom" ? customFontSizeRem : null,
         logo: values.logo === undefined ? fallback.logo : blankToNull(values.logo),
         logoRadius: isLogoRadius(values.logoRadius) ? values.logoRadius : fallback.logoRadius,
-        logoFit: isLogoFit(values.logoFit) ? values.logoFit : fallback.logoFit,
+        logoFit: isLogoFit(values.logoFit) ? values.logoFit : logoFitOrDefault(fallback.logoFit),
         headerTitle: values.headerTitle?.trim() || fallback.headerTitle,
         headerSubtitle: text(values.headerSubtitle, fallback.headerSubtitle),
         showHeader: values.showHeader ?? fallback.showHeader,
@@ -359,7 +373,7 @@ export function toPreviewTheme(values: PartialFormData, fallback: WidgetTheme): 
             .slice(0, MAX_SUGGESTED_PROMPTS),
         suggestedPromptsLayout: isSuggestedPromptsLayout(values.suggestedPromptsLayout)
             ? values.suggestedPromptsLayout
-            : fallback.suggestedPromptsLayout,
+            : suggestedPromptsLayoutOrDefault(fallback.suggestedPromptsLayout),
         inputPlaceholder: values.inputPlaceholder?.trim() || fallback.inputPlaceholder,
         disclaimer: text(values.disclaimer, fallback.disclaimer),
         customCss: values.customCss === undefined ? fallback.customCss : blankToNull(values.customCss.trim()),
