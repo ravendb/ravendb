@@ -2,28 +2,42 @@ import React from "react";
 import Button from "react-bootstrap/Button";
 import { AnimatePresence, motion } from "motion/react";
 import { Icon } from "components/common/Icon";
-import SamplesTabs from "components/common/sampleQueries/SamplesTabs";
-import { SamplesTab } from "components/common/sampleQueries/partials/sampleQueriesTypes";
+import SamplesTabs from "components/common/samples/SamplesTabs";
+import { SamplesTab } from "components/common/samples/partials/samplesTypes";
+import { ConfirmOptions } from "components/common/ConfirmDialog";
 
 export interface AceEditorSamplesPanelConfig {
     tabs: SamplesTab[];
-    tooltipTitle?: string;
+    isOpen?: boolean;
+    onToggle?: () => void;
 }
 
 interface AceEditorSamplesToggleActionProps {
-    tooltipTitle?: string;
     onClick: () => void;
 }
 
-export function AceEditorSamplesToggleAction({
-    tooltipTitle = "Browse samples",
-    onClick,
-}: AceEditorSamplesToggleActionProps) {
+export function AceEditorSamplesToggleAction({ onClick }: AceEditorSamplesToggleActionProps) {
     return (
-        <Button size="sm" title={tooltipTitle} onClick={onClick} className="p-0 text-reset" variant="link">
+        <Button size="sm" title="Browse samples" onClick={onClick} className="p-0 text-reset" variant="link">
             <Icon icon="help" margin="m-0" />
         </Button>
     );
+}
+
+export async function confirmSampleLoad(
+    confirm: (options: ConfirmOptions) => Promise<boolean>,
+    currentEditorValue: string
+): Promise<boolean> {
+    if (!currentEditorValue?.trim() || !confirm) {
+        return true;
+    }
+
+    return confirm({
+        title: "Load sample into the editor?",
+        message: "The current editor content will be replaced.",
+        actionColor: "warning",
+        confirmText: "Load",
+    });
 }
 
 interface AceEditorSamplesPanelProps {

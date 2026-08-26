@@ -1,7 +1,7 @@
 import React from "react";
 import { fireEvent, rtlRender } from "test/rtlTestUtils";
 import SamplesTabs from "./SamplesTabs";
-import { SamplesTab } from "./partials/sampleQueriesTypes";
+import { SamplesTab } from "./partials/samplesTypes";
 
 const tabs: SamplesTab[] = [
     {

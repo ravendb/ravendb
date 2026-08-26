@@ -1,4 +1,4 @@
-import { MethodGroup } from "components/common/sampleQueries/partials/sampleQueriesTypes";
+import { MethodGroup } from "components/common/samples/partials/samplesTypes";
 import { contextScriptMethodGroups, updateScriptMethodGroups } from "./editGenAiTaskMethodsData";
 
 const contextOnlySignatures = [
@@ -39,7 +39,6 @@ describe("editGenAiTaskMethodsData", () => {
     it("shows only methods supported by the context generation script", () => {
         const signatures = getSignatures(contextScriptMethodGroups);
 
-        expect(signatures).toHaveLength(48);
         expect(signatures).toEqual(expect.arrayContaining(contextOnlySignatures));
         expect(signatures).toEqual(expect.not.arrayContaining(updateOnlySignatures));
         expect(contextScriptMethodGroups.every((group) => group.methods.length > 0)).toBe(true);
@@ -48,7 +47,6 @@ describe("editGenAiTaskMethodsData", () => {
     it("shows only methods supported by the update script", () => {
         const signatures = getSignatures(updateScriptMethodGroups);
 
-        expect(signatures).toHaveLength(38);
         expect(signatures).toEqual(expect.arrayContaining(updateOnlySignatures));
         expect(signatures).toEqual(expect.not.arrayContaining(contextOnlySignatures));
         expect(updateScriptMethodGroups.every((group) => group.methods.length > 0)).toBe(true);

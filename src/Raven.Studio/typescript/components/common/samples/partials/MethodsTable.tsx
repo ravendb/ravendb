@@ -8,7 +8,7 @@ import { motion } from "motion/react";
 import Code, { CodeLanguage } from "components/common/Code";
 import { EmptySet } from "components/common/EmptySet";
 import { Icon } from "components/common/Icon";
-import { MethodEntry, MethodGroup } from "./sampleQueriesTypes";
+import { MethodEntry, MethodGroup } from "./samplesTypes";
 import LoadButton from "./LoadButton";
 
 interface MethodsTableProps {

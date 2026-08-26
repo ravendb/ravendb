@@ -98,56 +98,18 @@ export default function SampleObjectAndSchemaFields<
 
     const defaultActiveTab = jsonSchema ? "json-schema" : "sample-object";
 
-    const shouldShowSampleObjectHelpAction = !sampleObjectSamplesPanel && !!sampleObjectSyntaxHelp;
+    const sampleObjectActions = buildEditorActions({
+        onLoadFile: (value) => setValue(sampleObjectName, value as TFieldValues[TName], { shouldValidate: true }),
+        syntaxHelp: sampleObjectSyntaxHelp,
+        samplesPanel: sampleObjectSamplesPanel,
+        helpTooltipTitle: helpActionTooltipTitle,
+    });
 
-    const sampleObjectActions: AceEditorProps["actions"] = [
-        { component: <AceEditor.FullScreenAction /> },
-        { component: <AceEditor.FormatAction /> },
-        {
-            component: (
-                <AceEditor.LoadFileAction
-                    onLoad={(value) =>
-                        setValue(sampleObjectName, value as TFieldValues[TName], { shouldValidate: true })
-                    }
-                />
-            ),
-        },
-        ...(shouldShowSampleObjectHelpAction
-            ? [
-                  {
-                      component: (
-                          <AceEditor.HelpAction
-                              message={sampleObjectSyntaxHelp}
-                              tooltipTitle={helpActionTooltipTitle}
-                          />
-                      ),
-                      position: "bottom" as const,
-                  },
-              ]
-            : []),
-    ];
-
-    const shouldShowJsonSchemaHelpAction = !jsonSchemaSamplesPanel && !!jsonSchemaSyntaxHelp;
-
-    const jsonSchemaActions: AceEditorProps["actions"] = [
-        { component: <AceEditor.FullScreenAction /> },
-        { component: <AceEditor.FormatAction /> },
-        {
-            component: (
-                <AceEditor.LoadFileAction
-                    onLoad={(value) => setValue(jsonSchemaName, value as TFieldValues[TName], { shouldValidate: true })}
-                />
-            ),
-        },
-        ...(shouldShowJsonSchemaHelpAction
-            ? [
-                  {
-                      component: <AceEditor.HelpAction message={jsonSchemaSyntaxHelp} />,
-                      position: "bottom" as const,
-                  },
-              ]
-            : []),
-    ];
+    const jsonSchemaActions = buildEditorActions({
+        onLoadFile: (value) => setValue(jsonSchemaName, value as TFieldValues[TName], { shouldValidate: true }),
+        syntaxHelp: jsonSchemaSyntaxHelp,
+        samplesPanel: jsonSchemaSamplesPanel,
+    });
 
     return (
         <div className="sample-object-and-schema-tabs">
@@ -249,6 +211,34 @@ export default function SampleObjectAndSchemaFields<
             </Tabs>
         </div>
     );
+}
+
+interface BuildEditorActionsArgs {
+    onLoadFile: (value: string) => void;
+    syntaxHelp?: ReactNode;
+    samplesPanel?: AceEditorSamplesPanelConfig;
+    helpTooltipTitle?: string;
+}
+
+function buildEditorActions({
+    onLoadFile,
+    syntaxHelp,
+    samplesPanel,
+    helpTooltipTitle,
+}: BuildEditorActionsArgs): AceEditorProps["actions"] {
+    return [
+        { component: <AceEditor.FullScreenAction /> },
+        { component: <AceEditor.FormatAction /> },
+        { component: <AceEditor.LoadFileAction onLoad={onLoadFile} /> },
+        ...(!samplesPanel && syntaxHelp
+            ? [
+                  {
+                      component: <AceEditor.HelpAction message={syntaxHelp} tooltipTitle={helpTooltipTitle} />,
+                      position: "bottom" as const,
+                  },
+              ]
+            : []),
+    ];
 }
 
 function DefaultSampleObjectTooltip() {
