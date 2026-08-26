@@ -473,8 +473,7 @@ internal sealed class DiscordGatewayRuntime
         4011 => "this bot is in too many servers for a single gateway connection",
         4012 => "discord no longer supports the gateway version this appliance uses",
         4013 => "discord rejected the requested gateway intents",
-        4014 => "the Direct Messages intent is not enabled for this app; " +
-                "turn it on under Bot > Privileged Gateway Intents in the Developer Portal",
+        4014 => "discord rejected the direct messages intent for this app",
         _ => null,
     };
 }

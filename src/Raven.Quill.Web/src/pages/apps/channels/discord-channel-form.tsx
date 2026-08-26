@@ -207,13 +207,10 @@ function LoadedDiscordChannelForm({
                                         , choose <span className="font-medium">New Application</span> and name it.
                                     </li>
                                     <li>
-                                        Open the <span className="font-medium">Bot</span> page and turn on the{" "}
-                                        <span className="font-medium">Direct Messages Intent</span> under Privileged
-                                        Gateway Intents.
-                                    </li>
-                                    <li>
-                                        On the same page choose <span className="font-medium">Reset Token</span> and
-                                        copy the token it shows — Discord never shows it again.
+                                        Open the <span className="font-medium">Bot</span> page, choose{" "}
+                                        <span className="font-medium">Reset Token</span> and copy the token it shows —
+                                        Discord never shows it again. Direct messages use a non-privileged intent, so
+                                        nothing under Privileged Gateway Intents needs turning on.
                                     </li>
                                 </ol>
                                 <Text variant="caption">
