@@ -56,6 +56,9 @@ internal sealed class DiscordMessagePayload
     [JsonPropertyName("guild_id")]
     public string? GuildId { get; set; }
 
+    [JsonPropertyName("type")]
+    public int Type { get; set; }
+
     [JsonPropertyName("content")]
     public string? Content { get; set; }
 
