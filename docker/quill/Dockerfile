@@ -172,7 +172,7 @@ VOLUME /var/lib/quill
 # --start-period must match RAVEN_QUILL_STARTUP_GRACE_SECONDS below: both are the startup budget,
 # one for Docker, one for 05-console deciding when a slow start counts as stuck.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=180s \
-    CMD curl -fsk https://127.0.0.1/healthz && curl -fs http://127.0.0.1:5000/healthz
+    CMD curl -fsk --resolve api.localhost:443:127.0.0.1 https://api.localhost/healthz && curl -fs http://127.0.0.1:5000/healthz
 
 # S6_VERBOSITY=0 keeps the supervisor's lifecycle chatter off stdout
 ENV S6_VERBOSITY=0 \
