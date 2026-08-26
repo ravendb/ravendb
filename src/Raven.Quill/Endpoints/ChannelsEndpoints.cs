@@ -813,6 +813,7 @@ public static class ChannelsEndpoints
         ITelegramChannelManager telegramManager,
         SlackHealthRegistry slackHealth,
         IDiscordChannelManager discordManager,
+        DiscordHealthRegistry discordHealth,
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
@@ -831,7 +832,8 @@ public static class ChannelsEndpoints
             ChannelType.Telegram => await DeleteTelegramChannelAsync(session, channel, app, channelId, store, telegramManager, logger, ct),
             ChannelType.WhatsApp => DeleteWhatsAppChannelAsync(),
             ChannelType.Slack => await DeleteSlackChannelAsync(session, channel, app, channelId, store, slackHealth, logger, ct),
-            ChannelType.Discord => await DeleteDiscordChannelAsync(session, channel, app, channelId, store, discordManager, logger, ct),
+            ChannelType.Discord => await DeleteDiscordChannelAsync(
+                session, channel, app, channelId, store, discordManager, discordHealth, logger, ct),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{channel.Type}'")),
         };
     }
@@ -905,6 +907,7 @@ public static class ChannelsEndpoints
         string channelId,
         IDocumentStore store,
         IDiscordChannelManager discordManager,
+        DiscordHealthRegistry health,
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
@@ -914,6 +917,7 @@ public static class ChannelsEndpoints
         if (channel.Discord is { BotUserId.Length: > 0 } settings)
             await TryReleaseDiscordAsync(store, settings.BotUserId, app.Database, channel.Id!, logger);
 
+        health.Remove(app.Database, channel.ShortId);
         discordManager.Wake();
 
         logger.LogInformation("Deleted Discord channel slug={Slug} channelId={ChannelId}", app.Slug, channelId);

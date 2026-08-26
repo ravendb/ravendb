@@ -11,6 +11,7 @@ using Raven.Quill.Agents;
 using Raven.Quill.AiHelper;
 using Raven.Quill.Cdc;
 using Raven.Quill.Contracts;
+using Raven.Quill.Discord;
 using Raven.Quill.Endpoints.Helpers;
 using Raven.Quill.Live;
 using Raven.Quill.Raven;
@@ -100,6 +101,8 @@ public static class AppsEndpoints
         IDocumentStore store,
         ITelegramChannelManager telegramManager,
         SlackHealthRegistry slackHealth,
+        IDiscordChannelManager discordManager,
+        DiscordHealthRegistry discordHealth,
         ILogger<AppsLogger> logger,
         CancellationToken ct)
     {
@@ -117,7 +120,9 @@ public static class AppsEndpoints
         await AppLookup.DeleteAppAsync(store, slug, ct);
 
         slackHealth.RemoveDatabase(app.Database);
+        discordHealth.RemoveDatabase(app.Database);
         telegramManager.Wake();
+        discordManager.Wake();
 
         return Results.NoContent();
     }
