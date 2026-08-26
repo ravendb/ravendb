@@ -337,7 +337,7 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
             Host.Client, QuillRoutes.DiscordHealth(app.Slug));
         var row = health.Single(r => r.ChannelId == channel.ChannelId);
         Assert.False(row.GatewayConnected);
-        Assert.Contains("Direct Messages intent", row.LastGatewayError);
+        Assert.Contains("direct messages intent", row.LastGatewayError);
 
         var identifiesAfterFatal = Discord.Identifies.Count;
         await Task.Delay(750);
