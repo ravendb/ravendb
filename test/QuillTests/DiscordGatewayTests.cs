@@ -461,6 +461,45 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
         Assert.Equal(identifiesAfterFatal, Discord.Identifies.Count);
     }
 
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_flooding_sender_is_capped_and_notified_once_per_burst()
+    {
+        await using var app = await NewAppAsync();
+        await NewChannelAsync(app);
+        await Discord.WaitUntilConnectedAsync();
+
+        var capacity = new DiscordOptions().SenderQueueCapacity;
+        Router.Chunks = ["done"];
+
+        var firstBurst = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Router.BeforeRun = _ => firstBurst.Task;
+
+        for (var i = 0; i < capacity + 2; i++)
+            await Discord.DispatchDmAsync($"msg-flood-{i}", DmChannel, Sender, $"flood {i}");
+
+        await Discord.WaitUntilAsync(() => OverloadNotices() == 1, "the single overload notice");
+        Assert.Single(Router.Requests);
+
+        firstBurst.SetResult();
+        await Discord.WaitUntilAsync(() => Router.Requests.Count == capacity, "the capped burst to drain");
+        Assert.Equal(1, OverloadNotices());
+
+        var secondBurst = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Router.BeforeRun = _ => secondBurst.Task;
+
+        for (var i = 0; i < capacity + 2; i++)
+            await Discord.DispatchDmAsync($"msg-flood2-{i}", DmChannel, Sender, $"again {i}");
+
+        await Discord.WaitUntilAsync(() => OverloadNotices() == 2, "a fresh overload notice once the chain retired");
+
+        secondBurst.SetResult();
+        await Discord.WaitUntilAsync(
+            () => Router.Requests.Count == capacity * 2, "the second capped burst to drain");
+    }
+
+    private int OverloadNotices() =>
+        Discord.SentMessages.Count(m => m.Content == DiscordInboundProcessor.OverloadReply);
+
     private sealed record ProvisionedChannel(
         string ChannelId, string BotToken, string ApplicationId, string BotUserId);
 
