@@ -2285,6 +2285,15 @@ export interface operations {
                     "application/json": components["schemas"]["AuthStatusResponse"];
                 };
             };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthStatusResponse"];
+                };
+            };
         };
     };
     "auth.logout": {
