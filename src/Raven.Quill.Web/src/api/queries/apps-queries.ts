@@ -4,6 +4,8 @@ import { recordFetchStartedAt } from "@/lib/query-fetch-start";
 
 const baseKey = "apps";
 
+const CDC_ERRORS_POLL_INTERVAL_MS = 5_000;
+
 // Partial key covering every app's connection strings list, so mutations on the
 // (server-wide) connection strings can invalidate all of them at once.
 export const APP_AI_CONNECTION_STRINGS_KEY = [baseKey, "aiConnectionStringsList"] as const;
@@ -32,6 +34,9 @@ export function createAppsQueries(api: ServerApi["apps"]) {
                 // Errors must always reflect the current server state, so never serve them from cache.
                 staleTime: 0,
                 gcTime: 0,
+                // Data sync fails on its own schedule, often seconds after the view watching it
+                // opened, so a single fetch would leave the operator reading a stale zero.
+                refetchInterval: CDC_ERRORS_POLL_INTERVAL_MS,
             }),
         suggestAgentFromData: (slug: string) =>
             queryOptions({
