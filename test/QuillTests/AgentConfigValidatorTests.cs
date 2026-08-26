@@ -180,6 +180,30 @@ public class AgentConfigValidatorTests(ITestOutputHelper output) : NoDisposalNee
             ErrorsOf(config, new() { ["create_ticket"] = Webhook("https://h/x") }));
     }
 
+    [RavenTheory(RavenTestCategory.Quill)]
+    [InlineData("not json at all")]
+    [InlineData("[1, 2]")]
+    [InlineData("\"quoted\"")]
+    public void ValidateActions_rejects_a_parameter_sample_that_is_not_a_json_object(string sample)
+    {
+        var config = ConfigWith(("create_ticket", "files a ticket"));
+        config.Actions[0].ParametersSampleObject = sample;
+
+        Assert.Contains("action 'create_ticket': parametersSampleObject must be a JSON object",
+            ErrorsOf(config, new() { ["create_ticket"] = Webhook("https://h/x") }));
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public void ValidateActions_rejects_a_parameter_schema_that_is_not_a_json_object()
+    {
+        var config = ConfigWith(("create_ticket", "files a ticket"));
+        config.Actions[0].ParametersSampleObject = null;
+        config.Actions[0].ParametersSchema = "[1, 2]";
+
+        Assert.Contains("action 'create_ticket': parametersSchema must be a JSON object",
+            ErrorsOf(config, new() { ["create_ticket"] = Webhook("https://h/x") }));
+    }
+
     [RavenFact(RavenTestCategory.Quill)]
     public void ValidateActions_reports_bindings_that_collide_once_matched_without_case()
     {
