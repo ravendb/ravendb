@@ -335,6 +335,8 @@ public abstract class QuillDiscordTestBase(ITestOutputHelper output, QuillDiscor
                 opts.Discord.EditDebounce = TimeSpan.FromMilliseconds(50);
                 opts.Discord.ApplyChangesInterval = TimeSpan.FromSeconds(1);
                 opts.Discord.GatewayBackoffMax = TimeSpan.FromMilliseconds(200);
+                opts.Discord.GatewayHandshakeTimeout = TimeSpan.FromSeconds(2);
+                opts.Discord.GatewayRestartDelay = TimeSpan.FromSeconds(3);
                 configure?.Invoke(opts);
             },
             configureServices: services =>
