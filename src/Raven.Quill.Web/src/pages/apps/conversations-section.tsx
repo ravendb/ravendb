@@ -31,7 +31,7 @@ export function ConversationStatsCards({
 
     const cards: DashboardStatCard[] = [
         { label: "Conversations", value: stats?.conversations, isLoading: conversationStatsQuery.isPending },
-        { label: "Messages", value: stats?.messages, isLoading: conversationStatsQuery.isPending },
+        { label: "Prompts", value: stats?.messages, isLoading: conversationStatsQuery.isPending },
         { label: "Tokens", value: stats?.tokens, isLoading: conversationStatsQuery.isPending },
     ];
 

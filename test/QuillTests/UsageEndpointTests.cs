@@ -75,6 +75,23 @@ public class UsageEndpointTests(ITestOutputHelper output, QuillCollectionHost co
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Usage_invocations_skip_the_injected_parameters_message()
+    {
+        await using var app = await NewAppAsync();
+        var now = DateTime.UtcNow;
+        await SeedConversationAsync(app.Store, app.Slug, "chats/p", "demo", EarlierToday(now), richMessages:
+        [
+            ("system", "You are a helpful assistant."),
+            ("user", "AI Agent Parameters:\ncompany = companies/1-A\r\n"),
+            ("user", "what do you sell?"),
+            ("assistant", "coffee"),
+        ]);
+
+        var points = (await Host.GetUsageAsync(now.Year, now.Month, now.Day)).Points;
+        Assert.Equal(1, Sum(points, p => p.Messages));
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Usage_degrades_to_empty_when_index_not_deployed()
     {
         await using var app = await NewAppAsync();

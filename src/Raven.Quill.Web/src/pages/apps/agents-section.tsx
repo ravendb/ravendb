@@ -13,7 +13,7 @@ import { formatDateTime } from "@/lib/utils";
 import { DeleteAgentDialog } from "@/pages/apps/agents/delete-agent-dialog";
 import { SectionCard } from "@/pages/apps/section-card";
 
-const AGENT_TABLE_HEADERS = ["Agent name", "Status", "Model", "Last run", "Conversations", "Messages", "Tokens", ""];
+const AGENT_TABLE_HEADERS = ["Agent name", "Status", "Model", "Last run", "Conversations", "Prompts", "Tokens", ""];
 
 export function AgentsSection({ slug }: { slug: string }) {
     return (
