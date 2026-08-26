@@ -41,6 +41,12 @@ export function DiscordStatusPanel({ slug, channelId }: { slug: string; channelI
 }
 
 export function DiscordHealthStrip({ health }: { health: DiscordChannelHealthResponse }) {
+    const hasRecentSendError =
+        health.lastSendError != null &&
+        health.lastSendErrorAt != null &&
+        (health.lastInboundAt == null ||
+            new Date(health.lastSendErrorAt).getTime() > new Date(health.lastInboundAt).getTime());
+
     return (
         <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -57,7 +63,7 @@ export function DiscordHealthStrip({ health }: { health: DiscordChannelHealthRes
             {!health.gatewayConnected && health.lastGatewayError && (
                 <Alert variant="destructive">{health.lastGatewayError}</Alert>
             )}
-            {health.lastSendError && (
+            {hasRecentSendError && (
                 <Alert variant="destructive">Last reply could not be delivered: {health.lastSendError}</Alert>
             )}
         </div>

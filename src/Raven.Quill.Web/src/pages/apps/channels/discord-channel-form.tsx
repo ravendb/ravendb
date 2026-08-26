@@ -25,14 +25,18 @@ import { useFormUnsavedChanges } from "@/components/form/unsaved-changes/use-uns
 import { withNestedSubmit } from "@/lib/form-utils";
 import { invalidateChannelQueries } from "@/lib/query-invalidation";
 import { DISCORD_DEVELOPER_PORTAL_URL } from "@/pages/apps/channels/discord-app-setup";
-import { DISCORD_PARAMETER_SOURCES, discordParameterSourceHint } from "@/pages/apps/channels/discord-parameter-sources";
+import {
+    DISCORD_PARAMETER_SOURCES,
+    DISCORD_SOURCE_VALUES,
+    discordParameterSourceHint,
+} from "@/pages/apps/channels/discord-parameter-sources";
 import { DiscordStatusPanel } from "@/pages/apps/channels/discord-status-panel";
 import type { FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
 
 const parameterBindingSchema = z
     .object({
         name: z.string(),
-        source: z.enum(["Constant", "UserId", "Username"]),
+        source: z.enum(DISCORD_SOURCE_VALUES),
         value: z.string().trim(),
     })
     .superRefine((parameter, ctx) => {
