@@ -41,6 +41,19 @@ describe("streamChat on 429", () => {
     });
 });
 
+describe("streamChat on 413", () => {
+    it("asks the visitor to shorten the message and stays retryable", async () => {
+        const events = await eventsFor(new Response(null, { status: 413 }));
+
+        expect(events).toHaveLength(1);
+        expect(events[0]).toMatchObject({
+            type: "error",
+            kind: "failed",
+            message: expect.stringContaining("too long"),
+        });
+    });
+});
+
 describe("streamChat on a dead link", () => {
     it("maps 404 and 410 to the terminal expired state", async () => {
         for (const status of [404, 410]) {
