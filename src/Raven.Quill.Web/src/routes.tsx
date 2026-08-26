@@ -73,6 +73,8 @@ type AppRouteDefinitionBase = {
     subtitle?: string;
     navigation?: DashboardNavigationDefinition;
     isPageTitleHidden?: boolean;
+    isBareLayout?: boolean;
+    isSidebarCollapsed?: boolean;
 } & (
     | {
           element: ReactNode;
@@ -258,7 +260,9 @@ const appPages: AppRouteDefinition[] = [
         // App-level default chat widget styling. Reached from the Channels list.
         path: "chat-widget/default-customize",
         title: "Default chat widget appearance",
+        isBareLayout: true,
         isPageTitleHidden: true,
+        isSidebarCollapsed: true,
         element: <AppChatWidgetDefaultCustomize />,
     },
     {
@@ -336,6 +340,8 @@ function toRouteObject(page: AppRouteDefinition, appScoped = false): RouteObject
         subtitle: page.subtitle,
         appScoped: appScoped,
         isPageTitleHidden: page.isPageTitleHidden,
+        isBareLayout: page.isBareLayout,
+        isSidebarCollapsed: page.isSidebarCollapsed,
     } satisfies AppRouteHandle;
 
     if (page.index) {

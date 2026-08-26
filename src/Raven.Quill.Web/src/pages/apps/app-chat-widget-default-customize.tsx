@@ -7,7 +7,7 @@ import { FormFieldsSkeleton } from "@/components/data/loading-skeletons";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { appRoutes } from "@/lib/app-routes";
 import { useChatWidgetThemeSave } from "@/pages/apps/channels/use-chat-widget-theme-save";
-import { ChatWidgetThemeEditor } from "@/pages/apps/channels/chat-widget-theme-editor";
+import { ChatWidgetThemeEditor } from "@/pages/apps/channels/theme-editor/theme-editor";
 
 export function AppChatWidgetDefaultCustomize() {
     const { slug = "" } = useParams();
@@ -33,37 +33,36 @@ export function AppChatWidgetDefaultCustomize() {
                 meta="This theme applies to every embedded chat channel that doesn't have one of its own."
             />
 
-            <div className="-mx-2 min-h-0 flex-1 overflow-y-auto px-2">
-                <ApiState
-                    isLoading={defaultQuery.isPending}
-                    isError={defaultQuery.isError}
-                    errorTitle="Could not load the default theme"
-                    onRetry={() => defaultQuery.refetch()}
-                    loadingLabel="Loading default theme..."
-                    skeleton={<FormFieldsSkeleton count={4} />}
-                >
-                    <div className="grid gap-5">
-                        {defaultQuery.data && (
-                            <ChatWidgetThemeEditor
-                                theme={defaultQuery.data.theme}
-                                defaultTheme={defaultQuery.data.theme}
-                                fontOptions={defaultQuery.data.fontOptions}
-                                canResetToBuiltIn
-                                isSaving={saveMutation.isPending}
-                                onSave={(theme) => saveMutation.mutateAsync(theme)}
-                            />
-                        )}
+            {/* No scroller of this page's own between the header and the editor: the editor's inspector
+                is the scrolling region and its preview stage fills whatever height is left, so an
+                intermediate overflow-y-auto would scroll the stage out of view instead. */}
+            <ApiState
+                isLoading={defaultQuery.isPending}
+                isError={defaultQuery.isError}
+                errorTitle="Could not load the default theme"
+                onRetry={() => defaultQuery.refetch()}
+                loadingLabel="Loading default theme..."
+                skeleton={<FormFieldsSkeleton count={4} />}
+            >
+                {defaultQuery.data && (
+                    <ChatWidgetThemeEditor
+                        theme={defaultQuery.data.theme}
+                        defaultTheme={defaultQuery.data.theme}
+                        fontOptions={defaultQuery.data.fontOptions}
+                        canResetToBuiltIn
+                        isSaving={saveMutation.isPending}
+                        onSave={(theme) => saveMutation.mutateAsync(theme)}
+                    />
+                )}
 
-                        {saveMutation.isError && (
-                            <Alert variant="destructive">
-                                {saveMutation.error instanceof Error
-                                    ? saveMutation.error.message
-                                    : "Could not save the default theme."}
-                            </Alert>
-                        )}
-                    </div>
-                </ApiState>
-            </div>
+                {saveMutation.isError && (
+                    <Alert variant="destructive">
+                        {saveMutation.error instanceof Error
+                            ? saveMutation.error.message
+                            : "Could not save the default theme."}
+                    </Alert>
+                )}
+            </ApiState>
         </div>
     );
 }

@@ -5,7 +5,7 @@ import { ApiState } from "@/components/data/api-state";
 import { FormFieldsSkeleton } from "@/components/data/loading-skeletons";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { useChatWidgetThemeSave } from "@/pages/apps/channels/use-chat-widget-theme-save";
-import { ChatWidgetThemeEditor } from "@/pages/apps/channels/chat-widget-theme-editor";
+import { ChatWidgetThemeEditor } from "@/pages/apps/channels/theme-editor/theme-editor";
 
 // The chat widget theme editor, rendered inside the channel detail's "Customize appearance" tab.
 // Only mounted for embedded chat (IFrame) channels, whose theme endpoints exist.
@@ -19,7 +19,9 @@ export function ChatWidgetAppearanceTab({ slug, channelId }: { slug: string; cha
     });
 
     return (
-        <div className="grid gap-5">
+        // The editor's inspector is its own scrolling region and its preview stage fills what is left, so
+        // this tab hands it a bounded flex column rather than a scroller of its own.
+        <div className="flex min-h-0 flex-1 flex-col gap-5">
             <Text variant="muted">
                 Choose how this chat widget looks and reads. Every change previews live, and nothing reaches visitors
                 until you save.

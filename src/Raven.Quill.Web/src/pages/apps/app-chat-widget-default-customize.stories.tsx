@@ -72,3 +72,22 @@ export const ResetsToBuiltInDefault: Story = {
         await waitFor(() => expect(within(document.body).getByText("Default theme saved")).toBeInTheDocument());
     },
 };
+
+// The same fix landed on both host pages; only the channel page was covered. api-state.tsx discards
+// children on error, so a back link rendered inside the editor would vanish exactly here.
+export const KeepsBackLinkWhenDefaultThemeErrors: Story = {
+    tags: ["!dev"],
+    parameters: {
+        msw: {
+            handlers: {
+                iframe: [iframeMocks.getDefaultThemeError(), ...iframeHandlers()],
+            },
+        },
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        await canvas.findByText("Could not load the default theme");
+        expect(canvas.getByRole("link", { name: "Back to channels" })).toBeInTheDocument();
+    },
+};
