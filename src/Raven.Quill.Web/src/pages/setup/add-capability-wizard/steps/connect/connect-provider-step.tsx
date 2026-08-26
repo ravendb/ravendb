@@ -1,7 +1,8 @@
 import { useFormContext } from "react-hook-form";
 import { useParams } from "react-router";
-import { usePrefetchQuery, useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/api";
+import { useAiConsent } from "@/components/ai-consent/use-ai-consent";
 import { ApiState } from "@/components/data/api-state";
 import { FormFieldsSkeleton } from "@/components/data/loading-skeletons";
 import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
@@ -18,7 +19,7 @@ export function ConnectProviderStep({ isBusy }: WizardBodyComponentProps) {
     const { slug = "" } = useParams();
     const { control } = useFormContext<AgentFormData>();
 
-    usePrefetchQuery(api.queries.apps.suggestAgentFromData(slug));
+    useWarmAgentSuggestions(slug);
 
     const connectionStringsQuery = useQuery(api.queries.apps.aiConnectionStringsList(slug));
     const items = connectionStringsQuery.data ?? [];
@@ -58,6 +59,21 @@ export function ConnectProviderStep({ isBusy }: WizardBodyComponentProps) {
             )}
         </ApiState>
     );
+}
+
+/**
+ * Warms the agent suggestions a step before the create step asks for them: the call runs for a minute
+ * or more. Skipped without consent, which would only cache a refusal. Mirrors usePrefetchQuery, which
+ * has no `enabled` of its own.
+ */
+function useWarmAgentSuggestions(slug: string) {
+    const queryClient = useQueryClient();
+    const { isGranted } = useAiConsent();
+    const query = api.queries.apps.suggestAgentFromData(slug);
+
+    if (isGranted && !queryClient.getQueryState(query.queryKey)) {
+        void queryClient.prefetchQuery(query);
+    }
 }
 
 function AddButton() {

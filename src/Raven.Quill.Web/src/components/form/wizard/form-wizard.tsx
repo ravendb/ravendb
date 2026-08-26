@@ -15,6 +15,7 @@ import { useUnsavedChanges } from "@/components/form/unsaved-changes/use-unsaved
 import { Heading, Text } from "@/components/typography";
 import { WizardErrorAlert } from "@/components/form/wizard/wizard-error-alert";
 import { toError, WizardHandledError } from "@/components/form/wizard/wizard-step-error";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 export type WizardProgress = {
@@ -72,6 +73,8 @@ export type WizardStep<StepId extends string, Values extends FieldValues = Field
     onValidationFailed?: WizardAction;
     beforeNext?: WizardAction;
     isNextDisabled?: boolean;
+    /** Shown as a tooltip on the disabled button. */
+    nextDisabledReason?: ReactNode;
     nextLabel?: ReactNode;
     canCancel?: boolean;
     canGoBack?: boolean;
@@ -266,6 +269,7 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
                         isBusy={isBusy}
                         progressLabel={progressLabel}
                         isNextDisabled={currentStep.isNextDisabled === true}
+                        nextDisabledReason={currentStep.nextDisabledReason}
                         currentStepId={currentStepIdInFlow}
                         nextLabel={currentStep.nextLabel}
                         canCancel={currentStep.canCancel !== false}
@@ -399,6 +403,7 @@ type WizardFooterProps<StepId extends string> = {
     isBusy: boolean;
     progressLabel: string | null;
     isNextDisabled: boolean;
+    nextDisabledReason?: ReactNode;
     nextLabel?: ReactNode;
     canCancel: boolean;
     canGoBack: boolean;
@@ -416,6 +421,7 @@ function WizardFooter<StepId extends string>({
     isBusy,
     progressLabel,
     isNextDisabled,
+    nextDisabledReason,
     nextLabel,
     canCancel,
     canGoBack,
@@ -447,36 +453,60 @@ function WizardFooter<StepId extends string>({
                 </div>
                 <div className="ml-auto flex items-center gap-2" aria-live="polite">
                     {FooterComponent && <FooterComponent isBusy={isBusy} />}
-                    {isLast && completion.type === "action" ? (
-                        <Button
-                            type="button"
-                            onClick={handleComplete}
-                            size="lg"
-                            disabled={isCompletionDisabled}
-                            key={`${currentStepId}:complete`}
-                        >
-                            {isBusy ? <Spinner /> : <Check aria-hidden="true" />}
-                            <span>{resolveLabel(completion.label ?? "Finish", completion.busyLabel)}</span>
-                        </Button>
-                    ) : isLast ? (
-                        <Button type="submit" size="lg" disabled={isCompletionDisabled} key={`${currentStepId}:submit`}>
-                            {isBusy ? <Spinner /> : <Check aria-hidden="true" />}
-                            <span>{resolveLabel(completion.label ?? "Submit", completion.busyLabel)}</span>
-                        </Button>
-                    ) : (
-                        <Button
-                            onClick={handleNext}
-                            size="lg"
-                            disabled={isCompletionDisabled}
-                            key={`${currentStepId}:next`}
-                        >
-                            {isBusy && <Spinner />}
-                            <span>{resolveLabel(nextLabel ?? "Next")}</span>
-                            {!isBusy && <ArrowRight aria-hidden="true" />}
-                        </Button>
-                    )}
+                    <BlockedReasonTooltip reason={isNextDisabled && !isBusy ? nextDisabledReason : undefined}>
+                        {isLast && completion.type === "action" ? (
+                            <Button
+                                type="button"
+                                onClick={handleComplete}
+                                size="lg"
+                                disabled={isCompletionDisabled}
+                                key={`${currentStepId}:complete`}
+                            >
+                                {isBusy ? <Spinner /> : <Check aria-hidden="true" />}
+                                <span>{resolveLabel(completion.label ?? "Finish", completion.busyLabel)}</span>
+                            </Button>
+                        ) : isLast ? (
+                            <Button
+                                type="submit"
+                                size="lg"
+                                disabled={isCompletionDisabled}
+                                key={`${currentStepId}:submit`}
+                            >
+                                {isBusy ? <Spinner /> : <Check aria-hidden="true" />}
+                                <span>{resolveLabel(completion.label ?? "Submit", completion.busyLabel)}</span>
+                            </Button>
+                        ) : (
+                            <Button
+                                onClick={handleNext}
+                                size="lg"
+                                disabled={isCompletionDisabled}
+                                key={`${currentStepId}:next`}
+                            >
+                                {isBusy && <Spinner />}
+                                <span>{resolveLabel(nextLabel ?? "Next")}</span>
+                                {!isBusy && <ArrowRight aria-hidden="true" />}
+                            </Button>
+                        )}
+                    </BlockedReasonTooltip>
                 </div>
             </div>
         </div>
+    );
+}
+
+/** A disabled button swallows pointer events, so the reason it is disabled hangs off a wrapper. */
+function BlockedReasonTooltip({ reason, children }: { reason: ReactNode; children: ReactNode }) {
+    return (
+        // Its own provider: a wizard is mounted on its own in tests and stories, outside the app shell.
+        <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    {/* Always wrapping keeps the keyed button from remounting, and focus from dropping
+                        to the document, whenever the reason comes and goes. */}
+                    <span tabIndex={reason ? 0 : undefined}>{children}</span>
+                </TooltipTrigger>
+                {reason && <TooltipContent>{reason}</TooltipContent>}
+            </Tooltip>
+        </TooltipProvider>
     );
 }

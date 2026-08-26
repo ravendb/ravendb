@@ -1,19 +1,36 @@
 import { useId, useState } from "react";
 import { Plus, Sparkles, Trash2Icon } from "lucide-react";
 import { useFormContext } from "react-hook-form";
+import { AiConsentGate, type AiConsentCopy } from "@/components/ai-consent/ai-consent-gate";
+import { useAiConsent } from "@/components/ai-consent/use-ai-consent";
 import { FormRadioCards } from "@/components/form/form-radio-cards";
 import { FormTextarea } from "@/components/form/form-textarea";
 import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
+import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { FieldLabel } from "@/components/shadcn/ui/field";
 import { type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { AI_SUGGEST_OPTION, MANUAL_OPTION } from "@/pages/setup/add-app-wizard/steps/map/map-source-options";
 
+const MAP_CONSENT_COPY: AiConsentCopy = {
+    gateDescription:
+        "AI Suggest sends your schema and your intent prompt to the RavenDB AI service. Accept its Terms of Use to " +
+        "unlock the option below - or map the schema yourself with Manual.",
+    dialogTitle: "Map your schema with AI",
+    dialogDescription:
+        "AI reads your schema and works out the whole mapping, which you can review and edit in the next step. That " +
+        "sends your schema to the RavenDB AI service, so it is available only once you accept its Terms of Use.",
+};
+
 export function MapSchemaStep({ isBusy }: WizardBodyComponentProps) {
     const { control } = useFormContext<AppFormData>();
+    const { isBlocked: isAiBlocked, unavailableReason } = useAiConsent();
 
     return (
         <div className="grid gap-5">
+            {/* Above the cards, not inside the one it speaks for: that card is dimmed, and an
+                acceptance the operator cannot read is worse than none. */}
+            <AiConsentGate variant="banner" copy={MAP_CONSENT_COPY} />
             <FormRadioCards
                 control={control}
                 name="map.source"
@@ -25,7 +42,12 @@ export function MapSchemaStep({ isBusy }: WizardBodyComponentProps) {
                         label: AI_SUGGEST_OPTION.label,
                         description: AI_SUGGEST_OPTION.description,
                         icon: <Sparkles className="size-5" aria-hidden="true" />,
-                        content: ({ select }) => <IntentPrompt isDisabled={isBusy} select={select} />,
+                        // Disabled rather than hidden, so the operator can weigh it against Manual.
+                        disabled: isAiBlocked,
+                        badge: isAiBlocked && (
+                            <Badge variant="secondary">{unavailableReason ? "Unavailable" : "Needs consent"}</Badge>
+                        ),
+                        content: ({ select }) => <IntentPrompt isDisabled={isBusy || isAiBlocked} select={select} />,
                     },
                     {
                         value: MANUAL_OPTION.value,

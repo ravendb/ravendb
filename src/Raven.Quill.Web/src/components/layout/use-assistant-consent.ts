@@ -1,8 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
-import { api } from "@/api/api";
+import { useAiConsentQuery } from "@/components/ai-consent/use-ai-consent";
 import { useAssistantStore } from "@/components/layout/assistant-store";
 
 export function useAssistantConsent() {
     const isOpen = useAssistantStore((state) => state.isOpen);
-    return useQuery({ ...api.queries.assistant.consent(), enabled: isOpen });
+    return useAiConsentQuery({ enabled: isOpen });
 }
