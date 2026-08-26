@@ -323,6 +323,8 @@ public abstract class QuillDiscordTestBase(ITestOutputHelper output, QuillDiscor
 {
     protected MockDiscordApi Discord => fixture.Discord;
 
+    protected static readonly TimeSpan GatewayRestartDelay = TimeSpan.FromSeconds(3);
+
     internal FakeAgentRouter Router => fixture.Router;
 
     protected override Task<QuillHost> NewHostAsync(
@@ -336,7 +338,7 @@ public abstract class QuillDiscordTestBase(ITestOutputHelper output, QuillDiscor
                 opts.Discord.ApplyChangesInterval = TimeSpan.FromSeconds(1);
                 opts.Discord.GatewayBackoffMax = TimeSpan.FromMilliseconds(200);
                 opts.Discord.GatewayHandshakeTimeout = TimeSpan.FromSeconds(2);
-                opts.Discord.GatewayRestartDelay = TimeSpan.FromSeconds(3);
+                opts.Discord.GatewayRestartDelay = GatewayRestartDelay;
                 configure?.Invoke(opts);
             },
             configureServices: services =>

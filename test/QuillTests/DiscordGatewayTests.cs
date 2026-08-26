@@ -437,6 +437,30 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
         Assert.True(Discord.Identifies.Count >= 2, "the stopped runtime must be restarted, not left dead");
     }
 
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_rejected_bot_token_is_not_retried_after_the_restart_delay()
+    {
+        await using var app = await NewAppAsync();
+        Discord.CloseAfterIdentify = 4004;
+        var channel = await NewChannelAsync(app);
+
+        await Discord.WaitUntilAsync(
+            async () =>
+            {
+                var rows = await QuillHttp.GetAsync<DiscordChannelHealthResponse[]>(
+                    Host.Client, QuillRoutes.DiscordHealth(app.Slug));
+                return rows.Single(r => r.ChannelId == channel.ChannelId).LastGatewayError is not null;
+            },
+            "the recorded gateway error");
+
+        Discord.CloseAfterIdentify = null;
+        var identifiesAfterFatal = Discord.Identifies.Count;
+
+        await Task.Delay(GatewayRestartDelay + TimeSpan.FromSeconds(2));
+
+        Assert.Equal(identifiesAfterFatal, Discord.Identifies.Count);
+    }
+
     private sealed record ProvisionedChannel(
         string ChannelId, string BotToken, string ApplicationId, string BotUserId);
 

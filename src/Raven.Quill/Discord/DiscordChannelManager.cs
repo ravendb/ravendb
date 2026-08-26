@@ -163,7 +163,7 @@ internal sealed class DiscordChannelManager(
     }
 
     private bool IsRestartDue(DiscordGatewayRuntime runtime) =>
-        runtime.ExitedAt is { } exitedAt &&
+        runtime.CanRestart && runtime.ExitedAt is { } exitedAt &&
         DateTime.UtcNow - exitedAt >= options.Value.Discord.GatewayRestartDelay;
 
     public override async Task StopAsync(CancellationToken cancellationToken)
