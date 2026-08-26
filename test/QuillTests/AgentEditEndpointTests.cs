@@ -94,6 +94,27 @@ public class AgentEditEndpointTests(ITestOutputHelper output) : QuillTestBase(ou
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Edit_returns_400_for_a_sample_object_that_is_not_json()
+    {
+        await using var app = await NewAppAsync();
+        var agentId = (await app.ProvisionAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = "support", Name = "Support", SystemPrompt = "You help.",
+            ConnectionStringName = app.Host.ConnectionStringName,
+        })).AgentId;
+
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.EditAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = agentId, Name = "Support", SystemPrompt = "You help.",
+            ConnectionStringName = Host.ConnectionStringName,
+            SampleObject = "not json at all",
+        }));
+
+        Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
+        Assert.Contains("sampleObject must be a JSON object", ex.Body);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Raven_rejection_surfaces_the_reason_not_a_pointer_to_the_logs()
     {
         await using var app = await NewAppAsync();
