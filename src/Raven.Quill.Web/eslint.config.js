@@ -32,13 +32,25 @@ export default defineConfig([
                     message:
                         "Use <Text> (variant muted/caption/label) from @/components/typography instead of raw text-sm/text-xs/text-muted-foreground/font-medium classes.",
                 },
+                {
+                    selector: "JSXOpeningElement[name.name=/^h[1-6]$/] > JSXAttribute[name.name='className']",
+                    message:
+                        "Style headings with <Heading variant=…> from @/components/typography, not classes on a raw <hN>.",
+                },
             ],
         },
     },
     {
-        // The primitive layer (shadcn/ui) and the typography components themselves legitimately author
-        // these classes; the rule that steers app callers toward <Text>/<Heading> must not fire here.
-        files: ["src/components/shadcn/ui/**/*.{ts,tsx}", "src/components/typography.tsx"],
+        // The rule that steers app callers toward <Text>/<Heading> must not fire where authoring raw
+        // classes is legitimate: the primitive layer (shadcn/ui) and the typography components
+        // themselves; the embeddable widget package, which ships its own token system (rq-*) and does
+        // not depend on @/components/typography; and Storybook infra chrome.
+        files: [
+            "src/components/shadcn/ui/**/*.{ts,tsx}",
+            "src/components/typography.tsx",
+            "packages/widget/**/*.{ts,tsx}",
+            ".storybook/**/*.{ts,tsx}",
+        ],
         rules: {
             "no-restricted-syntax": "off",
         },

@@ -16,6 +16,7 @@ Frontend for Raven Quill. It is a Vite + React + TypeScript app and is finally b
 - Forms should use React Hook Form + Zod. If a reusable field is missing, add a generic form component instead of solving it only in one view.
 - Prefer shadcn components. Add missing shadcn components with `pnpm dlx shadcn@latest add <component>`. If shadcn does not cover the need, create a project component in the appropriate `src/components` area.
 - Use Tailwind for styling, but move hard-to-read style combinations into CSS/classes. Components must work in both light and dark themes; avoid one-theme hardcoded colors.
+- Typography goes through `<Heading>`/`<Text>` (`src/components/typography.tsx`), and `<SectionHeader>` for a section title with its description and action, instead of hand-written `text-*`/`font-*` classes. See the header comment in `typography.tsx` for the scale.
 - Keep components focused and reasonably small. If a component or hook grows awkward, step back and simplify the design before continuing.
 - Put reusable hooks/helpers in shared project utilities only when there is a realistic second use.
 - Boolean names must clearly read as booleans, e.g. `is`, `has`, `can`, `should`, `was`.
