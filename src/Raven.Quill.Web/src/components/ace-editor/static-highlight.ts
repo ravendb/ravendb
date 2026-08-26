@@ -6,6 +6,7 @@ import { Mode as JavaScriptMode } from "ace-builds/src-noconflict/mode-javascrip
 import { Mode as PowershellMode } from "ace-builds/src-noconflict/mode-powershell";
 import { Mode as PythonMode } from "ace-builds/src-noconflict/mode-python";
 import { Mode as ShMode } from "ace-builds/src-noconflict/mode-sh";
+import { Mode as YamlMode } from "ace-builds/src-noconflict/mode-yaml";
 import "@/components/ace-editor/ace-syntax-colors.css";
 
 const MODES = {
@@ -15,6 +16,7 @@ const MODES = {
     powershell: new PowershellMode(),
     python: new PythonMode(),
     sh: new ShMode(),
+    yaml: new YamlMode(),
 };
 
 export type HighlightLanguage = keyof typeof MODES;

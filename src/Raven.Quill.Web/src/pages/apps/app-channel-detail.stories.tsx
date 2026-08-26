@@ -82,6 +82,29 @@ export const SlackTokenRejected: Story = {
     },
 };
 
+export const SlackSendError: Story = {
+    parameters: {
+        router: {
+            initialPath: `/apps/demo/channels/${SAMPLE_SLACK_CHANNEL_ID}`,
+            path: "/apps/:slug/channels/:channelId",
+        },
+        msw: {
+            handlers: {
+                slack: [
+                    slackMocks.webhookInfo(),
+                    slackMocks.health([
+                        {
+                            ...sampleSlackHealth[0],
+                            lastSendErrorAt: new Date().toISOString(),
+                            lastSendError: "channel_not_found",
+                        },
+                    ]),
+                ],
+            },
+        },
+    },
+};
+
 export const Discord: Story = {
     parameters: {
         router: {
