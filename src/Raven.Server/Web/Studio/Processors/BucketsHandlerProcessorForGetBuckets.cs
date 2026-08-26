@@ -75,7 +75,12 @@ namespace Raven.Server.Web.Studio.Processors
         public long NumberOfBuckets;
         public long RangeSize;
         public HashSet<int> ShardNumbers = new();
-        
+
+        // set only for a single-bucket range that resides on more than one shard (resharding in progress);
+        // points to the shard that owns the bucket according to the sharding configuration,
+        // the copies on the remaining shards are pending removal
+        public int? OwnerShardNumber;
+
         public string RangeSizeHumane => Size.Humane(RangeSize);
         public long DocumentsCount;
         public DateTime LastModified;
@@ -92,8 +97,9 @@ namespace Raven.Server.Web.Studio.Processors
                 [nameof(RangeSize)] = RangeSize,
                 [nameof(DocumentsCount)] = DocumentsCount,
                 [nameof(LastModified)] = LastModified,
+                [nameof(OwnerShardNumber)] = OwnerShardNumber,
             };
-            
+
             return json;
         }
     }
