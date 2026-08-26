@@ -133,4 +133,26 @@ public class AuthEndpointsTests(ITestOutputHelper output) : QuillTestBase(output
 
         Assert.Contains(HttpStatusCode.TooManyRequests, statuses);
     }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Correct_key_logs_in_even_after_the_failure_limit_is_hit()
+    {
+        await using var host = await NewHostAsync();
+        host.Client.DefaultRequestHeaders.Remove(ApiKeyAuthenticationHandler.HeaderName);
+
+        HttpStatusCode? last = null;
+        for (var i = 0; i < 15; i++)
+        {
+            var resp = await host.Client.PostAsJsonAsync(QuillRoutes.AuthLogin, new { apiKey = "wrong-key" });
+            last = resp.StatusCode;
+        }
+        Assert.Equal(HttpStatusCode.TooManyRequests, last);
+
+        var login = await host.Client.PostAsJsonAsync(QuillRoutes.AuthLogin,
+            new { apiKey = ApplianceWebApplicationFactory.TestApiKey });
+        Assert.True(login.IsSuccessStatusCode, await login.Content.ReadAsStringAsync());
+
+        var wrongAfterReset = await host.Client.PostAsJsonAsync(QuillRoutes.AuthLogin, new { apiKey = "wrong-key" });
+        Assert.Equal(HttpStatusCode.Unauthorized, wrongAfterReset.StatusCode);
+    }
 }
