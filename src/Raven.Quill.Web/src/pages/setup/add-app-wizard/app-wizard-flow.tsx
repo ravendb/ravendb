@@ -13,6 +13,7 @@ import { DATA_SOURCE_OPTIONS } from "@/pages/setup/add-app-wizard/steps/data-sou
 import { MAP_SOURCE_OPTIONS } from "@/pages/setup/add-app-wizard/steps/map/map-source-options";
 import { ConnectSourceStep } from "@/pages/setup/add-app-wizard/steps/connect/connect-source-step";
 import { MapSchemaStep } from "@/pages/setup/add-app-wizard/steps/map/map-schema-step";
+import { useMapAiConsentBlock } from "@/pages/setup/add-app-wizard/steps/map/use-map-ai-consent-block";
 import { MapTablesStep } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-step";
 import { PreviewStep } from "@/pages/setup/add-app-wizard/steps/preview/preview-step";
 import { ExportConfigAction } from "@/pages/setup/add-app-wizard/steps/preview/export-config-action";
@@ -33,6 +34,7 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
     const verifyCdcBeforeNext = useVerifyCdcStep();
     const isVerifyCdcRunning = useIsVerifyCdcRunning();
     const mapSchemaBeforeNext = useMapSchemaStep();
+    const mapAiConsentBlock = useMapAiConsentBlock();
     const mapTablesBeforeNext = useMapTablesStep();
     const focusMapTablesError = useFocusMapTablesError();
     const isMapTablesNextDisabled = useIsMapTablesNextDisabled();
@@ -89,6 +91,8 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
             bodyComponent: MapSchemaStep,
             validate: "map",
             beforeNext: mapSchemaBeforeNext,
+            isNextDisabled: mapAiConsentBlock.isNextDisabled,
+            nextDisabledReason: mapAiConsentBlock.nextDisabledReason,
             badgeFields: ["map.source"],
             badge: ({ isComplete, values }) => {
                 if (!isComplete) {

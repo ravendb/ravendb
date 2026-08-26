@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { Pin, PinOff, Sparkles, Trash2, X } from "lucide-react";
 import { useAssistantChatStore } from "@/components/layout/assistant-chat-store";
 import { AssistantComposer } from "@/components/layout/assistant-composer";
-import { AssistantConsentGate } from "@/components/layout/assistant-consent";
+import { AiConsentGate, type AiConsentCopy } from "@/components/ai-consent/ai-consent-gate";
 import { AssistantMessages } from "@/components/layout/assistant-messages";
 import {
     ASSISTANT_MAX_WIDTH_PX,
@@ -20,6 +20,16 @@ import { cn } from "@/lib/utils";
 import { Heading } from "@/components/typography";
 
 const RESIZE_KEYBOARD_STEP_PX = 16;
+
+const ASSISTANT_CONSENT_COPY: AiConsentCopy = {
+    gateDescription:
+        "The AI assistant sends your questions to the RavenDB AI service. It stays unavailable until you review " +
+        "and accept the Terms of Use.",
+    dialogTitle: "Get started with the AI assistant",
+    dialogDescription:
+        "The assistant answers questions about RavenDB and Quill. Your messages are sent to the RavenDB AI service, " +
+        "so it is available only once you accept its Terms of Use.",
+};
 
 function AssistantResizeHandle({ axis }: { axis: "width" | "height" }) {
     const isWidthAxis = axis === "width";
@@ -105,6 +115,7 @@ export function AssistantPanel() {
     const setPinned = useAssistantStore((state) => state.setPinned);
     const hasMessages = useAssistantChatStore((state) => state.messages.length > 0);
     const clearMessages = useAssistantChatStore((state) => state.clearMessages);
+    const isOpen = useAssistantStore((state) => state.isOpen);
     const hasConsent = useAssistantConsent().data?.status === "Success";
 
     return (
@@ -167,7 +178,8 @@ export function AssistantPanel() {
                     <AssistantComposer />
                 </>
             ) : (
-                <AssistantConsentGate />
+                // The panel stays mounted while closed, and the gate checks consent as soon as it renders.
+                isOpen && <AiConsentGate copy={ASSISTANT_CONSENT_COPY} />
             )}
         </div>
     );

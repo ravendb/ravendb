@@ -1,5 +1,5 @@
 import { AiProgressStatus, type AiProgressStage } from "@/components/data/ai-progress-status";
-import { Skeleton } from "@/components/shadcn/ui/skeleton";
+import { SuggestedAgentCardsSkeleton } from "@/pages/setup/add-capability-wizard/steps/create/suggested-agents-skeleton";
 
 const SUGGESTION_STAGES: AiProgressStage[] = [
     { fromSeconds: 0, label: "Thinking" },
@@ -19,16 +19,7 @@ export function SuggestedAgentsProgress({ startedAt }: { startedAt: number | und
                 describe your own agent below in the meantime.
             </AiProgressStatus>
 
-            <div className="grid auto-cols-[minmax(0,1fr)] grid-flow-col gap-3">
-                {Array.from({ length: 3 }).map((_, index) => (
-                    <div key={index} className="grid min-h-28 content-start gap-2 rounded-lg border p-4">
-                        <Skeleton className="h-4 w-2/3" />
-                        <Skeleton className="h-3 w-full" />
-                        <Skeleton className="h-3 w-11/12" />
-                        <Skeleton className="h-3 w-3/4" />
-                    </div>
-                ))}
-            </div>
+            <SuggestedAgentCardsSkeleton />
         </div>
     );
 }

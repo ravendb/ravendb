@@ -1,8 +1,9 @@
-import { useLayoutEffect } from "react";
+import { useLayoutEffect, type ReactNode } from "react";
 import { useIsFetching, useQuery } from "@tanstack/react-query";
 import { useFormContext, useWatch } from "react-hook-form";
 import { useParams } from "react-router";
 import { api } from "@/api/api";
+import { describeAiConsentBlock, useAiConsent } from "@/components/ai-consent/use-ai-consent";
 import { getFetchStartedAt } from "@/lib/query-fetch-start";
 import { applySuggestionToForm } from "@/pages/setup/add-capability-wizard/agent-config-form";
 import { useCapabilityWizardStore } from "@/pages/setup/add-capability-wizard/capability-wizard-store";
@@ -17,14 +18,18 @@ export function useSuggestedAgents(): {
     isSuggesting: boolean;
     startedAt: number | undefined;
     isConsentRequired: boolean;
+    recheck: () => void;
 } {
     const { slug = "" } = useParams();
     const { getValues, setValue } = useFormContext<AgentFormData>();
     const suggestions = useCapabilityWizardStore((state) => state.suggestions);
     const setSuggestions = useCapabilityWizardStore((state) => state.setSuggestions);
 
+    const { isGranted, recheck: recheckConsent } = useAiConsent();
     const suggestQuery = api.queries.apps.suggestAgentFromData(slug);
-    const query = useQuery(suggestQuery);
+    // Without consent the call can only come back refused; accepting flips this on and the
+    // suggestions load without leaving the step.
+    const query = useQuery({ ...suggestQuery, enabled: isGranted });
     const suggestedAgents = query.data?.configurations;
 
     // The candidates arrive after this step is already on screen, so handing them to the store is a
@@ -53,20 +58,35 @@ export function useSuggestedAgents(): {
         isSuggesting: (query.isFetching || !suggestedAgents) && suggestions.length === 0,
         startedAt: getFetchStartedAt(suggestQuery.queryKey),
         isConsentRequired: query.data?.isConsentRequired === true,
+        recheck: () => {
+            recheckConsent();
+            void query.refetch();
+        },
     };
 }
 
 /**
- * Whether the wizard should hold "Next" back on the create step: with no candidate picked yet,
- * advancing would only carry an empty configuration into the review step. Observes the cache
- * instead of the query so the step definitions never start a fetch of their own.
+ * Why the wizard should hold "Next" back on the create step: advancing without a configuration would
+ * only carry an empty one into the review step. Observes the cache instead of the query so the step
+ * definitions never start a fetch of their own.
  */
-export function useIsSuggestingAgents(): boolean {
+export function useCreateAgentNextBlock(): { isNextDisabled: boolean; nextDisabledReason?: ReactNode } {
     const { slug = "" } = useParams();
     const { control } = useFormContext<AgentFormData>();
     const mode = useWatch({ control, name: "create.mode" });
     const hasSuggestions = useCapabilityWizardStore((state) => state.suggestions.length > 0);
     const isFetching = useIsFetching({ queryKey: api.queries.apps.suggestAgentFromData(slug).queryKey }) > 0;
+    const consent = useAiConsent();
 
-    return mode === "ai" && isFetching && !hasSuggestions;
+    const consentBlock =
+        mode === "manual" ? undefined : describeAiConsentBlock(consent, "Or set the agent up manually.");
+    if (consentBlock) {
+        return { isNextDisabled: true, nextDisabledReason: consentBlock };
+    }
+
+    if (mode === "ai" && isFetching && !hasSuggestions) {
+        return { isNextDisabled: true, nextDisabledReason: "Waiting for the AI-suggested agents." };
+    }
+
+    return { isNextDisabled: false };
 }
