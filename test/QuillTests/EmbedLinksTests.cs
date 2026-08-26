@@ -419,6 +419,22 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
         Assert.False(string.IsNullOrEmpty(body));
     }
 
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Mint_with_malformed_body_returns_the_api_error_shape()
+    {
+        await using var h = await HarnessAsync();
+
+        using var content = new StringContent("""{"channelId":"x","ttlSeconds":"abc"}""",
+            System.Text.Encoding.UTF8, "application/json");
+        var resp = await h.Client.PostAsync(QuillRoutes.EmbedLinks(h.Slug), content);
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        var body = await resp.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("   at ", body);
+        using var json = JsonDocument.Parse(body);
+        Assert.True(json.RootElement.TryGetProperty("error", out _), body);
+    }
+
     private async Task<Harness> HarnessAsync(bool provisionChannel = true, string[]? origins = null)
     {
         var app = await NewAppAsync();
