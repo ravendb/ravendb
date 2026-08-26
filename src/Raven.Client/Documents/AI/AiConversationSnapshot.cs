@@ -17,4 +17,12 @@ public sealed class AiConversationSnapshot
     /// conversation revision's timestamp.
     /// </summary>
     public DateTime CreatedAt { get; set; }
+
+    /// <summary>
+    /// The change vector of the conversation document after the snapshot was created.
+    /// Creating a snapshot force-creates a revision, which advances the document's change
+    /// vector; this is the resulting value, used to re-baseline a conversation's cached
+    /// change vector so a subsequent turn does not fail with a concurrency conflict.
+    /// </summary>
+    public string ChangeVector { get; set; }
 }
