@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { useParams } from "react-router";
 import { api } from "@/api/api";
 import { ApiState } from "@/components/data/api-state";
@@ -11,6 +12,8 @@ import { WebWidgetThemeEditor } from "@/pages/apps/channels/theme-editor/theme-e
 
 export function AppWebWidgetDefaultCustomize() {
     const { slug = "" } = useParams();
+    // The editor's Save/Reset group belongs in this page's header, so hand it the element to fill.
+    const [actionsSlot, setActionsSlot] = useState<HTMLDivElement | null>(null);
 
     const defaultQuery = useQuery(api.queries.webWidget.defaultTheme(slug));
 
@@ -31,6 +34,9 @@ export function AppWebWidgetDefaultCustomize() {
                 title="Default web widget appearance"
                 backTo={{ to: appRoutes.app(slug, "channels"), label: "Channels" }}
                 meta="This theme applies to every web widget that doesn't have one of its own."
+                // The editor's Save/Discard group belongs in this page's header rather than above the
+                // form, so the header is handed the element for the editor to fill.
+                actions={<div ref={setActionsSlot} className="flex flex-wrap items-center gap-2" />}
             />
 
             {/* No scroller of this page's own between the header and the editor: the editor's inspector
@@ -51,6 +57,7 @@ export function AppWebWidgetDefaultCustomize() {
                         fontOptions={defaultQuery.data.fontOptions}
                         canResetToBuiltIn
                         isSaving={saveMutation.isPending}
+                        actionsSlot={actionsSlot}
                         onSave={(theme) => saveMutation.mutateAsync(theme)}
                     />
                 )}

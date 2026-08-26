@@ -1,7 +1,6 @@
 import { useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { WidgetFontOption, WidgetTheme } from "@/api/generated/server-api";
-import { Alert } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { SCHEME_COLOR_FIELDS } from "@/pages/apps/channels/theme-editor/theme-editor-fields";
@@ -158,16 +157,11 @@ export function WebWidgetThemeEditor({
                 <header className="flex flex-wrap items-center gap-3 px-4">{actions}</header>
             )}
 
-            {isFollowingAppDefault && (
-                <Alert className="mx-4 mt-4">
-                    This widget follows the app-wide default. Change anything below and save to give it a theme of its
-                    own.
-                </Alert>
-            )}
-
-            {/* Below the two-pane breakpoint this stacks with natural height and the page scrolls once;
-                the bounded, split layout only kicks in once the container actually has room for it. */}
-            <div className="flex flex-col gap-4 @5xl/theme-editor:grid @5xl/theme-editor:min-h-0 @5xl/theme-editor:flex-1 @5xl/theme-editor:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] @5xl/theme-editor:gap-0">
+            {/* The editor owns its scrolling in both shapes, because its hosts (a channel-detail tab
+                panel, the app-default page) hand it a bounded box and no scroller of their own. Stacked,
+                this row is that scroller. Split, it stops scrolling and the inspector takes over, so the
+                preview stage can stay put beside a scrolling list of sections. */}
+            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto @5xl/theme-editor:grid @5xl/theme-editor:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] @5xl/theme-editor:gap-0 @5xl/theme-editor:overflow-visible">
                 <ThemeEditorInspector
                     control={form.control}
                     isSaving={isSaving}

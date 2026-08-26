@@ -240,6 +240,17 @@
     background-color: color-mix(in oklab, var(--color-primary) 10%, transparent) !important;
 }
 
+/* Canvas texture for the preview stage: a sparse dot grid that reads as backdrop rather than as part
+   of what is being previewed. Kept here so the dot size and rhythm live in one place. */
+@utility dot-grid {
+    background-image: radial-gradient(
+        circle,
+        color-mix(in oklab, var(--color-foreground) 10%, transparent) 1px,
+        transparent 1px
+    );
+    background-size: 16px 16px;
+}
+
 @utility no-scrollbar {
     scrollbar-width: none;
 

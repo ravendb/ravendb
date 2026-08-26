@@ -11,7 +11,7 @@ export function CustomCssSection({ control, isSaving, onReset }: ThemeSectionPro
                 mode="css"
                 height="220px"
                 disabled={isSaving}
-                description="Appended after the widget's own styles, for anything the options above don't cover — scrollbars, spacing, one-off tweaks."
+                description="Loads after the widget's own styles, so it can cover what the options above miss, like scrollbars or one-off spacing."
             />
         </ThemeEditorSection>
     );

@@ -1,5 +1,6 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { Decorator, Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { Link } from "react-router";
 import type { WidgetTheme } from "@/api/generated/server-api";
 import { SAMPLE_CHANNEL_ID } from "@/mocks/channels-mocks";
 import {
@@ -10,11 +11,25 @@ import {
     SAMPLE_FONT_OPTIONS,
     statefulThemeMocks,
 } from "@/mocks/iframe-mocks";
+import { MAX_SUGGESTED_PROMPTS } from "@/pages/apps/channels/web-widget-theme-schema";
 import { WebWidgetAppearanceTab } from "./web-widget-appearance-tab";
+
+// In production this tab renders inside the channel detail's tab panel, which app-channel-detail.tsx
+// gives `min-h-0 flex-1` inside a `h-full min-h-0` Tabs root - a bounded box with no scroller of its
+// own. Rendering the tab by itself has to reproduce that, or the editor grows to its content and the
+// layout stories below have no bounded pane left to prove anything about.
+const withChannelDetailTabPanel: Decorator = (Story) => (
+    <div className="flex h-svh min-h-0 flex-col bg-background p-2 text-foreground">
+        <div className="flex min-h-0 flex-1 flex-col">
+            <Story />
+        </div>
+    </div>
+);
 
 const meta = {
     title: "Apps/Channels/Web widget appearance tab",
     component: WebWidgetAppearanceTab,
+    decorators: [withChannelDetailTabPanel],
     parameters: {
         // Named sizes the layout stories below opt into via `defaultViewport`. addon-vitest otherwise
         // pins every story to 1200x900 (DEFAULT_VIEWPORT_DIMENSIONS in its vitest plugin) regardless of
@@ -127,9 +142,17 @@ export const MinimalTheme: Story = {
  * Colours are rows now, not fields: the row is the picker's trigger and the value lives inside the
  * popover it opens, so a story that reads or writes one has to go through it. The Colors section shows
  * one scheme at a time - the one the preview is on - so the trigger is named for the colour alone.
+ *
+ * The trigger's accessible name now embeds its current hex value (e.g. "Button #ff775f") so a
+ * screen-reader user can read a row's colour without opening it - so the query matches only the
+ * stable, colour-independent prefix rather than the whole name.
  */
+function colorPickerName(name: string): RegExp {
+    return new RegExp(`^${name}\\b`);
+}
+
 async function openColorPicker(canvas: ReturnType<typeof within>, name: string) {
-    await userEvent.click(await canvas.findByRole("button", { name: `${name} picker` }));
+    await userEvent.click(await canvas.findByRole("button", { name: colorPickerName(name) }));
     return within(document.body).findByLabelText("HEX value");
 }
 
@@ -141,22 +164,36 @@ async function readColor(canvas: ReturnType<typeof within>, name: string) {
 }
 
 async function setColor(canvas: ReturnType<typeof within>, name: string, hex: string) {
-    const field = await openColorPicker(canvas, name);
+    // Closes via the trigger, not Escape: Escape now cancels (restores the colour from when the
+    // popover opened) rather than committing, so it would undo the very edit this helper makes.
+    const trigger = await canvas.findByRole("button", { name: colorPickerName(name) });
+    await userEvent.click(trigger);
+    const field = await within(document.body).findByLabelText("HEX value");
     await userEvent.clear(field);
     await userEvent.type(field, hex);
-    await userEvent.keyboard("{Escape}");
+    await userEvent.click(trigger);
 }
 
 // Editing then leaving must be intercepted: this form is long, and losing it silently is the
 // worst thing the screen can do. The story router is a data router so `useBlocker` works.
 export const GuardsUnsavedChanges: Story = {
     tags: ["!dev"],
+    // The tab carries no navigation of its own - the channel detail's header does - so the story
+    // supplies the link, which is all the guard actually reacts to: a route change while dirty.
+    decorators: [
+        (Story) => (
+            <>
+                <Link to="/elsewhere">Leave this page</Link>
+                <Story />
+            </>
+        ),
+    ],
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
         // Colors is the only section open by default, so its swatches are the ones reliably mounted.
         await setColor(canvas, "Button", "#123456");
 
-        await userEvent.click(canvas.getByRole("link", { name: "Back to channel" }));
+        await userEvent.click(canvas.getByRole("link", { name: "Leave this page" }));
 
         await waitFor(() => expect(within(document.body).getByText("Discard unsaved changes?")).toBeInTheDocument());
     },
@@ -431,19 +468,6 @@ function getThemeEditorPanes(canvasElement: HTMLElement) {
     return { layoutRow, inspector, stage };
 }
 
-// The routed content's own scrolling region - decorators.tsx's StoryPageLayout wraps every "page"
-// story's children in this, mirroring app.tsx's `.app-shell__main .min-h-0.overflow-auto` outlet in
-// production. Below the two-pane threshold this is what's supposed to scroll, not the document (the
-// vitest browser harness's own root page never grows past the viewport, so `document.scrollingElement`
-// never reflects this route's own overflow) and not either pane.
-function getThemeEditorPageScrollContainer(canvasElement: HTMLElement) {
-    const canvas = within(canvasElement);
-
-    // The header is the outermost thing this page renders; its grandparent is that scrolling region.
-    const header = canvas.getByRole("link", { name: "Back to channel" }).closest("header")!;
-    return header.parentElement!.parentElement!;
-}
-
 // addon-vitest's default 1200x900 leaves the stage ~775px tall - tall enough that a reverted F1 (the
 // preview frame fixed at 640px again instead of filling the stage) would still fit with ~135px to
 // spare, so the overflow this checks for would never actually show up. themeEditorTwoPaneShort trims
@@ -523,13 +547,13 @@ export const StacksBelowTheContainerThreshold: Story = {
         await canvas.findByTitle("Web widget preview");
 
         const { layoutRow, inspector } = getThemeEditorPanes(canvasElement);
-        const scrollContainer = getThemeEditorPageScrollContainer(canvasElement);
 
         await waitFor(() => expect(getComputedStyle(layoutRow).display).toBe("flex"));
         // Neither pane gets its own bounded, scrolling region below the threshold...
         expect(getComputedStyle(inspector).overflowY).not.toBe("auto");
-        // ...so the overflow shows up on the page itself instead of being contained anywhere inside it.
-        await waitFor(() => expect(scrollContainer.scrollHeight).toBeGreaterThan(scrollContainer.clientHeight));
+        // ...the stacked row is the one scroller instead, because the tab panel hosting it has none.
+        await waitFor(() => expect(getComputedStyle(layoutRow).overflowY).toBe("auto"));
+        await waitFor(() => expect(layoutRow.scrollHeight).toBeGreaterThan(layoutRow.clientHeight));
     },
 };
 
@@ -603,7 +627,7 @@ export const OffersDefaultAndSavedPresets: Story = {
         // Editing first and then reopening the picker is the only way to tell the two apart.
         await setColor(canvas, "Button", "#123456");
 
-        await userEvent.click(await canvas.findByRole("button", { name: "Button picker" }));
+        await userEvent.click(await canvas.findByRole("button", { name: colorPickerName("Button") }));
 
         const surface = within(document.body);
         await surface.findByRole("button", { name: `Use ${CUSTOM_APP_DEFAULT_THEME.light.buttonColor}` });
@@ -617,9 +641,76 @@ export const OffersDefaultAndSavedPresets: Story = {
                 name: "Dark",
             }),
         );
-        await userEvent.click(await canvas.findByRole("button", { name: "Button picker" }));
+        await userEvent.click(await canvas.findByRole("button", { name: colorPickerName("Button") }));
         await surface.findByRole("button", { name: `Use ${CUSTOM_APP_DEFAULT_THEME.dark.buttonColor}` });
         await surface.findByRole("button", { name: `Use ${SAMPLE_CHANNEL_THEME.dark.buttonColor}` });
+    },
+};
+
+// The common case: a channel that has never been customised has its saved colour equal to the app
+// default (theme is null, so savedTheme falls back to defaultTheme - the very object identity
+// presetsFor's dedup exists to handle). Offering the same swatch twice here would read like a bug.
+export const OffersOnlyOnePresetWhenDefaultAndSavedMatch: Story = {
+    tags: ["!dev"],
+    parameters: {
+        msw: {
+            handlers: {
+                iframe: [
+                    iframeMocks.getTheme({
+                        theme: null,
+                        defaultTheme: SAMPLE_DEFAULT_THEME,
+                        fontOptions: SAMPLE_FONT_OPTIONS,
+                    }),
+                    ...iframeHandlers(),
+                ],
+            },
+        },
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await userEvent.click(await canvas.findByRole("button", { name: colorPickerName("Button") }));
+
+        const surface = within(document.body);
+        // The curated palettes share this row, so counting every swatch would prove nothing. What the
+        // dedup is responsible for is this one colour appearing once rather than twice.
+        const anchor = new RegExp(`^Use ${SAMPLE_DEFAULT_THEME.light.buttonColor}$`, "i");
+        expect(await surface.findAllByRole("button", { name: anchor })).toHaveLength(1);
+    },
+};
+
+// presetsFor compares anchors case-insensitively, so a saved "#FF775F" doesn't slip past a default
+// "#ff775f" as a second, visually identical swatch. Only the button colour differs from
+// SAMPLE_CHANNEL_THEME, and only by case, from SAMPLE_DEFAULT_THEME's.
+const CASE_DIFFERS_ONLY_THEME: WidgetTheme = {
+    ...SAMPLE_CHANNEL_THEME,
+    light: { ...SAMPLE_CHANNEL_THEME.light, buttonColor: SAMPLE_DEFAULT_THEME.light.buttonColor.toUpperCase() },
+};
+
+export const DedupesPresetsThatOnlyDifferByCase: Story = {
+    tags: ["!dev"],
+    parameters: {
+        msw: {
+            handlers: {
+                iframe: [
+                    iframeMocks.getTheme({
+                        theme: CASE_DIFFERS_ONLY_THEME,
+                        defaultTheme: SAMPLE_DEFAULT_THEME,
+                        fontOptions: SAMPLE_FONT_OPTIONS,
+                    }),
+                    ...iframeHandlers(),
+                ],
+            },
+        },
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await userEvent.click(await canvas.findByRole("button", { name: colorPickerName("Button") }));
+
+        const surface = within(document.body);
+        // Matched case-insensitively on purpose: the point is that "#FF775F" and "#ff775f" collapse to
+        // one swatch, so a case-sensitive query would pass even if both were rendered.
+        const anchor = new RegExp(`^Use ${SAMPLE_DEFAULT_THEME.light.buttonColor}$`, "i");
+        expect(await surface.findAllByRole("button", { name: anchor })).toHaveLength(1);
     },
 };
 
@@ -708,5 +799,54 @@ export const SwitchesThePromptLayout: Story = {
         await userEvent.click(canvas.getByRole("radio", { name: "Inline" }));
         await waitFor(() => expect(canvas.getByRole("radio", { name: "Inline" })).toBeChecked());
         expect(canvas.getByRole("radio", { name: "Stacked" })).not.toBeChecked();
+    },
+};
+
+// The schema rejects an eleventh prompt, but the form used to let an operator add rows without limit and
+// only report the problem on save. The add button has to close before the list can outgrow the cap.
+export const StopsAddingPromptsAtTheCap: Story = {
+    tags: ["!dev"],
+    parameters: {
+        msw: {
+            handlers: {
+                iframe: [
+                    iframeMocks.getTheme({
+                        theme: {
+                            ...SAMPLE_CHANNEL_THEME,
+                            // One short of the cap, so the button is proven live before it goes disabled.
+                            suggestedPrompts: Array.from(
+                                { length: MAX_SUGGESTED_PROMPTS - 1 },
+                                (_, index) => `Prompt ${index + 1}`,
+                            ),
+                        },
+                        defaultTheme: SAMPLE_DEFAULT_THEME,
+                        fontOptions: SAMPLE_FONT_OPTIONS,
+                    }),
+                    ...iframeHandlers(),
+                ],
+            },
+        },
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await userEvent.click(await canvas.findByRole("button", { name: "Content" }));
+
+        await waitFor(() =>
+            expect(canvas.getAllByRole("button", { name: "Remove value" })).toHaveLength(MAX_SUGGESTED_PROMPTS - 1),
+        );
+
+        const addPrompt = canvas.getByRole("button", { name: "Add prompt" });
+        expect(addPrompt).toBeEnabled();
+
+        await userEvent.click(addPrompt);
+
+        await waitFor(() =>
+            expect(canvas.getAllByRole("button", { name: "Remove value" })).toHaveLength(MAX_SUGGESTED_PROMPTS),
+        );
+        await waitFor(() => expect(canvas.getByRole("button", { name: "Add prompt" })).toBeDisabled());
+
+        // Removing a row reopens it: the cap is a live count, not a one-way latch.
+        await userEvent.click(canvas.getAllByRole("button", { name: "Remove value" })[0]);
+        await waitFor(() => expect(canvas.getByRole("button", { name: "Add prompt" })).toBeEnabled());
     },
 };

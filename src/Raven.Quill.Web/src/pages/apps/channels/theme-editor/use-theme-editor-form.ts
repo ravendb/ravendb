@@ -46,15 +46,13 @@ export function useThemeEditorForm({ savedTheme, onSave }: UseThemeEditorFormOpt
     // exactly backwards here - Discard exists to overwrite the dirty fields, so it opts back out.
     const discardChanges = () => form.reset(toFormData(savedTheme), { keepDirtyValues: false });
 
-    // Restores just this section's fields from the saved theme. keepDirtyValues is opted out of for the
-    // same reason Discard opts out: the point is to overwrite the fields the operator edited.
-    // Top-level keys only (keyof, not FieldPath): the lookup below is a plain savedValues[path], which
-    // would silently resolve to undefined for a nested path such as "suggestedPrompts.0.value" and wipe
-    // the field - see theme-editor-fields.ts's SECTION_FIELDS, this function's only caller.
+    // Restores just this section's fields from the saved theme. The form is seeded through `values`, so
+    // each field's default already is the saved value and resetField needs no defaultValue of its own -
+    // and passing one leaves the field's entry in dirtyFields behind, which kept each section's undo
+    // button on screen after the undo had happened.
     const resetSection = (paths: readonly (keyof WidgetThemeFormData)[]) => {
-        const savedValues = toFormData(savedTheme);
         for (const path of paths) {
-            form.resetField(path, { defaultValue: savedValues[path] });
+            form.resetField(path);
         }
     };
 
