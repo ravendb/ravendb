@@ -295,3 +295,116 @@ export const ResetsOneSectionOnly: Story = {
         expect(canvas.getByRole("button", { name: "Save" })).toBeEnabled();
     },
 };
+
+// Bare layout strips the shell's title and back link, so the host page carries both itself —
+// otherwise the operator reaches this screen and cannot leave it without the browser's Back.
+export const CarriesItsOwnNavigation: Story = {
+    tags: ["!dev"],
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        // The back link no longer waits on any query, so it can mount before channelsQuery resolves -
+        // unlike the link, the heading needs its own await rather than riding the link's.
+        expect(await canvas.findByRole("link", { name: "Back to channel" })).toBeInTheDocument();
+        expect(await canvas.findByRole("heading", { name: "Website widget" })).toBeInTheDocument();
+    },
+};
+
+// The back link and title used to live inside the editor, which only mounts once ApiState reaches
+// its success branch - a slow theme fetch left the operator stranded with no way back. They now
+// live on the host page, above ApiState, so a pending theme query must not take them down with it.
+export const KeepsBackLinkWhileThemeLoads: Story = {
+    tags: ["!dev"],
+    parameters: {
+        msw: {
+            handlers: {
+                iframe: [iframeMocks.getThemePending(), ...iframeHandlers()],
+            },
+        },
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        // Confirms the page is actually still in ApiState's loading branch, not the success one.
+        expect(await canvas.findByText("Loading theme...")).toBeInTheDocument();
+        expect(canvas.getByRole("link", { name: "Back to channel" })).toBeInTheDocument();
+    },
+};
+
+// Same regression as above, on the error branch: a failed theme fetch must not strand the operator
+// either.
+export const KeepsBackLinkWhenThemeErrors: Story = {
+    tags: ["!dev"],
+    parameters: {
+        msw: {
+            handlers: {
+                iframe: [iframeMocks.getThemeError(), ...iframeHandlers()],
+            },
+        },
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        // Confirms the page is actually in ApiState's error branch, not the success one.
+        expect(await canvas.findByText("Could not load the theme")).toBeInTheDocument();
+        expect(canvas.getByRole("link", { name: "Back to channel" })).toBeInTheDocument();
+    },
+};
+
+// The host page sizes the iframe, so "does my greeting wrap badly in a narrow sidebar?" is a real
+// question. 320 is where a prompt pill first wraps.
+export const PreviewsNarrowEmbedWidth: Story = {
+    tags: ["!dev"],
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        const frame = await canvas.findByTitle("Web widget preview");
+
+        await userEvent.click(canvas.getByRole("radio", { name: "320" }));
+
+        await waitFor(() => expect(frame.parentElement).toHaveStyle({ width: "320px" }));
+    },
+};
+
+// Fields that cannot affect anything should not be on screen. Their values are still kept, so turning
+// the header back on restores what was there rather than starting from blank.
+export const HidesHeaderFieldsWhenHeaderIsOff: Story = {
+    tags: ["!dev"],
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        await userEvent.click(await canvas.findByRole("button", { name: "Branding" }));
+        const title = await canvas.findByLabelText("Title");
+        const originalTitle = (title as HTMLInputElement).value;
+
+        await userEvent.click(canvas.getByRole("switch", { name: "Show the header" }));
+
+        await waitFor(() => expect(canvas.queryByLabelText("Title")).not.toBeInTheDocument());
+        expect(canvas.queryByLabelText("Logo radius")).not.toBeInTheDocument();
+
+        await userEvent.click(canvas.getByRole("switch", { name: "Show the header" }));
+
+        // The value survived being hidden — this is a disclosure, not a clear.
+        await waitFor(() => expect(canvas.getByLabelText("Title")).toHaveValue(originalTitle));
+    },
+};
+
+// suggestedPrompts is a useFieldArray, the reset path most likely to leave an orphaned row behind.
+// Task 1 proved this by hand; this keeps it proven.
+export const ResetsASectionContainingAFieldArray: Story = {
+    tags: ["!dev"],
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        await userEvent.click(await canvas.findByRole("button", { name: "Content" }));
+        const promptsBefore = canvas.getAllByPlaceholderText("Where is my order?").length;
+
+        await userEvent.click(canvas.getByRole("button", { name: "Add prompt" }));
+        await waitFor(() =>
+            expect(canvas.getAllByPlaceholderText("Where is my order?")).toHaveLength(promptsBefore + 1),
+        );
+
+        await userEvent.click(canvas.getByRole("button", { name: "Reset Content section" }));
+
+        await waitFor(() => expect(canvas.getAllByPlaceholderText("Where is my order?")).toHaveLength(promptsBefore));
+    },
+};

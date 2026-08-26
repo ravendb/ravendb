@@ -1,3 +1,4 @@
+import { delay } from "msw";
 import type {
     ApiErrorResponse,
     WidgetDefaultThemeResponse,
@@ -70,6 +71,18 @@ export const iframeMocks = {
             fontOptions: SAMPLE_FONT_OPTIONS,
         },
     ) => apiHttp.get("/api/apps/{slug}/iframe/{channelId}/theme", ({ response }) => response(200).json(theme)),
+    /** Never answers, so the theme page stays in its loading state. */
+    getThemePending: () =>
+        apiHttp.get("/api/apps/{slug}/iframe/{channelId}/theme", async ({ response }) => {
+            await delay("infinite");
+            return response(200).json({
+                theme: SAMPLE_CHANNEL_THEME,
+                defaultTheme: SAMPLE_DEFAULT_THEME,
+                fontOptions: SAMPLE_FONT_OPTIONS,
+            });
+        }),
+    getThemeError: (error: ApiErrorResponse = { error: "Could not load the theme.", code: "theme_load_failed" }) =>
+        apiHttp.get("/api/apps/{slug}/iframe/{channelId}/theme", ({ response }) => response(404).json(error)),
     updateTheme: (defaultTheme: WidgetTheme = SAMPLE_DEFAULT_THEME) =>
         apiHttp.put("/api/apps/{slug}/iframe/{channelId}/theme", async ({ request, response }) => {
             const body = await request.json();
@@ -83,6 +96,9 @@ export const iframeMocks = {
             fontOptions: SAMPLE_FONT_OPTIONS,
         },
     ) => apiHttp.get("/api/apps/{slug}/iframe/default-theme", ({ response }) => response(200).json(defaultTheme)),
+    getDefaultThemeError: (
+        error: ApiErrorResponse = { error: "Could not load the default theme.", code: "default_theme_load_failed" },
+    ) => apiHttp.get("/api/apps/{slug}/iframe/default-theme", ({ response }) => response(404).json(error)),
     updateDefaultTheme: () =>
         apiHttp.put("/api/apps/{slug}/iframe/default-theme", async ({ request, response }) => {
             const body = await request.json();
