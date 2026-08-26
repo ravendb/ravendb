@@ -1,13 +1,13 @@
 @use "Content/scss/sizes";
 @use "Content/scss/colors";
 
-.sample-queries-tabs {
+.samples-tabs {
     &.card {
         border-radius: sizes.$border-radius;
         overflow: hidden;
     }
 
-    .sample-queries-nav {
+    .samples-nav {
         display: flex;
         flex-wrap: wrap;
         align-items: center;

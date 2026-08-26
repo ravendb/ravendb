@@ -18,7 +18,9 @@ import useResizableHeight from "components/hooks/useResizableHeight";
 import AceEditorSamplesPanel, {
     AceEditorSamplesPanelConfig,
     AceEditorSamplesToggleAction,
+    confirmSampleLoad,
 } from "./AceEditorSamplesPanel";
+import useConfirm from "components/common/ConfirmDialog";
 
 interface ActionItem {
     component: ReactNode;
@@ -38,7 +40,6 @@ export interface AceEditorProps extends IAceEditorProps {
     maxHeight?: number | string;
     disabled?: boolean;
     samplesPanel?: AceEditorSamplesPanelConfig;
-    overlay?: ReactNode;
 }
 
 function AceEditor(props: AceEditorProps) {
@@ -57,7 +58,6 @@ function AceEditor(props: AceEditorProps) {
         readOnly,
         disabled,
         samplesPanel,
-        overlay,
         onChange,
         ...rest
     } = props;
@@ -77,19 +77,17 @@ function AceEditor(props: AceEditorProps) {
 
     const validActions = actions.filter(Boolean);
 
-    const [isSamplesPanelOpen, setIsSamplesPanelOpen] = useState(false);
+    const [internalSamplesPanelOpen, setInternalSamplesPanelOpen] = useState(false);
+
+    const isSamplesPanelOpen = samplesPanel?.isOpen ?? internalSamplesPanelOpen;
+    const toggleSamplesPanel = samplesPanel?.onToggle ?? (() => setInternalSamplesPanelOpen((prev) => !prev));
 
     const hasSamplesPanel = samplesPanel?.tabs.length > 0;
 
     const samplesToggleAction: ActionItem | null =
-        hasSamplesPanel && !disabled && !readOnly
+        hasSamplesPanel && !readOnly
             ? {
-                  component: (
-                      <AceEditorSamplesToggleAction
-                          tooltipTitle={samplesPanel.tooltipTitle}
-                          onClick={() => setIsSamplesPanelOpen((prev) => !prev)}
-                      />
-                  ),
+                  component: <AceEditorSamplesToggleAction onClick={toggleSamplesPanel} />,
                   position: "bottom",
               }
             : null;
@@ -167,6 +165,14 @@ function AceEditor(props: AceEditorProps) {
               },
           ]
         : defaultCommands;
+
+    const confirm = useConfirm();
+
+    const handleSampleSelect = async (script: string) => {
+        if (await confirmSampleLoad(confirm, aceRef.current?.editor.getValue() ?? "")) {
+            onChange?.(script);
+        }
+    };
 
     const handleLoad = (editor: Ace.Editor) => {
         // (ctrl+k is used for studio search)
@@ -247,7 +253,6 @@ function AceEditor(props: AceEditorProps) {
                         <small>{errorMessage}</small>
                     </div>
                 )}
-                {overlay}
                 <div
                     style={{
                         position: "absolute",
@@ -263,10 +268,10 @@ function AceEditor(props: AceEditorProps) {
             </div>
             {hasSamplesPanel && (
                 <AceEditorSamplesPanel
-                    isOpen={isSamplesPanelOpen && !disabled && !readOnly}
+                    isOpen={isSamplesPanelOpen && !readOnly}
                     tabs={samplesPanel.tabs}
-                    onSelect={(script) => onChange?.(script)}
-                    onClose={() => setIsSamplesPanelOpen(false)}
+                    onSelect={handleSampleSelect}
+                    onClose={toggleSamplesPanel}
                 />
             )}
         </AceEditorContext.Provider>

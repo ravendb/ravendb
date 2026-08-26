@@ -1,5 +1,5 @@
 import React from "react";
-import { SampleScript } from "./sampleQueriesTypes";
+import { SampleScript } from "./samplesTypes";
 import Code from "components/common/Code";
 import LoadButton from "./LoadButton";
 

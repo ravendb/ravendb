@@ -13,12 +13,10 @@ describe("samplesTabFactories", () => {
         expect(typeof tab.content).toBe("function");
     });
 
-    it("createSampleScriptsTab uses the provided label, key and icon", () => {
-        const tab = createSampleScriptsTab([], { label: "Sample object", key: "objects", icon: "json" });
+    it("createSampleScriptsTab uses the provided label", () => {
+        const tab = createSampleScriptsTab([], { label: "Sample object" });
 
-        expect(tab.key).toBe("objects");
         expect(tab.label).toBe("Sample object");
-        expect(tab.icon).toBe("json");
     });
 
     it("createSampleScriptsTab content renders the provided scripts", () => {

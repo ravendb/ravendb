@@ -7,8 +7,8 @@ import Form from "react-bootstrap/Form";
 import { motion } from "motion/react";
 import { Icon } from "components/common/Icon";
 import useUniqueId from "components/hooks/useUniqueId";
-import { SamplesTab } from "./partials/sampleQueriesTypes";
-import "./SampleQueries.scss";
+import { SamplesTab } from "./partials/samplesTypes";
+import "./SamplesTabs.scss";
 
 export interface SamplesTabsProps {
     tabs: SamplesTab[];
@@ -37,9 +37,9 @@ export default function SamplesTabs({ tabs, onSelect, onClose }: SamplesTabsProp
     };
 
     return (
-        <Card className="panel-bg-1 border border-color-light sample-queries-tabs">
+        <Card className="panel-bg-1 border border-color-light samples-tabs">
             <Tab.Container mountOnEnter unmountOnExit id={tabsId} activeKey={activeTabKey} onSelect={handleTabSelect}>
-                <Nav variant="pills" className="gap-1 panel-bg-2 sample-queries-nav">
+                <Nav variant="pills" className="gap-1 panel-bg-2 samples-nav">
                     {tabs.map((tab) => (
                         <Nav.Item key={tab.key}>
                             <Nav.Link eventKey={tab.key} className="no-decor">
@@ -52,7 +52,7 @@ export default function SamplesTabs({ tabs, onSelect, onClose }: SamplesTabsProp
                         <Button
                             variant="link"
                             size="sm"
-                            className="ms-auto p-1 text-reset sample-queries-close"
+                            className="ms-auto p-1 text-reset samples-close"
                             title="Close"
                             onClick={onClose}
                         >
@@ -75,6 +75,12 @@ export default function SamplesTabs({ tabs, onSelect, onClose }: SamplesTabsProp
                             className="rounded-1 methods-search-input"
                             value={activeSearch}
                             onChange={(e) => handleSearchChange(e.target.value)}
+                            onKeyDown={(e) => {
+                                // the panel can be rendered inside a form - Enter must not submit it
+                                if (e.key === "Enter") {
+                                    e.preventDefault();
+                                }
+                            }}
                         />
                     </div>
                 )}

@@ -11,6 +11,11 @@ import { Icon } from "components/common/Icon";
 import { useRef } from "react";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import AceEditor from "components/common/ace/AceEditor";
+import AceEditorSamplesPanel, {
+    AceEditorSamplesToggleAction,
+    confirmSampleLoad,
+} from "components/common/ace/AceEditorSamplesPanel";
+import useConfirm from "components/common/ConfirmDialog";
 import ReactAce from "react-ace";
 import SampleObjectAndSchemaFields from "components/common/sampleObjectAndSchemaFields/SampleObjectAndSchemaFields";
 import AiAssistantWindow from "components/common/aiAssistant/AiAssistantWindow";
@@ -34,6 +39,19 @@ export default function EditGenAiTaskModelFields() {
     const promptRef = useRef<ReactAce>(null);
 
     const { value: isAiAssistOpen, toggle: toggleIsAiAssistOpen } = useBoolean(false);
+    const {
+        value: isPromptSamplesOpen,
+        toggle: togglePromptSamples,
+        setValue: setIsPromptSamplesOpen,
+    } = useBoolean(false);
+
+    const confirm = useConfirm();
+
+    const handleLoadPromptSample = async (script: string) => {
+        if (await confirmSampleLoad(confirm, formValues.prompt ?? "")) {
+            setValue("prompt", script, { shouldValidate: true, shouldDirty: true });
+        }
+    };
 
     return (
         <>
@@ -52,37 +70,46 @@ export default function EditGenAiTaskModelFields() {
                         <Icon icon="info" color="info" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </FormLabel>
-                <FormAceEditor
-                    aceRef={promptRef}
-                    control={control}
-                    name="prompt"
-                    mode="text"
-                    actions={[{ component: <AceEditor.FullScreenAction /> }]}
-                    samplesPanel={{ tabs: promptSamplesTabs }}
-                    overlay={
-                        <>
-                            {formValues.prompt?.length > 0 && (
-                                <AiAssistantButton handleClick={toggleIsAiAssistOpen} right="48px" />
-                            )}
-                            {isAiAssistOpen && (
-                                <AiAssistantWindow
-                                    data={{
-                                        View: "GenAI",
-                                        Message: getRefinePromptMessage(formValues),
-                                    }}
-                                    acceptResult={(text) => setValue("prompt", text)}
-                                    successMessage="AI refined your prompt based on your input and information from the previous steps."
-                                    closeWindow={toggleIsAiAssistOpen}
-                                    right="48px"
-                                />
-                            )}
-                        </>
-                    }
-                    wrapEnabled
-                    setOptions={{
-                        indentedSoftWrap: false,
-                    }}
-                    isFullScreenLabelHidden
+                <div className="position-relative">
+                    <FormAceEditor
+                        aceRef={promptRef}
+                        control={control}
+                        name="prompt"
+                        mode="text"
+                        actions={[
+                            { component: <AceEditor.FullScreenAction /> },
+                            {
+                                component: <AceEditorSamplesToggleAction onClick={togglePromptSamples} />,
+                                position: "bottom",
+                            },
+                        ]}
+                        wrapEnabled
+                        setOptions={{
+                            indentedSoftWrap: false,
+                        }}
+                        isFullScreenLabelHidden
+                    />
+                    {formValues.prompt?.length > 0 && (
+                        <AiAssistantButton handleClick={toggleIsAiAssistOpen} right="48px" />
+                    )}
+                    {isAiAssistOpen && (
+                        <AiAssistantWindow
+                            data={{
+                                View: "GenAI",
+                                Message: getRefinePromptMessage(formValues),
+                            }}
+                            acceptResult={(text) => setValue("prompt", text)}
+                            successMessage="AI refined your prompt based on your input and information from the previous steps."
+                            closeWindow={toggleIsAiAssistOpen}
+                            right="48px"
+                        />
+                    )}
+                </div>
+                <AceEditorSamplesPanel
+                    isOpen={isPromptSamplesOpen}
+                    tabs={promptSamplesTabs}
+                    onSelect={handleLoadPromptSample}
+                    onClose={() => setIsPromptSamplesOpen(false)}
                 />
             </FormGroup>
             <SampleObjectAndSchemaFields

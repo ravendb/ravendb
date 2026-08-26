@@ -1,8 +1,6 @@
-import { SampleScript, SamplesTab } from "components/common/sampleQueries/partials/sampleQueriesTypes";
-import { createMethodsTab, createSampleScriptsTab } from "components/common/sampleQueries/partials/samplesTabFactories";
+import { SampleScript, SamplesTab } from "components/common/samples/partials/samplesTypes";
+import { createMethodsTab, createSampleScriptsTab } from "components/common/samples/partials/samplesTabFactories";
 import { contextScriptMethodGroups, updateScriptMethodGroups } from "./editGenAiTaskMethodsData";
-
-// Placeholder samples migrated from the previous syntax-help modals.
 
 const contextScriptSamples: SampleScript[] = [
     {

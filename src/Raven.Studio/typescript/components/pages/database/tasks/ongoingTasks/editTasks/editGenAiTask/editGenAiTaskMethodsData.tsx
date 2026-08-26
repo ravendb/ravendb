@@ -1,5 +1,5 @@
 import React from "react";
-import { MethodEntry, MethodGroup } from "components/common/sampleQueries/partials/sampleQueriesTypes";
+import { MethodEntry, MethodGroup } from "components/common/samples/partials/samplesTypes";
 
 type GenAiScriptScope = "context" | "update";
 
