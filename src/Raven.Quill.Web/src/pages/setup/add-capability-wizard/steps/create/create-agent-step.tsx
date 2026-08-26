@@ -1,4 +1,5 @@
 import { useFormContext, useWatch } from "react-hook-form";
+import { AI_LICENSE_UNAVAILABLE_MESSAGE } from "@/api/custom-services/assistant-service";
 import { AiConsentGate, type AiConsentCopy } from "@/components/ai-consent/ai-consent-gate";
 import { useAiConsent } from "@/components/ai-consent/use-ai-consent";
 import { cn } from "@/lib/utils";
@@ -33,6 +34,17 @@ const AGENT_CONSENT_COPY: AiConsentCopy = {
         "of Use.",
 };
 
+function suggestionFailureMessage(failureStatus: string | null) {
+    switch (failureStatus) {
+        case "InvalidCredentials":
+            return AI_LICENSE_UNAVAILABLE_MESSAGE;
+        case "OutOfTokens":
+            return "The AI service has used up its quota for now. Try again later, describe your own agent below, or set one up manually.";
+        default:
+            return "AI could not suggest agents from your data. Describe your own below, or set one up manually.";
+    }
+}
+
 export function CreateAgentStep({ isBusy }: WizardBodyComponentProps) {
     const { control, setValue } = useFormContext<AgentFormData>();
     const suggestions = useCapabilityWizardStore((state) => state.suggestions);
@@ -41,6 +53,7 @@ export function CreateAgentStep({ isBusy }: WizardBodyComponentProps) {
         isSuggesting,
         startedAt: suggestionStartedAt,
         isConsentRequired,
+        failureStatus,
         recheck: recheckSuggestions,
     } = useSuggestedAgents();
     const { isBlocked: isAiBlocked } = useAiConsent();
@@ -89,7 +102,7 @@ export function CreateAgentStep({ isBusy }: WizardBodyComponentProps) {
                                 </Button>
                             </>
                         ) : (
-                            "AI could not suggest agents from your data. Describe your own below, or set one up manually."
+                            suggestionFailureMessage(failureStatus)
                         )}
                     </Alert>
                 ) : (
