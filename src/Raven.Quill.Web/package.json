@@ -43,6 +43,7 @@
         "radix-ui": "^1.4.3",
         "react": "^19.2.6",
         "react-ace": "^14.0.1",
+        "react-colorful": "^5.8.0",
         "react-day-picker": "^10.0.1",
         "react-dom": "^19.2.6",
         "react-hook-form": "^7.76.0",
