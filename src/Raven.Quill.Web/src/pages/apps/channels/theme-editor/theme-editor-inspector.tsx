@@ -41,7 +41,7 @@ export function ThemeEditorInspector({
         // (@5xl/theme-editor, set on the form in theme-editor.tsx); below that it takes its natural
         // height so the page scrolls once instead of this column scrolling on its own inside a
         // height it doesn't have room for.
-        <div className="border-b bg-card @5xl/theme-editor:min-h-0 @5xl/theme-editor:flex-1 @5xl/theme-editor:overflow-y-auto @5xl/theme-editor:border-r @5xl/theme-editor:border-b-0">
+        <div className="shrink-0 border-b bg-card @5xl/theme-editor:min-h-0 @5xl/theme-editor:flex-1 @5xl/theme-editor:overflow-y-auto @5xl/theme-editor:border-r @5xl/theme-editor:border-b-0">
             <div className="divide-y">
                 <div className="p-4">
                     <ThemeEditorAppearanceField

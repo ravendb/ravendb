@@ -91,6 +91,6 @@ export const KeepsBackLinkWhenDefaultThemeErrors: Story = {
         const canvas = within(canvasElement);
 
         await canvas.findByText("Could not load the default theme");
-        expect(canvas.getByRole("link", { name: "Back to channels" })).toBeInTheDocument();
+        expect(canvas.getByRole("link", { name: "Back to Channels" })).toBeInTheDocument();
     },
 };
