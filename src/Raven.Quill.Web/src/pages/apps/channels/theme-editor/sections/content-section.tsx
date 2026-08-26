@@ -1,8 +1,11 @@
+import { CircleHelp } from "lucide-react";
+import { InfoHint } from "@/components/data/info-hint";
 import { FormInput } from "@/components/form/form-input";
+import { FormSegmented } from "@/components/form/form-segmented";
 import { FormStringList } from "@/components/form/form-string-list";
 import { SECTION_FIELDS, type ThemeSectionProps } from "@/pages/apps/channels/theme-editor/theme-editor-fields";
 import { ThemeEditorSection } from "@/pages/apps/channels/theme-editor/theme-editor-section";
-import { MAX_SUGGESTED_PROMPTS } from "@/pages/apps/channels/web-widget-theme-schema";
+import { MAX_SUGGESTED_PROMPTS, SUGGESTED_PROMPTS_LAYOUT_OPTIONS } from "@/pages/apps/channels/web-widget-theme-schema";
 
 type ContentSectionProps = ThemeSectionProps & {
     onFocusWelcomeFields: () => void;
@@ -31,12 +34,21 @@ export function ContentSection({ control, isSaving, onReset, onFocusWelcomeField
                     control={control}
                     name="suggestedPrompts"
                     label="Suggested prompts"
-                    description={`Offered on the welcome screen. Up to ${MAX_SUGGESTED_PROMPTS}.`}
+                    description={`Starter questions on the welcome screen, up to ${MAX_SUGGESTED_PROMPTS}.`}
                     addButtonLabel="Add prompt"
                     emptyLabel="No suggested prompts."
                     defaultValue={{ value: "" }}
                     fieldName={(index) => `suggestedPrompts.${index}.value`}
                     placeholder="Where is my order?"
+                    disabled={isSaving}
+                    sortable
+                />
+                <FormSegmented
+                    control={control}
+                    name="suggestedPromptsLayout"
+                    label="Prompt layout"
+                    hint="Stacked puts one prompt per row. Inline flows them as a wrapping row."
+                    options={SUGGESTED_PROMPTS_LAYOUT_OPTIONS}
                     disabled={isSaving}
                 />
             </div>
@@ -50,9 +62,16 @@ export function ContentSection({ control, isSaving, onReset, onFocusWelcomeField
             <FormInput
                 control={control}
                 name="disclaimer"
-                label="Disclaimer"
+                label={
+                    <span className="flex items-center gap-1.5">
+                        Disclaimer
+                        <InfoHint
+                            content="Sits as a small line under the composer. Leave it empty to hide it."
+                            icon={CircleHelp}
+                        />
+                    </span>
+                }
                 placeholder="AI responses may be inaccurate."
-                description="Shown as a small line under the composer. Left blank, nothing is shown."
                 disabled={isSaving}
             />
         </ThemeEditorSection>

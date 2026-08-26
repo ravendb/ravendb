@@ -622,3 +622,91 @@ export const OffersDefaultAndSavedPresets: Story = {
         await surface.findByRole("button", { name: `Use ${SAMPLE_CHANNEL_THEME.dark.buttonColor}` });
     },
 };
+
+/** The rows of the list being dragged that dnd-kit's sorting strategy has translated out of the way.
+ *  Every row carries a transform for the whole drag, so only a non-zero vertical offset counts. */
+function displacedSiblings(canvasElement: HTMLElement) {
+    const dragged = canvasElement.querySelector("[data-dragging]");
+    const rows = Array.from(dragged?.parentElement?.children ?? []) as HTMLElement[];
+    return rows.filter((row) => {
+        if (row === dragged) return false;
+        const offset = /translate3d\([^,]+,\s*(-?[\d.]+)px/.exec(row.style.transform);
+        return offset !== null && Number(offset[1]) !== 0;
+    });
+}
+
+// The prompts are read in order on the welcome screen, so the editor has to offer a way to change it that
+// is not "retype every row below this one".
+export const ReordersSuggestedPrompts: Story = {
+    tags: ["!dev"],
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await userEvent.click(await canvas.findByRole("button", { name: "Content" }));
+
+        const handle = () => canvas.getByRole("button", { name: "Reorder suggested prompts 1" });
+        const promptInputs = () =>
+            canvas
+                .getAllByRole("textbox")
+                .filter((input): input is HTMLInputElement =>
+                    SAMPLE_CHANNEL_THEME.suggestedPrompts.includes((input as HTMLInputElement).value),
+                );
+
+        // The section animates open, so its rows are still moving for a moment after the click. dnd-kit
+        // measures the droppable rects as the drag lifts, and a mid-animation measurement makes that
+        // first collision pass land on the row below - which then reads as the drag having travelled two
+        // rows instead of one. Two identical measurements in a row mean the geometry has stopped moving.
+        let lastTop = Number.NaN;
+        await waitFor(() => {
+            const top = handle().getBoundingClientRect().top;
+            const isSettled = top === lastTop;
+            lastTop = top;
+            expect(isSettled).toBe(true);
+        });
+
+        handle().focus();
+        await userEvent.keyboard("{ }");
+
+        // dnd-kit only registers the lift asynchronously, so a bare "{ArrowDown}" right after can land
+        // before the lift and silently do nothing. `data-dragging` is set once dnd-kit's `isDragging`
+        // actually flips.
+        await waitFor(() => expect(canvasElement.querySelector("[data-dragging]")).not.toBeNull());
+
+        await userEvent.keyboard("{ArrowDown}");
+
+        // Same story for the move itself: dropping right after the arrow key can beat dnd-kit's collision
+        // recalculation, committing before `over` has updated to the row underneath. The sorting strategy
+        // translates whichever row is being displaced, so a neighbour carrying a transform is the proof
+        // that the move has been taken into account and the drop has somewhere to land.
+        await waitFor(() => expect(displacedSiblings(canvasElement)).not.toHaveLength(0));
+
+        await userEvent.keyboard("{ }");
+        await waitFor(() => expect(canvasElement.querySelector("[data-dragging]")).toBeNull());
+
+        await waitFor(() =>
+            expect(promptInputs().map((input) => input.value)).toEqual([
+                SAMPLE_CHANNEL_THEME.suggestedPrompts[1],
+                SAMPLE_CHANNEL_THEME.suggestedPrompts[0],
+                ...SAMPLE_CHANNEL_THEME.suggestedPrompts.slice(2),
+            ]),
+        );
+    },
+};
+
+export const SwitchesThePromptLayout: Story = {
+    tags: ["!dev"],
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await userEvent.click(await canvas.findByRole("button", { name: "Content" }));
+
+        // SAMPLE_CHANNEL_THEME already saves "Inline", so clicking "Stacked" first is what proves the
+        // control is actually wired: without this step, the click below would find "Inline" already
+        // checked and the assertion after it would pass even if onChange were a no-op.
+        await userEvent.click(await canvas.findByRole("radio", { name: "Stacked" }));
+        await waitFor(() => expect(canvas.getByRole("radio", { name: "Stacked" })).toBeChecked());
+        expect(canvas.getByRole("radio", { name: "Inline" })).not.toBeChecked();
+
+        await userEvent.click(canvas.getByRole("radio", { name: "Inline" }));
+        await waitFor(() => expect(canvas.getByRole("radio", { name: "Inline" })).toBeChecked());
+        expect(canvas.getByRole("radio", { name: "Stacked" })).not.toBeChecked();
+    },
+};
