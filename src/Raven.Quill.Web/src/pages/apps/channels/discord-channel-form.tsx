@@ -13,6 +13,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { SheetClose, SheetFooter } from "@/components/shadcn/ui/sheet";
 import { ApiState } from "@/components/data/api-state";
+import { Heading, Text } from "@/components/typography";
 import { FormInput } from "@/components/form/form-input";
 import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
 import { ParameterBindingFields } from "@/pages/apps/channels/parameter-binding-fields";
@@ -179,10 +180,12 @@ function LoadedDiscordChannelForm({
                         <Collapsible open={isSetupOpen} onOpenChange={setIsSetupOpen} className="grid gap-3">
                             <CollapsibleTrigger className="group flex w-full items-start justify-between gap-3 text-left">
                                 <div>
-                                    <h3 className="text-sm font-semibold">No Discord app yet?</h3>
-                                    <p className="mt-1 text-xs text-muted-foreground">
+                                    <Heading as="h3" variant="label">
+                                        No Discord app yet?
+                                    </Heading>
+                                    <Text variant="caption" className="mt-1">
                                         Create one in the Developer Portal, then paste its bot token below.
-                                    </p>
+                                    </Text>
                                 </div>
                                 <ChevronDown
                                     className="mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180"
@@ -213,10 +216,10 @@ function LoadedDiscordChannelForm({
                                         copy the token it shows — Discord never shows it again.
                                     </li>
                                 </ol>
-                                <p className="text-xs text-muted-foreground">
+                                <Text variant="caption">
                                     After the channel is created you get an invite link. A person can only DM a bot they
                                     share a server with, so the bot has to be invited to a server your users are in.
-                                </p>
+                                </Text>
                             </CollapsibleContent>
                         </Collapsible>
                         {!agent && (

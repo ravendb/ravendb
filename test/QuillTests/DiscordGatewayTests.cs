@@ -43,7 +43,7 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
         Assert.Equal("What are your hours?", request.Prompt);
         Assert.Equal(Channel.IdPrefix + channel.ChannelId, request.ChannelId);
         Assert.Matches($"^chats/discord/{channel.ChannelId}/{Sender}/\\d{{4}}-\\d{{2}}-\\d{{2}}$", request.ConversationId);
-        Assert.Equal(Sender, request.Parameters["discordUser"]);
+        Assert.Equal(Sender, request.Parameters["discordUser"].GetString());
 
         await Discord.WaitUntilAsync(
             () => Discord.EditedMessages.Any(e => e.Content == "Hello from the fake agent."), "the finalized edit");
@@ -255,7 +255,7 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
         await Discord.DispatchDmAsync("msg-handle", DmChannel, Sender, "who am i?", authorUsername: "dana.dev");
 
         await Discord.WaitUntilAsync(() => Router.Requests.Count == 1, "the agent dispatch");
-        Assert.Equal("dana.dev", Assert.Single(Router.Requests).Parameters["handle"]);
+        Assert.Equal("dana.dev", Assert.Single(Router.Requests).Parameters["handle"].GetString());
     }
 
     [RavenFact(RavenTestCategory.Quill)]

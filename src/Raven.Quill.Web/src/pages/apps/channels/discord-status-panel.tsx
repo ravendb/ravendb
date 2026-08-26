@@ -5,6 +5,7 @@ import { ApiState } from "@/components/data/api-state";
 import { CopyableCode } from "@/components/data/copyable-code";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { Badge } from "@/components/shadcn/ui/badge";
+import { Text } from "@/components/typography";
 import { formatDateTime, formatRelativeTime } from "@/lib/utils";
 import { discordInstallUrl } from "@/pages/apps/channels/discord-app-setup";
 
@@ -53,11 +54,13 @@ export function DiscordHealthStrip({ health }: { health: DiscordChannelHealthRes
                 <DiscordTokenBadge tokenValid={health.tokenValid} tokenError={health.tokenError} />
                 <DiscordGatewayBadge health={health} />
                 {health.lastInboundAt ? (
-                    <span className="text-xs text-muted-foreground" title={formatDateTime(health.lastInboundAt)}>
+                    <Text as="span" variant="caption" title={formatDateTime(health.lastInboundAt)}>
                         Last message {formatRelativeTime(health.lastInboundAt)}
-                    </span>
+                    </Text>
                 ) : (
-                    <span className="text-xs text-muted-foreground">Waiting for the first message...</span>
+                    <Text as="span" variant="caption">
+                        Waiting for the first message...
+                    </Text>
                 )}
             </div>
             {!health.gatewayConnected && health.lastGatewayError && (

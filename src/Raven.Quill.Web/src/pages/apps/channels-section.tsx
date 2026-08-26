@@ -104,9 +104,9 @@ export function ChannelsSection({
                                             </Text>
                                         )}
                                         {channel.discord?.botUsername && (
-                                            <div className="text-xs font-normal text-muted-foreground">
+                                            <Text as="div" variant="caption" className="font-normal">
                                                 {channel.discord.botUsername}
-                                            </div>
+                                            </Text>
                                         )}
                                     </TableCell>
                                     {!fixedAgent && <TableCell className="font-medium">{agent?.name}</TableCell>}

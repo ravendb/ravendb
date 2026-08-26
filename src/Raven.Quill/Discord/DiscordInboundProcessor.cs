@@ -196,7 +196,10 @@ internal sealed class DiscordInboundProcessor(
         try
         {
             await router.RunAsync(
-                new AgentRequest(database, config.Identifier, conversationId, prompt, channel.Id!, parameters),
+                new AgentRequest(database, config.Identifier, conversationId, prompt, channel.Id!,
+                    parameters.ToDictionary(
+                        parameter => parameter.Key,
+                        parameter => AgentParameterValue.FromString(parameter.Value))),
                 reply.OnChunkAsync, config, ct);
 
             await reply.FinalizeAsync();
