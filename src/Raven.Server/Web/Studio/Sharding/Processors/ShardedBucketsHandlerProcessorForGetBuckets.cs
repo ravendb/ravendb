@@ -9,6 +9,7 @@ using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Server.Web.Studio.Processors;
 
 namespace Raven.Server.Web.Studio.Sharding.Processors
@@ -26,7 +27,19 @@ namespace Raven.Server.Web.Studio.Sharding.Processors
                 return await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(new GetBucketsCommand(fromBucket, toBucket, range), shardNumber.Value, token);
 
             var shardedGetBucketsOperation = new ShardedGetBucketsOperation(RequestHandler.HttpContext.Request, fromBucket, toBucket, range);
-            return await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(shardedGetBucketsOperation, token);
+            var results = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(shardedGetBucketsOperation, token);
+            MarkOwnerShards(results);
+            return results;
+        }
+
+        private void MarkOwnerShards(BucketsResults results)
+        {
+            var configuration = RequestHandler.DatabaseContext.DatabaseRecord.Sharding;
+            foreach (var bucketRange in results.BucketRanges.Values)
+            {
+                if (bucketRange.ShardNumbers.Count > 1 && bucketRange.FromBucket == bucketRange.ToBucket)
+                    bucketRange.OwnerShardNumber = ShardHelper.GetShardNumberFor(configuration, (int)bucketRange.FromBucket);
+            }
         }
     }
 
