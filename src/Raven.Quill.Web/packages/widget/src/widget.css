@@ -44,6 +44,20 @@ body {
     height: 100%;
 }
 
+/* Whether the logo fits inside its square or fills and crops it - an operator choice, so it rides a
+   variable rather than a Tailwind class. */
+.rq-logo {
+    object-fit: var(--rq-logo-fit, contain);
+}
+
+/* The composer grows with its textarea, and a pill radius grows with it - past a couple of lines the
+   corners curve across the text itself. Capping it at half the single-line height (the send button's
+   2.25rem plus 0.75rem of padding) keeps one line reading as a pill while taller ones round like a
+   card. rem, not px, so the cap tracks the theme's font size like everything else here. */
+.rq-composer-box {
+    border-radius: min(var(--rq-radius-pill), 1.5rem);
+}
+
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
