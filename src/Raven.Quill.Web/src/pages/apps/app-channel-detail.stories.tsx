@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import {
     SAMPLE_CHANNEL_ID,
     SAMPLE_DISCORD_CHANNEL_ID,
@@ -111,5 +112,51 @@ export const DiscordGatewayDisconnected: Story = {
                 ],
             },
         },
+    },
+};
+
+export const DiscordParameters: Story = {
+    parameters: {
+        router: {
+            initialPath: `/apps/demo/channels/${SAMPLE_DISCORD_CHANNEL_ID}`,
+            path: "/apps/:slug/channels/:channelId",
+        },
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        await userEvent.click(await canvas.findByRole("tab", { name: /parameters/i }));
+
+        const source = await canvas.findByRole("combobox", { name: "discordUser" });
+        await waitFor(() => expect(source).toHaveTextContent(/sender discord user id/i));
+        expect(canvas.getByText(/numeric discord user id/i)).toBeInTheDocument();
+    },
+};
+
+export const DiscordSendErrorOlderThanTheLastMessage: Story = {
+    parameters: {
+        router: {
+            initialPath: `/apps/demo/channels/${SAMPLE_DISCORD_CHANNEL_ID}`,
+            path: "/apps/:slug/channels/:channelId",
+        },
+        msw: {
+            handlers: {
+                discord: [
+                    discordMocks.health([
+                        {
+                            ...sampleDiscordHealth[0],
+                            lastSendErrorAt: "2026-08-21T11:50:00Z",
+                            lastSendError: "503: discord is unavailable",
+                        },
+                    ]),
+                ],
+            },
+        },
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        await canvas.findByText(/last message/i);
+        expect(canvas.queryByText(/could not be delivered/i)).not.toBeInTheDocument();
     },
 };
