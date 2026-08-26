@@ -105,6 +105,5 @@ namespace Raven.Analyzers.Indexes
                 }
             }
         }
-
     }
 }

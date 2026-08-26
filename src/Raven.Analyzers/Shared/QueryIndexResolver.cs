@@ -61,6 +61,7 @@ namespace Raven.Analyzers.Shared
 
             return type.Name.Replace("_", "/");
         }
+        
         /// <summary>
         /// Returns true when the invocation is session.Query&lt;…&gt;() on IDocumentSession or IAsyncDocumentSession.
         /// </summary>
@@ -174,7 +175,7 @@ namespace Raven.Analyzers.Shared
         /// complex to extract statically.
         /// Returns false when the property is not overridden (use the default name convention).
         /// </summary>
-        internal static bool TryGetOverriddenIndexNameLiteral(INamedTypeSymbol type, out string? literal)
+        private static bool TryGetOverriddenIndexNameLiteral(INamedTypeSymbol type, out string? literal)
         {
             foreach (ISymbol member in type.GetMembers(KnownTypes.IndexNamePropertyName))
             {

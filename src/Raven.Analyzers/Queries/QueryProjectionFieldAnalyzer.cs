@@ -212,10 +212,9 @@ namespace Raven.Analyzers.Queries
             ImmutableHashSet<string> sourceMembers = SourceMemberExtractor.GetPublicMembers(sourceType);
 
             // Resolve the effective ProjectionBehavior from Customize(x => x.Projection(...)) in the chain
-            string behavior = ResolveProjectionBehavior(behaviorChainExpression, model);
-            if (behavior == "bail")
+            if (TryResolveProjectionBehavior(behaviorChainExpression, model, out var behavior) == false)
                 return false;
-
+            
             fields = new ProjectionFields(storedFields, sourceMembers, indexClass.Name, sourceType.Name, behavior);
             return true;
         }
@@ -246,7 +245,7 @@ namespace Raven.Analyzers.Queries
                 string? name = SyntaxHelpers.GetMethodName(inv);
                 if (name == KnownTypes.QueryMethodName)
                     return false;
-                if (name == KnownTypes.SelectMethodName || name == KnownTypes.ProjectIntoMethodName)
+                if (name is KnownTypes.SelectMethodName or KnownTypes.ProjectIntoMethodName)
                     return true;
             }
             return false;
@@ -256,7 +255,7 @@ namespace Raven.Analyzers.Queries
         /// Walks the invocation chain looking for .Customize(x => x.Projection(ProjectionBehavior.X)).
         /// Returns the enum value name (e.g. "FromIndex"), "Default" when absent, or "bail" on ambiguity.
         /// </summary>
-        private static string ResolveProjectionBehavior(ExpressionSyntax chainExpression, SemanticModel model)
+        private static bool TryResolveProjectionBehavior(ExpressionSyntax chainExpression, SemanticModel model, out string behavior)
         {
             // EnumerateInvocationChain yields the chain outer-to-inner, i.e. the LAST-applied call
             // first. At runtime AbstractDocumentQuery.Projection(...) is a plain assignment, so the
@@ -284,11 +283,17 @@ namespace Raven.Analyzers.Queries
 
                 SeparatedSyntaxList<ArgumentSyntax> projArgs = projCall.ArgumentList.Arguments;
                 if (projArgs.Count == 0)
-                    return "bail";
+                {
+                    behavior = null!;
+                    return false;
+                }
 
                 // Expect: ProjectionBehavior.SomeMember
                 if (projArgs[0].Expression is not MemberAccessExpressionSyntax behaviorAccess)
-                    return "bail"; // variable or computed — bail
+                {
+                    behavior = null!;
+                    return false; // variable or computed — bail
+                }
 
                 string typeIdent = behaviorAccess.Expression switch
                 {
@@ -297,13 +302,18 @@ namespace Raven.Analyzers.Queries
                 };
 
                 if (typeIdent != KnownTypes.ProjectionBehaviorTypeName)
-                    return "bail";
+                {
+                    behavior = null!;
+                    return false;
+                }
 
                 // Outermost (last-applied) Projection customize — this is the effective behavior.
-                return behaviorAccess.Name.Identifier.Text;
+                behavior = behaviorAccess.Name.Identifier.Text;
+                return true;
             }
 
-            return KnownTypes.ProjectionBehaviorDefault;
+            behavior =  KnownTypes.ProjectionBehaviorDefault;
+            return true;
         }
 
         private static void CheckProjectInto(
@@ -499,6 +509,5 @@ namespace Raven.Analyzers.Queries
                     return storedFields.Contains(field) || sourceMembers.Contains(field);
             }
         }
-
     }
 }
