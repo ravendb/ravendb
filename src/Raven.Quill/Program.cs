@@ -130,6 +130,9 @@ builder.Services.AddOptions<ApplianceOptions>()
     .Validate(o => o.Discord.SenderQueueCapacity > 0, "Discord SenderQueueCapacity must be positive")
     .Validate(o => o.Discord.ApplyChangesInterval > TimeSpan.Zero, "Discord ApplyChangesInterval must be positive")
     .Validate(o => o.Discord.GatewayBackoffMax > TimeSpan.Zero, "Discord GatewayBackoffMax must be positive")
+    .Validate(o => o.Discord.GatewayHandshakeTimeout > TimeSpan.Zero,
+        "Discord GatewayHandshakeTimeout must be positive")
+    .Validate(o => o.Discord.GatewayRestartDelay > TimeSpan.Zero, "Discord GatewayRestartDelay must be positive")
     .Validate(o => o.Discord.MaxGatewayFrameBytes > 0, "Discord MaxGatewayFrameBytes must be positive")
     .ValidateOnStart();
 
