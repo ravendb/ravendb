@@ -34,6 +34,7 @@ cp "$SETUP_SETTINGS" /app/ravendb/settings.json
 # to RavenDB on this port (RavenStoreFactory.RavenInternalPort); nginx passes db.*/a.* through to it.
 RAVENDB_PORT="${RAVEN_QUILL_RAVENDB_INTERNAL_PORT:-8443}"
 sed -i -E "s#(\"ServerUrl\"[[:space:]]*:[[:space:]]*\")https://[^\"]*(\")#\1https://127.0.0.1:${RAVENDB_PORT}\2#" /app/ravendb/settings.json
+sed -i -E "s#(\"ServerUrl\.Tcp\"[[:space:]]*:[[:space:]]*\"tcp://)[^\"]*(:[0-9]+\")#\1127.0.0.1\2#" /app/ravendb/settings.json
 
 NODE_HOST="$(jq -r '.PublicServerUrl' "$SETUP_SETTINGS" | sed -E 's#^https?://##; s#[:/].*##')"
 if [ -n "$NODE_HOST" ]; then
