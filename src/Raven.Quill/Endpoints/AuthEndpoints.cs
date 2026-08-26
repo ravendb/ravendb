@@ -12,8 +12,6 @@ namespace Raven.Quill.Endpoints;
 
 public static class AuthEndpoints
 {
-    public const string LoginRateLimitPolicy = "auth-login";
-
     public static void Map(WebApplication app)
     {
         var group = app.MapGroup("/api/auth").WithTags("auth");
@@ -23,7 +21,7 @@ public static class AuthEndpoints
             .Accepts<LoginRequest>("application/json")
             .Produces<AuthStatusResponse>()
             .Produces<AuthStatusResponse>(StatusCodes.Status401Unauthorized)
-            .RequireRateLimiting(LoginRateLimitPolicy);
+            .Produces<AuthStatusResponse>(StatusCodes.Status429TooManyRequests);
 
         group.MapPost("/logout", LogoutAsync)
             .WithName("auth.logout")
@@ -35,15 +33,19 @@ public static class AuthEndpoints
     }
 
     private static async Task<IResult> LoginAsync(
-        LoginRequest body, IApiKeyStore keys, QuillLogger<AuthLogger> logger, HttpContext ctx, CancellationToken ct)
+        LoginRequest body, IApiKeyStore keys, LoginFailureLimiter limiter, QuillLogger<AuthLogger> logger, HttpContext ctx, CancellationToken ct)
     {
         if (body is null || string.IsNullOrWhiteSpace(body.ApiKey) ||
             await keys.ValidateAsync(body.ApiKey, ct) == false)
         {
             if (logger.AuditEnabled)
                 logger.Audit("LOGIN", "failed", ctx);
-            return Results.Json(new AuthStatusResponse(false), statusCode: StatusCodes.Status401Unauthorized);
+            var isLimited = limiter.RegisterFailure(ClientKey(ctx));
+            return Results.Json(new AuthStatusResponse(false),
+                statusCode: isLimited ? StatusCodes.Status429TooManyRequests : StatusCodes.Status401Unauthorized);
         }
+
+        limiter.Reset(ClientKey(ctx));
 
         var identity = new ClaimsIdentity(CookieAuthenticationDefaults.AuthenticationScheme);
         identity.AddClaim(new Claim(ClaimTypes.Name, "operator"));
@@ -65,6 +67,9 @@ public static class AuthEndpoints
             logger.Audit("LOGOUT", "session ended", ctx, principal);
         return Results.NoContent();
     }
+
+    private static string ClientKey(HttpContext ctx) =>
+        ctx.Connection.RemoteIpAddress?.ToString() ?? ctx.Connection.Id ?? "unknown";
 
     private static async Task<IResult> GetStatusAsync(HttpContext ctx, CancellationToken ct)
     {
