@@ -189,3 +189,30 @@ export const DiscordConnecting: Story = {
         expect(canvas.queryByText(/gateway disconnected/i)).not.toBeInTheDocument();
     },
 };
+
+export const DiscordSendErrorNewerThanTheLastMessage: Story = {
+    parameters: {
+        router: {
+            initialPath: `/apps/demo/channels/${SAMPLE_DISCORD_CHANNEL_ID}`,
+            path: "/apps/:slug/channels/:channelId",
+        },
+        msw: {
+            handlers: {
+                discord: [
+                    discordMocks.health([
+                        {
+                            ...sampleDiscordHealth[0],
+                            lastSendErrorAt: "2026-08-21T12:10:00Z",
+                            lastSendError: "503: discord is unavailable",
+                        },
+                    ]),
+                ],
+            },
+        },
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        await canvas.findByText(/could not be delivered/i);
+    },
+};

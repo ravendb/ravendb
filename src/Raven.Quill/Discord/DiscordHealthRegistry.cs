@@ -42,12 +42,17 @@ internal sealed class DiscordHealthRegistry
 
     public void RecordGatewayDisconnected(string database, string channelId, string? error)
     {
+        if (error is null)
+        {
+            TryUpdate(database, channelId, entry => entry.GatewayConnected = false);
+            return;
+        }
+
         var entry = EntryFor(database, channelId);
         lock (entry)
         {
             entry.GatewayConnected = false;
-            if (error is not null)
-                entry.LastGatewayError = error;
+            entry.LastGatewayError = error;
         }
     }
 
@@ -58,15 +63,19 @@ internal sealed class DiscordHealthRegistry
             entry.LastInboundAt = DateTime.UtcNow;
     }
 
-    public void RecordSendError(string database, string channelId, string error)
-    {
-        var entry = EntryFor(database, channelId);
-        lock (entry)
+    public void RecordSendError(string database, string channelId, string error) =>
+        TryUpdate(database, channelId, entry =>
         {
             entry.LastSendErrorAt = DateTime.UtcNow;
             entry.LastSendError = error;
-        }
-    }
+        });
+
+    public void RecordSendSuccess(string database, string channelId) =>
+        TryUpdate(database, channelId, entry =>
+        {
+            entry.LastSendErrorAt = null;
+            entry.LastSendError = null;
+        });
 
     public Snapshot SnapshotFor(string database, string channelId)
     {
@@ -123,6 +132,15 @@ internal sealed class DiscordHealthRegistry
             if (key.Database == database)
                 _entries.TryRemove(key, out _);
         }
+    }
+
+    private void TryUpdate(string database, string channelId, Action<Entry> update)
+    {
+        if (_entries.TryGetValue((database, channelId), out var entry) == false)
+            return;
+
+        lock (entry)
+            update(entry);
     }
 
     private Entry EntryFor(string database, string channelId) =>
