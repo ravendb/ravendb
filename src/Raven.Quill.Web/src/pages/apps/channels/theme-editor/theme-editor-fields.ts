@@ -20,7 +20,14 @@ export const SCHEME_COLOR_FIELDS = {
 export const SECTION_FIELDS = {
     colors: [...SCHEME_COLOR_FIELDS.Light, ...SCHEME_COLOR_FIELDS.Dark],
     style: ["radius", "fontFamily", "fontSize", "customFontSizeRem"],
-    branding: ["showHeader", "logo", "logoRadius", "headerTitle", "headerSubtitle"],
-    content: ["greetingTitle", "greetingBody", "suggestedPrompts", "inputPlaceholder", "disclaimer"],
+    branding: ["showHeader", "logo", "logoRadius", "logoFit", "headerTitle", "headerSubtitle"],
+    content: [
+        "greetingTitle",
+        "greetingBody",
+        "suggestedPrompts",
+        "suggestedPromptsLayout",
+        "inputPlaceholder",
+        "disclaimer",
+    ],
     customCss: ["customCss"],
 } as const satisfies Record<string, readonly (keyof WidgetThemeFormData)[]>;

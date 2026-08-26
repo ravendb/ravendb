@@ -9,6 +9,29 @@ import { FormStringList } from "./form-string-list";
 
 type Values = { prompts: { value: string }[] };
 
+// dnd-kit only registers a keyboard lift, and each subsequent arrow move, asynchronously. Firing the next
+// key right after can beat that update and silently land as a no-op. `data-dragging` flips as soon as the
+// lift actually lands, and stays true for the whole drag, so it is a reliable signal for the lift. There is
+// no equivalent DOM attribute per move, but dnd-kit's screen reader live region re-announces on every
+// collision recalculation ("... was moved over droppable area ..."), including the initial self-over
+// announcement the lift itself produces, so waiting for that text to change (rather than merely appear)
+// confirms an arrow key's move actually landed.
+
+/** Resolves once the lift has landed, returning the announcement text at that point so a later
+ *  `waitForMove` call can tell a real move apart from that same, already-stale text. */
+async function waitForLift(canvasElement: HTMLElement): Promise<string> {
+    await waitFor(() => expect(canvasElement.querySelector("[data-dragging]")).not.toBeNull());
+    return canvasElement.querySelector('[role="status"]')?.textContent ?? "";
+}
+
+async function waitForMove(canvasElement: HTMLElement, announcementBeforeMove: string) {
+    await waitFor(() => {
+        const status = canvasElement.querySelector('[role="status"]')?.textContent ?? "";
+        expect(status).toMatch(/was moved over droppable area/);
+        expect(status).not.toBe(announcementBeforeMove);
+    });
+}
+
 /** Mirrors how the theme editor drives it: a field array of `{ value }` rows, echoed so a play function can
  *  read the committed order without reaching into react-hook-form. */
 function Harness({
@@ -68,7 +91,10 @@ export const ReordersWithTheKeyboard: Story = {
 
         canvas.getByRole("button", { name: "Reorder prompts 1" }).focus();
         await userEvent.keyboard("{ }");
+        const liftAnnouncement = await waitForLift(canvasElement);
+
         await userEvent.keyboard("{ArrowDown}");
+        await waitForMove(canvasElement, liftAnnouncement);
         await userEvent.keyboard("{ }");
 
         await waitFor(() => expect(canvas.getByTestId("order")).toHaveTextContent("second,first,third"));
@@ -87,14 +113,20 @@ export const ReordersTwiceWithTheKeyboard: Story = {
 
         canvas.getByRole("button", { name: "Reorder prompts 1" }).focus();
         await userEvent.keyboard("{ }");
+        const liftAnnouncement = await waitForLift(canvasElement);
+
         await userEvent.keyboard("{ArrowDown}");
+        await waitForMove(canvasElement, liftAnnouncement);
         await userEvent.keyboard("{ }");
 
         await waitFor(() => expect(canvas.getByTestId("order")).toHaveTextContent("second,first,third"));
 
         canvas.getByRole("button", { name: "Reorder prompts 2" }).focus();
         await userEvent.keyboard("{ }");
+        const secondLiftAnnouncement = await waitForLift(canvasElement);
+
         await userEvent.keyboard("{ArrowDown}");
+        await waitForMove(canvasElement, secondLiftAnnouncement);
         await userEvent.keyboard("{ }");
 
         await waitFor(() => expect(canvas.getByTestId("order")).toHaveTextContent("second,third,first"));

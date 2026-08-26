@@ -78,13 +78,7 @@ function Row({ id, children, handleLabel, isDisabled, isSortable, hasHandle }: R
         <div
             ref={setNodeRef}
             style={{ transform: CSS.Translate.toString(transform), transition }}
-            className={
-                hasHandle
-                    ? "group grid gap-2 md:grid-cols-[auto_1fr_auto]"
-                    : isSortable
-                      ? "group grid gap-2 md:grid-cols-[1fr_auto]"
-                      : "grid gap-2 md:grid-cols-[1fr_auto]"
-            }
+            className={hasHandle ? "grid gap-2 md:grid-cols-[auto_1fr_auto]" : "grid gap-2 md:grid-cols-[1fr_auto]"}
             data-dragging={isDragging || undefined}
         >
             {hasHandle && (
@@ -92,7 +86,7 @@ function Row({ id, children, handleLabel, isDisabled, isSortable, hasHandle }: R
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="cursor-grab self-end text-muted-foreground group-data-[dragging]:cursor-grabbing"
+                    className="cursor-grab self-end text-foreground/70"
                     disabled={isDisabled}
                     aria-label={handleLabel}
                     title={handleLabel}
@@ -140,7 +134,15 @@ export function FormStringList<TFieldValues extends FieldValues, TName extends A
     // is already mounted, not the wrapper element type around the whole list.
     const hasHandles = sortable && fieldArray.fields.length > 1;
 
+    // Paired with the `body[data-dnd-dragging]` rule in index.css: the grabbing cursor cannot live on the
+    // handle, because dnd-kit moves the row out from under the pointer as soon as the drag starts.
+    const setDragCursor = (isDragging: boolean) => {
+        document.body.toggleAttribute("data-dnd-dragging", isDragging);
+    };
+
     const handleDragEnd = (event: DragEndEvent) => {
+        setDragCursor(false);
+
         const { active, over } = event;
         if (over === null || active.id === over.id) return;
 
@@ -212,6 +214,8 @@ export function FormStringList<TFieldValues extends FieldValues, TName extends A
                     sensors={sensors}
                     collisionDetection={closestCenter}
                     modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+                    onDragStart={() => setDragCursor(true)}
+                    onDragCancel={() => setDragCursor(false)}
                     onDragEnd={handleDragEnd}
                 >
                     <SortableContext

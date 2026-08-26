@@ -32,9 +32,9 @@ export function Greeting({ title, body, suggestedPrompts, layout, isDisabled, on
             </div>
 
             {suggestedPrompts.length > 0 && (
-                <ul className={LIST_CLASS[layout]}>
+                <ul className={LIST_CLASS[layout] ?? LIST_CLASS.Stacked}>
                     {suggestedPrompts.map((prompt) => (
-                        <li key={prompt} className={ITEM_CLASS[layout]}>
+                        <li key={prompt} className={ITEM_CLASS[layout] ?? ITEM_CLASS.Stacked}>
                             <button
                                 type="button"
                                 disabled={isDisabled}
