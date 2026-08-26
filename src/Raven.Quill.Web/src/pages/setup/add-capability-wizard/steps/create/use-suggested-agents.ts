@@ -18,6 +18,7 @@ export function useSuggestedAgents(): {
     isSuggesting: boolean;
     startedAt: number | undefined;
     isConsentRequired: boolean;
+    failureStatus: string | null;
     recheck: () => void;
 } {
     const { slug = "" } = useParams();
@@ -58,6 +59,7 @@ export function useSuggestedAgents(): {
         isSuggesting: (query.isFetching || !suggestedAgents) && suggestions.length === 0,
         startedAt: getFetchStartedAt(suggestQuery.queryKey),
         isConsentRequired: query.data?.isConsentRequired === true,
+        failureStatus: query.data?.failureStatus ?? null,
         recheck: () => {
             recheckConsent();
             void query.refetch();
