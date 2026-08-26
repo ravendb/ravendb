@@ -35,6 +35,7 @@ internal sealed class DiscordGatewayRuntime
     private readonly byte[] _receiveBuffer = new byte[8 * 1024];
     private readonly MemoryStream _frameBuffer = new();
 
+    private volatile bool _canRestart = true;
     private Task _run = Task.CompletedTask;
     private TimeSpan _backoff = MinBackoff;
     private long _seq = -1;
@@ -63,6 +64,8 @@ internal sealed class DiscordGatewayRuntime
     }
 
     public string? ChannelChangeVector { get; }
+
+    public bool CanRestart => _canRestart;
 
     public DateTime? ExitedAt
     {
@@ -450,7 +453,11 @@ internal sealed class DiscordGatewayRuntime
         if ((int?)status is 4007 or 4009)
             ForgetSession();
 
-        return FatalReasonFor(status);
+        var fatal = FatalReasonFor(status);
+        if (fatal is not null)
+            _canRestart = (int?)status is 4013 or 4014;
+
+        return fatal;
     }
 
     private void ForgetSession()
