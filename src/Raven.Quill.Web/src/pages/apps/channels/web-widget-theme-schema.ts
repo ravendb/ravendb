@@ -2,8 +2,10 @@ import { z } from "zod";
 import { findCssSyntaxError } from "@/pages/apps/channels/custom-css-syntax";
 import type {
     WidgetFontSize,
+    WidgetLogoFit,
     WidgetLogoRadius,
     WidgetRadius,
+    WidgetSuggestedPromptsLayout,
     WidgetTheme,
     WidgetThemeColors,
 } from "@/api/generated/server-api";
@@ -39,6 +41,8 @@ const LOGO_DATA_URI = /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/;
 
 const RADIUS_VALUES = ["None", "Small", "Medium", "Large"] as const;
 const LOGO_RADIUS_VALUES = ["None", "Small", "Medium", "Large", "Pill"] as const;
+const LOGO_FIT_VALUES = ["Contain", "Cover"] as const;
+const SUGGESTED_PROMPTS_LAYOUT_VALUES = ["Stacked", "Inline"] as const;
 const FONT_SIZE_VALUES = ["Small", "Medium", "Large", "Custom"] as const;
 
 const optionalText = (max: number, label: string) =>
@@ -75,6 +79,7 @@ export const widgetThemeSchema = z
             .max(MAX_LOGO_LENGTH, "That image is too large even after downscaling")
             .refine((value) => value.length === 0 || LOGO_DATA_URI.test(value), "Upload a png, jpeg or webp image"),
         logoRadius: z.enum(LOGO_RADIUS_VALUES),
+        logoFit: z.enum(LOGO_FIT_VALUES),
         headerTitle: z
             .string()
             .trim()
@@ -101,6 +106,7 @@ export const widgetThemeSchema = z
                 (prompts) => prompts.filter((prompt) => prompt.value.length > 0).length <= MAX_SUGGESTED_PROMPTS,
                 `Up to ${MAX_SUGGESTED_PROMPTS} prompts`,
             ),
+        suggestedPromptsLayout: z.enum(SUGGESTED_PROMPTS_LAYOUT_VALUES),
         inputPlaceholder: z
             .string()
             .trim()
@@ -158,9 +164,53 @@ export type WidgetThemeFormData = z.input<typeof widgetThemeSchema>;
 /** What the resolver hands to `handleSubmit`: trimmed and normalized, but still the form's prompt shape. */
 export type WidgetThemeFormOutput = z.output<typeof widgetThemeSchema>;
 
-export const RADIUS_OPTIONS = RADIUS_VALUES.map((value) => ({ value, label: value }));
-export const LOGO_RADIUS_OPTIONS = LOGO_RADIUS_VALUES.map((value) => ({ value, label: value }));
-export const FONT_SIZE_OPTIONS = FONT_SIZE_VALUES.map((value) => ({ value, label: value }));
+// The corner each step actually draws, mirroring RADIUS_SCALE in packages/widget/src/widget-theme.ts:
+// the editor's preview has to show the corner the widget will render, not a decorative approximation.
+const RADIUS_PREVIEW_PX: Record<(typeof RADIUS_VALUES)[number], number> = { None: 0, Small: 6, Medium: 12, Large: 18 };
+
+export const RADIUS_OPTIONS = RADIUS_VALUES.map((value) => ({
+    value,
+    label: value,
+    previewPx: RADIUS_PREVIEW_PX[value],
+}));
+// Mirrors LOGO_RADIUS_SCALE in the widget. Pill is "full" rather than a number: 100vh is not a corner
+// the preview could draw, it is the corner going away.
+const LOGO_RADIUS_PREVIEW_PX: Record<(typeof LOGO_RADIUS_VALUES)[number], number | "full"> = {
+    None: 0,
+    Small: 4,
+    Medium: 8,
+    Large: 12,
+    Pill: "full",
+};
+
+export const LOGO_FIT_OPTIONS = [
+    { value: "Contain", label: "Contain" },
+    { value: "Cover", label: "Cover" },
+] as const;
+
+export const SUGGESTED_PROMPTS_LAYOUT_OPTIONS = [
+    { value: "Stacked", label: "Stacked" },
+    { value: "Inline", label: "Inline" },
+] as const;
+
+export const LOGO_RADIUS_OPTIONS = LOGO_RADIUS_VALUES.map((value) => ({
+    value,
+    label: value,
+    previewPx: LOGO_RADIUS_PREVIEW_PX[value],
+}));
+// Likewise FONT_SIZE_REM in the widget: Custom carries no size of its own, it defers to the rem input.
+const FONT_SIZE_REM: Record<(typeof FONT_SIZE_VALUES)[number], number | null> = {
+    Small: 0.875,
+    Medium: 1,
+    Large: 1.125,
+    Custom: null,
+};
+
+export const FONT_SIZE_OPTIONS = FONT_SIZE_VALUES.map((value) => ({
+    value,
+    label: value,
+    rem: FONT_SIZE_REM[value],
+}));
 
 export function toFormData(theme: WidgetTheme): WidgetThemeFormData {
     return {
@@ -177,12 +227,14 @@ export function toFormData(theme: WidgetTheme): WidgetThemeFormData {
         customFontSizeRem: theme.customFontSizeRem,
         logo: theme.logo ?? "",
         logoRadius: theme.logoRadius,
+        logoFit: theme.logoFit,
         headerTitle: theme.headerTitle,
         headerSubtitle: theme.headerSubtitle,
         showHeader: theme.showHeader,
         greetingTitle: theme.greetingTitle,
         greetingBody: theme.greetingBody,
         suggestedPrompts: theme.suggestedPrompts.map((value) => ({ value })),
+        suggestedPromptsLayout: theme.suggestedPromptsLayout,
         inputPlaceholder: theme.inputPlaceholder,
         disclaimer: theme.disclaimer,
         customCss: theme.customCss ?? "",
@@ -208,12 +260,14 @@ export function toWidgetTheme(values: WidgetThemeFormOutput): WidgetTheme {
         customFontSizeRem: values.fontSize === "Custom" ? values.customFontSizeRem : null,
         logo: blankToNull(values.logo),
         logoRadius: values.logoRadius,
+        logoFit: values.logoFit,
         headerTitle: values.headerTitle,
         headerSubtitle: blankToNull(values.headerSubtitle),
         showHeader: values.showHeader,
         greetingTitle: blankToNull(values.greetingTitle),
         greetingBody: blankToNull(values.greetingBody),
         suggestedPrompts: values.suggestedPrompts.map((prompt) => prompt.value).filter((value) => value.length > 0),
+        suggestedPromptsLayout: values.suggestedPromptsLayout,
         inputPlaceholder: values.inputPlaceholder,
         disclaimer: blankToNull(values.disclaimer),
         customCss: blankToNull(values.customCss),
@@ -230,6 +284,14 @@ function isRadius(value: unknown): value is WidgetRadius {
 
 function isLogoRadius(value: unknown): value is WidgetLogoRadius {
     return LOGO_RADIUS_VALUES.includes(value as WidgetLogoRadius);
+}
+
+function isLogoFit(value: unknown): value is WidgetLogoFit {
+    return LOGO_FIT_VALUES.includes(value as WidgetLogoFit);
+}
+
+function isSuggestedPromptsLayout(value: unknown): value is WidgetSuggestedPromptsLayout {
+    return SUGGESTED_PROMPTS_LAYOUT_VALUES.includes(value as WidgetSuggestedPromptsLayout);
 }
 
 function isFontSize(value: unknown): value is WidgetFontSize {
@@ -285,6 +347,7 @@ export function toPreviewTheme(values: PartialFormData, fallback: WidgetTheme): 
         customFontSizeRem: fontSize === "Custom" ? customFontSizeRem : null,
         logo: values.logo === undefined ? fallback.logo : blankToNull(values.logo),
         logoRadius: isLogoRadius(values.logoRadius) ? values.logoRadius : fallback.logoRadius,
+        logoFit: isLogoFit(values.logoFit) ? values.logoFit : fallback.logoFit,
         headerTitle: values.headerTitle?.trim() || fallback.headerTitle,
         headerSubtitle: text(values.headerSubtitle, fallback.headerSubtitle),
         showHeader: values.showHeader ?? fallback.showHeader,
@@ -294,6 +357,9 @@ export function toPreviewTheme(values: PartialFormData, fallback: WidgetTheme): 
             .map((prompt) => prompt?.value?.trim() ?? "")
             .filter((value) => value.length > 0)
             .slice(0, MAX_SUGGESTED_PROMPTS),
+        suggestedPromptsLayout: isSuggestedPromptsLayout(values.suggestedPromptsLayout)
+            ? values.suggestedPromptsLayout
+            : fallback.suggestedPromptsLayout,
         inputPlaceholder: values.inputPlaceholder?.trim() || fallback.inputPlaceholder,
         disclaimer: text(values.disclaimer, fallback.disclaimer),
         customCss: values.customCss === undefined ? fallback.customCss : blankToNull(values.customCss.trim()),

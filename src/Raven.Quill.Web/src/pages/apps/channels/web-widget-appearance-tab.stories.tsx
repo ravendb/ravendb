@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import type { WidgetTheme } from "@/api/generated/server-api";
 import { SAMPLE_CHANNEL_ID } from "@/mocks/channels-mocks";
 import {
     iframeHandlers,
@@ -122,17 +123,38 @@ export const MinimalTheme: Story = {
         },
     },
 };
+/**
+ * Colours are rows now, not fields: the row is the picker's trigger and the value lives inside the
+ * popover it opens, so a story that reads or writes one has to go through it. The Colors section shows
+ * one scheme at a time - the one the preview is on - so the trigger is named for the colour alone.
+ */
+async function openColorPicker(canvas: ReturnType<typeof within>, name: string) {
+    await userEvent.click(await canvas.findByRole("button", { name: `${name} picker` }));
+    return within(document.body).findByLabelText("HEX value");
+}
+
+async function readColor(canvas: ReturnType<typeof within>, name: string) {
+    const field = (await openColorPicker(canvas, name)) as HTMLInputElement;
+    const value = field.value;
+    await userEvent.keyboard("{Escape}");
+    return value;
+}
+
+async function setColor(canvas: ReturnType<typeof within>, name: string, hex: string) {
+    const field = await openColorPicker(canvas, name);
+    await userEvent.clear(field);
+    await userEvent.type(field, hex);
+    await userEvent.keyboard("{Escape}");
+}
+
 // Editing then leaving must be intercepted: this form is long, and losing it silently is the
 // worst thing the screen can do. The story router is a data router so `useBlocker` works.
 export const GuardsUnsavedChanges: Story = {
     tags: ["!dev"],
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
-        // Colors is the only section open by default, so its fields are the ones reliably mounted.
-        const buttonColor = await canvas.findByLabelText("Button color");
-
-        await userEvent.clear(buttonColor);
-        await userEvent.type(buttonColor, "#123456");
+        // Colors is the only section open by default, so its swatches are the ones reliably mounted.
+        await setColor(canvas, "Button", "#123456");
 
         await userEvent.click(canvas.getByRole("link", { name: "Back to channel" }));
 
@@ -146,15 +168,13 @@ export const DiscardsChanges: Story = {
     tags: ["!dev"],
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
-        // Colors is the only section open by default, so its fields are the ones reliably mounted.
-        const buttonColor = await canvas.findByLabelText("Button color");
-        const originalColor = (buttonColor as HTMLInputElement).value;
+        // Colors is the only section open by default, so its swatches are the ones reliably mounted.
+        const originalColor = await readColor(canvas, "Button");
 
         expect(canvas.getByRole("button", { name: "Save" })).toBeDisabled();
         expect(canvas.queryByRole("button", { name: "Discard changes" })).not.toBeInTheDocument();
 
-        await userEvent.clear(buttonColor);
-        await userEvent.type(buttonColor, "#123456");
+        await setColor(canvas, "Button", "#123456");
 
         await waitFor(() => expect(canvas.getByRole("button", { name: "Save" })).toBeEnabled());
 
@@ -164,7 +184,10 @@ export const DiscardsChanges: Story = {
 
         await userEvent.click(canvas.getByRole("button", { name: "Discard changes" }));
 
-        await waitFor(() => expect(buttonColor).toHaveValue(originalColor));
+        // The section's own reset button only renders while that section is dirty, so it unmounting is
+        // the signal that Colors is back - and a settled form is what makes reading the swatch safe.
+        await waitFor(() => expect(canvas.queryByRole("button", { name: "Reset Colors section" })).toBeNull());
+        expect(await readColor(canvas, "Button")).toBe(originalColor);
         expect(canvas.getByRole("button", { name: "Save" })).toBeDisabled();
         expect(canvas.getByRole("button", { name: "Follow app default" })).toBeEnabled();
     },
@@ -194,10 +217,7 @@ export const FollowAppDefaultAdoptsServerTheme: Story = {
     },
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
-        const buttonColor = await canvas.findByLabelText("Button color");
-
-        await userEvent.clear(buttonColor);
-        await userEvent.type(buttonColor, "#123456");
+        await setColor(canvas, "Button", "#123456");
 
         await waitFor(() => expect(canvas.getByRole("button", { name: "Save" })).toBeEnabled());
         await userEvent.click(canvas.getByRole("button", { name: "Save" }));
@@ -207,7 +227,10 @@ export const FollowAppDefaultAdoptsServerTheme: Story = {
 
         await userEvent.click(canvas.getByRole("button", { name: "Follow app default" }));
 
-        await waitFor(() => expect(buttonColor).toHaveValue(SAMPLE_DEFAULT_THEME.light.buttonColor));
+        // Reading a swatch means opening its popover, so this waits on the save settling and reads once
+        // rather than polling - a waitFor around readColor would reopen the popover on every retry.
+        await waitFor(() => expect(canvas.getByRole("button", { name: "Save" })).toBeDisabled());
+        expect(await readColor(canvas, "Button")).toBe(SAMPLE_DEFAULT_THEME.light.buttonColor);
     },
 };
 
@@ -224,10 +247,7 @@ export const FailedSaveKeepsChangesDirty: Story = {
     },
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
-        const buttonColor = await canvas.findByLabelText("Button color");
-
-        await userEvent.clear(buttonColor);
-        await userEvent.type(buttonColor, "#123456");
+        await setColor(canvas, "Button", "#123456");
 
         await waitFor(() => expect(canvas.getByRole("button", { name: "Save" })).toBeEnabled());
         await userEvent.click(canvas.getByRole("button", { name: "Save" }));
@@ -295,31 +315,29 @@ export const ResetsOneSectionOnly: Story = {
     tags: ["!dev"],
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
-        const buttonColor = await canvas.findByLabelText("Button color");
-        const originalColor = (buttonColor as HTMLInputElement).value;
+        const originalColor = await readColor(canvas, "Button");
 
         await userEvent.click(canvas.getByRole("button", { name: "Style" }));
-        // Radius is a shadcn/Radix combobox, not a native <select>: userEvent.selectOptions can't target
-        // it, and its options only mount in a body-level portal once opened.
-        const radius = await canvas.findByLabelText("Radius");
-        const originalRadius = radius.textContent;
+        // Radius and Font size are both segmented radio groups whose steps share names ("Small",
+        // "Medium", "Large"), so the query has to be scoped to the group rather than the section.
+        const radius = within(await canvas.findByRole("radiogroup", { name: "Radius" }));
         // The fixture theme already saves "Large", so that has to be the one value NOT picked here -
-        // otherwise the "differs from original" assertion below would be vacuously true.
-        expect(originalRadius).not.toBe("Small");
+        // otherwise the assertion below would be vacuously true.
+        expect(radius.getByRole("radio", { name: "Large" })).toBeChecked();
 
-        await userEvent.clear(buttonColor);
-        await userEvent.type(buttonColor, "#123456");
-        await userEvent.click(radius);
-        await userEvent.click(await within(document.body).findByRole("option", { name: "Small" }));
+        await setColor(canvas, "Button", "#123456");
+        await userEvent.click(radius.getByRole("radio", { name: "None" }));
 
         await waitFor(() => expect(canvas.getByRole("button", { name: "Save" })).toBeEnabled());
 
         await userEvent.click(canvas.getByRole("button", { name: "Reset Colors section" }));
 
         // Colors goes back; Style keeps the edit, and the form is still dirty because of it.
-        await waitFor(() => expect(buttonColor).toHaveValue(originalColor));
-        expect(radius).toHaveTextContent("Small");
-        expect(radius).not.toHaveTextContent(originalRadius ?? "");
+        // The section's own reset button only renders while that section is dirty, so it unmounting is
+        // the signal that Colors is back - and a settled form is what makes reading the swatch safe.
+        await waitFor(() => expect(canvas.queryByRole("button", { name: "Reset Colors section" })).toBeNull());
+        expect(await readColor(canvas, "Button")).toBe(originalColor);
+        expect(radius.getByRole("radio", { name: "None" })).toBeChecked();
         expect(canvas.getByRole("button", { name: "Save" })).toBeEnabled();
     },
 };
@@ -332,7 +350,7 @@ export const PreviewsNarrowEmbedWidth: Story = {
         const canvas = within(canvasElement);
         const frame = await canvas.findByTitle("Web widget preview");
 
-        await userEvent.click(canvas.getByRole("radio", { name: "320" }));
+        await userEvent.click(canvas.getByRole("radio", { name: "Mobile" }));
 
         await waitFor(() => expect(frame.parentElement).toHaveStyle({ width: "320px" }));
     },
@@ -398,14 +416,17 @@ function getThemeEditorPanes(canvasElement: HTMLElement) {
 
     // Colors is the only section open by default (ColorsSection sets defaultOpen), so its <section> -
     // the Collapsible's own root - is always mounted. From there: its parent is ThemeEditorInspector's
-    // "grid gap-4" wrapper, whose parent is the inspector pane itself, whose parent is the row shared
-    // with the stage.
+    // divided list of sections, whose parent is the inspector pane itself, whose parent is the row
+    // shared with the stage.
     const colorsSection = canvas.getByRole("button", { name: "Colors" }).closest("section")!;
     const inspector = colorsSection.parentElement!.parentElement!;
     const layoutRow = inspector.parentElement!;
 
-    // "Live preview" labels the stage's own controls row; that row's parent is the stage pane.
-    const stage = canvas.getByText("Live preview").parentElement!.parentElement!;
+    // The preview frame is the one thing the stage exists to show, and it carries a stable title. Its
+    // parent is the width box, whose parent is the dot-grid canvas, whose parent is the stage pane.
+    // (The stage's controls float over that canvas out of flow, so they are no use as an anchor for
+    // geometry read off the pane.)
+    const stage = canvas.getByTitle("Web widget preview").parentElement!.parentElement!.parentElement!;
 
     return { layoutRow, inspector, stage };
 }
@@ -542,5 +563,62 @@ export const StacksInAConstrainedContainerDespiteAWideViewport: Story = {
         const { layoutRow } = getThemeEditorPanes(canvasElement);
 
         await waitFor(() => expect(getComputedStyle(layoutRow).display).toBe("flex"));
+    },
+};
+
+// The picker's presets are an operator's two useful anchors for a colour: what the product ships and
+// what this channel currently has saved. SAMPLE_CHANNEL_THEME's light button colour differs from the
+// default, so both swatches are present and distinct here.
+//
+// The default preset here is asserted against a `defaultTheme` fixture whose light button colour
+// (`#123abc`) deliberately differs from SAMPLE_DEFAULT_THEME's (`#ff775f`). If the anchor were read
+// from the built-in DEFAULT_THEME instead of the app default this mock supplies, this story would
+// offer "#ff775f" and this assertion would fail - the two are no longer coincidentally equal.
+const CUSTOM_APP_DEFAULT_THEME: WidgetTheme = {
+    ...SAMPLE_DEFAULT_THEME,
+    light: { ...SAMPLE_DEFAULT_THEME.light, buttonColor: "#123abc" },
+};
+
+export const OffersDefaultAndSavedPresets: Story = {
+    tags: ["!dev"],
+    parameters: {
+        msw: {
+            handlers: {
+                iframe: [
+                    iframeMocks.getTheme({
+                        theme: SAMPLE_CHANNEL_THEME,
+                        defaultTheme: CUSTOM_APP_DEFAULT_THEME,
+                        fontOptions: SAMPLE_FONT_OPTIONS,
+                    }),
+                    ...iframeHandlers(),
+                ],
+            },
+        },
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        // The edit must happen before the assertion: right after load, the live form values equal the
+        // saved theme, so a saved-preset anchor mistakenly wired to live form state would still pass.
+        // Editing first and then reopening the picker is the only way to tell the two apart.
+        await setColor(canvas, "Button", "#123456");
+
+        await userEvent.click(await canvas.findByRole("button", { name: "Button picker" }));
+
+        const surface = within(document.body);
+        await surface.findByRole("button", { name: `Use ${CUSTOM_APP_DEFAULT_THEME.light.buttonColor}` });
+        await surface.findByRole("button", { name: `Use ${SAMPLE_CHANNEL_THEME.light.buttonColor}` });
+        await userEvent.keyboard("{Escape}");
+
+        // Switching schemes must move the anchors with it: Dark's presets come from the same two
+        // fixtures' `dark` colours, not a leftover copy of Light's.
+        await userEvent.click(
+            within(canvas.getByRole("radiogroup", { name: "Scheme being edited" })).getByRole("radio", {
+                name: "Dark",
+            }),
+        );
+        await userEvent.click(await canvas.findByRole("button", { name: "Button picker" }));
+        await surface.findByRole("button", { name: `Use ${CUSTOM_APP_DEFAULT_THEME.dark.buttonColor}` });
+        await surface.findByRole("button", { name: `Use ${SAMPLE_CHANNEL_THEME.dark.buttonColor}` });
     },
 };

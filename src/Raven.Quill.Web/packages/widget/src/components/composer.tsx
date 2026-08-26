@@ -39,7 +39,7 @@ export function Composer({ placeholder, isStreaming, isDisabled, onSubmit, onSto
                 submit();
             }}
         >
-            <div className="rounded-rq-pill border-rq-border bg-rq-surface focus-within:border-rq-accent flex items-end gap-2 border py-1.5 ps-3.5 pe-1.5">
+            <div className="rq-composer-box border-rq-border bg-rq-surface focus-within:border-rq-accent flex items-end gap-2 border py-1.5 ps-3.5 pe-1.5">
                 <textarea
                     ref={textareaRef}
                     rows={1}

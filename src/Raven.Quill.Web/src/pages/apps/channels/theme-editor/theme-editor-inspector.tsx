@@ -1,20 +1,13 @@
 import type { Control } from "react-hook-form";
-import type { WidgetFontOption, WidgetTheme } from "@/api/generated/server-api";
-import { InlineCode } from "@/components/data/inline-code";
-import { FormToggleGroup } from "@/components/form/form-toggle-group";
+import type { WidgetFontOption, WidgetTheme, WidgetThemeColors } from "@/api/generated/server-api";
 import { BrandingSection } from "@/pages/apps/channels/theme-editor/sections/branding-section";
 import { ColorsSection } from "@/pages/apps/channels/theme-editor/sections/colors-section";
 import { ContentSection } from "@/pages/apps/channels/theme-editor/sections/content-section";
 import { CustomCssSection } from "@/pages/apps/channels/theme-editor/sections/custom-css-section";
 import { StyleSection } from "@/pages/apps/channels/theme-editor/sections/style-section";
+import { ThemeEditorAppearanceField } from "@/pages/apps/channels/theme-editor/theme-editor-appearance-field";
 import type { PreviewAppearance } from "@/pages/apps/channels/web-widget-theme-preview";
 import type { WidgetThemeFormData } from "@/pages/apps/channels/web-widget-theme-schema";
-
-const APPEARANCE_OPTIONS = [
-    { value: "Light", label: "Light" },
-    { value: "Dark", label: "Dark" },
-    { value: "System", label: "System" },
-] as const;
 
 type ThemeEditorInspectorProps = {
     control: Control<WidgetThemeFormData>;
@@ -25,6 +18,8 @@ type ThemeEditorInspectorProps = {
     previewAppearance: PreviewAppearance;
     onPreviewAppearanceChange: (next: PreviewAppearance) => void;
     onFocusWelcomeFields: () => void;
+    savedColors: Record<PreviewAppearance, WidgetThemeColors>;
+    defaultColors: Record<PreviewAppearance, WidgetThemeColors>;
 };
 
 export function ThemeEditorInspector({
@@ -36,29 +31,29 @@ export function ThemeEditorInspector({
     previewAppearance,
     onPreviewAppearanceChange,
     onFocusWelcomeFields,
+    savedColors,
+    defaultColors,
 }: ThemeEditorInspectorProps) {
     return (
+        // One panel, not a stack of cards: bg-card carries the whole column and the sections inside it
+        // are told apart by dividers alone.
         // Bounded and independently scrolling only once the two-pane split is actually active
         // (@5xl/theme-editor, set on the form in theme-editor.tsx); below that it takes its natural
         // height so the page scrolls once instead of this column scrolling on its own inside a
         // height it doesn't have room for.
-        <div className="p-4 @5xl/theme-editor:min-h-0 @5xl/theme-editor:flex-1 @5xl/theme-editor:overflow-y-auto">
-            <div className="grid gap-4">
-                <div className="rounded-md border bg-card p-4">
-                    <FormToggleGroup
+        <div className="border-b bg-card @5xl/theme-editor:min-h-0 @5xl/theme-editor:flex-1 @5xl/theme-editor:overflow-y-auto @5xl/theme-editor:border-r @5xl/theme-editor:border-b-0">
+            <div className="divide-y">
+                <div className="p-4">
+                    <ThemeEditorAppearanceField
                         control={control}
                         name="appearance"
                         label="Default color scheme"
-                        description={
-                            <span>
-                                System follows the visitor's own preference. The embedding page can override this with{" "}
-                                <InlineCode className="whitespace-nowrap">?appearance=dark|light|system</InlineCode> on
-                                the embed URL or an appearance message - see “Embed on your own site” on the channel
-                                page.
-                            </span>
-                        }
-                        options={APPEARANCE_OPTIONS}
-                        canDeselect={false}
+                        // The cards carry what each scheme means, so all this line still owes the reader is
+                        // that the choice is a default rather than a lock, and where the override is documented -
+                        // little enough to sit behind the label's help icon instead of under the cards.
+                        hint="The embedding page can override this - see “Embed on your own site” on the channel page."
+                        light={previewTheme.light}
+                        dark={previewTheme.dark}
                         onValueChange={(next) => {
                             if (next === "Light" || next === "Dark") onPreviewAppearanceChange(next);
                         }}
@@ -72,6 +67,8 @@ export function ThemeEditorInspector({
                     onReset={onReset}
                     previewAppearance={previewAppearance}
                     onPreviewAppearanceChange={onPreviewAppearanceChange}
+                    savedColors={savedColors}
+                    defaultColors={defaultColors}
                 />
 
                 <StyleSection

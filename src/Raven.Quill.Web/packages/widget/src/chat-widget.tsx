@@ -60,6 +60,7 @@ export function ChatWidgetView({
                         title={theme.greetingTitle}
                         body={theme.greetingBody}
                         suggestedPrompts={theme.suggestedPrompts}
+                        layout={theme.suggestedPromptsLayout}
                         isDisabled={isBlocked}
                         onSelectPrompt={onSubmit}
                     />
