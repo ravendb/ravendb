@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.ExceptionServices;
@@ -15,9 +15,7 @@ namespace Voron.Impl.Journal;
 
 internal sealed unsafe class JournalWritePipeline : IDisposable
 {
-    public const int MaxPipelinedBatchSizeInBytes = Constants.Size.Megabyte;
-
-    private const int MaxPipelinedBatch4Kbs = MaxPipelinedBatchSizeInBytes / Constants.Storage.JournalPageSize;
+    internal const int MaxPipelinedBatch4Kbs = Constants.Size.Megabyte / Constants.Storage.JournalPageSize;
 
     internal readonly record struct Ack(StorageEnvironment Environment, long TransactionId, TaskCompletionSource CommitCompleted);
 
@@ -63,9 +61,6 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
     private readonly ulong _allSlots;
     private ulong _completedSlots;
     private long _nextSequence;    // submitter only, serialized by the journal write lock
-    private SimpleEwma _writeLatencyTicks = new(smoothing: 8);
-    private SimpleEwma _writeSizeBytes = new(smoothing: 8);
-    private readonly long _pipelineAboveLatencyTicks;
     private long _reapedSequence;  // claimed by reapers with a CAS
     private long _lowestFailedSequence = long.MaxValue;
     private ExceptionDispatchInfo _failure;
@@ -79,68 +74,11 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
         _maxConcurrentWrites = Math.Clamp(env.Options.MaxConcurrentJournalWrites, 1, StorageEnvironmentOptions.MaxSupportedConcurrentJournalWrites);
         _slots = new PendingWrite[_maxConcurrentWrites];
         _allSlots = _maxConcurrentWrites == 64 ? ulong.MaxValue : (1UL << _maxConcurrentWrites) - 1;
-        _pipelineAboveLatencyTicks = env.Options.PipelineJournalWritesAboveLatencyInTicks;
     }
 
     public bool PipeliningEnabled => _maxConcurrentWrites > 1;
 
-    internal bool ShouldPipelineNow =>
-        PipeliningEnabled &&
-        // the merger is waiting to get bigger batches, overlapping writes will do the reverse
-        _env.BatchConsolidationActive == false &&                                          
-        // the device is slow enough that overlapping writes pays for the smaller batches
-        _writeLatencyTicks.Current >= _pipelineAboveLatencyTicks &&   
-        // if we are bounded by device bandwidth, pipelining won't help
-        IsCommitLatencyBound;                                         
-
-    internal long WriteLatencyEwmaTicks => _writeLatencyTicks.Current;
-
-    private long _lastWriteActivityTimestamp;
-
-    internal const int RecentWriteActivityWindowMs = 3;
-
-    // journal writes are user facing - background work (pool zeroing, etc.) uses this to stand down
-    // while a write is running or another is likely imminent
-    internal bool JournalWriteRecentlyActive =>
-        Volatile.Read(ref _nextSequence) - Volatile.Read(ref _reapedSequence) > 0 ||
-        Stopwatch.GetElapsedTime(Volatile.Read(ref _lastWriteActivityTimestamp)).TotalMilliseconds < RecentWriteActivityWindowMs;
-
-
-    internal enum DeviceClass
-    {
-        Unknown, // no evidence yet, go for safe defaults
-        Fast,    // exmaple: nvme - very high limits, or we never hit them
-        Budgeted // example: gp3 - both bandwidth & IOPS limits that we hit
-    }
-
-    internal DeviceClass MeasuredDeviceClass
-    {
-        get
-        {
-            // small writes can be fast on a slow device, so we can't estimate from small writes only
-            // gp3 writes small batches in 1.3-1.9ms, gp2 in 3-4ms, we need more than that...
-            if (_writeSizeBytes.Current < 256 * Constants.Size.Kilobyte)
-                return DeviceClass.Unknown;
-
-            var ewma = _writeLatencyTicks.Current;
-            if (ewma == 0)
-                return DeviceClass.Unknown;
-
-            return ewma < _pipelineAboveLatencyTicks / 2 ? DeviceClass.Fast : DeviceClass.Budgeted;
-        }
-    }
-
-    internal bool IsMeasuredFastDevice => MeasuredDeviceClass == DeviceClass.Fast;
-
-    public int MaxConcurrentWrites => _maxConcurrentWrites;
-
-    public bool CanPipeline(long totalNumberOf4Kbs) =>
-        PipeliningEnabled &&
-        _env.BatchConsolidationActive == false &&                                          
-        // < 1MB, otherwise we'll be copying to our own buffer, then we have large write, etc. Doesn't pay off. 
-        totalNumberOf4Kbs <= MaxPipelinedBatch4Kbs &&                 
-        // the device is slow enough that overlapping writes pays for the smaller batches
-        _writeLatencyTicks.Current >= _pipelineAboveLatencyTicks;     
+    internal bool HasInFlightWrites => Volatile.Read(ref _nextSequence) - Volatile.Read(ref _reapedSequence) > 0;
 
     public void SubmitPipelined(JournalFile file, long posBy4Kb, Span<Pal.journal_entry> entries, long totalNumberOf4Kbs, List<Ack> acks)
     {
@@ -195,7 +133,7 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
 
     private void WriteDirect(JournalFile file, long posBy4Kb, Span<Pal.journal_entry> entries, long totalNumberOf4Kbs, List<Ack> acks)
     {
-        Volatile.Write(ref _lastWriteActivityTimestamp, Stopwatch.GetTimestamp());
+        _env.WriteFlow.RecordJournalWriteSubmitted();
         RecordSubmitted(acks);
 
         try
@@ -275,15 +213,8 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
 
     private void RecordWriteLatency(long ticks, long numberOf4Kbs)
     {
-        Volatile.Write(ref _lastWriteActivityTimestamp, Stopwatch.GetTimestamp());
-        _writeLatencyTicks.Update(ticks);
-        _writeSizeBytes.Update(numberOf4Kbs * 4 * Constants.Size.Kilobyte);
+        _env.WriteFlow.RecordJournalWrite(ticks, numberOf4Kbs * 4 * Constants.Size.Kilobyte);
     }
-
-    internal bool IsCommitLatencyBound => 
-        // if we are making large writes, we'll be limited by device bandwidth, not latency.
-        // latency is meaningful if we have many small commits, not large ones
-        _writeSizeBytes.Current < 256 * Constants.Size.Kilobyte;
 
     private void Execute(PendingWrite write)
     {

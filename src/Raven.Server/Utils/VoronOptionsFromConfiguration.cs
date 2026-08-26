@@ -28,6 +28,7 @@ namespace Raven.Server.Utils
             options.MaxUnsyncedBytesBeforeMandatorySync = configuration.Storage.MaxUnsyncedSizeBeforeMandatorySync.GetValue(SizeUnit.Bytes);
             options.MaxConcurrentJournalWrites = configuration.Storage.MaxConcurrentJournalWrites;
             options.PipelineJournalWritesAboveLatencyInTicks = configuration.Storage.PipelineJournalWritesAboveLatencyInTicks;
+            options.ConsolidationTargetWriteSizeInBytes = configuration.Storage.ConsolidationTargetWriteSize.GetValue(SizeUnit.Bytes);
             options.SyncWritebackBlockSizeInMb = configuration.Storage.SyncWritebackBlockSizeInMb;
             options.SyncWritebackMinContiguousSizeInKb = configuration.Storage.SyncWritebackMinContiguousSizeInKb;
             options.SyncWritebackBarrierCostThresholdInMs = configuration.Storage.SyncWritebackBarrierCostThresholdInMs;

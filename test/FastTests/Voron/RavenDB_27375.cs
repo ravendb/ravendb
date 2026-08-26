@@ -44,10 +44,11 @@ namespace FastTests.Voron
         }
 
         [RavenFact(RavenTestCategory.Voron)]
-        public void WritebackGate_selects_drain_mode_and_returns_to_trickle()
+        public void DeviceWriteBudget_selects_drain_mode_and_returns_to_trickle()
         {
-            var gate = new global::Voron.Impl.Journal.WritebackPacingGate(queueReader: null, pathOnDevice: "test",
-                syncCostThresholdTicks: TimeSpan.FromMilliseconds(100).Ticks, queueDepthThreshold: 5);
+            var gate = new global::Voron.Impl.Journal.DeviceWriteBudget(queueReader: null, pathOnDevice: "test",
+                syncCostThresholdTicks: TimeSpan.FromMilliseconds(100).Ticks, queueDepthThreshold: 5,
+                classifyAboveLatencyTicks: TimeSpan.FromMilliseconds(2).Ticks);
 
             // healthy barrier: trickle mode
             gate.RecordSyncCost(TimeSpan.FromMilliseconds(5).Ticks);

@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -51,7 +52,6 @@ namespace Raven.Server.Documents.TransactionMerger
         private readonly ConcurrentQueue<List<MergedTransactionCommand<TOperationContext, TTransaction>>> _opsBuffers = new();
 
         private readonly Queue<(TOperationContext Context, List<MergedTransactionCommand<TOperationContext, TTransaction>> PendingOps)> _asyncCommittedTransactions = new();
-        private int _maxConcurrentJournalWrites = 1;
         
         private readonly ManualResetEventSlim _waitHandle = new(false);
         private ExceptionDispatchInfo _edi;
@@ -61,80 +61,12 @@ namespace Raven.Server.Documents.TransactionMerger
         private readonly double _maxTimeToWaitForPreviousTxInMs;
         private readonly long _maxTxSizeInBytes;
 
-        // On a slow device the group-commit equilibrium can collapse into tiny batches: short writes release few clients, next requests dribbles and we have small batches
-        // result: volume IOPS bound at a fraction of its bandwidth. We intentionally increase transaction time here, to batch more
-        private const long EnterBatchConsolidationAtLatencyTicks = 8 * TimeSpan.TicksPerMillisecond;   // the device is queuing under the write traffic
-        private const long ExitBatchConsolidationAtLatencyTicks = 4 * TimeSpan.TicksPerMillisecond;    // consolidation grows the writes, and must not turn itself off too quickly
-        private const long BatchConsolidationWindowLatencyFactor = 2;                                  // hold for up to this many write durations...
-        private const long MaxBatchConsolidationWindowInMs = 50;                                     // ...but never longer than this
-        private const long MaxBatchConsolidationSizeInBytes = 128 * Constants.Size.Megabyte;
-        private int _consecutiveEmptyConsolidationWaits;
-
-        // two empty one-millisecond waits in a row mean the arrivals dried up - every writer is already
-        // aboard this batch, and holding it any longer is pure added latency for them
-        private const int MaxConsecutiveEmptyConsolidationWaits = 2;
-
-        private bool _consolidatingBatches;
-
-        // Is the batch is still worth waiting for more operations to arrive?
-        // Even though we have async commits, we want to keep the *current* transaction alive for a bit longer
-        //
-        // This is an issue because gp3 drives, for example, has both IOPS and bandwidth limits. If we have a lot of 
-        // small writes, we burned through that budget, and start queuing. And we end in a meta-stable slow state.
-        // 
-        // Batch size is whatever arrives during one write, so tiny writes -> the device goes IOPS bound at a fraction of its bandwidth 
-        // -> queuing inflates every op's latency -> clients cycle slowly -> few arrivals per write -> tiny writes again. 
-        // 
-        // Holding the batch open for a couple of write-durations flips it to few large writes: the device becomes bandwidth
-        // // bound, the queuing disappears, and per-op latency drops even though we waited (measured on gp3: 8.4k -> 12.9k ops/s at 1,531 clients, p50 down). 
-        // 
-        // The hold only engages when both symptoms are present (writes queuing AND batches collapsed), exits within ~2ms once every writer is already 
-        // aboard, and never engages on a fast device - a flat hold measurably hurts healthy workloads
-        private bool TryWaitForMoreOperationsToConsolidate(long modifiedSize, long consolidationSize, Stopwatch sp, double consolidationWindowMs)
-        {
-            if (_consolidatingBatches == false || // not relevant unless in consolidation regine
-                modifiedSize >= consolidationSize ||
-                sp.ElapsedMilliseconds >= consolidationWindowMs)
-            {
-                _consecutiveEmptyConsolidationWaits = 0;
-                return false;
-            }
-
-            _waitHandle.Reset();
-
-            if (_operations.IsEmpty == false || // an operation arrived between the queue check and the reset
-                _waitHandle.Wait(millisecondsTimeout: 1, _shutdown)) // or was enqueued while we waited
-            {
-                _consecutiveEmptyConsolidationWaits = 0;
-                return true;
-            }
-
-            if (++_consecutiveEmptyConsolidationWaits >= MaxConsecutiveEmptyConsolidationWaits)
-            {
-                _consecutiveEmptyConsolidationWaits = 0;
-                return false;
-            }
-
-            return true;
-        }
-
         private double GetBatchingWindowDurationInMs()
         {
             if (_is32Bits)
                 return _maxTimeToWaitForPreviousTxInMs;
 
-            var writeLatencyTicks = _env.Journal.WriteLatencyEwmaTicks;
-
-            _consolidatingBatches = _consolidatingBatches
-                ? writeLatencyTicks >= ExitBatchConsolidationAtLatencyTicks
-                : writeLatencyTicks >= EnterBatchConsolidationAtLatencyTicks && _env.Journal.IsCommitLatencyBound;
-            _env.BatchConsolidationActive = _consolidatingBatches;
-
-            if (_consolidatingBatches == false)
-                return _maxTimeToWaitForPreviousTxInMs;
-
-            var windowMs = BatchConsolidationWindowLatencyFactor * writeLatencyTicks / TimeSpan.TicksPerMillisecond;
-            return Math.Max(_maxTimeToWaitForPreviousTxInMs, Math.Min(MaxBatchConsolidationWindowInMs, windowMs));
+            return _env.WriteFlow.GetBatchingWindowDurationInMs(_maxTimeToWaitForPreviousTxInMs);
         }
         private readonly double _maxTimeToWaitForPreviousTxBeforeRejectingInMs;
 
@@ -169,7 +101,6 @@ namespace Raven.Server.Documents.TransactionMerger
             _isEncrypted = isEncrypted;
             _is32Bits = is32Bits;
             _env = GetStorageEnvironment(contextPool);
-            _maxConcurrentJournalWrites = Math.Max(1, _env.Journal.MaxConcurrentJournalWrites);
             _initialized = true;
         }
 
@@ -645,7 +576,7 @@ namespace Raven.Server.Documents.TransactionMerger
                         startedCompletingInFlight = true;
                         // depending on the size of journal writes, we may want to keep writes to the jounral in flight (pipelined).
                         // that doesn't make sense if we have large journal writes, since then we are bandwidth bound anyway
-                        var keepInFlight = _env.Journal.ShouldPipelineJournalNow ? _maxConcurrentJournalWrites - 1 : 0;
+                        var keepInFlight = _env.WriteFlow.KeepInFlightJournalWrites;
                         CompleteAsyncCommittedTransactions(keep: keepInFlight, throwOnError: true);
                     }
                     catch (Exception e)
@@ -847,6 +778,128 @@ namespace Raven.Server.Documents.TransactionMerger
 
         private bool _alreadyListeningToPreviousOperationEnd;
 
+        private struct BatchShaper(AbstractTransactionOperationsMerger<TOperationContext, TTransaction> merger)
+        {
+            public readonly Stopwatch Timer = Stopwatch.StartNew();
+
+            public WriteFlowPolicy.BatchCloseReason CloseReason = WriteFlowPolicy.BatchCloseReason.QueueStarved;
+
+            private long _queueDepthSnapshot = -1;
+            private int _consecutiveEmptyWaits;
+
+            // called when the _previous_ tx is done, and we *can* close, we check whether we _should_ 
+            // if we keep the tx open longer, we get better batch and better throughput (min latency cost)
+            public bool ShouldCloseBatch(int batchOperations, long modifiedSize)
+            {
+                var windowMs = merger.GetBatchingWindowDurationInMs();
+                var sizeLimit = Math.Min(merger._maxTxSizeInBytes, merger._env.WriteFlow.ConsolidationSizeLimitInBytes);
+
+                if (merger._operations.IsEmpty &&
+                    ShouldWaitForMoreOperationsToConsolidate(modifiedSize, sizeLimit, windowMs) == false)
+                {
+                    if (modifiedSize >= sizeLimit)
+                        CloseReason = WriteFlowPolicy.BatchCloseReason.SizeReached;
+                    else if (merger._env.WriteFlow.ConsolidatingBatches && Timer.ElapsedMilliseconds >= windowMs)
+                        CloseReason = WriteFlowPolicy.BatchCloseReason.WindowElapsed;
+                    else
+                        CloseReason = WriteFlowPolicy.BatchCloseReason.QueueStarved;
+                    return true; // nothing remaining to do, let us close this work
+                }
+
+                if (Timer.ElapsedMilliseconds > windowMs)
+                {
+                    // a batch this small closing as soon as it may is arrival-capped, treat it as such
+                    CloseReason = batchOperations < WriteFlowPolicy.TinyBatchOperations
+                        ? WriteFlowPolicy.BatchCloseReason.QueueStarved
+                        : WriteFlowPolicy.BatchCloseReason.WindowElapsed;
+                    return true; // too much time
+                }
+
+                if (ShouldYieldPendingOpsToNextTransaction(batchOperations))
+                {
+                    CloseReason = WriteFlowPolicy.BatchCloseReason.WindowElapsed;
+                    return true;
+                }
+
+                if (modifiedSize > merger._maxTxSizeInBytes)
+                {
+                    CloseReason = WriteFlowPolicy.BatchCloseReason.SizeReached;
+                    return true; // transaction is too big, let's clean it
+                }
+
+                // even though we can close the tx, we choose to keep it a bit longer:
+                // keep processing operations until the queue clears or time / size limits hit
+                return false;
+            }
+
+            // When consolidating writes, we flush immediately once arrivals dry up to avoid latency
+            private bool ShouldWaitForMoreOperationsToConsolidate(long modifiedSize, long sizeLimit, double windowMs)
+            {
+                if (merger._env.WriteFlow.ConsolidatingBatches == false || // not relevant unless in consolidation regime
+                    modifiedSize >= sizeLimit ||
+                    Timer.ElapsedMilliseconds >= windowMs)
+                {
+                    _consecutiveEmptyWaits = 0;
+                    return false;
+                }
+
+                merger._waitHandle.Reset();
+
+                if (merger._operations.IsEmpty == false) // we have more operations, let's consolidate them
+                {
+                    _consecutiveEmptyWaits = 0;
+                    return true;
+                }
+
+                // policy may return 0 here, to disable waiting entirely
+                var emptyWaitLimit = merger._env.WriteFlow.EmptyConsolidationWaitLimit;
+                if (++_consecutiveEmptyWaits >= emptyWaitLimit)
+                {
+                    _consecutiveEmptyWaits = 0;
+                    return false;
+                }
+
+                // we'll "burn" up to 1ms waiting for more operations to arrive
+                if (merger._waitHandle.Wait(millisecondsTimeout: 1, merger._shutdown))
+                {
+                    _consecutiveEmptyWaits = 0;
+                }
+
+                return true;
+            }
+
+            // counter-intuitive: we leave a small number of operations to the *next* transaction, 
+            // so that it can start on them immediately. That allow to interleave operations from clients, 
+            // to max out over all concurrency. Otherwise, we may "sync up" everything, and then we have 
+            // high peaks and completely idle periods. Better to leave work to the next transaction instead.
+            private bool ShouldYieldPendingOpsToNextTransaction(int currentBatchSize)
+            {
+                int minimumQueueDepthToAbsorb = merger._env.WriteFlow.MinQueueDepthToKeepAbsorbing;
+                
+                // No consolidation or batch too small to benefit from leaving work to the next tx
+                if (minimumQueueDepthToAbsorb == 0 || currentBatchSize < WriteFlowPolicy.TinyBatchOperations)
+                    return false;
+
+                if (_queueDepthSnapshot > 0)
+                    _queueDepthSnapshot--; // each call absorbed one op since the snapshot was taken
+
+                int requiredQueueDepthToContinue = Math.Max(minimumQueueDepthToAbsorb, currentBatchSize);
+
+                if (_queueDepthSnapshot >= requiredQueueDepthToContinue)
+                    return false;
+
+                // Slow path: refresh snapshot (acquires lock) before finalizing the decision to stop absorbing ops
+                _queueDepthSnapshot = merger._operations.Count;
+
+                return _queueDepthSnapshot < requiredQueueDepthToContinue;
+            }
+
+            public void ClosedBySizeRejection() => CloseReason = WriteFlowPolicy.BatchCloseReason.SizeReached;
+
+            public readonly void Publish(int operations, long modifiedBytes) =>
+                merger._env.WriteFlow.RecordBatchClosed(CloseReason, operations, modifiedBytes);
+        }
+
         private PendingOperations ExecutePendingOperationsInTransaction(
             List<MergedTransactionCommand<TOperationContext, TTransaction>> executedOps,
             TOperationContext context,
@@ -854,7 +907,8 @@ namespace Raven.Server.Documents.TransactionMerger
         {
             _alreadyListeningToPreviousOperationEnd = false;
             context.TransactionMarkerOffset = 1;  // ensure that we are consistent here and don't use old values
-            var sp = Stopwatch.StartNew();
+            var shaper = new BatchShaper(this);
+            long modifiedSize = 0;
 
             do
             {
@@ -895,31 +949,15 @@ namespace Raven.Server.Documents.TransactionMerger
                 if (op.UpdateAccessTime)
                     UpdateLastAccessTime(_time.GetUtcNow());
 
-                var modifiedSize = llt.NumberOfModifiedPages * Constants.Storage.PageSize;
+                modifiedSize = llt.NumberOfModifiedPages * Constants.Storage.PageSize + llt.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
 
-                modifiedSize += llt.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
 
                 var canCloseCurrentTx = previousOperation == null || previousOperation.IsCompleted;
                 if (canCloseCurrentTx || _is32Bits)
                 {
-                    var consolidationWindowMs = GetBatchingWindowDurationInMs();
-                    var consolidationSize = Math.Min(_maxTxSizeInBytes, MaxBatchConsolidationSizeInBytes);
+                    if (shaper.ShouldCloseBatch(executedOps.Count, modifiedSize))
+                        break;
 
-                    if (_operations.IsEmpty && 
-                        TryWaitForMoreOperationsToConsolidate(modifiedSize, consolidationSize, sp, consolidationWindowMs) is false)
-                    {
-                        break; // nothing remaining to do, let's us close this work
-                    }
-
-                    if (sp.ElapsedMilliseconds > consolidationWindowMs)
-                        break; // too much time
-
-                    if (modifiedSize > _maxTxSizeInBytes)
-                        break; // transaction is too big, let's clean it
-
-                    // even though we can close the tx, we choose to keep it a bit longer
-                    // we want to keep processing operations until we clear the queue, time / size
-                    // limits are reached
                     continue;
                 }
 
@@ -928,15 +966,18 @@ namespace Raven.Server.Documents.TransactionMerger
                 if (modifiedSize < _maxTxSizeInBytes)
                     continue; // we can still process requests at this time, so let's do that...
 
-                UnlikelyRejectOperations(previousOperation, sp, llt, modifiedSize);
+                UnlikelyRejectOperations(previousOperation, shaper.Timer, llt, modifiedSize);
+                shaper.ClosedBySizeRejection();
                 break;
             } while (true);
+
+            shaper.Publish(executedOps.Count, modifiedSize);
 
             var status = GetPendingOperationsStatus(context, executedOps.Count is 0);
             if (_log.IsDebugEnabled)
             {
                 var opType = previousOperation == null ? string.Empty : "(async) ";
-                _log.Debug($"Merged {executedOps.Count:#,#;;0} operations in {sp.Elapsed} {opType}with {_operations.Count:#,#;;0} operations remaining. Status: {status}");
+                _log.Debug($"Merged {executedOps.Count:#,#;;0} operations in {shaper.Timer.Elapsed} {opType}with {_operations.Count:#,#;;0} operations remaining. Status: {status}");
             }
             return status;
         }

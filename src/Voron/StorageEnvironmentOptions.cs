@@ -592,26 +592,17 @@ namespace Voron
                 public WriteAheadJournal Journal;
                 public int StalledMs;
 
-                private const int MaxJournalZeroingStallMs = 500;
-
                 [UnmanagedCallersOnly]
                 public static unsafe int JournalZeroingPacing(void* state)
                 {
                     var pacing = (JournalZeroingPacingState)GCHandle.FromIntPtr((IntPtr)state).Target;
 
-                    // zero-filling prepays the filesystem extent-conversion cost, on bandwidth-budgeted volumes 
-                    // (cloud disks) the fill competes with the journal and (gp3 at high write cost 8-17% of throughput).
-                    if (pacing.Journal.IsMeasuredFastDevice == false)
-                        return -1;
-
-                    if (pacing.Journal.IsJournalWriteActive == false)
-                        return 0; // write the next chunk immediately
-
-                    if (pacing.StalledMs >= MaxJournalZeroingStallMs)
-                        return -1; // no sign of going quiet - abort, the partial file is still banked
-
-                    pacing.StalledMs += JournalWritePipeline.RecentWriteActivityWindowMs;
-                    return JournalWritePipeline.RecentWriteActivityWindowMs;
+                    var writeFlow = pacing.Journal.Env.WriteFlow;
+                    var jrnl = pacing.Journal;
+                    var step = writeFlow.NextJournalZeroingStepMs(jrnl.IsJournalWriteActive, pacing.StalledMs);
+                    if (step > 0)
+                        pacing.StalledMs += step;
+                    return step;
                 }
             }
 
@@ -620,9 +611,7 @@ namespace Voron
                 if (EnableJournalPoolPrewarming == false || Disposed)
                     return;
 
-                // pre-zeroed pool files only pay off where filesystems extent-conversion cost (fast local device)
-                // On GP3 & similar, the fill competes with the journal for the whole budget, so we'll skip it.
-                if (journal.IsMeasuredFastDevice == false)
+                if (journal.Env.WriteFlow.ShouldPrepareZeroedJournalsInBackground == false)
                     return;
 
                 size = Math.Min(size, MaxLogFileSize);
@@ -1805,15 +1794,15 @@ namespace Voron
             set => _maxConcurrentJournalWrites = Math.Clamp(value, 1, MaxSupportedConcurrentJournalWrites);
         }
 
-        internal WritebackPacingGate WritebackGate { get; private set; }
+        internal DeviceWriteBudget DeviceWriteBudget { get; private set; } 
 
         private protected unsafe void InitializeWritebackGate(Pager.State state, string dataFilePath)
         {
             if (Pal.rvn_pager_get_device_id(state.Handle, out var deviceId, out _) != PalFlags.FailCodes.Success)
                 return;
                 
-            WritebackGate = WritebackPacingGate.GetForDevice(deviceId, dataFilePath,
-                SyncWritebackBarrierCostThresholdTicks, SyncWritebackDrainQueueDepthThreshold);
+            DeviceWriteBudget = DeviceWriteBudget.GetForDevice(deviceId, dataFilePath,
+                SyncWritebackBarrierCostThresholdTicks, SyncWritebackDrainQueueDepthThreshold, PipelineJournalWritesAboveLatencyInTicks);
         }
 
         internal bool SimulateFailureOnDbCreation { get; set; }
@@ -1826,6 +1815,7 @@ namespace Voron
         public int JournalsCompressionAcceleration { get; set; } = 1;
 
         public JournalCompressionAlgorithm JournalCompressionAlgorithm { get; set; } = JournalCompressionAlgorithm.Auto;
+        public long ConsolidationTargetWriteSizeInBytes { get; set; }
         public int MinimumSharedJournalsMergeCount { get; set; } = 8;
         public bool UseSequentialReadAheadHintForJournalRecovery { get; set; } = true;
 
