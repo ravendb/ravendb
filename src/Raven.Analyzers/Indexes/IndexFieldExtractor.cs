@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -73,7 +74,6 @@ namespace Raven.Analyzers.Indexes
 
             return new IndexFieldSet(IndexFieldInspection.Ok, allFields.ToImmutableHashSet());
         }
-
 
         private static IndexFieldInspection ExtractFromCtorBody(
             SyntaxNode body,

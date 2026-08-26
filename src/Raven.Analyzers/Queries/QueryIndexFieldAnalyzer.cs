@@ -159,12 +159,12 @@ namespace Raven.Analyzers.Queries
         }
 
         private static bool IsFilterOrOrderMethod(string name) =>
-            name == KnownTypes.WhereMethodName
-            || name == KnownTypes.OrderByMethodName
-            || name == KnownTypes.OrderByDescendingMethodName
-            || name == KnownTypes.ThenByMethodName
-            || name == KnownTypes.ThenByDescendingMethodName
-            || name == KnownTypes.SearchMethodName;
+            name is KnownTypes.WhereMethodName or
+                KnownTypes.OrderByMethodName or
+                KnownTypes.OrderByDescendingMethodName or
+                KnownTypes.ThenByMethodName or
+                KnownTypes.ThenByDescendingMethodName or
+                KnownTypes.SearchMethodName;
 
         // True when the invocation has at least one lambda argument (l => ... or (l) => ...). Such an
         // argument introduces an inner range variable, which is the hallmark of a range-binding
@@ -272,6 +272,5 @@ namespace Raven.Analyzers.Queries
                 }
             }
         }
-
     }
 }

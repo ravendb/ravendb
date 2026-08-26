@@ -61,7 +61,7 @@ namespace Raven.Analyzers.Shared
         private static int[] Parse(string version)
         {
             if (string.IsNullOrWhiteSpace(version))
-                return Array.Empty<int>();
+                return [];
 
             string[] parts = version.Split('.');
             int[] result = new int[parts.Length];

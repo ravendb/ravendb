@@ -312,21 +312,12 @@ namespace Raven.Analyzers.Sessions
             }
         }
 
-        private sealed class Pass1CollectMaterializationDerivedLocals : CSharpSyntaxWalker
+        private sealed class Pass1CollectMaterializationDerivedLocals(SemanticModel model, HashSet<ISymbol> derivedSet) : CSharpSyntaxWalker
         {
             // Dependency tracking uses the BROAD set: any materializer (including First/Single/Count/…)
             // produces a local that downstream operations may depend on, so all of them must be tracked
             // even though the detection pass only flags the lazy-batchable subset.
             private static readonly HashSet<string> QueryMaterializingMethods = KnownTypes.SessionMaterializingMethods;
-
-            private readonly SemanticModel _model;
-            private readonly HashSet<ISymbol> _materializationDerivedSet;
-
-            public Pass1CollectMaterializationDerivedLocals(SemanticModel model, HashSet<ISymbol> derivedSet)
-            {
-                _model = model;
-                _materializationDerivedSet = derivedSet;
-            }
 
             public override void VisitLocalDeclarationStatement(LocalDeclarationStatementSyntax node)
             {
@@ -334,9 +325,9 @@ namespace Raven.Analyzers.Sessions
                 {
                     if (declarator.Initializer?.Value is ExpressionSyntax value
                         && IsDerivedInitializer(value)
-                        && _model.GetDeclaredSymbol(declarator) is ISymbol symbol)
+                        && model.GetDeclaredSymbol(declarator) is ISymbol symbol)
                     {
-                        _materializationDerivedSet.Add(symbol);
+                        derivedSet.Add(symbol);
                     }
                 }
 
@@ -351,12 +342,12 @@ namespace Raven.Analyzers.Sessions
             // session.Load<Customer>(_customerId);
             public override void VisitAssignmentExpression(AssignmentExpressionSyntax node)
             {
-                ISymbol? target = _model.GetSymbolInfo(node.Left).Symbol;
+                ISymbol? target = model.GetSymbolInfo(node.Left).Symbol;
                 if (node.IsKind(SyntaxKind.SimpleAssignmentExpression)
                     && target is ILocalSymbol or IFieldSymbol or IPropertySymbol
                     && IsDerivedInitializer(node.Right))
                 {
-                    _materializationDerivedSet.Add(target);
+                    derivedSet.Add(target);
                 }
 
                 base.VisitAssignmentExpression(node);
@@ -380,7 +371,7 @@ namespace Raven.Analyzers.Sessions
                 if (methodName == null)
                     return false;
 
-                ITypeSymbol? receiverType = _model.GetTypeInfo(memberAccess.Expression).Type;
+                ITypeSymbol? receiverType = model.GetTypeInfo(memberAccess.Expression).Type;
 
                 if (QueryMaterializingMethods.Contains(methodName) && SyntaxHelpers.IsRavenQueryable(receiverType))
                     return true;
@@ -396,8 +387,8 @@ namespace Raven.Analyzers.Sessions
 
                 foreach (IdentifierNameSyntax id in value.DescendantNodesAndSelf().OfType<IdentifierNameSyntax>())
                 {
-                    ISymbol? symbol = _model.GetSymbolInfo(id).Symbol;
-                    if (symbol != null && _materializationDerivedSet.Contains(symbol))
+                    ISymbol? symbol = model.GetSymbolInfo(id).Symbol;
+                    if (symbol != null && derivedSet.Contains(symbol))
                         return true;
                 }
 
@@ -424,6 +415,5 @@ namespace Raven.Analyzers.Sessions
                 // Skip local functions
             }
         }
-
     }
 }

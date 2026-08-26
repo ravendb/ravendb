@@ -194,7 +194,7 @@ namespace Raven.Analyzers
         public const string RunMethodName = "Run";
         public const string OpenSessionMethodName = "OpenSession";
         public const string OpenAsyncSessionMethodName = "OpenAsyncSession";
-        public const string IDocumentStoreName = "IDocumentStore";
+        public const string DocumentStoreName = "IDocumentStore";
 
         public const string SubscriptionWorkerTypeName = "SubscriptionWorker";
         public const string AbstractSubscriptionWorkerTypeName = "AbstractSubscriptionWorker";
@@ -219,18 +219,19 @@ namespace Raven.Analyzers
         /// rewrite cannot express; those are filtered out of the batchable set by
         /// <see cref="LazyBatchableQueryMaterializers"/>.
         /// </summary>
-        public static readonly HashSet<string> SessionMaterializingMethods = new(System.StringComparer.Ordinal)
-        {
-            "ToList",    "ToListAsync",
-            "ToArray",   "ToArrayAsync",
-            "First",     "FirstAsync",
-            "FirstOrDefault",  "FirstOrDefaultAsync",
-            "Single",    "SingleAsync",
+        public static readonly HashSet<string> SessionMaterializingMethods =
+        [
+            with(System.StringComparer.Ordinal),
+            "ToList", "ToListAsync",
+            "ToArray", "ToArrayAsync",
+            "First", "FirstAsync",
+            "FirstOrDefault", "FirstOrDefaultAsync",
+            "Single", "SingleAsync",
             "SingleOrDefault", "SingleOrDefaultAsync",
-            "Any",       "AnyAsync",
-            "Count",     "CountAsync",
-            "LongCount", "LongCountAsync",
-        };
+            "Any", "AnyAsync",
+            "Count", "CountAsync",
+            "LongCount", "LongCountAsync"
+        ];
 
         /// <summary>
         /// The materializers RVN012 may actually offer to batch: only <c>ToList</c>/<c>ToArray</c>
