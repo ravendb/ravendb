@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
@@ -42,6 +43,13 @@ internal static class AgentConfigValidator
 
         if (TryValidateActions(body, request.ActionBindings, out var actionErrors) == false)
             return Results.BadRequest(new ApiErrorResponse(Errors: actionErrors.ToArray()));
+
+        if (string.IsNullOrWhiteSpace(body.SampleObject) == false && IsJsonObject(body.SampleObject) == false)
+            return Results.BadRequest(new ApiErrorResponse(
+                """sampleObject must be a JSON object, e.g. {"reply":""}"""));
+
+        if (string.IsNullOrWhiteSpace(body.OutputSchema) == false && IsJsonObject(body.OutputSchema) == false)
+            return Results.BadRequest(new ApiErrorResponse("outputSchema must be a JSON object"));
 
         if (body.SubAgents is { Count: > 0 })
             return Results.BadRequest(new ApiErrorResponse("subAgents are not supported in demo"));
@@ -121,6 +129,12 @@ internal static class AgentConfigValidator
                     : $"action '{action.Name}': parametersSampleObject or parametersSchema is required");
             }
 
+            if (hasSample && IsJsonObject(action.ParametersSampleObject) == false)
+                errors.Add($"action '{action.Name}': parametersSampleObject must be a JSON object");
+
+            if (hasSchema && IsJsonObject(action.ParametersSchema) == false)
+                errors.Add($"action '{action.Name}': parametersSchema must be a JSON object");
+
             if (byName.Remove(action.Name, out var binding) == false)
                 errors.Add($"action '{action.Name}' has no binding");
             else if (IsHttpUrl(binding.Url) == false)
@@ -133,6 +147,19 @@ internal static class AgentConfigValidator
         }
 
         return errors.Count == 0;
+    }
+
+    private static bool IsJsonObject(string text)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(text);
+            return doc.RootElement.ValueKind == JsonValueKind.Object;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     private static bool IsHttpUrl(string? url) =>
