@@ -8,6 +8,7 @@ every label, heading, menu item, description, toast, `aria-label` and page title
 | **App**               | a configured application                     | "Application"                      |
 | **Data source**       | the source database and its ingestion        | "CDC" as a product noun            |
 | **Dashboard API key** | the single dashboard credential              | "operator API key", "operator key" |
+| **Prompt**            | one message a person sent to an agent        | "Message" for the counted metric   |
 | **Quill**             | the deployment                               | "appliance", "this Quill instance" |
 | **Sync**              | the running pipeline (performance, progress) | "CDC performance", "CDC feed"      |
 
