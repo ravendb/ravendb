@@ -1,4 +1,4 @@
-import type { Control, FieldPath } from "react-hook-form";
+import type { Control } from "react-hook-form";
 import type { WidgetFontOption, WidgetTheme } from "@/api/generated/server-api";
 import { InlineCode } from "@/components/data/inline-code";
 import { FormToggleGroup } from "@/components/form/form-toggle-group";
@@ -19,7 +19,7 @@ const APPEARANCE_OPTIONS = [
 type ThemeEditorInspectorProps = {
     control: Control<WidgetThemeFormData>;
     isSaving: boolean;
-    onReset: (paths: readonly FieldPath<WidgetThemeFormData>[]) => void;
+    onReset: (paths: readonly (keyof WidgetThemeFormData)[]) => void;
     fontOptions: WidgetFontOption[];
     previewTheme: WidgetTheme;
     previewAppearance: PreviewAppearance;
@@ -38,7 +38,11 @@ export function ThemeEditorInspector({
     onFocusWelcomeFields,
 }: ThemeEditorInspectorProps) {
     return (
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        // Bounded and independently scrolling only once the two-pane split is actually active
+        // (@5xl/theme-editor, set on the form in theme-editor.tsx); below that it takes its natural
+        // height so the page scrolls once instead of this column scrolling on its own inside a
+        // height it doesn't have room for.
+        <div className="p-4 @5xl/theme-editor:min-h-0 @5xl/theme-editor:flex-1 @5xl/theme-editor:overflow-y-auto">
             <div className="grid gap-4">
                 <div className="rounded-md border bg-card p-4">
                     <FormToggleGroup

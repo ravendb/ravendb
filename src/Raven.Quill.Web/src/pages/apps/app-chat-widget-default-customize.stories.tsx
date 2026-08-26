@@ -7,7 +7,10 @@ const meta = {
     title: "Apps/Default chat widget appearance",
     component: AppChatWidgetDefaultCustomize,
     parameters: {
-        page: { title: "Default chat widget appearance" },
+        // Production renders this route bare (isBareLayout/isPageTitleHidden): no host title, no padding,
+        // single row. Setting page.title here made the harness render a title + padded two-row layout no
+        // real operator ever sees, hiding the overflow F1/F2/F3 actually cause.
+        page: { bare: true },
         router: {
             initialPath: "/apps/demo/chat-widget/default-customize",
             path: "/apps/:slug/chat-widget/default-customize",
