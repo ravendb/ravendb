@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { iframeHandlers, iframeMocks, SAMPLE_CHANNEL_THEME, SAMPLE_FONT_OPTIONS } from "@/mocks/iframe-mocks";
 import { AppWebWidgetDefaultCustomize } from "./app-web-widget-default-customize";
 
@@ -56,5 +57,18 @@ export const DarkTheme: Story = {
                 ],
             },
         },
+    },
+};
+
+// The app default is the one theme with nowhere to fall back to, so it needs its own way home.
+// A null save is what the server already treats as "reset to the built-in".
+export const ResetsToBuiltInDefault: Story = {
+    tags: ["!dev"],
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        await userEvent.click(await canvas.findByRole("button", { name: "Reset to built-in default" }));
+
+        await waitFor(() => expect(within(document.body).getByText("Default theme saved")).toBeInTheDocument());
     },
 };

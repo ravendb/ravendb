@@ -1,25 +1,25 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ChevronDown } from "lucide-react";
-import { useState, type ReactNode } from "react";
-import { useForm, useWatch, type Control, type FieldPath } from "react-hook-form";
+import { useState } from "react";
+import { useForm, useFormState, useWatch, type FieldPath } from "react-hook-form";
 import type { WidgetFontOption, WidgetTheme } from "@/api/generated/server-api";
 import { FormAceEditor } from "@/components/form/form-ace-editor";
 import { FormColorPicker } from "@/components/form/form-color-picker";
-import { FormErrorIcon } from "@/components/form/form-error-icon";
 import { FormImagePicker } from "@/components/form/form-image-picker";
 import { FormInput } from "@/components/form/form-input";
 import { FormSelect } from "@/components/form/form-select";
 import { FormStringList } from "@/components/form/form-string-list";
 import { FormSwitch } from "@/components/form/form-switch";
 import { FormToggleGroup } from "@/components/form/form-toggle-group";
-import { Heading, Text } from "@/components/typography";
+import { Text } from "@/components/typography";
+import { useFormUnsavedChanges } from "@/components/form/unsaved-changes/use-unsaved-changes";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/shadcn/ui/collapsible";
 import { Separator } from "@/components/shadcn/ui/separator";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/shadcn/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/shadcn/ui/toggle-group";
+import { SCHEME_COLOR_FIELDS, SECTION_FIELDS } from "@/pages/apps/channels/theme-editor/theme-editor-fields";
+import { ThemeEditorSection } from "@/pages/apps/channels/theme-editor/theme-editor-section";
 import {
     FONT_SIZE_OPTIONS,
     LOGO_RADIUS_OPTIONS,
@@ -47,19 +47,6 @@ const APPEARANCE_OPTIONS = [
     { value: "System", label: "System" },
 ] as const;
 
-const SCHEME_COLOR_FIELDS = {
-    Light: ["lightButtonColor", "lightMessageColor", "lightBackgroundColor"],
-    Dark: ["darkButtonColor", "darkMessageColor", "darkBackgroundColor"],
-} as const satisfies Record<PreviewAppearance, readonly (keyof WidgetThemeFormData)[]>;
-
-const SECTION_FIELDS = {
-    colors: [...SCHEME_COLOR_FIELDS.Light, ...SCHEME_COLOR_FIELDS.Dark],
-    style: ["radius", "fontFamily", "fontSize", "customFontSizeRem"],
-    branding: ["showHeader", "logo", "logoRadius", "headerTitle", "headerSubtitle"],
-    content: ["greetingTitle", "greetingBody", "suggestedPrompts", "inputPlaceholder", "disclaimer"],
-    customCss: ["customCss"],
-} as const satisfies Record<string, readonly FieldPath<WidgetThemeFormData>[]>;
-
 type WebWidgetThemeEditorProps = {
     /** The saved theme. Null means "follow the app default", which only the per-widget editor offers. */
     theme: WidgetTheme | null;
@@ -69,51 +56,19 @@ type WebWidgetThemeEditorProps = {
     fontOptions: WidgetFontOption[];
     /** Present only in the per-widget editor, which can hand control back to the app default. */
     canFollowAppDefault?: boolean;
+    /** Present only in the app-level editor, the one theme with no other theme to fall back to. */
+    canResetToBuiltIn?: boolean;
     isSaving: boolean;
-    onSave: (theme: WidgetTheme | null) => void;
+    /** Resolves once the theme has reached the server; rejects so a failed save leaves the form dirty. */
+    onSave: (theme: WidgetTheme | null) => Promise<unknown>;
 };
-
-function Section({
-    title,
-    control,
-    paths,
-    defaultOpen = false,
-    children,
-}: {
-    title: string;
-    control: Control<WidgetThemeFormData>;
-    paths: readonly FieldPath<WidgetThemeFormData>[];
-    defaultOpen?: boolean;
-    children: ReactNode;
-}) {
-    const [isOpen, setIsOpen] = useState(defaultOpen);
-
-    return (
-        <Collapsible open={isOpen} onOpenChange={setIsOpen} className="rounded-md border bg-card p-4" asChild>
-            <section>
-                <Heading as="h3" variant="subsection">
-                    <CollapsibleTrigger className="group flex w-full items-center justify-between gap-3 rounded-sm text-left focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none">
-                        <span className="flex items-center gap-1.5">
-                            {title}
-                            <FormErrorIcon control={control} paths={paths} onError={() => setIsOpen(true)} />
-                        </span>
-                        <ChevronDown
-                            className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180"
-                            aria-hidden="true"
-                        />
-                    </CollapsibleTrigger>
-                </Heading>
-                <CollapsibleContent className="mt-4 grid gap-4">{children}</CollapsibleContent>
-            </section>
-        </Collapsible>
-    );
-}
 
 export function WebWidgetThemeEditor({
     theme,
     defaultTheme,
     fontOptions,
     canFollowAppDefault = false,
+    canResetToBuiltIn = false,
     isSaving,
     onSave,
 }: WebWidgetThemeEditorProps) {
@@ -126,7 +81,33 @@ export function WebWidgetThemeEditor({
         // The app default seeds the form while a widget follows it, so switching to an own theme starts from
         // what the operator is already looking at instead of from the built-in.
         values: toFormData(savedTheme),
+        // The re-seed is load-bearing - Follow app default saves null and the editor has to pick up the app
+        // default that comes back - but it must not overwrite fields the operator has already edited.
+        resetOptions: { keepDirtyValues: true },
     });
+
+    const unsavedChanges = useFormUnsavedChanges(form);
+    const { isDirty } = useFormState({ control: form.control });
+
+    const saveTheme = async (themeToSave: WidgetTheme | null) => {
+        try {
+            await onSave(themeToSave);
+        } catch {
+            // The mutation owns the error UI. Leaving the form dirty keeps the guard armed until the
+            // operator's work has actually reached the server.
+            return;
+        }
+        unsavedChanges.markSaved();
+    };
+
+    // Restores just this section's fields from the saved theme. keepDirtyValues is opted out of for the
+    // same reason Discard opts out: the point is to overwrite the fields the operator edited.
+    const resetSection = (paths: readonly FieldPath<WidgetThemeFormData>[]) => {
+        const savedValues = toFormData(savedTheme);
+        for (const path of paths) {
+            form.resetField(path, { defaultValue: savedValues[path as keyof WidgetThemeFormData] });
+        }
+    };
 
     // One state drives both the colors tabs and the previewed scheme, so the colors on screen are always
     // the colors in the frame and editing dark never means guessing.
@@ -170,7 +151,7 @@ export function WebWidgetThemeEditor({
         <form
             className="grid gap-6"
             onSubmit={form.handleSubmit(
-                (submitted) => onSave(toWidgetTheme(submitted)),
+                (submitted) => void saveTheme(toWidgetTheme(submitted)),
                 (errors) => {
                     // The color fields of the inactive scheme are unmounted with their tab, so an error there
                     // would be invisible and Save would appear to do nothing - switch to the tab that has it.
@@ -185,11 +166,47 @@ export function WebWidgetThemeEditor({
         >
             <div className="sticky top-0 z-10 -mx-2 flex flex-wrap items-center justify-end gap-2 bg-surface1 px-2 py-2 dark:bg-surface2">
                 {canFollowAppDefault && !isFollowingAppDefault && (
-                    <Button type="button" variant="outline" size="sm" disabled={isSaving} onClick={() => onSave(null)}>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        // Handing control back while the form is dirty would race the re-seed against
+                        // markSaved and could baseline unsent edits as saved. Discard first.
+                        disabled={isSaving || isDirty}
+                        title="Discard your changes first"
+                        onClick={() => void saveTheme(null)}
+                    >
                         Follow app default
                     </Button>
                 )}
-                <Button type="submit" size="sm" disabled={isSaving}>
+                {canResetToBuiltIn && (
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        // Same gate as Follow app default: a null save while dirty could baseline unsent
+                        // edits as saved. Discard first.
+                        disabled={isSaving || isDirty}
+                        title="Discard your changes first"
+                        onClick={() => void saveTheme(null)}
+                    >
+                        Reset to built-in default
+                    </Button>
+                )}
+                {isDirty && (
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={isSaving}
+                        // useForm's resetOptions default every reset() call to keepDirtyValues: true, which is
+                        // exactly backwards here - Discard exists to overwrite the dirty fields, so it opts back out.
+                        onClick={() => form.reset(toFormData(savedTheme), { keepDirtyValues: false })}
+                    >
+                        Discard changes
+                    </Button>
+                )}
+                <Button type="submit" size="sm" disabled={isSaving || !isDirty}>
                     {isSaving && <Spinner />}
                     Save
                 </Button>
@@ -227,7 +244,13 @@ export function WebWidgetThemeEditor({
                         />
                     </div>
 
-                    <Section title="Colors" control={form.control} paths={SECTION_FIELDS.colors} defaultOpen>
+                    <ThemeEditorSection
+                        title="Colors"
+                        control={form.control}
+                        paths={SECTION_FIELDS.colors}
+                        defaultOpen
+                        onReset={resetSection}
+                    >
                         <Text variant="muted">
                             Each scheme keeps its own colors. Every other option applies to both.
                         </Text>
@@ -246,9 +269,14 @@ export function WebWidgetThemeEditor({
                                 {colorFields("Dark")}
                             </TabsContent>
                         </Tabs>
-                    </Section>
+                    </ThemeEditorSection>
 
-                    <Section title="Style" control={form.control} paths={SECTION_FIELDS.style}>
+                    <ThemeEditorSection
+                        title="Style"
+                        control={form.control}
+                        paths={SECTION_FIELDS.style}
+                        onReset={resetSection}
+                    >
                         <FormSelect
                             control={form.control}
                             name="radius"
@@ -289,9 +317,14 @@ export function WebWidgetThemeEditor({
                                 disabled={isSaving}
                             />
                         )}
-                    </Section>
+                    </ThemeEditorSection>
 
-                    <Section title="Branding" control={form.control} paths={SECTION_FIELDS.branding}>
+                    <ThemeEditorSection
+                        title="Branding"
+                        control={form.control}
+                        paths={SECTION_FIELDS.branding}
+                        onReset={resetSection}
+                    >
                         <FormSwitch
                             control={form.control}
                             name="showHeader"
@@ -333,9 +366,14 @@ export function WebWidgetThemeEditor({
                             placeholder="Ask me anything"
                             disabled={isSaving}
                         />
-                    </Section>
+                    </ThemeEditorSection>
 
-                    <Section title="Content" control={form.control} paths={SECTION_FIELDS.content}>
+                    <ThemeEditorSection
+                        title="Content"
+                        control={form.control}
+                        paths={SECTION_FIELDS.content}
+                        onReset={resetSection}
+                    >
                         {/* These render only on the welcome screen, so editing them steers the preview there. */}
                         <div className="grid gap-4" onFocusCapture={() => setPreviewView("Welcome")}>
                             <FormInput
@@ -380,9 +418,14 @@ export function WebWidgetThemeEditor({
                             description="Shown as a small line under the composer. Left blank, nothing is shown."
                             disabled={isSaving}
                         />
-                    </Section>
+                    </ThemeEditorSection>
 
-                    <Section title="Custom CSS" control={form.control} paths={SECTION_FIELDS.customCss}>
+                    <ThemeEditorSection
+                        title="Custom CSS"
+                        control={form.control}
+                        paths={SECTION_FIELDS.customCss}
+                        onReset={resetSection}
+                    >
                         <FormAceEditor
                             control={form.control}
                             name="customCss"
@@ -391,10 +434,10 @@ export function WebWidgetThemeEditor({
                             disabled={isSaving}
                             description="Appended after the widget's own styles, for anything the options above don't cover — scrollbars, spacing, one-off tweaks."
                         />
-                    </Section>
+                    </ThemeEditorSection>
                 </div>
 
-                <div className="grid gap-3 xl:sticky xl:top-14">
+                <div className="grid gap-3 xl:sticky xl:top-0">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                         <Text as="span" variant="label">
                             Live preview

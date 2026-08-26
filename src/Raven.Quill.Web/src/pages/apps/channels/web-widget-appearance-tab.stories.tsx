@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { SAMPLE_CHANNEL_ID } from "@/mocks/channels-mocks";
 import {
     iframeHandlers,
@@ -6,6 +7,7 @@ import {
     SAMPLE_CHANNEL_THEME,
     SAMPLE_DEFAULT_THEME,
     SAMPLE_FONT_OPTIONS,
+    statefulThemeMocks,
 } from "@/mocks/iframe-mocks";
 import { WebWidgetAppearanceTab } from "./web-widget-appearance-tab";
 
@@ -90,5 +92,206 @@ export const MinimalTheme: Story = {
                 ],
             },
         },
+    },
+};
+// Editing then leaving must be intercepted: this form is long, and losing it silently is the
+// worst thing the screen can do. The story router is a data router so `useBlocker` works.
+export const GuardsUnsavedChanges: Story = {
+    tags: ["!dev"],
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        // Colors is the only section open by default, so its fields are the ones reliably mounted.
+        const buttonColor = await canvas.findByLabelText("Button color");
+
+        await userEvent.clear(buttonColor);
+        await userEvent.type(buttonColor, "#123456");
+
+        await userEvent.click(canvas.getByRole("link", { name: "Back to channel" }));
+
+        await waitFor(() => expect(within(document.body).getByText("Discard unsaved changes?")).toBeInTheDocument());
+    },
+};
+
+// Save must say whether there is anything to save, and Discard must put the form back without a
+// round trip - the operator's only other way out is navigating away and confirming a dialog.
+export const DiscardsChanges: Story = {
+    tags: ["!dev"],
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        // Colors is the only section open by default, so its fields are the ones reliably mounted.
+        const buttonColor = await canvas.findByLabelText("Button color");
+        const originalColor = (buttonColor as HTMLInputElement).value;
+
+        expect(canvas.getByRole("button", { name: "Save" })).toBeDisabled();
+        expect(canvas.queryByRole("button", { name: "Discard changes" })).not.toBeInTheDocument();
+
+        await userEvent.clear(buttonColor);
+        await userEvent.type(buttonColor, "#123456");
+
+        await waitFor(() => expect(canvas.getByRole("button", { name: "Save" })).toBeEnabled());
+
+        // A null save while dirty would race the re-seed against markSaved and could baseline unsent
+        // edits as saved, so the escape hatch stays closed until the form is clean again.
+        expect(canvas.getByRole("button", { name: "Follow app default" })).toBeDisabled();
+
+        await userEvent.click(canvas.getByRole("button", { name: "Discard changes" }));
+
+        await waitFor(() => expect(buttonColor).toHaveValue(originalColor));
+        expect(canvas.getByRole("button", { name: "Save" })).toBeDisabled();
+        expect(canvas.getByRole("button", { name: "Follow app default" })).toBeEnabled();
+    },
+};
+
+// markSaved's reset must not leave dirtyFields behind: a stale dirty field would make the next
+// re-seed keep the on-screen value instead of adopting what the server actually saved, so a later
+// escape hatch (Follow app default) would display - and eventually resave - a value the server never
+// received. The other mocks always answer with the same fixed theme, so a stateful pair is needed here
+// to prove the re-seed after the null save actually observes the server's response.
+export const FollowAppDefaultAdoptsServerTheme: Story = {
+    tags: ["!dev"],
+    parameters: {
+        msw: {
+            handlers: {
+                iframe: (() => {
+                    const theme = statefulThemeMocks();
+                    return [
+                        theme.getTheme(),
+                        theme.updateTheme(),
+                        iframeMocks.getDefaultTheme(),
+                        iframeMocks.updateDefaultTheme(),
+                    ];
+                })(),
+            },
+        },
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        const buttonColor = await canvas.findByLabelText("Button color");
+
+        await userEvent.clear(buttonColor);
+        await userEvent.type(buttonColor, "#123456");
+
+        await waitFor(() => expect(canvas.getByRole("button", { name: "Save" })).toBeEnabled());
+        await userEvent.click(canvas.getByRole("button", { name: "Save" }));
+
+        // The form must be clean again before the escape hatch is even offered.
+        await waitFor(() => expect(canvas.getByRole("button", { name: "Follow app default" })).toBeEnabled());
+
+        await userEvent.click(canvas.getByRole("button", { name: "Follow app default" }));
+
+        await waitFor(() => expect(buttonColor).toHaveValue(SAMPLE_DEFAULT_THEME.light.buttonColor));
+    },
+};
+
+// The one branch of Task 1's saveTheme that no story reaches: a rejected save must leave the form
+// dirty, so the navigation guard stays armed until the work has actually reached the server.
+export const FailedSaveKeepsChangesDirty: Story = {
+    tags: ["!dev"],
+    parameters: {
+        msw: {
+            handlers: {
+                iframe: [iframeMocks.updateThemeError(), ...iframeHandlers()],
+            },
+        },
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        const buttonColor = await canvas.findByLabelText("Button color");
+
+        await userEvent.clear(buttonColor);
+        await userEvent.type(buttonColor, "#123456");
+
+        await waitFor(() => expect(canvas.getByRole("button", { name: "Save" })).toBeEnabled());
+        await userEvent.click(canvas.getByRole("button", { name: "Save" }));
+
+        // Both conditions below already hold before the click's flush even reaches the pending render, so
+        // asserting them alone would pass whether or not the save actually failed. Wait for the failure
+        // itself to land first - http-client.ts maps the mock's error onto the destructive alert's text -
+        // then the form's state actually reflects the rejected save.
+        await canvas.findByText("Could not save the theme.");
+
+        // The save failed, so the edit is still unsaved: Save stays live and Discard is still offered.
+        expect(canvas.getByRole("button", { name: "Discard changes" })).toBeInTheDocument();
+        expect(canvas.getByRole("button", { name: "Save" })).toBeEnabled();
+    },
+};
+
+// Discard's reset uses keepDirtyValues: false, which wipes react-hook-form's `_fields` and
+// `_names.mount` - Discard has only been proven against a plain text input so far, and a
+// useFieldArray is the field most likely to misbehave through that reset. Prove it puts the array
+// back to its saved rows, not just its scalar fields.
+export const DiscardsAddedSuggestedPrompt: Story = {
+    tags: ["!dev"],
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        // Content is collapsed by default; only Colors starts open.
+        await userEvent.click(await canvas.findByRole("button", { name: "Content" }));
+
+        const savedRowCount = SAMPLE_CHANNEL_THEME.suggestedPrompts.length;
+        await waitFor(() =>
+            expect(canvas.getAllByRole("button", { name: "Remove value" })).toHaveLength(savedRowCount),
+        );
+
+        await userEvent.click(canvas.getByRole("button", { name: "Add prompt" }));
+
+        await waitFor(() =>
+            expect(canvas.getAllByRole("button", { name: "Remove value" })).toHaveLength(savedRowCount + 1),
+        );
+        await waitFor(() => expect(canvas.getByRole("button", { name: "Save" })).toBeEnabled());
+
+        await userEvent.click(canvas.getByRole("button", { name: "Discard changes" }));
+
+        await waitFor(() =>
+            expect(canvas.getAllByRole("button", { name: "Remove value" })).toHaveLength(savedRowCount),
+        );
+        expect(canvas.getByRole("button", { name: "Save" })).toBeDisabled();
+    },
+};
+
+// The page used to promise a derived palette the form makes unreachable. Until Slice B restores
+// derivation, the description has to match what the screen actually does.
+export const DescribesWhatTheScreenDoes: Story = {
+    tags: ["!dev"],
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        expect(await canvas.findByText(/nothing reaches visitors until you save/i)).toBeInTheDocument();
+        expect(canvas.queryByText(/the rest of the palette is derived from it/i)).not.toBeInTheDocument();
+    },
+};
+
+// Each section can be undone on its own. The whole-form Discard is too blunt when an operator has
+// deliberately changed four things and regrets one of them.
+export const ResetsOneSectionOnly: Story = {
+    tags: ["!dev"],
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        const buttonColor = await canvas.findByLabelText("Button color");
+        const originalColor = (buttonColor as HTMLInputElement).value;
+
+        await userEvent.click(canvas.getByRole("button", { name: "Style" }));
+        // Radius is a shadcn/Radix combobox, not a native <select>: userEvent.selectOptions can't target
+        // it, and its options only mount in a body-level portal once opened.
+        const radius = await canvas.findByLabelText("Radius");
+        const originalRadius = radius.textContent;
+        // The fixture theme already saves "Large", so that has to be the one value NOT picked here -
+        // otherwise the "differs from original" assertion below would be vacuously true.
+        expect(originalRadius).not.toBe("Small");
+
+        await userEvent.clear(buttonColor);
+        await userEvent.type(buttonColor, "#123456");
+        await userEvent.click(radius);
+        await userEvent.click(await within(document.body).findByRole("option", { name: "Small" }));
+
+        await waitFor(() => expect(canvas.getByRole("button", { name: "Save" })).toBeEnabled());
+
+        await userEvent.click(canvas.getByRole("button", { name: "Reset Colors section" }));
+
+        // Colors goes back; Style keeps the edit, and the form is still dirty because of it.
+        await waitFor(() => expect(buttonColor).toHaveValue(originalColor));
+        expect(radius).toHaveTextContent("Small");
+        expect(radius).not.toHaveTextContent(originalRadius ?? "");
+        expect(canvas.getByRole("button", { name: "Save" })).toBeEnabled();
     },
 };

@@ -1,4 +1,5 @@
 import type {
+    ApiErrorResponse,
     WidgetDefaultThemeResponse,
     WidgetFontOption,
     WidgetTheme,
@@ -74,6 +75,8 @@ export const iframeMocks = {
             const body = await request.json();
             return response(200).json({ theme: body.theme, defaultTheme, fontOptions: SAMPLE_FONT_OPTIONS });
         }),
+    updateThemeError: (error: ApiErrorResponse = { error: "Could not save the theme.", code: "theme_save_failed" }) =>
+        apiHttp.put("/api/apps/{slug}/iframe/{channelId}/theme", ({ response }) => response(400).json(error)),
     getDefaultTheme: (
         defaultTheme: WidgetDefaultThemeResponse = {
             theme: SAMPLE_DEFAULT_THEME,
@@ -89,6 +92,29 @@ export const iframeMocks = {
             });
         }),
 };
+
+// A stateful pair for the channel theme GET/PUT. Every other mock here always answers with its fixed
+// fixture, so a refetch after a save never observes what was actually saved. This one echoes the last
+// PUT body back from the GET, like the real endpoint, so a save-then-reseed flow can be exercised.
+export function statefulThemeMocks(
+    initialTheme: WidgetTheme | null = SAMPLE_CHANNEL_THEME,
+    defaultTheme: WidgetTheme = SAMPLE_DEFAULT_THEME,
+) {
+    let currentTheme = initialTheme;
+
+    return {
+        getTheme: () =>
+            apiHttp.get("/api/apps/{slug}/iframe/{channelId}/theme", ({ response }) =>
+                response(200).json({ theme: currentTheme, defaultTheme, fontOptions: SAMPLE_FONT_OPTIONS }),
+            ),
+        updateTheme: () =>
+            apiHttp.put("/api/apps/{slug}/iframe/{channelId}/theme", async ({ request, response }) => {
+                const body = await request.json();
+                currentTheme = body.theme;
+                return response(200).json({ theme: currentTheme, defaultTheme, fontOptions: SAMPLE_FONT_OPTIONS });
+            }),
+    };
+}
 
 // Happy-path handlers for every iframe endpoint (the story default). Because a story override replaces the
 // whole `iframe` array, spread this after a single overriding handler to change one endpoint while keeping

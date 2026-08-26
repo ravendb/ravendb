@@ -48,8 +48,9 @@ export function AppWebWidgetDefaultCustomize() {
                                 theme={defaultQuery.data.theme}
                                 defaultTheme={defaultQuery.data.theme}
                                 fontOptions={defaultQuery.data.fontOptions}
+                                canResetToBuiltIn
                                 isSaving={saveMutation.isPending}
-                                onSave={(theme) => saveMutation.mutate(theme)}
+                                onSave={(theme) => saveMutation.mutateAsync(theme)}
                             />
                         )}
 
