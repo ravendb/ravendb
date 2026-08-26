@@ -108,10 +108,7 @@ export function AppChannelDetail() {
                 its inspector and fills the rest with its preview; the Telegram tabs keep a fixed header
                 over a scrolling body), so for them this is just the bounded flex column they size against. */}
             <div
-                className={cn(
-                    "min-h-0 flex-1",
-                    isFill || isBare ? "flex flex-col" : "-mx-2 overflow-y-auto px-2 py-5",
-                )}
+                className={cn("min-h-0 flex-1", isFill || isBare ? "flex flex-col" : "-mx-2 overflow-y-auto px-2 py-5")}
             >
                 <ApiState
                     isLoading={channelsQuery.isPending || agentsQuery.isPending}

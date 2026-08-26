@@ -1,4 +1,4 @@
-import { CircleHelp } from "lucide-react";
+import { Text } from "@/components/typography";
 import { type ReactNode } from "react";
 import { type FieldPath, type FieldValues, type UseControllerProps, useController } from "react-hook-form";
 import { InfoHint } from "@/components/data/info-hint";
@@ -53,10 +53,10 @@ export function FormSegmented<TFieldValues extends FieldValues, TName extends Fi
     return (
         <div className="grid gap-2">
             <span className="flex items-center gap-1.5">
-                <span id={`${name}-label`} className="text-sm font-medium">
+                <Text as="span" id={`${name}-label`} variant="label">
                     {label}
-                </span>
-                {hint && <InfoHint content={hint} icon={CircleHelp} />}
+                </Text>
+                {hint && <InfoHint content={hint} />}
             </span>
             <div
                 role="radiogroup"

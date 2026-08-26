@@ -88,8 +88,35 @@ describe("suggestedPromptsLayout", () => {
     it("previews the form value and falls back to the saved one", () => {
         expect(toPreviewTheme({ suggestedPromptsLayout: "Inline" }, theme).suggestedPromptsLayout).toBe("Inline");
         expect(toPreviewTheme({}, theme).suggestedPromptsLayout).toBe("Stacked");
-        expect(
-            toPreviewTheme({ suggestedPromptsLayout: "Sideways" as never }, theme).suggestedPromptsLayout,
-        ).toBe("Stacked");
+        expect(toPreviewTheme({ suggestedPromptsLayout: "Sideways" as never }, theme).suggestedPromptsLayout).toBe(
+            "Stacked",
+        );
+    });
+});
+
+/** A theme stored before `logoFit` and `suggestedPromptsLayout` shipped comes back without them, and the
+ *  generated type does not admit that, so nothing coalesces them on the way into the form. */
+describe("fields missing from a stored theme", () => {
+    const stored = { ...theme } as WidgetTheme;
+    delete (stored as Partial<WidgetTheme>).logoFit;
+    delete (stored as Partial<WidgetTheme>).suggestedPromptsLayout;
+
+    it("defaults them in the form rather than failing validation", () => {
+        const values = toFormData(stored);
+        expect(values.logoFit).toBe("Contain");
+        expect(values.suggestedPromptsLayout).toBe("Stacked");
+        expect(widgetThemeSchema.safeParse(values).success).toBe(true);
+    });
+
+    it("defaults them in the preview, which falls back to that same theme", () => {
+        const preview = toPreviewTheme({}, stored);
+        expect(preview.logoFit).toBe("Contain");
+        expect(preview.suggestedPromptsLayout).toBe("Stacked");
+    });
+
+    it("saves them as the defaults", () => {
+        const output = widgetThemeSchema.parse(toFormData(stored));
+        expect(toWidgetTheme(output).logoFit).toBe("Contain");
+        expect(toWidgetTheme(output).suggestedPromptsLayout).toBe("Stacked");
     });
 });

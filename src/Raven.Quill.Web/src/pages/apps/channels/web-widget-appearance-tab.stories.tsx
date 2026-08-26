@@ -45,7 +45,7 @@ const meta = {
     },
     args: {
         slug: "demo",
-        channelId: SAMPLE_CHANNEL_ID
+        channelId: SAMPLE_CHANNEL_ID,
     },
 } satisfies Meta<typeof WebWidgetAppearanceTab>;
 

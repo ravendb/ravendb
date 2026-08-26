@@ -247,3 +247,28 @@
         display: none;
     }
 }
+
+/* react-colorful ships a 28px handle, which is wider than the inset the colour picker's area sits in,
+   so half of it was clipped whenever the colour was at a limit (fully saturated, white, hue near 0).
+   18px keeps the handle inside the inset at every position, including its 1.1 scale while dragging,
+   and small enough that it no longer overflows the 24px hue strip at all. */
+.rq-color-area .react-colorful__pointer {
+    width: 18px;
+    height: 18px;
+}
+
+/* The hue strip ships fused to the bottom of the saturation area, sharing its rounded corners. Split
+   into two separate controls: the area rounds on all four corners, the strip becomes a pill, and the
+   gap matches the popover's own 2.5 rhythm. Overriding `__last-control` needs no !important because
+   this selector carries one more class than react-colorful's own. */
+.rq-color-area .react-colorful {
+    gap: 0.625rem;
+}
+
+.rq-color-area .react-colorful__saturation {
+    border-radius: 0.5rem;
+}
+
+.rq-color-area .react-colorful__hue {
+    border-radius: 9999px;
+}

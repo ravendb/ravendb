@@ -1,4 +1,4 @@
-import { Text } from "@/components/typography";
+import { presetColorsFor } from "@/pages/apps/channels/theme-editor/color-presets";
 import { SECTION_FIELDS, type ThemeSectionProps } from "@/pages/apps/channels/theme-editor/theme-editor-fields";
 import { ThemeEditorColorRow } from "@/pages/apps/channels/theme-editor/theme-editor-color-row";
 import { ThemeEditorSection } from "@/pages/apps/channels/theme-editor/theme-editor-section";
@@ -42,12 +42,18 @@ export function ColorsSection({
     savedColors,
     defaultColors,
 }: ColorsSectionProps) {
-    // Two anchors per colour, deduplicated: a channel that has never been customised has the default
-    // saved already, and offering the same swatch twice reads like a bug. Comparison is case-insensitive
-    // so a saved "#FF775F" doesn't slip past a default "#ff775f" as a second, visually identical swatch.
+    // Two anchors first, then the curated palettes: the anchors are where this channel came from, so
+    // they stay leftmost where the eye lands. Deduplicated, because a channel that has never been
+    // customised has the default saved already, and offering the same swatch twice reads like a bug.
+    // Comparison is case-insensitive so a saved "#FF775F" doesn't slip past a default "#ff775f" as a
+    // second, visually identical swatch, and it also collapses an anchor that matches a palette.
     const presetsFor = (key: keyof WidgetThemeColors) => {
         const seen = new Set<string>();
-        return [defaultColors[previewAppearance][key], savedColors[previewAppearance][key]].filter((value) => {
+        return [
+            defaultColors[previewAppearance][key],
+            savedColors[previewAppearance][key],
+            ...presetColorsFor(previewAppearance, key),
+        ].filter((value) => {
             const normalized = value.toLowerCase();
             if (seen.has(normalized)) return false;
             seen.add(normalized);
@@ -102,7 +108,6 @@ export function ColorsSection({
                     />
                 ))}
             </div>
-            <Text variant="muted">Every other option applies to both schemes.</Text>
         </ThemeEditorSection>
     );
 }

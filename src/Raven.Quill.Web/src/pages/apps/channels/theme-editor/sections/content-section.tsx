@@ -1,4 +1,3 @@
-import { CircleHelp } from "lucide-react";
 import { InfoHint } from "@/components/data/info-hint";
 import { FormInput } from "@/components/form/form-input";
 import { FormSegmented } from "@/components/form/form-segmented";
@@ -39,6 +38,7 @@ export function ContentSection({ control, isSaving, onReset, onFocusWelcomeField
                     emptyLabel="No suggested prompts."
                     defaultValue={{ value: "" }}
                     fieldName={(index) => `suggestedPrompts.${index}.value`}
+                    maxItems={MAX_SUGGESTED_PROMPTS}
                     placeholder="Where is my order?"
                     disabled={isSaving}
                     sortable
@@ -65,10 +65,7 @@ export function ContentSection({ control, isSaving, onReset, onFocusWelcomeField
                 label={
                     <span className="flex items-center gap-1.5">
                         Disclaimer
-                        <InfoHint
-                            content="Sits as a small line under the composer. Leave it empty to hide it."
-                            icon={CircleHelp}
-                        />
+                        <InfoHint content="Sits as a small line under the composer. Leave it empty to hide it." />
                     </span>
                 }
                 placeholder="AI responses may be inaccurate."

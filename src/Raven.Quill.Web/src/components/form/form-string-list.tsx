@@ -49,6 +49,9 @@ type FormStringListProps<TFieldValues extends FieldValues, TName extends ArrayPa
     fieldName: (index: number) => FieldPath<TFieldValues>;
     itemLabel?: (index: number) => string;
     label: string;
+    /** Hard cap on rows. The add button goes disabled once reached, so the list cannot outgrow what the
+     *  schema will accept. */
+    maxItems?: number;
     placeholder?: string;
     /** Opt in: most string lists here are unordered sets, where a handle would suggest an order that
      *  carries no meaning. Turn it on only where the order is the point. */
@@ -111,6 +114,7 @@ export function FormStringList<TFieldValues extends FieldValues, TName extends A
     fieldName,
     itemLabel,
     label,
+    maxItems,
     name,
     placeholder,
     sortable = false,
@@ -133,6 +137,8 @@ export function FormStringList<TFieldValues extends FieldValues, TName extends A
     // This can change freely as rows are added or removed: it only toggles the handle inside a row that
     // is already mounted, not the wrapper element type around the whole list.
     const hasHandles = sortable && fieldArray.fields.length > 1;
+
+    const isFull = maxItems !== undefined && fieldArray.fields.length >= maxItems;
 
     // Paired with the `body[data-dnd-dragging]` rule in index.css: the grabbing cursor cannot live on the
     // handle, because dnd-kit moves the row out from under the pointer as soon as the drag starts.
@@ -197,7 +203,8 @@ export function FormStringList<TFieldValues extends FieldValues, TName extends A
                     type="button"
                     variant="outline"
                     size="sm"
-                    disabled={disabled}
+                    disabled={disabled === true || isFull}
+                    title={isFull ? `Up to ${maxItems}.` : undefined}
                     onClick={() => fieldArray.append(defaultValue)}
                 >
                     <Plus className="size-4" aria-hidden />

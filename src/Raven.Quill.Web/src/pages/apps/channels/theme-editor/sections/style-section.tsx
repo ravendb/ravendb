@@ -1,7 +1,10 @@
+import { useController } from "react-hook-form";
 import type { WidgetFontOption, WidgetTheme } from "@/api/generated/server-api";
-import { FormInput } from "@/components/form/form-input";
-import { FormSelect } from "@/components/form/form-select";
+import { FormSlider } from "@/components/form/form-slider";
 import { SECTION_FIELDS, type ThemeSectionProps } from "@/pages/apps/channels/theme-editor/theme-editor-fields";
+import { ThemeEditorFontFamilyField } from "@/pages/apps/channels/theme-editor/theme-editor-font-family-field";
+import { ThemeEditorFontSizeField } from "@/pages/apps/channels/theme-editor/theme-editor-font-size-field";
+import { ThemeEditorRadiusField } from "@/pages/apps/channels/theme-editor/theme-editor-radius-field";
 import { ThemeEditorSection } from "@/pages/apps/channels/theme-editor/theme-editor-section";
 import {
     FONT_SIZE_OPTIONS,
@@ -16,49 +19,53 @@ type StyleSectionProps = ThemeSectionProps & {
 };
 
 export function StyleSection({ control, isSaving, onReset, fontOptions, previewTheme }: StyleSectionProps) {
-    const fontSelectOptions = fontOptions.map((option) => ({ value: option.stack, label: option.label }));
-    // A hand-written stack saved earlier is not in the curated list; offer it so the select can show it.
-    const hasCuratedFont = fontSelectOptions.some((option) => option.value === previewTheme.fontFamily);
+    const customFontSize = useController({ control, name: "customFontSizeRem" });
+    // A hand-written stack saved earlier is not in the curated list; offer it so the field can show it.
+    const hasCuratedFont = fontOptions.some((option) => option.stack === previewTheme.fontFamily);
+    const fontChoices = hasCuratedFont
+        ? fontOptions
+        : [...fontOptions, { stack: previewTheme.fontFamily, label: "Custom" }];
 
     return (
         <ThemeEditorSection title="Style" control={control} paths={SECTION_FIELDS.style} onReset={onReset}>
-            <FormSelect
+            <ThemeEditorRadiusField
                 control={control}
                 name="radius"
                 label="Radius"
-                description="Rounds the corners inside the widget - message bubbles, code blocks, the composer and the prompt pills."
                 options={RADIUS_OPTIONS}
                 disabled={isSaving}
             />
-            <FormSelect
+            <ThemeEditorFontFamilyField
                 control={control}
                 name="fontFamily"
                 label="Font"
-                options={
-                    hasCuratedFont
-                        ? fontSelectOptions
-                        : [...fontSelectOptions, { value: previewTheme.fontFamily, label: "Custom" }]
-                }
+                options={fontChoices}
                 disabled={isSaving}
             />
-            <FormSelect
+            <ThemeEditorFontSizeField
                 control={control}
                 name="fontSize"
                 label="Font size"
                 options={FONT_SIZE_OPTIONS}
+                // Custom starts from the standard size instead of from nothing: a slider's thumb has to
+                // sit somewhere, so an unset value would only ever surface as an error on save.
+                onValueChange={(next) => {
+                    if (next === "Custom" && customFontSize.field.value === null) customFontSize.field.onChange(1);
+                }}
                 disabled={isSaving}
             />
             {previewTheme.fontSize === "Custom" && (
-                <FormInput
+                <FormSlider
                     control={control}
                     name="customFontSizeRem"
-                    label="Custom font size (rem)"
-                    type="number"
-                    step="0.025"
+                    label="Custom font size"
                     min={MIN_CUSTOM_FONT_SIZE_REM}
                     max={MAX_CUSTOM_FONT_SIZE_REM}
-                    placeholder="1"
-                    description={`1 is the standard size; ${MIN_CUSTOM_FONT_SIZE_REM}-${MAX_CUSTOM_FONT_SIZE_REM}.`}
+                    // A sixteenth of a rem: fine enough to tune by, coarse enough that the stops stay
+                    // countable on the rail, and it lands exactly on 1 - the standard size.
+                    step={0.0625}
+                    fallback={1}
+                    format={(value) => `${value.toFixed(3).replace(/0+$/, "").replace(/\.$/, "")} rem`}
                     disabled={isSaving}
                 />
             )}
