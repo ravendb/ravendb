@@ -115,12 +115,7 @@ internal sealed class PurgeConversationSnapshotsCommand : MergedTransactionComma
 
         foreach (string changeVector in changeVectorsToDelete)
         {
-            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, documentId, out var loweredKey))
-            using (Slice.From(context.Allocator, changeVector, out var cvSlice))
-            {
-                _database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, loweredKey, collection,
-                    changeVector, lastModifiedTicks, cvSlice, fromReplication: false);
-            }
+            _database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, documentId, collection, changeVector, lastModifiedTicks);
         }
     }
 

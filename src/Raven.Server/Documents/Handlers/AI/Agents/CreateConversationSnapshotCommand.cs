@@ -20,6 +20,7 @@ internal sealed class CreateConversationSnapshotCommand : MergedTransactionComma
 
     public string SnapshotToken { get; private set; }
     public DateTime CreatedAt { get; private set; }
+    public string RootChangeVector { get; private set; }
 
     public CreateConversationSnapshotCommand(DocumentDatabase database, string conversationId)
     {
@@ -41,6 +42,7 @@ internal sealed class CreateConversationSnapshotCommand : MergedTransactionComma
 
         using var rootRevision = _database.DocumentsStorage.RevisionsStorage.GetRevision(context, rootCv);
         CreatedAt = rootRevision?.LastModified ?? _database.Time.GetUtcNow();
+        RootChangeVector = rootCv;
 
         SnapshotToken = SnapshotTokenDto.Build(context, _conversationId, CreatedAt, revisions);
         return 1;

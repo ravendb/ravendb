@@ -317,7 +317,6 @@ internal sealed class ForkConversationCommand : MergedTransactionCommand<Documen
         // Adjust OpenActionCalls — entries with SubConversationId need their IDs updated
         if (data.TryGet(nameof(ConversationDocument.OpenActionCalls), out BlittableJsonReaderObject openCalls) && openCalls != null && openCalls.Count > 0)
         {
-            var adjustedCalls = new DynamicJsonValue(openCalls);
             bool callsModified = false;
 
             foreach (var callId in openCalls.GetPropertyNames())
@@ -329,9 +328,13 @@ internal sealed class ForkConversationCommand : MergedTransactionCommand<Documen
                     var adjustedSubConvId = AdjustId(subConvId, sourcePrefix, targetPrefix);
                     if (adjustedSubConvId != subConvId)
                     {
-                        var adjustedCall = new DynamicJsonValue(callObj);
-                        adjustedCall["SubConversationId"] = adjustedSubConvId;
-                        adjustedCalls[callId] = adjustedCall;
+                        // Modify the child blittable in place and store it in the parent, since nesting a source-backed DynamicJsonValue is invalid.
+                        callObj.Modifications = new DynamicJsonValue(callObj)
+                        {
+                            ["SubConversationId"] = adjustedSubConvId
+                        };
+                        openCalls.Modifications ??= new DynamicJsonValue(openCalls);
+                        openCalls.Modifications[callId] = callObj;
                         callsModified = true;
                     }
                 }
@@ -339,7 +342,7 @@ internal sealed class ForkConversationCommand : MergedTransactionCommand<Documen
 
             if (callsModified)
             {
-                data.Modifications[nameof(ConversationDocument.OpenActionCalls)] = adjustedCalls;
+                data.Modifications[nameof(ConversationDocument.OpenActionCalls)] = openCalls;
                 modified = true;
             }
         }
@@ -358,10 +361,16 @@ internal sealed class ForkConversationCommand : MergedTransactionCommand<Documen
         if (data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false || metadata == null)
             return data;
 
+        // Set modifications on the metadata blittable and place the blittable itself in the parent.
+        // Nesting a DynamicJsonValue that carries a source as a value is invalid (asserted in
+        // ObjectJsonParser) — only a blittable's own .Modifications may carry a source.
+        metadata.Modifications = new DynamicJsonValue(metadata)
+        {
+            [Constants.Documents.Metadata.Expires] = now.Add(expires.Value)
+        };
+
         data.Modifications ??= new DynamicJsonValue(data);
-        var metadataMod = new DynamicJsonValue(metadata);
-        metadataMod[Constants.Documents.Metadata.Expires] = now.Add(expires.Value);
-        data.Modifications[Constants.Documents.Metadata.Key] = metadataMod;
+        data.Modifications[Constants.Documents.Metadata.Key] = metadata;
 
         return context.ReadObject(data, "refreshed-expiration");
     }
