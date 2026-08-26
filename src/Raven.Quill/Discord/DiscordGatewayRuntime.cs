@@ -10,6 +10,8 @@ namespace Raven.Quill.Discord;
 internal sealed class DiscordGatewayRuntime
 {
     private const int DirectMessagesIntent = 1 << 12;
+    private const int DefaultMessageType = 0;
+    private const int ReplyMessageType = 19;
     private const int AttemptsBeforeSessionReset = 3;
 
     private static readonly TimeSpan MinBackoff = TimeSpan.FromSeconds(1);
@@ -310,14 +312,13 @@ internal sealed class DiscordGatewayRuntime
         if (string.IsNullOrEmpty(message.ChannelId))
             return;
 
-        var content = message.Content ?? "";
-        var kind = content.Trim().Length > 0
-            ? "text"
-            : message.Attachments is { Length: > 0 }
-                ? "unsupported"
-                : null;
-        if (kind is null)
+        if (message.Type is not (DefaultMessageType or ReplyMessageType))
             return;
+
+        var content = message.Content ?? "";
+        var kind = message.Attachments is { Length: > 0 } || content.Trim().Length == 0
+            ? "unsupported"
+            : "text";
 
         _health.RecordInbound(_database, _shortChannelId);
         _processor.Enqueue(

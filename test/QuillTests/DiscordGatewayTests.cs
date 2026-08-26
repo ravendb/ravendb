@@ -148,6 +148,53 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Dms_that_carry_both_text_and_an_attachment_get_the_unsupported_kind_reply()
+    {
+        await using var app = await NewAppAsync();
+        await NewChannelAsync(app);
+
+        await Discord.DispatchDmAsync(
+            "msg-file-text", DmChannel, Sender, "here's the error I'm getting", withAttachment: true);
+
+        await Discord.WaitUntilAsync(
+            () => Discord.SentMessages.Any(m => m.Content == DiscordInboundProcessor.UnsupportedKindReply),
+            "the unsupported-kind reply");
+        Assert.Empty(Router.Requests);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Sticker_dms_get_the_unsupported_kind_reply_and_land_in_health()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+
+        await Discord.DispatchDmAsync("msg-sticker", DmChannel, Sender, "");
+
+        await Discord.WaitUntilAsync(
+            () => Discord.SentMessages.Any(m => m.Content == DiscordInboundProcessor.UnsupportedKindReply),
+            "the unsupported-kind reply");
+        Assert.Empty(Router.Requests);
+
+        var health = await QuillHttp.GetAsync<DiscordChannelHealthResponse[]>(
+            Host.Client, QuillRoutes.DiscordHealth(app.Slug));
+        Assert.NotNull(health.Single(r => r.ChannelId == channel.ChannelId).LastInboundAt);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Dm_system_messages_are_ignored()
+    {
+        await using var app = await NewAppAsync();
+        await NewChannelAsync(app);
+        await Discord.WaitUntilConnectedAsync();
+
+        await Discord.DispatchDmAsync("msg-call", DmChannel, Sender, "", messageType: 3);
+
+        await Task.Delay(400);
+        Assert.Empty(Router.Requests);
+        Assert.Empty(Discord.SentMessages);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Replies_suppress_mentions_so_agent_text_cannot_ping_a_server()
     {
         await using var app = await NewAppAsync();

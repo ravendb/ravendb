@@ -165,7 +165,8 @@ public sealed class MockDiscordApi : IAsyncDisposable
 
     public async Task DispatchDmAsync(
         string messageId, string channelId, string authorId, string content,
-        string authorUsername = "dana", bool fromBot = false, string? guildId = null, bool withAttachment = false)
+        string authorUsername = "dana", bool fromBot = false, string? guildId = null, bool withAttachment = false,
+        int messageType = 0)
     {
         await WaitUntilConnectedAsync();
         var session = ReadySession ?? throw new InvalidOperationException("MockDiscordApi: the session went away.");
@@ -178,6 +179,7 @@ public sealed class MockDiscordApi : IAsyncDisposable
         {
             ["id"] = messageId,
             ["channel_id"] = channelId,
+            ["type"] = messageType,
             ["content"] = content,
             ["author"] = author,
             ["attachments"] = withAttachment
