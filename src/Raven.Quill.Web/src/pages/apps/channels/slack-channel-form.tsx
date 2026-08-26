@@ -13,8 +13,10 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Heading, Text } from "@/components/typography";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { SheetClose, SheetFooter } from "@/components/shadcn/ui/sheet";
+import { Separator } from "@/components/shadcn/ui/separator";
 import { ApiState } from "@/components/data/api-state";
-import { CopyableCode } from "@/components/data/copyable-code";
+import { CodeBlockTabs } from "@/components/data/code-block-tabs";
+import { NumberedSteps } from "@/components/data/numbered-steps";
 import { FormInput } from "@/components/form/form-input";
 import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
 import { ParameterBindingFields } from "@/pages/apps/channels/parameter-binding-fields";
@@ -32,6 +34,7 @@ import {
     SLACK_SOURCE_VALUES,
     slackParameterSourceHint,
 } from "@/pages/apps/channels/slack-parameter-sources";
+import { SlackConnectionCard } from "@/pages/apps/channels/slack-connection-card";
 import { SlackWebhookPanel } from "@/pages/apps/channels/slack-webhook-panel";
 import type { FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
 
@@ -152,6 +155,13 @@ function LoadedSlackChannelForm({
         return (
             <div className="flex min-h-0 flex-1 flex-col">
                 <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
+                    <div className="space-y-1">
+                        <Heading as="h3" variant="subsection">
+                            Bot connected
+                        </Heading>
+                        <Text variant="muted">Now finish the event subscription so Slack delivers messages to it.</Text>
+                    </div>
+                    <SlackConnectionCard slug={slug} channelId={createdChannelId} />
                     <SlackWebhookPanel slug={slug} channelId={createdChannelId} />
                 </div>
                 <SheetFooter className="flex-row justify-end border-t">
@@ -197,30 +207,62 @@ function LoadedSlackChannelForm({
                                     aria-hidden="true"
                                 />
                             </CollapsibleTrigger>
-                            <CollapsibleContent className="grid gap-2">
-                                <ol className="list-decimal space-y-1.5 ps-5 text-xs text-muted-foreground">
-                                    <li>
-                                        At{" "}
-                                        <a
-                                            href="https://api.slack.com/apps"
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="underline"
-                                        >
-                                            api.slack.com/apps
-                                        </a>
-                                        , choose{" "}
-                                        <span className="font-medium">Create New App &gt; From a manifest</span> and
-                                        paste:
-                                    </li>
-                                </ol>
-                                <CopyableCode code={SLACK_APP_MANIFEST} copyLabel="Copy app manifest" />
-                                <Text variant="caption">
-                                    Then <span className="font-medium">Install to Workspace</span>. The bot token is on
-                                    the OAuth &amp; Permissions page, the signing secret under Basic Information.
-                                </Text>
+                            <CollapsibleContent>
+                                <NumberedSteps
+                                    size="sm"
+                                    steps={[
+                                        {
+                                            title: "Create the app from this manifest",
+                                            content: (
+                                                <div className="space-y-2">
+                                                    <Text variant="caption">
+                                                        At{" "}
+                                                        <a
+                                                            href="https://api.slack.com/apps"
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="underline"
+                                                        >
+                                                            api.slack.com/apps
+                                                        </a>
+                                                        , choose{" "}
+                                                        <span className="font-medium">
+                                                            Create New App &gt; From a manifest
+                                                        </span>{" "}
+                                                        and paste:
+                                                    </Text>
+                                                    <CodeBlockTabs
+                                                        tabs={[
+                                                            {
+                                                                value: "manifest",
+                                                                label: "Manifest (YAML)",
+                                                                code: SLACK_APP_MANIFEST,
+                                                                language: "yaml",
+                                                            },
+                                                        ]}
+                                                        value="manifest"
+                                                        copyLabel="Copy app manifest"
+                                                    />
+                                                </div>
+                                            ),
+                                        },
+                                        {
+                                            title: "Install it and copy the credentials",
+                                            content: (
+                                                <Text variant="caption">
+                                                    <span className="font-medium">Install to Workspace</span>. The bot
+                                                    token is on the OAuth &amp; Permissions page, the signing secret
+                                                    under Basic Information.
+                                                </Text>
+                                            ),
+                                        },
+                                    ]}
+                                />
                             </CollapsibleContent>
                         </Collapsible>
+
+                        <Separator />
+
                         {!agent && (
                             <FormSelect
                                 control={form.control}

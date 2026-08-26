@@ -1,6 +1,18 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ComponentType } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bot, CodeXml, Fingerprint, Globe, MessageCircle, Pause, Pencil, Play, Send, Trash2 } from "lucide-react";
+import {
+    Bot,
+    Building2,
+    CodeXml,
+    Fingerprint,
+    Globe,
+    MessageCircle,
+    Pause,
+    Pencil,
+    Play,
+    Send,
+    Trash2,
+} from "lucide-react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { api } from "@/api/api";
@@ -219,6 +231,11 @@ function ChannelMeta({ channel, agent }: { channel: ChannelSummaryResponse; agen
             {agent?.name && (
                 <DetailHeaderMetaItem icon={Bot} tooltip="Agent">
                     {agent.name}
+                </DetailHeaderMetaItem>
+            )}
+            {channel.slack?.teamName && (
+                <DetailHeaderMetaItem icon={Building2} tooltip="Slack workspace">
+                    {channel.slack.teamName}
                 </DetailHeaderMetaItem>
             )}
             {allowedOrigins.length > 0 && (
