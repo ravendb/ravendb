@@ -21,8 +21,8 @@ export function ChatWidgetAppearanceTab({ slug, channelId }: { slug: string; cha
     return (
         <div className="grid gap-5">
             <Text variant="muted">
-                Choose how this chat widget looks and reads. Pick an accent color and the rest of the palette is derived
-                from it, so light and dark both stay coherent.
+                Choose how this chat widget looks and reads. Every change previews live, and nothing reaches visitors
+                until you save.
             </Text>
 
             <ApiState
@@ -40,7 +40,7 @@ export function ChatWidgetAppearanceTab({ slug, channelId }: { slug: string; cha
                         fontOptions={themeQuery.data.fontOptions}
                         canFollowAppDefault
                         isSaving={saveMutation.isPending}
-                        onSave={(theme) => saveMutation.mutate(theme)}
+                        onSave={(theme) => saveMutation.mutateAsync(theme)}
                     />
                 )}
             </ApiState>
