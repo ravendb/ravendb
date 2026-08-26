@@ -32,6 +32,7 @@ namespace FastTests.Issues
             nameof(StorageEnvironmentOptions.MaxUnsyncedBytesBeforeMandatorySync),
             nameof(StorageEnvironmentOptions.MaxConcurrentJournalWrites),
             nameof(StorageEnvironmentOptions.PipelineJournalWritesAboveLatencyInTicks),
+            nameof(StorageEnvironmentOptions.ConsolidationTargetWriteSizeInBytes),
             nameof(StorageEnvironmentOptions.SyncWritebackBlockSizeInMb),
             nameof(StorageEnvironmentOptions.SyncWritebackMinContiguousSizeInKb),
             nameof(StorageEnvironmentOptions.SyncWritebackBarrierCostThresholdInMs),

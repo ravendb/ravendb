@@ -60,8 +60,6 @@ namespace Voron.Impl.Journal
             public JournalStateRecord JournalStateRecord => new JournalStateRecord(Transaction, Tcs, Entry);
         }
 
-        private const int FastDeviceCompressTxAboveSizeInBytes = 512 * Constants.Size.Kilobyte;
-
         private long _currentJournalFileSize;
         private DateTime _lastFile;
 
@@ -314,29 +312,10 @@ namespace Voron.Impl.Journal
         
         public bool HasBranchCommits => SharedJournalState.HasBranchCommits;
 
-        internal int MaxConcurrentJournalWrites => _writePipeline.MaxConcurrentWrites;
+        internal JournalCompressionAlgorithm ResolveJournalCompressionAlgorithm() =>
+            _env.WriteFlow.ResolveJournalCompressionAlgorithm(_env.Options.JournalCompressionAlgorithm);
 
-        internal bool ShouldPipelineJournalNow => _writePipeline.ShouldPipelineNow;
-
-        internal bool IsCommitLatencyBound => _writePipeline.IsCommitLatencyBound;
-
-        public long WriteLatencyEwmaTicks => _writePipeline.WriteLatencyEwmaTicks;
-
-        public bool IsJournalWriteActive => _writePipeline.JournalWriteRecentlyActive;
-
-        public bool IsMeasuredFastDevice => _writePipeline.IsMeasuredFastDevice;
-
-        internal JournalCompressionAlgorithm ResolveJournalCompressionAlgorithm()
-        {
-            var configured = _env.Options.JournalCompressionAlgorithm;
-            if (configured != JournalCompressionAlgorithm.Auto)
-                return configured; // pinned by the user, in either direction
-
-            // Zstd is 400MB/sec vs. LZ4 1.5GB/sec. It pays to pay for Zstd if the device is constrained.
-            return _writePipeline.MeasuredDeviceClass == JournalWritePipeline.DeviceClass.Budgeted
-                ? JournalCompressionAlgorithm.Zstd
-                : JournalCompressionAlgorithm.Lz4;
-        }
+        public bool IsJournalWriteActive => _writePipeline.HasInFlightWrites;
 
         private JournalFile NextFile(long numberOf4Kbs)
         {
@@ -1402,7 +1381,7 @@ namespace Voron.Impl.Journal
                 if (options.RootJournal != null)
                     return; // non-root (shared-journal) environments never trickle
 
-                var gate = options.WritebackGate;
+                var gate = options.DeviceWriteBudget;
                 if (gate != null && gate.ShouldDrain())
                     return; // drain mode - the sync owns the writeback now
 
@@ -1603,7 +1582,7 @@ namespace Voron.Impl.Journal
                     var currentStateRecord = parent._waj._env.CurrentStateRecord;
                     var dataPagerState = currentStateRecord.DataPagerState;
                     var options = parent._waj._env.Options;
-                    var gate = options.SyncWritebackBlockSizeInMb > 0 ? options.WritebackGate : null;
+                    var gate = options.SyncWritebackBlockSizeInMb > 0 ? options.DeviceWriteBudget : null;
 
                     // In trickle mode, we already initiated the writeback, so we don't need to do it again here. 
                     // In drain mode, we drain first to avoid big I/O hitting all at once, causing congestion.
@@ -2527,7 +2506,7 @@ namespace Voron.Impl.Journal
 
             tx._forTestingPurposes?.ActionToCallJustBeforeWritingToJournal?.Invoke();
 
-            if (tx.IsAsyncCommit && _writePipeline.CanPipeline(totalNumberOf4Kbs))
+            if (tx.IsAsyncCommit && _env.WriteFlow.CanPipeline(totalNumberOf4Kbs))
                 _writePipeline.SubmitPipelined(CurrentFile, writePosIn4Kbs, entries, totalNumberOf4Kbs, _acksForCurrentWrite);
             else
                 _writePipeline.WriteInline(CurrentFile, writePosIn4Kbs, entries, totalNumberOf4Kbs, _acksForCurrentWrite);
@@ -2777,9 +2756,7 @@ namespace Voron.Impl.Journal
 
             // We want to do compression when the size of the data to store is bigger than the threshold.
             // On NVMe devices, writing the full data to disk is _faster_ than compressing it first.
-            var compressTxAboveSizeInBytes = _env.Options.CompressTxAboveSizeInBytes;
-            if (_writePipeline.IsMeasuredFastDevice)
-                compressTxAboveSizeInBytes = Math.Max(compressTxAboveSizeInBytes, FastDeviceCompressTxAboveSizeInBytes);
+            var compressTxAboveSizeInBytes = _env.WriteFlow.GetCompressTxAboveSizeInBytes(_env.Options.CompressTxAboveSizeInBytes);
             var performCompression = totalSizeWritten > compressTxAboveSizeInBytes;
             var compressionAlgorithm = ResolveJournalCompressionAlgorithm();
             if (performCompression)

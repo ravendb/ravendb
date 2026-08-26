@@ -155,6 +155,7 @@ namespace Voron
                 SelfReference.WeekReference = new WeakReference<StorageEnvironment>(this);
                 _log = RavenLogManager.Instance.GetLoggerForVoron<StorageEnvironment>(options, options.BasePath.FullPath);
                 _options = options;
+                WriteFlow = new WriteFlowPolicy(options);
                 ScratchPagesTable = new ScratchPagesTable(ActiveTransactions);
                 (_dataPager, var dataPagerState) = options.InitializeDataPager();
                 _freeSpaceHandling = new FreeSpaceHandling(options.DisableSparseRegions);
@@ -1554,16 +1555,8 @@ namespace Voron
             }
         }
 
-        internal volatile bool BatchConsolidationActive;
+        public WriteFlowPolicy WriteFlow { get; }
 
-        internal bool ShouldDelaySyncToConsolidateWrites()
-        {
-            var options = Options;
-            if (options.SyncWritebackBlockSizeInMb <= 0 || options.RunningOn32Bits)
-                return false;
-
-            return _journal.Applicator.TotalWrittenButUnsyncedBytes <= options.MaxUnsyncedBytesBeforeMandatorySync;
-        }
 
         internal void BackgroundFlushWritesToDataFile()
         {
