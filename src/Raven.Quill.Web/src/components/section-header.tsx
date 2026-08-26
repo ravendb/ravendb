@@ -6,11 +6,8 @@ import { Heading, Text } from "@/components/typography";
 // `variant` independently from the Heading grid. Folds the title + description pairing so the two
 // can't drift apart between call sites (the same role always renders the same size).
 const LEVELS = {
-    page: { as: "h1", variant: "page" },
     section: { as: "h2", variant: "section" },
     subsection: { as: "h3", variant: "subsection" },
-    // Compact card-item / eyebrow header: semantically an h2, visually small.
-    item: { as: "h2", variant: "label" },
 } as const;
 
 type Level = keyof typeof LEVELS;
