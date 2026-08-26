@@ -38,8 +38,6 @@ public static class AssistantEndpoints
     private static async Task<IResult> CheckConsentAsync(IAiHelperClient aiClient, CancellationToken ct) =>
         ToConsentResult(await aiClient.CheckConsentAsync(ct));
 
-    // Consent is the operator's to give: this runs only because they accepted the AI service's terms in
-    // the assistant panel, and nothing else in Quill grants it for them.
     private static async Task<IResult> GiveConsentAsync(
         IAiHelperClient aiClient,
         ILogger<AssistantLogger> logger,

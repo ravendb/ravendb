@@ -88,6 +88,9 @@ public sealed class MockQuillServices : IAsyncDisposable
     /// When set, check-consent answers this instead of reporting whether the gate is open.
     public (int Status, string Body)? CheckConsentResponse { get; set; }
 
+    /// When true, a successful give-consent does NOT open the assist gate — simulates propagation lag.
+    public bool ConsentGrantHasNoEffect { get; set; }
+
     public int GiveConsentCallCount { get; private set; }
 
     // ---- /hook — a customer's action webhook ----
@@ -203,6 +206,7 @@ public sealed class MockQuillServices : IAsyncDisposable
         RequireConsentForAssist = false;
         GiveConsentResponse = (200, "{\"Status\":\"Success\"}");
         CheckConsentResponse = null;
+        ConsentGrantHasNoEffect = false;
         GiveConsentCallCount = 0;
         _consentGiven = false;
 
@@ -279,12 +283,12 @@ public sealed class MockQuillServices : IAsyncDisposable
                 : Results.Content("{\"Status\":\"Success\"}", "application/json");
         });
 
-        // the appliance posts here once an operator accepted the terms; a 200 opens the gate
+        // the appliance posts here after a ConsentRequired, then retries assist; a 200 opens the gate
         app.MapPost("/assistant/give-consent", () =>
         {
             GiveConsentCallCount++;
             var (status, body) = GiveConsentResponse;
-            if (status is >= 200 and < 300)
+            if (status is >= 200 and < 300 && ConsentGrantHasNoEffect == false)
                 _consentGiven = true;
             return Results.Content(body, "application/json", statusCode: status);
         });
