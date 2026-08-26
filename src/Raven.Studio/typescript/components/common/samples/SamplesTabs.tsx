@@ -52,7 +52,7 @@ export default function SamplesTabs({ tabs, onSelect, onClose }: SamplesTabsProp
                         <Button
                             variant="link"
                             size="sm"
-                            className="ms-auto p-1 text-reset samples-close"
+                            className="ms-auto p-0 text-reset samples-close"
                             title="Close"
                             onClick={onClose}
                         >

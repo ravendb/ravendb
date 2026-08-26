@@ -4,12 +4,9 @@ import { AnimatePresence, motion } from "motion/react";
 import { Icon } from "components/common/Icon";
 import SamplesTabs from "components/common/samples/SamplesTabs";
 import { SamplesTab } from "components/common/samples/partials/samplesTypes";
-import { ConfirmOptions } from "components/common/ConfirmDialog";
 
 export interface AceEditorSamplesPanelConfig {
     tabs: SamplesTab[];
-    isOpen?: boolean;
-    onToggle?: () => void;
 }
 
 interface AceEditorSamplesToggleActionProps {
@@ -22,22 +19,6 @@ export function AceEditorSamplesToggleAction({ onClick }: AceEditorSamplesToggle
             <Icon icon="help" margin="m-0" />
         </Button>
     );
-}
-
-export async function confirmSampleLoad(
-    confirm: (options: ConfirmOptions) => Promise<boolean>,
-    currentEditorValue: string
-): Promise<boolean> {
-    if (!currentEditorValue?.trim() || !confirm) {
-        return true;
-    }
-
-    return confirm({
-        title: "Load sample into the editor?",
-        message: "The current editor content will be replaced.",
-        actionColor: "warning",
-        confirmText: "Load",
-    });
 }
 
 interface AceEditorSamplesPanelProps {
