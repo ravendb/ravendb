@@ -28,6 +28,7 @@ public sealed class MockDiscordApi : IAsyncDisposable
     private readonly List<string> _identityCalls = [];
 
     private int _heartbeats;
+    private int _connects;
     private int _nextMessageId = 1;
     private int _nextSessionId = 1;
     private GatewaySession? _session;
@@ -67,6 +68,8 @@ public sealed class MockDiscordApi : IAsyncDisposable
     public bool InvalidateResume { get; set; }
 
     public int? CloseOnConnect { get; set; }
+
+    public bool StallBeforeHello { get; set; }
 
     public int? CloseAfterIdentify { get; set; }
 
@@ -108,6 +111,8 @@ public sealed class MockDiscordApi : IAsyncDisposable
 
     public int Heartbeats => Volatile.Read(ref _heartbeats);
 
+    public int Connects => Volatile.Read(ref _connects);
+
     public bool IsConnected => ReadySession is not null;
 
     public string? CurrentSessionId => ReadySession?.SessionId;
@@ -136,12 +141,14 @@ public sealed class MockDiscordApi : IAsyncDisposable
         session?.Socket.Abort();
 
         Volatile.Write(ref _heartbeats, 0);
+        Volatile.Write(ref _connects, 0);
         Down = false;
         SendErrorStatus = null;
         NextEditRateLimit429 = false;
         SuppressHeartbeatAck = false;
         InvalidateResume = false;
         CloseOnConnect = null;
+        StallBeforeHello = false;
         CloseAfterIdentify = null;
         CloseAfterResume = null;
         HeartbeatIntervalMs = 30_000;
@@ -270,6 +277,7 @@ public sealed class MockDiscordApi : IAsyncDisposable
         }
 
         using var socket = await ctx.WebSockets.AcceptWebSocketAsync();
+        Interlocked.Increment(ref _connects);
 
         string sessionId;
         lock (_lock)
@@ -301,6 +309,12 @@ public sealed class MockDiscordApi : IAsyncDisposable
         if (CloseOnConnect is { } forced)
         {
             await CloseAsync(session, forced);
+            return;
+        }
+
+        if (StallBeforeHello)
+        {
+            await Task.Delay(Timeout.Infinite, ct);
             return;
         }
 

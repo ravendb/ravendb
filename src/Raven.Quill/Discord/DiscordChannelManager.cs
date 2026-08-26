@@ -111,7 +111,8 @@ internal sealed class DiscordChannelManager(
             if (unreadable.Contains(key.Database))
                 continue;
 
-            if (desired.TryGetValue(key, out var current) && runtime.ChannelChangeVector == current.ChangeVector)
+            if (desired.TryGetValue(key, out var current) && runtime.ChannelChangeVector == current.ChangeVector &&
+                IsRestartDue(runtime) == false)
                 continue;
 
             if (_runtimes.TryRemove(key, out _) == false)
@@ -160,6 +161,10 @@ internal sealed class DiscordChannelManager(
                 key.ChannelId, entry.Channel.Discord!.BotUserId, key.Database);
         }
     }
+
+    private bool IsRestartDue(DiscordGatewayRuntime runtime) =>
+        runtime.ExitedAt is { } exitedAt &&
+        DateTime.UtcNow - exitedAt >= options.Value.Discord.GatewayRestartDelay;
 
     public override async Task StopAsync(CancellationToken cancellationToken)
     {

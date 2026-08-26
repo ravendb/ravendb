@@ -323,6 +323,73 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
         Assert.Equal(identifiesAfterFatal, Discord.Identifies.Count);
     }
 
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_gateway_that_never_sends_hello_times_out_and_the_runtime_retries()
+    {
+        await using var app = await NewAppAsync();
+        Discord.StallBeforeHello = true;
+        var channel = await NewChannelAsync(app);
+
+        await Discord.WaitUntilAsync(
+            async () =>
+            {
+                var rows = await QuillHttp.GetAsync<DiscordChannelHealthResponse[]>(
+                    Host.Client, QuillRoutes.DiscordHealth(app.Slug));
+                return rows.Single(r => r.ChannelId == channel.ChannelId).LastGatewayError is not null;
+            },
+            "the recorded handshake timeout");
+
+        var health = await QuillHttp.GetAsync<DiscordChannelHealthResponse[]>(
+            Host.Client, QuillRoutes.DiscordHealth(app.Slug));
+        Assert.Contains("hello frame", health.Single(r => r.ChannelId == channel.ChannelId).LastGatewayError);
+
+        Discord.StallBeforeHello = false;
+        await Discord.WaitUntilConnectedAsync();
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Repeated_failures_before_the_first_frame_drop_the_cached_session()
+    {
+        await using var app = await NewAppAsync();
+        await NewChannelAsync(app);
+        await Discord.WaitUntilConnectedAsync();
+
+        var connectsBefore = Discord.Connects;
+        Discord.CloseOnConnect = 1000;
+        await Discord.RequestReconnectAsync();
+
+        await Discord.WaitUntilAsync(
+            () => Discord.Connects >= connectsBefore + 4, "the attempts that never reach a frame");
+        Discord.CloseOnConnect = null;
+
+        await Discord.WaitUntilAsync(
+            () => Discord.Identifies.Count >= 2, "a fresh identify once the cached session is dropped");
+        await Discord.WaitUntilConnectedAsync();
+        Assert.Empty(Discord.Resumes);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_fatally_stopped_gateway_reconnects_once_the_intent_is_enabled()
+    {
+        await using var app = await NewAppAsync();
+        Discord.CloseAfterIdentify = 4014;
+        var channel = await NewChannelAsync(app);
+
+        await Discord.WaitUntilAsync(
+            async () =>
+            {
+                var rows = await QuillHttp.GetAsync<DiscordChannelHealthResponse[]>(
+                    Host.Client, QuillRoutes.DiscordHealth(app.Slug));
+                return rows.Single(r => r.ChannelId == channel.ChannelId).LastGatewayError is not null;
+            },
+            "the recorded gateway error");
+
+        Discord.CloseAfterIdentify = null;
+
+        await Discord.WaitUntilConnectedAsync(TimeSpan.FromSeconds(30));
+        Assert.True(Discord.Identifies.Count >= 2, "the stopped runtime must be restarted, not left dead");
+    }
+
     private sealed record ProvisionedChannel(
         string ChannelId, string BotToken, string ApplicationId, string BotUserId);
 

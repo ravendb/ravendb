@@ -10,6 +10,7 @@ namespace Raven.Quill.Discord;
 internal sealed class DiscordGatewayRuntime
 {
     private const int DirectMessagesIntent = 1 << 12;
+    private const int AttemptsBeforeSessionReset = 3;
 
     private static readonly TimeSpan MinBackoff = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan StopTimeout = TimeSpan.FromSeconds(10);
@@ -35,7 +36,9 @@ internal sealed class DiscordGatewayRuntime
     private Task _run = Task.CompletedTask;
     private TimeSpan _backoff = MinBackoff;
     private long _seq = -1;
+    private long _exitedAtTicks;
     private int _awaitingAck;
+    private int _attemptsSinceConnected;
     private string? _sessionId;
     private string? _resumeUrl;
 
@@ -58,6 +61,15 @@ internal sealed class DiscordGatewayRuntime
     }
 
     public string? ChannelChangeVector { get; }
+
+    public DateTime? ExitedAt
+    {
+        get
+        {
+            var ticks = Interlocked.Read(ref _exitedAtTicks);
+            return ticks == 0 ? null : new DateTime(ticks, DateTimeKind.Utc);
+        }
+    }
 
     public static DiscordGatewayRuntime Start(
         string database, Channel channel, string? channelChangeVector, DiscordInboundProcessor processor,
@@ -92,6 +104,18 @@ internal sealed class DiscordGatewayRuntime
 
     private async Task RunAsync()
     {
+        try
+        {
+            await ReconnectLoopAsync();
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _exitedAtTicks, DateTime.UtcNow.Ticks);
+        }
+    }
+
+    private async Task ReconnectLoopAsync()
+    {
         while (_cts.IsCancellationRequested == false)
         {
             string? fatal;
@@ -123,6 +147,14 @@ internal sealed class DiscordGatewayRuntime
                 return;
             }
 
+            if (++_attemptsSinceConnected >= AttemptsBeforeSessionReset && _sessionId is not null)
+            {
+                _logger.LogWarning(
+                    "Discord gateway for channel {ChannelId} dropped its cached session after {Attempts} " +
+                    "attempts that never connected", _shortChannelId, _attemptsSinceConnected);
+                ForgetSession();
+            }
+
             try
             {
                 await Task.Delay(_backoff, _cts.Token);
@@ -143,14 +175,13 @@ internal sealed class DiscordGatewayRuntime
         var url = resuming ? _resumeUrl! : await DiscoverGatewayUrlAsync();
 
         using var socket = new ClientWebSocket();
-        await socket.ConnectAsync(GatewayUri(url), _cts.Token);
+        _frameBuffer.SetLength(0);
+
+        var hello = await HandshakeAsync(socket, url);
 
         using var connection = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
         var ct = connection.Token;
 
-        _frameBuffer.SetLength(0);
-
-        var hello = await ReceiveFrameAsync(socket, ct);
         if (hello is null)
             return OnClosed(socket.CloseStatus);
 
@@ -216,6 +247,24 @@ internal sealed class DiscordGatewayRuntime
         }
     }
 
+    private async Task<DiscordGatewayFrame?> HandshakeAsync(ClientWebSocket socket, string url)
+    {
+        using var handshake = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
+        handshake.CancelAfter(_options.GatewayHandshakeTimeout);
+
+        try
+        {
+            await socket.ConnectAsync(GatewayUri(url), handshake.Token);
+            return await ReceiveFrameAsync(socket, handshake.Token);
+        }
+        catch (OperationCanceledException) when (_cts.IsCancellationRequested == false)
+        {
+            socket.Abort();
+            throw new TimeoutException(
+                $"discord did not send a hello frame within {_options.GatewayHandshakeTimeout}");
+        }
+    }
+
     private void OnDispatch(DiscordGatewayFrame frame)
     {
         switch (frame.T)
@@ -240,6 +289,7 @@ internal sealed class DiscordGatewayRuntime
     private void OnConnected()
     {
         _backoff = MinBackoff;
+        _attemptsSinceConnected = 0;
         _health.RecordGatewayConnected(_database, _shortChannelId);
         _logger.LogInformation(
             "Discord gateway connected for channel {ChannelId} (bot {BotUserId})", _shortChannelId, _botUserId);
