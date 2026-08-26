@@ -7,7 +7,10 @@ const meta = {
     title: "Apps/Default web widget appearance",
     component: AppWebWidgetDefaultCustomize,
     parameters: {
-        page: { title: "Default web widget appearance" },
+        // Production renders this route bare (isBareLayout/isPageTitleHidden): no host title, no padding,
+        // single row. Setting page.title here made the harness render a title + padded two-row layout no
+        // real operator ever sees, hiding the overflow F1/F2/F3 actually cause.
+        page: { bare: true },
         router: {
             initialPath: "/apps/demo/web-widget/default-customize",
             path: "/apps/:slug/web-widget/default-customize",

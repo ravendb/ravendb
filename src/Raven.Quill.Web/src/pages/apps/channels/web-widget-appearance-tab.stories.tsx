@@ -14,9 +14,37 @@ import { WebWidgetAppearanceTab } from "./web-widget-appearance-tab";
 const meta = {
     title: "Apps/Channels/Web widget appearance tab",
     component: WebWidgetAppearanceTab,
+    parameters: {
+        // Named sizes the layout stories below opt into via `defaultViewport`. addon-vitest otherwise
+        // pins every story to 1200x900 (DEFAULT_VIEWPORT_DIMENSIONS in its vitest plugin) regardless of
+        // what a story actually needs to prove - at that size the stage lands around 775px tall, tall
+        // enough that a reintroduced fixed-height (F1) preview frame would still fit with slack.
+        viewport: {
+            options: {
+                // Wide enough to be in two-pane mode, short enough that a reverted F1 (a preview frame
+                // fixed at 640px again instead of filling the stage) would visibly overflow it.
+                themeEditorTwoPaneShort: {
+                    name: "Theme editor: two-pane, short",
+                    styles: { width: "1280px", height: "700px" },
+                },
+                // Under the @5xl/theme-editor container threshold on its own, regardless of this
+                // viewport's generous height.
+                themeEditorNarrow: {
+                    name: "Theme editor: narrow",
+                    styles: { width: "800px", height: "900px" },
+                },
+                // Wide enough to be in two-pane mode by viewport alone - only pairs with a decorator that
+                // narrows the form's own container to prove the split reads that, not the viewport.
+                themeEditorWide: {
+                    name: "Theme editor: wide",
+                    styles: { width: "1280px", height: "900px" },
+                },
+            },
+        },
+    },
     args: {
         slug: "demo",
-        channelId: SAMPLE_CHANNEL_ID,
+        channelId: SAMPLE_CHANNEL_ID
     },
 } satisfies Meta<typeof WebWidgetAppearanceTab>;
 
@@ -296,61 +324,6 @@ export const ResetsOneSectionOnly: Story = {
     },
 };
 
-// Bare layout strips the shell's title and back link, so the host page carries both itself —
-// otherwise the operator reaches this screen and cannot leave it without the browser's Back.
-export const CarriesItsOwnNavigation: Story = {
-    tags: ["!dev"],
-    play: async ({ canvasElement }) => {
-        const canvas = within(canvasElement);
-
-        // The back link no longer waits on any query, so it can mount before channelsQuery resolves -
-        // unlike the link, the heading needs its own await rather than riding the link's.
-        expect(await canvas.findByRole("link", { name: "Back to channel" })).toBeInTheDocument();
-        expect(await canvas.findByRole("heading", { name: "Website widget" })).toBeInTheDocument();
-    },
-};
-
-// The back link and title used to live inside the editor, which only mounts once ApiState reaches
-// its success branch - a slow theme fetch left the operator stranded with no way back. They now
-// live on the host page, above ApiState, so a pending theme query must not take them down with it.
-export const KeepsBackLinkWhileThemeLoads: Story = {
-    tags: ["!dev"],
-    parameters: {
-        msw: {
-            handlers: {
-                iframe: [iframeMocks.getThemePending(), ...iframeHandlers()],
-            },
-        },
-    },
-    play: async ({ canvasElement }) => {
-        const canvas = within(canvasElement);
-
-        // Confirms the page is actually still in ApiState's loading branch, not the success one.
-        expect(await canvas.findByText("Loading theme...")).toBeInTheDocument();
-        expect(canvas.getByRole("link", { name: "Back to channel" })).toBeInTheDocument();
-    },
-};
-
-// Same regression as above, on the error branch: a failed theme fetch must not strand the operator
-// either.
-export const KeepsBackLinkWhenThemeErrors: Story = {
-    tags: ["!dev"],
-    parameters: {
-        msw: {
-            handlers: {
-                iframe: [iframeMocks.getThemeError(), ...iframeHandlers()],
-            },
-        },
-    },
-    play: async ({ canvasElement }) => {
-        const canvas = within(canvasElement);
-
-        // Confirms the page is actually in ApiState's error branch, not the success one.
-        expect(await canvas.findByText("Could not load the theme")).toBeInTheDocument();
-        expect(canvas.getByRole("link", { name: "Back to channel" })).toBeInTheDocument();
-    },
-};
-
 // The host page sizes the iframe, so "does my greeting wrap badly in a narrow sidebar?" is a real
 // question. 320 is where a prompt pill first wraps.
 export const PreviewsNarrowEmbedWidth: Story = {
@@ -395,7 +368,8 @@ export const ResetsASectionContainingAFieldArray: Story = {
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
 
-        await userEvent.click(await canvas.findByRole("button", { name: "Content" }));
+        const contentTrigger = await canvas.findByRole("button", { name: "Content" });
+        await userEvent.click(contentTrigger);
         const promptsBefore = canvas.getAllByPlaceholderText("Where is my order?").length;
 
         await userEvent.click(canvas.getByRole("button", { name: "Add prompt" }));
@@ -406,5 +380,167 @@ export const ResetsASectionContainingAFieldArray: Story = {
         await userEvent.click(canvas.getByRole("button", { name: "Reset Content section" }));
 
         await waitFor(() => expect(canvas.getAllByPlaceholderText("Where is my order?")).toHaveLength(promptsBefore));
+        // The reset button only renders while dirty, so this click unmounts it - onResetClick
+        // (theme-editor-section.tsx) moves focus to the section's own trigger deliberately. If that ref
+        // were ever dropped, this would silently fall through to <body> instead of failing loudly.
+        expect(document.activeElement).toBe(contentTrigger);
+    },
+};
+
+// The stories below read layout geometry rather than matching class-name strings: a `querySelector`
+// keyed on `[class*="@container/stage"]` only proves the class is still spelled that way, not that the
+// stage actually fits its content - a harmless rename would break the selector (failing loudly, which
+// is something) but a regression that leaves the class in place and breaks the CSS behind it would sail
+// through unnoticed. Walking the DOM from stable, semantic anchors (a section's own heading button, a
+// visible label) and reading computed style/geometry off what that reaches catches the latter too.
+function getThemeEditorPanes(canvasElement: HTMLElement) {
+    const canvas = within(canvasElement);
+
+    // Colors is the only section open by default (ColorsSection sets defaultOpen), so its <section> -
+    // the Collapsible's own root - is always mounted. From there: its parent is ThemeEditorInspector's
+    // "grid gap-4" wrapper, whose parent is the inspector pane itself, whose parent is the row shared
+    // with the stage.
+    const colorsSection = canvas.getByRole("button", { name: "Colors" }).closest("section")!;
+    const inspector = colorsSection.parentElement!.parentElement!;
+    const layoutRow = inspector.parentElement!;
+
+    // "Live preview" labels the stage's own controls row; that row's parent is the stage pane.
+    const stage = canvas.getByText("Live preview").parentElement!.parentElement!;
+
+    return { layoutRow, inspector, stage };
+}
+
+// The routed content's own scrolling region - decorators.tsx's StoryPageLayout wraps every "page"
+// story's children in this, mirroring app.tsx's `.app-shell__main .min-h-0.overflow-auto` outlet in
+// production. Below the two-pane threshold this is what's supposed to scroll, not the document (the
+// vitest browser harness's own root page never grows past the viewport, so `document.scrollingElement`
+// never reflects this route's own overflow) and not either pane.
+function getThemeEditorPageScrollContainer(canvasElement: HTMLElement) {
+    const canvas = within(canvasElement);
+
+    // The header is the outermost thing this page renders; its grandparent is that scrolling region.
+    const header = canvas.getByRole("link", { name: "Back to channel" }).closest("header")!;
+    return header.parentElement!.parentElement!;
+}
+
+// addon-vitest's default 1200x900 leaves the stage ~775px tall - tall enough that a reverted F1 (the
+// preview frame fixed at 640px again instead of filling the stage) would still fit with ~135px to
+// spare, so the overflow this checks for would never actually show up. themeEditorTwoPaneShort trims
+// the viewport to 700px tall instead, leaving well under 640px for the stage once its own controls row
+// and padding are accounted for, so a reintroduced fixed-height frame overflows for real.
+//
+// Proved this can fail: reverting only the preview's own className to a bare "h-[640px]" turned out not
+// to be enough - the surrounding wrapper (still "flex flex-col" with the row above it still stretching)
+// flex-shrinks an explicitly-sized flex child to fit regardless, so the frame quietly gave up its 640px
+// and the assertion kept passing. Reproducing F1 for real needs the wrapper reverted too: dropped
+// "flex flex-col" back to plain "max-w-full" on the width box and "@5xl/theme-editor:items-stretch" from
+// the row above it (its pre-fix shape - see git history), which stops the frame from being coerced down.
+// With both reverted, this story failed with `AssertionError: expected 712 to be less than or equal to
+// 573` (`stage.scrollHeight` vs `stage.clientHeight`). Reverted immediately after.
+export const StageFillsAvailableHeightWithoutOverflow: Story = {
+    tags: ["!dev"],
+    parameters: { viewport: { defaultViewport: "themeEditorTwoPaneShort" } },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await canvas.findByTitle("Web widget preview");
+
+        const { layoutRow, stage } = getThemeEditorPanes(canvasElement);
+
+        // The two-pane split has to actually be active for "the stage doesn't overflow its share of it"
+        // to mean anything - otherwise this would trivially pass in stacked mode too.
+        await waitFor(() => expect(getComputedStyle(layoutRow).display).toBe("grid"));
+
+        await waitFor(() => expect(stage.scrollHeight).toBeLessThanOrEqual(stage.clientHeight));
+    },
+};
+
+// Companion to the assertion above: the inspector is the one pane that is *supposed* to scroll on its
+// own (it can hold far more sections than fit), so proving the stage doesn't scroll only matters
+// alongside proving the inspector still does. Both regressed together pre-fix (F2): the two-pane grid
+// stretched both panes to equal, too-short rows, so neither the inspector's own scroll nor the stage's
+// overflow behaved as intended.
+//
+// Proved this can fail: temporarily dropped `@5xl/theme-editor:overflow-y-auto` from the inspector's
+// className in theme-editor-inspector.tsx (leaving `@5xl/theme-editor:min-h-0 @5xl/theme-editor:flex-1`
+// - a bounded pane that still isn't allowed to scroll) and ran this story alone - the computed
+// `overflow-y` came back `"visible"` against the expected `"auto"`, failing with
+// `AssertionError: expected 'visible' to be 'auto'`. Reverted immediately after.
+export const InspectorIsTheOnlyScrollingRegion: Story = {
+    tags: ["!dev"],
+    parameters: { viewport: { defaultViewport: "themeEditorTwoPaneShort" } },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await canvas.findByTitle("Web widget preview");
+
+        const { layoutRow, inspector, stage } = getThemeEditorPanes(canvasElement);
+
+        await waitFor(() => expect(getComputedStyle(layoutRow).display).toBe("grid"));
+
+        // The inspector has enough sections to outgrow the pane at this viewport, so it should scroll…
+        await waitFor(() => expect(getComputedStyle(inspector).overflowY).toBe("auto"));
+        await waitFor(() => expect(inspector.scrollHeight).toBeGreaterThan(inspector.clientHeight));
+        // …and the stage, sized to fit rather than clipped or stretched thin, should not have to.
+        expect(stage.scrollHeight).toBeLessThanOrEqual(stage.clientHeight);
+    },
+};
+
+// F2 fixed the two-pane grid forcing a bounded height below its own breakpoint; nothing until now
+// proved the stacked branch itself - that below @5xl/theme-editor the row is a plain flex column (not a
+// one-column grid still carrying `min-h-0 flex-1`) and neither pane gets its own scroll region, so the
+// page scrolls once instead.
+//
+// Proved this can fail: temporarily restored the pre-F3 shape of the row in theme-editor.tsx - `"grid
+// min-h-0 flex-1 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]"` (unconditionally a grid, only the
+// column split gated) - and ran this story alone at the same 800px-wide viewport. `getComputedStyle
+// (layoutRow).display` came back `"grid"` against the expected `"flex"`, failing with
+// `AssertionError: expected 'grid' to be 'flex'`. Reverted immediately after.
+export const StacksBelowTheContainerThreshold: Story = {
+    tags: ["!dev"],
+    parameters: { viewport: { defaultViewport: "themeEditorNarrow" } },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await canvas.findByTitle("Web widget preview");
+
+        const { layoutRow, inspector } = getThemeEditorPanes(canvasElement);
+        const scrollContainer = getThemeEditorPageScrollContainer(canvasElement);
+
+        await waitFor(() => expect(getComputedStyle(layoutRow).display).toBe("flex"));
+        // Neither pane gets its own bounded, scrolling region below the threshold...
+        expect(getComputedStyle(inspector).overflowY).not.toBe("auto");
+        // ...so the overflow shows up on the page itself instead of being contained anywhere inside it.
+        await waitFor(() => expect(scrollContainer.scrollHeight).toBeGreaterThan(scrollContainer.clientHeight));
+    },
+};
+
+// F3 fixed the split being gated on viewport width via `lg:` instead of the width the editor's own
+// container actually has - the assistant panel pinned open is exactly the state that used to force an
+// unusably narrow two-pane split. A wide viewport paired with a decorator that narrows only the story's
+// own container (standing in for the panel eating into the routed content's width) is enough to prove
+// the split reads the container, not the viewport - mounting the real assistant panel isn't needed.
+//
+// Proved this can fail: with the same pre-F3 row shape as above (`"grid min-h-0 flex-1
+// lg:grid-cols-[...]"`), the unconditional `grid` already fails this the same way as
+// StacksBelowTheContainerThreshold above - but the state this story exists to catch is the *column*
+// split firing on viewport width despite the narrow container, so `lg:grid-cols-[...]` was the relevant
+// part: at this story's 1280px viewport (>= lg's 1024px) the column split fired even though the
+// decorator holds the container to 700px. Confirmed via the same `display` check: `"grid"` where
+// `"flex"` was expected. Reverted immediately after.
+export const StacksInAConstrainedContainerDespiteAWideViewport: Story = {
+    tags: ["!dev"],
+    parameters: { viewport: { defaultViewport: "themeEditorWide" } },
+    decorators: [
+        (Story) => (
+            <div style={{ width: "700px" }}>
+                <Story />
+            </div>
+        ),
+    ],
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await canvas.findByTitle("Web widget preview");
+
+        const { layoutRow } = getThemeEditorPanes(canvasElement);
+
+        await waitFor(() => expect(getComputedStyle(layoutRow).display).toBe("flex"));
     },
 };

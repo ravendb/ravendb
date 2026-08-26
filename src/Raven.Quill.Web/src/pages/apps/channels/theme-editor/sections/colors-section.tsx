@@ -1,5 +1,6 @@
 import { FormColorPicker } from "@/components/form/form-color-picker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/shadcn/ui/tabs";
+import { Text } from "@/components/typography";
 import { SECTION_FIELDS, type ThemeSectionProps } from "@/pages/apps/channels/theme-editor/theme-editor-fields";
 import { ThemeEditorSection } from "@/pages/apps/channels/theme-editor/theme-editor-section";
 import type { PreviewAppearance } from "@/pages/apps/channels/web-widget-theme-preview";
@@ -49,9 +50,7 @@ export function ColorsSection({
             defaultOpen
             onReset={onReset}
         >
-            <p className="text-sm text-muted-foreground">
-                Each scheme keeps its own colors. Every other option applies to both.
-            </p>
+            <Text variant="muted">Each scheme keeps its own colors. Every other option applies to both.</Text>
             <Tabs
                 value={previewAppearance}
                 onValueChange={(next) => onPreviewAppearanceChange(next as PreviewAppearance)}

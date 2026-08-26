@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, useFormState, useWatch, type FieldPath } from "react-hook-form";
+import { useForm, useFormState, useWatch } from "react-hook-form";
 import type { WidgetTheme } from "@/api/generated/server-api";
 import { useFormUnsavedChanges } from "@/components/form/unsaved-changes/use-unsaved-changes";
 import {
@@ -48,10 +48,13 @@ export function useThemeEditorForm({ savedTheme, onSave }: UseThemeEditorFormOpt
 
     // Restores just this section's fields from the saved theme. keepDirtyValues is opted out of for the
     // same reason Discard opts out: the point is to overwrite the fields the operator edited.
-    const resetSection = (paths: readonly FieldPath<WidgetThemeFormData>[]) => {
+    // Top-level keys only (keyof, not FieldPath): the lookup below is a plain savedValues[path], which
+    // would silently resolve to undefined for a nested path such as "suggestedPrompts.0.value" and wipe
+    // the field - see theme-editor-fields.ts's SECTION_FIELDS, this function's only caller.
+    const resetSection = (paths: readonly (keyof WidgetThemeFormData)[]) => {
         const savedValues = toFormData(savedTheme);
         for (const path of paths) {
-            form.resetField(path, { defaultValue: savedValues[path as keyof WidgetThemeFormData] });
+            form.resetField(path, { defaultValue: savedValues[path] });
         }
     };
 
