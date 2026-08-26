@@ -455,6 +455,22 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
         Assert.True(json.RootElement.TryGetProperty("error", out _), body);
     }
 
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Deleting_the_channel_revokes_its_links()
+    {
+        await using var h = await HarnessAsync();
+        var token = await MintAsync(h.App, h.ChannelId);
+
+        await h.App.DeleteChannelAsync(h.ChannelId);
+
+        var links = await h.App.GetEmbedLinksAsync();
+        Assert.DoesNotContain(links, l => l.Token == token);
+
+        using var session = h.Store.OpenAsyncSession(h.Database);
+        var link = await session.LoadAsync<EmbedLink>(EmbedLink.IdPrefix + token);
+        Assert.True(link.Revoked);
+    }
+
     private async Task<Harness> HarnessAsync(bool provisionChannel = true, string[]? origins = null)
     {
         var app = await NewAppAsync();
