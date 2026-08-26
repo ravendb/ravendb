@@ -84,7 +84,7 @@ fi
 
 cd "$(git rev-parse --show-toplevel)"
 
-cmd=(docker buildx build --platform "$PLATFORMS" -f "$DOCKERFILE")
+cmd=(docker buildx build --pull --platform "$PLATFORMS" -f "$DOCKERFILE")
 
 for tag in "${TAGS[@]}"; do
   cmd+=(-t "$tag")
