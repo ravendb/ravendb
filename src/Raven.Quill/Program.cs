@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -14,6 +15,7 @@ using Polly;
 using Raven.Quill.Agents;
 using Raven.Quill.AiHelper;
 using Raven.Quill.Auth;
+using Raven.Quill.Contracts;
 using Raven.Quill.Embed;
 using Raven.Quill.Endpoints;
 using Raven.Quill.Feedback;
@@ -295,6 +297,8 @@ builder.Services.AddRateLimiter(options =>
 builder.Services.TryAddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<LoginFailureLimiter>();
 
+builder.Services.Configure<RouteHandlerOptions>(static options => options.ThrowOnBadRequest = true);
+
 builder.Services
     .AddAuthentication(options =>
     {
@@ -351,6 +355,21 @@ RavenLogManager.Instance.ConfigureLogging(app.Services.GetRequiredService<IOptio
 
 if (app.Environment.IsDevelopment())
     app.MapOpenApi();
+
+app.UseExceptionHandler(static errorApp => errorApp.Run(static async ctx =>
+{
+    var error = ctx.Features.Get<IExceptionHandlerFeature>()?.Error;
+    if (error is BadHttpRequestException bad)
+    {
+        ctx.Response.StatusCode = bad.StatusCode;
+        var detail = bad.InnerException is JsonException json ? $" {FirstLine(json.Message)}" : "";
+        await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse($"{bad.Message}{detail}"));
+        return;
+    }
+
+    ctx.Response.StatusCode = StatusCodes.Status500InternalServerError;
+    await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse("Unexpected server error. See server logs for details."));
+}));
 
 app.UseForwardedHeaders();
 
@@ -424,6 +443,12 @@ static Sparrow.Logging.LogLevel ParseLogLevel(string name, string value)
             $"{name} must be one of {string.Join(", ", Enum.GetNames<Sparrow.Logging.LogLevel>())}, " +
             $"got '{value.Trim()}'");
     return level;
+}
+
+static string FirstLine(string text)
+{
+    var newline = text.IndexOfAny(['\r', '\n']);
+    return newline < 0 ? text : text[..newline];
 }
 
 static TimeSpan ParsePositiveSeconds(string name, string value)
