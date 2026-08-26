@@ -203,6 +203,7 @@ internal sealed class DiscordInboundProcessor(
                 reply.OnChunkAsync, config, ct);
 
             await reply.FinalizeAsync();
+            health.RecordSendSuccess(database, shortChannelId);
 
             if (reply.IsEmpty)
                 logger.LogWarning("Discord agent turn produced an empty reply for channel {ChannelId}", channel.Id);
@@ -213,10 +214,11 @@ internal sealed class DiscordInboundProcessor(
         }
         catch (Exception e)
         {
+            await TrySendAsync(discord, database, shortChannelId, settings, dmChannel, ErrorReply, ct);
+
             if (e is DiscordApiException apiError)
                 health.RecordSendError(database, shortChannelId, apiError.Message);
 
-            await TrySendAsync(discord, database, shortChannelId, settings, dmChannel, ErrorReply, ct);
             throw;
         }
     }
@@ -250,6 +252,7 @@ internal sealed class DiscordInboundProcessor(
         try
         {
             await discord.CreateMessageAsync(settings.BotToken, dmChannel, text, ct);
+            health.RecordSendSuccess(database, shortChannelId);
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
