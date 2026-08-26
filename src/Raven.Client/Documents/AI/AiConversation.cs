@@ -100,7 +100,21 @@ internal class AiConversation : IAiConversationOperations
             return _conversationId;
         }
     }
-    
+
+    public async Task<AiConversationSnapshot> CreateSnapshotAsync(CancellationToken token = default)
+    {
+        var snapshot = await _aiOperations.CreateSnapshotAsync(Id, token).ConfigureAwait(false);
+
+        // Snapshot creation advances the conversation's change vector on the server; adopt it as the
+        // new baseline so a subsequent RunAsync on this same instance doesn't fail with a false conflict.
+        if (string.IsNullOrEmpty(snapshot.ChangeVector) == false)
+            _changeVector = snapshot.ChangeVector;
+
+        return snapshot;
+    }
+
+    public AiConversationSnapshot CreateSnapshot() => AsyncHelpers.RunSync(() => CreateSnapshotAsync());
+
     public void AddArtificialActionWithResponse(string toolId, string actionResponse)
     {
         ValidationMethods.AssertNotNullOrEmpty(toolId, nameof(toolId));

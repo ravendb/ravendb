@@ -20,7 +20,7 @@ internal sealed class AiAgentProcessorForCreateConversationSnapshot : AbstractDa
     {
         var conversationId = RequestHandler.GetStringQueryString("conversationId");
 
-        var (snapshotToken, createdAt, _) = await ConversationHandler.CreateSnapshotForConversationAsync(RequestHandler.Database, conversationId);
+        var (snapshotToken, createdAt, changeVector) = await ConversationHandler.CreateSnapshotForConversationAsync(RequestHandler.Database, conversationId);
 
         if (snapshotToken == null)
         {
@@ -39,6 +39,10 @@ internal sealed class AiAgentProcessorForCreateConversationSnapshot : AbstractDa
             writer.WriteComma();
             writer.WritePropertyName(nameof(AiConversationSnapshot.CreatedAt));
             writer.WriteDateTime(createdAt, isUtc: true);
+
+            writer.WriteComma();
+            writer.WritePropertyName(nameof(AiConversationSnapshot.ChangeVector));
+            writer.WriteString(changeVector);
 
             writer.WriteEndObject();
         }

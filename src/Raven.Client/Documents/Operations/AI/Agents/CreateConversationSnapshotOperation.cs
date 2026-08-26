@@ -56,11 +56,13 @@ public class CreateConversationSnapshotOperation : IMaintenanceOperation<AiConve
 
             response.TryGet(nameof(AiConversationSnapshot.Token), out string token);
             response.TryGet(nameof(AiConversationSnapshot.CreatedAt), out DateTime createdAt);
+            response.TryGet(nameof(AiConversationSnapshot.ChangeVector), out string changeVector);
 
             Result = new AiConversationSnapshot
             {
                 Token = token,
-                CreatedAt = createdAt
+                CreatedAt = createdAt,
+                ChangeVector = changeVector
             };
         }
     }
