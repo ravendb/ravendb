@@ -6,11 +6,15 @@ ARG NODE_IMAGE=node:24-bookworm-slim
 ARG STUDIO_NODE_MAJOR=24
 ARG PNPM_VERSION=11.2.2
 ARG S6_OVERLAY_VERSION=3.2.1.0
+ARG VERSION=""
 
 FROM ${SDK_IMAGE} AS ravendb-server-build
 ARG TARGETARCH
+ARG VERSION
 WORKDIR /src
 COPY . .
+
+RUN sh docker/quill/scripts/stamp-version.sh "$VERSION"
 
 RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
     . docker/quill/scripts/dotnet-rid.sh \
@@ -30,6 +34,7 @@ RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
 
 FROM --platform=$BUILDPLATFORM ${SDK_IMAGE} AS ravendb-studio-build
 ARG STUDIO_NODE_MAJOR
+ARG VERSION
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl ca-certificates gnupg \
@@ -47,7 +52,7 @@ RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
 
 WORKDIR /src/src/Raven.Studio
 RUN VERSION_PREFIX=$(sed -n 's/.*AssemblyVersion("\([^"]*\)").*/\1/p' /src/src/CommonAssemblyInfo.cs) \
-    && printf '{ "Version": "%s-custom-72" }\n' "$VERSION_PREFIX" > wwwroot/version.txt \
+    && printf '{ "Version": "%s" }\n' "${VERSION:-$VERSION_PREFIX-custom-72}" > wwwroot/version.txt \
     && cat wwwroot/version.txt
 
 RUN --mount=type=cache,target=/root/.npm \
@@ -100,8 +105,11 @@ RUN pnpm build
 # Stage 4: publish the backend and overlay the Vite output into wwwroot.
 FROM ${SDK_IMAGE} AS web-build
 ARG TARGETARCH
+ARG VERSION
 WORKDIR /src
 COPY . .
+
+RUN sh docker/quill/scripts/stamp-version.sh "$VERSION"
 
 RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
     . docker/quill/scripts/dotnet-rid.sh \

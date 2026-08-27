@@ -12,6 +12,9 @@ Options:
   --tag <name>          Image tag. Repeatable. (default: ravendb/quill:dev)
   --push                Push to registry instead of loading locally
   --platforms <list>    Comma-separated platforms (default: linux/amd64)
+  --version <ver>       Build version stamped into the image (e.g.
+                        7.2.6-quill-nightly-20260827-1044). Omit for local
+                        dev builds; the image then reports 7.2.6-custom-72.
   --no-cache            Force a full rebuild, ignoring layer cache
   --dry-run             Build locally without pushing (overrides --push)
   -h, --help            Show this help
@@ -29,6 +32,7 @@ PLATFORMS="linux/amd64"
 PUSH="false"
 NO_CACHE="false"
 DRY_RUN="false"
+VERSION=""
 
 DOCKERFILE="docker/quill/Dockerfile"
 
@@ -44,6 +48,7 @@ while [[ $# -gt 0 ]]; do
     --tag)       require_value --tag "$#";       TAGS+=("$2"); shift 2 ;;
     --push)      PUSH="true"; shift ;;
     --platforms) require_value --platforms "$#"; PLATFORMS="$2"; shift 2 ;;
+    --version)   require_value --version "$#";   VERSION="$2"; shift 2 ;;
     --no-cache)  NO_CACHE="true"; shift ;;
     --dry-run)   DRY_RUN="true"; shift ;;
     -h|--help)   show_help; exit 0 ;;
@@ -73,6 +78,10 @@ fi
 cd "$(git rev-parse --show-toplevel)"
 
 cmd=(docker buildx build --pull --platform "$PLATFORMS" -f "$DOCKERFILE")
+
+if [ -n "$VERSION" ]; then
+  cmd+=(--build-arg "VERSION=$VERSION")
+fi
 
 for tag in "${TAGS[@]}"; do
   cmd+=(-t "$tag")
