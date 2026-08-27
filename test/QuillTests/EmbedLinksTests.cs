@@ -437,15 +437,15 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Chat_rejects_an_oversized_prompt_with_413()
+    public async Task Chat_rejects_an_oversized_prompt_and_an_oversized_body()
     {
         await using var h = await HarnessAsync();
         var token = await MintAsync(h.App, h.ChannelId);
 
         var longPrompt = await Assert.ThrowsAsync<QuillHttpException>(
             () => h.App.SendEmbedChatAsync(token, new string('a', 40_000)));
-        Assert.Equal(HttpStatusCode.RequestEntityTooLarge, longPrompt.StatusCode);
-        Assert.Contains("prompt_too_large", longPrompt.Body);
+        Assert.Equal(HttpStatusCode.BadRequest, longPrompt.StatusCode);
+        Assert.Contains("prompt_too_long", longPrompt.Body);
 
         var hugeBody = await Assert.ThrowsAsync<QuillHttpException>(
             () => h.App.SendEmbedChatAsync(token, new string('a', 2_000_000)));
