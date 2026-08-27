@@ -56,10 +56,28 @@ namespace Corax.Querying.Matches.TermProviders
                 _ => false
             };
 
+            // Without this, PrepareKeys puts the stop term behind the start term, iteration never reaches it
+            // and the range collapses into "everything from low onwards".
+            if (IsEmptyRange())
+            {
+                _isEmpty = true;
+                return;
+            }
+
             PrepareKeys();
             Reset();
         }
-        
+
+        private bool IsEmptyRange()
+        {
+            var cmp = _low.CompareTo(_high);
+            if (cmp > 0)
+                return true;
+
+            // <x, x> holds x; (x, x>, <x, x) and (x, x) are empty.
+            return cmp == 0 && (typeof(TLow) == typeof(Range.Exclusive) || typeof(THigh) == typeof(Range.Exclusive));
+        }
+
         private void PrepareKeys()
         {
             // We want to rewrite the range, so it starts and ends with elements that are presented in our data source
