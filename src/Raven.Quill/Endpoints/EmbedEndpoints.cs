@@ -27,7 +27,7 @@ public static class EmbedEndpoints
 {
     public const string ChatRateLimitPolicy = "embed-chat";
 
-    internal const int MaxPromptLength = 32_000;
+    internal const int MaxPromptLength = ChatLimits.MaxPromptLength;
 
     public static void Map(WebApplication app)
     {
@@ -165,10 +165,10 @@ public static class EmbedEndpoints
             return;
         }
 
-        if (body.Prompt.Length > MaxPromptLength)
+        if (body.Prompt.Length > ChatLimits.MaxPromptLength)
         {
-            await WriteErrorAsync(ctx, StatusCodes.Status413PayloadTooLarge,
-                $"prompt exceeds the {MaxPromptLength:N0} character limit", ct, "prompt_too_large");
+            await WriteErrorAsync(ctx, StatusCodes.Status400BadRequest,
+                $"prompt exceeds {ChatLimits.MaxPromptLength} characters", ct, "prompt_too_long");
             return;
         }
 
@@ -263,8 +263,6 @@ public static class EmbedEndpoints
         }
     }
 
-    private const long MaxChatBodyBytes = 256 * 1024;
-
     private static async Task<EmbedChatRequest?> ReadChatRequestAsync(HttpContext ctx, CancellationToken ct)
     {
         if (ctx.Request.HasJsonContentType() == false)
@@ -273,7 +271,7 @@ public static class EmbedEndpoints
             return null;
         }
 
-        if (ctx.Request.ContentLength > MaxChatBodyBytes)
+        if (ctx.Request.ContentLength > ChatLimits.MaxBodyBytes)
         {
             await WriteBodyTooLargeAsync(ctx, ct);
             return null;
@@ -281,7 +279,7 @@ public static class EmbedEndpoints
 
         var sizeFeature = ctx.Features.Get<IHttpMaxRequestBodySizeFeature>();
         if (sizeFeature is { IsReadOnly: false })
-            sizeFeature.MaxRequestBodySize = MaxChatBodyBytes;
+            sizeFeature.MaxRequestBodySize = ChatLimits.MaxBodyBytes;
 
         try
         {
