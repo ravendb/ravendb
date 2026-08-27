@@ -86,19 +86,8 @@ Build from source:
 
 Rebuild any time the Dockerfile or `src/Raven.Quill*` changes.
 
-The script supports two build modes via `--mode`:
-
-- **`source`** (default) — compile `Raven.Server` **and** `Raven.Studio` from the current repo state.
-  Uses `docker/quill/Dockerfile.source`. Slower (webpack + `dotnet publish`) but picks up any
-  in-progress RavenDB changes that live in `feature/ai-appliance` but haven't landed in a published
-  RavenDB image yet.
-- **`nightly`** — pull the RavenDB binaries + Studio.zip from `ravendb/ravendb-nightly:7.2-latest`
-  (no source compile of Raven.Server). Uses `docker/quill/Dockerfile`. Faster, but only correct once
-  the RavenDB changes Quill depends on have shipped to the nightly channel.
-
-```bash
-./docker/quill/scripts/build.sh --tag ravendb/quill:latest --mode nightly
-```
+The image is always compiled from source: `docker/quill/Dockerfile` builds `Raven.Server`,
+`rvn`, and `Raven.Studio` from the current repo state.
 
 **Post-release** — a published image exists on Docker Hub. Compose pulls it automatically on
 `docker compose up`, or you can prefetch:
