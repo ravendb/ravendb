@@ -91,7 +91,7 @@ namespace Raven.Analyzers
             nameof(Queryable.Select),
             nameof(Queryable.SelectMany),
             nameof(Queryable.GroupBy),
-            "Search",
+            QueryMethods.Search,
             "ProjectInto",
             "Filter",
             "Spatial",
@@ -132,15 +132,17 @@ namespace Raven.Analyzers
         public const string AdditionalSourcesPropertyName = "AdditionalSources";
         public const string AdditionalAssembliesPropertyName = "AdditionalAssemblies";
 
-        // Session query method names
-        public const string QueryMethodName = "Query";
-        public const string WhereMethodName = "Where";
-        public const string OrderByMethodName = "OrderBy";
-        public const string OrderByDescendingMethodName = "OrderByDescending";
-        public const string ThenByMethodName = "ThenBy";
-        public const string ThenByDescendingMethodName = "ThenByDescending";
-        public const string SearchMethodName = "Search";
-        public const string TakeMethodName = "Take";
+        public static class QueryMethods
+        {
+            public const string Query = "Query";
+            public const string Where = "Where";
+            public const string OrderBy = "OrderBy";
+            public const string OrderByDescending = "OrderByDescending";
+            public const string ThenBy = "ThenBy";
+            public const string ThenByDescending = "ThenByDescending";
+            public const string Search = "Search";
+            public const string Take = "Take";
+        }
 
         // RavenDB client types live under this namespace. Short-name matches for the session /
         // store / queryable interfaces are gated on it (see SyntaxHelpers.IsTypeOrImplements) so the
@@ -156,7 +158,7 @@ namespace Raven.Analyzers
         // JS index base (bail on dynamic field creation)
         public const string AbstractJavaScriptIndexCreationTaskName = "AbstractJavaScriptIndexCreationTask";
 
-        // Dynamic field / bail method names
+        // Dynamic field method names
         public const string CreateFieldMethodName = "CreateField";
         public const string CreateSpatialFieldMethodName = "CreateSpatialField";
         public const string AsJsonMethodName = "AsJson";
@@ -241,10 +243,11 @@ namespace Raven.Analyzers
         /// are excluded. This is the single source of truth shared by the analyzer's detection pass and
         /// the code fix's collector so the diagnostic is only raised where a working fix exists.
         /// </summary>
-        public static readonly HashSet<string> LazyBatchableQueryMaterializers = new(System.StringComparer.Ordinal)
-        {
-            "ToList",  "ToListAsync",
-            "ToArray", "ToArrayAsync",
-        };
+        public static readonly HashSet<string> LazyBatchableQueryMaterializers =
+        [
+            with(System.StringComparer.Ordinal),
+            "ToList", "ToListAsync",
+            "ToArray", "ToArrayAsync"
+        ];
     }
 }

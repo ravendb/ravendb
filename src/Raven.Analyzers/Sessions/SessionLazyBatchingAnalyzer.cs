@@ -200,7 +200,7 @@ namespace Raven.Analyzers.Sessions
             {
                 foreach (InvocationExpressionSyntax inv in SyntaxHelpers.EnumerateInvocationChain(queryExpression, _model))
                 {
-                    if (SyntaxHelpers.GetMethodName(inv) == KnownTypes.QueryMethodName
+                    if (SyntaxHelpers.GetMethodName(inv) == KnownTypes.QueryMethods.Query
                         && inv.Expression is MemberAccessExpressionSyntax queryAccess)
                     {
                         return _model.GetSymbolInfo(queryAccess.Expression).Symbol;

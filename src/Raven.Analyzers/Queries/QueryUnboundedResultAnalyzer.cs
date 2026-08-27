@@ -52,7 +52,7 @@ namespace Raven.Analyzers.Queries
             // Do not "upgrade" this to a semantic symbol lookup without that trade-off in mind.
             foreach (InvocationExpressionSyntax chainCall in SyntaxHelpers.EnumerateInvocationChain(memberAccess.Expression, context.SemanticModel))
             {
-                if (SyntaxHelpers.GetMethodName(chainCall) == KnownTypes.TakeMethodName)
+                if (SyntaxHelpers.GetMethodName(chainCall) == KnownTypes.QueryMethods.Take)
                     return;
             }
 
@@ -182,7 +182,7 @@ namespace Raven.Analyzers.Queries
         {
             foreach (InvocationExpressionSyntax invocation in SyntaxHelpers.EnumerateInvocationChain(expression))
             {
-                if (SyntaxHelpers.GetMethodName(invocation) == KnownTypes.TakeMethodName)
+                if (SyntaxHelpers.GetMethodName(invocation) == KnownTypes.QueryMethods.Take)
                     return true;
             }
 
