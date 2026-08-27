@@ -423,6 +423,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
 
         var pendingAlertsDetails = new List<ExceededTokenThresholdDetails>();
         bool isFirstIteration = true;
+        bool pendingFinalTurn = false;
         var debugTraces = new AiDebugTraceCollector(_document.Debug, database);
 
         try
@@ -437,7 +438,8 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
 
                 var trace = debugTraces.CreateTrace();
 
-                using var request = talker.CreateCompletionRequest(attachments, trace);
+                using var request = talker.CreateCompletionRequest(attachments, trace, finalStructuredTurn: pendingFinalTurn);
+                pendingFinalTurn = false;
                 r = await talker.RunAsync(database.DocumentsStorage.ContextPool, request, trace, token);
 
                 var currentTurnUsage = AiUsage.GetUsageDifference(talker.AiUsage, _document.CurrentUsage);
@@ -448,7 +450,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 }
                 isFirstIteration = false;
 
-                bool isNoSchema = r.Type is AiResponseType.Result && _schema == null;
+                bool isNoSchema = r.Type is AiResponseType.Result && (_schema == null || talker.RequiresStructuredFollowUp);
                 _document.AddMessage(context, r.Message, currentTurnUsage, isNoSchema);
                 _document.UpdateUsage(talker.AiUsage);
                 OnUpdateUsage?.Invoke(database.Name, currentTurnUsage);
@@ -472,8 +474,15 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 toolsIterations++;
                 if (r.Type is AiResponseType.Result)
                 {
-                    _document.RemainingToolIterations = _maxModelIterationsPerCall;
-                    shouldContinueConversation = false;
+                    if (talker.RequiresStructuredFollowUp)
+                    {
+                        pendingFinalTurn = true;
+                    }
+                    else
+                    {
+                        _document.RemainingToolIterations = _maxModelIterationsPerCall;
+                        shouldContinueConversation = false;
+                    }
                 }
                 else
                 {
@@ -491,6 +500,9 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 }
 
                 _document.CurrentUsage = talker.AiUsage;
+
+                if (pendingFinalTurn)
+                    continue;
 
                 // check if we should summarize or truncate the chat history
                 var reductionResult = await TryReduceChatSizeAsync(context, talker.Client, talker.AiUsage, token);
