@@ -12,6 +12,7 @@ using Corax.Utils;
 using Sparrow;
 using Sparrow.Compression;
 using Sparrow.Server;
+using Sparrow.Server.Collections;
 using Sparrow.Server.Utils;
 using Sparrow.Server.Utils.VxSort;
 using Voron;
@@ -26,9 +27,18 @@ namespace Corax.Querying.Matches
     public struct MultiTermMatch<TTermProvider> : IQueryMatch
         where TTermProvider : ITermProvider
     {
+        internal enum ScoringMode : byte
+        {
+            None,
+            Bm25,
+            ConstantScore
+        }
+
         private const int InitialFrequencyHolders = 64;
+        private const int ConstantScoreBufferSize = 4096;
         private readonly CancellationToken _token;
-        private readonly bool _isBoosting;
+        private readonly ScoringMode _scoringMode;
+        private readonly Querying.IndexSearcher _indexSearcher;
         private long _readTerms, _totalResults;
         private readonly long _maxNumberOfTerms;
         private long _current;
@@ -50,7 +60,7 @@ namespace Corax.Querying.Matches
         private MultiTermReader _termReader;
         private readonly ByteStringContext _context;
 
-        public bool IsBoosting => _isBoosting;
+        public bool IsBoosting => _scoringMode != ScoringMode.None;
         public long Count => _totalResults;
 
         public SkipSortingResult AttemptToSkipSorting()
@@ -61,13 +71,17 @@ namespace Corax.Querying.Matches
         public QueryCountConfidence Confidence => _confidence;
 
         public MultiTermMatch(Querying.IndexSearcher indexSearcher, in FieldMetadata field, ByteStringContext context, TTermProvider inner, bool streamingEnabled,
-            long maxNumberOfTerms = long.MaxValue, QueryCountConfidence confidence = QueryCountConfidence.Low, in CancellationToken token = default)
+            long maxNumberOfTerms = long.MaxValue, QueryCountConfidence confidence = QueryCountConfidence.Low, in CancellationToken token = default,
+            bool scoreAsConstant = false)
         {
             _inner = inner;
-            _isBoosting = field.HasBoost;
+            _scoringMode = field.HasBoost
+                ? (scoreAsConstant && inner.IsFillSupported ? ScoringMode.ConstantScore : ScoringMode.Bm25)
+                : ScoringMode.None;
+            _indexSearcher = indexSearcher;
             _token = token;
             _current = QueryMatch.Start;
-            if (_inner.IsFillSupported && _isBoosting == false)
+            if (_inner.IsFillSupported && _scoringMode != ScoringMode.Bm25)
                 _termReader = new MultiTermReader(indexSearcher);
             else
             {
@@ -86,7 +100,7 @@ namespace Corax.Querying.Matches
 
             _doNotSortResultsDueToStreaming = streamingEnabled;
 
-            if (_isBoosting)
+            if (_scoringMode == ScoringMode.Bm25)
             {
                 var pool = Bm25Relevance.RelevancePool ??= ArrayPool<Bm25Relevance>.Create();
                 _frequenciesHolder = pool.Rent(InitialFrequencyHolders);
@@ -96,7 +110,7 @@ namespace Corax.Querying.Matches
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Fill(Span<long> buffer)
         {
-            return _inner.IsFillSupported && _isBoosting == false
+            return _inner.IsFillSupported && _scoringMode != ScoringMode.Bm25
                 ? FillWithReader(buffer)
                 : FillWithTermMatches(buffer);
         }
@@ -358,7 +372,7 @@ namespace Corax.Querying.Matches
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int AndWith(Span<long> buffer, int matches)
         {
-            if (_inner.IsFillSupported && _isBoosting == false)
+            if (_inner.IsFillSupported && _scoringMode != ScoringMode.Bm25)
                 return AndWithFill(buffer, matches);
 
             return AndWithTermMatch(buffer, matches);
@@ -508,7 +522,7 @@ namespace Corax.Querying.Matches
 
         private void AddTermToBm25()
         {
-            if (_isBoosting && _currentTerm.Count != 0)
+            if (_scoringMode == ScoringMode.Bm25 && _currentTerm.Count != 0)
             {
                 if (_currentFreqIdx >= FrequenciesHolderSize)
                     UnlikelyGrowBufferOfTermMatches();
@@ -520,8 +534,14 @@ namespace Corax.Querying.Matches
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Score(Span<long> matches, Span<float> scores, float boostFactor)
         {
-            if (_isBoosting == false)
+            if (_scoringMode == ScoringMode.None)
                 return;
+
+            if (_scoringMode == ScoringMode.ConstantScore)
+            {
+                ScoreConstant(matches, scores, boostFactor);
+                return;
+            }
 
             //We've to gather all data from already seen TermMatches to get proper ranking :)
             for (int idX = 0; idX < _currentFreqIdx; ++idX)
@@ -535,6 +555,43 @@ namespace Corax.Querying.Matches
             Bm25Relevance.RelevancePool.Return(_frequenciesHolder);
             _frequenciesHolder = null;
             _currentFreqIdx = 0;
+        }
+
+        private void ScoreConstant(Span<long> matches, Span<float> scores, float boostFactor)
+        {
+            if (matches.Length == 0)
+                return;
+
+            _inner.Reset();
+            var reader = new MultiTermReader(_indexSearcher);
+
+            var contribution = Bm25Relevance.ConstantScoreValue * boostFactor;
+
+            using var bufferScope = _context.Allocate(ConstantScoreBufferSize * sizeof(long), out var bufferHolder);
+            var ids = bufferHolder.ToSpan<long>();
+            var alreadyScored = new GrowableBitArray(_context, matches.Length);
+
+            try
+            {
+                while (reader.Read(ref this, ids, long.MaxValue, out _) is var read and > 0)
+                {
+                    _token.ThrowIfCancellationRequested();
+                    for (int i = 0; i < read; i++)
+                    {
+                        var idx = matches.BinarySearch(ids[i]);
+                        if (idx < 0)
+                            continue;
+
+                        if (alreadyScored.Add(idx))
+                            scores[idx] += contribution;
+                    }
+                }
+            }
+            finally
+            {
+                alreadyScored.Dispose();
+                reader.Dispose();
+            }
         }
 
         public QueryInspectionNode Inspect()

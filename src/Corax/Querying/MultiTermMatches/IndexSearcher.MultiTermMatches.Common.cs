@@ -14,7 +14,7 @@ namespace Corax.Querying;
 
 public partial class IndexSearcher
 {
-    private MultiTermMatch MultiTermMatchBuilder<TTermProvider>(in FieldMetadata field, Slice term, bool streamingEnabled = false, bool validatePostfixLen = false, in CancellationToken token = default)
+    private MultiTermMatch MultiTermMatchBuilder<TTermProvider>(in FieldMetadata field, Slice term, bool streamingEnabled = false, bool validatePostfixLen = false, in CancellationToken token = default, bool scoreAsConstant = false)
         where TTermProvider : struct, ITermProvider
     {
         var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
@@ -42,7 +42,7 @@ public partial class IndexSearcher
         }
         
         return MultiTermMatch.Create(new MultiTermMatch<TTermProvider>(this, field, _transaction.Allocator, 
-            GetMultiTermMatchProvider<TTermProvider>(field, terms, termKey, seekKey, validatePostfixLen, token), streamingEnabled: streamingEnabled, token: token));
+            GetMultiTermMatchProvider<TTermProvider>(field, terms, termKey, seekKey, validatePostfixLen, token), streamingEnabled: streamingEnabled, token: token, scoreAsConstant: scoreAsConstant));
     }
 
     private MultiTermMatch MultiTermMatchBuilder<TTermProvider>(in FieldMetadata field, string term, bool streamingEnabled, CancellationToken token)
