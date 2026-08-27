@@ -290,11 +290,17 @@ public static class EmbedEndpoints
             if (body is not null)
                 return body;
         }
-        catch (BadHttpRequestException)
+        catch (BadHttpRequestException bad) when (bad.StatusCode == StatusCodes.Status413PayloadTooLarge)
         {
             ctx.Response.StatusCode = StatusCodes.Status413PayloadTooLarge;
             await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse(
                 "request body is too large", Code: "prompt_too_large"), ct);
+            return null;
+        }
+        catch (BadHttpRequestException)
+        {
+            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse("request body could not be read"), ct);
             return null;
         }
         catch (JsonException)
