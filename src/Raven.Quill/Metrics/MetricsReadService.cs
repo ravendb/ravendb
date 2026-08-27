@@ -8,6 +8,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide.Operations;
 using Raven.Quill.Agents;
+using Raven.Quill.Cdc;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints.Helpers;
@@ -367,7 +368,14 @@ internal static class MetricsReadService
                 sourceType = MapSourceType(sql.FactoryName);
         }
         var agentsCount = record.AiAgents?.Count ?? 0;
-        var (status, subtitle) = DeriveAppStatus(agentsCount, channels.Count, enabledChannels, cdc?.Disabled ?? false);
+        var cdcDisabled = cdc?.Disabled ?? false;
+
+        var syncErrorCount = cdc is not null && cdcDisabled == false && agentsCount > 0
+            ? CdcPerformanceShaper.CountErrors(
+                await CdcPerformanceReader.ReadErrorsAsync(store.Maintenance.ForDatabase(app.Database), ct))
+            : 0;
+
+        var (status, subtitle) = DeriveAppStatus(agentsCount, channels.Count, enabledChannels, cdcDisabled, syncErrorCount);
 
         return new ApplianceAppResponse(
             Id: app.Slug,  // the prototype routes by app.id; slug is the routing key (id==slug)
@@ -404,10 +412,14 @@ internal static class MetricsReadService
     };
 
     private static (string Status, string? Subtitle) DeriveAppStatus(
-        int agentsCount, int channelsCount, int enabledChannels, bool cdcDisabled)
+        int agentsCount, int channelsCount, int enabledChannels, bool cdcDisabled, int syncErrorCount)
     {
         if (agentsCount == 0) return ("setup", "No AI agent yet");
         if (cdcDisabled) return ("warning", "Data sync paused");
+        if (syncErrorCount > 0)
+            return ("warning", syncErrorCount == 1
+                ? "Data sync reported 1 error"
+                : $"Data sync reported {syncErrorCount} errors");
         if (channelsCount > 0 && enabledChannels == 0) return ("warning", "All channels disabled");
         return ("running", null);
     }

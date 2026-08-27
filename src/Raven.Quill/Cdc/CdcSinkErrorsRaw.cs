@@ -8,7 +8,7 @@ namespace Raven.Quill.Cdc;
 /// (the shared task-errors shape: <c>{ "Results": [ { TaskName, ProcessErrors: [ err ],
 /// ItemErrors: [ err ] } ] }</c>), parsed appliance-side with System.Text.Json so we don't
 /// reference <c>Raven.Server</c>'s error types. Persistent per-task error store, distinct from
-/// the rolling perf window — read only when the sink is reporting an error.
+/// the rolling perf window: a failure that never produced a batch reaches this store alone.
 /// </summary>
 internal sealed class CdcSinkErrorsRaw
 {
