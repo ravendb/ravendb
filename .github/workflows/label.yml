@@ -27,6 +27,8 @@ jobs:
             quill:
               - 'src/Raven.Quill/**/*'
               - 'src/Raven.Quill.Web/**/*'
+              - 'test/QuillTests/**/*'
+              - 'docker/quill/**/*'
 
       - uses: actions/checkout@v4
 
