@@ -33,15 +33,19 @@ public static class AuthEndpoints
     private static async Task<IResult> LoginAsync(
         LoginRequest body, IApiKeyStore keys, LoginFailureLimiter limiter, HttpContext ctx, CancellationToken ct)
     {
+        var client = ClientKey(ctx);
+        if (limiter.IsThrottled(client))
+            return Results.Json(new AuthStatusResponse(false), statusCode: StatusCodes.Status429TooManyRequests);
+
         if (body is null || string.IsNullOrWhiteSpace(body.ApiKey) ||
             await keys.ValidateAsync(body.ApiKey, ct) == false)
         {
-            var isLimited = limiter.RegisterFailure(ClientKey(ctx));
+            var isLimited = limiter.RegisterFailure(client);
             return Results.Json(new AuthStatusResponse(false),
                 statusCode: isLimited ? StatusCodes.Status429TooManyRequests : StatusCodes.Status401Unauthorized);
         }
 
-        limiter.Reset(ClientKey(ctx));
+        limiter.Reset(client);
 
         var identity = new ClaimsIdentity(CookieAuthenticationDefaults.AuthenticationScheme);
         identity.AddClaim(new Claim(ClaimTypes.Name, "operator"));
