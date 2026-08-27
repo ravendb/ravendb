@@ -111,8 +111,9 @@ public static class ChatEndpoints
         }
         catch (Exception e)
         {
+            var failure = ProviderFailures.Classify(e);
             if (logger.IsErrorEnabled)
-                logger.Error(e, $"Chat stream failed for agentId={body.AgentId}");
+                logger.Error(e, $"Chat stream failed for agentId={body.AgentId}: {failure.OperatorMessage}");
             try
             {
                 await NdjsonStream.WriteLineAsync(ctx, new
@@ -120,7 +121,9 @@ public static class ChatEndpoints
                     type = "error",
                     message = e is InvalidParameterValueException
                         ? e.Message
-                        : "Chat stream failed. See server logs for details.",
+                        : ChatFailureText.ForOperator(failure, e),
+                    code = failure.Code,
+                    retryable = failure.Retryable,
                 });
             }
             catch
