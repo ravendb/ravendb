@@ -161,10 +161,10 @@ public static class EmbedEndpoints
             return;
         }
 
-        if (body.Prompt.Length > MaxPromptLength)
+        if (body.Prompt.Length > ChatLimits.MaxPromptLength)
         {
             await WriteErrorAsync(ctx, StatusCodes.Status413PayloadTooLarge,
-                $"prompt exceeds the {MaxPromptLength:N0} character limit", ct, "prompt_too_large");
+                $"prompt exceeds the {ChatLimits.MaxPromptLength:N0} character limit", ct, "prompt_too_large");
             return;
         }
 
@@ -258,9 +258,6 @@ public static class EmbedEndpoints
         }
     }
 
-    private const int MaxPromptLength = 32_000;
-    private const long MaxChatBodyBytes = 256 * 1024;
-
     private static async Task<EmbedChatRequest?> ReadChatRequestAsync(HttpContext ctx, CancellationToken ct)
     {
         if (ctx.Request.HasJsonContentType() == false)
@@ -269,7 +266,7 @@ public static class EmbedEndpoints
             return null;
         }
 
-        if (ctx.Request.ContentLength > MaxChatBodyBytes)
+        if (ctx.Request.ContentLength > ChatLimits.MaxBodyBytes)
         {
             await WriteBodyTooLargeAsync(ctx, ct);
             return null;
@@ -277,7 +274,7 @@ public static class EmbedEndpoints
 
         var sizeFeature = ctx.Features.Get<IHttpMaxRequestBodySizeFeature>();
         if (sizeFeature is { IsReadOnly: false })
-            sizeFeature.MaxRequestBodySize = MaxChatBodyBytes;
+            sizeFeature.MaxRequestBodySize = ChatLimits.MaxBodyBytes;
 
         try
         {

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Logging;
 using Raven.Client.Documents;
 using Raven.Quill.Agents;
@@ -28,6 +29,16 @@ public static class ChatEndpoints
         IAgentRouter router,
         ILogger<ChatStreamLogger> logger)
     {
+        if (ctx.Request.ContentLength > ChatLimits.MaxBodyBytes)
+        {
+            await WriteErrorAsync(ctx, StatusCodes.Status413PayloadTooLarge, "request body is too large");
+            return;
+        }
+
+        var sizeFeature = ctx.Features.Get<IHttpMaxRequestBodySizeFeature>();
+        if (sizeFeature is { IsReadOnly: false })
+            sizeFeature.MaxRequestBodySize = ChatLimits.MaxBodyBytes;
+
         ChatRequest? body;
         try
         {
@@ -36,6 +47,11 @@ public static class ChatEndpoints
         // don't write on an aborted response: a second exception floods logs
         catch (OperationCanceledException) when (ctx.RequestAborted.IsCancellationRequested)
         {
+            return;
+        }
+        catch (BadHttpRequestException bad) when (bad.StatusCode == StatusCodes.Status413PayloadTooLarge)
+        {
+            await WriteErrorAsync(ctx, StatusCodes.Status413PayloadTooLarge, "request body is too large");
             return;
         }
         catch (Exception)
@@ -47,6 +63,13 @@ public static class ChatEndpoints
         if (body is null || string.IsNullOrWhiteSpace(body.AgentId) || string.IsNullOrWhiteSpace(body.Prompt))
         {
             await WriteBadRequestAsync(ctx, "agentId and prompt are required");
+            return;
+        }
+
+        if (body.Prompt.Length > ChatLimits.MaxPromptLength)
+        {
+            await WriteErrorAsync(ctx, StatusCodes.Status413PayloadTooLarge,
+                $"prompt exceeds the {ChatLimits.MaxPromptLength:N0} character limit");
             return;
         }
 
@@ -105,9 +128,12 @@ public static class ChatEndpoints
 
     internal sealed class ChatStreamLogger;
 
-    private static async Task WriteBadRequestAsync(HttpContext ctx, string error)
+    private static Task WriteBadRequestAsync(HttpContext ctx, string error) =>
+        WriteErrorAsync(ctx, StatusCodes.Status400BadRequest, error);
+
+    private static async Task WriteErrorAsync(HttpContext ctx, int statusCode, string error)
     {
-        ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+        ctx.Response.StatusCode = statusCode;
         await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse(error));
     }
 }

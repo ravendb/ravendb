@@ -354,6 +354,14 @@ public static class AppsEndpoints
             return;
         }
 
+        if (body.Prompt.Length > ChatLimits.MaxPromptLength)
+        {
+            ctx.Response.StatusCode = StatusCodes.Status413PayloadTooLarge;
+            await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse(
+                $"prompt exceeds the {ChatLimits.MaxPromptLength:N0} character limit", Code: "prompt_too_large"), ct);
+            return;
+        }
+
         var app = await AppLookup.LoadAppAsync(store, slug, ct);
 
         if (app is null)
