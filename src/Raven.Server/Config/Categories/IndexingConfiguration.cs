@@ -218,7 +218,7 @@ namespace Raven.Server.Config.Categories
 
         [Description("EXPERT: Number of concurrent stopped batches if running low on memory")]
         [DefaultValue(2)]
-        [IndexUpdateType(IndexUpdateType.None)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.NumberOfConcurrentStoppedBatchesIfRunningLowOnMemory", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public int NumberOfConcurrentStoppedBatchesIfRunningLowOnMemory { get; protected set; }
 
@@ -548,21 +548,21 @@ namespace Raven.Server.Config.Categories
         [Description("Max time to wait when forcing the storage environment flush and sync when replacing side-by-side index.")]
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
-        [IndexUpdateType(IndexUpdateType.None)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndexInSec", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public TimeSetting MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndex { get; protected set; }
 
         [Description("Minimum total size of journals to run flush and sync when replacing side by side index.")]
         [DefaultValue(512)]
         [SizeUnit(SizeUnit.Megabytes)]
-        [IndexUpdateType(IndexUpdateType.None)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.MinimumTotalSizeOfJournalsToRunFlushAndSyncWhenReplacingSideBySideIndexInMb",
             ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public Size MinimumTotalSizeOfJournalsToRunFlushAndSyncWhenReplacingSideBySideIndex { get; set; }
         
         [Description("Sort by ticks when field contains dates. When sorting in descending order, null dates are returned at the end with this option enabled.")]
         [DefaultValue(true)]
-        [IndexUpdateType(IndexUpdateType.None)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.OrderByTicksAutomaticallyWhenDatesAreInvolved", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public bool OrderByTicksAutomaticallyWhenDatesAreInvolved { get; set; }
 
@@ -614,13 +614,13 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(10)]
         [MinValue(1)]
         [TimeUnit(TimeUnit.Minutes)]
-        [IndexUpdateType(IndexUpdateType.None)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.ElapsedSinceQueriedPersistIntervalInMin", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public TimeSetting ElapsedSinceQueriedPersistInterval { get; set; }
         
         [Description("The default minimum similarity for vector search (0.0f - 1.0f, default is 0f)")]
         [DefaultValue(0f)]
-        [IndexUpdateType(IndexUpdateType.None)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.Corax.VectorSearch.DefaultMinimumSimilarity", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public float CoraxVectorSearchDefaultMinimumSimilarity { get; protected set; }
         
@@ -638,7 +638,7 @@ namespace Raven.Server.Config.Categories
         
         [Description("The default maximum number of vectors that we will return from a graph search.")]
         [DefaultValue(16)]
-        [IndexUpdateType(IndexUpdateType.None)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.Corax.VectorSearch.DefaultNumberOfCandidatesForQuerying", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public int CoraxVectorDefaultNumberOfCandidatesForQuerying { get; protected set; }
         
@@ -656,7 +656,8 @@ namespace Raven.Server.Config.Categories
 
         [Description("Expert: The maximum number of concurrent batches for HNSW distance computation acceleration.")]
         [DefaultValue(512)]
-        [IndexUpdateType(IndexUpdateType.None)]
+        // Bounds only the parallelism of subsequent HNSW indexing work - nothing already written depends on it.
+        [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.Corax.VectorSearch.MaximumConcurrentBatchesForHnswAcceleration", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public int MaximumConcurrentBatchesForHnswAcceleration { get; set; }
         

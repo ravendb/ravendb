@@ -45,6 +45,27 @@ namespace FastTests.Issues
             }
         }
 
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Vector)]
+        public async Task ChangingHnswBuildParallelismDoesNotRebuildTheIndex()
+        {
+            using (var database = CreateDocumentDatabase())
+            {
+                var indexDefinition = CreateIndexDefinition();
+
+                var index = await database.IndexStore.CreateIndex(indexDefinition, Guid.NewGuid().ToString());
+                Assert.NotNull(index);
+
+                indexDefinition = CreateIndexDefinition();
+                indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.MaximumConcurrentBatchesForHnswAcceleration)] = "256";
+
+                // The setting only bounds the parallelism of future HNSW indexing work, so the configuration has to be
+                // refreshed in place. IndexCreationOptions.Update would rebuild the index side by side for nothing.
+                var options = IndexStore.GetIndexCreationOptions(indexDefinition, index.Instance.ToIndexInformationHolder(), database.Configuration, out var differences);
+                Assert.Equal(IndexDefinitionCompareDifferences.Configuration, differences);
+                Assert.Equal(IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex, options);
+            }
+        }
+
         [RavenFact(RavenTestCategory.Indexes)]
         public async Task WillUpdate()
         {

@@ -50,7 +50,11 @@ namespace Raven.Server.Documents.Indexes.Configuration
                 if (updateTypeAttribute.UpdateType == IndexUpdateType.Reset)
                     return IndexUpdateType.Reset; // worst case, we do not need to check further
 
-                result = updateTypeAttribute.UpdateType;
+                // Keep the heaviest update type seen so far. Assigning unconditionally would let the last changed
+                // setting in reflection order decide, so a Refresh could be downgraded to None by a later setting -
+                // making the outcome depend on the declaration order of the properties.
+                if (updateTypeAttribute.UpdateType > result)
+                    result = updateTypeAttribute.UpdateType;
             }
 
             return result;
