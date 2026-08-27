@@ -412,6 +412,24 @@ namespace Raven.Client.Documents.Session
             return null;
         }
 
+        /// <summary>
+        /// Registers an explicit optimistic concurrency check for a document, without loading it into the
+        /// session and without a remote call. The next SaveChanges verifies the document against the server
+        /// and throws a <see cref="Raven.Client.Exceptions.ConcurrencyException"/> if it no longer matches.
+        /// The check is honored regardless of the session's <see cref="OptimisticConcurrencyMode"/>, and it
+        /// overrides anything the session itself tracked for that id.
+        /// A non-empty change vector requires the document to still have it, <see cref="string.Empty"/> asserts
+        /// the document does not exist, and <c>null</c> disables the check for this id.
+        /// The registration is one shot - a successful SaveChanges consumes it.
+        /// </summary>
+        public void RegisterForConcurrencyCheck(string id, string changeVector)
+        {
+            if (string.IsNullOrEmpty(id))
+                throw new ArgumentNullException(nameof(id));
+
+            TrackedEntities.ForceRegister(id, changeVector);
+        }
+
         public DateTime? GetLastModifiedFor<T>(T instance)
         {
             if (instance == null)
@@ -954,6 +972,9 @@ more responsive application.
                     case CommandType.CompareExchangeDELETE:
                     case CommandType.CompareExchangePUT:
                         break;
+                    case CommandType.BatchTrackChanges:
+                        throw new NotSupportedException(
+                            $"{nameof(RegisterForConcurrencyCheck)} is not supported when using a cluster transaction.");
                     default:
                         throw new NotSupportedException($"The command '{command.Type}' is not supported in a cluster session.");
                 }
@@ -2547,6 +2568,7 @@ more responsive application.
 
                     _session.DeferredCommands.Clear();
                     _session.DeferredCommandsDictionary.Clear();
+                    _session.TrackedEntities.ClearForcedRegistrations();
                 }
 
                 public void ClearDeletedEntities()
@@ -2964,6 +2986,11 @@ more responsive application.
     {
         private readonly Dictionary<string, string> _trackedEntities = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
+        // Explicit registrations made via RegisterForConcurrencyCheck. These are kept apart from _trackedEntities so
+        // that tracking operations (loads, refreshes, evictions) can neither override nor remove them, and so that
+        // they are honored in every OptimisticConcurrencyMode. A null value disables the check for that id.
+        private Dictionary<string, string> _forcedEntities;
+
         private readonly bool _shouldTrack;
 
         public TrackedEntitiesHolder(bool shouldTrack)
@@ -2971,12 +2998,26 @@ more responsive application.
             _shouldTrack = shouldTrack;
         }
 
-        public bool Any()
+        /// <summary>
+        /// Registers an explicit concurrency check for an id, bypassing the session's OptimisticConcurrencyMode.
+        /// The entry is included in the next SaveChanges batch and overrides any tracked value for the id.
+        /// A null change vector disables the check for the id, string.Empty asserts the document does not exist,
+        /// and any other value is verified against the server.
+        /// </summary>
+        public void ForceRegister(string id, string changeVector)
         {
-            if (_shouldTrack)
-                return _trackedEntities.Any();
+            _forcedEntities ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            _forcedEntities[id] = changeVector;
+        }
 
-            return false;
+        /// <summary>
+        /// Registered checks are one shot - the next SaveChanges verifies them and then they are done.
+        /// Holding on to them would make every later SaveChanges on this session re-assert a change vector that
+        /// this very session has already validated and replaced.
+        /// </summary>
+        public void ClearForcedRegistrations()
+        {
+            _forcedEntities = null;
         }
 
         public void TryRemove(string id)
@@ -2995,8 +3036,8 @@ more responsive application.
 
         public void Clear()
         {
-            if (_shouldTrack)
-                _trackedEntities.Clear();
+            _trackedEntities.Clear();
+            _forcedEntities = null;
         }
 
         public bool TryGetValue(string id, out string cv)
@@ -3035,11 +3076,47 @@ more responsive application.
 
         public void PrepareForEntitiesTrack(InMemoryDocumentSessionOperations.SaveChangesData result)
         {
-            if (Any() == false)
+            Dictionary<string, string> entitiesToCheck = BuildEntitiesToCheck();
+            if (entitiesToCheck == null)
                 return;
 
-            result.TrackChangesCommandData = new BatchTrackChangesCommandData(_trackedEntities, result.IdsAlreadyCheckedForConcurrency);
+            result.TrackChangesCommandData = new BatchTrackChangesCommandData(entitiesToCheck, GetIdsToSkip(result.IdsAlreadyCheckedForConcurrency));
             result.SessionCommands.Insert(0, result.TrackChangesCommandData);
+        }
+
+        private Dictionary<string, string> BuildEntitiesToCheck()
+        {
+            bool hasTracked = _shouldTrack && _trackedEntities.Count > 0;
+
+            if (_forcedEntities == null)
+                return hasTracked ? _trackedEntities : null;
+
+            Dictionary<string, string> entitiesToCheck = hasTracked
+                ? new Dictionary<string, string>(_trackedEntities, StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (KeyValuePair<string, string> forced in _forcedEntities)
+            {
+                // an explicit registration overrides whatever the session tracked for this id
+                if (forced.Value == null)
+                    entitiesToCheck.Remove(forced.Key);
+                else
+                    entitiesToCheck[forced.Key] = forced.Value;
+            }
+
+            return entitiesToCheck.Count > 0 ? entitiesToCheck : null;
+        }
+
+        private HashSet<string> GetIdsToSkip(HashSet<string> idsAlreadyCheckedForConcurrency)
+        {
+            // a write that carries its own change vector check makes the tracked read check redundant, but it must
+            // not swallow a check that the user registered explicitly
+            if (_forcedEntities == null || idsAlreadyCheckedForConcurrency.Count == 0)
+                return idsAlreadyCheckedForConcurrency;
+
+            var idsToSkip = new HashSet<string>(idsAlreadyCheckedForConcurrency, StringComparer.OrdinalIgnoreCase);
+            idsToSkip.ExceptWith(_forcedEntities.Keys);
+            return idsToSkip;
         }
     }
 

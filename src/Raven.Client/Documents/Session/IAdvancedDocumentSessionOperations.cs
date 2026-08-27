@@ -181,6 +181,43 @@ namespace Raven.Client.Documents.Session
         string GetChangeVectorFor<T>(T instance);
 
         /// <summary>
+        ///     Registers an explicit optimistic concurrency check for a document, without loading it into the
+        ///     session and without a remote call. The next <c>SaveChanges</c> will verify the document against
+        ///     the server and throw a <see cref="Raven.Client.Exceptions.ConcurrencyException"/> if it no longer
+        ///     matches. The check is honored regardless of the session's <see cref="OptimisticConcurrencyMode"/>.
+        ///     <para>
+        ///     The <paramref name="changeVector"/> is typically obtained from another session via
+        ///     <see cref="GetChangeVectorFor{T}"/>. Its value controls the check:
+        ///     </para>
+        ///     <list type="bullet">
+        ///         <item><description>A non-empty change vector: the document must still have this change vector.</description></item>
+        ///         <item><description><see cref="string.Empty"/>: the document must not exist.</description></item>
+        ///         <item><description><c>null</c>: disables the concurrency check for this id.</description></item>
+        ///     </list>
+        ///     <para>
+        ///     The registration always wins over what the session itself knows about the id. Loading the document
+        ///     afterwards does not replace the registered change vector, and a document written in the same batch
+        ///     with its own change vector check does not suppress the registered check. Registering the same id
+        ///     twice keeps the last value.
+        ///     </para>
+        ///     <para>
+        ///     The registration is one shot. A successful <c>SaveChanges</c> consumes it, so later calls on the
+        ///     same session do not check the id again. A failed <c>SaveChanges</c> keeps it, so it can be retried.
+        ///     Call this method with a <c>null</c> change vector, or <see cref="Clear"/>, to cancel it earlier.
+        ///     </para>
+        ///     <para>
+        ///     Not supported when <see cref="SessionOptions.TransactionMode"/> is
+        ///     <see cref="Raven.Client.Documents.Session.TransactionMode.ClusterWide"/>, and not supported in a
+        ///     <see cref="SessionOptions.NoTracking"/> session, because such a session cannot call
+        ///     <c>SaveChanges</c> at all.
+        ///     </para>
+        /// </summary>
+        /// <param name="id">The document id to verify during the next SaveChanges.</param>
+        /// <param name="changeVector">The change vector the document is expected to still have, <see cref="string.Empty"/> to assert absence, or <c>null</c> to disable the check for this id.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="id"/> is null or empty.</exception>
+        void RegisterForConcurrencyCheck(string id, string changeVector);
+
+        /// <summary>
         ///     Gets all the counter names for the specified entity.
         /// </summary>
         /// <param name="instance">The instance.</param>
