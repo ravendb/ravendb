@@ -38,7 +38,7 @@ namespace Raven.Analyzers.Queries
                 startCtx.RegisterSyntaxNodeAction(ctx =>
                 {
                     var invocation = (InvocationExpressionSyntax)ctx.Node;
-                    if (SyntaxHelpers.GetMethodName(invocation) != KnownTypes.QueryMethodName)
+                    if (SyntaxHelpers.GetMethodName(invocation) != KnownTypes.QueryMethods.Query)
                         return;
                     pending.Add((invocation, ctx.SemanticModel));
                 }, SyntaxKind.InvocationExpression);
@@ -144,14 +144,14 @@ namespace Raven.Analyzers.Queries
                 {
                     case WhereClauseSyntax whereClause:
                         CheckFieldReferences(whereClause.Condition, paramName, indexedFields,
-                            KnownTypes.WhereMethodName, indexClassName, reportDiagnostic);
+                            KnownTypes.QueryMethods.Where, indexClassName, reportDiagnostic);
                         break;
 
                     case OrderByClauseSyntax orderByClause:
                         foreach (OrderingSyntax ordering in orderByClause.Orderings)
                         {
                             CheckFieldReferences(ordering.Expression, paramName, indexedFields,
-                                KnownTypes.OrderByMethodName, indexClassName, reportDiagnostic);
+                                KnownTypes.QueryMethods.OrderBy, indexClassName, reportDiagnostic);
                         }
                         break;
                 }
@@ -159,12 +159,12 @@ namespace Raven.Analyzers.Queries
         }
 
         private static bool IsFilterOrOrderMethod(string name) =>
-            name is KnownTypes.WhereMethodName or
-                KnownTypes.OrderByMethodName or
-                KnownTypes.OrderByDescendingMethodName or
-                KnownTypes.ThenByMethodName or
-                KnownTypes.ThenByDescendingMethodName or
-                KnownTypes.SearchMethodName;
+            name is KnownTypes.QueryMethods.Where or
+                KnownTypes.QueryMethods.OrderBy or
+                KnownTypes.QueryMethods.OrderByDescending or
+                KnownTypes.QueryMethods.ThenBy or
+                KnownTypes.QueryMethods.ThenByDescending or
+                KnownTypes.QueryMethods.Search;
 
         // True when the invocation has at least one lambda argument (l => ... or (l) => ...). Such an
         // argument introduces an inner range variable, which is the hallmark of a range-binding
