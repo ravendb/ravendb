@@ -36,6 +36,10 @@ namespace Raven.Client.Exceptions
     {
         public HttpStatusCode StatusCode { get; internal set; }
 
+        public UnsuccessfulAiRequestException(string message) : base(message)
+        {
+        }
+
         public UnsuccessfulAiRequestException(string message, HttpStatusCode statusCode) : base(message)
         {
             StatusCode = statusCode;
