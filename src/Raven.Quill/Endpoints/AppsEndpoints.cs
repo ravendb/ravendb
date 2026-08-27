@@ -363,6 +363,13 @@ public static class AppsEndpoints
             return;
         }
 
+        if (AgentConfigValidator.TryValidateJsonShapes(body.Configuration, out var shapeErrors) == false)
+        {
+            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse(Errors: shapeErrors.ToArray()), ct);
+            return;
+        }
+
         AiAgentRegistrar.EnsureDefaultOutputShape(body.Configuration);
 
         var streamField = string.IsNullOrWhiteSpace(body.StreamField)
