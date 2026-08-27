@@ -24,11 +24,9 @@ namespace Micro.Benchmark.Benchmarks.Json
         {
             public Config()
             {
-                // No Runtime pin, so the job follows the project's target framework.
-                // BenchmarkDotNet has no .NET 10 CoreRuntime member to pin to.
                 AddJob(new Job
                 {
-                    Environment = { Platform = Platform.X64, Jit = Jit.RyuJit, },
+                    Environment = { Runtime = CoreRuntime.Core10_0, Platform = Platform.X64, Jit = Jit.RyuJit, },
                 });
 
                 AddExporter(GetExporters().ToArray());
