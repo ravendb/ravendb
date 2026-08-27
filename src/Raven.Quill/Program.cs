@@ -325,8 +325,8 @@ app.UseExceptionHandler(static errorApp => errorApp.Run(static async ctx =>
     if (error is BadHttpRequestException bad)
     {
         ctx.Response.StatusCode = bad.StatusCode;
-        var detail = bad.InnerException is JsonException json ? $" {FirstLine(json.Message)}" : "";
-        await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse($"{bad.Message}{detail}"));
+        var message = bad.InnerException is JsonException ? "request body is not valid JSON" : bad.Message;
+        await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse(message));
         return;
     }
 
@@ -375,12 +375,6 @@ static void ReadEnv(string name, Action<string> apply)
 {
     var v = Environment.GetEnvironmentVariable(name);
     if (!string.IsNullOrEmpty(v)) apply(v);
-}
-
-static string FirstLine(string text)
-{
-    var newline = text.IndexOfAny(['\r', '\n']);
-    return newline < 0 ? text : text[..newline];
 }
 
 static TimeSpan ParsePositiveSeconds(string name, string value)
