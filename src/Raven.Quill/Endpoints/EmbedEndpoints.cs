@@ -65,6 +65,12 @@ public static class EmbedEndpoints
         if (TryParseAppearance(ctx.Request.Query["appearance"], out var appearanceOverride))
             theme = theme with { Appearance = appearanceOverride };
 
+        if (IsExhausted(link))
+        {
+            await WriteNoticeAsync(ctx, theme, StatusCodes.Status410Gone, WidgetNotice.Notice.Exhausted(), ct);
+            return;
+        }
+
         if (assets.IsAvailable == false)
         {
             await WriteNoticeAsync(ctx, theme, StatusCodes.Status503ServiceUnavailable,
@@ -335,7 +341,7 @@ public static class EmbedEndpoints
             if (link is null || link.Revoked || link.ExpiresAt <= DateTime.UtcNow)
                 return InvocationGate.Gone;
 
-            if (link.InvocationCount >= link.MaxInvocations)
+            if (IsExhausted(link))
                 return InvocationGate.Exhausted;
 
             if (string.IsNullOrEmpty(link.ConversationId))
@@ -429,6 +435,8 @@ public static class EmbedEndpoints
             ? (LinkStatus.Gone, resolved)
             : (LinkStatus.Ok, resolved);
     }
+
+    private static bool IsExhausted(EmbedLink link) => link.InvocationCount >= link.MaxInvocations;
 
     private static async Task<(App app, EmbedLink link, Channel channel, WidgetTheme theme)?> ResolveAsync(
         IDocumentStore store, string slug, string token, bool resolveTheme, CancellationToken ct)

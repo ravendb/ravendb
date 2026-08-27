@@ -16,4 +16,6 @@ public static class EmbedLinkLimits
 
     public const int MaxMaxInvocations = 1_000_000;
     public const int DefaultMaxInvocations = 100;
+
+    public static readonly TimeSpan SpentLinkRetention = TimeSpan.FromDays(7);
 }
