@@ -5,10 +5,10 @@ import type {
     CdcSinkLinkedTableConfig,
     CdcSinkTableConfig,
 } from "@/api/generated/server-api";
-import { type AppFormData, providerSchema } from "@/pages/setup/add-app-wizard/app-wizard-validation";
+import { type AppFormData, providerSchema, tablesSchema } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { resolveConnectionString } from "@/pages/setup/add-app-wizard/connection-string";
 import { resolveProviderFromSourceType } from "@/pages/setup/add-app-wizard/steps/connect/connect-source-options";
-import { mapFormTablesToDto } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-dto";
+import { mapFormTablesToDto, wrapDtoTablesToFormShape } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-dto";
 
 /** The portable wizard configuration: connection details plus the CDC Sink table mapping, in the
  * canonical DTO shape (matching `/setup/map`). The app name and slug are excluded - a slug
@@ -24,11 +24,13 @@ export type SourceTableRef = {
     sourceTableName: string;
 };
 
+const MISSING_CONNECTION_STRING = "The configuration is missing a connection string.";
+
 // Tables are validated structurally on top level only; the deep CDC graph is validated later by
 // `tablesSchema` once converted to the form shape, which yields friendlier per-field messages.
 const wizardConfigSchema = z.object({
     provider: providerSchema,
-    connectionString: z.string().trim().min(1, "The configuration is missing a connection string."),
+    connectionString: z.string({ error: MISSING_CONNECTION_STRING }).trim().min(1, MISSING_CONNECTION_STRING),
     tables: z.array(z.looseObject({})).min(1, "The configuration does not define any tables."),
 });
 
@@ -92,6 +94,19 @@ export async function parseConfigFile(file: File): Promise<WizardConfig> {
         connectionString: result.data.connectionString,
         tables: result.data.tables as CdcSinkTableConfig[],
     };
+}
+
+export function parseConfigTables(tables: CdcSinkTableConfig[]) {
+    const result = tablesSchema.safeParse(wrapDtoTablesToFormShape(tables));
+
+    if (!result.success) {
+        throw new Error(
+            result.error.issues[0]?.message ||
+                "The configuration's table mapping is invalid or was exported from an incompatible version.",
+        );
+    }
+
+    return result.data;
 }
 
 type AnyTableConfig = {
