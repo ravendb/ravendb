@@ -157,16 +157,14 @@ public static class EmbedEndpoints
 
         if (string.IsNullOrWhiteSpace(body.Prompt))
         {
-            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse("prompt is required"), ct);
+            await WriteErrorAsync(ctx, StatusCodes.Status400BadRequest, "prompt is required", ct);
             return;
         }
 
         if (body.Prompt.Length > MaxPromptLength)
         {
-            ctx.Response.StatusCode = StatusCodes.Status413PayloadTooLarge;
-            await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse(
-                $"prompt exceeds the {MaxPromptLength:N0} character limit", Code: "prompt_too_large"), ct);
+            await WriteErrorAsync(ctx, StatusCodes.Status413PayloadTooLarge,
+                $"prompt exceeds the {MaxPromptLength:N0} character limit", ct, "prompt_too_large");
             return;
         }
 
@@ -267,16 +265,13 @@ public static class EmbedEndpoints
     {
         if (ctx.Request.HasJsonContentType() == false)
         {
-            ctx.Response.StatusCode = StatusCodes.Status415UnsupportedMediaType;
-            await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse("request body must be application/json"), ct);
+            await WriteErrorAsync(ctx, StatusCodes.Status415UnsupportedMediaType, "request body must be application/json", ct);
             return null;
         }
 
         if (ctx.Request.ContentLength > MaxChatBodyBytes)
         {
-            ctx.Response.StatusCode = StatusCodes.Status413PayloadTooLarge;
-            await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse(
-                "request body is too large", Code: "prompt_too_large"), ct);
+            await WriteBodyTooLargeAsync(ctx, ct);
             return null;
         }
 
@@ -292,24 +287,32 @@ public static class EmbedEndpoints
         }
         catch (BadHttpRequestException bad) when (bad.StatusCode == StatusCodes.Status413PayloadTooLarge)
         {
-            ctx.Response.StatusCode = StatusCodes.Status413PayloadTooLarge;
-            await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse(
-                "request body is too large", Code: "prompt_too_large"), ct);
+            await WriteBodyTooLargeAsync(ctx, ct);
             return null;
         }
         catch (BadHttpRequestException)
         {
-            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse("request body could not be read"), ct);
+            await WriteErrorAsync(ctx, StatusCodes.Status400BadRequest, "request body could not be read", ct);
             return null;
         }
         catch (JsonException)
         {
+            await WriteErrorAsync(ctx, StatusCodes.Status400BadRequest, "request body is not valid JSON", ct);
+            return null;
         }
 
-        ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
-        await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse("prompt is required"), ct);
+        await WriteErrorAsync(ctx, StatusCodes.Status400BadRequest, "prompt is required", ct);
         return null;
+    }
+
+    private static Task WriteBodyTooLargeAsync(HttpContext ctx, CancellationToken ct) =>
+        WriteErrorAsync(ctx, StatusCodes.Status413PayloadTooLarge, "request body is too large", ct, "prompt_too_large");
+
+    private static async Task WriteErrorAsync(
+        HttpContext ctx, int statusCode, string message, CancellationToken ct, string? code = null)
+    {
+        ctx.Response.StatusCode = statusCode;
+        await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse(message, Code: code), ct);
     }
 
     private enum GateStatus { Ok, Exhausted, Gone }
