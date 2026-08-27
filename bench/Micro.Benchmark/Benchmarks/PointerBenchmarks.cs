@@ -22,6 +22,7 @@ namespace Micro.Benchmark.Benchmarks
                 {
                     Environment =
                     {
+                        Runtime = CoreRuntime.Core10_0,
                         Platform = Platform.X64,
                         Jit = Jit.Default,
                     }
