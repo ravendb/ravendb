@@ -21,8 +21,8 @@ internal static class CdcPerformanceReader
         }
     }
 
-    /// <summary>Reads the persistent per-task error store. Only worth calling when the perf
-    /// snapshot reports an error; degrades to an empty result on any unavailability.</summary>
+    /// <summary>Reads the persistent per-task error store, which holds the failures that never
+    /// produced a batch; degrades to an empty result on any unavailability.</summary>
     public static async Task<CdcSinkErrorsRaw> ReadErrorsAsync(
         MaintenanceOperationExecutor maintenance, CancellationToken ct)
     {

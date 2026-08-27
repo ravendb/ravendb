@@ -302,10 +302,12 @@ public static class AppsEndpoints
             return Results.NotFound(AppLookup.NoCdcTaskError(slug));
 
         var raw = await CdcPerformanceReader.ReadAsync(store.Maintenance.ForDatabase(app.Database), ct);
+        var errors = await CdcPerformanceReader.ReadErrorsAsync(store.Maintenance.ForDatabase(app.Database), ct);
         var (state, lastModified) = await AppLookup.LoadCdcStateAsync(store, app.Database, app.CdcTaskName, ct);
 
         var snapshot = CdcPerformanceShaper.Shape(
-            raw, disabled: cdc.Configuration.Disabled, DateTime.UtcNow, lastActivityAt: lastModified);
+            raw, disabled: cdc.Configuration.Disabled, DateTime.UtcNow, lastActivityAt: lastModified,
+            storedErrorCount: CdcPerformanceShaper.CountErrors(errors));
         return Results.Ok(snapshot);
     }
 
