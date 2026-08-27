@@ -1,20 +1,43 @@
-name: version
+name: labels
 
 on:
   pull_request_target
+
+permissions:
+  contents: read
+  pull-requests: write
 
 jobs:
   labels:
     name: Label
     runs-on: windows-latest
     steps:
+      # must run before the checkout, so it resolves changed files via the GitHub API
+      # instead of the local (base branch) working tree
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            studio:
+              - 'src/Raven.Studio/**/*'
+            outsideStudio:
+              - '!src/Raven.Studio/**/*'
+            client:
+              - 'src/Raven.Client/**/*'
+
       - uses: actions/checkout@v4
 
-      - name: Parse Labels (merged)
+      - name: Parse Labels
         shell: pwsh
+        env:
+          # Studio is labelled only when nothing outside src/Raven.Studio was touched
+          studioOnly: ${{ steps.changes.outputs.studio == 'true' && steps.changes.outputs.outsideStudio != 'true' }}
+          clientTouched: ${{ steps.changes.outputs.client }}
         run: |
           $branch = "${{ github.event.pull_request.base.ref }}"
           $labels = New-Object System.Collections.Generic.List[string]
+
+          # --- labels derived from the base branch ---
 
           if ($branch -like 'release/*') {
             # release labels
@@ -45,6 +68,17 @@ jobs:
             }
           }
 
+          # --- labels derived from the changed paths ---
+
+          if (($branch -like 'v*' -or $branch -like 'feature*') -and $env:studioOnly -eq 'true') {
+            $labels.Add('Studio')
+          }
+
+          # Client API changes need migration tracking only on version branches (e.g. v7.2)
+          if ($branch -like 'v*' -and $env:clientTouched -eq 'true') {
+            $labels.Add('migrate-ClientApi')
+          }
+
           $unique = $labels | Select-Object -Unique
           $labelStr = ($unique) -join ','
           echo "labelsToApply=$labelStr" >> $env:GITHUB_ENV
@@ -55,8 +89,6 @@ jobs:
           githubOwner: ${{ github.event.pull_request.base.repo.owner.login }}
           repoName: ${{ github.event.repository.name }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COMPlus_ReadyToRunExcludeList: 'System.Security.Cryptography.X509Certificates'
-          Raven_Enable_Per_Test_Logging: 'true'
         shell: pwsh
         run: |
           $json = @'
