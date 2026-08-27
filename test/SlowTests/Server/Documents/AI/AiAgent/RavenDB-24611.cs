@@ -20,7 +20,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.vLLM, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.vLLM | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task ParametersAreKeySensitive(Options options, GenAiConfiguration config)
         {
             using var store = await GetClusterStoreAsync(options);
@@ -39,7 +39,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task CanPassNestedObjectAsActionResponse(Options options, GenAiConfiguration config)
         {
             using var store = await GetClusterStoreAsync(options);
@@ -85,7 +85,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.vLLM, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.vLLM | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task ShouldThrowWhenConversationIdIsDocumentId(Options options, GenAiConfiguration config)
         {
             using var store = await GetClusterStoreAsync(options);
@@ -106,7 +106,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
 
         [RavenMultiplatformTheory(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task Concurrency_When_Resuming_Same_Conversation(Options options, GenAiConfiguration config)
         {
             using var store = await GetClusterStoreAsync(options);
@@ -148,7 +148,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task ConcurrentActionResponsesShouldConflict(Options options, GenAiConfiguration cfg)
         {
             using var store = await GetClusterStoreAsync(options);

@@ -16,6 +16,10 @@ internal class OllamaChatCompletionClientSettings : AbstractChatCompletionClient
         _settings = settings;
     }
 
+    // Ollama's OpenAI-compatible endpoint silently drops 'tool_choice', so "none" cannot stop tool calls.
+    // Instead, the tools array is omitted entirely once tools are disabled.
+    public override bool SupportsToolChoiceNone => false;
+
     public override string GetRelativeCompletionUri() => "v1/" + base.GetRelativeCompletionUri();
 
     public override string GetRelativeModelsUri() => "v1/" + base.GetRelativeModelsUri();

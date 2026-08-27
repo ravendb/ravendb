@@ -1,7 +1,9 @@
 ﻿#nullable enable
 
 using System;
+using System.IO;
 using System.Threading;
+using Sparrow.Exceptions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -45,8 +47,31 @@ public unsafe class SseStreamingJsonParser : IDisposable
 
     public void Reset()
     {
+        IsInvalid = false;
+        _totalSize = 0;
         _context.CachedProperties.NewDocument();
         _builder.ReadObjectDocument();
+    }
+
+    public bool IsInvalid { get; private set; }
+
+    public bool TryProcess(LazyStringValue dataChunk, out BlittableJsonReaderObject? result, CancellationToken? token = null)
+    {
+        result = null;
+
+        if (IsInvalid)
+            return false;
+
+        try
+        {
+            result = Process(dataChunk, token);
+            return true;
+        }
+        catch (Exception e) when (e is InvalidDataException or InvalidStartOfObjectException)
+        {
+            IsInvalid = true;
+            return false;
+        }
     }
 
     public BlittableJsonReaderObject? Process(LazyStringValue dataChunk, CancellationToken? token = null)
