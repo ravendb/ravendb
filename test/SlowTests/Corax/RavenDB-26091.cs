@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,8 +12,6 @@ using Raven.Client.Documents.Session;
 using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
-using ITestOutputHelper = Xunit.ITestOutputHelper;
 
 namespace SlowTests.Corax;
 
