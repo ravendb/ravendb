@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Parquet;
+using Parquet.Schema;
 using Voron;
 using Voron.Data.Graphs;
 
@@ -129,13 +130,21 @@ static IEnumerable<(int[], float[])> YieldVectors(string filePath)
     var schema = file.Schema;
     for (int i = 0; i < file.RowGroupCount; i++)
     {
-        var reader = file.OpenRowGroupReader(i);
-        var wikiId = reader.ReadColumnAsync(schema.DataFields[4]).Result;
-        var vectors = reader.ReadColumnAsync(schema.DataFields[8]).Result;
-        var wikiIds = (int[])wikiId.DefinedData;
-        var vectorsArr = (float[])vectors.DefinedData;
+        using var reader = file.OpenRowGroupReader(i);
+        var wikiIds = ReadColumn<int>(reader, schema.DataFields[4]);
+        var vectorsArr = ReadColumn<float>(reader, schema.DataFields[8]);
         yield return (wikiIds, vectorsArr);
     }
+}
+
+// Parquet.Net 6 reads into a buffer supplied by the caller, size it from the column chunk
+// metadata so that the repeated 'vectors' field is covered as well, not just the row count.
+static T[] ReadColumn<T>(ParquetRowGroupReader reader, DataField field)
+    where T : struct
+{
+    var values = new T[reader.GetMetadata(field).MetaData.NumValues];
+    reader.ReadAsync<T>(field, values.AsMemory()).GetAwaiter().GetResult();
+    return values;
 }
 
 static async Task DownloadFile(string fullPath)
