@@ -39,6 +39,51 @@ public class DashboardAppsEndpointTests(ITestOutputHelper output, QuillCollectio
         Assert.Equal("PostgreSQL", appResp.Source.Type);
     }
 
+    /// The test source is unreachable, so every app here is genuinely failing to sync; the row used to
+    /// report it as running because the status never consulted the sink's error store.
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task DashboardApps_says_an_app_needs_attention_when_its_data_sync_is_failing()
+    {
+        await using var app = await NewAppAsync();
+
+        await app.ProvisionAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = "support", Name = "Support", SystemPrompt = "You help.",
+            ConnectionStringName = app.Host.ConnectionStringName,
+        });
+
+        await WaitForCdcErrorsAsync(app.Slug);
+
+        var appResp = (await Host.GetDashboardAppsAsync()).Single(a => a.Slug == app.Slug);
+
+        Assert.Equal("error", appResp.Status);
+        Assert.Equal("Sync errors detected", appResp.StatusSubtitle);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task DashboardApps_keeps_setup_ahead_of_a_sync_failure_while_the_app_has_no_agent()
+    {
+        await using var app = await NewAppAsync();
+
+        await WaitForCdcErrorsAsync(app.Slug);
+
+        var appResp = (await Host.GetDashboardAppsAsync()).Single(a => a.Slug == app.Slug);
+
+        Assert.Equal("setup", appResp.Status);
+    }
+
+    private async Task WaitForCdcErrorsAsync(string slug)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(30);
+        while ((await Host.GetCdcErrorsAsync(slug)).Count == 0)
+        {
+            if (DateTime.UtcNow > deadline)
+                throw new TimeoutException($"no CDC error recorded for '{slug}' within 30s");
+
+            await Task.Delay(200);
+        }
+    }
+
     [RavenFact(RavenTestCategory.Quill)]
     public async Task DashboardApps_status_becomes_error_when_the_source_is_unreachable()
     {
