@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -60,7 +60,6 @@ namespace Voron.Benchmark.Corax
                 {
                     Environment =
                     {
-                        Runtime = CoreRuntime.Core80,
                         Platform = BenchmarkDotNet.Environments.Platform.X64,
                         Jit = Jit.RyuJit
                     },
