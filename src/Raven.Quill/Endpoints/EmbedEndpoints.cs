@@ -244,8 +244,9 @@ public static class EmbedEndpoints
         }
         catch (Exception e)
         {
+            var failure = ProviderFailures.Classify(e);
             if (logger.IsErrorEnabled)
-                logger.Error(e, $"embed chat failed for tokenPrefix={EmbedLink.RedactToken(token)}");
+                logger.Error(e, $"embed chat failed for tokenPrefix={EmbedLink.RedactToken(token)}: {failure.OperatorMessage}");
 
             // refund the reserved invocation only if nothing streamed (mid-stream abort stays consumed)
             if (streamedAny == false)
@@ -253,13 +254,9 @@ public static class EmbedEndpoints
 
             try
             {
-                await NdjsonStream.WriteLineAsync(ctx, new
-                {
-                    type = "error",
-                    message = e is InvalidParameterValueException invalid
-                        ? invalid.PublicMessage
-                        : "Chat failed. See server logs for details.",
-                });
+                await NdjsonStream.WriteLineAsync(ctx, e is InvalidParameterValueException invalid
+                    ? new { type = "error", message = invalid.PublicMessage, code = ProviderFailure.FailedCode, retryable = false }
+                    : new { type = "error", message = failure.VisitorMessage, code = failure.Code, retryable = failure.Retryable });
             }
             catch
             {

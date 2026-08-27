@@ -476,11 +476,18 @@ public static class AppsEndpoints
         }
         catch (Exception e)
         {
+            var failure = ProviderFailures.Classify(e);
             if (logger.IsErrorEnabled)
-                logger.Error(e, $"setup/try failed for slug={slug}");
+                logger.Error(e, $"setup/try failed for slug={slug}: {failure.OperatorMessage}");
             try
             {
-                await NdjsonStream.WriteLineAsync(ctx, new { type = "error", message = "Agent test failed. See server logs for details." });
+                await NdjsonStream.WriteLineAsync(ctx, new
+                {
+                    type = "error",
+                    message = ChatFailureText.ForOperator(failure, e),
+                    code = failure.Code,
+                    retryable = failure.Retryable,
+                });
             }
             catch
             {
