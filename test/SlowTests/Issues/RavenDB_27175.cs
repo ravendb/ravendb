@@ -252,6 +252,111 @@ public class RavenDB_27175(ITestOutputHelper output) : RavenTestBase(output)
         }
     }
 
+    [RavenFact(RavenTestCategory.Subscriptions)]
+    public async Task StatusIsStoppedWhenTheCancellationTokenPassedToRunIsCancelled()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var name = await store.Subscriptions.CreateAsync<Company>();
+
+            using (var worker = store.Subscriptions.GetSubscriptionWorker<Company>(name))
+            using (var connected = new ManualResetEventSlim())
+            using (var cts = new CancellationTokenSource())
+            {
+                worker.OnEstablishedSubscriptionConnection += () => connected.Set();
+
+                var run = worker.Run(_ => { }, cts.Token);
+
+                Assert.True(connected.Wait(_reasonableWaitTime), "initial connection wasn't established");
+
+                // let the worker park inside the idle read - a cancellation that lands in the narrow startup
+                // window before the first read is observed at a loop-condition check instead, which exits
+                // cleanly and would hide the behavior this test pins down
+                await Task.Delay(2000);
+
+                cts.Cancel();
+
+                // the status is final by the time the task completes - SetState runs before the task
+                // transitions to its terminal state
+                Assert.True(await Task.WhenAny(run, Task.Delay(_reasonableWaitTime)) == run,
+                    "the Run task didn't complete after the token was cancelled");
+
+                // SubscriptionWorkerState.Stopped is documented as: "The worker stopped on request - it was
+                // disposed, or the cancellation token passed to Run was cancelled."
+                Assert.Equal(SubscriptionWorkerState.Stopped, worker.Status.State);
+                Assert.Null(worker.Status.Exception);
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Subscriptions)]
+    public async Task FailingSinceUtcSurvivesTheRetryCycleAndIsClearedOnRecovery()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var name = await store.Subscriptions.CreateAsync<Company>();
+
+            using (var worker = store.Subscriptions.GetSubscriptionWorker<Company>(new SubscriptionWorkerOptions(name)
+                   {
+                       // short enough to get through several attempts quickly, long enough that the clock tells
+                       // the timestamps of two consecutive attempts apart
+                       TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(100)
+                   }))
+            using (var cts = new CancellationTokenSource(_reasonableWaitTime))
+            {
+                var changes = new BlockingCollection<SubscriptionWorkerStatus>();
+
+                worker.OnStateChanged += (_, status) => changes.Add(status);
+
+                SubscriptionWorkerStatus NextStatus(SubscriptionWorkerState state)
+                {
+                    while (true)
+                    {
+                        var status = changes.Take(cts.Token);
+                        if (status.State == state)
+                            return status;
+                    }
+                }
+
+                // no documents are ever stored here, so the state is the only indication of what the worker is doing
+                _ = worker.Run(_ => { });
+
+                // a healthy worker is not failing
+                Assert.Null(NextStatus(SubscriptionWorkerState.WaitingForDocuments).FailingSinceUtc);
+
+                // an exception the worker keeps reconnecting from, so that it stays broken instead of recovering
+                // on its own the way a dropped connection would
+                worker.ForTestingPurposesOnly().SimulateUnexpectedException = true;
+
+                await DropConnectionAsync(store, name);
+
+                var first = NextStatus(SubscriptionWorkerState.Retrying);
+
+                Assert.NotNull(first.FailingSinceUtc);
+
+                // every further attempt is a state change of its own, so SinceUtc moves - but they are all the
+                // same stretch of being broken, which is what FailingSinceUtc has to keep pointing at
+                var later = first;
+                while (later.SinceUtc == first.SinceUtc)
+                    later = NextStatus(SubscriptionWorkerState.Retrying);
+
+                Assert.True(later.SinceUtc > first.SinceUtc, $"'{later}' should have been entered after '{first}'");
+                Assert.Equal(first.FailingSinceUtc, later.FailingSinceUtc);
+
+                // let it through
+                worker.ForTestingPurposesOnly().SimulateUnexpectedException = false;
+
+                // Connecting is a step of every retry as well as the first thing a healthy worker does, so it
+                // neither starts nor ends the stretch - it carries it over
+                Assert.Equal(first.FailingSinceUtc, NextStatus(SubscriptionWorkerState.Connecting).FailingSinceUtc);
+
+                // and reaching the server clears it
+                Assert.Null(NextStatus(SubscriptionWorkerState.WaitingForDocuments).FailingSinceUtc);
+                Assert.Null(worker.Status.FailingSinceUtc);
+            }
+        }
+    }
+
     private async Task DropConnectionAsync(Raven.Client.Documents.IDocumentStore store, string subscriptionName)
     {
         var db = await Databases.GetDocumentDatabaseInstanceFor(store, store.Database);
