@@ -13,7 +13,6 @@ using Parquet.Schema;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.SQL;
 using Sparrow.Json;
-using DataColumn = Parquet.Data.DataColumn;
 
 namespace Raven.Server.Documents.ETL.Providers.OLAP
 {
@@ -51,7 +50,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private double[] _doubleArr;
         private decimal[] _decimalArr;
         private DateTime[] _dtArr;
-        private TimeSpan[] _tsArr;
+        private int[] _timeMillisArr;
 
         private const string DateTimeFormat = "yyyy-MM-dd-HH-mm-ss.ffffff";
         private const string Extension = "parquet";
@@ -141,9 +140,17 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 Directory.CreateDirectory(Path.Combine(_tmpFilePath, _localFolderName));
 
             using (Stream fileStream = File.Open(localPath, FileMode.OpenOrCreate, FileAccess.ReadWrite))
-            using (var parquetWriter = ParquetWriter.CreateAsync(new ParquetSchema(Fields.Values), fileStream).GetAwaiter().GetResult())
             {
-                WriteGroup(parquetWriter);
+                var parquetWriter = ParquetWriter.CreateAsync(new ParquetSchema(Fields.Values), fileStream).GetAwaiter().GetResult();
+                try
+                {
+                    WriteGroup(parquetWriter);
+                }
+                finally
+                {
+                    // ParquetWriter is IAsyncDisposable only, disposing it writes the file footer
+                    parquetWriter.DisposeAsync().GetAwaiter().GetResult();
+                }
             }
 
             _count = _group.Count;
@@ -161,7 +168,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 if (kvp.Value == null)
                     continue;
 
-                fields[kvp.Key] = new DataField(kvp.Key, kvp.Value);
+                fields[kvp.Key] = CreateDataField(kvp.Key, kvp.Value);
             }
 
             fields[_documentIdColumn] = new DataField(_documentIdColumn, typeof(string));
@@ -170,97 +177,102 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             return fields;
         }
 
+        private static DataField CreateDataField(string name, Type dataType)
+        {
+            // TimeSpan is not a supported Parquet.Net type anymore, a TIME column with
+            // millisecond precision is what earlier versions used to write for it
+            if (dataType == typeof(TimeSpan))
+                return new TimeDataField(name, TimeUnitPrecision.Millis);
+
+            return new DataField(name, dataType);
+        }
+
         private void WriteGroup(ParquetWriter parquetWriter)
         {
             AddMandatoryFields();
 
             using (ParquetRowGroupWriter groupWriter = parquetWriter.CreateRowGroup())
             {
-                foreach (var kvp in _group.Data)
+                // columns must be written in the order they appear in the schema,
+                // and the schema is generated from 'Fields', so we iterate over it
+                foreach (var kvp in Fields)
                 {
-                    if (Fields.TryGetValue(kvp.Key, out var field) == false)
-                        continue;
+                    var field = kvp.Value;
+                    var data = _group.Data[kvp.Key];
 
-                    var data = kvp.Value;
-                    Array array;
-
-                    if (field.ClrType == typeof(bool))
+                    // 'ClrType' is the type Parquet stores the column as, which is not the type we
+                    // asked for in a couple of cases, so those are matched on the field itself
+                    if (field is TimeDataField)
                     {
-                        array = _boolArr ??= new bool[data.Count];
+                        WriteTimeColumn(groupWriter, field, data, ref _timeMillisArr);
+                    }
+                    else if (field.ClrType == typeof(ReadOnlyMemory<char>))
+                    {
+                        WriteStringColumn(groupWriter, field, data, ref _strArr);
+                    }
+                    else if (field.ClrType == typeof(bool))
+                    {
+                        WriteColumn(groupWriter, field, data, ref _boolArr);
                     }
                     else if (field.ClrType == typeof(byte))
                     {
-                        array = _byteArr ??= new byte[data.Count];
+                        WriteColumn(groupWriter, field, data, ref _byteArr);
                     }
                     else if (field.ClrType == typeof(sbyte))
                     {
-                        array = _sbyteArr ??= new sbyte[data.Count];
+                        WriteColumn(groupWriter, field, data, ref _sbyteArr);
                     }
                     else if (field.ClrType == typeof(short))
                     {
-                        array = _shortArr ??= new short[data.Count];
+                        WriteColumn(groupWriter, field, data, ref _shortArr);
                     }
                     else if (field.ClrType == typeof(int))
                     {
-                        array = _intArr ??= new int[data.Count];
+                        WriteColumn(groupWriter, field, data, ref _intArr);
                     }
                     else if (field.ClrType == typeof(long))
                     {
-                        array = _longArr ??= new long[data.Count];
+                        WriteColumn(groupWriter, field, data, ref _longArr);
                     }
                     else if (field.ClrType == typeof(ushort))
                     {
-                        array = _ushortArr ??= new ushort[data.Count];
+                        WriteColumn(groupWriter, field, data, ref _ushortArr);
                     }
                     else if (field.ClrType == typeof(uint))
                     {
-                        array = _uintArr ??= new uint[data.Count];
+                        WriteColumn(groupWriter, field, data, ref _uintArr);
                     }
                     else if (field.ClrType == typeof(ulong))
                     {
-                        array = _ulongArr ??= new ulong[data.Count];
+                        WriteColumn(groupWriter, field, data, ref _ulongArr);
                     }
                     else if (field.ClrType == typeof(float))
                     {
-                        array = _floatArr ??= new float[data.Count];
+                        WriteColumn(groupWriter, field, data, ref _floatArr);
                     }
                     else if (field.ClrType == typeof(double))
                     {
-                        array = _doubleArr ??= new double[data.Count];
+                        WriteColumn(groupWriter, field, data, ref _doubleArr);
                     }
                     else if (field.ClrType == typeof(decimal))
                     {
-                        array = _decimalArr ??= new decimal[data.Count];
-                    }
-                    else if (field.ClrType == typeof(string))
-                    {
-                        array = _strArr ??= new string[data.Count];
+                        WriteColumn(groupWriter, field, data, ref _decimalArr);
                     }
                     else if (field.ClrType == typeof(DateTime))
                     {
-                        array = _dtArr ??= new DateTime[data.Count];
-                    }
-                    else if (field.ClrType == typeof(TimeSpan))
-                    {
-                        array = _tsArr ??= new TimeSpan[data.Count];
+                        WriteColumn(groupWriter, field, data, ref _dtArr);
                     }
                     else
                     {
                         ThrowUnsupportedDataType(field.ClrType);
-                        return;
                     }
-
-                    Debug.Assert(array.Length == data.Count, $"Invalid field data on property '{kvp.Key}'");
-
-                    data.CopyTo(array, 0);
-                    groupWriter.WriteColumnAsync(new DataColumn(field, array)).GetAwaiter().GetResult();
                 }
             }
 
             _boolArr = null;
             _strArr = null;
             _dtArr = null;
-            _tsArr = null;
+            _timeMillisArr = null;
             _byteArr = null;
             _sbyteArr = null;
             _shortArr = null;
@@ -272,6 +284,41 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             _floatArr = null;
             _doubleArr = null;
             _decimalArr = null;
+        }
+
+        private static void WriteColumn<T>(ParquetRowGroupWriter groupWriter, DataField field, IList data, ref T[] array)
+            where T : struct
+        {
+            array ??= new T[data.Count];
+
+            Debug.Assert(array.Length == data.Count, $"Invalid field data on property '{field.Name}'");
+
+            data.CopyTo(array, 0);
+            groupWriter.WriteAsync(field, new ReadOnlyMemory<T>(array)).GetAwaiter().GetResult();
+        }
+
+        private static void WriteTimeColumn(ParquetRowGroupWriter groupWriter, DataField field, IList data, ref int[] array)
+        {
+            array ??= new int[data.Count];
+
+            Debug.Assert(array.Length == data.Count, $"Invalid field data on property '{field.Name}'");
+
+            for (int i = 0; i < data.Count; i++)
+                array[i] = (int)((TimeSpan)data[i]).TotalMilliseconds;
+
+            groupWriter.WriteAsync(field, new ReadOnlyMemory<int>(array)).GetAwaiter().GetResult();
+        }
+
+        private static void WriteStringColumn(ParquetRowGroupWriter groupWriter, DataField field, IList data, ref string[] array)
+        {
+            array ??= new string[data.Count];
+
+            Debug.Assert(array.Length == data.Count, $"Invalid field data on property '{field.Name}'");
+
+            data.CopyTo(array, 0);
+
+            // strings are reference types, so they need the dedicated overload
+            groupWriter.WriteAsync(field, array).GetAwaiter().GetResult();
         }
 
         internal void AddMandatoryFields()
