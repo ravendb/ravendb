@@ -24,6 +24,9 @@ jobs:
               - '!src/Raven.Studio/**/*'
             client:
               - 'src/Raven.Client/**/*'
+            quill:
+              - 'src/Raven.Quill/**/*'
+              - 'src/Raven.Quill.Web/**/*'
 
       - uses: actions/checkout@v4
 
@@ -33,6 +36,7 @@ jobs:
           # Studio is labelled only when nothing outside src/Raven.Studio was touched
           studioOnly: ${{ steps.changes.outputs.studio == 'true' && steps.changes.outputs.outsideStudio != 'true' }}
           clientTouched: ${{ steps.changes.outputs.client }}
+          quillTouched: ${{ steps.changes.outputs.quill }}
         run: |
           $branch = "${{ github.event.pull_request.base.ref }}"
           $labels = New-Object System.Collections.Generic.List[string]
@@ -77,6 +81,10 @@ jobs:
           # Client API changes need migration tracking only on version branches (e.g. v7.2)
           if ($branch -like 'v*' -and $env:clientTouched -eq 'true') {
             $labels.Add('migrate-ClientApi')
+          }
+
+          if (($branch -like 'v*' -or $branch -like 'feature*') -and $env:quillTouched -eq 'true') {
+            $labels.Add('area-Quill')
           }
 
           $unique = $labels | Select-Object -Unique
