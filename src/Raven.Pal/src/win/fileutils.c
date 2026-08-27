@@ -74,21 +74,26 @@ PRIVATE int32_t
 _write_file(void* handle, const void* buffer, int64_t size, int64_t offset, int32_t* detailed_error_code)
 {
     const int32_t WRITE_INCREMENT = 4096;
-    const int32_t NUMBER_OF_BYTES_TO_WRITE = (UINT32_MAX / WRITE_INCREMENT) * WRITE_INCREMENT;
 
     assert(size % WRITE_INCREMENT == 0);
     assert((size_t)buffer % WRITE_INCREMENT == 0);
 
-    int32_t rc = _write_file_in_sections(handle, (char*)buffer, size, offset, NUMBER_OF_BYTES_TO_WRITE, detailed_error_code);
-    if (rc == SUCCESS)
-        return SUCCESS;
+    uint32_t section_size = (UINT32_MAX / WRITE_INCREMENT) * WRITE_INCREMENT;
 
-    if (*detailed_error_code != ERROR_WORKING_SET_QUOTA)
-        return FAIL_WRITE_FILE;
+    for (;;)
+    {
+        int32_t rc = _write_file_in_sections(handle, (char*)buffer, size, offset, section_size, detailed_error_code);
+        if (rc == SUCCESS)
+            return SUCCESS;
 
-    // this error can happen under low memory conditions, instead of trying to write the whole thing in a single shot
-    // we'll write it in 4KB increments. This is likely to be much slower, but failing here will fail the entire DB
-    return _write_file_in_sections(handle, (char*)buffer, size, offset, WRITE_INCREMENT, detailed_error_code);
+        // this error can happen under low memory conditions, when the kernel cannot lock the whole
+        // buffer for unbuffered I/O. Failing here would fail the entire DB, so retry with smaller sections
+        if (*detailed_error_code != ERROR_WORKING_SET_QUOTA || section_size == WRITE_INCREMENT)
+            return FAIL_WRITE_FILE;
+
+        section_size /= 2;
+        section_size -= section_size % WRITE_INCREMENT;
+    }
 }
 
 PRIVATE int32_t
