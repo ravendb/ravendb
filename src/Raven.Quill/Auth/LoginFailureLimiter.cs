@@ -10,6 +10,7 @@ public sealed class LoginFailureLimiter(TimeProvider time)
     private const int MaxTrackedClients = 10_000;
 
     private readonly ConcurrentDictionary<string, Counter> _failures = new();
+    private long _lastPurgeTicks;
 
     public bool IsThrottled(string client)
     {
@@ -18,7 +19,9 @@ public sealed class LoginFailureLimiter(TimeProvider time)
 
         lock (counter)
         {
-            return time.GetUtcNow() - counter.WindowStart <= Window && counter.Count > MaxFailures;
+            return counter.Removed == false &&
+                   time.GetUtcNow() - counter.WindowStart <= Window &&
+                   counter.Count > MaxFailures;
         }
     }
 
@@ -27,32 +30,65 @@ public sealed class LoginFailureLimiter(TimeProvider time)
         var now = time.GetUtcNow();
 
         if (_failures.Count > MaxTrackedClients)
+        {
             PurgeExpired(now);
 
-        var counter = _failures.GetOrAdd(client, _ => new Counter { WindowStart = now });
-        lock (counter)
+            if (_failures.Count > MaxTrackedClients && _failures.ContainsKey(client) == false)
+                return false;
+        }
+
+        while (true)
         {
-            if (now - counter.WindowStart > Window)
+            var counter = _failures.GetOrAdd(client, _ => new Counter { WindowStart = now });
+            lock (counter)
             {
-                counter.WindowStart = now;
-                counter.Count = 0;
+                if (counter.Removed == false)
+                {
+                    if (now - counter.WindowStart > Window)
+                    {
+                        counter.WindowStart = now;
+                        counter.Count = 0;
+                    }
+
+                    counter.Count++;
+                    return counter.Count > MaxFailures;
+                }
             }
 
-            counter.Count++;
-            return counter.Count > MaxFailures;
+            _failures.TryRemove(new KeyValuePair<string, Counter>(client, counter));
         }
     }
 
-    public void Reset(string client) => _failures.TryRemove(client, out _);
+    public void Reset(string client)
+    {
+        if (_failures.TryGetValue(client, out var counter) == false)
+            return;
+
+        lock (counter)
+        {
+            counter.Removed = true;
+            _failures.TryRemove(new KeyValuePair<string, Counter>(client, counter));
+        }
+    }
 
     private void PurgeExpired(DateTimeOffset now)
     {
+        var last = Interlocked.Read(ref _lastPurgeTicks);
+        if (now.UtcTicks - last < Window.Ticks)
+            return;
+
+        if (Interlocked.CompareExchange(ref _lastPurgeTicks, now.UtcTicks, last) != last)
+            return;
+
         foreach (var (client, counter) in _failures)
         {
             lock (counter)
             {
                 if (now - counter.WindowStart > Window)
-                    _failures.TryRemove(client, out _);
+                {
+                    counter.Removed = true;
+                    _failures.TryRemove(new KeyValuePair<string, Counter>(client, counter));
+                }
             }
         }
     }
@@ -61,5 +97,6 @@ public sealed class LoginFailureLimiter(TimeProvider time)
     {
         public DateTimeOffset WindowStart;
         public int Count;
+        public bool Removed;
     }
 }
