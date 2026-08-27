@@ -15,7 +15,8 @@ internal static class CdcPerformanceShaper
         .SelectMany(t => t.Stats ?? new List<CdcPerfProcessRaw>())
         .SelectMany(p => p.Performance ?? new List<CdcPerfBatchRaw>());
 
-    public static CdcPerformanceResponse Shape(CdcSinkPerformanceRaw raw, bool disabled, DateTime nowUtc, DateTime? lastActivityAt)
+    public static CdcPerformanceResponse Shape(
+        CdcSinkPerformanceRaw raw, bool disabled, DateTime nowUtc, DateTime? lastActivityAt, int storedErrorCount = 0)
     {
         var batches = Batches(raw)
             .OrderBy(b => b.Started)
@@ -34,7 +35,7 @@ internal static class CdcPerformanceShaper
 
         long recentReads = batches.Sum(b => (long)b.NumberOfReadMessages);
         long recentWrites = batches.Sum(b => (long)b.NumberOfProcessedMessages);
-        int errorCount = batches.Sum(b => b.ScriptProcessingErrorCount + b.ReadErrorCount);
+        int errorCount = Math.Max(batches.Sum(b => b.ScriptProcessingErrorCount + b.ReadErrorCount), storedErrorCount);
 
         DateTime? lastSyncAt = null;
         var inProgress = false;
@@ -70,6 +71,10 @@ internal static class CdcPerformanceShaper
 
         return new CdcPerformanceResponse(enabled, status, lastSyncAt, lagSeconds, recentReads, recentWrites, errorCount, points);
     }
+
+    public static int CountErrors(CdcSinkErrorsRaw raw) =>
+        (raw.Results ?? new List<CdcTaskErrorsRaw>())
+            .Sum(t => (t.ProcessErrors?.Count ?? 0) + (t.ItemErrors?.Count ?? 0));
 
     // Default cap on returned error details — mirrors the rolling perf window (~25 entries).
     private const int MaxErrors = 25;
