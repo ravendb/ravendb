@@ -16,10 +16,9 @@ export function CdcErrorsAlert({ slug }: { slug: string }) {
     return (
         <Alert variant="destructive">
             <TriangleAlertIcon />
-            <AlertTitle>App errors detected</AlertTitle>
+            <AlertTitle>Sync errors detected</AlertTitle>
             <AlertDescription>
-                {errorCount === 1 ? "1 error was" : `${errorCount} errors were`} reported while syncing data changes for
-                this app.
+                {errorCount === 1 ? "1 error was" : `${errorCount} errors were`} reported while syncing data changes.
             </AlertDescription>
             <AlertAction>
                 <CdcErrorsSheet

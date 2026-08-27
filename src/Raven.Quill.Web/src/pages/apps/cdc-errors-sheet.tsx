@@ -31,8 +31,8 @@ export function CdcErrorsSheet({ slug, trigger }: { slug: string; trigger: React
             <SheetTrigger asChild>{trigger}</SheetTrigger>
             <SheetContent className="w-full sm:max-w-lg data-[side=right]:sm:max-w-lg">
                 <SheetHeader className="border-b">
-                    <SheetTitle>App errors</SheetTitle>
-                    <SheetDescription>Errors reported while syncing data changes for this app.</SheetDescription>
+                    <SheetTitle>Sync errors</SheetTitle>
+                    <SheetDescription>Errors reported while syncing data changes.</SheetDescription>
                 </SheetHeader>
                 <div className="min-h-0 flex-1 space-y-3 overflow-auto px-4 pb-4">
                     <ApiState
@@ -45,7 +45,7 @@ export function CdcErrorsSheet({ slug, trigger }: { slug: string; trigger: React
                     >
                         {errorsQuery.data &&
                             (errorsQuery.data.length === 0 ? (
-                                <Text variant="muted">No app errors.</Text>
+                                <Text variant="muted">No sync errors.</Text>
                             ) : (
                                 errorsQuery.data.map((error, index) => <CdcErrorCard key={index} error={error} />)
                             ))}

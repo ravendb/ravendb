@@ -29,7 +29,7 @@ export function AppDataSource() {
     return (
         <div className="flex h-full min-h-0 flex-col">
             <DetailHeader
-                title={appQuery.data?.name ?? slug}
+                title="Data source"
                 status={
                     <DataSourceStatus status={dashboardAppQuery.data?.status} isLoading={dashboardAppQuery.isPending} />
                 }
