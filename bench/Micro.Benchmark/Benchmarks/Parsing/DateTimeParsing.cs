@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using System.Text;
 using BenchmarkDotNet.Analysers;
 using BenchmarkDotNet.Attributes;
@@ -19,7 +19,7 @@ public class DateTimeParsing
     {
         public Config()
         {
-            AddJob(new Job { Environment = { Runtime = CoreRuntime.Core80, Platform = Platform.X64, Jit = Jit.RyuJit, } });
+            AddJob(new Job { Environment = { Platform = Platform.X64, Jit = Jit.RyuJit, } });
 
             // Exporters for data
             AddExporter(GetExporters().ToArray());

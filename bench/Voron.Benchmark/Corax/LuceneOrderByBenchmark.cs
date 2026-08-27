@@ -1,4 +1,4 @@
-﻿//using System;
+//using System;
 using System;
 using System.IO;
 using System.Linq;
@@ -57,7 +57,6 @@ namespace Voron.Benchmark.Lucene
                 {
                     Environment =
                     {
-                        Runtime = CoreRuntime.Core80,
                         Platform = BenchmarkDotNet.Environments.Platform.X64,
                         Jit = Jit.RyuJit
                     },

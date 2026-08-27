@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using BenchmarkDotNet.Analysers;
@@ -25,7 +25,6 @@ namespace Micro.Benchmark.Benchmarks
                 {
                     Environment =
                     {
-                        Runtime = CoreRuntime.Core80,
                         Platform = Platform.X64,
                         Jit = Jit.Default,
                     }
