@@ -8,7 +8,10 @@ import type {
 import { type AppFormData, providerSchema, tablesSchema } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { resolveConnectionString } from "@/pages/setup/add-app-wizard/connection-string";
 import { resolveProviderFromSourceType } from "@/pages/setup/add-app-wizard/steps/connect/connect-source-options";
-import { mapFormTablesToDto, wrapDtoTablesToFormShape } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-dto";
+import {
+    mapFormTablesToDto,
+    wrapDtoTablesToFormShape,
+} from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-dto";
 
 /** The portable wizard configuration: connection details plus the CDC Sink table mapping, in the
  * canonical DTO shape (matching `/setup/map`). The app name and slug are excluded - a slug
