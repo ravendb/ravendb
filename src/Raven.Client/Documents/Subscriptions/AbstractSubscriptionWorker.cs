@@ -43,6 +43,7 @@ namespace Raven.Client.Documents.Subscriptions
         internal TcpClient _tcpClient;
         protected bool _disposed;
         protected Task _subscriptionTask;
+        private CancellationToken _externalToken;
         protected Stream _stream;
         protected int _forcedTopologyUpdateAttempts = 0;
 
@@ -64,7 +65,9 @@ namespace Raven.Client.Documents.Subscriptions
 
         public event Action<Exception> OnUnexpectedSubscriptionError;
 
-        private SubscriptionWorkerStatus _status = new SubscriptionWorkerStatus(SubscriptionWorkerState.NotStarted, exception: null, DateTime.UtcNow);
+        private SubscriptionWorkerStatus _status = new SubscriptionWorkerStatus(SubscriptionWorkerState.NotStarted, exception: null, DateTime.UtcNow, failingSinceUtc: null);
+
+        private DateTime? _failingSinceUtc;
 
         /// <summary>
         /// What the worker is doing right now - connecting, waiting for the server to send documents, processing a
@@ -81,17 +84,32 @@ namespace Raven.Client.Documents.Subscriptions
         /// </summary>
         public event Action<AbstractSubscriptionWorker<TBatch, TType>, SubscriptionWorkerStatus> OnStateChanged;
 
-        /// <remarks>
-        /// Called only from the task running the subscription, so the read of the current status below does not
-        /// need to be synchronized with another writer.
-        /// </remarks>
+        // Called only from the task running the subscription, no synchronization needed
         private void SetState(SubscriptionWorkerState state, Exception exception = null)
         {
-            SubscriptionWorkerStatus current = _status;
-            if (current.State == state && ReferenceEquals(current.Exception, exception))
-                return; // same state, keep SinceUtc pointing at when we actually entered it
+            DateTime now = DateTime.UtcNow;
 
-            SubscriptionWorkerStatus status = new SubscriptionWorkerStatus(state, exception, DateTime.UtcNow);
+            switch (state)
+            {
+                case SubscriptionWorkerState.WaitingForDocuments:
+                case SubscriptionWorkerState.Processing:
+                    _failingSinceUtc = null; // we are talking to the server, whatever went wrong before is over
+                    break;
+
+                case SubscriptionWorkerState.Retrying:
+                case SubscriptionWorkerState.Faulted:
+                    _failingSinceUtc ??= now; // keep the first time we failed, so that the user can see how long we've been failing
+                    break;
+
+                case SubscriptionWorkerState.Connecting:
+                    break; // intentionally skipped, a step of every retry as well as of a healthy start, so it carries the streak over
+            }
+
+            SubscriptionWorkerStatus current = _status;
+            if (current.State == state && ReferenceEquals(current.Exception, exception) && current.FailingSinceUtc == _failingSinceUtc)
+                return; // same state, no need to change anything
+
+            SubscriptionWorkerStatus status = new SubscriptionWorkerStatus(state, exception, now, _failingSinceUtc);
             Volatile.Write(ref _status, status);
 
             Action<AbstractSubscriptionWorker<TBatch, TType>, SubscriptionWorkerStatus> onStateChanged = OnStateChanged;
@@ -203,6 +221,8 @@ namespace Raven.Client.Documents.Subscriptions
         {
             if (_subscriptionTask != null)
                 throw new InvalidOperationException("The subscription is already running");
+
+            _externalToken = ct;
 
             if (ct != default)
             {
@@ -864,7 +884,10 @@ namespace Raven.Client.Documents.Subscriptions
             }
             catch (Exception e)
             {
-                SetState(SubscriptionWorkerState.Faulted, e);
+                // caller asked us to stop, the failure isn't a problem
+                if (_disposed == false && _externalToken.IsCancellationRequested == false)
+                    SetState(SubscriptionWorkerState.Faulted, e);
+
                 throw;
             }
             finally
