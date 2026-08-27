@@ -265,6 +265,13 @@ public static class EmbedEndpoints
 
     private static async Task<EmbedChatRequest?> ReadChatRequestAsync(HttpContext ctx, CancellationToken ct)
     {
+        if (ctx.Request.HasJsonContentType() == false)
+        {
+            ctx.Response.StatusCode = StatusCodes.Status415UnsupportedMediaType;
+            await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse("request body must be application/json"), ct);
+            return null;
+        }
+
         if (ctx.Request.ContentLength > MaxChatBodyBytes)
         {
             ctx.Response.StatusCode = StatusCodes.Status413PayloadTooLarge;
