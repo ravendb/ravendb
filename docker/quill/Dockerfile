@@ -14,18 +14,19 @@ COPY . .
 
 RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
     . docker/quill/scripts/dotnet-rid.sh \
-    && dotnet publish src/Raven.Server/Raven.Server.csproj \
-        -c Release \
-        -r "$DOTNET_RID" \
-        --self-contained false \
-        -o /publish/raven \
-        --nologo \
-    && dotnet publish tools/rvn/rvn.csproj \
-        -c Release \
-        -r "$DOTNET_RID" \
-        --self-contained false \
-        -o /publish/raven \
-        --nologo
+    && for proj in \
+         src/Raven.Server/Raven.Server.csproj \
+         tools/rvn/rvn.csproj \
+         tools/Raven.Debug/Raven.Debug.csproj \
+         tools/Voron.Recovery/Voron.Recovery.csproj \
+         tools/Raven.Migrator/Raven.Migrator.csproj ; do \
+        dotnet publish "$proj" \
+            -c Release \
+            -r "$DOTNET_RID" \
+            --self-contained false \
+            -o /publish/raven \
+            --nologo ; \
+       done
 
 FROM --platform=$BUILDPLATFORM ${SDK_IMAGE} AS ravendb-studio-build
 ARG STUDIO_NODE_MAJOR
