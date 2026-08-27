@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using QuillTests.E2E.Fixtures;
 using Raven.Quill.Auth;
 using Tests.Infrastructure;
@@ -135,9 +137,14 @@ public class AuthEndpointsTests(ITestOutputHelper output) : QuillTestBase(output
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Correct_key_logs_in_even_after_the_failure_limit_is_hit()
+    public async Task Throttled_client_is_rejected_before_validation_and_recovers_after_the_window()
     {
-        await using var host = await NewHostAsync();
+        var clock = new TestClock();
+        await using var host = await NewHostAsync(configureServices: services =>
+        {
+            services.RemoveAll<TimeProvider>();
+            services.AddSingleton<TimeProvider>(clock);
+        });
         host.Client.DefaultRequestHeaders.Remove(ApiKeyAuthenticationHandler.HeaderName);
 
         HttpStatusCode? last = null;
@@ -148,11 +155,26 @@ public class AuthEndpointsTests(ITestOutputHelper output) : QuillTestBase(output
         }
         Assert.Equal(HttpStatusCode.TooManyRequests, last);
 
+        var duringLockout = await host.Client.PostAsJsonAsync(QuillRoutes.AuthLogin,
+            new { apiKey = ApplianceWebApplicationFactory.TestApiKey });
+        Assert.Equal(HttpStatusCode.TooManyRequests, duringLockout.StatusCode);
+
+        clock.Advance(LoginFailureLimiter.Window + TimeSpan.FromSeconds(1));
+
         var login = await host.Client.PostAsJsonAsync(QuillRoutes.AuthLogin,
             new { apiKey = ApplianceWebApplicationFactory.TestApiKey });
         Assert.True(login.IsSuccessStatusCode, await login.Content.ReadAsStringAsync());
 
         var wrongAfterReset = await host.Client.PostAsJsonAsync(QuillRoutes.AuthLogin, new { apiKey = "wrong-key" });
         Assert.Equal(HttpStatusCode.Unauthorized, wrongAfterReset.StatusCode);
+    }
+
+    private sealed class TestClock : TimeProvider
+    {
+        private DateTimeOffset _now = DateTimeOffset.UtcNow;
+
+        public override DateTimeOffset GetUtcNow() => _now;
+
+        public void Advance(TimeSpan by) => _now += by;
     }
 }

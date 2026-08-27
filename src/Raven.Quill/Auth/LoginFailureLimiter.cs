@@ -11,6 +11,17 @@ public sealed class LoginFailureLimiter(TimeProvider time)
 
     private readonly ConcurrentDictionary<string, Counter> _failures = new();
 
+    public bool IsThrottled(string client)
+    {
+        if (_failures.TryGetValue(client, out var counter) == false)
+            return false;
+
+        lock (counter)
+        {
+            return time.GetUtcNow() - counter.WindowStart <= Window && counter.Count > MaxFailures;
+        }
+    }
+
     public bool RegisterFailure(string client)
     {
         var now = time.GetUtcNow();
