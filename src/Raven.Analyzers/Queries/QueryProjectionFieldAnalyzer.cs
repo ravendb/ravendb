@@ -227,7 +227,7 @@ namespace Raven.Analyzers.Queries
             foreach (InvocationExpressionSyntax inv in SyntaxHelpers.EnumerateInvocationChain(expression, model))
             {
                 string? name = SyntaxHelpers.GetMethodName(inv);
-                if (name == KnownTypes.QueryMethodName)
+                if (name == KnownTypes.QueryMethods.Query)
                     return inv;
             }
             return null;
@@ -243,7 +243,7 @@ namespace Raven.Analyzers.Queries
             foreach (InvocationExpressionSyntax inv in SyntaxHelpers.EnumerateInvocationChain(receiver, model))
             {
                 string? name = SyntaxHelpers.GetMethodName(inv);
-                if (name == KnownTypes.QueryMethodName)
+                if (name == KnownTypes.QueryMethods.Query)
                     return false;
                 if (name is KnownTypes.SelectMethodName or KnownTypes.ProjectIntoMethodName)
                     return true;

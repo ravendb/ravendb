@@ -68,7 +68,7 @@ namespace Raven.Analyzers.Shared
         internal static bool IsSessionQueryCall(InvocationExpressionSyntax invocation, SemanticModel model)
         {
             string? methodName = SyntaxHelpers.GetMethodName(invocation);
-            if (methodName != KnownTypes.QueryMethodName)
+            if (methodName != KnownTypes.QueryMethods.Query)
                 return false;
 
             if (SyntaxHelpers.GetMethodSymbol(invocation, model) is not IMethodSymbol method)
