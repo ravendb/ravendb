@@ -25,9 +25,9 @@ export type ChannelTabDef = {
     key: string;
     label: string;
     icon: LucideIcon;
-    // "padded": default breathing padding. "bare": brings its own sticky top bar / preview and wants
-    // content flush (the web widget's Customize tab). "fill": a fixed header that stays put while the body
-    // scrolls beneath it (the editable Telegram tabs).
+    // "padded": default breathing padding. "bare": brings its own header and preview and wants the tab's
+    // whole height, flush (the web widget's Customize tab). "fill": a fixed header that stays put while
+    // the body scrolls beneath it (the editable Telegram tabs).
     layout: "padded" | "bare" | "fill";
     render: (ctx: ChannelTabContext) => ReactNode;
 };

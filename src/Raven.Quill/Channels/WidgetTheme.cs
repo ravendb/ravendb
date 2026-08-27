@@ -40,6 +40,27 @@ public enum WidgetLogoRadius
     Pill,
 }
 
+/// How the logo fills the square the header gives it. `Contain` fits the whole image inside that square
+/// and is the safe default for a wordmark; `Cover` fills the square and crops whatever does not fit, which
+/// is what an avatar-style logo usually wants. Mirrored by `LOGO_FIT_SCALE` in
+/// `packages/widget/src/widget-theme.ts`.
+public enum WidgetLogoFit
+{
+    Contain,
+    Cover,
+}
+
+/// How the welcome screen lays the suggested prompts out. `Stacked` puts one per line, which is what a
+/// sentence-shaped prompt wants; `Inline` flows them as a wrapping row of chips, which suits a handful of
+/// short ones. `Stacked` is first so it is the zero value: a theme stored before this option existed reads
+/// back as the layout the widget has always drawn. Mirrored by `WidgetSuggestedPromptsLayout` in
+/// `packages/widget/src/widget-theme.ts`.
+public enum WidgetSuggestedPromptsLayout
+{
+    Stacked,
+    Inline,
+}
+
 /// The colors an operator picks for one scheme. Everything else the widget paints is derived from these,
 /// so light and dark each get their own trio without an operator ever filling in a swatch table.
 public sealed record WidgetThemeColors(
@@ -64,12 +85,14 @@ public sealed record WidgetTheme(
     // A data:image/... URI, small enough to live in the document; the embed CSP allows `img-src data:`.
     string? Logo,
     WidgetLogoRadius LogoRadius,
+    WidgetLogoFit LogoFit,
     string HeaderTitle,
     string? HeaderSubtitle,
     bool ShowHeader,
     string? GreetingTitle,
     string? GreetingBody,
     string[] SuggestedPrompts,
+    WidgetSuggestedPromptsLayout SuggestedPromptsLayout,
     string InputPlaceholder,
     string? Disclaimer,
     string? CustomCss)
@@ -88,12 +111,14 @@ public sealed record WidgetTheme(
         CustomFontSizeRem: null,
         Logo: null,
         LogoRadius: WidgetLogoRadius.Pill,
+        LogoFit: WidgetLogoFit.Contain,
         HeaderTitle: "AI Assistant",
         HeaderSubtitle: "Ask me anything",
         ShowHeader: true,
         GreetingTitle: "How can I help?",
         GreetingBody: "Ask a question and I'll do my best to answer it.",
         SuggestedPrompts: [],
+        SuggestedPromptsLayout: WidgetSuggestedPromptsLayout.Stacked,
         InputPlaceholder: "Ask a question...",
         Disclaimer: null,
         CustomCss: null);

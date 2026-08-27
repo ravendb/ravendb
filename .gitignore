@@ -164,6 +164,10 @@ src/Sparrow.Server/Utils/VxSort/codegen/__pycache__/
 AGENTS.override.md
 
 .claude/
+
+# Superpowers agent scratch: brainstorm mockups, SDD ledger, task briefs and review diffs.
+.superpowers/
+
 src/.cache/
 src/Raven.Server/embeddings/
 

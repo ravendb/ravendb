@@ -38,7 +38,9 @@ export function useFormUnsavedChanges<TValues extends FieldValues>(form: UseForm
     return {
         hasUnsavedChanges,
         markSaved: () => {
-            form.reset(form.getValues());
+            // A form-level `resetOptions` merges into every reset() call; keepDirtyValues would retain the
+            // dirty map here and make the next re-seed prefer stale on-screen values over the server's.
+            form.reset(form.getValues(), { keepDirtyValues: false });
             useUnsavedChangesStore.getState().clearUnsavedChanges(formId);
         },
     };

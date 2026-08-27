@@ -68,6 +68,17 @@ type Story = StoryObj<typeof meta>;
 export const EmptyLight: Story = {};
 export const EmptyDark: Story = { args: { appearance: "Dark" } };
 
+// Short prompts are the case the inline layout exists for, and there are enough of them here to force a
+// wrap inside the 420px frame the decorator gives every story.
+const INLINE_THEME = {
+    ...THEME,
+    suggestedPromptsLayout: "Inline" as const,
+    suggestedPrompts: ["Track order", "Returns", "Shipping", "Sizing", "Gift wrap", "Contact a human"],
+};
+
+export const InlinePromptsLight: Story = { args: { theme: INLINE_THEME } };
+export const InlinePromptsDark: Story = { args: { theme: INLINE_THEME, appearance: "Dark" } };
+
 export const MarkdownLight: Story = { args: { messages: TRANSCRIPT } };
 export const MarkdownDark: Story = { args: { messages: TRANSCRIPT, appearance: "Dark" } };
 

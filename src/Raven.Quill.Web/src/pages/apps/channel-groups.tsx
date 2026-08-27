@@ -95,10 +95,12 @@ export function ChannelGroups({ slug }: { slug: string }) {
                                         {group.channels.length}
                                     </Badge>
                                     {group.label === "Web widgets" && (
-                                        <Button asChild variant="outline">
+                                        // Pushed to the far end of the row so the label and its count
+                                        // read as one unit instead of competing with the action.
+                                        <Button asChild variant="outline" size="sm" className="ms-auto">
                                             <Link to={appRoutes.app(slug, "web-widget/default-customize")}>
                                                 <Palette aria-hidden="true" />
-                                                Customize default appearance
+                                                Customize appearance
                                             </Link>
                                         </Button>
                                     )}
@@ -149,7 +151,9 @@ function ChannelCard({
                 <CardTitle variant="item" className="min-w-0 truncate">
                     <Link
                         to={appRoutes.app(slug, `channels/${channel.channelId}`)}
-                        className="after:absolute after:inset-0 after:content-[''] hover:underline"
+                        // No hover underline: the overlay covers the whole card, so the card's own
+                        // hover background and ring already signal that the title is the link.
+                        className="after:absolute after:inset-0 after:content-['']"
                         title="Open details"
                     >
                         {channel.displayName}
@@ -204,7 +208,9 @@ function ChannelCard({
                 </div>
             </CardContent>
 
-            <CardFooter className="justify-end gap-1">
+            {/* No divider or fill behind the actions, so the footer's own top padding would double
+                up on the card's gap — the card already keeps `pb` for the footer to supply. */}
+            <CardFooter className="justify-end gap-1 border-t-0 bg-transparent pt-0">
                 {isIFrame && (
                     <GenerateEmbedLinkDialog
                         slug={slug}

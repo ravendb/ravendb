@@ -116,14 +116,11 @@ export function AppChannelDetail() {
 
             {/* -mx-2/px-2 keeps card borders/shadows off the scroller's clip edge (overflow-y-auto clips
                 x too). On padded tabs, py-5 breathes at rest but scrolls away so content sits flush under
-                the header; bare tabs keep no padding for their own sticky top bar. "fill" tabs own their
-                own scroller (with a fixed header), so this just becomes their flex column. */}
+                the header. "bare" and "fill" tabs own their own scrolling (the web widget's editor scrolls
+                its inspector and fills the rest with its preview; the Telegram tabs keep a fixed header
+                over a scrolling body), so for them this is just the bounded flex column they size against. */}
             <div
-                className={cn(
-                    "min-h-0 flex-1",
-                    isFill ? "flex flex-col" : "-mx-2 overflow-y-auto px-2",
-                    !isBare && !isFill && "py-5",
-                )}
+                className={cn("min-h-0 flex-1", isFill || isBare ? "flex flex-col" : "-mx-2 overflow-y-auto px-2 py-5")}
             >
                 <ApiState
                     isLoading={channelsQuery.isPending || agentsQuery.isPending}
@@ -143,7 +140,10 @@ export function AppChannelDetail() {
                                 <TabsContent
                                     key={tab.key}
                                     value={tab.key}
-                                    className={cn(tab.layout === "fill" && "flex min-h-0 flex-1 flex-col")}
+                                    className={cn(
+                                        (tab.layout === "fill" || tab.layout === "bare") &&
+                                            "flex min-h-0 flex-1 flex-col",
+                                    )}
                                 >
                                     {tab.render({ slug, channel, agent })}
                                 </TabsContent>

@@ -25,20 +25,22 @@ public class WidgetThemeEndpointsTests(ITestOutputHelper output) : QuillTestBase
         public double? CustomFontSizeRem;
         public string? Logo;
         public WidgetLogoRadius LogoRadius = WidgetLogoRadius.Pill;
+        public WidgetLogoFit LogoFit = WidgetLogoFit.Contain;
         public string HeaderTitle = "Support";
         public string? HeaderSubtitle = "We usually reply instantly";
         public bool ShowHeader = true;
         public string? GreetingTitle = "Hi there";
         public string? GreetingBody = "Ask us anything about your order.";
         public string[] SuggestedPrompts = ["Where is my order?", "How do I return an item?"];
+        public WidgetSuggestedPromptsLayout SuggestedPromptsLayout = WidgetSuggestedPromptsLayout.Stacked;
         public string InputPlaceholder = "Type a message...";
         public string? Disclaimer = "AI responses may be inaccurate.";
         public string? CustomCss;
 
         public WidgetTheme Build() => new(
-            Appearance, Light, Dark, Radius, FontFamily, FontSize, CustomFontSizeRem, Logo, LogoRadius,
+            Appearance, Light, Dark, Radius, FontFamily, FontSize, CustomFontSizeRem, Logo, LogoRadius, LogoFit,
             HeaderTitle, HeaderSubtitle, ShowHeader, GreetingTitle, GreetingBody, SuggestedPrompts,
-            InputPlaceholder, Disclaimer, CustomCss);
+            SuggestedPromptsLayout, InputPlaceholder, Disclaimer, CustomCss);
     }
 
     /// Derived from the limit rather than written out, so raising it does not silently turn an
@@ -126,6 +128,28 @@ public class WidgetThemeEndpointsTests(ITestOutputHelper output) : QuillTestBase
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Suggested_prompts_layout_round_trips()
+    {
+        await using var widget = await NewWidgetAsync();
+
+        var saved = await Host.UpdateWidgetThemeAsync(widget.Slug, widget.ChannelId, new UpdateWidgetThemeRequest(
+            Sample(theme => theme.SuggestedPromptsLayout = WidgetSuggestedPromptsLayout.Inline)));
+        Assert.Equal(WidgetSuggestedPromptsLayout.Inline, saved.Theme!.SuggestedPromptsLayout);
+
+        var loaded = await Host.GetWidgetThemeAsync(widget.Slug, widget.ChannelId);
+        Assert.Equal(WidgetSuggestedPromptsLayout.Inline, loaded.Theme!.SuggestedPromptsLayout);
+    }
+
+    /// `Stacked` is the enum's zero value, so a theme stored before the field existed deserializes to the
+    /// layout the widget has always drawn rather than silently flipping to the new one.
+    [RavenFact(RavenTestCategory.Quill)]
+    public void Default_theme_stacks_the_prompts()
+    {
+        Assert.Equal(WidgetSuggestedPromptsLayout.Stacked, WidgetTheme.Default.SuggestedPromptsLayout);
+        Assert.Equal(default, WidgetTheme.Default.SuggestedPromptsLayout);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task The_app_default_applies_to_widgets_that_make_no_choice()
     {
         await using var widget = await NewWidgetAsync();
@@ -196,6 +220,8 @@ public class WidgetThemeEndpointsTests(ITestOutputHelper output) : QuillTestBase
         { "fontFamily", theme => theme.FontFamily = new string('a', WidgetThemeValidation.MaxFontFamilyLength + 1) },
         { "radius", theme => theme.Radius = (WidgetRadius)99 },
         { "logoRadius", theme => theme.LogoRadius = (WidgetLogoRadius)99 },
+        { "logoFit", theme => theme.LogoFit = (WidgetLogoFit)99 },
+        { "suggestedPromptsLayout", theme => theme.SuggestedPromptsLayout = (WidgetSuggestedPromptsLayout)99 },
         { "suggestedPrompts", theme => theme.SuggestedPrompts = Prompts(WidgetThemeValidation.MaxSuggestedPrompts + 1) },
         { "suggested prompt", theme => theme.SuggestedPrompts = [new string('x', WidgetThemeValidation.MaxSuggestedPromptLength + 1)] },
         { "headerTitle", theme => theme.HeaderTitle = "" },

@@ -68,13 +68,10 @@ export function WebWidgetThemePreview({ theme, appearance, view, className }: We
     }, [theme, appearance, view, readyCount]);
 
     return (
+        // The caller drives the height through `className` (a fixed value, a fill, whatever fits its own
+        // layout) rather than this component hard-coding one - see theme-editor-stage.tsx, its one caller.
         <div className={cn("overflow-hidden rounded-xl border bg-background shadow-sm", className)}>
-            <iframe
-                ref={iframeRef}
-                title="Web widget preview"
-                src={PREVIEW_SRC}
-                className="h-[640px] w-full border-0"
-            />
+            <iframe ref={iframeRef} title="Web widget preview" src={PREVIEW_SRC} className="h-full w-full border-0" />
         </div>
     );
 }

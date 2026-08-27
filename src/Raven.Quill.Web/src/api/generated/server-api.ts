@@ -1951,9 +1951,13 @@ export interface components {
         /** @enum {unknown} */
         WidgetFontSize: "Small" | "Medium" | "Large" | "Custom";
         /** @enum {unknown} */
+        WidgetLogoFit: "Contain" | "Cover";
+        /** @enum {unknown} */
         WidgetLogoRadius: "None" | "Small" | "Medium" | "Large" | "Pill";
         /** @enum {unknown} */
         WidgetRadius: "None" | "Small" | "Medium" | "Large";
+        /** @enum {unknown} */
+        WidgetSuggestedPromptsLayout: "Stacked" | "Inline";
         WidgetTheme: {
             appearance: components["schemas"]["WidgetAppearance"];
             light: components["schemas"]["WidgetThemeColors"];
@@ -1965,12 +1969,14 @@ export interface components {
             customFontSizeRem: null | number;
             logo: null | string;
             logoRadius: components["schemas"]["WidgetLogoRadius"];
+            logoFit: components["schemas"]["WidgetLogoFit"];
             headerTitle: string;
             headerSubtitle: null | string;
             showHeader: boolean;
             greetingTitle: null | string;
             greetingBody: null | string;
             suggestedPrompts: string[];
+            suggestedPromptsLayout: components["schemas"]["WidgetSuggestedPromptsLayout"];
             inputPlaceholder: string;
             disclaimer: null | string;
             customCss: null | string;
@@ -4425,8 +4431,10 @@ export type WidgetAppearance = components["schemas"]["WidgetAppearance"];
 export type WidgetDefaultThemeResponse = components["schemas"]["WidgetDefaultThemeResponse"];
 export type WidgetFontOption = components["schemas"]["WidgetFontOption"];
 export type WidgetFontSize = components["schemas"]["WidgetFontSize"];
+export type WidgetLogoFit = components["schemas"]["WidgetLogoFit"];
 export type WidgetLogoRadius = components["schemas"]["WidgetLogoRadius"];
 export type WidgetRadius = components["schemas"]["WidgetRadius"];
+export type WidgetSuggestedPromptsLayout = components["schemas"]["WidgetSuggestedPromptsLayout"];
 export type WidgetTheme = components["schemas"]["WidgetTheme"];
 export type WidgetThemeColors = components["schemas"]["WidgetThemeColors"];
 export type WidgetThemeResponse = components["schemas"]["WidgetThemeResponse"];

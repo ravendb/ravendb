@@ -131,6 +131,14 @@
         background: color-mix(in oklch, var(--color-foreground) 20%, transparent);
         background-clip: padding-box;
     }
+
+    /* dnd-kit translates the dragged row out from under the pointer the moment a drag starts, so a
+       grabbing cursor scoped to the handle stops painting almost immediately and the arrow comes back.
+       The cursor has to be claimed for the whole document for as long as the drag lasts. */
+    body[data-dnd-dragging],
+    body[data-dnd-dragging] * {
+        cursor: grabbing !important;
+    }
 }
 
 @layer components {
@@ -232,10 +240,46 @@
     background-color: color-mix(in oklab, var(--color-primary) 10%, transparent) !important;
 }
 
+/* Canvas texture for the preview stage: a sparse dot grid that reads as backdrop rather than as part
+   of what is being previewed. Kept here so the dot size and rhythm live in one place. */
+@utility dot-grid {
+    background-image: radial-gradient(
+        circle,
+        color-mix(in oklab, var(--color-foreground) 10%, transparent) 1px,
+        transparent 1px
+    );
+    background-size: 16px 16px;
+}
+
 @utility no-scrollbar {
     scrollbar-width: none;
 
     &::-webkit-scrollbar {
         display: none;
     }
+}
+
+/* react-colorful ships a 28px handle, which is wider than the inset the colour picker's area sits in,
+   so half of it was clipped whenever the colour was at a limit (fully saturated, white, hue near 0).
+   18px keeps the handle inside the inset at every position, including its 1.1 scale while dragging,
+   and small enough that it no longer overflows the 24px hue strip at all. */
+.rq-color-area .react-colorful__pointer {
+    width: 18px;
+    height: 18px;
+}
+
+/* The hue strip ships fused to the bottom of the saturation area, sharing its rounded corners. Split
+   into two separate controls: the area rounds on all four corners, the strip becomes a pill, and the
+   gap matches the popover's own 2.5 rhythm. Overriding `__last-control` needs no !important because
+   this selector carries one more class than react-colorful's own. */
+.rq-color-area .react-colorful {
+    gap: 0.625rem;
+}
+
+.rq-color-area .react-colorful__saturation {
+    border-radius: 0.5rem;
+}
+
+.rq-color-area .react-colorful__hue {
+    border-radius: 9999px;
 }

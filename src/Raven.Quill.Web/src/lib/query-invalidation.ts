@@ -51,7 +51,6 @@ function channelTypeQueryKeys(slug: string, channelType: NonNullable<ChannelType
 export function invalidateChannelQueries(queryClient: QueryClient, slug: string, channelType?: ChannelType) {
     return Promise.all([
         queryClient.invalidateQueries({ queryKey: api.queries.channels.list(slug).queryKey }),
-        queryClient.invalidateQueries({ queryKey: api.queries.stats.channels(slug).queryKey }),
         queryClient.invalidateQueries({ queryKey: api.queries.stats.dashboardApps().queryKey }),
         ...(channelType ? channelTypeQueryKeys(slug, channelType) : []).map((queryKey) =>
             queryClient.invalidateQueries({ queryKey }),

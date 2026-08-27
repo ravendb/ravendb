@@ -4,6 +4,8 @@ import {
     MAX_SUGGESTED_PROMPTS,
     widgetThemeSchema,
     toFormData,
+    toPreviewTheme,
+    toWidgetTheme,
 } from "@/pages/apps/channels/web-widget-theme-schema";
 import type { WidgetTheme } from "@/api/generated/server-api";
 
@@ -17,12 +19,14 @@ const theme: WidgetTheme = {
     customFontSizeRem: null,
     logo: null,
     logoRadius: "Pill",
+    logoFit: "Contain",
     headerTitle: "AI Assistant",
     headerSubtitle: null,
     showHeader: true,
     greetingTitle: null,
     greetingBody: null,
     suggestedPrompts: [],
+    suggestedPromptsLayout: "Stacked",
     inputPlaceholder: "Ask a question...",
     disclaimer: null,
     customCss: null,
@@ -63,5 +67,56 @@ describe("widgetThemeSchema", () => {
 
     it("ignores a stale custom font size while the size is named", () => {
         expect(parse({ fontSize: "Medium", customFontSizeRem: 9 }).success).toBe(true);
+    });
+});
+
+describe("suggestedPromptsLayout", () => {
+    it("round-trips through the form", () => {
+        const form = toFormData({ ...theme, suggestedPromptsLayout: "Inline" });
+        expect(form.suggestedPromptsLayout).toBe("Inline");
+
+        const parsed = widgetThemeSchema.parse(form);
+        expect(toWidgetTheme(parsed).suggestedPromptsLayout).toBe("Inline");
+    });
+
+    it("rejects a layout that is neither value", () => {
+        expect(parse({ suggestedPromptsLayout: "Sideways" as never }).success).toBe(false);
+    });
+
+    // The preview renders whatever is in the form right now, including a value react-hook-form has not
+    // registered yet, so an unrecognised one has to fall back rather than reach the widget.
+    it("previews the form value and falls back to the saved one", () => {
+        expect(toPreviewTheme({ suggestedPromptsLayout: "Inline" }, theme).suggestedPromptsLayout).toBe("Inline");
+        expect(toPreviewTheme({}, theme).suggestedPromptsLayout).toBe("Stacked");
+        expect(toPreviewTheme({ suggestedPromptsLayout: "Sideways" as never }, theme).suggestedPromptsLayout).toBe(
+            "Stacked",
+        );
+    });
+});
+
+/** A theme stored before `logoFit` and `suggestedPromptsLayout` shipped comes back without them, and the
+ *  generated type does not admit that, so nothing coalesces them on the way into the form. */
+describe("fields missing from a stored theme", () => {
+    const stored = { ...theme } as WidgetTheme;
+    delete (stored as Partial<WidgetTheme>).logoFit;
+    delete (stored as Partial<WidgetTheme>).suggestedPromptsLayout;
+
+    it("defaults them in the form rather than failing validation", () => {
+        const values = toFormData(stored);
+        expect(values.logoFit).toBe("Contain");
+        expect(values.suggestedPromptsLayout).toBe("Stacked");
+        expect(widgetThemeSchema.safeParse(values).success).toBe(true);
+    });
+
+    it("defaults them in the preview, which falls back to that same theme", () => {
+        const preview = toPreviewTheme({}, stored);
+        expect(preview.logoFit).toBe("Contain");
+        expect(preview.suggestedPromptsLayout).toBe("Stacked");
+    });
+
+    it("saves them as the defaults", () => {
+        const output = widgetThemeSchema.parse(toFormData(stored));
+        expect(toWidgetTheme(output).logoFit).toBe("Contain");
+        expect(toWidgetTheme(output).suggestedPromptsLayout).toBe("Stacked");
     });
 });

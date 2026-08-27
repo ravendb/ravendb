@@ -73,6 +73,8 @@ type AppRouteDefinitionBase = {
     subtitle?: string;
     navigation?: DashboardNavigationDefinition;
     isPageTitleHidden?: boolean;
+    isBareLayout?: boolean;
+    isSidebarCollapsed?: boolean;
 } & (
     | {
           element: ReactNode;
@@ -258,7 +260,9 @@ const appPages: AppRouteDefinition[] = [
         // App-level default web-widget styling. Reached from the Channels list.
         path: "web-widget/default-customize",
         title: "Default web widget appearance",
+        isBareLayout: true,
         isPageTitleHidden: true,
+        isSidebarCollapsed: true,
         element: <AppWebWidgetDefaultCustomize />,
     },
     {
@@ -335,6 +339,8 @@ function toRouteObject(page: AppRouteDefinition, appScoped = false): RouteObject
         subtitle: page.subtitle,
         appScoped: appScoped,
         isPageTitleHidden: page.isPageTitleHidden,
+        isBareLayout: page.isBareLayout,
+        isSidebarCollapsed: page.isSidebarCollapsed,
     } satisfies AppRouteHandle;
 
     if (page.index) {
