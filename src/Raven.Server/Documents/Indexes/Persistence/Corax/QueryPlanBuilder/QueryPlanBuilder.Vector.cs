@@ -101,6 +101,11 @@ internal static partial class QueryPlanBuilder
             ? vec.NumberOfCandidates
             : builderParameters.Index.Configuration.CoraxVectorDefaultNumberOfCandidatesForQuerying;
 
+        // exact(vector.search(...)) opts out of the HNSW approximation - brute-force the whole (or filtered) candidate
+        // set instead. ParseExact marks the clause template, and exact() is part of the structural plan key, so the
+        // exact and approximate forms of the same query never share a compiled plan.
+        bool isExact = exec.Clause.IsExact;
+
         var fieldName = exec.Clause.FieldName
                         ?? throw new InvalidOperationException("Vector clause has no pre-resolved field name.");
 
@@ -122,12 +127,12 @@ internal static partial class QueryPlanBuilder
             {
                 return (method, methodParameter) switch
                 {
-                    (method: VectorHelpers.MethodVectorValue.ForDocument, string docId) => CoraxVectorItem.BuildForDocVector(builderParameters, fieldMetadata, docId, numberOfCandidates, minimumMatch, false),
-                    (method: VectorHelpers.MethodVectorValue.ForDocument, StringSegment docIdSegment) => CoraxVectorItem.BuildForDocVector(builderParameters, fieldMetadata, docIdSegment.Value, numberOfCandidates, minimumMatch, false),
+                    (method: VectorHelpers.MethodVectorValue.ForDocument, string docId) => CoraxVectorItem.BuildForDocVector(builderParameters, fieldMetadata, docId, numberOfCandidates, minimumMatch, isExact),
+                    (method: VectorHelpers.MethodVectorValue.ForDocument, StringSegment docIdSegment) => CoraxVectorItem.BuildForDocVector(builderParameters, fieldMetadata, docIdSegment.Value, numberOfCandidates, minimumMatch, isExact),
                     (method: VectorHelpers.MethodVectorValue.ForRaw, string vectorAsBase64) => CoraxVectorItem.BuildSingleVector(builderParameters, fieldMetadata,
-                        GenerateEmbeddings.FromBase64Array(VectorOptions.Default, builderParameters.Allocator, vectorAsBase64), numberOfCandidates, minimumMatch, false),
+                        GenerateEmbeddings.FromBase64Array(VectorOptions.Default, builderParameters.Allocator, vectorAsBase64), numberOfCandidates, minimumMatch, isExact),
                     (method: VectorHelpers.MethodVectorValue.ForRaw, StringSegment stringSegmentAsBase64) => CoraxVectorItem.BuildSingleVector(builderParameters, fieldMetadata,
-                        GenerateEmbeddings.FromBase64Array(VectorOptions.Default, builderParameters.Allocator, stringSegmentAsBase64.ToString()), numberOfCandidates, minimumMatch, false),
+                        GenerateEmbeddings.FromBase64Array(VectorOptions.Default, builderParameters.Allocator, stringSegmentAsBase64.ToString()), numberOfCandidates, minimumMatch, isExact),
                     (_, BlittableJsonReaderArray { Length: 0 }) => throw new InvalidDataException("Cannot perform search on empty value."),
                     _ => throw new InvalidQueryException(
                         $"Unknown method in value ({vec.Method}. Parameter type: {methodParameter?.GetType().FullName}, Value: {methodParameter}")
@@ -151,9 +156,9 @@ internal static partial class QueryPlanBuilder
             var vector = VectorHelpers.GetEmbeddingsForQueryParameter(builderParameters, valueTokenType, methodParameter, embeddingsGenerationTaskIdentifier, vectorOptions, fieldName);
 
             if (vector.SingleVector != null)
-                return CoraxVectorItem.BuildSingleVector(builderParameters, fieldMetadata, vector.SingleVector.Value, numberOfCandidates, minimumMatch, false);
+                return CoraxVectorItem.BuildSingleVector(builderParameters, fieldMetadata, vector.SingleVector.Value, numberOfCandidates, minimumMatch, isExact);
 
-            return CoraxVectorItem.BuildMultiVector(builderParameters, fieldMetadata, vector.MultiVector, numberOfCandidates, minimumMatch, false);
+            return CoraxVectorItem.BuildMultiVector(builderParameters, fieldMetadata, vector.MultiVector, numberOfCandidates, minimumMatch, isExact);
         }
 
         // Direct value (not a method call) — use pre-resolved value
@@ -235,7 +240,7 @@ internal static partial class QueryPlanBuilder
 
             if (indexField != null)
                 AssertDimensions(singleVector);
-            return CoraxVectorItem.BuildSingleVector(builderParameters, fieldMetadata, singleVector, numberOfCandidates, minimumMatch, false);
+            return CoraxVectorItem.BuildSingleVector(builderParameters, fieldMetadata, singleVector, numberOfCandidates, minimumMatch, isExact);
         }
 
         if (transformedEmbeddings.MultiVector != null)
@@ -248,7 +253,7 @@ internal static partial class QueryPlanBuilder
                     AssertDimensions(vector);
             }
 
-            return CoraxVectorItem.BuildMultiVector(builderParameters, fieldMetadata, multiVector, numberOfCandidates, minimumMatch, false);
+            return CoraxVectorItem.BuildMultiVector(builderParameters, fieldMetadata, multiVector, numberOfCandidates, minimumMatch, isExact);
         }
 
         throw new InvalidDataException("Expected to get single or multiple embeddings of VectorValue type but none was provided");
