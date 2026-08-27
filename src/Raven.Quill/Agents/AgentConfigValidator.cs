@@ -44,12 +44,8 @@ internal static class AgentConfigValidator
         if (TryValidateActions(body, request.ActionBindings, out var actionErrors) == false)
             return Results.BadRequest(new ApiErrorResponse(Errors: actionErrors.ToArray()));
 
-        if (string.IsNullOrWhiteSpace(body.SampleObject) == false && IsJsonObject(body.SampleObject) == false)
-            return Results.BadRequest(new ApiErrorResponse(
-                """sampleObject must be a JSON object, e.g. {"reply":""}"""));
-
-        if (string.IsNullOrWhiteSpace(body.OutputSchema) == false && IsJsonObject(body.OutputSchema) == false)
-            return Results.BadRequest(new ApiErrorResponse("outputSchema must be a JSON object"));
+        if (TryValidateJsonShapes(body, out var shapeErrors) == false)
+            return Results.BadRequest(new ApiErrorResponse(Errors: shapeErrors.ToArray()));
 
         if (body.SubAgents is { Count: > 0 })
             return Results.BadRequest(new ApiErrorResponse("subAgents are not supported in demo"));
@@ -93,6 +89,39 @@ internal static class AgentConfigValidator
         return null;
     }
 
+    internal static bool TryValidateJsonShapes(AiAgentConfiguration body, out List<string> errors)
+    {
+        errors = [];
+
+        if (string.IsNullOrWhiteSpace(body.SampleObject) == false && IsJsonObject(body.SampleObject) == false)
+            errors.Add("""sampleObject must be a JSON object, e.g. {"reply":""}""");
+
+        if (string.IsNullOrWhiteSpace(body.OutputSchema) == false && IsJsonObject(body.OutputSchema) == false)
+            errors.Add("outputSchema must be a JSON object");
+
+        foreach (var action in body.Actions ?? [])
+        {
+            AddActionShapeErrors(action, errors);
+        }
+
+        return errors.Count == 0;
+    }
+
+    private static void AddActionShapeErrors(AiAgentToolAction action, List<string> errors)
+    {
+        if (string.IsNullOrWhiteSpace(action.ParametersSampleObject) == false &&
+            IsJsonObject(action.ParametersSampleObject) == false)
+        {
+            errors.Add($"action '{action.Name}': parametersSampleObject must be a JSON object");
+        }
+
+        if (string.IsNullOrWhiteSpace(action.ParametersSchema) == false &&
+            IsJsonObject(action.ParametersSchema) == false)
+        {
+            errors.Add($"action '{action.Name}': parametersSchema must be a JSON object");
+        }
+    }
+
     internal static bool TryValidateActions(
         AiAgentConfiguration body, Dictionary<string, WebhookBinding>? bindings, out List<string> errors)
     {
@@ -129,11 +158,7 @@ internal static class AgentConfigValidator
                     : $"action '{action.Name}': parametersSampleObject or parametersSchema is required");
             }
 
-            if (hasSample && IsJsonObject(action.ParametersSampleObject) == false)
-                errors.Add($"action '{action.Name}': parametersSampleObject must be a JSON object");
-
-            if (hasSchema && IsJsonObject(action.ParametersSchema) == false)
-                errors.Add($"action '{action.Name}': parametersSchema must be a JSON object");
+            AddActionShapeErrors(action, errors);
 
             if (byName.Remove(action.Name, out var binding) == false)
                 errors.Add($"action '{action.Name}' has no binding");
