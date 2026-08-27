@@ -789,6 +789,8 @@ public class ChatCompletionClient : IDisposable
 
                 if (error.RetryAfter != null)
                     retryAfter = error.RetryAfter.Value;
+                else if (TryGetRetryAfter(response, out var retryAfterFromHeaders))
+                    retryAfter = retryAfterFromHeaders;
 
                 if (headers.TryGetValues(Constants.Headers.XRateLimitResetTokens, out var resetTokensValues))
                 {
@@ -824,6 +826,36 @@ public class ChatCompletionClient : IDisposable
                 UnsuccessfulAiRequestException.Throw(content.ToString(), response.StatusCode, reqId);
                 break;
         }
+    }
+
+    private static bool TryGetRetryAfter(HttpResponseMessage response, out TimeSpan retryAfter)
+    {
+        retryAfter = TimeSpan.Zero;
+
+        if (response.Headers.TryGetValues(Constants.Headers.RetryAfterMs, out var milliseconds) &&
+            double.TryParse(milliseconds.FirstOrDefault(), NumberStyles.Float, CultureInfo.InvariantCulture, out var ms) &&
+            ms > 0)
+        {
+            retryAfter = TimeSpan.FromMilliseconds(ms);
+            return true;
+        }
+
+        if (response.Headers.RetryAfter is not { } header)
+            return false;
+
+        if (header.Delta is { } delta && delta > TimeSpan.Zero)
+        {
+            retryAfter = delta;
+            return true;
+        }
+
+        if (header.Date is { } date && date - DateTimeOffset.UtcNow is { Ticks: > 0 } until)
+        {
+            retryAfter = until;
+            return true;
+        }
+
+        return false;
     }
 
     private string GetRefusal(BlittableJsonReaderObject choice0, BlittableJsonReaderObject message) => _settings.GetRefusal(choice0, message);
