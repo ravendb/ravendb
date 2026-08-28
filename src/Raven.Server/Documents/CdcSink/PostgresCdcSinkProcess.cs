@@ -248,17 +248,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             }
         }
 
-        // If a previous consumer (e.g., a process that was stopped but whose WAL sender
-        // hasn't timed out yet) is still holding the slot, terminate it so we can connect.
-        // PostgreSQL's default wal_sender_timeout is 60 seconds; without this, we'd have
-        // to wait for it to expire before the new process can stream.
-        await using (var cmd = new NpgsqlCommand(
-            "SELECT pg_terminate_backend(active_pid) FROM pg_replication_slots WHERE slot_name = @slotName AND active_pid IS NOT NULL",
-            conn))
-        {
-            cmd.Parameters.AddWithValue("slotName", _slotName);
-            await cmd.ExecuteScalarAsync(ct);
-        }
+        await TerminateActiveSlotConsumerAsync(conn, ct);
 
         // Resolve pgvector extension OID so OidToCategory can recognize vector columns
         // in the CDC stream. Returns null if the extension is not installed.
@@ -267,6 +257,19 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             var result = await cmd.ExecuteScalarAsync(ct);
             _vectorOid = result is uint oid ? oid : uint.MaxValue;
         }
+    }
+
+    // If a previous consumer (e.g., a process that was stopped but whose WAL sender
+    // hasn't timed out yet) is still holding the slot, terminate it so we can connect.
+    // PostgreSQL's default wal_sender_timeout is 60 seconds; without this, we'd have
+    // to wait for it to expire before the new process can stream.
+    protected virtual async Task TerminateActiveSlotConsumerAsync(NpgsqlConnection conn, CancellationToken ct)
+    {
+        await using var cmd = new NpgsqlCommand(
+            "SELECT pg_terminate_backend(active_pid) FROM pg_replication_slots WHERE slot_name = @slotName AND active_pid IS NOT NULL",
+            conn);
+        cmd.Parameters.AddWithValue("slotName", _slotName);
+        await cmd.ExecuteScalarAsync(ct);
     }
 
     private async Task VerifyPublicationTableCoverage(NpgsqlConnection conn, List<CdcSinkConfiguration.TableInfo> configuredTables, CancellationToken ct)
@@ -297,24 +300,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
 
         if (missing.Count > 0)
         {
-            var quotedMissing = QuoteTableList(missing);
-            var quotedPubName = CommandBuilder.QuoteIdentifier(_publicationName);
-            try
-            {
-                await using var alterCmd = new NpgsqlCommand(
-                    $"ALTER PUBLICATION {quotedPubName} ADD TABLE {quotedMissing}", conn);
-                await alterCmd.ExecuteNonQueryAsync(ct);
-
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"[{Name}] Added missing tables to publication '{_publicationName}': {quotedMissing}");
-            }
-            catch (PostgresException ex)
-            {
-                throw new InvalidOperationException(
-                    $"""
-                    Publication '{_publicationName}' does not include tables: {quotedMissing}. Attempted to add them automatically but failed ({ex.MessageText}). Ask a database administrator to run: ALTER PUBLICATION {quotedPubName} ADD TABLE {quotedMissing};
-                    """, ex);
-            }
+            await HandleMissingPublicationTablesAsync(conn, missing, ct);
         }
 
         // Warn about extra tables in the publication that aren't in the configuration
@@ -336,6 +322,28 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                 AlertReason.CdcSink_Warning,
                 NotificationSeverity.Warning,
                 key: $"{Tag}/{Name}/publication-extra-tables"));
+        }
+    }
+
+    protected virtual async Task HandleMissingPublicationTablesAsync(NpgsqlConnection conn, List<CdcSinkConfiguration.TableInfo> missing, CancellationToken ct)
+    {
+        var quotedMissing = QuoteTableList(missing);
+        var quotedPubName = CommandBuilder.QuoteIdentifier(_publicationName);
+        try
+        {
+            await using var alterCmd = new NpgsqlCommand(
+                $"ALTER PUBLICATION {quotedPubName} ADD TABLE {quotedMissing}", conn);
+            await alterCmd.ExecuteNonQueryAsync(ct);
+
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"[{Name}] Added missing tables to publication '{_publicationName}': {quotedMissing}");
+        }
+        catch (PostgresException ex)
+        {
+            throw new InvalidOperationException(
+                $"""
+                Publication '{_publicationName}' does not include tables: {quotedMissing}. Attempted to add them automatically but failed ({ex.MessageText}). Ask a database administrator to run: ALTER PUBLICATION {quotedPubName} ADD TABLE {quotedMissing};
+                """, ex);
         }
     }
 
@@ -716,7 +724,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         return (proc, values);
     }
 
-    private string QuoteTableList(List<CdcSinkConfiguration.TableInfo> tables)
+    protected string QuoteTableList(List<CdcSinkConfiguration.TableInfo> tables)
     {
         return string.Join(", ", tables.Select(t =>
             $"{CommandBuilder.QuoteIdentifier(t.Schema)}.{CommandBuilder.QuoteIdentifier(t.TableName)}"));
