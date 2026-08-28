@@ -17,6 +17,7 @@ import { Heading, Text } from "@/components/typography";
 import { FormInput } from "@/components/form/form-input";
 import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
 import { ParameterBindingFields } from "@/pages/apps/channels/parameter-binding-fields";
+import { DISCORD_BOT_TOKEN_FORMAT, newTokenField } from "@/pages/apps/channels/channel-token-fields";
 import {
     hasSameParameterNames,
     seedParameterRows,
@@ -49,11 +50,7 @@ const parameterBindingSchema = z
 const discordChannelSchema = z.object({
     agentId: z.string().min(1, "Select an agent to route conversations to"),
     displayName: z.string().trim(),
-    botToken: z
-        .string()
-        .trim()
-        .min(1, "Paste the bot token from the app's Bot page")
-        .refine((token) => /^\S+$/.test(token), "A bot token contains no spaces"),
+    botToken: newTokenField(DISCORD_BOT_TOKEN_FORMAT, "Paste the bot token from the app's Bot page"),
     parameters: z.array(parameterBindingSchema),
 });
 

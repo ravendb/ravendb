@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
 import { Button } from "@/components/shadcn/ui/button";
 import { appRoutes } from "@/lib/app-routes";
+import { readStoredValue, writeStoredValue } from "@/lib/safe-storage";
 import { cn } from "@/lib/utils";
 import { Heading, Text } from "@/components/typography";
 
@@ -15,7 +16,7 @@ function dismissedStorageKey(slug: string) {
 }
 
 function readDismissed(slug: string) {
-    return localStorage.getItem(dismissedStorageKey(slug)) === "true";
+    return readStoredValue(dismissedStorageKey(slug)) === "true";
 }
 
 export function WelcomePanel({ slug }: { slug: string }) {
@@ -53,7 +54,7 @@ export function WelcomePanel({ slug }: { slug: string }) {
     }
 
     const dismiss = () => {
-        localStorage.setItem(dismissedStorageKey(slug), "true");
+        writeStoredValue(dismissedStorageKey(slug), "true");
         setIsDismissed(true);
     };
 

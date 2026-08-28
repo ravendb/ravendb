@@ -39,6 +39,14 @@ async function statusFailure(response: Response): Promise<ChatEvent | null> {
     return null;
 }
 
+function parseServerEvent(line: string): ServerEvent | null {
+    try {
+        return JSON.parse(line) as ServerEvent;
+    } catch {
+        return null;
+    }
+}
+
 async function* readLines(body: ReadableStream<Uint8Array>): AsyncGenerator<string> {
     const reader = body.getReader();
     const decoder = new TextDecoder();
@@ -64,7 +72,9 @@ async function* readLines(body: ReadableStream<Uint8Array>): AsyncGenerator<stri
 }
 
 function toChatEvent(line: string): ChatEvent | null {
-    const parsed = JSON.parse(line) as ServerEvent;
+    const parsed = parseServerEvent(line);
+    if (parsed === null) return null;
+
     switch (parsed.type) {
         case "chunk":
             return typeof parsed.text === "string" ? { type: "chunk", text: parsed.text } : null;
