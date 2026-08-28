@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { Cable, CodeXml, Link2, MessageCircle, Palette, Pencil, Send, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { Cable, CodeXml, Link2, MessageCircle, Palette, Pencil, Search, Send, Trash2 } from "lucide-react";
 import type { ComponentType, ReactNode, SVGProps } from "react";
 import { Link } from "react-router";
 import { api } from "@/api/api";
@@ -10,6 +11,8 @@ import { EnabledStatus } from "@/components/data/status-indicator";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { Card, CardAction, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/shadcn/ui/card";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/shadcn/ui/input-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/shadcn/ui/select";
 import { Skeleton } from "@/components/shadcn/ui/skeleton";
 import { Heading, Text } from "@/components/typography";
 import { appRoutes } from "@/lib/app-routes";
@@ -33,7 +36,13 @@ const CHANNEL_GROUPS: ChannelGroupConfig[] = [
     { type: "Discord", label: "Discord", icon: DiscordIcon },
 ];
 
+type ChannelTypeFilter = NonNullable<ChannelType> | "all";
+type ChannelStatusFilter = "all" | "active" | "paused";
+
 export function ChannelGroups({ slug }: { slug: string }) {
+    const [search, setSearch] = useState("");
+    const [typeFilter, setTypeFilter] = useState<ChannelTypeFilter>("all");
+    const [statusFilter, setStatusFilter] = useState<ChannelStatusFilter>("all");
     const agentsQuery = useQuery(api.queries.agents.list(slug));
     const channelsQuery = useQuery(api.queries.channels.list(slug));
     // Active-link counts are supplementary — kept out of the ApiState gate so a
@@ -55,18 +64,27 @@ export function ChannelGroups({ slug }: { slug: string }) {
     };
 
     const channels = channelsQuery.data ?? [];
+    const query = search.trim().toLowerCase();
+    const filteredChannels = channels.filter((channel) => {
+        const matchesType = typeFilter === "all" || channel.type === typeFilter;
+        const matchesStatus =
+            statusFilter === "all" || (statusFilter === "active" ? channel.enabled : !channel.enabled);
+        const matchesSearch = query === "" || channelSearchText(channel).includes(query);
+        return matchesType && matchesStatus && matchesSearch;
+    });
+
     const knownTypes = new Set<NonNullable<ChannelType>>(CHANNEL_GROUPS.map((group) => group.type));
     const groups = [
         ...CHANNEL_GROUPS.map((group) => ({
             label: group.label,
             icon: group.icon,
-            channels: channels.filter((channel) => channel.type === group.type),
+            channels: filteredChannels.filter((channel) => channel.type === group.type),
         })),
         // Catch-all so an unknown or untyped channel is never silently dropped.
         {
             label: "Other",
             icon: Cable,
-            channels: channels.filter((channel) => channel.type == null || !knownTypes.has(channel.type)),
+            channels: filteredChannels.filter((channel) => channel.type == null || !knownTypes.has(channel.type)),
         },
     ].filter((group) => group.channels.length > 0);
 
@@ -86,40 +104,149 @@ export function ChannelGroups({ slug }: { slug: string }) {
                     </Text>
                 ) : (
                     <div className="space-y-6">
-                        {groups.map((group) => (
-                            <section key={group.label} className="min-w-0">
-                                <div className="mb-3 flex items-center gap-2">
-                                    <group.icon className="size-4 text-muted-foreground" aria-hidden="true" />
-                                    <Heading variant="label">{group.label}</Heading>
-                                    <Badge variant="secondary" className="tabular-nums">
-                                        {group.channels.length}
-                                    </Badge>
-                                    {group.label === "Web widgets" && (
-                                        <Button asChild variant="outline">
-                                            <Link to={appRoutes.app(slug, "web-widget/default-customize")}>
-                                                <Palette aria-hidden="true" />
-                                                Customize default appearance
-                                            </Link>
-                                        </Button>
-                                    )}
-                                </div>
-                                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                                    {group.channels.map((channel) => (
-                                        <ChannelCard
-                                            key={channel.channelId}
-                                            slug={slug}
-                                            channel={channel}
-                                            agent={agentsQuery.data?.find((x) => x.agentId === channel.agentId)}
-                                            activeLinkCount={activeLinkCounts.get(channel.channelId) ?? 0}
-                                            isLinkCountLoading={embedLinksQuery.isPending}
-                                        />
-                                    ))}
-                                </div>
-                            </section>
-                        ))}
+                        <ChannelsToolbar
+                            search={search}
+                            onSearchChange={setSearch}
+                            typeFilter={typeFilter}
+                            onTypeFilterChange={setTypeFilter}
+                            statusFilter={statusFilter}
+                            onStatusFilterChange={setStatusFilter}
+                        />
+                        {groups.length === 0 ? (
+                            <Text as="div" variant="muted" className="rounded-lg border border-dashed p-10 text-center">
+                                No channels match your filters.
+                            </Text>
+                        ) : (
+                            <div className="space-y-6">
+                                {groups.map((group) => (
+                                    <section key={group.label} className="min-w-0">
+                                        <div className="mb-3 flex items-center gap-2">
+                                            <group.icon className="size-4 text-muted-foreground" aria-hidden="true" />
+                                            <Heading variant="label">{group.label}</Heading>
+                                            <Badge variant="secondary" className="tabular-nums">
+                                                {group.channels.length}
+                                            </Badge>
+                                            {group.label === "Web widgets" && (
+                                                <Button asChild variant="outline">
+                                                    <Link to={appRoutes.app(slug, "web-widget/default-customize")}>
+                                                        <Palette aria-hidden="true" />
+                                                        Customize default appearance
+                                                    </Link>
+                                                </Button>
+                                            )}
+                                        </div>
+                                        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                                            {group.channels.map((channel) => (
+                                                <ChannelCard
+                                                    key={channel.channelId}
+                                                    slug={slug}
+                                                    channel={channel}
+                                                    agent={agentsQuery.data?.find((x) => x.agentId === channel.agentId)}
+                                                    activeLinkCount={activeLinkCounts.get(channel.channelId) ?? 0}
+                                                    isLinkCountLoading={embedLinksQuery.isPending}
+                                                />
+                                            ))}
+                                        </div>
+                                    </section>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 ))}
         </ApiState>
+    );
+}
+
+// The text a channel is matched against when searching by name — its display name plus the
+// provider identity shown on the card (bot username / workspace), so either finds the channel.
+function channelSearchText(channel: ChannelSummaryResponse): string {
+    return [channel.displayName, channel.telegram?.botUsername, channel.slack?.teamName, channel.discord?.botUsername]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+}
+
+const STATUS_FILTER_OPTIONS: { value: Exclude<ChannelStatusFilter, "all">; label: string }[] = [
+    { value: "active", label: "Active" },
+    { value: "paused", label: "Paused" },
+];
+
+function ChannelsToolbar({
+    search,
+    onSearchChange,
+    typeFilter,
+    onTypeFilterChange,
+    statusFilter,
+    onStatusFilterChange,
+}: {
+    search: string;
+    onSearchChange: (value: string) => void;
+    typeFilter: ChannelTypeFilter;
+    onTypeFilterChange: (value: ChannelTypeFilter) => void;
+    statusFilter: ChannelStatusFilter;
+    onStatusFilterChange: (value: ChannelStatusFilter) => void;
+}) {
+    return (
+        <div className="flex flex-wrap items-center gap-3">
+            <InputGroup className="w-full sm:max-w-xs">
+                <InputGroupAddon>
+                    <Search />
+                </InputGroupAddon>
+                <InputGroupInput
+                    placeholder="Search by name"
+                    value={search}
+                    onChange={(event) => onSearchChange(event.target.value)}
+                    aria-label="Search channels by name"
+                />
+            </InputGroup>
+
+            <div className="flex items-center gap-2 sm:ml-auto">
+                <FilterSelect
+                    value={typeFilter}
+                    onChange={onTypeFilterChange}
+                    options={CHANNEL_GROUPS.map((group) => ({ value: group.type, label: group.label }))}
+                    allLabel="All channels"
+                    ariaLabel="Filter by type"
+                />
+                <FilterSelect
+                    value={statusFilter}
+                    onChange={onStatusFilterChange}
+                    options={STATUS_FILTER_OPTIONS}
+                    allLabel="Any status"
+                    ariaLabel="Filter by status"
+                />
+            </div>
+        </div>
+    );
+}
+
+function FilterSelect<T extends string>({
+    value,
+    onChange,
+    options,
+    allLabel,
+    ariaLabel,
+}: {
+    value: T | "all";
+    onChange: (value: T | "all") => void;
+    options: { value: T; label: string }[];
+    allLabel: string;
+    ariaLabel: string;
+}) {
+    return (
+        <Select value={value} onValueChange={(next) => onChange(next as T | "all")}>
+            <SelectTrigger size="sm" aria-label={ariaLabel} className="w-auto max-w-48 min-w-32">
+                <SelectValue />
+            </SelectTrigger>
+            <SelectContent align="end">
+                <SelectItem value="all">{allLabel}</SelectItem>
+                {options.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                    </SelectItem>
+                ))}
+            </SelectContent>
+        </Select>
     );
 }
 
