@@ -11,6 +11,7 @@ import { UserMenu } from "@/components/layout/user-menu";
 import { appRoutes } from "@/lib/app-routes";
 import { COMPACT_LAYOUT_MEDIA_QUERY, useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
+import { readStoredValue, writeStoredValue } from "@/lib/safe-storage";
 import QuillMark from "@/components/brand/quill-mark.svg?react";
 import { AssistantPanel } from "@/components/layout/assistant-panel";
 import { ASSISTANT_PANEL_TITLE_ID, useAssistantPinning, useAssistantStore } from "@/components/layout/assistant-store";
@@ -22,7 +23,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "sidebar-collapsed";
 
 function readStoredSidebarCollapsed() {
-    return localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === "true";
+    return readStoredValue(SIDEBAR_COLLAPSED_STORAGE_KEY) === "true";
 }
 
 function App() {
@@ -65,7 +66,7 @@ function App() {
     const toggleSidebarCollapsed = () => {
         const isCollapsed = !isSidebarCollapsed;
         setIsSidebarCollapsed(isCollapsed);
-        localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, String(isCollapsed));
+        writeStoredValue(SIDEBAR_COLLAPSED_STORAGE_KEY, String(isCollapsed));
     };
 
     return (

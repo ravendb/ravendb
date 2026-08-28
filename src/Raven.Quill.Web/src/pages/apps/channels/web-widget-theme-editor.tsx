@@ -12,6 +12,7 @@ import { FormSelect } from "@/components/form/form-select";
 import { FormStringList } from "@/components/form/form-string-list";
 import { FormSwitch } from "@/components/form/form-switch";
 import { FormToggleGroup } from "@/components/form/form-toggle-group";
+import { useFormUnsavedChanges } from "@/components/form/unsaved-changes/use-unsaved-changes";
 import { Heading, Text } from "@/components/typography";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
@@ -127,6 +128,10 @@ export function WebWidgetThemeEditor({
         // what the operator is already looking at instead of from the built-in.
         values: toFormData(savedTheme),
     });
+
+    // The save is mutation-driven, so the window to suppress is the request itself - the saved theme comes
+    // back through `values`, which resets the form. A failed save leaves the edits dirty, re-arming the guard.
+    useFormUnsavedChanges(form, { isSaving });
 
     // One state drives both the colors tabs and the previewed scheme, so the colors on screen are always
     // the colors in the frame and editing dark never means guessing.

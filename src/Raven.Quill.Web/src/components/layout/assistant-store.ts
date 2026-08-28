@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { readStoredValue, writeStoredValue } from "@/lib/safe-storage";
 import { COMPACT_LAYOUT_MEDIA_QUERY, useMediaQuery } from "@/lib/use-media-query";
 
 const ASSISTANT_OPEN_STORAGE_KEY = "assistant-open";
@@ -27,11 +28,11 @@ export function clampAssistantSize(sizePx: number, minPx: number, maxPx: number)
 }
 
 function persistSize(storageKey: string, sizePx: number) {
-    localStorage.setItem(storageKey, String(sizePx));
+    writeStoredValue(storageKey, String(sizePx));
 }
 
 function readStoredSize(storageKey: string, defaultPx: number, minPx: number, maxPx = Number.POSITIVE_INFINITY) {
-    const storedPx = Number(localStorage.getItem(storageKey));
+    const storedPx = Number(readStoredValue(storageKey));
     return Number.isFinite(storedPx) && storedPx > 0 ? clampAssistantSize(storedPx, minPx, maxPx) : defaultPx;
 }
 
@@ -53,8 +54,8 @@ type AssistantState = {
 };
 
 export const useAssistantStore = create<AssistantState>((set, get) => ({
-    isOpen: localStorage.getItem(ASSISTANT_OPEN_STORAGE_KEY) === "true",
-    isPinned: localStorage.getItem(ASSISTANT_PINNED_STORAGE_KEY) !== "false",
+    isOpen: readStoredValue(ASSISTANT_OPEN_STORAGE_KEY) === "true",
+    isPinned: readStoredValue(ASSISTANT_PINNED_STORAGE_KEY) !== "false",
     isResizing: false,
     openCount: 0,
     widthPx: readStoredSize(
@@ -66,11 +67,11 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
     heightPx: readStoredSize(ASSISTANT_HEIGHT_STORAGE_KEY, ASSISTANT_DEFAULT_HEIGHT_PX, ASSISTANT_MIN_HEIGHT_PX),
     setOpen: (isOpen) =>
         set((state) => {
-            localStorage.setItem(ASSISTANT_OPEN_STORAGE_KEY, String(isOpen));
+            writeStoredValue(ASSISTANT_OPEN_STORAGE_KEY, String(isOpen));
             return { isOpen, openCount: isOpen ? state.openCount + 1 : state.openCount };
         }),
     setPinned: (isPinned) => {
-        localStorage.setItem(ASSISTANT_PINNED_STORAGE_KEY, String(isPinned));
+        writeStoredValue(ASSISTANT_PINNED_STORAGE_KEY, String(isPinned));
         set({ isPinned });
     },
     setResizing: (isResizing) => {

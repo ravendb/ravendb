@@ -4,6 +4,7 @@ import { ShieldAlertIcon } from "lucide-react";
 import { CodeBlockTabs } from "@/components/data/code-block-tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/shadcn/ui/alert";
 import { originForSubdomain } from "@/lib/subdomain-origin";
+import { readStoredValue, writeStoredValue } from "@/lib/safe-storage";
 import {
     buildMintEmbedLinkUrl,
     DEFAULT_MAX_INVOCATIONS,
@@ -49,7 +50,7 @@ const LANGUAGE_OPTIONS: LanguageOption[] = [
 ];
 
 function readLanguage(): Language {
-    const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    const stored = readStoredValue(LANGUAGE_STORAGE_KEY);
     return LANGUAGE_OPTIONS.some((language) => language.value === stored) ? (stored as Language) : "bash";
 }
 
@@ -68,7 +69,7 @@ export function EmbedLinkApiDocs({ slug, channelId, parameters }: EmbedLinkApiDo
 
     const onLanguageChange = (value: string) => {
         const next = value as Language;
-        localStorage.setItem(LANGUAGE_STORAGE_KEY, next);
+        writeStoredValue(LANGUAGE_STORAGE_KEY, next);
         setLanguage(next);
     };
 
