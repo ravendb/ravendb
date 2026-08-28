@@ -52,7 +52,15 @@ namespace Voron.Data.Compression
                 tree.DecompressionsCache.Invalidate(PageNumber, DecompressionUsage.Write);
                 return;
             }
-            
+
+#if DEBUG
+            if (tx.DirtyPageStillBelongsTo(Original.Base, PageNumber) == false)
+            {
+                VoronUnrecoverableErrorException.Raise(tx,
+                    $"Attempt to write decompressed page #{PageNumber} back into scratch memory that no longer belongs to it - the page was freed and its scratch slot re-issued (the slot's header now claims page #{Original.PageNumber}). The page should have been invalidated when it was freed, tree: {tree.Name}");
+            }
+#endif
+
             if (CalcSizeUsed() < Original.PageMaxSpace)
             {
                 // no need to compress
