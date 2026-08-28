@@ -4451,6 +4451,51 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.True(await WaitForDocumentDeletionAsync(store, "UuidKeyed/11111111-1111-1111-1111-111111111111", timeoutMs: 60_000));
         }
 
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
+        public async Task MariaDb_UnsupportedMappedColumnType_FaultsInsteadOfSilentSkip()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MySQL_MySqlConnector, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            if (SupportsMariaDbNativeUuid(connectionString) == false)
+                return;
+
+            ExecuteMySql(connectionString, @"
+                CREATE TABLE net_items (
+                    id   INT PRIMARY KEY,
+                    addr INET6
+                )");
+            ExecuteMySql(connectionString, "INSERT INTO net_items (id, addr) VALUES (1, '::1');");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-mariadb-unsupported-type",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "NetItems",
+                        SourceTableSchema = schemaName,
+                        SourceTableName = "net_items",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "addr", Name = "Addr" }
+                        }
+                    }
+                }
+            };
+            AddCdcSink(store, config);
+
+            var fault = await WaitForProcessFaultAsync(store, config.Name);
+            Assert.IsType<Raven.Server.Documents.CdcSink.CdcSinkFaultedException>(fault);
+            Assert.Contains("'addr'", fault.Message);
+            Assert.Contains("not supported for binlog streaming", fault.Message);
+        }
+
         // --- MySQL-specific DTO classes (different nested type structure) ---
 
         private class NestedEmployee
