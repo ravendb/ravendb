@@ -20,6 +20,7 @@ Frontend for Raven Quill. It is a Vite + React + TypeScript app and is finally b
 - Keep components focused and reasonably small. If a component or hook grows awkward, step back and simplify the design before continuing.
 - Put reusable hooks/helpers in shared project utilities only when there is a realistic second use.
 - Boolean names must clearly read as booleans, e.g. `is`, `has`, `can`, `should`, `was`.
+- Test booleans by negation or truthiness, not by comparing to a literal: `!isSaving`, not `isSaving !== true`.
 - Use kebab-case filenames, PascalCase React components, `@/*` imports, and `SCREAMING_SNAKE_CASE` module constants.
 - Install new dependencies only when they remove real complexity. Prefer popular, maintained packages and latest versions.
 

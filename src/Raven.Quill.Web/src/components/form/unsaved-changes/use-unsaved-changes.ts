@@ -37,7 +37,7 @@ export function useFormUnsavedChanges<TValues extends FieldValues>(
     const { isDirty, isSubmitting } = useFormState({ control: form.control });
 
     // A save that navigates on success must not prompt on its way out.
-    const hasUnsavedChanges = isDirty && !isSubmitting && options.isSaving !== true;
+    const hasUnsavedChanges = isDirty && !isSubmitting && !options.isSaving;
     useRegisterUnsavedChanges(formId, hasUnsavedChanges);
 
     return {

@@ -6,6 +6,14 @@ export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
 }
 
+export function tryParseJson<T>(value: string): T | null {
+    try {
+        return JSON.parse(value) as T;
+    } catch {
+        return null;
+    }
+}
+
 // Renders an ISO timestamp in the viewer's locale; falls back to the raw value
 // if it isn't a parseable date.
 export function formatDateTime(value: string) {
