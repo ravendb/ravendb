@@ -142,8 +142,10 @@ static IEnumerable<(int[], float[])> YieldVectors(string filePath)
 static T[] ReadColumn<T>(ParquetRowGroupReader reader, DataField field)
     where T : struct
 {
-    var values = new T[reader.GetMetadata(field).MetaData.NumValues];
-    reader.ReadAsync<T>(field, values.AsMemory()).GetAwaiter().GetResult();
+    var numValues = reader.GetMetadata(field)!.MetaData!.NumValues;
+
+    var values = new T[numValues];
+    reader.ReadAsync<T>(field, values.AsMemory()).AsTask().GetAwaiter().GetResult();
     return values;
 }
 
