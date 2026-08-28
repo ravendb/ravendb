@@ -80,6 +80,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public string SourceCollection;
 
+        public int LoadedItemsCount;
+
         public readonly TransactionOperationContext IndexContext;
 
         public readonly IndexDefinitionBaseServerSide IndexDefinition;
@@ -248,6 +250,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 references.Add(keySlice);
 
+                LoadedItemsCount++;
+
                 // when there is conflict, we need to apply same behavior as if the document would not exist
                 var document = _documentsStorage.Get(QueryContext.Documents, keySlice, throwOnConflict: false);
 
@@ -351,6 +355,8 @@ namespace Raven.Server.Documents.Indexes.Static
                 var references = GetCompareExchangeReferencesForItem(idSlice);
 
                 references.Add(keySlice);
+
+                LoadedItemsCount++;
 
                 var value = _documentsStorage.DocumentDatabase.ServerStore.Cluster.GetCompareExchangeValue(QueryContext.Server, keySlice);
 
