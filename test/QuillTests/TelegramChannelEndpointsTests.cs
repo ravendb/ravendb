@@ -4,6 +4,7 @@ using QuillTests.E2E.Fixtures;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
+using Raven.Quill.Telegram;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -234,6 +235,67 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
         Assert.NotEqual(first.ChannelId, second.ChannelId);
 
         await app.DeleteChannelAsync(second.ChannelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_reservation_reclaimed_mid_provision_fails_the_stale_confirm()
+    {
+        await using var appA = await NewAppAsync();
+        await using var appB = await NewAppAsync();
+        var agentB = await SeedAgentAsync(appB);
+        var token = NewBotToken();
+        var botId = MockTelegramBotApi.BotIdFor(token);
+
+        // app A mid-provision: reservation claimed, channel doc not yet stored
+        var pendingChannelId = Channel.IdPrefix + Guid.NewGuid().ToString("N");
+        var claimA = await ChannelBotReservations.TryClaimAsync<TelegramBotReservation>(
+            appA.Host.Config, TelegramBotReservation.IdFor(botId), appA.Slug, pendingChannelId,
+            c => c?.Telegram?.BotId == botId, storeCompanions: null, CancellationToken.None);
+        Assert.True(claimA.Acquired);
+
+        // app B provisions the same bot: A's channel doc is missing, so B reclaims the "orphan"
+        var created = await appB.ProvisionChannelAsync(
+            new ProvisionChannelRequest(ChannelType.Telegram, agentB, null, Telegram: new(token)));
+
+        // app A's channel doc lands after B won; A's stale change vector must fail the confirm
+        using (var session = appA.Store.OpenAsyncSession(appA.Slug))
+        {
+            await session.StoreAsync(new Channel
+            {
+                Id = pendingChannelId,
+                Type = ChannelType.Telegram,
+                DisplayName = "@quill_test_bot",
+                AgentId = "orphaned-agent",
+                AllowedOrigins = [],
+                Enabled = true,
+                CreatedAt = DateTime.UtcNow,
+                Telegram = new TelegramSettings { BotToken = token, BotId = botId, BotUsername = "quill_test_bot" },
+            });
+            await session.SaveChangesAsync();
+        }
+
+        var confirmed = await ChannelBotReservations.TryConfirmAsync(
+            appA.Host.Config, TelegramBotReservation.IdFor(botId),
+            new TelegramBotReservation { Database = appA.Slug, ChannelId = pendingChannelId },
+            claimA.ChangeVector!, CancellationToken.None);
+        Assert.False(confirmed);
+
+        // the reservation stays with the channel B provisioned
+        using (var session = appA.Host.Config.OpenAsyncSession())
+        {
+            var reservation = await session.LoadAsync<TelegramBotReservation>(TelegramBotReservation.IdFor(botId));
+            Assert.NotNull(reservation);
+            Assert.Equal(appB.Slug, reservation.Database);
+            Assert.Equal(Channel.IdPrefix + created.ChannelId, reservation.ChannelId);
+        }
+
+        using (var session = appA.Store.OpenAsyncSession(appA.Slug))
+        {
+            session.Delete(pendingChannelId);
+            await session.SaveChangesAsync();
+        }
+
+        await appB.DeleteChannelAsync(created.ChannelId);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
