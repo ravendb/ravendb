@@ -127,6 +127,14 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
         ["set"]        = 254, // MYSQL_TYPE_STRING (encoded as string)
         ["json"]       = 245, // MYSQL_TYPE_JSON
         ["geometry"]   = 255, // MYSQL_TYPE_GEOMETRY
+        ["point"]              = 255,
+        ["linestring"]         = 255,
+        ["polygon"]            = 255,
+        ["multipoint"]         = 255,
+        ["multilinestring"]    = 255,
+        ["multipolygon"]       = 255,
+        ["geomcollection"]     = 255,
+        ["geometrycollection"] = 255,
         ["uuid"]               = 254,
     };
 
@@ -135,8 +143,6 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
         if (MySqlDataTypeToBinlogType.TryGetValue(dataType, out var binlogType))
             return binlogType;
 
-        // Unknown types are not fatal — we just can't do prefix comparison for this position.
-        // Use 0 as a wildcard that won't match anything, forcing a restart if it matters.
         return 0;
     }
 
@@ -321,7 +327,15 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
             var requiredLen = processor.RequiredPrefixLength;
             var expectedPrefix = new byte[requiredLen];
             for (int i = 0; i < requiredLen && i < columnsArray.Length; i++)
-                expectedPrefix[i] = MapDataTypeToBinlogType(columnsArray[i].DataType);
+            {
+                var binlogType = MapDataTypeToBinlogType(columnsArray[i].DataType);
+                if (binlogType == 0)
+                    throw new CdcSinkFaultedException(
+                        $"Column '{columnsArray[i].Name}' in table {tableInfo.Schema}.{tableInfo.TableName} has data type " +
+                        $"'{columnsArray[i].DataType}', which is not supported for binlog streaming. " +
+                        "Remove the column from the CDC Sink mapping, or change its type to a supported one.");
+                expectedPrefix[i] = binlogType;
+            }
 
             var tableKey = (tableInfo.Schema, tableInfo.TableName);
             _resolvedTables[tableKey] = new TableInfo
