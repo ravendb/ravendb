@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Npgsql;
@@ -133,6 +134,81 @@ namespace SlowTests.Server.Documents.CdcSink
             var publicationExists = await QueryScalarAsync(connectionString,
                 "SELECT 1 FROM pg_publication WHERE pubname = @pub", "pub", savedConfig.Postgres.PublicationName);
             Assert.NotNull(publicationExists);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
+        public async Task DryRun_CreatesTemporarySlot_AndLeavesNoSlotBehind()
+        {
+            using var store = GetDocumentStore();
+            using var teardown = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out _, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE products (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(200) NOT NULL,
+                    price NUMERIC(12,2) NOT NULL
+                );
+                INSERT INTO products (id, name, price) VALUES (1, 'Widget', 9.99);
+                CREATE PUBLICATION dryrun_pub FOR TABLE products;");
+
+            var config = BuildProductsConfig(connectionStringName: null);
+            config.Name = "dry-run-only";
+            config.Postgres = new CdcSinkPostgresSettings
+            {
+                PublicationName = "dryrun_pub",
+                SlotName = "rvn_dryrun_slot_c2"
+            };
+
+            await using var lockConn = new NpgsqlConnection(connectionString);
+            await lockConn.OpenAsync();
+            await using var lockTx = await lockConn.BeginTransactionAsync();
+            await using (var lockCmd = new NpgsqlCommand("LOCK TABLE products IN ACCESS EXCLUSIVE MODE", lockConn, lockTx))
+                await lockCmd.ExecuteNonQueryAsync();
+
+            var dryRunTask = store.Maintenance.SendAsync(new VerifyCdcSinkOperation(new CdcTestRequest
+            {
+                Configuration = config,
+                Connection = new SqlConnectionString
+                {
+                    Name = "inline",
+                    FactoryName = "Npgsql",
+                    ConnectionString = connectionString
+                }
+            }));
+
+            object temporary = null;
+            var sw = Stopwatch.StartNew();
+            while (sw.ElapsedMilliseconds < 60_000)
+            {
+                temporary = await QueryScalarAsync(connectionString,
+                    "SELECT temporary FROM pg_replication_slots WHERE slot_name = @slot", "slot", config.Postgres.SlotName);
+                if (temporary != null || dryRunTask.IsCompleted)
+                    break;
+
+                await Task.Delay(100);
+            }
+
+            if (temporary == null && dryRunTask.IsCompleted)
+            {
+                var early = await dryRunTask;
+                Assert.Fail($"Dry-run completed before the slot was observed. Success={early.Success}, Error={early.Error}");
+            }
+
+            Assert.NotNull(temporary);
+            Assert.True((bool)temporary);
+
+            await lockTx.RollbackAsync();
+
+            var result = await dryRunTask;
+            Assert.True(result.Success, result.Error);
+
+            var slotAfter = await QueryScalarAsync(connectionString,
+                "SELECT 1 FROM pg_replication_slots WHERE slot_name = @slot", "slot", config.Postgres.SlotName);
+            Assert.Null(slotAfter);
+
+            var publicationAfter = await QueryScalarAsync(connectionString,
+                "SELECT 1 FROM pg_publication WHERE pubname = @pub", "pub", config.Postgres.PublicationName);
+            Assert.NotNull(publicationAfter);
         }
 
         [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]

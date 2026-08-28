@@ -223,11 +223,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             {
                 try
                 {
-                    await using var createCmd = new NpgsqlCommand(
-                        $"SELECT pg_create_logical_replication_slot(@slotName, 'pgoutput')", conn);
-                    createCmd.Parameters.AddWithValue("slotName", _slotName);
-                    await createCmd.ExecuteNonQueryAsync(ct);
-                    _createdSlot = true;
+                    await CreateReplicationSlotAsync(conn, ct);
                 }
                 catch (PostgresException ex) when (ex.SqlState == "42710")
                 {
@@ -257,6 +253,15 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             var result = await cmd.ExecuteScalarAsync(ct);
             _vectorOid = result is uint oid ? oid : uint.MaxValue;
         }
+    }
+
+    protected virtual async Task CreateReplicationSlotAsync(NpgsqlConnection conn, CancellationToken ct)
+    {
+        await using var createCmd = new NpgsqlCommand(
+            "SELECT pg_create_logical_replication_slot(@slotName, 'pgoutput')", conn);
+        createCmd.Parameters.AddWithValue("slotName", _slotName);
+        await createCmd.ExecuteNonQueryAsync(ct);
+        _createdSlot = true;
     }
 
     // If a previous consumer (e.g., a process that was stopped but whose WAL sender
