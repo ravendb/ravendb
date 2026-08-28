@@ -4,6 +4,7 @@ import { ChevronDown, ChevronUp, Database } from "lucide-react";
 import type { AgentToolCall } from "@/api/custom-services/agent-stream";
 import AceEditor from "@/components/ace-editor/ace-editor";
 import type { AceEditorMode } from "@/components/ace-editor/ace-editor-types";
+import { tryParseJson } from "@/lib/utils";
 
 // A collapsed transcript of one query tool the agent ran this turn: the RQL it executed, the
 // parameters the model filled in, and the content the query returned. Mirrors Studio's query
@@ -90,13 +91,5 @@ function prettifyJson(value: string | null | undefined): string {
     }
 
     const parsed = tryParseJson(value);
-    return parsed === undefined ? value : JSON.stringify(parsed, null, 4);
-}
-
-function tryParseJson(value: string): unknown {
-    try {
-        return JSON.parse(value);
-    } catch {
-        return undefined;
-    }
+    return parsed === null ? value : JSON.stringify(parsed, null, 4);
 }

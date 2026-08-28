@@ -3,6 +3,7 @@ import type { AiToolCallResult } from "@/api/generated/server-api";
 import { Parameters } from "@/components/data/parameters";
 import { CodeBlock, TranscriptDisclosure } from "@/pages/apps/conversations/transcript-disclosure";
 import { Text } from "@/components/typography";
+import { tryParseJson } from "@/lib/utils";
 
 // A collapsed transcript entry for one tool the agent ran during a turn. Kept operator-friendly:
 // only the parameters the model filled in and the tool's response — no raw query internals.
@@ -93,13 +94,5 @@ function formatParameterValue(value: unknown): string {
 
 function prettifyJson(value: string): string {
     const parsed = tryParseJson(value);
-    return parsed === undefined ? value : JSON.stringify(parsed, null, 2);
-}
-
-function tryParseJson(value: string): unknown {
-    try {
-        return JSON.parse(value);
-    } catch {
-        return undefined;
-    }
+    return parsed === null ? value : JSON.stringify(parsed, null, 2);
 }
