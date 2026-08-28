@@ -3,3 +3,5 @@ packages:
 allowBuilds:
     esbuild: false
     msw: false
+overrides:
+    js-yaml@4: ^4.3.1
