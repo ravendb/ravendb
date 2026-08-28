@@ -366,7 +366,7 @@ namespace Raven.Server.Documents.Indexes
             if (_stats.MapDetails != null && name == "Map")
                 operation.MapDetails = _stats.MapDetails;
 
-            if (_stats.CleanupDetails != null && name == "Cleanup")
+            if (_stats.CleanupDetails != null && name is "DocumentsCleanup" or "TimeSeriesCleanup")
                 operation.CleanupDetails = _stats.CleanupDetails;
 
             if (_stats.LuceneMergeDetails != null && name == IndexingOperation.Lucene.Merge)
