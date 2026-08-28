@@ -173,7 +173,8 @@ internal sealed class SlackInboundProcessor(
         if (prompt.Length == 0)
             return;
 
-        var conversationId = SlackConversationId.ForUtcDay(shortChannelId, sender, DateTime.UtcNow);
+        var conversationId = SlackConversationId.ForUtcDay(
+            shortChannelId, sender, DateTime.UtcNow, settings.ParameterBindings);
 
         var config = await AgentLookup.FindAsync(store, database, channel.AgentId, ct);
         if (config is null)
