@@ -381,7 +381,10 @@ public static class QueryPrimitives
             bitmap.OrWith(ref srcData);
             return;
         }
-        if (match is Matches.TermMatch tm && tm.TryGetPostingListIterator(out var iter))
+        // A boosting term must go through Fill: that is where TermMatch hands ids and frequencies to Bm25Relevance.
+        // Reading the posting list directly here leaves BM25 without data, and the score pass then returns the score
+        // buffer's initial value for every document.
+        if (match is Matches.TermMatch tm && tm.IsBoosting == false && tm.TryGetPostingListIterator(out var iter))
         {
             FillFromPostings(ref iter, ref bitmap, token, limit);
             return;
@@ -426,7 +429,7 @@ public static class QueryPrimitives
             bitmap.AndWith(ref srcData);
             return;
         }
-        if (match is Matches.TermMatch tm && tm.TryGetPostingListIterator(out var iter))
+        if (match is Matches.TermMatch tm && tm.IsBoosting == false && tm.TryGetPostingListIterator(out var iter))
         {
             AndWithPostings(ref iter, ref bitmap, ref tempBitmap, token);
             return;
@@ -458,7 +461,7 @@ public static class QueryPrimitives
             bitmap.AndNotWith(ref srcData);
             return;
         }
-        if (match is Matches.TermMatch tm && tm.TryGetPostingListIterator(out var iter))
+        if (match is Matches.TermMatch tm && tm.IsBoosting == false && tm.TryGetPostingListIterator(out var iter))
         {
             AndNotWithPostings(ref iter, ref bitmap, ref tempBitmap, token);
             return;
