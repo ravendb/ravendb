@@ -648,7 +648,7 @@ public static class CoraxQueryBuilder
         }
 
         var fieldMetadata = QueryBuilderHelper.GetFieldMetadata(allocator, fieldName, builderParameters.Index, builderParameters.IndexFieldsMapping, builderParameters.FieldsToFetch, builderParameters.HasDynamics,
-            builderParameters.DynamicFields, exact: exact);
+            builderParameters.DynamicFields, exact: exact, hasBoost: builderParameters.HasBoost);
         
         var hasTime = builderParameters.Index.IndexFieldsPersistence.HasTimeValues(fieldName);
         

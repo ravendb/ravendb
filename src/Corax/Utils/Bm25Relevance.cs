@@ -210,6 +210,10 @@ public sealed unsafe class Bm25Relevance : IDisposable
             while (bm25._setIterator.Fill(bm25.Matches, out var read, pruneGreaterThanOptimization: EntryIdEncodings.PrepareIdForPruneInPostingList(matches[^1])) && read > 0)
             {
                 bm25._currentId = read;
+                // The posting list yields encoded ids (entry id + quantized frequency). Split them the way the stored
+                // path does in DecodeAndSave, otherwise the ids never match and the frequencies stay zero - leaving
+                // every document with the score buffer's initial value.
+                EntryIdEncodings.Decode(bm25.Matches, bm25.Scores);
                 CalculateScoreFromMemory(bm25, matches, scores, boostFactor);
                 bm25._currentId = bm25._bufferCapacity;
             }
