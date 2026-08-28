@@ -150,6 +150,8 @@ internal static class CdcSinkTestProcess
     {
         private readonly CdcSinkTestCapture _capture;
         private readonly OperationCancelToken _token;
+        private NpgsqlConnection _slotConnection;
+
         public TestPostgresCdcSinkProcess(DocumentDatabase database, CdcSinkConfiguration configuration, CdcSinkTestCapture capture, OperationCancelToken token)
             : base(configuration, database)
         {
@@ -158,6 +160,18 @@ internal static class CdcSinkTestProcess
         }
 
         protected override Task TerminateActiveSlotConsumerAsync(NpgsqlConnection conn, CancellationToken ct) => Task.CompletedTask;
+
+        protected override async Task CreateReplicationSlotAsync(NpgsqlConnection conn, CancellationToken ct)
+        {
+            var csb = new NpgsqlConnectionStringBuilder(Configuration.Connection.ConnectionString) { Pooling = false };
+            _slotConnection = new NpgsqlConnection(csb.ToString());
+            await _slotConnection.OpenAsync(ct);
+
+            await using var createCmd = new NpgsqlCommand(
+                "SELECT pg_create_logical_replication_slot(@slotName, 'pgoutput', true)", _slotConnection);
+            createCmd.Parameters.AddWithValue("slotName", _slotName);
+            await createCmd.ExecuteNonQueryAsync(ct);
+        }
 
         protected override Task HandleMissingPublicationTablesAsync(NpgsqlConnection conn, List<CdcSinkConfiguration.TableInfo> missing, CancellationToken ct)
         {
@@ -221,38 +235,31 @@ internal static class CdcSinkTestProcess
                         Logger.Warn($"[{Name}] CDC dry-run source cleanup failed", e);
                 }
             }
+
+            if (_slotConnection != null)
+            {
+                try { await _slotConnection.DisposeAsync(); }
+                catch (Exception e)
+                {
+                    if (Logger.IsWarnEnabled)
+                        Logger.Warn($"[{Name}] CDC dry-run slot connection close failed", e);
+                }
+            }
+
             await base.DisposeAsync();
         }
 
         private async Task UndoSourceSetupAsync(CancellationToken ct)
         {
-            if (_createdSlot == false && _createdPublication == false)
+            if (_createdPublication == false)
                 return;
 
             await using var conn = _dataSource.CreateConnection();
             await conn.OpenAsync(ct);
 
-            if (_createdSlot)
-            {
-                await using (var terminate = new NpgsqlCommand(
-                                 "SELECT pg_terminate_backend(active_pid) FROM pg_replication_slots WHERE slot_name = @slot AND active_pid IS NOT NULL", conn))
-                {
-                    terminate.Parameters.AddWithValue("slot", _slotName);
-                    await terminate.ExecuteScalarAsync(ct);
-                }
-
-                await using var dropSlot = new NpgsqlCommand(
-                    "SELECT pg_drop_replication_slot(slot_name) FROM pg_replication_slots WHERE slot_name = @slot", conn);
-                dropSlot.Parameters.AddWithValue("slot", _slotName);
-                await dropSlot.ExecuteNonQueryAsync(ct);
-            }
-
-            if (_createdPublication)
-            {
-                await using var dropPub = new NpgsqlCommand(
-                    $"DROP PUBLICATION IF EXISTS {CommandBuilder.QuoteIdentifier(_publicationName)}", conn);
-                await dropPub.ExecuteNonQueryAsync(ct);
-            }
+            await using var dropPub = new NpgsqlCommand(
+                $"DROP PUBLICATION IF EXISTS {CommandBuilder.QuoteIdentifier(_publicationName)}", conn);
+            await dropPub.ExecuteNonQueryAsync(ct);
         }
     }
 
