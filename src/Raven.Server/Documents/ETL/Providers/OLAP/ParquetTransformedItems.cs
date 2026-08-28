@@ -149,7 +149,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 finally
                 {
                     // ParquetWriter is IAsyncDisposable only, disposing it writes the file footer
-                    parquetWriter.DisposeAsync().GetAwaiter().GetResult();
+                    parquetWriter.DisposeAsync().AsTask().GetAwaiter().GetResult();
                 }
             }
 
