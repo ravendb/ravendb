@@ -3,7 +3,7 @@
     "private": true,
     "version": "0.0.0",
     "type": "module",
-    "packageManager": "pnpm@11.2.2",
+    "packageManager": "pnpm@11.24.0",
     "scripts": {
         "dev": "pnpm generate:api && vite",
         "build": "pnpm generate:api && tsc -b && vite build && pnpm build:expired && pnpm build:widget",
