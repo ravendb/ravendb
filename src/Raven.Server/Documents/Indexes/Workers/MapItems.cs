@@ -7,8 +7,10 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.Persistence;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Indexes.Workers
@@ -40,9 +42,12 @@ namespace Raven.Server.Documents.Indexes.Workers
                 ? _configuration.MaxTimeForDocumentTransactionToRemainOpen.AsTimeSpan
                 : TimeSpan.FromMinutes(15);
 
+            var currentIndexingScope = CurrentIndexingScope.Current;
             var moreWorkFound = false;
             var batchContinuationResult = Index.CanContinueBatchResult.None;
             var totalProcessedCount = 0;
+            var totalSeenItemsCount = 0;
+            var lastCheckedSeenItemsCount = 0L;
 
             foreach (var collection in _index.Collections)
             {
@@ -126,6 +131,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     }
 
                                     totalProcessedCount++;
+                                    totalSeenItemsCount++;
                                     collectionStats.RecordMapAttempt();
                                     stats.RecordDocumentSize(current.Size);
                                     if (_logger.IsInfoEnabled && totalProcessedCount % 8192 == 0)
@@ -134,17 +140,18 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     lastEtag = current.Etag;
                                     inMemoryStats.UpdateLastEtag(lastEtag, isTombstone: false);
 
+                                    var numberOfResults = 0;
                                     try
                                     {
                                         current.KnownToBeNew = _indexStorage.LowerThanLastDatabaseEtagOnIndexCreation(current.Etag);
 
                                         if (itemEnumerator.Current.ShouldBeProcessedAsArchived(_index.ArchivedDataProcessingBehavior) == false)
                                         {
-                                            var numberOfResults = _index.HandleMap(current, mapResults,
+                                            numberOfResults = _index.HandleMap(current, mapResults,
                                                 writeOperation, indexContext, collectionStats);
-                                            
+
                                             resultsCount += numberOfResults;
-                                            
+
                                             collectionStats.RecordMapSuccess();
                                             _index.MapsPerSec?.MarkSingleThreaded(numberOfResults);
                                         }
@@ -162,14 +169,21 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         if (_logger.IsInfoEnabled)
                                             _logger.Info($"Failed to execute mapping function on '{current.Id}' for '{_index.Name}'.", e);
 
-                                        collectionStats.AddMapError(current.Id, $"Failed to execute mapping function on {current.Id}. " +
-                                                                                $"Exception: {e}");
+                                        collectionStats.AddMapError(current.Id, $"Failed to execute mapping function on {current.Id}. Exception: {e}");
                                     }
 
-                                    var parameters = new CanContinueBatchParameters(collectionStats, IndexingWorkType.Map, queryContext, indexContext, writeOperation,
-                                        lastEtag, lastCollectionEtag, totalProcessedCount, sw);
+                                    // Include the processed fanout results as well. We might not have seen more documents
+                                    // on disk, but we certainly processed more than usual. Since fanouts might be big,
+                                    // it's better to account for them too.
+                                    totalSeenItemsCount += numberOfResults - (numberOfResults > 1).ToInt32();
 
-                                    batchContinuationResult = _index.CanContinueBatch(in parameters, ref maxTimeForDocumentTransactionToRemainOpen);
+                                    totalSeenItemsCount += currentIndexingScope.LoadedItemsCount;
+                                    currentIndexingScope.LoadedItemsCount = 0;
+
+                                    var parameters = new CanContinueBatchParameters(collectionStats, IndexingWorkType.Map, queryContext, indexContext, writeOperation,
+                                        lastEtag, lastCollectionEtag, totalProcessedCount, totalSeenItemsCount, sw);
+
+                                    batchContinuationResult = _index.CanContinueBatch(in parameters, ref maxTimeForDocumentTransactionToRemainOpen, ref lastCheckedSeenItemsCount);
                                 }
                             }
                         }

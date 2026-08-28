@@ -4597,7 +4597,7 @@ namespace Raven.Server.Documents.Indexes
             RenewTransaction
         }
 
-        public CanContinueBatchResult CanContinueBatch(in CanContinueBatchParameters parameters, ref TimeSpan maxTimeForDocumentTransactionToRemainOpen)
+        public CanContinueBatchResult CanContinueBatch(in CanContinueBatchParameters parameters, ref TimeSpan maxTimeForDocumentTransactionToRemainOpen, ref long lastCheckedSeenItemsCount)
         {
             if (Configuration.MapBatchSize.HasValue && parameters.Count >= Configuration.MapBatchSize.Value)
             {
@@ -4611,11 +4611,13 @@ namespace Raven.Server.Documents.Indexes
                 return CanContinueBatchResult.False;
             }
 
-            if (parameters.Count % 128 != 0)
+            if (parameters.SeenCount - lastCheckedSeenItemsCount < 128)
             {
-                // do the actual check only every N ops
+                // the counter advances in jumps (fanout results, loaded items) - do the actual check once per at least 128 seen items
                 return CanContinueBatchResult.True;
             }
+
+            lastCheckedSeenItemsCount = parameters.SeenCount;
 
             if (parameters.Sw.Elapsed > maxTimeForDocumentTransactionToRemainOpen)
             {
