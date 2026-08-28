@@ -656,7 +656,6 @@ namespace Raven.Server.Config.Categories
 
         [Description("Expert: The maximum number of concurrent batches for HNSW distance computation acceleration.")]
         [DefaultValue(512)]
-        // Bounds only the parallelism of subsequent HNSW indexing work - nothing already written depends on it.
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.Corax.VectorSearch.MaximumConcurrentBatchesForHnswAcceleration", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public int MaximumConcurrentBatchesForHnswAcceleration { get; set; }

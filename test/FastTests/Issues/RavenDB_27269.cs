@@ -2,28 +2,22 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
+using Raven.Client.Documents.Indexes;
+using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Configuration;
 using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Issues
 {
-    public class RavenDB_27269(ITestOutputHelper output) : NoDisposalNeeded(output)
+    public class RavenDB_27269(ITestOutputHelper output) : RavenLowLevelTestBase(output)
     {
         [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Indexes)]
         public void PerIndexSettingsMustDeclareHowTheIndexIsUpdated()
         {
-            // A setting that can be set per index ends up in the index definition's Configuration, so changing it
-            // reaches SingleIndexConfiguration.CalculateUpdateType and decides what IndexStore.GetIndexCreationOptions
-            // does with the index. IndexUpdateType.None means "nothing to decide": CalculateUpdateType returns None,
-            // the switch there falls through every remaining difference check and the method ends on its catch-all
-            // `return IndexCreationOptions.Update` - rebuilding the index side by side for a setting that declared it
-            // needs no index-side work at all. So per-index settings must pick one of the two real answers:
-            //   Refresh - the value is read on the fly (next indexing batch, next query, background work),
-            //             so swapping the configuration on the live index is enough,
-            //   Reset   - the value is baked into what the index stores (see IndexStorage.PersistConfiguration),
-            //             so only a newly built index can pick it up.
             var offenders = new List<string>();
 
             foreach (var property in typeof(SingleIndexConfiguration).GetProperties(BindingFlags.Public | BindingFlags.Instance))
@@ -34,7 +28,6 @@ namespace FastTests.Issues
 
                 var updateType = property.GetCustomAttribute<IndexUpdateTypeAttribute>();
 
-                // CalculateUpdateType dereferences this attribute without a null check, so a missing one is a crash.
                 if (updateType == null)
                 {
                     offenders.Add($"{entry.Key} - no {nameof(IndexUpdateTypeAttribute)}");
@@ -50,5 +43,34 @@ namespace FastTests.Issues
                 $"{nameof(IndexUpdateType)}.{nameof(IndexUpdateType.Reset)}, otherwise changing them rebuilds the index " +
                 $"side by side for nothing:{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
         }
+
+        [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Indexes)]
+        public async Task NoneSettingDoesNotDowngradeARefreshSettingChangedAlongWithIt()
+        {
+            using (var database = CreateDocumentDatabase())
+            {
+                var index = await database.IndexStore.CreateIndex(CreateIndexDefinition(), Guid.NewGuid().ToString());
+                Assert.NotNull(index);
+
+                var changed = CreateIndexDefinition();
+                changed.Configuration[RavenConfiguration.GetKey(x => x.Indexing.HistoryRevisionsNumber)] = "21234";
+                changed.Configuration[RavenConfiguration.GetKey(x => x.Indexing.MapTimeout)] = "30";
+
+                var currentConfiguration = (SingleIndexConfiguration)index.Instance.Configuration;
+                var newConfiguration = new SingleIndexConfiguration(changed.Configuration, database.Configuration);
+
+                Assert.Equal(IndexUpdateType.Refresh, currentConfiguration.CalculateUpdateType(newConfiguration));
+
+                var options = IndexStore.GetIndexCreationOptions(changed, index.Instance.ToIndexInformationHolder(), database.Configuration, out _);
+                Assert.Equal(IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex, options);
+            }
+        }
+
+        private static IndexDefinition CreateIndexDefinition() => new()
+        {
+            Name = "Users_ByName",
+            Maps = { "from user in docs.Users select new { user.Name }" },
+            Type = IndexType.Map
+        };
     }
 }
