@@ -157,6 +157,16 @@ internal static class CdcSinkTestProcess
             _token = token;
         }
 
+        protected override Task TerminateActiveSlotConsumerAsync(NpgsqlConnection conn, CancellationToken ct) => Task.CompletedTask;
+
+        protected override Task HandleMissingPublicationTablesAsync(NpgsqlConnection conn, List<CdcSinkConfiguration.TableInfo> missing, CancellationToken ct)
+        {
+            _capture.AddWarning(
+                $"Publication '{Configuration.Postgres.PublicationName}' does not include tables: {string.Join(", ", missing.Select(t => t.FullName))}. " +
+                "The task will add them to the publication when it runs.");
+            return Task.CompletedTask;
+        }
+
         protected override async Task EnsureReplicaIdentityForEmbeddedTables(CancellationToken ct)
         {
             try
