@@ -43,7 +43,7 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
     private bool _isMariaDb;
     private string _serverGtid; // Current GTID set fetched from server during startup
 
-    private enum MySqlColumnCategory { Other, Text, Decimal, Json, Boolean }
+    private enum MySqlColumnCategory { Other, Text, Decimal, Json, Boolean, Uuid }
 
     private readonly record struct ColumnInfo(string Name, MySqlColumnCategory Category, string DataType);
 
@@ -127,6 +127,7 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
         ["set"]        = 254, // MYSQL_TYPE_STRING (encoded as string)
         ["json"]       = 245, // MYSQL_TYPE_JSON
         ["geometry"]   = 255, // MYSQL_TYPE_GEOMETRY
+        ["uuid"]               = 254,
     };
 
     internal static byte MapDataTypeToBinlogType(string dataType)
@@ -296,6 +297,7 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
                     (_, "tinyint(1)") or (_, "tinyint(1) unsigned") => MySqlColumnCategory.Boolean,
                     ("bit", "bit(1)")                                => MySqlColumnCategory.Boolean,
                     ("json", _)                                      => MySqlColumnCategory.Json,
+                    ("uuid", _)                                      => MySqlColumnCategory.Uuid,
                     ("decimal" or "numeric", _)                      => MySqlColumnCategory.Decimal,
                     ("text" or "tinytext" or "mediumtext" or "longtext"
                         or "char" or "varchar" or "enum" or "set", _) => MySqlColumnCategory.Text,
@@ -771,6 +773,9 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
                     // Use MySqlCdc's JsonParser to convert to a JSON string.
                     byte[] bytes when col.Category is MySqlColumnCategory.Json
                         => MySqlCdc.Providers.MySql.JsonParser.Parse(bytes),
+
+                    byte[] bytes when col.Category is MySqlColumnCategory.Uuid
+                        => new Guid(bytes, bigEndian: true).ToString(),
 
                     // MySQL's binlog uses the same BLOB type codes for TEXT and BLOB columns.
                     // TEXT columns should be UTF-8 decoded; true binary columns pass through.
