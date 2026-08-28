@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Quill.Agents;
 
@@ -131,6 +133,22 @@ internal static class ChannelParameterBindings
         }
 
         return true;
+    }
+
+    internal static string Fingerprint(Dictionary<string, ChannelParameterBinding>? bindings)
+    {
+        var canonical = new StringBuilder();
+        var ordered = (bindings ?? new Dictionary<string, ChannelParameterBinding>())
+            .OrderBy(entry => entry.Key, StringComparer.OrdinalIgnoreCase);
+        foreach (var (name, binding) in ordered)
+        {
+            canonical.Append(name.ToLowerInvariant()).Append('\u001f')
+                .Append(binding.Source).Append('\u001f')
+                .Append(binding.Value ?? "").Append('\u001e');
+        }
+
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(canonical.ToString()));
+        return Convert.ToHexString(hash.AsSpan(0, 4)).ToLowerInvariant();
     }
 
     private static string FormatSources(ChannelParameterSource[] sources) =>

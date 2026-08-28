@@ -177,7 +177,8 @@ internal sealed class DiscordInboundProcessor(
         if (prompt.Length == 0)
             return;
 
-        var conversationId = DiscordConversationId.ForUtcDay(shortChannelId, sender, DateTime.UtcNow);
+        var conversationId = DiscordConversationId.ForUtcDay(
+            shortChannelId, sender, DateTime.UtcNow, settings.ParameterBindings);
 
         var config = await AgentLookup.FindAsync(store, database, channel.AgentId, ct);
         if (config is null)
