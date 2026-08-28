@@ -54,9 +54,6 @@ jobs:
         npm run prettier
       working-directory: ./src/Raven.Studio
 
-  # Quill.Web's conventions, kept beside Studio's rather than in a workflow of their own.
-  # No setup-dotnet: unlike `pnpm build`, none of these four scripts invoke generate:api,
-  # and the generated client is committed.
   quill-web-conventions:
     name: Quill.Web Conventions
     runs-on: ubuntu-latest
@@ -65,8 +62,6 @@ jobs:
       run:
         working-directory: ./src/Raven.Quill.Web
     steps:
-    # Runs before the checkout so it resolves changed files via the GitHub API. Gating on
-    # paths keeps the job inert on branches that carry no Quill code.
     - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
       id: changes
       with:
@@ -94,8 +89,7 @@ jobs:
       if: steps.changes.outputs.quillWeb == 'true'
       run: pnpm install --frozen-lockfile
 
-    # The four checks report independently (a lint failure should not hide a format one), but
-    # none of them can produce a meaningful result without installed dependencies.
+    # Each check reports independently, but none is meaningful without dependencies.
     - name: Typecheck
       if: steps.changes.outputs.quillWeb == 'true'
       run: pnpm typecheck
