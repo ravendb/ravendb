@@ -110,6 +110,7 @@ internal static class QuillRoutes
     public const string AiModels = "/api/ai/models";
     public const string SettingsLicense = "/api/settings/license";
     public const string SettingsUsage = "/api/settings/usage";
+    public const string DnsIpBinding = "/api/dns/ip-binding";
 
     // wizard (config-DB scoped)
     public const string SetupConnect = "/api/setup/connect";

@@ -19,6 +19,7 @@ import { createStatsQueries } from "@/api/queries/stats-queries";
 import { createSettingsQueries } from "@/api/queries/settings-queries";
 import { createSlackQueries } from "@/api/queries/slack-queries";
 import { createDiscordQueries } from "@/api/queries/discord-queries";
+import { createDnsQueries } from "@/api/queries/dns-queries";
 
 export type ApiServices = ServerApi & {
     agentTest: ReturnType<typeof createAgentTestService>;
@@ -43,6 +44,7 @@ export type ApiQueries = {
     stats: ReturnType<typeof createStatsQueries>;
     settings: ReturnType<typeof createSettingsQueries>;
     certificates: ReturnType<typeof createCertificatesQueries>;
+    dns: ReturnType<typeof createDnsQueries>;
 };
 
 export type Api = {
@@ -81,6 +83,7 @@ export function createApi(options?: ApiClientOptions): Api {
             stats: createStatsQueries(services.stats),
             settings: createSettingsQueries(services.settings),
             certificates: createCertificatesQueries(services.certificates),
+            dns: createDnsQueries(services.dns),
         },
     };
 }

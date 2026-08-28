@@ -1,13 +1,12 @@
-import { http, HttpResponse } from "msw";
+import { apiHttp } from "./api-http";
 
-// Mirrors the DNS-over-HTTPS lookup the IP configuration page performs.
 export const dnsMocks = {
-    resolve: (ips: string[] = ["51.210.14.7"]) =>
-        http.get("https://dns.google/resolve", () =>
-            HttpResponse.json({
-                Status: 0,
-                Answer: ips.map((ip) => ({ type: 1, data: ip })),
-            }),
+    ipBinding: (addresses: string[] = ["51.210.14.7"]) =>
+        apiHttp.get("/api/dns/ip-binding", ({ response }) =>
+            response(200).json({ hostname: "dashboard.acme.ravendb.run", addresses }),
         ),
-    resolveError: () => http.get("https://dns.google/resolve", () => HttpResponse.json({ Status: 2 })),
+    ipBindingError: () =>
+        apiHttp.get("/api/dns/ip-binding", ({ response }) =>
+            response(502).json({ error: "DNS lookup for 'dashboard.acme.ravendb.run' failed" }),
+        ),
 };

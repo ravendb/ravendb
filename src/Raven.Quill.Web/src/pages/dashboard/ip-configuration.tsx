@@ -10,34 +10,14 @@ import { Field, FieldError, FieldLabel } from "@/components/shadcn/ui/field";
 import { Input } from "@/components/shadcn/ui/input";
 import { containerNameForHost, isIpV4 } from "@/lib/subdomain-origin";
 import { Heading, Text } from "@/components/typography";
+import { api } from "@/api/api";
 
 const NEW_IP_PLACEHOLDER = "<new-ip>";
-const DNS_A_RECORD_TYPE = 1;
-
-type DnsJsonResponse = {
-    Status: number;
-    Answer?: Array<{ type: number; data: string }>;
-};
-
-// The browser cannot inspect DNS directly, so the current binding is read from
-// the public record through DNS-over-HTTPS.
-async function resolveIpBinding(hostname: string): Promise<string[]> {
-    const response = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(hostname)}&type=A`);
-    if (!response.ok) {
-        throw new Error(`DNS lookup failed with status ${response.status}`);
-    }
-    const result = (await response.json()) as DnsJsonResponse;
-    if (result.Status !== 0) {
-        throw new Error(`DNS lookup failed with response code ${result.Status}`);
-    }
-    return (result.Answer ?? []).flatMap((record) => (record.type === DNS_A_RECORD_TYPE ? [record.data] : []));
-}
 
 export function DashboardIpConfiguration({ hostname = window.location.hostname }: { hostname?: string }) {
     const hasResolvableDomain = hostname.includes(".") && !isIpV4(hostname);
     const bindingQuery = useQuery({
-        queryKey: ["ip-configuration", "binding", hostname],
-        queryFn: () => resolveIpBinding(hostname),
+        ...api.queries.dns.ipBinding(),
         enabled: hasResolvableDomain,
     });
 
@@ -89,8 +69,8 @@ export function DashboardIpConfiguration({ hostname = window.location.hostname }
                                         IP address
                                     </Text>
                                     <Text as="div" variant="label" className="tabular-nums">
-                                        {bindingQuery.data?.length
-                                            ? bindingQuery.data.join(", ")
+                                        {bindingQuery.data?.addresses.length
+                                            ? bindingQuery.data.addresses.join(", ")
                                             : "No DNS record found"}
                                     </Text>
                                 </div>

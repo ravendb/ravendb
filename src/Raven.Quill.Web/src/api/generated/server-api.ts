@@ -84,6 +84,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/dns/ip-binding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["dns.ipBinding"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/assistant/chat": {
         parameters: {
             query?: never;
@@ -1561,6 +1577,10 @@ export interface components {
             /** Format: int32 */
             embeddingsMaxConcurrentBatches?: null | number;
         };
+        IpBindingResponse: {
+            hostname: string;
+            addresses: string[];
+        };
         JsonElement: unknown;
         LicensePlan: {
             slug: string;
@@ -2127,6 +2147,44 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "dns.ipBinding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IpBindingResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4364,6 +4422,7 @@ export type GenerateClientCertificateRequest = components["schemas"]["GenerateCl
 export type GoogleAIVersion = components["schemas"]["GoogleAIVersion"];
 export type GoogleSettings = components["schemas"]["GoogleSettings"];
 export type HuggingFaceSettings = components["schemas"]["HuggingFaceSettings"];
+export type IpBindingResponse = components["schemas"]["IpBindingResponse"];
 export type JsonElement = components["schemas"]["JsonElement"];
 export type LicensePlan = components["schemas"]["LicensePlan"];
 export type LicenseResponse = components["schemas"]["LicenseResponse"];
@@ -4486,6 +4545,9 @@ export const API_ENDPOINTS = {
     discord: {
         health: (slug: string) => `/apps/${encodeURIComponent(slug)}/discord/health`,
     },
+    dns: {
+        ipBinding: "/dns/ip-binding",
+    },
     embedLinks: {
         list: (slug: string) => `/apps/${encodeURIComponent(slug)}/embed-links`,
         mint: (slug: string) => `/apps/${encodeURIComponent(slug)}/embed-links`,
@@ -4588,6 +4650,9 @@ export function createServerApi(client: ApiClient) {
         },
         discord: {
             health: (slug: string) => client.get<DiscordChannelHealthResponse[], ApiErrorResponse>(API_ENDPOINTS.discord.health(slug)),
+        },
+        dns: {
+            ipBinding: () => client.get<IpBindingResponse, ApiErrorResponse>(API_ENDPOINTS.dns.ipBinding),
         },
         embedLinks: {
             list: (slug: string) => client.get<EmbedLinkSummaryResponse[], ApiErrorResponse>(API_ENDPOINTS.embedLinks.list(slug)),
