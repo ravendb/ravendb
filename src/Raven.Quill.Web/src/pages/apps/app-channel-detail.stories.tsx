@@ -159,6 +159,8 @@ export const DiscordTokenRejected: Story = {
 
         await canvas.findByText(/token rejected/i);
         expect(canvas.getByText(/rotate bot token/i)).toBeInTheDocument();
+        // A rejected token blocks the gateway, so the panel must not also claim it's "Connecting...".
+        expect(canvas.queryByText(/connecting/i)).not.toBeInTheDocument();
     },
 };
 
@@ -254,6 +256,8 @@ export const DiscordConnecting: Story = {
 
         await canvas.findByText(/connecting/i);
         expect(canvas.queryByText(/gateway disconnected/i)).not.toBeInTheDocument();
+        // No inbound message yet, so the connection card invites the first one instead of showing nothing.
+        expect(canvas.getByText(/waiting for the first message/i)).toBeInTheDocument();
     },
 };
 

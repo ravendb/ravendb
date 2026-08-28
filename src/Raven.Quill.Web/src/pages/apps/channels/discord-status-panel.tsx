@@ -70,9 +70,13 @@ function DiscordConnectionCardBody({ health }: { health: DiscordChannelHealthRes
                         <DiscordTokenBadge tokenValid={health.tokenValid} tokenError={health.tokenError} />
                         <DiscordGatewayBadge health={health} />
                     </div>
-                    {health.lastInboundAt && (
+                    {health.lastInboundAt ? (
                         <Text as="span" variant="caption" title={formatDateTime(health.lastInboundAt)}>
                             Last message {formatRelativeTime(health.lastInboundAt)}
+                        </Text>
+                    ) : (
+                        <Text as="span" variant="caption">
+                            Waiting for the first message...
                         </Text>
                     )}
                 </div>
@@ -96,14 +100,26 @@ function DiscordConnectionCardBody({ health }: { health: DiscordChannelHealthRes
     );
 }
 
-// The one-time install walkthrough: invite the bot to a shared server, then DM it. Renders nothing until
-// health loads (the connection card above owns the loading/error state for the same, deduped query).
+// The one-time install walkthrough: invite the bot to a shared server, then DM it. Carries its own
+// loading/error state (off the same deduped health query) so the Connect tab's bordered "Invite the
+// bot" card never renders empty while health is still loading.
 export function DiscordSetupSteps({ slug, channelId }: { slug: string; channelId: string }) {
-    const { health } = useDiscordHealth(slug, channelId);
-    if (!health) {
-        return null;
-    }
+    const { healthQuery, health } = useDiscordHealth(slug, channelId);
 
+    return (
+        <ApiState
+            isLoading={healthQuery.isPending}
+            isError={healthQuery.isError}
+            errorTitle="Could not load the Discord setup steps"
+            onRetry={() => void healthQuery.refetch()}
+            loadingLabel="Loading setup steps..."
+        >
+            {health && <DiscordSetupStepsBody health={health} />}
+        </ApiState>
+    );
+}
+
+function DiscordSetupStepsBody({ health }: { health: DiscordChannelHealthResponse }) {
     const steps: NumberedStep[] = [
         {
             title: "Invite the bot to a server",
@@ -132,6 +148,12 @@ export function DiscordSetupSteps({ slug, channelId }: { slug: string; channelId
 }
 
 function DiscordGatewayBadge({ health }: { health: DiscordChannelHealthResponse }) {
+    // A rejected token blocks the gateway entirely, so don't also claim it's "Connecting...".
+    // The token badge already surfaces the blocking problem, so the gateway state is just noise here.
+    if (health.tokenValid === false) {
+        return null;
+    }
+
     if (health.gatewayConnected) {
         return (
             <Badge
