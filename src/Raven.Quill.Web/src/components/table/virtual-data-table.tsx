@@ -5,7 +5,9 @@
 import { useRef, type CSSProperties, type ReactNode } from "react";
 import { flexRender, type Header, type Table as ReactTable } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { Skeleton } from "@/components/shadcn/ui/skeleton";
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/ui/table";
+import { getSkeletonCellWidth } from "@/components/table/skeleton-cell-width";
 import { useAutoSizeColumns } from "@/components/table/use-auto-size-columns";
 import { cn } from "@/lib/utils";
 
@@ -25,16 +27,19 @@ interface VirtualDataTableProps<TData> {
     overscan?: number;
     rowHeightInPx?: number;
     getCellClassName?: (cellId: string) => string;
+    getHeadClassName?: (columnId: string) => string;
     getRowState?: (rowId: string) => string;
     getRowClassName?: (rowId: string) => string;
     /** Called with the row the pointer entered, or null when it left the rows. */
     onRowHoverChange?: (rowId: string | null) => void;
+    /** Called with the row that was clicked. Rows are only given a click target when set. */
+    onRowClick?: (rowId: string) => void;
     /** Floating content laid over the table region, e.g. a selection toolbar pinned to the bottom edge. */
     overlay?: ReactNode;
 }
 
-function getColumnStyle(size: number, canShrink = false): CSSProperties {
-    return { width: size, flexGrow: 0, flexShrink: canShrink ? 1 : 0 };
+function getColumnStyle(size: number, { canShrink = false, canGrow = false } = {}): CSSProperties {
+    return { width: size, flexGrow: canGrow ? 1 : 0, flexShrink: canShrink ? 1 : 0 };
 }
 
 export function VirtualDataTable<TData>({
@@ -46,9 +51,11 @@ export function VirtualDataTable<TData>({
     overscan = DEFAULT_OVERSCAN,
     rowHeightInPx = DEFAULT_ROW_HEIGHT_IN_PX,
     getCellClassName,
+    getHeadClassName,
     getRowState,
     getRowClassName,
     onRowHoverChange,
+    onRowClick,
     overlay,
 }: VirtualDataTableProps<TData>) {
     // Enable resizing for the whole table so the drag handles and content-based auto-sizing
@@ -75,7 +82,7 @@ export function VirtualDataTable<TData>({
         return (
             <div className={cn("min-w-0 overflow-hidden rounded-lg border", className)}>
                 <table className="w-full caption-bottom text-sm">
-                    <VirtualTableHeader table={table} canShrinkColumns />
+                    <VirtualTableHeader table={table} getHeadClassName={getHeadClassName} canShrinkColumns />
                     <TableBody>
                         <TableRow>
                             <TableCell colSpan={columnCount} className="h-24 text-center text-muted-foreground">
@@ -112,7 +119,7 @@ export function VirtualDataTable<TData>({
                 style={isFillHeight ? undefined : { maxHeight }}
             >
                 <table className="grid min-w-full caption-bottom text-sm" style={{ width: table.getTotalSize() }}>
-                    <VirtualTableHeader table={table} />
+                    <VirtualTableHeader table={table} getHeadClassName={getHeadClassName} />
                     <TableBody
                         className="relative grid"
                         style={{
@@ -134,6 +141,7 @@ export function VirtualDataTable<TData>({
                                     ref={(node) => rowVirtualizer.measureElement(node)}
                                     onPointerEnter={() => onRowHoverChange?.(row.id)}
                                     onPointerLeave={() => onRowHoverChange?.(null)}
+                                    onClick={onRowClick ? () => onRowClick(row.id) : undefined}
                                     className={cn("absolute flex w-full", getRowClassName?.(row.id))}
                                     // Positioned via top instead of translateY: Chromium never shrinks
                                     // scrollable overflow contributed by transformed children, so rows
@@ -169,12 +177,76 @@ export function VirtualDataTable<TData>({
     );
 }
 
-function VirtualTableHeader<TData>({
+/**
+ * Placeholder for a `VirtualDataTable` that is still loading. Takes the same table instance, so the
+ * header labels are the real ones and the placeholder columns line up under them. Content-based
+ * auto-sizing needs rows to measure, so until they land the columns start from their configured
+ * widths and share out the leftover container width the way auto-sizing will.
+ */
+export function VirtualDataTableSkeleton<TData>({
     table,
-    canShrinkColumns = false,
+    rows = 5,
+    className,
+    getHeadClassName,
+    getCellClassName,
+    rowHeightInPx = DEFAULT_ROW_HEIGHT_IN_PX,
 }: {
     table: ReactTable<TData>;
+    rows?: number;
+    className?: string;
+    getHeadClassName?: (columnId: string) => string;
+    getCellClassName?: (columnId: string) => string;
+    rowHeightInPx?: number;
+}) {
+    const columns = table.getVisibleLeafColumns();
+    const hasActionColumn = columns.at(-1)?.columnDef.header === "";
+
+    return (
+        <div className={cn("min-w-0 overflow-hidden rounded-lg border", className)}>
+            <table className="w-full caption-bottom text-sm">
+                <VirtualTableHeader table={table} getHeadClassName={getHeadClassName} canShrinkColumns canGrowColumns />
+                <TableBody className="grid">
+                    {Array.from({ length: rows }).map((_, rowIndex) => (
+                        <TableRow
+                            key={rowIndex}
+                            className="flex w-full hover:bg-transparent"
+                            style={{ height: rowHeightInPx }}
+                        >
+                            {columns.map((column, columnIndex) => (
+                                <TableCell
+                                    key={column.id}
+                                    className={cn("flex items-center overflow-hidden", getCellClassName?.(column.id))}
+                                    style={getColumnStyle(column.getSize(), {
+                                        canShrink: column.getCanResize(),
+                                        canGrow: column.getCanResize(),
+                                    })}
+                                >
+                                    <Skeleton
+                                        className={cn(
+                                            "h-4",
+                                            getSkeletonCellWidth(columnIndex, columns.length, hasActionColumn),
+                                        )}
+                                    />
+                                </TableCell>
+                            ))}
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </table>
+        </div>
+    );
+}
+
+function VirtualTableHeader<TData>({
+    table,
+    getHeadClassName,
+    canShrinkColumns = false,
+    canGrowColumns = false,
+}: {
+    table: ReactTable<TData>;
+    getHeadClassName?: (columnId: string) => string;
     canShrinkColumns?: boolean;
+    canGrowColumns?: boolean;
 }) {
     return (
         <TableHeader className="sticky top-0 z-10 grid grid-cols-1 bg-background">
@@ -184,8 +256,14 @@ function VirtualTableHeader<TData>({
                         <TableHead
                             key={header.id}
                             data-column-id={header.column.id}
-                            className="group relative flex items-center overflow-hidden"
-                            style={getColumnStyle(header.getSize(), canShrinkColumns && header.column.getCanResize())}
+                            className={cn(
+                                "group relative flex items-center overflow-hidden",
+                                getHeadClassName?.(header.column.id),
+                            )}
+                            style={getColumnStyle(header.getSize(), {
+                                canShrink: canShrinkColumns && header.column.getCanResize(),
+                                canGrow: canGrowColumns && header.column.getCanResize(),
+                            })}
                         >
                             <span className="truncate">
                                 {header.isPlaceholder

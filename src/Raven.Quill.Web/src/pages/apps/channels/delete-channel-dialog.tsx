@@ -9,23 +9,38 @@ import { invalidateChannelQueries } from "@/lib/query-invalidation";
 type DeleteChannelDialogProps = {
     slug: string;
     channel: ChannelSummaryResponse;
-    trigger: ReactNode;
+    /** Omit when the dialog is driven by `open`/`onOpenChange` (e.g. from a dropdown menu item). */
+    trigger?: ReactNode;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    /** Called after a successful delete, e.g. to navigate away from the deleted channel's own page. */
+    onDeleted?: () => void;
 };
 
-export function DeleteChannelDialog({ slug, channel, trigger }: DeleteChannelDialogProps) {
-    const [isOpen, setIsOpen] = useState(false);
+export function DeleteChannelDialog({
+    slug,
+    channel,
+    trigger,
+    open,
+    onOpenChange,
+    onDeleted,
+}: DeleteChannelDialogProps) {
+    const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+    const isOpen = open ?? uncontrolledOpen;
+    const setIsOpen = onOpenChange ?? setUncontrolledOpen;
     const queryClient = useQueryClient();
 
     const deleteMutation = useMutation({
         mutationFn: () => api.services.channels.delete(slug, channel.channelId),
         onSuccess: async () => {
             await Promise.all([
-                invalidateChannelQueries(queryClient, slug),
+                invalidateChannelQueries(queryClient, slug, channel.type),
                 // Deleting a channel orphans its embed links, so drop them from the active-links view.
                 queryClient.invalidateQueries({ queryKey: api.queries.embedLinks.list(slug).queryKey }),
             ]);
             toast.success(`Channel “${channel.displayName}” deleted`);
             setIsOpen(false);
+            onDeleted?.();
         },
     });
 

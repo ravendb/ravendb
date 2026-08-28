@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { Text } from "@/components/typography";
 import { SparklesIcon } from "lucide-react";
 
 export type AiProgressStage = {
@@ -22,14 +23,14 @@ export function AiProgressStatus({
         <div className="grid gap-2">
             <div className="flex items-center gap-2">
                 <SparklesIcon className="size-4 shrink-0 animate-pulse text-primary-strong" aria-hidden="true" />
-                <span className="animate-pulse text-sm font-medium" aria-live="polite">
+                <Text variant="label" as="span" className="animate-pulse" aria-live="polite">
                     {stage?.label}...
-                </span>
-                <span className="font-mono text-xs text-muted-foreground tabular-nums">
+                </Text>
+                <Text variant="caption" as="span" className="font-mono tabular-nums">
                     {formatElapsed(elapsedSeconds)}
-                </span>
+                </Text>
             </div>
-            <p className="text-sm text-muted-foreground">{children}</p>
+            <Text variant="muted">{children}</Text>
         </div>
     );
 }

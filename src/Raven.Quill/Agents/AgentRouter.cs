@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents;
+using System.Text.Json;
+using Raven.Client.Documents;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Quill.Metrics;
@@ -13,13 +14,19 @@ public sealed record AgentRequest(
     string ConversationId,
     string Prompt,
     string ChannelId,
-    IReadOnlyDictionary<string, string> Parameters);
+    IReadOnlyDictionary<string, JsonElement> Parameters);
 
 public sealed record AgentRunResult(object Answer, string ConversationId);
 
 public interface IAgentRouter
 {
     Task<AgentRunResult> RunAsync(AgentRequest request, Func<string, ValueTask> onChunk, AiAgentConfiguration config, CancellationToken ct);
+}
+
+public sealed class InvalidParameterValueException(string name, AiAgentParameterValueType type, string reason)
+    : Exception($"parameter '{name}' declared as {type}: {reason}")
+{
+    public string PublicMessage { get; } = $"the value bound for parameter '{name}' is not a valid {type}";
 }
 
 public sealed class UnknownAgentException(string agentId)
@@ -39,7 +46,7 @@ internal sealed class AgentRouter(
         var conversationId = NormalizeConversationId(request.ConversationId);
 
         var creationOptions = new AiConversationCreationOptions();
-        foreach (var (key, value) in request.Parameters)
+        foreach (var (key, value) in ConvertParameters(request, config))
             creationOptions.AddParameter(key, value);
 
         var conversation = store.AI.ForDatabase(request.Database).Conversation(
@@ -79,6 +86,29 @@ internal sealed class AgentRouter(
         return new AgentRunResult(new { reply }, conversation.Id);
     }
 
+    private static Dictionary<string, object?> ConvertParameters(AgentRequest request, AiAgentConfiguration config)
+    {
+        var declaredType = new Dictionary<string, AiAgentParameterValueType>(StringComparer.OrdinalIgnoreCase);
+        foreach (var parameter in config.Parameters ?? [])
+        {
+            if (string.IsNullOrWhiteSpace(parameter.Name) == false)
+                declaredType[parameter.Name] = parameter.Type;
+        }
+
+        var converted = new Dictionary<string, object?>();
+        foreach (var (key, value) in request.Parameters)
+        {
+            var type = declaredType.GetValueOrDefault(key, AiAgentParameterValueType.Default);
+
+            if (AgentParameterValue.TryNormalize(type, value, out var normalized, out var error) == false)
+                throw new InvalidParameterValueException(key, type, error!);
+
+            converted[key] = AgentTestParameterValue.Convert(normalized);
+        }
+
+        return converted;
+    }
+
     private async Task RunActionsAsync(
         IAiConversationOperations conversation, AiAgentConfiguration config,
         AgentActionBindings bindings, CancellationToken ct)
@@ -116,7 +146,9 @@ internal sealed class AgentRouter(
             ConversationId = conversationId,
             Agent = agent,
             ChannelId = request.ChannelId,
-            Parameters = new Dictionary<string, string>(request.Parameters),
+            Parameters = request.Parameters.ToDictionary(
+                parameter => parameter.Key,
+                parameter => AgentParameterValue.ToDisplayText(parameter.Value)),
             CreatedAt = nowUtc
         };
 

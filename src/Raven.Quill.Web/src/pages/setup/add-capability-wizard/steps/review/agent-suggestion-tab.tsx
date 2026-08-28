@@ -1,6 +1,7 @@
 import { type ReactNode } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { Sparkles } from "lucide-react";
+import { Text } from "@/components/typography";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { Spinner } from "@/components/shadcn/ui/spinner";
@@ -29,10 +30,10 @@ export function AgentSuggestionTab() {
             {mode === "prompt" ? <PromptEditor /> : <SuggestionPicker />}
 
             <div className="grid gap-2">
-                <div className="flex items-center gap-2 text-sm font-medium">
+                <Text variant="label" as="div" className="flex items-center gap-2">
                     <Sparkles className="size-4" />
                     Agent summary
-                </div>
+                </Text>
                 <div className="flex flex-col divide-y rounded-lg border bg-background px-4">
                     <SummaryRow label="Agent name">{config.name || "—"}</SummaryRow>
                     <SummaryRow label="System prompt">
@@ -41,7 +42,9 @@ export function AgentSuggestionTab() {
                                 {systemPrompt}
                             </ExpandableText>
                         ) : (
-                            <span className="text-sm text-muted-foreground">—</span>
+                            <Text variant="muted" as="span">
+                                —
+                            </Text>
                         )}
                     </SummaryRow>
                     <SummaryRow label="Connection string">{connectionStringName || "—"}</SummaryRow>
@@ -102,7 +105,9 @@ function PromptEditor() {
 function SummaryRow({ label, children }: { label: string; children: ReactNode }) {
     return (
         <div className="flex min-h-12 items-center justify-between gap-12 py-3">
-            <span className="shrink-0 text-sm font-medium">{label}</span>
+            <Text variant="label" as="span" className="shrink-0">
+                {label}
+            </Text>
             <div className="flex min-w-0 justify-end text-sm">{children}</div>
         </div>
     );

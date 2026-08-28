@@ -1,5 +1,7 @@
 using FastTests;
 using Raven.Quill.Agents;
+using Raven.Quill.Channels;
+using Raven.Quill.Hosting;
 using Raven.Quill.Telegram;
 using Tests.Infrastructure;
 using Xunit;
@@ -57,12 +59,12 @@ public class TelegramConversationIdTests(ITestOutputHelper output) : NoDisposalN
     }
 }
 
-public class TelegramMessageSplitterTests(ITestOutputHelper output) : NoDisposalNeeded(output)
+public class MessageSplitterTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 {
     [RavenFact(RavenTestCategory.Quill)]
     public void Short_text_is_returned_unchanged()
     {
-        var parts = TelegramMessageSplitter.Split("hello world", TelegramMessageSplitter.TelegramApiMessageLimit);
+        var parts = MessageSplitter.Split("hello world", TelegramOptions.ApiMessageLimit);
 
         Assert.Equal(["hello world"], parts);
     }
@@ -72,7 +74,7 @@ public class TelegramMessageSplitterTests(ITestOutputHelper output) : NoDisposal
     {
         var text = new string('a', 4096);
 
-        Assert.Equal([text], TelegramMessageSplitter.Split(text, TelegramMessageSplitter.TelegramApiMessageLimit));
+        Assert.Equal([text], MessageSplitter.Split(text, TelegramOptions.ApiMessageLimit));
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -80,7 +82,7 @@ public class TelegramMessageSplitterTests(ITestOutputHelper output) : NoDisposal
     {
         var first = new string('a', 20) + ".";
         var second = new string('b', 20);
-        var parts = TelegramMessageSplitter.Split(first + " " + second, limit: 30);
+        var parts = MessageSplitter.Split(first + " " + second, limit: 30);
 
         Assert.Equal([first, second], parts);
     }
@@ -90,7 +92,7 @@ public class TelegramMessageSplitterTests(ITestOutputHelper output) : NoDisposal
     {
         var first = new string('a', 20);
         var second = new string('b', 20);
-        var parts = TelegramMessageSplitter.Split(first + "\n" + second, limit: 30);
+        var parts = MessageSplitter.Split(first + "\n" + second, limit: 30);
 
         Assert.Equal([first, second], parts);
     }
@@ -99,7 +101,7 @@ public class TelegramMessageSplitterTests(ITestOutputHelper output) : NoDisposal
     public void Text_without_boundaries_hard_splits_at_the_limit()
     {
         var text = new string('a', 70);
-        var parts = TelegramMessageSplitter.Split(text, limit: 30);
+        var parts = MessageSplitter.Split(text, limit: 30);
 
         Assert.Equal([new string('a', 30), new string('a', 30), new string('a', 10)], parts);
     }
@@ -108,7 +110,7 @@ public class TelegramMessageSplitterTests(ITestOutputHelper output) : NoDisposal
     public void Hard_split_never_tears_a_surrogate_pair()
     {
         var text = string.Concat(Enumerable.Repeat("\U0001F600", 20));
-        var parts = TelegramMessageSplitter.Split(text, limit: 15);
+        var parts = MessageSplitter.Split(text, limit: 15);
 
         Assert.All(parts, part => Assert.True(part.Length <= 15));
         Assert.All(parts, part => Assert.False(char.IsHighSurrogate(part[^1])));
@@ -120,7 +122,7 @@ public class TelegramMessageSplitterTests(ITestOutputHelper output) : NoDisposal
     public void Every_part_stays_within_the_limit()
     {
         var text = string.Join(" ", Enumerable.Range(0, 300).Select(i => $"Sentence number {i} ends here."));
-        var parts = TelegramMessageSplitter.Split(text, TelegramMessageSplitter.TelegramApiMessageLimit);
+        var parts = MessageSplitter.Split(text, TelegramOptions.ApiMessageLimit);
 
         Assert.True(parts.Count > 1);
         Assert.All(parts, part => Assert.True(part.Length <= 4096));

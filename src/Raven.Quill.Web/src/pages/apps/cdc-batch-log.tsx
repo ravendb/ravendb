@@ -1,4 +1,5 @@
 import { useId, useLayoutEffect, useRef, useState, type ReactNode, type UIEvent } from "react";
+import { Text } from "@/components/typography";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ChevronRight } from "lucide-react";
 import { StatusIndicator, type StatusTone } from "@/components/data/status-indicator";
@@ -21,7 +22,9 @@ export function CdcBatchLog({ batches }: { batches: CdcLiveBatch[] }) {
     if (batches.length === 0) {
         return (
             <div className="rounded-lg border">
-                <p className="py-12 text-center text-sm text-muted-foreground">No batches yet.</p>
+                <Text variant="muted" className="py-12 text-center">
+                    No batches yet.
+                </Text>
             </div>
         );
     }
@@ -103,7 +106,9 @@ function CdcBatchList({ batches }: { batches: CdcLiveBatch[] }) {
     return (
         <div className="overflow-hidden rounded-lg border">
             <div className="flex items-center justify-between gap-3 border-b bg-muted/40 px-3 py-2">
-                <p className="text-xs text-muted-foreground tabular-nums">{formatCompact(batches.length)} batches</p>
+                <Text variant="caption" className="tabular-nums">
+                    {formatCompact(batches.length)} batches
+                </Text>
                 <div className="flex items-center gap-2">
                     <Label htmlFor={followId} className="text-xs font-normal text-muted-foreground">
                         Follow latest
@@ -200,16 +205,16 @@ function CdcBatchRow({
                     )}
                 />
                 <StatusIndicator tone={state.tone} label={state.label} className="shrink-0 justify-start" />
-                <span className="shrink-0 font-mono text-xs text-muted-foreground tabular-nums">
+                <Text as="span" variant="caption" className="shrink-0 font-mono tabular-nums">
                     {formatBatchTime(batch.started)}
-                </span>
-                <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+                </Text>
+                <Text as="span" variant="caption" className="min-w-0 flex-1 truncate">
                     {describeBatch(batch, errorCount)}
-                </span>
+                </Text>
                 {/* The narrow layout keeps state, time and summary; the duration stays in the details below. */}
-                <span className="hidden shrink-0 font-mono text-xs text-muted-foreground tabular-nums sm:inline">
+                <Text as="span" variant="caption" className="hidden shrink-0 font-mono tabular-nums sm:inline">
                     {formatBatchDuration(batch.durationInMs)}
-                </span>
+                </Text>
             </button>
             {isExpanded && (
                 <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 px-3 pb-3 pl-10">

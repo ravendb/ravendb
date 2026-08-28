@@ -5,6 +5,7 @@ import type { AppResponse } from "@/api/generated/server-api";
 import { StatusIndicator, type StatusTone } from "@/components/data/status-indicator";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
+import { Heading, Text } from "@/components/typography";
 import { formatDate } from "@/lib/format";
 import { cn, copyToClipboard } from "@/lib/utils";
 import {
@@ -41,14 +42,16 @@ export function CertificateCard({ certificate, apps }: { certificate: Certificat
                 <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="min-w-0 space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="text-sm font-semibold">{certificate.name || "—"}</h3>
+                            <Heading as="h3" variant="label">
+                                {certificate.name || "—"}
+                            </Heading>
                             <StatusIndicator tone={STATE_TONES[state]} label={CERTIFICATE_STATE_LABELS[state]} />
                             {isAboutToExpire && <StatusIndicator tone="warning" label="About to expire" />}
                         </div>
                         <div className="flex items-center gap-1">
-                            <span className="truncate font-mono text-xs text-muted-foreground">
+                            <Text as="span" variant="caption" className="truncate font-mono">
                                 {certificate.thumbprint}
-                            </span>
+                            </Text>
                             <Button
                                 type="button"
                                 variant="ghost"

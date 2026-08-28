@@ -1,7 +1,9 @@
+using Raven.Quill.Channels;
+
 namespace Raven.Quill.Telegram;
 
 // Lives in the config-store database so one bot token can never poll from two apps.
-internal sealed class TelegramBotReservation
+internal sealed class TelegramBotReservation : IChannelBotReservation
 {
     internal const string IdPrefix = "telegram-bots/";
 

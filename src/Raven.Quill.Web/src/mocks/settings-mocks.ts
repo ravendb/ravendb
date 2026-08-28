@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import type { LicenseResponse, QuillUsageResponse } from "@/api/generated/server-api";
+import type { LicenseResponse, QuillApplicationUsage, QuillUsageResponse } from "@/api/generated/server-api";
 import type { CertificateItem } from "@/api/custom-services/certificates-service";
 import { apiHttp } from "./api-http";
 
@@ -80,7 +80,7 @@ export const sampleCertificates: CertificateItem[] = [
         securityClearance: "ValidUser",
         notBefore: "2025-06-20T00:00:00Z",
         notAfter: "2026-06-20T00:00:00Z",
-        permissions: { "demo-shop": "Read" },
+        permissions: { "demo-shop": "ReadWrite" },
         disabled: false,
     },
     {
@@ -104,6 +104,36 @@ export const sampleCertificates: CertificateItem[] = [
     },
 ];
 
+// The shape RavenDB reports: unpadded base64 of a 16-byte guid - 22 characters over A-Za-z0-9+/,
+// always ending in one of the four the final two bits allow. A couple carry a + or a /, because ids
+// that awkward to read are exactly why the table groups by name and only falls back to them.
+export const sampleTopologyIds = {
+    systemBusiest: "j9T7K/m7IZsA7MorB0UVmw",
+    system: "dFGqCGUYc8DUeweTsCxudA",
+    systemQuietest: "26jT6mFmbaClQn7J0vE1Yg",
+    huetopiaBusiest: "NA+WUHfUc3cvjURuPbGDFQ",
+    huetopia: "C3i3GQcS1dgeNvaAYmIHDQ",
+    supportCopilot: "Y44Uy3cyOPO0UdiBXNPCeg",
+    ordersSync: "5xTOTLh5XkChGKDVQRCK5Q",
+    bookshopHelper: "2ODd5OiMFOwoH1TF1cOhJQ",
+};
+
+function usageRow(
+    topologyId: string,
+    applicationName: string,
+    usage: number,
+    { isSystem = false }: { isSystem?: boolean } = {},
+): QuillApplicationUsage {
+    return {
+        topologyId,
+        applicationName,
+        from: "2026-06-01T00:00:00Z",
+        to: "2026-06-30T23:59:59Z",
+        usage,
+        isSystem,
+    };
+}
+
 // ~30 daily points with a gentle wave so the writes chart has shape.
 export const sampleQuillUsage: QuillUsageResponse = {
     byPeriod: Array.from({ length: 30 }, (_, index) => {
@@ -115,27 +145,17 @@ export const sampleQuillUsage: QuillUsageResponse = {
             usage: Math.round(280000 + wave * 130000),
         };
     }),
+    // Mirrors what a real licence covering several appliances reports: many system rows sharing the
+    // config database's name, a repeated app name, and unique apps - each distinguished only by
+    // topology id, and deliberately out of order so the grouping is doing the work.
     perApplication: [
-        {
-            topologyId: "topology-1",
-            applicationName: "support-copilot",
-            from: "2026-06-01T00:00:00Z",
-            to: "2026-06-30T23:59:59Z",
-            usage: 5200000,
-        },
-        {
-            topologyId: "topology-1",
-            applicationName: "orders-sync",
-            from: "2026-06-01T00:00:00Z",
-            to: "2026-06-30T23:59:59Z",
-            usage: 2400000,
-        },
-        {
-            topologyId: "topology-2",
-            applicationName: "docs-assistant",
-            from: "2026-06-01T00:00:00Z",
-            to: "2026-06-30T23:59:59Z",
-            usage: 1300000,
-        },
+        usageRow(sampleTopologyIds.system, "quill-config", 2600, { isSystem: true }),
+        usageRow(sampleTopologyIds.supportCopilot, "support-copilot", 5200000),
+        usageRow(sampleTopologyIds.huetopiaBusiest, "huetopia", 1300000),
+        usageRow(sampleTopologyIds.systemQuietest, "quill-config", 900, { isSystem: true }),
+        usageRow(sampleTopologyIds.ordersSync, "orders-sync", 2400000),
+        usageRow(sampleTopologyIds.systemBusiest, "quill-config", 4100, { isSystem: true }),
+        usageRow(sampleTopologyIds.huetopia, "huetopia", 640000),
+        usageRow(sampleTopologyIds.bookshopHelper, "bookshop-helper", 88000),
     ],
 };

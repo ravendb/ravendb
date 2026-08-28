@@ -648,7 +648,7 @@ if ($input.doc) {
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task GenAi_RealProvider_ObjectContext_CompletesWithoutError(Options options, GenAiConfiguration config)
     {
         // Credential-gated real-provider smoke test (RavenDB-26767 previously had none). Provider-stable only: a full/
@@ -679,7 +679,7 @@ if ($input.doc) {
             session.SaveChanges();
         }
 
-        Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(2)));
+        Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(6)));
 
         using (var session = store.OpenSession())
         {

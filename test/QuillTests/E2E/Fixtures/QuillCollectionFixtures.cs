@@ -236,6 +236,138 @@ public abstract class QuillTelegramTestBase(ITestOutputHelper output, QuillTeleg
         $"{Random.Shared.NextInt64(1_000_000, 9_999_999)}:AA{Guid.NewGuid():N}";
 }
 
+// ---- Slack ----
+
+public sealed class QuillSlackFixture : QuillCollectionHost
+{
+    public MockSlackApi Slack { get; private set; } = null!;
+
+    internal FakeAgentRouter Router { get; } = new();
+
+    public override async ValueTask InitializeAsync()
+    {
+        await base.InitializeAsync();
+        Slack = await MockSlackApi.StartAsync();
+    }
+
+    public override async ValueTask DisposeAsync()
+    {
+        await base.DisposeAsync();
+        await Slack.DisposeAsync();
+    }
+}
+
+public abstract class QuillSlackTestBase(ITestOutputHelper output, QuillSlackFixture fixture)
+    : QuillTestBase(output, fixture)
+{
+    protected MockSlackApi Slack => fixture.Slack;
+
+    internal FakeAgentRouter Router => fixture.Router;
+
+    protected override Task<QuillHost> NewHostAsync(
+        Action<ApplianceOptions>? configure = null, Action<IServiceCollection>? configureServices = null,
+        string setupPackagePath = "", bool seedChatConnectionString = true, bool longLived = false) =>
+        base.NewHostAsync(
+            configure: opts =>
+            {
+                opts.Slack.ApiUrl = fixture.Slack.BaseAddress;
+                opts.Slack.EditDebounce = TimeSpan.FromMilliseconds(50);
+                configure?.Invoke(opts);
+            },
+            configureServices: services =>
+            {
+                services.RemoveAll<Raven.Quill.Agents.IAgentRouter>();
+                services.AddSingleton<Raven.Quill.Agents.IAgentRouter>(fixture.Router);
+                configureServices?.Invoke(services);
+            },
+            setupPackagePath: setupPackagePath, seedChatConnectionString: seedChatConnectionString,
+            longLived: longLived);
+
+    public override async ValueTask InitializeAsync()
+    {
+        await base.InitializeAsync();
+        Slack.Reset();
+        Router.Reset();
+    }
+
+    protected static string NewBotToken() => "xoxb-" + Guid.NewGuid().ToString("N");
+
+    protected static string NewTeamId() => "T" + Random.Shared.Next(100_000_000, 999_999_999);
+
+    protected static string NewBotUserId() => "U" + Random.Shared.Next(100_000_000, 999_999_999);
+}
+
+// ---- Discord ----
+
+public sealed class QuillDiscordFixture : QuillCollectionHost
+{
+    public MockDiscordApi Discord { get; private set; } = null!;
+
+    internal FakeAgentRouter Router { get; } = new();
+
+    public override async ValueTask InitializeAsync()
+    {
+        await base.InitializeAsync();
+        Discord = await MockDiscordApi.StartAsync();
+    }
+
+    public override async ValueTask DisposeAsync()
+    {
+        await base.DisposeAsync();
+        await Discord.DisposeAsync();
+    }
+}
+
+public abstract class QuillDiscordTestBase(ITestOutputHelper output, QuillDiscordFixture fixture)
+    : QuillTestBase(output, fixture)
+{
+    protected MockDiscordApi Discord => fixture.Discord;
+
+    protected static readonly TimeSpan GatewayRestartDelay = TimeSpan.FromSeconds(3);
+
+    internal FakeAgentRouter Router => fixture.Router;
+
+    protected override Task<QuillHost> NewHostAsync(
+        Action<ApplianceOptions>? configure = null, Action<IServiceCollection>? configureServices = null,
+        string setupPackagePath = "", bool seedChatConnectionString = true, bool longLived = false) =>
+        base.NewHostAsync(
+            configure: opts =>
+            {
+                opts.Discord.ApiUrl = fixture.Discord.BaseAddress;
+                opts.Discord.EditDebounce = TimeSpan.FromMilliseconds(50);
+                opts.Discord.ApplyChangesInterval = TimeSpan.FromSeconds(1);
+                opts.Discord.GatewayBackoffMax = TimeSpan.FromMilliseconds(200);
+                opts.Discord.GatewayHandshakeTimeout = TimeSpan.FromSeconds(2);
+                opts.Discord.GatewayRestartDelay = GatewayRestartDelay;
+                configure?.Invoke(opts);
+            },
+            configureServices: services =>
+            {
+                services.RemoveAll<Raven.Quill.Agents.IAgentRouter>();
+                services.AddSingleton<Raven.Quill.Agents.IAgentRouter>(fixture.Router);
+                configureServices?.Invoke(services);
+            },
+            setupPackagePath: setupPackagePath, seedChatConnectionString: seedChatConnectionString,
+            longLived: longLived);
+
+    public override async ValueTask InitializeAsync()
+    {
+        await base.InitializeAsync();
+        Discord.Reset();
+        Router.Reset();
+    }
+
+    protected static string NewBotToken() =>
+        "MT" + Guid.NewGuid().ToString("N")[..8] + ".G" + Guid.NewGuid().ToString("N")[..6] + "." +
+        Guid.NewGuid().ToString("N");
+
+    protected static string NewApplicationId() =>
+        Random.Shared.NextInt64(100_000_000_000_000_000, 999_999_999_999_999_999).ToString();
+
+    protected static string NewBotUserId() =>
+        Random.Shared.NextInt64(100_000_000_000_000_000, 999_999_999_999_999_999).ToString();
+}
+
 // ---- AI models ----
 
 /// A resettable <see cref="IAiHelperClient"/> that records the last call and returns a per-test-configurable

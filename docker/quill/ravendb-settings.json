@@ -1,7 +1,0 @@
-{
-    "Setup.Mode": "Unsecured",
-    "ServerUrl": "http://0.0.0.0:8080",
-    "DataDir": "/var/lib/quill/ravendb",
-    "Security.UnsecuredAccessAllowed": "PublicNetwork",
-    "License.Eula.Accepted": true
-}

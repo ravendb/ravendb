@@ -132,19 +132,19 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
         var partial = await Assert.ThrowsAsync<QuillHttpException>(() =>
             app.ProvisionChannelAsync(new ProvisionChannelRequest(
                 ChannelType.Telegram, agentId, null,
-                Telegram: new(NewBotToken(), new Dictionary<string, TelegramParameterBinding>
+                Telegram: new(NewBotToken(), new Dictionary<string, ChannelParameterBinding>
                 {
-                    ["customerId"] = new() { Source = TelegramParameterSource.Constant, Value = "customers/1" },
+                    ["customerId"] = new() { Source = ChannelParameterSource.Constant, Value = "customers/1" },
                 }))));
         Assert.Equal(HttpStatusCode.BadRequest, partial.StatusCode);
         Assert.Contains("missing parameter binding(s) for agent parameter(s): senderId", partial.Body);
 
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.Telegram, agentId, null,
-            Telegram: new(NewBotToken(), new Dictionary<string, TelegramParameterBinding>
+            Telegram: new(NewBotToken(), new Dictionary<string, ChannelParameterBinding>
             {
-                ["customerId"] = new() { Source = TelegramParameterSource.Constant, Value = "customers/1" },
-                ["senderId"] = new() { Source = TelegramParameterSource.UserId },
+                ["customerId"] = new() { Source = ChannelParameterSource.Constant, Value = "customers/1" },
+                ["senderId"] = new() { Source = ChannelParameterSource.UserId },
             })));
         Assert.NotEmpty(created.ChannelId);
 
@@ -161,10 +161,10 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
         var undeclared = await Assert.ThrowsAsync<QuillHttpException>(() =>
             app.ProvisionChannelAsync(new ProvisionChannelRequest(
                 ChannelType.Telegram, agentId, null,
-                Telegram: new(NewBotToken(), new Dictionary<string, TelegramParameterBinding>
+                Telegram: new(NewBotToken(), new Dictionary<string, ChannelParameterBinding>
                 {
-                    ["customerId"] = new() { Source = TelegramParameterSource.Constant, Value = "customers/1" },
-                    ["region"] = new() { Source = TelegramParameterSource.Constant, Value = "eu" },
+                    ["customerId"] = new() { Source = ChannelParameterSource.Constant, Value = "customers/1" },
+                    ["region"] = new() { Source = ChannelParameterSource.Constant, Value = "eu" },
                 }))));
         Assert.Equal(HttpStatusCode.BadRequest, undeclared.StatusCode);
         Assert.Contains("undeclared agent parameter(s): region", undeclared.Body);
@@ -172,9 +172,9 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
         var emptyConstant = await Assert.ThrowsAsync<QuillHttpException>(() =>
             app.ProvisionChannelAsync(new ProvisionChannelRequest(
                 ChannelType.Telegram, agentId, null,
-                Telegram: new(NewBotToken(), new Dictionary<string, TelegramParameterBinding>
+                Telegram: new(NewBotToken(), new Dictionary<string, ChannelParameterBinding>
                 {
-                    ["customerId"] = new() { Source = TelegramParameterSource.Constant },
+                    ["customerId"] = new() { Source = ChannelParameterSource.Constant },
                 }))));
         Assert.Equal(HttpStatusCode.BadRequest, emptyConstant.StatusCode);
         Assert.Contains("a Constant binding requires a value", emptyConstant.Body);
@@ -182,9 +182,9 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
         var valueOnWellKnown = await Assert.ThrowsAsync<QuillHttpException>(() =>
             app.ProvisionChannelAsync(new ProvisionChannelRequest(
                 ChannelType.Telegram, agentId, null,
-                Telegram: new(NewBotToken(), new Dictionary<string, TelegramParameterBinding>
+                Telegram: new(NewBotToken(), new Dictionary<string, ChannelParameterBinding>
                 {
-                    ["customerId"] = new() { Source = TelegramParameterSource.Username, Value = "alice" },
+                    ["customerId"] = new() { Source = ChannelParameterSource.Username, Value = "alice" },
                 }))));
         Assert.Equal(HttpStatusCode.BadRequest, valueOnWellKnown.StatusCode);
         Assert.Contains("a value applies only to Constant bindings", valueOnWellKnown.Body);
@@ -269,31 +269,43 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
 
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.Telegram, agentId, null,
-            Telegram: new(NewBotToken(), new Dictionary<string, TelegramParameterBinding>
+            Telegram: new(NewBotToken(), new Dictionary<string, ChannelParameterBinding>
             {
-                ["customerId"] = new() { Source = TelegramParameterSource.Constant, Value = "customers/1" },
+                ["customerId"] = new() { Source = ChannelParameterSource.Constant, Value = "customers/1" },
             })));
 
         var summary = await app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
-            new(ParameterBindings: new Dictionary<string, TelegramParameterBinding>
+            new(ParameterBindings: new Dictionary<string, ChannelParameterBinding>
             {
-                ["customerId"] = new() { Source = TelegramParameterSource.Username },
+                ["customerId"] = new() { Source = ChannelParameterSource.Username },
             })));
-        Assert.Equal(TelegramParameterSource.Username, summary.Telegram!.ParameterBindings["customerId"].Source);
+        Assert.Equal(ChannelParameterSource.Username, summary.Telegram!.ParameterBindings["customerId"].Source);
         Assert.Null(summary.Telegram.ParameterBindings["customerId"].Value);
 
         var unchanged = await app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest("Renamed", null, null));
-        Assert.Equal(TelegramParameterSource.Username, unchanged.Telegram!.ParameterBindings["customerId"].Source);
+        Assert.Equal(ChannelParameterSource.Username, unchanged.Telegram!.ParameterBindings["customerId"].Source);
 
         var undeclared = await Assert.ThrowsAsync<QuillHttpException>(() =>
             app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
-                new(ParameterBindings: new Dictionary<string, TelegramParameterBinding>
+                new(ParameterBindings: new Dictionary<string, ChannelParameterBinding>
                 {
-                    ["customerId"] = new() { Source = TelegramParameterSource.Username },
-                    ["region"] = new() { Source = TelegramParameterSource.Constant, Value = "eu" },
+                    ["customerId"] = new() { Source = ChannelParameterSource.Username },
+                    ["region"] = new() { Source = ChannelParameterSource.Constant, Value = "eu" },
                 }))));
         Assert.Equal(HttpStatusCode.BadRequest, undeclared.StatusCode);
         Assert.Contains("undeclared agent parameter(s): region", undeclared.Body);
+
+        var unsupported = await Assert.ThrowsAsync<QuillHttpException>(() =>
+            app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
+                new(ParameterBindings: new Dictionary<string, ChannelParameterBinding>
+                {
+                    ["customerId"] = new() { Source = ChannelParameterSource.Email },
+                }))));
+        Assert.Equal(HttpStatusCode.BadRequest, unsupported.StatusCode);
+        Assert.Contains("Telegram channels cannot bind Email", unsupported.Body);
+
+        var stillUsername = await app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null));
+        Assert.Equal(ChannelParameterSource.Username, stillUsername.Telegram!.ParameterBindings["customerId"].Source);
 
         await app.DeleteChannelAsync(created.ChannelId);
     }
@@ -318,16 +330,153 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
 
         var missing = await Assert.ThrowsAsync<QuillHttpException>(() =>
             app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
-                new(ParameterBindings: new Dictionary<string, TelegramParameterBinding>()))));
+                new(ParameterBindings: new Dictionary<string, ChannelParameterBinding>()))));
         Assert.Equal(HttpStatusCode.BadRequest, missing.StatusCode);
         Assert.Contains("missing parameter binding(s) for agent parameter(s): customerId", missing.Body);
 
         var summary = await app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
-            new(ParameterBindings: new Dictionary<string, TelegramParameterBinding>
+            new(ParameterBindings: new Dictionary<string, ChannelParameterBinding>
             {
-                ["customerId"] = new() { Source = TelegramParameterSource.UserId },
+                ["customerId"] = new() { Source = ChannelParameterSource.UserId },
             })));
-        Assert.Equal(TelegramParameterSource.UserId, summary.Telegram!.ParameterBindings["customerId"].Source);
+        Assert.Equal(ChannelParameterSource.UserId, summary.Telegram!.ParameterBindings["customerId"].Source);
+
+        await app.DeleteChannelAsync(created.ChannelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_constant_binding_must_match_the_declared_parameter_type()
+    {
+        await using var app = await NewAppAsync();
+        var agentId = await SeedAgentAsync(app);
+
+        var created = await app.ProvisionChannelAsync(
+            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, Telegram: new(NewBotToken())));
+
+        await app.EditAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = agentId,
+            Name = "Telegram Demo Agent",
+            SystemPrompt = "You are a placeholder demo agent.",
+            ConnectionStringName = app.Host.ConnectionStringName,
+            Parameters =
+            [
+                new AiAgentParameter("orderLimit", "how many orders to consider")
+                {
+                    Type = AiAgentParameterValueType.Number,
+                },
+            ],
+        });
+
+        var invalid = await Assert.ThrowsAsync<QuillHttpException>(() =>
+            app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
+                new(ParameterBindings: new Dictionary<string, ChannelParameterBinding>
+                {
+                    ["orderLimit"] = new() { Source = ChannelParameterSource.Constant, Value = "lots" },
+                }))));
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+        Assert.Contains("orderLimit", invalid.Body);
+
+        var summary = await app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
+            new(ParameterBindings: new Dictionary<string, ChannelParameterBinding>
+            {
+                ["orderLimit"] = new() { Source = ChannelParameterSource.Constant, Value = "25" },
+            })));
+        Assert.Equal("25", summary.Telegram!.ParameterBindings["orderLimit"].Value);
+
+        await app.DeleteChannelAsync(created.ChannelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_sender_binding_must_be_able_to_satisfy_the_declared_parameter_type()
+    {
+        await using var app = await NewAppAsync();
+        var agentId = await SeedAgentAsync(app);
+
+        var created = await app.ProvisionChannelAsync(
+            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, Telegram: new(NewBotToken())));
+
+        await app.EditAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = agentId,
+            Name = "Telegram Demo Agent",
+            SystemPrompt = "You are a placeholder demo agent.",
+            ConnectionStringName = app.Host.ConnectionStringName,
+            Parameters =
+            [
+                new AiAgentParameter("orderLimit", "how many orders to consider")
+                {
+                    Type = AiAgentParameterValueType.Number,
+                },
+            ],
+        });
+
+        var invalid = await Assert.ThrowsAsync<QuillHttpException>(() =>
+            app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
+                new(ParameterBindings: new Dictionary<string, ChannelParameterBinding>
+                {
+                    ["orderLimit"] = new() { Source = ChannelParameterSource.Username },
+                }))));
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+        Assert.Contains("orderLimit", invalid.Body);
+        Assert.Contains("Username", invalid.Body);
+
+        var phone = await Assert.ThrowsAsync<QuillHttpException>(() =>
+            app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
+                new(ParameterBindings: new Dictionary<string, ChannelParameterBinding>
+                {
+                    ["orderLimit"] = new() { Source = ChannelParameterSource.PhoneNumber },
+                }))));
+        Assert.Equal(HttpStatusCode.BadRequest, phone.StatusCode);
+
+        var summary = await app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
+            new(ParameterBindings: new Dictionary<string, ChannelParameterBinding>
+            {
+                ["orderLimit"] = new() { Source = ChannelParameterSource.UserId },
+            })));
+        Assert.Equal(ChannelParameterSource.UserId, summary.Telegram!.ParameterBindings["orderLimit"].Source);
+
+        await app.DeleteChannelAsync(created.ChannelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_null_typed_parameter_binds_with_a_valueless_constant()
+    {
+        await using var app = await NewAppAsync();
+        var agentId = await SeedAgentAsync(app);
+
+        var created = await app.ProvisionChannelAsync(
+            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, Telegram: new(NewBotToken())));
+
+        await app.EditAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = agentId,
+            Name = "Telegram Demo Agent",
+            SystemPrompt = "You are a placeholder demo agent.",
+            ConnectionStringName = app.Host.ConnectionStringName,
+            Parameters =
+            [
+                new AiAgentParameter("unused", "always null")
+                {
+                    Type = AiAgentParameterValueType.Null,
+                },
+            ],
+        });
+
+        var summary = await app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
+            new(ParameterBindings: new Dictionary<string, ChannelParameterBinding>
+            {
+                ["unused"] = new() { Source = ChannelParameterSource.Constant, Value = "" },
+            })));
+        Assert.Equal(ChannelParameterSource.Constant, summary.Telegram!.ParameterBindings["unused"].Source);
+
+        var invalid = await Assert.ThrowsAsync<QuillHttpException>(() =>
+            app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
+                new(ParameterBindings: new Dictionary<string, ChannelParameterBinding>
+                {
+                    ["unused"] = new() { Source = ChannelParameterSource.UserId },
+                }))));
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
 
         await app.DeleteChannelAsync(created.ChannelId);
     }

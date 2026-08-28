@@ -22,6 +22,7 @@ import { FormErrorIcon } from "@/components/form/form-error-icon";
 import { FormInput } from "@/components/form/form-input";
 import { FormTextarea } from "@/components/form/form-textarea";
 import { useFormUnsavedChanges } from "@/components/form/unsaved-changes/use-unsaved-changes";
+import { Heading, Text } from "@/components/typography";
 import { appRoutes } from "@/lib/app-routes";
 import { invalidateAgentQueries } from "@/lib/query-invalidation";
 import {
@@ -115,11 +116,14 @@ export function EditAgentForm({ slug, agentId, config, actionBindings, connectio
     return (
         <FormProvider {...form}>
             <form
-                className="flex min-h-0 flex-1 flex-col gap-3"
+                className="flex min-h-0 flex-1 flex-col"
                 onSubmit={form.handleSubmit((values) => updateMutation.mutate(values), openAllSections)}
                 noValidate
             >
-                <div className="flex min-h-0 flex-1 flex-col gap-8 overflow-y-auto">
+                {/* py-5 lives inside the scroller so it breathes at rest but scrolls away (content stays
+                    flush with the header/action bar while scrolling). -mx-2/px-2 is visually self-cancelling
+                    but keeps card borders and focus rings off the clip edge (overflow-y-auto clips x too). */}
+                <div className="-mx-2 flex min-h-0 flex-1 flex-col gap-8 overflow-y-auto px-2 py-5">
                     <CollapsibleSection
                         title="Basic settings"
                         description="The agent's purpose and its AI provider connection."
@@ -133,6 +137,8 @@ export function EditAgentForm({ slug, agentId, config, actionBindings, connectio
                                 name="review.name"
                                 label="Agent name"
                                 placeholder="e.g. Customer Service Agent"
+                                disabled
+                                description="The agent name cannot be changed after creation."
                             />
                             <FormCombobox
                                 control={form.control}
@@ -202,14 +208,16 @@ export function EditAgentForm({ slug, agentId, config, actionBindings, connectio
                 </div>
 
                 {updateMutation.isError && (
-                    <Alert variant="destructive">
+                    <Alert variant="destructive" className="mt-3">
                         {updateMutation.error instanceof Error
                             ? updateMutation.error.message
                             : "Could not update agent."}
                     </Alert>
                 )}
 
-                <div className="flex items-center justify-between gap-2 border-t pt-3">
+                {/* Bleed to the panel edges so the pinned action bar's top border spans full width,
+                    like the detail header; the buttons stay aligned with the header content. */}
+                <div className="-mx-4 flex items-center justify-between gap-2 border-t px-4 pt-3 lg:-mx-5 lg:px-5">
                     <Button asChild type="button" variant="outline">
                         <Link to={appRoutes.app(slug, "agents")}>Cancel</Link>
                     </Button>
@@ -245,11 +253,13 @@ function CollapsibleSection({
         <Collapsible open={isOpen} onOpenChange={onOpenChange} className="grid gap-3">
             <CollapsibleTrigger className="group flex w-full items-start justify-between gap-3 text-left">
                 <div>
-                    <h3 className="flex items-center gap-1.5 text-sm font-semibold">
+                    <Heading as="h2" variant="section" className="flex items-center gap-1.5">
                         {title}
                         {errorIcon}
-                    </h3>
-                    <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+                    </Heading>
+                    <Text variant="caption" className="mt-1">
+                        {description}
+                    </Text>
                 </div>
                 <ChevronDown
                     className="mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180"

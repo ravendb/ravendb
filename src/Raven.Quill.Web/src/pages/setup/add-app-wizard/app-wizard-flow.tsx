@@ -13,6 +13,7 @@ import { DATA_SOURCE_OPTIONS } from "@/pages/setup/add-app-wizard/steps/data-sou
 import { MAP_SOURCE_OPTIONS } from "@/pages/setup/add-app-wizard/steps/map/map-source-options";
 import { ConnectSourceStep } from "@/pages/setup/add-app-wizard/steps/connect/connect-source-step";
 import { MapSchemaStep } from "@/pages/setup/add-app-wizard/steps/map/map-schema-step";
+import { useMapAiConsentBlock } from "@/pages/setup/add-app-wizard/steps/map/use-map-ai-consent-block";
 import { MapTablesStep } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-step";
 import { PreviewStep } from "@/pages/setup/add-app-wizard/steps/preview/preview-step";
 import { ExportConfigAction } from "@/pages/setup/add-app-wizard/steps/preview/export-config-action";
@@ -33,6 +34,7 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
     const verifyCdcBeforeNext = useVerifyCdcStep();
     const isVerifyCdcRunning = useIsVerifyCdcRunning();
     const mapSchemaBeforeNext = useMapSchemaStep();
+    const mapAiConsentBlock = useMapAiConsentBlock();
     const mapTablesBeforeNext = useMapTablesStep();
     const focusMapTablesError = useFocusMapTablesError();
     const isMapTablesNextDisabled = useIsMapTablesNextDisabled();
@@ -40,7 +42,7 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
     return {
         dataSource: {
             title: "Choose data source",
-            description: "Where is the data this application will work with?",
+            description: "Where is the data this app will work with?",
             bodyComponent: ChooseDataSourceStep,
             validate: "dataSource",
             badgeFields: ["dataSource.source"],
@@ -68,9 +70,9 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
         verifySchema: {
             title: "Verify your schema",
             description:
-                "Choose the tables this application will work with. Only the selected tables are carried into the " +
+                "Choose the tables this app will work with. Only the selected tables are carried into the " +
                 "mapping and the task configuration - unselected tables, and relationships pointing to them, are " +
-                "ignored. Continuing runs a configuration validation dry run against the source database.",
+                "ignored. Clicking Next runs a configuration validation dry run against the source database.",
             bodyComponent: VerifySchemaStep,
             isFullHeight: true,
             validate: "verifySchema",
@@ -89,6 +91,8 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
             bodyComponent: MapSchemaStep,
             validate: "map",
             beforeNext: mapSchemaBeforeNext,
+            isNextDisabled: mapAiConsentBlock.isNextDisabled,
+            nextDisabledReason: mapAiConsentBlock.nextDisabledReason,
             badgeFields: ["map.source"],
             badge: ({ isComplete, values }) => {
                 if (!isComplete) {

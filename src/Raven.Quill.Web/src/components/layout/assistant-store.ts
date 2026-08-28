@@ -26,6 +26,10 @@ export function clampAssistantSize(sizePx: number, minPx: number, maxPx: number)
     return Math.min(maxPx, Math.max(minPx, Math.round(sizePx)));
 }
 
+function persistSize(storageKey: string, sizePx: number) {
+    localStorage.setItem(storageKey, String(sizePx));
+}
+
 function readStoredSize(storageKey: string, defaultPx: number, minPx: number, maxPx = Number.POSITIVE_INFINITY) {
     const storedPx = Number(localStorage.getItem(storageKey));
     return Number.isFinite(storedPx) && storedPx > 0 ? clampAssistantSize(storedPx, minPx, maxPx) : defaultPx;
@@ -48,7 +52,7 @@ type AssistantState = {
     setHeight: (heightPx: number) => void;
 };
 
-export const useAssistantStore = create<AssistantState>((set) => ({
+export const useAssistantStore = create<AssistantState>((set, get) => ({
     isOpen: localStorage.getItem(ASSISTANT_OPEN_STORAGE_KEY) === "true",
     isPinned: localStorage.getItem(ASSISTANT_PINNED_STORAGE_KEY) !== "false",
     isResizing: false,
@@ -69,16 +73,29 @@ export const useAssistantStore = create<AssistantState>((set) => ({
         localStorage.setItem(ASSISTANT_PINNED_STORAGE_KEY, String(isPinned));
         set({ isPinned });
     },
-    setResizing: (isResizing) => set({ isResizing }),
+    setResizing: (isResizing) => {
+        set({ isResizing });
+        if (isResizing) {
+            return;
+        }
+
+        const { widthPx, heightPx } = get();
+        persistSize(ASSISTANT_WIDTH_STORAGE_KEY, widthPx);
+        persistSize(ASSISTANT_HEIGHT_STORAGE_KEY, heightPx);
+    },
     setWidth: (widthPx) => {
         const clampedPx = clampAssistantSize(widthPx, ASSISTANT_MIN_WIDTH_PX, ASSISTANT_MAX_WIDTH_PX);
-        localStorage.setItem(ASSISTANT_WIDTH_STORAGE_KEY, String(clampedPx));
         set({ widthPx: clampedPx });
+        if (!get().isResizing) {
+            persistSize(ASSISTANT_WIDTH_STORAGE_KEY, clampedPx);
+        }
     },
     setHeight: (heightPx) => {
         const clampedPx = clampAssistantSize(heightPx, ASSISTANT_MIN_HEIGHT_PX, assistantMaxHeightPx());
-        localStorage.setItem(ASSISTANT_HEIGHT_STORAGE_KEY, String(clampedPx));
         set({ heightPx: clampedPx });
+        if (!get().isResizing) {
+            persistSize(ASSISTANT_HEIGHT_STORAGE_KEY, clampedPx);
+        }
     },
 }));
 

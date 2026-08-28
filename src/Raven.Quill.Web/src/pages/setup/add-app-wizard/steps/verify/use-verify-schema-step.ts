@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useFormContext } from "react-hook-form";
+import { useAiConsent } from "@/components/ai-consent/use-ai-consent";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import {
@@ -17,11 +18,18 @@ import {
 export function useVerifySchemaStep() {
     const queryClient = useQueryClient();
     const { getValues } = useFormContext<AppFormData>();
+    const consent = useAiConsent();
 
     return () => {
         // After an import or a manual mapping choice the suggestion could never be consumed, so the
-        // (expensive) call must not be warmed up.
-        if (getValues("map.source") !== "ai-suggested") {
+        // (expensive) call must not be warmed up. Nor while the AI service is out of reach or still
+        // waiting on consent. A check that has not settled yet is warmed anyway: a refused call costs
+        // nothing, and recording the consent invalidates it.
+        if (
+            getValues("map.source") !== "ai-suggested" ||
+            consent.isConsentRequired ||
+            consent.unavailableReason !== undefined
+        ) {
             cancelAbandonedSuggestions(queryClient);
             return;
         }

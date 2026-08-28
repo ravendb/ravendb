@@ -8,7 +8,7 @@ import { api } from "@/api/api";
 import type { DataCollectionDto } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
 import { Badge } from "@/components/shadcn/ui/badge";
-import { VirtualDataTable } from "@/components/table/virtual-data-table";
+import { VirtualDataTable, VirtualDataTableSkeleton } from "@/components/table/virtual-data-table";
 import { formatCompact } from "@/lib/format";
 import { SectionCard } from "@/pages/apps/section-card";
 
@@ -56,6 +56,7 @@ export function CollectionsSection({ slug }: { slug: string }) {
                 errorTitle="Could not load collections"
                 onRetry={() => void collectionsQuery.refetch()}
                 loadingLabel="Loading collections..."
+                skeleton={<VirtualDataTableSkeleton table={table} rows={4} className="bg-card" />}
             >
                 <VirtualDataTable
                     table={table}

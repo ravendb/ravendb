@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { Text } from "@/components/typography";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
 import type { AiModelType } from "@/api/generated/server-api";
@@ -31,10 +32,12 @@ export function EditAiConnectionString({ name, modelType, trigger, onSaved }: Ed
                 </SheetHeader>
 
                 {detailQuery.isPending ? (
-                    <p className="p-4 text-sm text-muted-foreground">Loading connection string…</p>
+                    <Text variant="muted" className="p-4">
+                        Loading connection string…
+                    </Text>
                 ) : detailQuery.isError || !detailQuery.data ? (
                     <div className="space-y-3 p-4">
-                        <p className="text-sm text-muted-foreground">Could not load the connection string.</p>
+                        <Text variant="muted">Could not load the connection string.</Text>
                         <Button type="button" variant="outline" size="sm" onClick={() => void detailQuery.refetch()}>
                             Retry
                         </Button>

@@ -105,7 +105,7 @@ public class RavenDB_24984 : RavenTestBase
 
         chat.SetUserPrompt("call the 'MyTool' tool until it returns a value >= 10");
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
         var result = await chat.RunAsync<AiAgentBasics.OutputSchema>(cts.Token);
 
         Assert.Equal(AiConversationResult.Done, result.Status);

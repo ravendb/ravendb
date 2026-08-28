@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Builder;
+using System.Text.Json;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Raven.Client.Documents;
@@ -70,7 +71,7 @@ public static class ChatEndpoints
         {
             var result = await router.RunAsync(
                 new AgentRequest(store.Database, config.Identifier, conversationId, body.Prompt, ChannelId: "",
-                    body.Parameters ?? new Dictionary<string, string>()),
+                    body.Parameters ?? new Dictionary<string, JsonElement>()),
                 async chunk => await NdjsonStream.WriteLineAsync(ctx, new { type = "chunk", text = chunk }),
                 config,
                 ctx.RequestAborted);
@@ -91,7 +92,13 @@ public static class ChatEndpoints
                 logger.Error(e, $"Chat stream failed for agentId={body.AgentId}");
             try
             {
-                await NdjsonStream.WriteLineAsync(ctx, new { type = "error", message = "Chat stream failed. See server logs for details." });
+                await NdjsonStream.WriteLineAsync(ctx, new
+                {
+                    type = "error",
+                    message = e is InvalidParameterValueException
+                        ? e.Message
+                        : "Chat stream failed. See server logs for details.",
+                });
             }
             catch
             {

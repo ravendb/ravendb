@@ -1,4 +1,5 @@
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
+import { Text } from "@/components/typography";
 import { Plus, Settings2 } from "lucide-react";
 import { Button } from "@/components/shadcn/ui/button";
 import { FormInput } from "@/components/form/form-input";
@@ -38,7 +39,9 @@ export function AgentParametersSection({ className }: { className?: string }) {
             <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                     <Settings2 className="size-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Agent parameters</span>
+                    <Text variant="label" as="span">
+                        Agent parameters
+                    </Text>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => fieldArray.append(emptyAgentParameter())}>
                     <Plus />
@@ -74,14 +77,20 @@ function ParameterItem({ index, remove }: { index: number; remove: () => void })
             summary={
                 <>
                     <div className="flex min-w-0 items-center gap-2">
-                        <span className="truncate text-sm font-medium">{parameter.name || "(unnamed)"}</span>
-                        <span className="text-xs text-muted-foreground">|</span>
-                        <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                        <Text variant="label" as="span" className="truncate">
+                            {parameter.name || "(unnamed)"}
+                        </Text>
+                        <Text variant="caption" as="span">
+                            |
+                        </Text>
+                        <Text variant="caption" as="span" className="shrink-0 font-mono">
                             {getParameterTypeLabel(parameter.type)}
-                        </span>
+                        </Text>
                     </div>
                     {parameter.description && (
-                        <p className="mt-0.5 truncate text-xs text-muted-foreground">{parameter.description}</p>
+                        <Text variant="caption" className="mt-0.5 truncate">
+                            {parameter.description}
+                        </Text>
                     )}
                 </>
             }

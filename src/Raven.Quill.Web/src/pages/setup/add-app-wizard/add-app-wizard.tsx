@@ -1,6 +1,5 @@
 import { AppWizard } from "@/pages/setup/add-app-wizard/app-wizard";
 import { type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
-import { DEFAULT_PORT_BY_PROVIDER, DEFAULT_PROVIDER } from "@/pages/setup/add-app-wizard/connection-string";
 
 export function AddAppWizard() {
     return <AppWizard defaultValues={getDefaultValues()} />;
@@ -14,11 +13,11 @@ function getDefaultValues(): AppFormData {
         externalConnection: {
             appName: "",
             slug: "",
-            provider: DEFAULT_PROVIDER,
+            provider: "",
             mode: "fields",
             fields: {
                 host: "",
-                port: DEFAULT_PORT_BY_PROVIDER[DEFAULT_PROVIDER],
+                port: null,
                 database: "",
                 username: "",
                 password: "",

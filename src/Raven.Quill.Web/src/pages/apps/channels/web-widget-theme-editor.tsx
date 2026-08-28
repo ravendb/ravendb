@@ -12,6 +12,7 @@ import { FormSelect } from "@/components/form/form-select";
 import { FormStringList } from "@/components/form/form-string-list";
 import { FormSwitch } from "@/components/form/form-switch";
 import { FormToggleGroup } from "@/components/form/form-toggle-group";
+import { Heading, Text } from "@/components/typography";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/shadcn/ui/collapsible";
@@ -90,7 +91,7 @@ function Section({
     return (
         <Collapsible open={isOpen} onOpenChange={setIsOpen} className="rounded-md border bg-card p-4" asChild>
             <section>
-                <h3 className="text-sm font-semibold">
+                <Heading as="h3" variant="subsection">
                     <CollapsibleTrigger className="group flex w-full items-center justify-between gap-3 rounded-sm text-left focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none">
                         <span className="flex items-center gap-1.5">
                             {title}
@@ -101,7 +102,7 @@ function Section({
                             aria-hidden="true"
                         />
                     </CollapsibleTrigger>
-                </h3>
+                </Heading>
                 <CollapsibleContent className="mt-4 grid gap-4">{children}</CollapsibleContent>
             </section>
         </Collapsible>
@@ -227,9 +228,9 @@ export function WebWidgetThemeEditor({
                     </div>
 
                     <Section title="Colors" control={form.control} paths={SECTION_FIELDS.colors} defaultOpen>
-                        <p className="text-sm text-muted-foreground">
+                        <Text variant="muted">
                             Each scheme keeps its own colors. Every other option applies to both.
-                        </p>
+                        </Text>
                         <Tabs
                             value={previewAppearance}
                             onValueChange={(next) => setPreviewAppearance(next as PreviewAppearance)}
@@ -298,10 +299,10 @@ export function WebWidgetThemeEditor({
                             disabled={isSaving}
                         />
                         {previewTheme.showHeader === false && (
-                            <p className="text-sm text-muted-foreground">
+                            <Text variant="muted">
                                 The header is hidden, so nothing below is shown to visitors. It is kept for when you
                                 turn the header back on.
-                            </p>
+                            </Text>
                         )}
                         <FormImagePicker
                             control={form.control}
@@ -395,7 +396,9 @@ export function WebWidgetThemeEditor({
 
                 <div className="grid gap-3 xl:sticky xl:top-14">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="text-sm font-medium">Live preview</span>
+                        <Text as="span" variant="label">
+                            Live preview
+                        </Text>
                         <div className="flex flex-wrap items-center gap-3">
                             <ToggleGroup
                                 type="single"

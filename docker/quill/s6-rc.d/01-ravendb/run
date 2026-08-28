@@ -5,57 +5,57 @@ exec 2>&1
 
 mkdir -p /var/lib/quill/ravendb
 
-# When activation has produced a setup package, overlay its secure settings on
-# top of the baked-in unsecured config. Pre-activation the file is absent and
-# RavenDB starts unsecured on loopback (Setup.Mode=Unsecured from
-# docker/quill/ravendb-settings.json).
-#
+SETUP_DIR="${RAVEN_QUILL_SETUP_PACKAGE_PATH:-/var/lib/quill/setup}"
+SETUP_SETTINGS="$SETUP_DIR/A/settings.json"
+
+# Wait for activation (02-web) to unpack the setup package. Log a heartbeat every 60s: the wait is
+# unbounded (activation retries in 02-web until the package arrives)
+if [ ! -f "$SETUP_SETTINGS" ]; then
+    echo "01-ravendb: waiting for the setup package at $SETUP_SETTINGS..."
+    waited=0
+    while [ ! -f "$SETUP_SETTINGS" ]; do
+        sleep 2
+        waited=$((waited + 2))
+        if [ $((waited % 60)) -eq 0 ]; then
+            echo "01-ravendb: still waiting for the setup package after ${waited}s (activation runs in 02-web; check its log)"
+        fi
+    done
+fi
+
 # The admin client cert's thumbprint is written by the .NET activation endpoint
 # next to the unpacked package as the file `admin-thumbprint`. Reading it here
 # rather than extracting from the PFX with openssl avoids PKCS#12 bag-ordering
 # quirks and one less binary dependency in the runtime image.
-SETUP_DIR="${RAVEN_QUILL_SETUP_PACKAGE_PATH:-/var/lib/quill/setup}"
-SETUP_SETTINGS="$SETUP_DIR/A/settings.json"
-if [ -f "$SETUP_SETTINGS" ]; then
-    cp "$SETUP_SETTINGS" /app/ravendb/settings.json
+cp "$SETUP_SETTINGS" /app/ravendb/settings.json
 
-    # Phase 1: nginx owns :443, so bind RavenDB's HTTPS to loopback:$RAVENDB_PORT instead. settings.json
-    # wins over env in RavenDB's config precedence, so rewrite the copied file (keep https — the
-    # scheme-match validator requires ServerUrl/PublicServerUrl schemes to agree). The appliance connects
-    # to RavenDB on this port (RavenStoreFactory.RavenInternalPort); nginx passes db.*/a.* through to it.
-    RAVENDB_PORT="${RAVEN_QUILL_RAVENDB_INTERNAL_PORT:-8443}"
-    sed -i -E "s#(\"ServerUrl\"[[:space:]]*:[[:space:]]*\")https://[^\"]*(\")#\1https://127.0.0.1:${RAVENDB_PORT}\2#" /app/ravendb/settings.json
+# Phase 1: nginx owns :443, so bind RavenDB's HTTPS to loopback:$RAVENDB_PORT instead. settings.json
+# wins over env in RavenDB's config precedence, so rewrite the copied file (keep https — the
+# scheme-match validator requires ServerUrl/PublicServerUrl schemes to agree). The appliance connects
+# to RavenDB on this port (RavenStoreFactory.RavenInternalPort); nginx passes db.*/a.* through to it.
+RAVENDB_PORT="${RAVEN_QUILL_RAVENDB_INTERNAL_PORT:-8443}"
+sed -i -E "s#(\"ServerUrl\"[[:space:]]*:[[:space:]]*\")https://[^\"]*(\")#\1https://127.0.0.1:${RAVENDB_PORT}\2#" /app/ravendb/settings.json
+sed -i -E "s#(\"ServerUrl\.Tcp\"[[:space:]]*:[[:space:]]*\"tcp://)[^\"]*(:[0-9]+\")#\1127.0.0.1\2#" /app/ravendb/settings.json
 
-    NODE_HOST="$(jq -r '.PublicServerUrl' "$SETUP_SETTINGS" | sed -E 's#^https?://##; s#[:/].*##')"
-    if [ -n "$NODE_HOST" ]; then
-        grep -q "[[:space:]]$NODE_HOST\$" /etc/hosts || echo "127.0.0.1 $NODE_HOST" >> /etc/hosts
-    fi
+NODE_HOST="$(jq -r '.PublicServerUrl' "$SETUP_SETTINGS" | sed -E 's#^https?://##; s#[:/].*##')"
+if [ -n "$NODE_HOST" ]; then
+    grep -q "[[:space:]]$NODE_HOST\$" /etc/hosts || echo "127.0.0.1 $NODE_HOST" >> /etc/hosts
+fi
 
-    CERT_DIR=/var/lib/quill/certs
-    mkdir -p "$CERT_DIR"
+CERT_DIR=/var/lib/quill/certs
+mkdir -p "$CERT_DIR"
 
-    PFX="$(basename "$(ls "$SETUP_DIR"/A/cluster.server.certificate.*.pfx | head -n1)")"
-    [ -f "$CERT_DIR/$PFX" ] || cp "$SETUP_DIR/A/$PFX" "$CERT_DIR/"
+PFX="$(basename "$(ls "$SETUP_DIR"/A/cluster.server.certificate.*.pfx | head -n1)")"
+[ -f "$CERT_DIR/$PFX" ] || cp "$SETUP_DIR/A/$PFX" "$CERT_DIR/"
 
-    sed -i "s#\"$PFX\"#\"$CERT_DIR/$PFX\"#" /app/ravendb/settings.json
+sed -i "s#\"$PFX\"#\"$CERT_DIR/$PFX\"#" /app/ravendb/settings.json
 
-    if [ -f "$SETUP_DIR/admin-thumbprint" ]; then
-        export RAVEN_Security_WellKnownCertificates_Admin="$(cat "$SETUP_DIR/admin-thumbprint")"
-    fi
+if [ -f "$SETUP_DIR/admin-thumbprint" ]; then
+    export RAVEN_Security_WellKnownCertificates_Admin="$(cat "$SETUP_DIR/admin-thumbprint")"
+fi
 
-    # Activate the license shipped in the setup package. The setup-wizard zip
-    # writes license.json at the package root (not into A/settings.json), and
-    # nothing else wires it up — without this RavenDB starts unlicensed
-    # (Community/AGPL) and rejects commercial features (AI Agent, etc.), even
-    # though a valid license sits on disk. RavenDB activates License.Path on
-    # first start when no license is stored yet, then persists it to cluster
-    # storage. License.Eula.Accepted is re-asserted because copying
-    # A/settings.json over the baked config drops the baked Eula flag, and a
-    # missing flag blocks activation.
-    if [ -f "$SETUP_DIR/license.json" ]; then
-        export RAVEN_License_Path="$SETUP_DIR/license.json"
-        export RAVEN_License_Eula_Accepted=true
-    fi
+if [ -f "$SETUP_DIR/license.json" ]; then
+    export RAVEN_License_Path="$SETUP_DIR/license.json"
+    export RAVEN_License_Eula_Accepted=true
 fi
 
 cd /app/ravendb

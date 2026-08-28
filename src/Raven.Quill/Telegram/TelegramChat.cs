@@ -209,16 +209,16 @@ internal sealed class TelegramChat
         {
             switch (binding.Source)
             {
-                case TelegramParameterSource.Constant:
+                case ChannelParameterSource.Constant:
                     parameters[name] = binding.Value ?? "";
                     break;
 
-                case TelegramParameterSource.UserId:
+                case ChannelParameterSource.UserId:
                     var userId = message.From?.Id ?? _chatId;
                     parameters[name] = userId.ToString(CultureInfo.InvariantCulture);
                     break;
 
-                case TelegramParameterSource.Username:
+                case ChannelParameterSource.Username:
                     var username = message.From?.Username;
                     if (string.IsNullOrEmpty(username))
                     {
@@ -229,7 +229,7 @@ internal sealed class TelegramChat
                     parameters[name] = username;
                     break;
 
-                case TelegramParameterSource.PhoneNumber:
+                case ChannelParameterSource.PhoneNumber:
                     phoneNumber ??= await LoadPhoneNumberAsync(message);
                     if (phoneNumber is null)
                     {
@@ -266,7 +266,10 @@ internal sealed class TelegramChat
         {
             await _context.Router.RunAsync(
                 new AgentRequest(
-                    _context.Database, config.Identifier, conversationId, prompt, _context.ChannelDoc.Id!, parameters),
+                    _context.Database, config.Identifier, conversationId, prompt, _context.ChannelDoc.Id!,
+                    parameters.ToDictionary(
+                        parameter => parameter.Key,
+                        parameter => AgentParameterValue.FromString(parameter.Value))),
                 reply.OnChunkAsync, config, _ct);
 
             await reply.FinalizeAsync();

@@ -1,15 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
-import { Check, RefreshCw } from "lucide-react";
+import { Check, LifeBuoy, RefreshCw } from "lucide-react";
 import { api } from "@/api/api";
 import type { ConnectivityStatus, LicensePlan, ServerLicenseResponse } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
+import { DetailGridSkeleton } from "@/components/data/loading-skeletons";
 import { ConnectivityMetric } from "@/components/data/connectivity-metric";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/shadcn/ui/card";
 import { formatDate } from "@/lib/format";
+import { getSupportUrl } from "@/lib/help-links";
 import { cn } from "@/lib/utils";
-import { ContactSheet } from "@/components/layout/contact-sheet";
+import { Heading, Text } from "@/components/typography";
 
 // Subtle brand wash used to make the featured plan stand out.
 // Defined as a CSS class (see index.css) so it layers over the card's bg-color.
@@ -21,7 +23,9 @@ export function DashboardLicense() {
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between gap-3">
-                <h1 className="text-2xl font-semibold tracking-tight">License</h1>
+                <Heading as="h1" variant="page">
+                    License
+                </Heading>
                 <Button
                     variant="outline"
                     size="sm"
@@ -39,6 +43,7 @@ export function DashboardLicense() {
                 errorTitle="Could not load license"
                 onRetry={() => licenseQuery.refetch()}
                 loadingLabel="Loading license…"
+                skeleton={<DetailGridSkeleton count={6} />}
             >
                 {licenseQuery.data && (
                     <div className="space-y-8">
@@ -59,23 +64,30 @@ function LicenseSummaryCard({ license }: { license: ServerLicenseResponse }) {
                 <CardTitle>Current license</CardTitle>
                 {license.expired && <CardDescription>This license has expired.</CardDescription>}
                 <CardAction>
-                    <ContactSheet
-                        trigger={
-                            <Button variant="outline" size="sm">
-                                Contact us
-                            </Button>
-                        }
-                    />
+                    <Button variant="outline" size="sm" asChild>
+                        <a href={getSupportUrl(license.id)} target="_blank" rel="noreferrer">
+                            <LifeBuoy aria-hidden="true" />
+                            Support
+                        </a>
+                    </Button>
                 </CardAction>
             </CardHeader>
             <CardContent className="grid gap-6 sm:grid-cols-2">
                 <div className="space-y-1">
-                    <div className="text-xs text-muted-foreground">Expiration date</div>
-                    <div className="text-sm font-medium">{formatDate(license.expiration)}</div>
+                    <Text as="div" variant="caption">
+                        Expiration date
+                    </Text>
+                    <Text as="div" variant="label">
+                        {formatDate(license.expiration)}
+                    </Text>
                 </div>
                 <div className="space-y-1">
-                    <div className="text-xs text-muted-foreground">License ID</div>
-                    <div className="text-sm font-medium tabular-nums">{license.id}</div>
+                    <Text as="div" variant="caption">
+                        License ID
+                    </Text>
+                    <Text as="div" variant="label" className="tabular-nums">
+                        {license.id}
+                    </Text>
                 </div>
             </CardContent>
         </Card>
@@ -87,10 +99,10 @@ function PlansSection({ plans }: { plans: LicensePlan[] }) {
         <section className="space-y-4">
             <div>
                 <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-semibold">Available plans</h2>
+                    <Heading variant="section">Available plans</Heading>
                     <Badge variant="secondary">Coming soon</Badge>
                 </div>
-                <p className="text-sm text-muted-foreground">Talk to sales to install a license.</p>
+                <Text variant="muted">Talk to sales to install a license.</Text>
             </div>
             <div aria-disabled="true" className="pointer-events-none grid gap-4 opacity-60 grayscale md:grid-cols-3">
                 {plans.map((plan) => (
@@ -105,10 +117,8 @@ function HealthSection({ connectivity }: { connectivity: ConnectivityStatus }) {
     return (
         <section className="space-y-4">
             <div>
-                <h2 className="text-lg font-semibold">License health</h2>
-                <p className="text-sm text-muted-foreground">
-                    Check the status of your license, and connectivity with the API.
-                </p>
+                <Heading variant="section">License health</Heading>
+                <Text variant="muted">Check the status of your license, and connectivity with the API.</Text>
             </div>
             <Card>
                 <CardContent>
@@ -134,7 +144,11 @@ function PlanCard({ plan }: { plan: LicensePlan }) {
             <CardContent className="space-y-4">
                 <div className="flex items-baseline gap-1">
                     <span className="text-2xl font-bold">{plan.priceLabel}</span>
-                    {plan.priceSuffix && <span className="text-sm text-muted-foreground">{plan.priceSuffix}</span>}
+                    {plan.priceSuffix && (
+                        <Text as="span" variant="muted">
+                            {plan.priceSuffix}
+                        </Text>
+                    )}
                 </div>
                 <ul className="space-y-2">
                     {plan.features.map((feature) => (

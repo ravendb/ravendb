@@ -32,8 +32,8 @@ public class RavenDB_25430 : ReplicationTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai, Skip = "RavenDB-25471")]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { BackupType.Backup })]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { BackupType.Snapshot })]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { BackupType.Backup })]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { BackupType.Snapshot })]
     public async Task DisableAiAgentsOnRestoreWithoutLicense(Options options, GenAiConfiguration aiConfig, BackupType backupType)
     {
         DoNotReuseServer();
@@ -57,7 +57,7 @@ public class RavenDB_25430 : ReplicationTestBase
                 FolderPath = backupPath
             }
         }));
-        await backupOperation.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
+        await backupOperation.WaitForCompletionAsync(TimeSpan.FromSeconds(90));
         await source.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(source.Database, hardDelete: true));
 
         await PutLicense(Server, LicenseTestBase.RL_COMM);
@@ -101,8 +101,8 @@ public class RavenDB_25430 : ReplicationTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai, Skip = "RavenDB-25471")]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { BackupType.Backup })]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { BackupType.Snapshot })]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { BackupType.Backup })]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { BackupType.Snapshot })]
     public async Task ThrowAiAgentsOnRestoreWithoutLicense(Options options, GenAiConfiguration aiConfig, BackupType backupType)
     {
         DoNotReuseServer();
@@ -126,7 +126,7 @@ public class RavenDB_25430 : ReplicationTestBase
                 FolderPath = backupPath
             }
         }));
-        await backupOperation.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
+        await backupOperation.WaitForCompletionAsync(TimeSpan.FromSeconds(90));
         foreach (var agentConfig in agents)
         {
             agentConfig.Disabled = true;

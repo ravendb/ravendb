@@ -12,13 +12,14 @@ export function createCertificatesService(client: ApiClient) {
     return {
         list: (searchParams: { start: number; pageSize: number }) =>
             client.get<CertificateItem[], ApiErrorResponse>(API_ENDPOINTS.settings.certificates, { searchParams }),
-        generate: (
-            permissions: Record<string, DatabaseAccess>,
-            searchParams: { name: string; clearance: SecurityClearance; password?: string },
-        ) =>
-            client.post<Blob, ApiErrorResponse>(API_ENDPOINTS.settings.certificatesGenerate, permissions, {
+        generate: (body: {
+            name: string;
+            clearance: SecurityClearance;
+            password?: string;
+            permissions: Record<string, DatabaseAccess>;
+        }) =>
+            client.post<Blob, ApiErrorResponse>(API_ENDPOINTS.settings.certificatesGenerate, body, {
                 responseType: "blob",
-                searchParams,
             }),
     };
 }

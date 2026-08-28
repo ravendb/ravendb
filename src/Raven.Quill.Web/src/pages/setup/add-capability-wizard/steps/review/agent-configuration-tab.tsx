@@ -6,6 +6,7 @@ import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capabili
 import { AgentActionsSection } from "@/pages/setup/add-capability-wizard/steps/review/agent-actions-section";
 import { AgentParametersSection } from "@/pages/setup/add-capability-wizard/steps/review/agent-parameters-section";
 import { AgentQueryToolsSection } from "@/pages/setup/add-capability-wizard/steps/review/agent-query-tools-section";
+import { SectionHeader } from "@/components/section-header";
 
 export const SYSTEM_PROMPT_PLACEHOLDER =
     "Describe the agent's purpose and capabilities. " +
@@ -81,10 +82,7 @@ function ConfigurationSection({
 }) {
     return (
         <section className="grid gap-3">
-            <div>
-                <h3 className="text-sm font-semibold">{title}</h3>
-                <p className="mt-1 text-xs text-muted-foreground">{description}</p>
-            </div>
+            <SectionHeader level="section" title={title} description={description} />
             {children}
         </section>
     );

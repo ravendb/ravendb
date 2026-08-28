@@ -1,6 +1,8 @@
 ﻿using System.Net.Mail;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Queries.MoreLikeThis;
+using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Commercial;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Quill.Contracts;
 using Raven.Quill.Feedback;
@@ -37,58 +39,92 @@ public static class SettingsEndpoints
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status502BadGateway);
 
-        group.MapGet("/certificates/get", async (IDocumentStore store, int start, int pageSize, CancellationToken token) =>
-            {
-                var op = new GetCertificatesOperation(start, pageSize);
-                var result = await store.Maintenance.Server.SendAsync(op, token);
-                return Results.Ok(result.Select(CertificateItem.From).ToArray());
-            })
+        group.MapGet("/certificates/get", (IDocumentStore store, int start, int pageSize, QuillLogger<SettingsLogger> logger, CancellationToken token) =>
+                GuardCertificateErrorsAsync(logger, async () =>
+                {
+                    var op = new GetCertificatesOperation(start, pageSize);
+                    var result = await store.Maintenance.Server.SendAsync(op, token);
+                    return Results.Ok(result.Select(CertificateItem.From).ToArray());
+                }))
             .Produces<CertificateItem[]>()
             .WithName("settings.certificates")
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
 
-        group.MapPost("/certificates/generate", async (IDocumentStore store, QuillLogger<SettingsLogger> logger, HttpContext ctx, string name, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance, string? password, CancellationToken token) =>
-            {
-                var op = new CreateClientCertificateOperation(name, permissions, clearance, password);
-                var fileBytes = await store.Maintenance.Server.SendAsync(op, token);
-
-                if (logger.AuditEnabled)
-                    logger.Audit("POST",
-                        $"Certificate '{name}' clearance={clearance} permissions={{{DescribePermissions(permissions)}}}",
-                        ctx);
-
-                return Results.File(fileBytes.RawData, "application/octet-stream", $"{name}_certificates.zip");
-            })
-            .WithName("settings.certificatesGenerate")
-            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
-
-        group.MapPost("/certificates/edit", async (IDocumentStore store, QuillLogger<SettingsLogger> logger, HttpContext ctx, string thumbprint, string name, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance, bool disable, CancellationToken token) =>
-            {
-                var existing = await store.Maintenance.Server.SendAsync(new GetCertificateOperation(thumbprint), token);
-                if (existing is null)
-                    return Results.NotFound(new ApiErrorResponse($"no certificate with thumbprint '{thumbprint}'"));
-
-                var op = new EditClientCertificateOperation(new EditClientCertificateOperation.Parameters
+        group.MapPost("/certificates/generate", (IDocumentStore store, GenerateClientCertificateRequest body, QuillLogger<SettingsLogger> logger, HttpContext ctx, CancellationToken token) =>
+                GuardCertificateErrorsAsync(logger, async () =>
                 {
-                    Thumbprint = thumbprint,
-                    Permissions = permissions,
-                    Disabled = disable,
-                    Name = name,
-                    Clearance = clearance
-                });
-                await store.Maintenance.Server.SendAsync(op, token);
+                    var op = new CreateClientCertificateOperation(body.Name, body.Permissions, body.Clearance, body.Password);
+                    var fileBytes = await store.Maintenance.Server.SendAsync(op, token);
 
-                if (logger.AuditEnabled)
-                    logger.Audit("POST",
-                        $"Certificate '{name}' thumbprint={thumbprint} clearance={clearance} disabled={disable} " +
-                        $"permissions={{{DescribePermissions(permissions)}}}",
-                        ctx);
+                    if (logger.AuditEnabled)
+                        logger.Audit("POST",
+                            $"Certificate '{body.Name}' clearance={body.Clearance} " +
+                            $"permissions={{{DescribePermissions(body.Permissions)}}}",
+                            ctx);
 
-                return Results.Ok();
-            })
+                    return Results.File(fileBytes.RawData, "application/octet-stream", $"{body.Name}_certificates.zip");
+                }))
+            .WithName("settings.certificatesGenerate")
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ApiErrorResponse>(StatusCodes.Status403Forbidden);
+
+        group.MapPost("/certificates/edit", (IDocumentStore store, string thumbprint, string name, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance, bool disable, QuillLogger<SettingsLogger> logger, HttpContext ctx, CancellationToken token) =>
+                GuardCertificateErrorsAsync(logger, async () =>
+                {
+                    var existing = await store.Maintenance.Server.SendAsync(new GetCertificateOperation(thumbprint), token);
+                    if (existing is null)
+                        return Results.NotFound(new ApiErrorResponse($"no certificate with thumbprint '{thumbprint}'"));
+
+                    var op = new EditClientCertificateOperation(new EditClientCertificateOperation.Parameters
+                    {
+                        Thumbprint = thumbprint,
+                        Permissions = permissions,
+                        Disabled = disable,
+                        Name = name,
+                        Clearance = clearance
+                    });
+                    await store.Maintenance.Server.SendAsync(op, token);
+
+                    if (logger.AuditEnabled)
+                        logger.Audit("POST",
+                            $"Certificate '{name}' thumbprint={thumbprint} clearance={clearance} disabled={disable} " +
+                            $"permissions={{{DescribePermissions(permissions)}}}",
+                            ctx);
+
+                    return Results.Ok();
+                }))
             .WithName("settings.certificatesEdit")
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound)
-            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ApiErrorResponse>(StatusCodes.Status403Forbidden);
+    }
+
+    private static async Task<IResult> GuardCertificateErrorsAsync(QuillLogger<SettingsLogger> logger, Func<Task<IResult>> action)
+    {
+        try
+        {
+            return await action();
+        }
+        catch (LicenseLimitException ex)
+        {
+            if (logger.IsWarnEnabled)
+                logger.Warn(ex, "certificate operation rejected by license");
+            var error = ex.LimitType switch
+            {
+                LimitType.ReadOnlyCertificates =>
+                    "your license does not include read-only certificates; grant at least one app ReadWrite access, or upgrade the license",
+                LimitType.InvalidLicense =>
+                    "the RavenDB license is in an invalid state, so certificates cannot be issued",
+                _ => "the RavenDB license does not allow this certificate operation",
+            };
+            return Results.Json(new ApiErrorResponse(error), statusCode: StatusCodes.Status403Forbidden);
+        }
+        catch (RavenException ex)
+        {
+            if (logger.IsWarnEnabled)
+                logger.Warn(ex, "certificate operation rejected by RavenDB");
+            return Results.BadRequest(new ApiErrorResponse("certificate request rejected; see server logs for details"));
+        }
     }
 
     public record CertificateItem(

@@ -2,12 +2,14 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { ApiState } from "@/components/data/api-state";
+import { DetailGridSkeleton } from "@/components/data/loading-skeletons";
 import { CopyableCode } from "@/components/data/copyable-code";
 import { Button } from "@/components/shadcn/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/shadcn/ui/card";
 import { Field, FieldError, FieldLabel } from "@/components/shadcn/ui/field";
 import { Input } from "@/components/shadcn/ui/input";
 import { containerNameForHost, isIpV4 } from "@/lib/subdomain-origin";
+import { Heading, Text } from "@/components/typography";
 
 const NEW_IP_PLACEHOLDER = "<new-ip>";
 const DNS_A_RECORD_TYPE = 1;
@@ -42,7 +44,9 @@ export function DashboardIpConfiguration({ hostname = window.location.hostname }
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between gap-3">
-                <h1 className="text-2xl font-semibold tracking-tight">IP configuration</h1>
+                <Heading as="h1" variant="page">
+                    IP configuration
+                </Heading>
                 <Button
                     variant="outline"
                     size="sm"
@@ -56,8 +60,10 @@ export function DashboardIpConfiguration({ hostname = window.location.hostname }
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Current IP binding</CardTitle>
-                    <CardDescription>The IP address the appliance domain currently resolves to.</CardDescription>
+                    <CardTitle asChild>
+                        <h2>Current IP binding</h2>
+                    </CardTitle>
+                    <CardDescription>The IP address Quill&rsquo;s domain currently resolves to.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     {hasResolvableDomain ? (
@@ -67,26 +73,33 @@ export function DashboardIpConfiguration({ hostname = window.location.hostname }
                             errorTitle="Could not resolve the current IP binding"
                             onRetry={() => bindingQuery.refetch()}
                             loadingLabel="Resolving DNS…"
+                            skeleton={<DetailGridSkeleton count={2} />}
                         >
                             <div className="grid gap-6 sm:grid-cols-2">
                                 <div className="space-y-1">
-                                    <div className="text-xs text-muted-foreground">Domain</div>
-                                    <div className="text-sm font-medium break-all">{hostname}</div>
+                                    <Text as="div" variant="caption">
+                                        Domain
+                                    </Text>
+                                    <Text as="div" variant="label" className="break-all">
+                                        {hostname}
+                                    </Text>
                                 </div>
                                 <div className="space-y-1">
-                                    <div className="text-xs text-muted-foreground">IP address</div>
-                                    <div className="text-sm font-medium tabular-nums">
+                                    <Text as="div" variant="caption">
+                                        IP address
+                                    </Text>
+                                    <Text as="div" variant="label" className="tabular-nums">
                                         {bindingQuery.data?.length
                                             ? bindingQuery.data.join(", ")
                                             : "No DNS record found"}
-                                    </div>
+                                    </Text>
                                 </div>
                             </div>
                         </ApiState>
                     ) : (
-                        <p className="text-sm text-muted-foreground">
+                        <Text variant="muted">
                             This dashboard is opened directly by IP address, so there is no domain binding to show.
-                        </p>
+                        </Text>
                     )}
                 </CardContent>
             </Card>
@@ -106,9 +119,11 @@ function ChangeIpCard({ hostname }: { hostname: string }) {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Change the IP</CardTitle>
+                <CardTitle asChild>
+                    <h2>Change the IP</h2>
+                </CardTitle>
                 <CardDescription>
-                    Run this command on the Docker host to point the appliance domains (dashboard, db, public, api) at a
+                    Run this command on the Docker host to point Quill&rsquo;s domains (dashboard, db, public, api) at a
                     new IP address.
                 </CardDescription>
             </CardHeader>
@@ -127,10 +142,10 @@ function ChangeIpCard({ hostname }: { hostname: string }) {
                     {isInvalidIp && <FieldError>Enter a valid IPv4 address.</FieldError>}
                 </Field>
                 <CopyableCode code={command} language="sh" copyLabel="Copy update-dns command" />
-                <p className="text-xs text-muted-foreground">
+                <Text variant="caption">
                     DNS changes can take a few minutes to propagate. Refresh the current binding above to confirm the
                     update.
-                </p>
+                </Text>
             </CardContent>
         </Card>
     );

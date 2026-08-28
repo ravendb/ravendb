@@ -1,4 +1,5 @@
 import { Copy, ExternalLink } from "lucide-react";
+import { Text } from "@/components/typography";
 import { CopyableCode } from "@/components/data/copyable-code";
 import { Field, FieldLabel } from "@/components/shadcn/ui/field";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/shadcn/ui/input-group";
@@ -39,9 +40,9 @@ export function EmbedLinkPreview({ url, expiresAt, maxInvocations }: EmbedLinkPr
                 <FieldLabel>Embed snippet</FieldLabel>
                 <CopyableCode code={iframeSnippet} copyLabel="Copy embed snippet" />
             </Field>
-            <p className="text-xs text-muted-foreground">
+            <Text variant="caption">
                 Expires {formatDateTime(expiresAt)} · up to {maxInvocations.toLocaleString()} chats.
-            </p>
+            </Text>
             <iframe
                 src={url}
                 title="Embed preview"

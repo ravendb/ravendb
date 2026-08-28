@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Text } from "@/components/typography";
 import { type Control, useFieldArray, useForm, useFormContext, useWatch } from "react-hook-form";
 import { useParams } from "react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -410,10 +411,10 @@ function TestParametersSection({
                 aria-expanded={!isCollapsed}
                 onClick={onToggleCollapsed}
             >
-                <span className="flex items-center gap-2 text-sm font-medium">
+                <Text variant="label" as="span" className="flex items-center gap-2">
                     <Settings2 className="size-4 text-muted-foreground" aria-hidden />
                     Parameters
-                </span>
+                </Text>
                 {isCollapsed ? (
                     <ChevronDown className="size-4 text-muted-foreground" aria-hidden />
                 ) : (
@@ -421,7 +422,9 @@ function TestParametersSection({
                 )}
             </button>
             {isCollapsed ? (
-                <p className="truncate text-xs text-muted-foreground">{summary}</p>
+                <Text variant="caption" className="truncate">
+                    {summary}
+                </Text>
             ) : (
                 <div className="grid gap-2">
                     {fields.map((field, index) => {
@@ -432,9 +435,9 @@ function TestParametersSection({
                         return (
                             <div key={field.id} className="grid gap-2 rounded-md border p-3">
                                 <div className="flex items-center justify-between gap-3">
-                                    <span className="truncate text-sm font-medium" title={field.name}>
+                                    <Text variant="label" as="span" className="truncate" title={field.name}>
                                         {field.name}
-                                    </span>
+                                    </Text>
                                     <FormSwitch
                                         control={control}
                                         name={`parameters.${index}.isSendToModel`}
@@ -505,10 +508,10 @@ function AgentAnswer({ message, isLoading }: { message: ChatMessage; isLoading: 
             <Bot className="mt-2 size-4 shrink-0 text-muted-foreground" aria-hidden />
             <div className="min-w-0 flex-1">
                 {isLoading && (
-                    <div className="mt-2 mb-1.5 flex items-center gap-2 text-xs text-muted-foreground">
+                    <Text variant="caption" as="div" className="mt-2 mb-1.5 flex items-center gap-2">
                         <Spinner className="size-3" />
                         <span>Generating response…</span>
-                    </div>
+                    </Text>
                 )}
                 {message.toolCalls && message.toolCalls.length > 0 && (
                     <div className="mb-2 grid gap-2">

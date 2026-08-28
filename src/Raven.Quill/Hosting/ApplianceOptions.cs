@@ -18,6 +18,8 @@ public sealed class ApplianceOptions
 
     public string SetupPackagePath { get; set; } = "/setup";
 
+    public string SetupNodeSettingsPath => Path.Combine(SetupPackagePath, "A", "settings.json");
+
     public string? LicenseKey { get; set; }
 
     public string? ApiKey { get; set; }
@@ -38,6 +40,10 @@ public sealed class ApplianceOptions
     /// timeouts are, so what lands here is already known good.
     /// </summary>
     public LogOptions Logs { get; set; } = new();
+
+    public SlackOptions Slack { get; set; } = new();
+
+    public DiscordOptions Discord { get; set; } = new();
 
     public TimeSpan ReadinessInitialDelay { get; set; } = TimeSpan.FromSeconds(15);
 

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Text } from "@/components/typography";
 import { useParams } from "react-router";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
@@ -6,13 +7,15 @@ import type { AppUsageResponse, SeriesData } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
 import { SeriesBarChart } from "@/components/data/charts";
 import { DatePeriodPicker } from "@/components/data/date-period-picker";
+import { ChartSkeleton, DetailGridSkeleton } from "@/components/data/loading-skeletons";
 import { PagePanel } from "@/components/data/page-panel";
 import { canDrillInto, drillInto, getDefaultDatePeriod, type DatePeriod } from "@/lib/date-period";
 import { useAppStartDate } from "@/lib/use-start-date";
 import { TableCell, TableRow } from "@/components/shadcn/ui/table";
+import { SectionTable } from "@/components/table/section-table";
 import { formatCompact } from "@/lib/format";
 import { StatCardsSection, type DashboardStatCard } from "@/pages/dashboard/dashboard-stat-cards";
-import { SectionCard, SectionTable } from "@/pages/apps/section-card";
+import { SectionCard } from "@/pages/apps/section-card";
 
 type BarClickHandler = (entry: Record<string, unknown>) => void;
 
@@ -42,6 +45,12 @@ export function AppAnalytics() {
                 errorTitle="Could not load analytics"
                 onRetry={() => void appUsageQuery.refetch()}
                 loadingLabel="Loading analytics..."
+                skeleton={
+                    <div className="space-y-8">
+                        <DetailGridSkeleton count={4} className="sm:grid-cols-4" />
+                        <ChartSkeleton />
+                    </div>
+                }
             >
                 {appUsageQuery.data && (
                     <div className="space-y-8">
@@ -118,7 +127,9 @@ function AnalyticsSeriesSection({
         <SectionCard title={title}>
             <div className="rounded-lg border p-4">
                 {series.keys.length === 0 ? (
-                    <p className="py-8 text-center text-sm text-muted-foreground">No data for this period.</p>
+                    <Text variant="muted" className="py-8 text-center">
+                        No data for this period.
+                    </Text>
                 ) : (
                     <SeriesBarChart data={series} onBarClick={onBarClick} />
                 )}

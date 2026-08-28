@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Text } from "@/components/typography";
 import { ChevronDown, ChevronUp, Database } from "lucide-react";
 import type { AgentToolCall } from "@/api/custom-services/agent-stream";
 import AceEditor from "@/components/ace-editor/ace-editor";
@@ -31,7 +32,7 @@ export function TestQueryToolCall({ toolCall }: { toolCall: AgentToolCall }) {
 
             {isExpanded && (
                 <div className="grid gap-3 border-t p-2">
-                    {toolCall.description && <p className="text-xs text-muted-foreground">{toolCall.description}</p>}
+                    {toolCall.description && <Text variant="caption">{toolCall.description}</Text>}
                     {toolCall.query && <CodeField label="Query" value={toolCall.query} mode="sql" height="80px" />}
                     <CodeField
                         label="Parameters filled by the model"
@@ -71,7 +72,9 @@ function CodeField({
 }) {
     return (
         <div className="grid gap-1">
-            <span className="text-xs text-muted-foreground">{label}</span>
+            <Text variant="caption" as="span">
+                {label}
+            </Text>
             <div className="overflow-hidden rounded-md border">
                 <AceEditor mode={mode} value={value} readOnly height={height} maxHeight={300} />
             </div>

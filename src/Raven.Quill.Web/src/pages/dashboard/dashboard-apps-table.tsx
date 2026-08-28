@@ -1,40 +1,21 @@
+import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { Database, Pencil, Plus, Trash2 } from "lucide-react";
 import type { ApplianceAppResponse, AppWrites } from "@/api/generated/server-api";
-import { StatusIndicator, type StatusTone } from "@/components/data/status-indicator";
+import { StatusIndicator } from "@/components/data/status-indicator";
+import { resolveStatusStyle } from "@/lib/app-status";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
+import { Skeleton } from "@/components/shadcn/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/ui/table";
+import { TableSkeletonRows } from "@/components/table/table-skeleton";
 import { WruLabel } from "@/components/data/wru-label";
 import { appRoutes } from "@/lib/app-routes";
 import { datePeriodUnit, type DatePeriod } from "@/lib/date-period";
 import { formatCompact } from "@/lib/format";
 import { DeleteAppDialog } from "@/pages/apps/delete-app-dialog";
 import { EditAppConfirmDialog } from "@/pages/setup/add-app-wizard/edit-app-confirm-dialog";
-
-type StatusStyle = { tone: StatusTone; label: string };
-
-// Maps the server's derived status codes (MetricsReadService.DeriveAppStatus emits
-// running/warning/setup) onto the dashboard's status vocabulary. loading/failed are
-// kept for forward-compatibility so a future provisioning/error state renders sensibly.
-const STATUS_STYLES: Record<string, StatusStyle> = {
-    running: { tone: "positive", label: "Healthy" },
-    healthy: { tone: "positive", label: "Healthy" },
-    warning: { tone: "warning", label: "Needs attention" },
-    setup: { tone: "info", label: "Setup" },
-    loading: { tone: "loading", label: "Loading" },
-    failed: { tone: "danger", label: "Failed" },
-    error: { tone: "danger", label: "Failed" },
-};
-
-function resolveStatusStyle(status: string): StatusStyle {
-    return (
-        STATUS_STYLES[status.toLowerCase()] ?? {
-            tone: "muted",
-            label: status ? status[0].toUpperCase() + status.slice(1) : "Unknown",
-        }
-    );
-}
+import { Heading, Text } from "@/components/typography";
 
 export function DashboardAppsTable({
     apps,
@@ -54,44 +35,81 @@ export function DashboardAppsTable({
 
     return (
         <div className="space-y-4">
-            <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-semibold tracking-tight">Apps</h2>
+            <AppsToolbar
+                count={
                     <Badge variant="secondary" className="font-mono">
                         {apps.length}
                     </Badge>
-                </div>
-                <Button asChild size="sm">
-                    <Link to={appRoutes.addApp()}>
-                        <Plus className="size-3.5" aria-hidden="true" />
-                        Add application
-                    </Link>
-                </Button>
+                }
+                action={
+                    <Button asChild size="sm">
+                        <Link to={appRoutes.addApp()}>
+                            <Plus className="size-3.5" aria-hidden="true" />
+                            Add app
+                        </Link>
+                    </Button>
+                }
+            />
+            <AppsTableFrame period={period}>
+                {apps.map((app) => (
+                    <AppRow key={app.slug} app={app} writes={writesBySlug.get(app.slug)} />
+                ))}
+            </AppsTableFrame>
+        </div>
+    );
+}
+
+export function DashboardAppsTableSkeleton({ period }: { period: DatePeriod }) {
+    return (
+        <div className="space-y-4">
+            {/* The button is drawn rather than rendered: `ApiState` hides the skeleton from the
+                accessibility tree, and a real link in there would still take focus. */}
+            <AppsToolbar
+                count={<Skeleton className="h-5 w-8 rounded-md" />}
+                action={<Skeleton className="h-8 w-36 rounded-md" />}
+            />
+            <AppsTableFrame period={period}>
+                <TableSkeletonRows columnCount={APPS_COLUMN_COUNT} rows={4} hasActionColumn />
+            </AppsTableFrame>
+        </div>
+    );
+}
+
+function AppsToolbar({ count, action }: { count: ReactNode; action: ReactNode }) {
+    return (
+        <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+                <Heading variant="section">Apps</Heading>
+                {count}
             </div>
-            <div className="overflow-hidden rounded-lg border">
-                <Table>
-                    <TableHeader>
-                        <TableRow className="hover:bg-transparent">
-                            <TableHead className="w-[26%] text-xs font-medium text-muted-foreground">App</TableHead>
-                            <TableHead className="text-xs font-medium text-muted-foreground">Source</TableHead>
-                            <TableHead className="text-xs font-medium text-muted-foreground">Agents</TableHead>
-                            <TableHead className="text-xs font-medium text-muted-foreground">Channels</TableHead>
-                            <TableHead className="text-xs font-medium text-muted-foreground">
-                                <WruLabel suffix={` / ${datePeriodUnit(period)}`} />
-                            </TableHead>
-                            <TableHead className="w-[20%] text-xs font-medium text-muted-foreground">Status</TableHead>
-                            <TableHead className="w-0 text-right text-xs font-medium text-muted-foreground">
-                                <span className="sr-only">Actions</span>
-                            </TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {apps.map((app) => (
-                            <AppRow key={app.slug} app={app} writes={writesBySlug.get(app.slug)} />
-                        ))}
-                    </TableBody>
-                </Table>
-            </div>
+            {action}
+        </div>
+    );
+}
+
+const APPS_COLUMN_COUNT = 7;
+
+function AppsTableFrame({ period, children }: { period: DatePeriod; children: ReactNode }) {
+    return (
+        <div className="overflow-hidden rounded-lg border">
+            <Table>
+                <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                        <TableHead className="w-[26%] text-xs font-medium text-muted-foreground">App</TableHead>
+                        <TableHead className="text-xs font-medium text-muted-foreground">Source</TableHead>
+                        <TableHead className="text-xs font-medium text-muted-foreground">Agents</TableHead>
+                        <TableHead className="text-xs font-medium text-muted-foreground">Channels</TableHead>
+                        <TableHead className="text-xs font-medium text-muted-foreground">
+                            <WruLabel suffix={` / ${datePeriodUnit(period)}`} />
+                        </TableHead>
+                        <TableHead className="w-[20%] text-xs font-medium text-muted-foreground">Status</TableHead>
+                        <TableHead className="w-0 text-right text-xs font-medium text-muted-foreground">
+                            <span className="sr-only">Actions</span>
+                        </TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>{children}</TableBody>
+            </Table>
         </div>
     );
 }
@@ -101,8 +119,12 @@ function AppRow({ app, writes }: { app: ApplianceAppResponse; writes: number | u
         <TableRow className="group">
             <TableCell className="py-3">
                 <Link to={appRoutes.app(app.slug)} className="flex flex-col gap-0.5">
-                    <span className="text-sm font-medium group-hover:underline">{app.name}</span>
-                    <span className="font-mono text-xs text-muted-foreground">{app.slug}</span>
+                    <Text as="span" variant="label" className="group-hover:underline">
+                        {app.name}
+                    </Text>
+                    <Text as="span" variant="caption" className="font-mono">
+                        {app.slug}
+                    </Text>
                 </Link>
             </TableCell>
             <TableCell className="text-sm">{app.source.type || "—"}</TableCell>
@@ -143,7 +165,11 @@ function AppStatusCell({ app }: { app: ApplianceAppResponse }) {
     return (
         <div className="flex flex-col items-start gap-1">
             <StatusIndicator tone={style.tone} label={style.label} />
-            {app.statusSubtitle && <span className="text-xs text-muted-foreground">{app.statusSubtitle}</span>}
+            {app.statusSubtitle && (
+                <Text as="span" variant="caption">
+                    {app.statusSubtitle}
+                </Text>
+            )}
         </div>
     );
 }
@@ -155,14 +181,16 @@ function EmptyAppsState() {
                 <div className="flex size-9 items-center justify-center rounded-md bg-accent text-accent-foreground">
                     <Database className="size-5" aria-hidden="true" />
                 </div>
-                <h2 className="mt-4 text-sm font-semibold">No apps added yet</h2>
-                <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                    Create an app from a source database and CDC mapping.
-                </p>
+                <Heading variant="label" className="mt-4">
+                    No apps added yet
+                </Heading>
+                <Text variant="caption" className="mt-3 leading-5">
+                    Create an app from a source database and a table mapping.
+                </Text>
                 <Button asChild size="sm" className="mt-5">
                     <Link to={appRoutes.addApp()}>
                         <Plus className="size-3.5" aria-hidden="true" />
-                        Add application
+                        Add app
                     </Link>
                 </Button>
             </div>

@@ -4,6 +4,7 @@ import {
     createAssistantService,
     describeAssistantError,
     isAssistantConsentRequired,
+    isQuillSessionExpired,
     type AssistantChatFrame,
     type AssistantStreamEvent,
 } from "@/api/custom-services/assistant-service";
@@ -109,6 +110,24 @@ describe("assistant stream", () => {
             message: "The AI assistant did not finish answering. Please try again.",
         });
     });
+
+    it("reports a stream cut off mid-frame as unfinished rather than malformed", async () => {
+        const client = createApiClient({
+            transport: () =>
+                Promise.resolve(
+                    new Response('data: {"type":"Ongoing","text":"Half"}\n\ndata: {"type":"Ongo', {
+                        headers: { "Content-Type": "text/event-stream" },
+                    }),
+                ),
+        });
+
+        const events = await streamEvents(client);
+
+        expect(events.at(-1)).toEqual({
+            type: "error",
+            message: "The AI assistant did not finish answering. Please try again.",
+        });
+    });
 });
 
 async function refusalOf(body: string, status: number, contentType: string) {
@@ -160,5 +179,21 @@ describe("isAssistantConsentRequired", () => {
         const error = await refusalOf("Unauthorized", 401, "text/plain");
 
         expect(isAssistantConsentRequired(error)).toBe(false);
+    });
+});
+
+describe("isQuillSessionExpired", () => {
+    it("recognizes Quill's bare 401 session challenge", async () => {
+        const error = await refusalOf("", 401, "text/plain");
+
+        expect(isQuillSessionExpired(error)).toBe(true);
+    });
+
+    it("does not read the AI service's relayed refusals as an expired session", async () => {
+        const consentError = await refusalOf('{"Status":"ConsentRequired"}', 401, "application/json");
+        const licenseError = await refusalOf("Unauthorized", 401, "text/plain");
+
+        expect(isQuillSessionExpired(consentError)).toBe(false);
+        expect(isQuillSessionExpired(licenseError)).toBe(false);
     });
 });

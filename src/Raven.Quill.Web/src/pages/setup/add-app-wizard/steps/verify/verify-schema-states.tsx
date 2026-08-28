@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Text } from "@/components/typography";
 import { CircleSlash2Icon, PlusIcon, TriangleAlertIcon } from "lucide-react";
 import { Button } from "@/components/shadcn/ui/button";
 import { Skeleton } from "@/components/shadcn/ui/skeleton";
@@ -37,10 +38,10 @@ export function NoTablesFound({ schemas, onCustomizeSchemas }: { schemas: string
                 <CircleSlash2Icon className="size-5 text-muted-foreground" aria-hidden="true" />
             </div>
             <div className="text-center">
-                <p className="text-sm font-medium">We didn&apos;t find any tables in {scopeLabel}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
+                <Text variant="label">We didn&apos;t find any tables in {scopeLabel}</Text>
+                <Text variant="caption" className="mt-1">
                     Add other schemas to widen the table discovery scope.
-                </p>
+                </Text>
             </div>
             <Button type="button" variant="outline" size="sm" onClick={onCustomizeSchemas}>
                 <PlusIcon aria-hidden="true" />

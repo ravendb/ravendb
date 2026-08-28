@@ -1,3 +1,4 @@
+using Raven.Quill.Agents;
 using Raven.Quill.Channels;
 
 namespace Raven.Quill.Contracts;
@@ -16,7 +17,9 @@ public sealed record EmbedLinkSummaryResponse(
         link.ShortId,
         link.ChannelId,
         link.AgentId,
-        link.Parameters,
+        link.Parameters.ToDictionary(
+            parameter => parameter.Key,
+            parameter => AgentParameterValue.ToDisplayText(AgentParameterValue.FromStoredText(parameter.Value))),
         link.CreatedAt,
         link.ExpiresAt,
         link.MaxInvocations,

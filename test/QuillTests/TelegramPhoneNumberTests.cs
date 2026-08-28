@@ -106,7 +106,7 @@ public class TelegramPhoneNumberTests(ITestOutputHelper output, QuillTelegramFix
         await Mock.WaitUntilAsync(() => Router.Requests.Count >= 1, "the agent run");
 
         var request = Assert.Single(Router.Requests);
-        Assert.Equal("+48123456789", request.Parameters["phone"]);
+        Assert.Equal("+48123456789", request.Parameters["phone"].GetString());
 
         await app.DeleteChannelAsync(channelId);
     }
@@ -181,9 +181,9 @@ public class TelegramPhoneNumberTests(ITestOutputHelper output, QuillTelegramFix
         var token = NewBotToken();
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.Telegram, agentId, null,
-            Telegram: new(token, new Dictionary<string, TelegramParameterBinding>
+            Telegram: new(token, new Dictionary<string, ChannelParameterBinding>
             {
-                ["phone"] = new() { Source = TelegramParameterSource.PhoneNumber },
+                ["phone"] = new() { Source = ChannelParameterSource.PhoneNumber },
             })));
 
         return (app, created.ChannelId, token);

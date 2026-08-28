@@ -4,6 +4,8 @@ import { recordFetchStartedAt } from "@/lib/query-fetch-start";
 
 const baseKey = "apps";
 
+const CDC_ERRORS_POLL_INTERVAL_MS = 5_000;
+
 // Partial key covering every app's connection strings list, so mutations on the
 // (server-wide) connection strings can invalidate all of them at once.
 export const APP_AI_CONNECTION_STRINGS_KEY = [baseKey, "aiConnectionStringsList"] as const;
@@ -32,6 +34,9 @@ export function createAppsQueries(api: ServerApi["apps"]) {
                 // Errors must always reflect the current server state, so never serve them from cache.
                 staleTime: 0,
                 gcTime: 0,
+                // Data sync fails on its own schedule, often seconds after the view watching it
+                // opened, so a single fetch would leave the operator reading a stale zero.
+                refetchInterval: CDC_ERRORS_POLL_INTERVAL_MS,
             }),
         suggestAgentFromData: (slug: string) =>
             queryOptions({
@@ -40,17 +45,22 @@ export function createAppsQueries(api: ServerApi["apps"]) {
                     recordFetchStartedAt(queryKey);
 
                     // Suggestions are an optional aid — the wizard works without them — so
-                    // failures degrade to an empty list instead of blocking navigation.
+                    // failures degrade to an empty list instead of blocking navigation. A missing
+                    // AI consent is reported alongside them so the step can name it instead of
+                    // blaming the operator's data.
                     const result = await api
                         .suggestAgent(slug, { mode: "from-data", intentPrompt: null })
                         .catch(() => null);
 
-                    return result?.status === "Success" ? result.configurations : [];
+                    return {
+                        configurations: result?.status === "Success" ? result.configurations : [],
+                        isConsentRequired: result?.status === "ConsentRequired",
+                    };
                 },
                 // A non-empty suggestion is an expensive AI call: never refetch it behind the
                 // wizard. An empty one (failure or no candidates) stays stale so the next
                 // fetch retries.
-                staleTime: (query) => ((query.state.data?.length ?? 0) > 0 ? Infinity : 0),
+                staleTime: (query) => (query.state.data?.configurations.length ? Infinity : 0),
             }),
         aiConnectionStringsList: (slug: string) =>
             queryOptions({

@@ -1,5 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { api } from "@/api/api";
+import { AI_CONSENT_REQUIRED_MESSAGE } from "@/api/custom-services/assistant-service";
+import type { ChannelType } from "@/api/generated/server-api";
 import { APP_AI_CONNECTION_STRINGS_KEY } from "@/api/queries/apps-queries";
 
 // The dashboard "My apps" table (stats.dashboardApps) summarizes each app's agent and
@@ -35,10 +37,38 @@ export function invalidateAiConnectionStringQueries(queryClient: QueryClient) {
     ]);
 }
 
-export function invalidateChannelQueries(queryClient: QueryClient, slug: string) {
+function channelTypeQueryKeys(slug: string, channelType: NonNullable<ChannelType>) {
+    switch (channelType) {
+        case "Slack":
+            return [api.queries.slack.health(slug).queryKey];
+        case "Discord":
+            return [api.queries.discord.health(slug).queryKey];
+        default:
+            return [];
+    }
+}
+
+export function invalidateChannelQueries(queryClient: QueryClient, slug: string, channelType?: ChannelType) {
     return Promise.all([
         queryClient.invalidateQueries({ queryKey: api.queries.channels.list(slug).queryKey }),
         queryClient.invalidateQueries({ queryKey: api.queries.stats.channels(slug).queryKey }),
         queryClient.invalidateQueries({ queryKey: api.queries.stats.dashboardApps().queryKey }),
+        ...(channelType ? channelTypeQueryKeys(slug, channelType) : []).map((queryKey) =>
+            queryClient.invalidateQueries({ queryKey }),
+        ),
     ]);
+}
+
+export function invalidateConsentBlockedSuggestions(queryClient: QueryClient) {
+    return queryClient.invalidateQueries({
+        predicate: (query) => isConsentRequiredResult(query.state.data) || isConsentRequiredFailure(query.state.error),
+    });
+}
+
+function isConsentRequiredResult(data: unknown) {
+    return typeof data === "object" && data != null && "isConsentRequired" in data && data.isConsentRequired === true;
+}
+
+function isConsentRequiredFailure(error: unknown) {
+    return error instanceof Error && error.message === AI_CONSENT_REQUIRED_MESSAGE;
 }

@@ -11,10 +11,11 @@ import { UserMenu } from "@/components/layout/user-menu";
 import { appRoutes } from "@/lib/app-routes";
 import { COMPACT_LAYOUT_MEDIA_QUERY, useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
-import { QuillMark } from "@/components/brand/quill-logo.tsx";
+import QuillMark from "@/components/brand/quill-mark.svg?react";
 import { AssistantPanel } from "@/components/layout/assistant-panel";
 import { ASSISTANT_PANEL_TITLE_ID, useAssistantPinning, useAssistantStore } from "@/components/layout/assistant-store";
-import { ContactSheet } from "@/components/layout/contact-sheet";
+import { FeedbackSheet } from "@/components/layout/feedback-sheet";
+import { Heading } from "@/components/typography";
 import { Button } from "@/components/shadcn/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
 
@@ -102,7 +103,7 @@ function App() {
                 <CommandPalette slug={slug} appName={activeAppLabel} />
 
                 <nav className="ml-4 flex shrink-0 items-center gap-4 text-sm" aria-label="Top navigation">
-                    <ContactSheet
+                    <FeedbackSheet
                         trigger={
                             <Button variant="outline" size="sm">
                                 <MessageCircle aria-hidden="true" />
@@ -151,9 +152,19 @@ function App() {
                 )}
             >
                 {!isPageTitleHidden && (
-                    <h1 className="text-2xl font-semibold tracking-tight">{activeRoute?.title ?? "My apps"}</h1>
+                    <Heading as="h1" variant="page">
+                        {activeRoute?.title ?? "My apps"}
+                    </Heading>
                 )}
-                <div className={cn("min-h-0 overflow-auto", !isBareLayout && "-mx-2 px-2")}>
+                <div
+                    className={cn(
+                        "min-h-0",
+                        // Bleed the scroll area to the panel's inner border (padding keeps content in place) so
+                        // a full-bleed detail header can reach the edges instead of being clipped short. Clip
+                        // horizontal overflow so the page never scrolls sideways; wide content self-scrolls.
+                        isBareLayout ? "overflow-auto" : "-mx-4 overflow-x-clip overflow-y-auto px-4 lg:-mx-5 lg:px-5",
+                    )}
+                >
                     <Outlet />
                 </div>
             </main>

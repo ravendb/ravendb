@@ -37,7 +37,7 @@ public class AiAgentDebugTracing : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task DebugTracesCreatedWhenEnabled(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -70,7 +70,7 @@ public class AiAgentDebugTracing : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task NoDebugTracesWhenNotEnabled(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -93,7 +93,7 @@ public class AiAgentDebugTracing : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task Debug_FlippedOnExistingConversation_TracesOnlyNextTurn(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -140,7 +140,7 @@ public class AiAgentDebugTracing : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task Debug_QueryStringOverride_FlipsPersistedAttributeFromFalseToTrue(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -184,7 +184,7 @@ public class AiAgentDebugTracing : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task Debug_QueryStringOverride_FlipsPersistedAttributeFromTrueToFalse(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -233,7 +233,7 @@ public class AiAgentDebugTracing : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task Debug_WithAttachment_PersistsAttachmentNames(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -266,7 +266,7 @@ public class AiAgentDebugTracing : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task Debug_Streaming_PersistsStreamEvents(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -306,7 +306,7 @@ public class AiAgentDebugTracing : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task Debug_WithQueryTool_PersistsOneTracePerLlmCall(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -348,7 +348,7 @@ public class AiAgentDebugTracing : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task Debug_WithActionTool_PersistsOneTracePerLlmCall(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -497,9 +497,9 @@ public class AiAgentDebugTracing : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { true })]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { false })]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { null })]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { true })]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { false })]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { null })]
     public async Task Debug_PropagatesToSubAgent(Options options, GenAiConfiguration config, bool? debug)
     {
         using var store = await CreateStoreWithSubAgentArithmetic(options, config);
@@ -567,7 +567,7 @@ public class AiAgentDebugTracing : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task Debug_MultipleAttachments_PersistsAllNamesInOrder(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);

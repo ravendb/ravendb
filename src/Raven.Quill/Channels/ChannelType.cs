@@ -5,4 +5,6 @@ public enum ChannelType
     IFrame,
     Telegram,
     WhatsApp,
+    Slack,
+    Discord,
 }

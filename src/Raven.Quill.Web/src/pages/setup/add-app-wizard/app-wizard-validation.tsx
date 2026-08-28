@@ -7,17 +7,13 @@ import { MAX_SLUG_LENGTH, toSlug } from "@/pages/setup/add-app-wizard/slugify";
 const COLUMN_TYPES = ["Default", "Json", "Attachment"] as const satisfies readonly CdcColumnType[];
 const RELATION_TYPES = ["Array", "Map", "Value"] as const satisfies readonly CdcSinkRelationType[];
 
-// Optional override; when empty the server derives the slug from the app name. Mirrors the
-// server's normalization checks so obvious problems surface before provisioning (reserved
-// names are only known server-side and come back as a 400).
+// Mirrors the server's normalization checks so obvious problems surface before provisioning
+// (reserved names are only known server-side and come back as a 400).
 export const slugSchema = z
     .string()
     .trim()
+    .min(1, "Public URL slug is required")
     .superRefine((value, ctx) => {
-        if (value === "") {
-            return;
-        }
-
         const normalized = toSlug(value);
 
         if (normalized === "") {
@@ -219,7 +215,7 @@ export const tablesSchema = z
             ctx.addIssue({
                 code: "custom",
                 path: [index, "sourceTableName"],
-                message: `Source table "${getSourceTableLabel(table)}" is already configured as another root table. CDC Sink can process a source table only once.`,
+                message: `Source table "${getSourceTableLabel(table)}" is already configured as another root table. A source table can be mapped only once.`,
             });
         });
     });
@@ -258,23 +254,30 @@ export const createExternalConnectionSchema = (takenSlugs: string[] = []) => {
 
     return z
         .object({
-            appName: z.string().trim().min(1, "Application name is required"),
+            appName: z.string().trim().min(1, "App name is required"),
             slug: slugSchema,
-            provider: providerSchema,
+            // Empty until the operator picks a source database type; superRefine rejects it so the
+            // connect step can't advance without a choice.
+            provider: providerSchema.or(z.literal("")),
             mode: connectionModeSchema,
             fields: z.object(connectionFieldsShape),
             connectionString: z.string(),
         })
         .superRefine((values, ctx) => {
-            const overrideSlug = values.slug.trim();
-            // With an empty override the server derives the slug from the app name, so the name is
-            // what has to be changed to free up the conflict.
-            const slug = toSlug(overrideSlug || values.appName);
+            if (values.provider === "") {
+                ctx.addIssue({
+                    code: "custom",
+                    path: ["provider"],
+                    message: "Select a source database type",
+                });
+            }
+
+            const slug = toSlug(values.slug);
 
             if (slug !== "" && normalizedTakenSlugs.has(slug)) {
                 ctx.addIssue({
                     code: "custom",
-                    path: [overrideSlug === "" ? "appName" : "slug"],
+                    path: ["slug"],
                     message: `Slug "${slug}" is already used by another app`,
                 });
             }

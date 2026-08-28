@@ -1,11 +1,11 @@
-using Raven.Quill.Telegram;
+using Raven.Quill.Hosting;
 
 namespace Raven.Quill.Channels;
 
 /// Per-channel overrides for the bot's canned replies; a null field falls back to the default text.
 public sealed class TelegramChannelMessages
 {
-    internal const int MaxLength = TelegramMessageSplitter.TelegramApiMessageLimit;
+    internal const int MaxLength = TelegramOptions.ApiMessageLimit;
 
     public string? Greeting { get; set; }
 

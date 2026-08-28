@@ -35,7 +35,7 @@ internal sealed class TelegramBotRuntime
         Client = client;
         ChannelChangeVector = channelChangeVector;
         _acceptsContactShares = channel.Telegram!.ParameterBindings.Values
-            .Any(binding => binding.Source == TelegramParameterSource.PhoneNumber);
+            .Any(binding => binding.Source == ChannelParameterSource.PhoneNumber);
         _context = new TelegramChatContext(database, channel, store, router, options, logger);
     }
 

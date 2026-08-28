@@ -1,25 +1,27 @@
 import { useQuery } from "@tanstack/react-query";
-import { Cable, CodeXml, Link2, MessageCircle, Palette, Pencil, Send, Trash2, type LucideIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import { Cable, CodeXml, Link2, MessageCircle, Palette, Pencil, Send, Trash2 } from "lucide-react";
+import type { ComponentType, ReactNode, SVGProps } from "react";
 import { Link } from "react-router";
 import { api } from "@/api/api";
 import type { AgentSummaryResponse, ChannelSummaryResponse, ChannelType } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
+import { CardListSkeleton } from "@/components/data/loading-skeletons";
 import { EnabledStatus } from "@/components/data/status-indicator";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { Card, CardAction, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/shadcn/ui/card";
 import { Skeleton } from "@/components/shadcn/ui/skeleton";
+import { Heading, Text } from "@/components/typography";
 import { appRoutes } from "@/lib/app-routes";
 import { cn, formatDateTime, formatRelativeTime } from "@/lib/utils";
+import { DiscordIcon, SlackIcon } from "@/pages/apps/channels/channel-brand-icons";
 import { DeleteChannelDialog } from "@/pages/apps/channels/delete-channel-dialog";
-import { EditChannelSheet } from "@/pages/apps/channels/edit-channel-sheet";
 import { GenerateEmbedLinkDialog } from "@/pages/apps/channels/generate-embed-link-dialog";
 
 type ChannelGroupConfig = {
     type: NonNullable<ChannelType>;
     label: string;
-    icon: LucideIcon;
+    icon: ComponentType<SVGProps<SVGSVGElement>>;
 };
 
 // Order and icons mirror the "Add channel" menu so the page reads the same way channels are created.
@@ -27,6 +29,8 @@ const CHANNEL_GROUPS: ChannelGroupConfig[] = [
     { type: "IFrame", label: "Web widgets", icon: CodeXml },
     { type: "Telegram", label: "Telegram bots", icon: Send },
     { type: "WhatsApp", label: "WhatsApp", icon: MessageCircle },
+    { type: "Slack", label: "Slack", icon: SlackIcon },
+    { type: "Discord", label: "Discord", icon: DiscordIcon },
 ];
 
 export function ChannelGroups({ slug }: { slug: string }) {
@@ -73,19 +77,20 @@ export function ChannelGroups({ slug }: { slug: string }) {
             errorTitle="Could not load channels"
             onRetry={onRetry}
             loadingLabel="Loading channels..."
+            skeleton={<CardListSkeleton count={2} />}
         >
             {channelsQuery.data &&
                 (channels.length === 0 ? (
-                    <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+                    <Text as="div" variant="muted" className="rounded-lg border border-dashed p-10 text-center">
                         No channels yet. Add one to start reaching users.
-                    </div>
+                    </Text>
                 ) : (
                     <div className="space-y-6">
                         {groups.map((group) => (
                             <section key={group.label} className="min-w-0">
                                 <div className="mb-3 flex items-center gap-2">
                                     <group.icon className="size-4 text-muted-foreground" aria-hidden="true" />
-                                    <h2 className="text-sm font-semibold">{group.label}</h2>
+                                    <Heading variant="label">{group.label}</Heading>
                                     <Badge variant="secondary" className="tabular-nums">
                                         {group.channels.length}
                                     </Badge>
@@ -141,7 +146,7 @@ function ChannelCard({
             className="relative gap-3 transition-[background-color,box-shadow] hover:bg-muted/40 hover:ring-foreground/25 has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-ring"
         >
             <CardHeader>
-                <CardTitle className="min-w-0 truncate">
+                <CardTitle variant="item" className="min-w-0 truncate">
                     <Link
                         to={appRoutes.app(slug, `channels/${channel.channelId}`)}
                         className="after:absolute after:inset-0 after:content-[''] hover:underline"
@@ -150,9 +155,19 @@ function ChannelCard({
                         {channel.displayName}
                     </Link>
                     {channel.telegram?.botUsername && (
-                        <div className="truncate text-xs font-normal text-muted-foreground">
+                        <Text as="div" variant="caption" className="truncate font-normal">
                             @{channel.telegram.botUsername}
-                        </div>
+                        </Text>
+                    )}
+                    {channel.slack?.teamName && (
+                        <Text as="div" variant="caption" className="truncate font-normal">
+                            {channel.slack.teamName}
+                        </Text>
+                    )}
+                    {channel.discord?.botUsername && (
+                        <Text as="div" variant="caption" className="truncate font-normal">
+                            {channel.discord.botUsername}
+                        </Text>
                     )}
                 </CardTitle>
                 <CardAction>
@@ -164,7 +179,9 @@ function ChannelCard({
                 {agent ? (
                     <AgentChip name={agent.name} seed={agent.agentId} />
                 ) : (
-                    <span className="text-xs text-muted-foreground">Unassigned</span>
+                    <Text as="span" variant="caption">
+                        Unassigned
+                    </Text>
                 )}
 
                 <div className={cn("grid gap-2", isIFrame ? "grid-cols-2" : "grid-cols-1")}>
@@ -193,7 +210,7 @@ function ChannelCard({
                         slug={slug}
                         channelId={channel.channelId}
                         displayName={channel.displayName}
-                        parameterNames={agent?.parameters ?? []}
+                        parameters={agent?.parameters ?? []}
                         trigger={
                             <Button
                                 variant="ghost"
@@ -208,21 +225,18 @@ function ChannelCard({
                         }
                     />
                 )}
-                <EditChannelSheet
-                    slug={slug}
-                    channel={channel}
-                    trigger={
-                        <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            className="relative z-10"
-                            aria-label={`Edit ${channel.displayName}`}
-                            title="Edit channel"
-                        >
-                            <Pencil className="size-3.5" aria-hidden="true" />
-                        </Button>
-                    }
-                />
+                <Button
+                    asChild
+                    variant="ghost"
+                    size="icon-sm"
+                    className="relative z-10"
+                    aria-label={`Edit ${channel.displayName}`}
+                    title="Edit channel"
+                >
+                    <Link to={appRoutes.app(slug, `channels/${channel.channelId}?edit=1`)}>
+                        <Pencil className="size-3.5" aria-hidden="true" />
+                    </Link>
+                </Button>
                 <DeleteChannelDialog
                     slug={slug}
                     channel={channel}
@@ -247,7 +261,9 @@ function StatBox({ label, value }: { label: string; value: ReactNode }) {
     return (
         <div className="rounded-md border bg-muted/30 px-2.5 py-1.5">
             <div className="text-[11px] text-muted-foreground">{label}</div>
-            <div className="text-sm font-medium tabular-nums">{value}</div>
+            <Text as="div" variant="label" className="tabular-nums">
+                {value}
+            </Text>
         </div>
     );
 }

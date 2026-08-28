@@ -7,11 +7,13 @@ import { assistantMocks } from "./assistant-mocks";
 import { authMocks } from "./auth-mocks";
 import { bootstrapMocks } from "./bootstrap-mocks";
 import { channelsMocks } from "./channels-mocks";
+import { discordMocks } from "./discord-mocks";
 import { dnsMocks } from "./dns-mocks";
 import { embedLinksMocks } from "./embed-links-mocks";
 import { iframeHandlers } from "./iframe-mocks";
 import { settingsMocks } from "./settings-mocks";
 import { setupMocks } from "./setup-mocks";
+import { slackMocks } from "./slack-mocks";
 import { statsMocks } from "./stats-mocks";
 
 // Happy-path defaults for every server endpoint, keyed by service. Storybook merges
@@ -51,6 +53,8 @@ export const defaultApiMocks = {
     auth: [authMocks.status(), authMocks.login(), authMocks.logout()],
     bootstrap: [bootstrapMocks.status()],
     channels: [channelsMocks.list(), channelsMocks.create(), channelsMocks.update(), channelsMocks.delete()],
+    slack: [slackMocks.webhookInfo(), slackMocks.health()],
+    discord: [discordMocks.health()],
     dns: [dnsMocks.resolve()],
     embedLinks: [embedLinksMocks.list(), embedLinksMocks.mint(), embedLinksMocks.revoke()],
     iframe: iframeHandlers(),

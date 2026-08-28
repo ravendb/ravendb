@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/shadcn/ui/button";
+import { Text } from "@/components/typography";
 
 interface TablePaginationProps {
     pageIndex: number;
@@ -15,13 +16,13 @@ export function TablePagination({ pageIndex, pageSize, totalCount, onPageIndexCh
 
     return (
         <div className="flex items-center justify-between gap-3">
-            <span className="text-sm text-muted-foreground tabular-nums">
+            <Text variant="muted" as="span" className="tabular-nums">
                 {rangeStart}&ndash;{rangeEnd} of {totalCount}
-            </span>
+            </Text>
             <div className="flex items-center gap-3">
-                <span className="text-sm text-muted-foreground tabular-nums">
+                <Text variant="muted" as="span" className="tabular-nums">
                     Page {pageIndex + 1} of {pageCount}
-                </span>
+                </Text>
                 <div className="flex items-center gap-1">
                     <Button
                         variant="outline"

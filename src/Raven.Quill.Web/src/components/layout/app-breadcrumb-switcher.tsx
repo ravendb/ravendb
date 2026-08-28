@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Text } from "@/components/typography";
 import { useLocation, useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronsUpDown, Plus } from "lucide-react";
@@ -52,17 +53,17 @@ export function AppBreadcrumbSwitcher({ slug, appName }: AppBreadcrumbSwitcherPr
     return (
         <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
             <DropdownMenuTrigger
-                aria-label="Switch application"
+                aria-label="Switch app"
                 className={cn(
                     "flex min-w-0 items-center gap-1 rounded-md text-sm transition-colors outline-none hover:text-sidebar-foreground/70 focus-visible:ring-2 focus-visible:ring-ring",
                     appName ? "text-sidebar-foreground" : "text-sidebar-foreground/60",
                 )}
             >
-                <span className="truncate">{appName ?? "Select application"}</span>
+                <span className="truncate">{appName ?? "Select app"}</span>
                 <ChevronsUpDown className="size-3.5 shrink-0 text-sidebar-foreground/50" aria-hidden="true" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-64">
-                <DropdownMenuLabel>Switch application</DropdownMenuLabel>
+                <DropdownMenuLabel>Switch app</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {apps.length > 0 ? (
                     <DropdownMenuRadioGroup value={slug ?? ""}>
@@ -77,19 +78,19 @@ export function AppBreadcrumbSwitcher({ slug, appName }: AppBreadcrumbSwitcherPr
                         ))}
                     </DropdownMenuRadioGroup>
                 ) : appsQuery.isLoading ? (
-                    <div className="flex items-center gap-2 px-1.5 py-2 text-sm text-muted-foreground">
+                    <Text variant="muted" as="div" className="flex items-center gap-2 px-1.5 py-2">
                         <Spinner />
-                        Loading applications…
-                    </div>
+                        Loading apps…
+                    </Text>
                 ) : (
-                    <p className="px-1.5 py-2 text-sm text-muted-foreground">
-                        {appsQuery.isError ? "Couldn't load applications." : "No applications yet."}
-                    </p>
+                    <Text variant="muted" className="px-1.5 py-2">
+                        {appsQuery.isError ? "Couldn't load apps." : "No apps yet."}
+                    </Text>
                 )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={() => navigate(appRoutes.addApp())}>
                     <Plus aria-hidden="true" />
-                    New application
+                    New app
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>

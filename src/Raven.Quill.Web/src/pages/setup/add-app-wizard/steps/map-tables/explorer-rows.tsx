@@ -4,6 +4,7 @@
 
 import { ArrowRight, ChevronDown, ChevronRight, CircleAlert, EllipsisVertical, Layers, Link2 } from "lucide-react";
 import { useFormContext, useFormState, type FieldPath } from "react-hook-form";
+import { Text } from "@/components/typography";
 import { Button } from "@/components/shadcn/ui/button";
 import {
     DropdownMenu,
@@ -41,9 +42,9 @@ export function ExplorerRowItem({ row }: { row: ExplorerRow }) {
 
 export function SchemaRow({ label }: { label: string }) {
     return (
-        <div className="rounded-sm bg-muted px-1.5 py-1 text-center font-mono text-xs text-muted-foreground">
+        <Text variant="caption" as="div" className="rounded-sm bg-muted px-1.5 py-1 text-center font-mono">
             {label}
-        </div>
+        </Text>
     );
 }
 

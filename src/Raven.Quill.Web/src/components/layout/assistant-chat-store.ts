@@ -3,9 +3,10 @@ import { api } from "@/api/api";
 import {
     describeAssistantError,
     isAssistantConsentRequired,
+    isQuillSessionExpired,
     type AssistantRelevantLink,
 } from "@/api/custom-services/assistant-service";
-import { queryClient } from "@/lib/query-client";
+import { markSessionExpired, queryClient } from "@/lib/query-client";
 
 export type AssistantMessage = {
     id: string;
@@ -103,6 +104,15 @@ export const useAssistantChatStore = create<AssistantChatState>((set, get) => ({
             // an answer that never started would strand the "Thinking…" placeholder.
             if (abortController.signal.aborted) {
                 dropAnswerIfEmpty();
+                return;
+            }
+
+            if (isQuillSessionExpired(error)) {
+                updateAnswer({
+                    role: "error",
+                    text: "Your session expired before the assistant could answer. Please send the message again.",
+                });
+                markSessionExpired();
                 return;
             }
 

@@ -1,4 +1,4 @@
-﻿using System.Text;
+using Raven.Quill.Channels;
 using Raven.Quill.Hosting;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
@@ -13,63 +13,22 @@ internal sealed class TelegramStreamingReply(
     long chatId,
     TelegramOptions options,
     QuillLogger<TelegramChannelManager> logger,
-    CancellationToken ct)
+    CancellationToken ct) : ChannelStreamingReply(options.MessageLimit, options.EditDebounce)
 {
-    private readonly StringBuilder _buffer = new();
     private int _currentMessageId;
-    private int _flushedUpTo;
-    private string _lastPreviewText = "";
-    private DateTime _lastFlushAt;
 
-    private int PendingLength => _buffer.Length - _flushedUpTo;
+    protected override bool HasOpenMessage => _currentMessageId != 0;
 
-    public async ValueTask OnChunkAsync(string chunk)
+    protected override void CloseCurrentMessage() => _currentMessageId = 0;
+
+    protected override void LogFlushFailure(Exception error)
     {
-        _buffer.Append(chunk);
-
-        if (PendingLength <= options.MessageLimit &&
-            DateTime.UtcNow - _lastFlushAt < options.EditDebounce)
-            return;
-
-        try
-        {
-            await FlushPreviewAsync();
-        }
-        catch (Exception e) when (e is not OperationCanceledException)
-        {
-            if (logger.IsDebugEnabled)
-                logger.Debug($"Telegram streaming flush failed for chat {chatId}: {e.Message}");
-        }
-        finally
-        {
-            _lastFlushAt = DateTime.UtcNow;
-        }
+        if (logger.IsDebugEnabled)
+            logger.Debug($"Telegram streaming flush failed for chat {chatId}: {error.Message}");
     }
 
-    private async Task FlushPreviewAsync()
+    protected override async Task ShowPreviewAsync(string text)
     {
-        while (PendingLength > options.MessageLimit)
-        {
-            var pending = _buffer.ToString(_flushedUpTo, PendingLength);
-            var cut = TelegramMessageSplitter.CutPoint(pending, options.MessageLimit);
-
-            await ShowPreviewAsync(pending[..cut].TrimEnd());
-            _flushedUpTo += cut;
-            while (PendingLength > 0 && char.IsWhiteSpace(_buffer[_flushedUpTo]))
-                _flushedUpTo++;
-
-            _currentMessageId = 0;
-            _lastPreviewText = "";
-        }
-
-        await ShowPreviewAsync(_buffer.ToString(_flushedUpTo, PendingLength));
-    }
-
-    private async Task ShowPreviewAsync(string text)
-    {
-        if (text.Length == 0 || text == _lastPreviewText)
-            return;
-
         if (_currentMessageId == 0)
         {
             var message = await bot.SendMessage(chatId, text, cancellationToken: ct);
@@ -79,27 +38,9 @@ internal sealed class TelegramStreamingReply(
         {
             await EditPlainAsync(_currentMessageId, text);
         }
-
-        _lastPreviewText = text;
     }
 
-    public async Task FinalizeAsync()
-    {
-        var pending = _buffer.ToString(_flushedUpTo, PendingLength);
-        if (string.IsNullOrWhiteSpace(pending))
-            return;
-
-        var parts = TelegramMessageSplitter.Split(pending, options.MessageLimit);
-        for (var i = 0; i < parts.Count; i++)
-        {
-            if (i == 0 && _currentMessageId != 0)
-                await EditSafeAsync(_currentMessageId, parts[i]);
-            else
-                await SendSafeAsync(parts[i]);
-        }
-    }
-
-    private async Task SendSafeAsync(string text)
+    protected override async Task SendFinalAsync(string text)
     {
         try
         {
@@ -111,18 +52,18 @@ internal sealed class TelegramStreamingReply(
         }
     }
 
-    private async Task EditSafeAsync(int messageId, string text)
+    protected override async Task EditFinalAsync(string text)
     {
         try
         {
-            await bot.EditMessageText(chatId, messageId, text, parseMode: ParseMode.Markdown, cancellationToken: ct);
+            await bot.EditMessageText(chatId, _currentMessageId, text, parseMode: ParseMode.Markdown, cancellationToken: ct);
         }
         catch (ApiRequestException e) when (IsNotModified(e))
         {
         }
         catch (ApiRequestException)
         {
-            await EditPlainAsync(messageId, text);
+            await EditPlainAsync(_currentMessageId, text);
         }
     }
 

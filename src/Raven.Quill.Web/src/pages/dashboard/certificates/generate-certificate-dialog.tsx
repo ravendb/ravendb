@@ -23,6 +23,7 @@ import {
 import { GuardedDialog } from "@/components/form/unsaved-changes/guarded-overlays";
 import { useFormUnsavedChanges } from "@/components/form/unsaved-changes/use-unsaved-changes";
 import { Spinner } from "@/components/shadcn/ui/spinner";
+import { Text } from "@/components/typography";
 import {
     CLEARANCE_OPTIONS,
     DATABASE_ACCESS_OPTIONS,
@@ -95,7 +96,7 @@ function GenerateCertificateForm({ apps, onGenerated }: { apps: AppResponse[]; o
             name: "",
             password: "",
             clearance: "ValidUser",
-            permissions: [{ database: "", access: "Read" }],
+            permissions: [{ database: "", access: "ReadWrite" }],
         },
     });
     const permissionRows = useFieldArray({ control: form.control, name: "permissions" });
@@ -104,14 +105,12 @@ function GenerateCertificateForm({ apps, onGenerated }: { apps: AppResponse[]; o
 
     const generateMutation = useMutation({
         mutationFn: (values: GenerateCertificateFormData) =>
-            api.services.certificates.generate(
-                values.clearance === "ValidUser" ? toPermissionsRecord(values.permissions) : {},
-                {
-                    name: values.name,
-                    clearance: values.clearance,
-                    password: values.password || undefined,
-                },
-            ),
+            api.services.certificates.generate({
+                name: values.name,
+                clearance: values.clearance,
+                password: values.password || undefined,
+                permissions: values.clearance === "ValidUser" ? toPermissionsRecord(values.permissions) : {},
+            }),
         onSuccess: async (zip, values) => {
             unsavedChanges.markSaved();
             // Same filename the server sets in its Content-Disposition header.
@@ -141,7 +140,9 @@ function GenerateCertificateForm({ apps, onGenerated }: { apps: AppResponse[]; o
 
             {clearance === "ValidUser" && (
                 <div className="grid gap-3">
-                    <div className="text-sm font-medium">App access</div>
+                    <Text as="div" variant="label">
+                        App access
+                    </Text>
                     {permissionRows.fields.map((row, index) => (
                         <div key={row.id} className="flex items-start gap-2">
                             <FormSelect
@@ -174,7 +175,7 @@ function GenerateCertificateForm({ apps, onGenerated }: { apps: AppResponse[]; o
                         variant="outline"
                         size="sm"
                         className="w-fit"
-                        onClick={() => permissionRows.append({ database: "", access: "Read" })}
+                        onClick={() => permissionRows.append({ database: "", access: "ReadWrite" })}
                     >
                         <Plus className="size-3.5" aria-hidden="true" />
                         Add access

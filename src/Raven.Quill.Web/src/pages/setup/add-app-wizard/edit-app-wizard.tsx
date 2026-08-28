@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router";
 import type { AppCdcConfigurationResponse, ApplianceAppResponse } from "@/api/generated/server-api";
 import { api } from "@/api/api";
 import { ApiState } from "@/components/data/api-state";
+import { FormFieldsSkeleton } from "@/components/data/loading-skeletons";
 import { Alert, AlertDescription, AlertTitle } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
 import { appRoutes } from "@/lib/app-routes";
@@ -25,8 +26,9 @@ export function EditAppWizard() {
             <ApiState
                 isLoading={appQuery.isPending || configurationQuery.isPending}
                 isError={appQuery.isError || configurationQuery.isError}
-                errorTitle="Could not load the application configuration"
-                loadingLabel="Loading the application configuration..."
+                errorTitle="Could not load the app configuration"
+                loadingLabel="Loading the app configuration..."
+                skeleton={<FormFieldsSkeleton count={4} />}
                 onRetry={() => {
                     void appQuery.refetch();
                     void configurationQuery.refetch();
@@ -46,13 +48,13 @@ function EditAppWizardForm({ app, cdc }: { app: ApplianceAppResponse; cdc: AppCd
         return (
             <div className="p-8">
                 <Alert variant="destructive" className="max-w-2xl">
-                    <AlertTitle>This application&rsquo;s mapping cannot be edited here</AlertTitle>
+                    <AlertTitle>This app&rsquo;s mapping cannot be edited here</AlertTitle>
                     <AlertDescription>
                         {seed.error}
                         <div className="mt-3">
                             <Button asChild type="button" variant="outline" size="sm">
                                 <Link to={appRoutes.app(app.slug)} className="!no-underline">
-                                    Back to the application
+                                    Back to the app
                                 </Link>
                             </Button>
                         </div>

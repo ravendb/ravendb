@@ -6,6 +6,7 @@ import { ExpandableList } from "@/components/data/expandable-list";
 import { FormErrorIcon } from "@/components/form/form-error-icon";
 import { FormInput } from "@/components/form/form-input";
 import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
+import { Text } from "@/components/typography";
 import { Button } from "@/components/shadcn/ui/button";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import type { EmbeddedTablePath, RootTablePath } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-types";
@@ -44,19 +45,19 @@ export function FieldMappingEditor({ path }: FieldMappingEditorProps) {
     return (
         <div className="grid gap-2">
             <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-1.5 text-sm font-medium">
+                <Text variant="label" as="div" className="flex items-center gap-1.5">
                     Field mapping
                     <FormErrorIcon control={control} paths={[columnsPath as FieldPath<AppFormData>]} />
-                </div>
+                </Text>
                 <Button type="button" variant="ghost" size="sm" onClick={addFieldMapping}>
                     <Plus className="size-4" aria-hidden="true" />
                     Add field mapping
                 </Button>
             </div>
             {columnsFieldArray.fields.length === 0 ? (
-                <div className="rounded-md border border-dashed px-3 py-2 text-center text-sm text-muted-foreground">
+                <Text variant="muted" as="div" className="rounded-md border border-dashed px-3 py-2 text-center">
                     No field mappings defined.
-                </div>
+                </Text>
             ) : (
                 <div className="grid gap-2">
                     <div className={`${ROW_GRID_CLASS} text-xs text-muted-foreground`}>

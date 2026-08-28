@@ -16,7 +16,7 @@ export function buildUsageStatCards(usage: UsageResponse | undefined, isPending:
 
     return [
         toCard("Conversations", (point) => point.conversations),
-        toCard("Messages", (point) => point.messages),
+        toCard("Prompts", (point) => point.messages),
         toCard("Tokens", (point) => point.tokens),
         { ...toCard("WRU", (point) => point.writes), labelInfo: WRU_DESCRIPTION },
     ];

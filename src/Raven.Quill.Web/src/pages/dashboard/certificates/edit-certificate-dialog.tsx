@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { Text } from "@/components/typography";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -140,11 +141,11 @@ function EditCertificateForm({
 
             {clearance === "ValidUser" && (
                 <div className="grid gap-3">
-                    <div className="text-sm font-medium">App access</div>
+                    <Text as="div" variant="label">
+                        App access
+                    </Text>
                     {permissionRows.fields.length === 0 && (
-                        <p className="text-sm text-muted-foreground">
-                            No access granted — this certificate cannot reach any app.
-                        </p>
+                        <Text variant="muted">No access granted — this certificate cannot reach any app.</Text>
                     )}
                     {permissionRows.fields.map((row, index) => (
                         <div key={row.id} className="flex items-start gap-2">
@@ -177,7 +178,7 @@ function EditCertificateForm({
                         variant="outline"
                         size="sm"
                         className="w-fit"
-                        onClick={() => permissionRows.append({ database: "", access: "Read" })}
+                        onClick={() => permissionRows.append({ database: "", access: "ReadWrite" })}
                     >
                         <Plus className="size-3.5" aria-hidden="true" />
                         Add access

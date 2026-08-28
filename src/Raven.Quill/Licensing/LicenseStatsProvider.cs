@@ -1,7 +1,9 @@
 using System.Text.Json;
+using Microsoft.Extensions.Options;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Quill.AiHelper;
 using Raven.Quill.Contracts;
+using Raven.Quill.Hosting;
 using Raven.Quill.Metrics;
 
 namespace Raven.Quill.Licensing;
@@ -9,10 +11,14 @@ namespace Raven.Quill.Licensing;
 internal sealed class LicenseStatsProvider : ILicenseStatsProvider
 {
     private readonly IAiHelperClient _ravendb;
+    private readonly string _configDatabase;
 
-    public LicenseStatsProvider(IAiHelperClient ravendb)
+    public LicenseStatsProvider(IAiHelperClient ravendb, IOptions<ApplianceOptions> options)
     {
         _ravendb = ravendb;
+        // The config database name is configurable (RAVEN_QUILL_CONFIG_DB), so the appliance's own
+        // usage row can only be recognized by comparing against the configured value - never a literal.
+        _configDatabase = options.Value.ConfigDatabase;
     }
 
     private static readonly LicensePlan[] Plans =
@@ -50,7 +56,8 @@ internal sealed class LicenseStatsProvider : ILicenseStatsProvider
                 g.Key.ApplicationName,
                 g.Min(x => x.From),
                 g.Max(x => x.To),
-                g.Sum(x => x.Usage)))
+                g.Sum(x => x.Usage),
+                IsSystem: string.Equals(g.Key.ApplicationName, _configDatabase, StringComparison.OrdinalIgnoreCase)))
             .ToList();
 
         return new QuillUsageResponse(perApplicationUsages, usage.ByPeriod);

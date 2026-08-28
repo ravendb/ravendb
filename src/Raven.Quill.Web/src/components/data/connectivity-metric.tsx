@@ -1,4 +1,5 @@
 import type { ConnectivityStatus } from "@/api/generated/server-api";
+import { Text } from "@/components/typography";
 import { cn } from "@/lib/utils";
 
 // Healthy means the licensing API answered OK with no transport error.
@@ -10,8 +11,10 @@ export function ConnectivityMetric({ connectivity }: { connectivity: Connectivit
     return (
         <div className="space-y-2">
             <div className="space-y-1">
-                <div className="text-xs text-muted-foreground">Connectivity</div>
-                <div className="flex items-center gap-2 text-sm font-medium">
+                <Text variant="caption" as="div">
+                    Connectivity
+                </Text>
+                <Text variant="label" as="div" className="flex items-center gap-2">
                     <span
                         className={cn(
                             "size-2 rounded-full",
@@ -20,10 +23,12 @@ export function ConnectivityMetric({ connectivity }: { connectivity: Connectivit
                         aria-hidden="true"
                     />
                     {connectivity.statusCode}
-                </div>
+                </Text>
             </div>
             {connectivity.exception && (
-                <p className="text-sm break-words text-muted-foreground">{connectivity.exception}</p>
+                <Text variant="muted" className="break-words">
+                    {connectivity.exception}
+                </Text>
             )}
         </div>
     );

@@ -668,7 +668,8 @@ namespace Raven.Server.Config.Categories
 
         [Description("The maximum amount of memory for the HNSW vector search node cache per index. " +
                      "This cache pre-loads upper-level graph nodes to accelerate vector queries. " +
-                     "Changing this value does not require re-indexing.")]
+                     "Changing this value does not require re-indexing. " +
+                     "The cache is incompatible with encrypted databases; there it is ignored and vector search reads from disk.")]
         [DefaultValue(10)]
         [SizeUnit(SizeUnit.Megabytes)]
         [IndexUpdateType(IndexUpdateType.Refresh)]

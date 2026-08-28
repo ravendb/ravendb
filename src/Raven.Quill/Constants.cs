@@ -59,6 +59,16 @@ public static class Constants
         public const string TelegramApiUrl = "RAVEN_QUILL_TELEGRAM_API_URL";
 
         /// <summary>
+        /// Base URL of the Slack Web API. Validated as an absolute http(s) URL.
+        /// </summary>
+        public const string SlackApiUrl = "RAVEN_QUILL_SLACK_API_URL";
+
+        /// <summary>
+        /// Base URL of the Discord API. Validated as an absolute http(s) URL.
+        /// </summary>
+        public const string DiscordApiUrl = "RAVEN_QUILL_DISCORD_API_URL";
+
+        /// <summary>
         /// License key the appliance activates itself with at startup. Unset, it stays in
         /// NeedsActivation.
         /// </summary>

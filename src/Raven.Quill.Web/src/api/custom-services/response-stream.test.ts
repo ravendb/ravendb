@@ -47,8 +47,8 @@ describe("streamSseData", () => {
         await expect(collect(streamSseData(client, "/assistant/chat", {}))).resolves.toEqual(['{"a":1}']);
     });
 
-    it("yields a last frame that arrived without its trailing newline", async () => {
-        const client = clientStreaming('data: {"a":1}');
+    it("discards a trailing line the connection cut off before its newline", async () => {
+        const client = clientStreaming('data: {"a":1}\n\n', 'data: {"b":');
 
         await expect(collect(streamSseData(client, "/assistant/chat", {}))).resolves.toEqual(['{"a":1}']);
     });

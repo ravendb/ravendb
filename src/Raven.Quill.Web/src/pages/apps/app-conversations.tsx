@@ -3,6 +3,7 @@ import { useParams } from "react-router";
 import { getDefaultDatePeriod } from "@/lib/date-period";
 import { useAppStartDate } from "@/lib/use-start-date";
 import { ConversationStatsCards, ConversationsSection } from "@/pages/apps/conversations-section";
+import { Heading, Text } from "@/components/typography";
 
 export function AppConversations() {
     const { slug = "" } = useParams();
@@ -13,8 +14,10 @@ export function AppConversations() {
         <div className="space-y-8">
             <div className="space-y-6">
                 <div className="space-y-1">
-                    <h1 className="text-2xl font-semibold tracking-tight">Conversations</h1>
-                    <p className="text-sm text-muted-foreground">Live and historical chats across all channels.</p>
+                    <Heading as="h1" variant="page">
+                        Conversations
+                    </Heading>
+                    <Text variant="muted">Live and historical chats across all channels.</Text>
                 </div>
                 <ConversationStatsCards
                     slug={slug}

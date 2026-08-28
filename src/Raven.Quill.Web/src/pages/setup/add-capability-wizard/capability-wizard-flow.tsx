@@ -4,7 +4,8 @@ import { ChooseCapabilityStep } from "@/pages/setup/add-capability-wizard/steps/
 import { ConnectProviderStep } from "@/pages/setup/add-capability-wizard/steps/connect/connect-provider-step";
 import { CreateAgentStep } from "@/pages/setup/add-capability-wizard/steps/create/create-agent-step";
 import { useCreateAgentStep } from "@/pages/setup/add-capability-wizard/steps/create/use-create-agent-step";
-import { useIsSuggestingAgents } from "@/pages/setup/add-capability-wizard/steps/create/use-suggested-agents";
+import { useCreateAgentNextBlock } from "@/pages/setup/add-capability-wizard/steps/create/use-suggested-agents";
+import { useAiConsent } from "@/components/ai-consent/use-ai-consent";
 import { ReviewAgentStep } from "@/pages/setup/add-capability-wizard/steps/review/review-agent-step";
 import { ReviewTestAgentButton } from "@/pages/setup/add-capability-wizard/steps/review/test-agent-sheet";
 import { useProvisionAgentStep } from "@/pages/setup/add-capability-wizard/steps/review/use-provision-agent-step";
@@ -18,7 +19,8 @@ export const CAPABILITY_FLOW: AgentStepId[] = ["capability", "connection", "crea
 export const useCapabilitySteps = (): WizardSteps<AgentStepId, AgentFormData> => {
     const createAgentBeforeNext = useCreateAgentStep();
     const provisionAgentBeforeNext = useProvisionAgentStep();
-    const isSuggestingAgents = useIsSuggestingAgents();
+    const createAgentNextBlock = useCreateAgentNextBlock();
+    const { isBlocked: isAiBlocked } = useAiConsent();
 
     return {
         capability: {
@@ -50,12 +52,14 @@ export const useCapabilitySteps = (): WizardSteps<AgentStepId, AgentFormData> =>
         },
         create: {
             title: "Create your Agent with AI",
-            description:
-                "We analyzed your collections and propose a few agents. Pick one, describe your own for AI to generate, or set up manually.",
+            description: isAiBlocked
+                ? "Enable AI to have your collections analyzed and your agent drafted for you, or set one up manually."
+                : "We analyzed your collections and propose a few agents. Pick one, describe your own for AI to generate, or set up manually.",
             bodyComponent: CreateAgentStep,
             validate: "create",
             beforeNext: createAgentBeforeNext,
-            isNextDisabled: isSuggestingAgents,
+            isNextDisabled: createAgentNextBlock.isNextDisabled,
+            nextDisabledReason: createAgentNextBlock.nextDisabledReason,
         },
         review: {
             title: "Review & edit your agent",

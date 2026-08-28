@@ -1,4 +1,6 @@
 import * as React from "react";
+import { Slot } from "radix-ui";
+import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
 
@@ -29,14 +31,31 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
     );
 }
 
-function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
-    return (
-        <div
-            data-slot="card-title"
-            className={cn("text-base leading-snug font-medium group-data-[size=sm]/card:text-sm", className)}
-            {...props}
-        />
-    );
+const cardTitleVariants = cva("leading-snug", {
+    variants: {
+        variant: {
+            default: "text-base font-semibold tracking-tight group-data-[size=sm]/card:text-sm",
+            // Lighter title for list-item / row cards where the name is data, not a section heading.
+            item: "text-base font-medium group-data-[size=sm]/card:text-sm",
+        },
+    },
+    defaultVariants: {
+        variant: "default",
+    },
+});
+
+// `asChild` lets a card that is a genuine page section render its title as a heading
+// (e.g. <CardTitle asChild><h2>…</h2></CardTitle>) so it joins the document outline,
+// while keeping the card-title styling. Non-section cards stay a plain div.
+function CardTitle({
+    className,
+    variant = "default",
+    asChild = false,
+    ...props
+}: React.ComponentProps<"div"> & VariantProps<typeof cardTitleVariants> & { asChild?: boolean }) {
+    const Comp = asChild ? Slot.Root : "div";
+
+    return <Comp data-slot="card-title" className={cn(cardTitleVariants({ variant }), className)} {...props} />;
 }
 
 function CardDescription({ className, ...props }: React.ComponentProps<"div">) {

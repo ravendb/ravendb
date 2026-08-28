@@ -205,7 +205,10 @@ public static class EmbedEndpoints
         try
         {
             var result = await router.RunAsync(
-                new AgentRequest(app.Database, config.Identifier, gate.ConversationId, body.Prompt, channel.Id!, link.Parameters),
+                new AgentRequest(app.Database, config.Identifier, gate.ConversationId, body.Prompt, channel.Id!,
+                    link.Parameters.ToDictionary(
+                        parameter => parameter.Key,
+                        parameter => AgentParameterValue.FromStoredText(parameter.Value))),
                 async chunk =>
                 {
                     streamedAny = true;
@@ -234,7 +237,13 @@ public static class EmbedEndpoints
 
             try
             {
-                await NdjsonStream.WriteLineAsync(ctx, new { type = "error", message = "Chat failed. See server logs for details." });
+                await NdjsonStream.WriteLineAsync(ctx, new
+                {
+                    type = "error",
+                    message = e is InvalidParameterValueException invalid
+                        ? invalid.PublicMessage
+                        : "Chat failed. See server logs for details.",
+                });
             }
             catch
             {
@@ -414,6 +423,8 @@ public static class EmbedEndpoints
             if (result is null)
                 return [];
             return MetricsReadService.MapTranscript(result.Messages, replyField)
+                // the visitor sees this thread - the agent's system prompt never belongs in it
+                .Where(m => m.Role != AiMessageRole.System)
                 .Select(m => new HistoryTurn(m.Role, m.Content ?? ""))
                 .ToArray();
         }

@@ -17,6 +17,8 @@ import { createAiConnectionStringsQueries } from "@/api/queries/ai-connection-st
 import { createAiModelsQueries } from "@/api/queries/ai-models-queries";
 import { createStatsQueries } from "@/api/queries/stats-queries";
 import { createSettingsQueries } from "@/api/queries/settings-queries";
+import { createSlackQueries } from "@/api/queries/slack-queries";
+import { createDiscordQueries } from "@/api/queries/discord-queries";
 
 export type ApiServices = ServerApi & {
     agentTest: ReturnType<typeof createAgentTestService>;
@@ -31,6 +33,8 @@ export type ApiQueries = {
     agents: ReturnType<typeof createAgentsQueries>;
     assistant: ReturnType<typeof createAssistantQueries>;
     channels: ReturnType<typeof createChannelsQueries>;
+    slack: ReturnType<typeof createSlackQueries>;
+    discord: ReturnType<typeof createDiscordQueries>;
     webWidget: ReturnType<typeof createWebWidgetQueries>;
     embedLinks: ReturnType<typeof createEmbedLinksQueries>;
     setup: ReturnType<typeof createSetupQueries>;
@@ -67,6 +71,8 @@ export function createApi(options?: ApiClientOptions): Api {
             agents: createAgentsQueries(services.agents),
             assistant: createAssistantQueries(services.assistant),
             channels: createChannelsQueries(services.channels),
+            slack: createSlackQueries(services.slack),
+            discord: createDiscordQueries(services.discord),
             webWidget: createWebWidgetQueries(services.iframe),
             embedLinks: createEmbedLinksQueries(services.embedLinks),
             setup: createSetupQueries(services.setup),

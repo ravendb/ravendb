@@ -1,6 +1,7 @@
 import type { CertificateItem, SecurityClearance } from "@/api/custom-services/certificates-service";
 import type { AppResponse, DatabaseAccess } from "@/api/generated/server-api";
 import type { FormSelectOption } from "@/components/form/form-select";
+import { GRANTABLE_DATABASE_ACCESS } from "@/pages/dashboard/certificates/certificate-permissions";
 
 export const DATABASE_ACCESS_LABELS: Record<DatabaseAccess, string> = {
     Admin: "Admin",
@@ -8,11 +9,9 @@ export const DATABASE_ACCESS_LABELS: Record<DatabaseAccess, string> = {
     Read: "Read",
 };
 
-export const DATABASE_ACCESS_OPTIONS: readonly FormSelectOption<DatabaseAccess>[] = [
-    { value: "Admin", label: DATABASE_ACCESS_LABELS.Admin },
-    { value: "ReadWrite", label: DATABASE_ACCESS_LABELS.ReadWrite },
-    { value: "Read", label: DATABASE_ACCESS_LABELS.Read },
-];
+export const DATABASE_ACCESS_OPTIONS: readonly FormSelectOption<DatabaseAccess>[] = GRANTABLE_DATABASE_ACCESS.map(
+    (access) => ({ value: access, label: DATABASE_ACCESS_LABELS[access] }),
+);
 
 export const SECURITY_CLEARANCE_LABELS: Record<SecurityClearance, string> = {
     UnauthenticatedClients: "Unauthenticated",

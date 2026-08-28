@@ -26,7 +26,7 @@ internal sealed class ConversationMetricsIndex : AbstractIndexCreationTask
                       Agent = c.Agent,
                       Bucket = new DateTime(c.CreatedAt.Year, c.CreatedAt.Month, c.CreatedAt.Day, c.CreatedAt.Hour, 0, 0, DateTimeKind.Utc),
                       Conversations = 1,
-                      Messages = c.Messages.Count(m => m.role == ""user""),
+                      Messages = c.Messages.Count(m => m.role == ""user"" && (m.content == null || m.content.ToString().StartsWith(""AI Agent Parameters:"") == false)),
                       Tokens = c.TotalUsage.TotalTokens
                   }"
             },

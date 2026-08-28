@@ -23,7 +23,12 @@ export const sampleAgents: AgentSummaryResponse[] = [
         name: "Sales assistant",
         model: "claude-opus-4-8",
         disabled: false,
-        parameters: ["customerId"],
+        parameters: [
+            { name: "customerId", description: "The customer to scope queries to.", type: "String" },
+            { name: "orderLimit", description: "How many orders to consider.", type: "Number" },
+            { name: "includeDrafts", description: "Whether draft orders count.", type: "Boolean" },
+            { name: "regions", description: "Regions to search.", type: "ArrayOfString" },
+        ],
         lastInvokedAt: "2026-06-25T09:00:00Z",
         conversations: 1800,
         messages: 5200,

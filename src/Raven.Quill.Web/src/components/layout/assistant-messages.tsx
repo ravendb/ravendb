@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { Text } from "@/components/typography";
 import { ExternalLink, Sparkles } from "lucide-react";
 import { Streamdown } from "streamdown";
 import { useAssistantChatStore, type AssistantMessage } from "@/components/layout/assistant-chat-store";
@@ -35,9 +36,17 @@ function AssistantMessageItem({ message }: { message: AssistantMessage }) {
     );
 }
 
+function isWebUrl(url: string | undefined) {
+    try {
+        const { protocol } = new URL(url ?? "");
+        return protocol === "http:" || protocol === "https:";
+    } catch {
+        return false;
+    }
+}
+
 function AssistantRelevantLinks({ links }: { links: AssistantMessage["relevantLinks"] }) {
-    // The links come straight from the AI service, so a blank url is possible and unlinkable.
-    const linkedSources = links?.filter((link) => link.Url?.trim());
+    const linkedSources = links?.filter((link) => isWebUrl(link.Url));
 
     if (!linkedSources || linkedSources.length === 0) {
         return null;
@@ -45,7 +54,9 @@ function AssistantRelevantLinks({ links }: { links: AssistantMessage["relevantLi
 
     return (
         <div className="mt-2 border-t pt-2">
-            <p className="text-xs font-medium text-muted-foreground">Related documentation</p>
+            <Text variant="caption" className="font-medium">
+                Related documentation
+            </Text>
             <ul className="mt-1 flex flex-col gap-1">
                 {linkedSources.map((link) => (
                     <li key={link.Url}>
@@ -97,8 +108,8 @@ export function AssistantMessages() {
                         <Sparkles className="size-5 text-primary" aria-hidden="true" />
                     </div>
                     <div>
-                        <p className="text-sm font-medium">How can I help?</p>
-                        <p className="text-sm text-muted-foreground">Ask about your apps, conversations, or setup.</p>
+                        <Text variant="label">How can I help?</Text>
+                        <Text variant="muted">Ask about your apps, conversations, or setup.</Text>
                     </div>
                 </div>
             ) : (

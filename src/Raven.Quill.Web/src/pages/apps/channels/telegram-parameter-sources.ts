@@ -1,6 +1,17 @@
-import type { TelegramParameterSource } from "@/api/generated/server-api";
+import type { ChannelParameterSource } from "@/api/generated/server-api";
 
-export const TELEGRAM_PARAMETER_SOURCES: { value: TelegramParameterSource; label: string; hint?: string }[] = [
+export const TELEGRAM_SOURCE_VALUES = [
+    "Constant",
+    "UserId",
+    "Username",
+    "PhoneNumber",
+] as const satisfies readonly ChannelParameterSource[];
+
+export const TELEGRAM_PARAMETER_SOURCES: {
+    value: (typeof TELEGRAM_SOURCE_VALUES)[number];
+    label: string;
+    hint?: string;
+}[] = [
     { value: "Constant", label: "Constant value" },
     { value: "UserId", label: "Telegram user id" },
     {
@@ -15,10 +26,6 @@ export const TELEGRAM_PARAMETER_SOURCES: { value: TelegramParameterSource; label
     },
 ];
 
-export function telegramParameterSourceLabel(source: TelegramParameterSource | undefined) {
-    return TELEGRAM_PARAMETER_SOURCES.find((candidate) => candidate.value === source)?.label ?? (source || "—");
-}
-
-export function telegramParameterSourceHint(source: TelegramParameterSource | undefined) {
+export function telegramParameterSourceHint(source: ChannelParameterSource | undefined) {
     return TELEGRAM_PARAMETER_SOURCES.find((candidate) => candidate.value === source)?.hint;
 }

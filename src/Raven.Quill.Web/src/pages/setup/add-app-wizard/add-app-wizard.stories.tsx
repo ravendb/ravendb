@@ -3,7 +3,9 @@ import { expect, userEvent, waitFor, within } from "storybook/test";
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FormProvider, useForm } from "react-hook-form";
-import type { DiscoverResponse } from "@/api/generated/server-api";
+import type { AiHelperStatus, DiscoverResponse } from "@/api/generated/server-api";
+import { assistantMocks } from "@/mocks/assistant-mocks";
+import { AI_OUT_OF_TOKENS_MESSAGE } from "@/components/ai-consent/use-ai-consent";
 import { FormWizard } from "@/components/form/wizard/form-wizard";
 import { RANGE_PREVIEW_ROW_CLASSNAME } from "@/components/table/row-range-selection";
 import { preventEnterKeySubmission } from "@/lib/form-utils";
@@ -81,6 +83,10 @@ function buildSeed(discovery: DiscoverResponse): AppFormData {
 // with the seeded result, keeping the rest of the setup mocks intact.
 function discoverHandlers(discovery: DiscoverResponse) {
     return { setup: [setupMocks.discover(discovery), ...defaultApiMocks.setup] };
+}
+
+function consentHandlers(status: AiHelperStatus) {
+    return { assistant: [assistantMocks.consent({ status }), ...defaultApiMocks.assistant] };
 }
 
 // Renders the real wizard jumped to a single step. The body components read the discovery
@@ -221,7 +227,7 @@ export const ConnectSourceConnectionString: Story = {
     },
 };
 
-// Import is a header action next to the step title, and it no longer waits for an application name:
+// Import is a header action next to the step title, and it no longer waits for an app name:
 // the wizard endpoints get a draft slug until the operator provides a real one.
 export const ConnectSourceImport: Story = {
     render: () => (
@@ -238,7 +244,7 @@ export const ConnectSourceImport: Story = {
         const heading = canvas.getByRole("heading", { name: /connect to your source database/i });
         const importButton = canvas.getByRole("button", { name: /import configuration/i });
 
-        expect(canvas.getByLabelText(/application name/i)).toHaveValue("");
+        expect(canvas.getByLabelText(/app name/i)).toHaveValue("");
         expect(importButton).toBeEnabled();
 
         // The heading sits in the title block, whose row also carries the header action.
@@ -319,7 +325,7 @@ export const VerifySchemaWithoutSelection: Story = {
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
 
-        await userEvent.click(canvas.getByRole("button", { name: /next/i }));
+        await userEvent.click(canvas.getByRole("button", { name: /^next$/i }));
         await waitFor(() => expect(canvas.getByText("At least one table is required")).toBeInTheDocument());
 
         await userEvent.click(canvas.getAllByRole("checkbox", { name: "Select row" })[0]);
@@ -445,9 +451,9 @@ export const VerifySchemaCdcVerificationFailed: Story = {
         const canvas = within(canvasElement);
         // The failed run reports an error and a warning, so the alert shows the two-entry summary
         // and keeps the individual blockers in its collapsible details.
-        const findAlert = () => canvas.queryByText(/cdc verification failed for the selected tables/i);
+        const findAlert = () => canvas.queryByText(/data source verification failed for the selected tables/i);
 
-        await userEvent.click(canvas.getByRole("button", { name: /next/i }));
+        await userEvent.click(canvas.getByRole("button", { name: /^next$/i }));
         await waitFor(() => expect(findAlert()).toBeInTheDocument());
         expect(canvas.getByRole("heading", { name: /verify your schema/i })).toBeInTheDocument();
 
@@ -541,6 +547,44 @@ export const MapSchemaIntentPromptFromManual: Story = {
         await userEvent.click(canvas.getByRole("button", { name: /add an intent prompt/i }));
         await waitFor(() => expect(canvas.getByRole("radio", { name: /ai suggest/i })).toBeChecked());
         expect(canvas.getByRole("textbox", { name: /intent prompt/i })).toBeInTheDocument();
+    },
+};
+
+// No consent on file yet: the AI card stays on screen disabled, and "Next" waits until it is accepted.
+export const MapSchemaConsentRequired: Story = {
+    parameters: { msw: { handlers: consentHandlers("ConsentRequired") } },
+    render: () => <AppWizardAtStep initialStep="map" seedOverride={withoutIntentPrompt} />,
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        await waitFor(() => expect(canvas.getByRole("radio", { name: /ai suggest/i })).toBeDisabled());
+        expect(canvas.getByRole("button", { name: /^next$/i })).toBeDisabled();
+    },
+};
+
+// A license that rules AI out leaves nothing to accept, so only Manual can carry the wizard on.
+export const MapSchemaAiUnavailable: Story = {
+    parameters: { msw: { handlers: consentHandlers("InvalidCredentials") } },
+    render: () => <AppWizardAtStep initialStep="map" seedOverride={withoutIntentPrompt} />,
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        await waitFor(() => expect(canvas.getByRole("radio", { name: /ai suggest/i })).toBeDisabled());
+        expect(canvas.queryByRole("button", { name: /review the terms of use/i })).not.toBeInTheDocument();
+        expect(canvas.getByRole("button", { name: /^next$/i })).toBeDisabled();
+    },
+};
+
+// An exhausted quota also leaves nothing to accept, but unlike a license answer it offers a retry.
+export const MapSchemaAiOutOfTokens: Story = {
+    parameters: { msw: { handlers: consentHandlers("OutOfTokens") } },
+    render: () => <AppWizardAtStep initialStep="map" seedOverride={withoutIntentPrompt} />,
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        await waitFor(() => expect(canvas.getByRole("alert")).toHaveTextContent(AI_OUT_OF_TOKENS_MESSAGE));
+        expect(canvas.getByRole("radio", { name: /ai suggest/i })).toBeDisabled();
+        expect(canvas.getByRole("button", { name: /try again/i })).toBeEnabled();
     },
 };
 

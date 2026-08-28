@@ -7,6 +7,7 @@ import { EnabledStatus } from "@/components/data/status-indicator";
 import { Button } from "@/components/shadcn/ui/button";
 import { Skeleton } from "@/components/shadcn/ui/skeleton";
 import { TableCell, TableRow } from "@/components/shadcn/ui/table";
+import { SectionTable, SectionTableSkeleton } from "@/components/table/section-table";
 import { appRoutes } from "@/lib/app-routes";
 import { CHANNEL_TYPE_LABELS } from "@/lib/channel-type-labels";
 import { formatDateTime } from "@/lib/utils";
@@ -14,12 +15,22 @@ import { AddChannelMenu } from "@/pages/apps/channels/add-channel-menu";
 import type { FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
 import { GenerateEmbedLinkDialog } from "@/pages/apps/channels/generate-embed-link-dialog";
 import { DeleteChannelDialog } from "@/pages/apps/channels/delete-channel-dialog";
-import { EditChannelSheet } from "@/pages/apps/channels/edit-channel-sheet";
-import { SectionCard, SectionTable } from "@/pages/apps/section-card";
+import { SectionCard } from "@/pages/apps/section-card";
+import { Text } from "@/components/typography";
 
 // When `agent` is set the section is scoped to that single agent: only its channels are listed,
 // the agent name column is dropped, and new channels are routed to it (e.g. the capability wizard).
-export function ChannelsSection({ slug, agent: fixedAgent }: { slug: string; agent?: FixedAgent }) {
+// `nested` renders the section under an existing heading (e.g. a wizard step title), so the
+// section title steps down to a sub-section instead of competing as a top-level section.
+export function ChannelsSection({
+    slug,
+    agent: fixedAgent,
+    nested = false,
+}: {
+    slug: string;
+    agent?: FixedAgent;
+    nested?: boolean;
+}) {
     const agentsQuery = useQuery(api.queries.agents.list(slug));
     const channelsQuery = useQuery(api.queries.channels.list(slug));
     // Active-link counts are supplementary — kept out of the ApiState gate so a
@@ -44,9 +55,20 @@ export function ChannelsSection({ slug, agent: fixedAgent }: { slug: string; age
         ? (channelsQuery.data ?? []).filter((channel) => channel.agentId === fixedAgent.agentId)
         : channelsQuery.data;
 
+    const headers = [
+        "Channel name",
+        ...(fixedAgent ? [] : ["Agent name"]),
+        "Status",
+        "Type",
+        "Active links",
+        "Created",
+        "",
+    ];
+
     return (
         <SectionCard
             title={fixedAgent ? `Channels for “${fixedAgent.name}”` : "Channels"}
+            level={nested ? "subsection" : "section"}
             action={<AddChannelMenu slug={slug} agent={fixedAgent} />}
         >
             <ApiState
@@ -55,21 +77,10 @@ export function ChannelsSection({ slug, agent: fixedAgent }: { slug: string; age
                 errorTitle="Could not load channels"
                 onRetry={onRetry}
                 loadingLabel="Loading channels..."
+                skeleton={<SectionTableSkeleton headers={headers} />}
             >
                 {channels && (
-                    <SectionTable
-                        headers={[
-                            "Channel name",
-                            ...(fixedAgent ? [] : ["Agent name"]),
-                            "Status",
-                            "Type",
-                            "Active links",
-                            "Created",
-                            "",
-                        ]}
-                        isEmpty={channels.length === 0}
-                        emptyMessage="No channels yet."
-                    >
+                    <SectionTable headers={headers} isEmpty={channels.length === 0} emptyMessage="No channels yet.">
                         {channels.map((channel) => {
                             const agent = agentsQuery.data?.find((x) => x.agentId === channel.agentId);
                             return (
@@ -83,9 +94,19 @@ export function ChannelsSection({ slug, agent: fixedAgent }: { slug: string; age
                                             {channel.displayName}
                                         </Link>
                                         {channel.telegram?.botUsername && (
-                                            <div className="text-xs font-normal text-muted-foreground">
+                                            <Text as="div" variant="caption" className="font-normal">
                                                 @{channel.telegram.botUsername}
-                                            </div>
+                                            </Text>
+                                        )}
+                                        {channel.slack?.teamName && (
+                                            <Text as="div" variant="caption" className="font-normal">
+                                                {channel.slack.teamName}
+                                            </Text>
+                                        )}
+                                        {channel.discord?.botUsername && (
+                                            <Text as="div" variant="caption" className="font-normal">
+                                                {channel.discord.botUsername}
+                                            </Text>
                                         )}
                                     </TableCell>
                                     {!fixedAgent && <TableCell className="font-medium">{agent?.name}</TableCell>}
@@ -121,7 +142,7 @@ export function ChannelsSection({ slug, agent: fixedAgent }: { slug: string; age
                                                     slug={slug}
                                                     channelId={channel.channelId}
                                                     displayName={channel.displayName}
-                                                    parameterNames={agent?.parameters ?? []}
+                                                    parameters={agent?.parameters ?? []}
                                                     trigger={
                                                         <Button
                                                             variant="ghost"
@@ -135,20 +156,17 @@ export function ChannelsSection({ slug, agent: fixedAgent }: { slug: string; age
                                                     }
                                                 />
                                             )}
-                                            <EditChannelSheet
-                                                slug={slug}
-                                                channel={channel}
-                                                trigger={
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon-sm"
-                                                        aria-label={`Edit ${channel.displayName}`}
-                                                        title="Edit channel"
-                                                    >
-                                                        <Pencil className="size-3.5" aria-hidden="true" />
-                                                    </Button>
-                                                }
-                                            />
+                                            <Button
+                                                asChild
+                                                variant="ghost"
+                                                size="icon-sm"
+                                                aria-label={`Edit ${channel.displayName}`}
+                                                title="Edit channel"
+                                            >
+                                                <Link to={appRoutes.app(slug, `channels/${channel.channelId}?edit=1`)}>
+                                                    <Pencil className="size-3.5" aria-hidden="true" />
+                                                </Link>
+                                            </Button>
                                             <DeleteChannelDialog
                                                 slug={slug}
                                                 channel={channel}

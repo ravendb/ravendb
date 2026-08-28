@@ -46,6 +46,13 @@ public sealed class RavenReadinessService(
 
         try
         {
+            if (string.IsNullOrEmpty(opts.RavenDbS6Service) == false && bootstrap.StartedWithSetupPackage == false)
+            {
+                if (logger.IsInfoEnabled)
+                    logger.Info("Started without the setup package; waiting for activation to restart the host before probing RavenDB.");
+                await Task.Delay(Timeout.Infinite, stoppingToken);
+            }
+
             // grace period: RavenDB needs ~10-15s; earlier probes just spam errors
             if (opts.ReadinessInitialDelay > TimeSpan.Zero)
             {
@@ -99,7 +106,7 @@ public sealed class RavenReadinessService(
                             $"retrying in {opts.ReadinessInitialDelay}.");
                     ready.MarkFailed(ex.Message);
 
-                    if (File.Exists(GetSetupSettingsPath(opts)))
+                    if (File.Exists(opts.SetupNodeSettingsPath))
                         bootstrap.MarkRestarting("ravendb is not reachable: " + ex.Message);
                     else
                         bootstrap.MarkFailed("ravendb is not reachable: " + ex.Message);
@@ -122,6 +129,4 @@ public sealed class RavenReadinessService(
         await base.StopAsync(cancellationToken);
     }
 
-    private static string GetSetupSettingsPath(ApplianceOptions options) =>
-        Path.Combine(options.SetupPackagePath, "A", "settings.json");
 }

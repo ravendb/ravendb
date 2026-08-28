@@ -8,7 +8,9 @@ public sealed class TelegramOptions
 
     public TimeSpan EditDebounce { get; set; } = TimeSpan.FromSeconds(1);
 
-    public int MessageLimit { get; set; } = TelegramMessageSplitter.TelegramApiMessageLimit;
+    internal const int ApiMessageLimit = 4096;
+
+    public int MessageLimit { get; set; } = ApiMessageLimit;
 
     public TimeSpan ApplyChangesInterval { get; set; } = TimeSpan.FromSeconds(30);
 

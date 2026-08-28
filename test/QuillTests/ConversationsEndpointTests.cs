@@ -160,11 +160,36 @@ public class ConversationsEndpointTests(ITestOutputHelper output) : QuillTestBas
         var detail = await app.GetConversationAsync("chats/real");
         var transcript = detail.Transcript;
 
-        Assert.Equal(3, transcript.Length);
-        Assert.Equal(AiMessageRole.User, transcript[0].Role);
-        Assert.Equal("hello", transcript[0].Content);
-        Assert.Equal(AiMessageRole.Assistant, transcript[1].Role);
-        Assert.Equal("hi there", transcript[1].Content);
+        Assert.Equal(4, transcript.Length);
+        Assert.Equal(AiMessageRole.System, transcript[0].Role);
+        Assert.Equal("You are a helpful assistant.", transcript[0].Content);
+        Assert.Equal(AiMessageRole.User, transcript[1].Role);
+        Assert.Equal("hello", transcript[1].Content);
         Assert.Equal(AiMessageRole.Assistant, transcript[2].Role);
+        Assert.Equal("hi there", transcript[2].Content);
+        Assert.Equal(AiMessageRole.Assistant, transcript[3].Role);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Conversation_detail_returns_the_full_transcript_of_a_long_conversation()
+    {
+        await using var app = await NewAppAsync();
+
+        var messages = new List<(string Role, object? Content)> { ("system", "You are a helpful assistant.") };
+        for (var i = 0; i < 15; i++)
+        {
+            messages.Add(("user", $"question {i}"));
+            messages.Add(("assistant", $"answer {i}"));
+        }
+        await SeedConversationAsync(app.Store, app.Slug, "chats/long", "order-support", DateTime.UtcNow.AddMinutes(-5),
+            richMessages: messages);
+
+        var detail = await app.GetConversationAsync("chats/long");
+
+        Assert.Equal(31, detail.Transcript.Length);
+        Assert.Equal(AiMessageRole.System, detail.Transcript[0].Role);
+        Assert.Equal("You are a helpful assistant.", detail.Transcript[0].Content);
+        Assert.Equal("question 0", detail.Transcript[1].Content);
+        Assert.Equal("answer 14", detail.Transcript[^1].Content);
     }
 }

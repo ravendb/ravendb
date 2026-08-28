@@ -5,6 +5,7 @@ import { api } from "@/api/api";
 import type { CertificateItem, SecurityClearance } from "@/api/custom-services/certificates-service";
 import type { AppResponse } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
+import { CardListSkeleton } from "@/components/data/loading-skeletons";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { CertificateCard } from "@/pages/dashboard/certificates/certificate-card";
@@ -16,6 +17,7 @@ import {
 import { CertificatesToolbar, type CertificateSort } from "@/pages/dashboard/certificates/certificates-toolbar";
 import { GenerateCertificateDialog } from "@/pages/dashboard/certificates/generate-certificate-dialog";
 import { originForSubdomain } from "@/lib/subdomain-origin";
+import { Heading, Text } from "@/components/typography";
 
 interface CertificateFilters {
     search: string;
@@ -46,7 +48,9 @@ export function DashboardCertificates() {
         <div className="space-y-6">
             <div className="flex items-center justify-between gap-3">
                 <div>
-                    <h1 className="text-2xl font-semibold tracking-tight">Certificates</h1>
+                    <Heading as="h1" variant="page">
+                        Certificates
+                    </Heading>
                 </div>
                 <div className="flex items-center gap-2">
                     <Button variant="outline" size="sm" asChild>
@@ -93,13 +97,14 @@ export function DashboardCertificates() {
                 errorTitle="Could not load certificates"
                 onRetry={() => certificatesQuery.refetch()}
                 loadingLabel="Loading certificates…"
+                skeleton={<CardListSkeleton />}
             >
                 {visibleCertificates.length === 0 ? (
-                    <div className="rounded-lg border p-8 text-center text-sm text-muted-foreground">
+                    <Text as="div" variant="muted" className="rounded-lg border p-8 text-center">
                         {certificates.length === 0
                             ? "No certificates yet."
                             : "No certificates match the current filters."}
-                    </div>
+                    </Text>
                 ) : (
                     <div className="space-y-8">
                         {serverCertificates.length > 0 && (
@@ -127,7 +132,7 @@ function CertificateSection({
     return (
         <section className="space-y-3">
             <div className="flex items-center gap-2">
-                <h2 className="text-sm font-semibold">{title}</h2>
+                <Heading variant="label">{title}</Heading>
                 <Badge variant="secondary">{certificates.length}</Badge>
             </div>
             <div className="space-y-3">

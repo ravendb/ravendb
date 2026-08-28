@@ -31,7 +31,9 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
         Assert.Equal("IFrame", item.GetProperty("type").GetString());
         Assert.Equal("demo-agent", item.GetProperty("agentId").GetString());
         Assert.True(item.GetProperty("enabled").GetBoolean());
-        Assert.False(item.TryGetProperty("allowedOrigins", out _));
+        var origins = item.GetProperty("allowedOrigins");
+        Assert.Equal(1, origins.GetArrayLength());
+        Assert.Equal("http://localhost", origins[0].GetString());
         Assert.False(item.TryGetProperty("bindingId", out _));
     }
 
@@ -344,7 +346,7 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
 
     private static async Task<string> MintLinkAsync(QuillApp app, string channelId)
     {
-        var minted = await app.MintEmbedLinkAsync(new MintEmbedLinkRequest(channelId, new Dictionary<string, string>(), 3600, 50));
+        var minted = await app.MintEmbedLinkAsync(new MintEmbedLinkRequest(channelId, [], 3600, 50));
         return minted.Token;
     }
 
