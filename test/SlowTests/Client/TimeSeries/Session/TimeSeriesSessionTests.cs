@@ -892,12 +892,16 @@ namespace SlowTests.Client.TimeSeries.Session
 
         internal class CanGetTimeSeriesRangeCases : IEnumerable<object[]>
         {
+            // The Kind must be explicit. xUnit v3 4.0 round-trips theory arguments through
+            // DateTime.ToUniversalTime().ToString("O"), which reads an Unspecified value as local
+            // time and hands the test back a UTC value shifted by the machine's offset. Utc is a
+            // no-op through that conversion; the ticks are the same either way.
             private readonly List<object[]> _data = new List<object[]>
             {
                 new object[] {null, null, 4},
-                new object[] {new DateTime(2020, 1, 1), null, 3},
-                new object[] {null, new DateTime(2020, 2, 1), 3},
-                new object[] {new DateTime(2020, 1, 1), new DateTime(2020, 2, 1), 2},
+                new object[] {new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc), null, 3},
+                new object[] {null, new DateTime(2020, 2, 1, 0, 0, 0, DateTimeKind.Utc), 3},
+                new object[] {new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2020, 2, 1, 0, 0, 0, DateTimeKind.Utc), 2},
             };
 
             public IEnumerator<object[]> GetEnumerator() => _data.GetEnumerator();
