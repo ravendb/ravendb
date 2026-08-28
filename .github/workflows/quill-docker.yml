@@ -4,8 +4,8 @@ permissions:
   contents: read
 
 on:
-  # Long-lived branches only, matching the other test workflows. Topic branches reach
-  # this through pull_request, so they need no push trigger of their own.
+  # Packaging paths only - the code the image bundles is checked by compile.yml,
+  # studioConventions.yml and StudioTests.yml.
   push:
     branches:
       - feature/*
@@ -13,8 +13,6 @@ on:
       - 'v[4-9]+.[0-9]+'
     paths:
       - 'docker/quill/**'
-      - 'src/Raven.Quill/**'
-      - 'src/Raven.Quill.Web/**'
       - '.github/workflows/quill-docker.yml'
   pull_request:
     branches:
@@ -23,13 +21,17 @@ on:
       - 'v[4-9]+.[0-9]+'
     paths:
       - 'docker/quill/**'
-      - 'src/Raven.Quill/**'
-      - 'src/Raven.Quill.Web/**'
       - '.github/workflows/quill-docker.yml'
 
-# A superseded run leaves two full multi-arch image builds occupying runners for
-# nothing. Cancel them on a PR force-push; keep every long-lived-branch build so
-# each commit there still has a result.
+  # Nightly full matrix: schedule ignores path filters, so it also covers the server and
+  # studio stages the paths above miss. Dormant until this file reaches the default
+  # branch (v7.2) - GitHub registers cron and workflow_dispatch only from there.
+  schedule:
+    - cron: '15 3 * * *'
+
+  workflow_dispatch:
+
+# Cancel superseded PR runs; long-lived-branch builds each keep a result.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}

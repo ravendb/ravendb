@@ -37,11 +37,8 @@ jobs:
         run: |
           dotnet build
         
-      # Raven.Quill (C#) is in the solution, so the root `dotnet build` above already covers
-      # it. Raven.Quill.Web is an .esproj with no Build.0 entry, so nothing else here compiles
-      # the frontend, and nothing else checks that the committed generated API client still
-      # matches the C# surface. Gated on paths so these steps stay inert on branches that
-      # carry no Quill code.
+      # Raven.Quill.Web is an .esproj with no Build.0 entry, so the root dotnet build skips
+      # it. Keep above the NuGet cache clear: generate:api shells out to dotnet build.
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: quill
         with:
@@ -67,12 +64,9 @@ jobs:
         run: pnpm install --frozen-lockfile
         working-directory: src/Raven.Quill.Web
 
-      # server-api.ts is generated from Raven.Quill's OpenAPI document but committed, and the
-      # 146 files importing it typecheck happily against a stale copy - so drift shows up only
-      # at runtime. Asserted before `pnpm build` rather than after: build re-runs generate:api
-      # itself, and a stale client that also breaks tsc would bury this diagnostic under type
-      # errors. The second generate:api is near-free (incremental dotnet, write skipped when
-      # the content is identical).
+      # server-api.ts is generated but committed, and typechecks fine when stale. Asserted
+      # before `pnpm build`, which re-runs generate:api itself: a stale client that also
+      # breaks tsc would otherwise bury this diagnostic in type errors.
       - name: Regenerate Quill.Web API client
         if: steps.quill.outputs.changed == 'true'
         run: pnpm generate:api
