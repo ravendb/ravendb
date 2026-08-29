@@ -32,6 +32,21 @@ namespace Raven.Client.Exceptions
         }
     }
 
+    public sealed class AiLengthException(string message) : AiException(message)
+    {
+        public string FinishReason { get; set; }
+
+        public static void Throw(string finishReason, string responseContent, string requestId)
+        {
+            throw new AiLengthException(
+                $"The provider stopped generation because the output-token limit was reached (finish_reason: '{finishReason}'); the response is incomplete. Response content: {responseContent}")
+            {
+                FinishReason = finishReason,
+                RequestId = requestId
+            };
+        }
+    }
+
     public class UnsuccessfulAiRequestException : AiException
     {
         public HttpStatusCode StatusCode { get; internal set; }

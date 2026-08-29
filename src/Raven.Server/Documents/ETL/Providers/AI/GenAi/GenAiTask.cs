@@ -450,6 +450,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 case TooManyTokensException:
                 // the model refused to answer about this item, and is unlikely to change its mind    
                 case RefusedToAnswerException:
+                case AiLengthException:
                     // in this case, we _intentionally_ want to update the hash so we will _not_ try to update this known bad
                     // item again in the future.
                     item.UpdateHash = true;

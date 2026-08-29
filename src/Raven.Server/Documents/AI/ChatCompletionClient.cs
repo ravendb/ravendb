@@ -193,6 +193,8 @@ public class ChatCompletionClient : IDisposable
         object message = null;
         StringBuilder stringContent = structuredOutput ? null : new StringBuilder();
 
+        string finishReason = null;
+
         // need two contexts here because we run two parsing operations at once, first for each of the SSE events
         // and then for the internal buffer that there are providing.
         using var ___ = contextPool.AllocateOperationContext(out JsonOperationContext parsingContext);
@@ -233,6 +235,11 @@ public class ChatCompletionClient : IDisposable
             }
 
             var choice = (BlittableJsonReaderObject)choices[0];
+
+            var currentFinishReason = _settings.GetFinishReason(choice);
+            if (string.IsNullOrEmpty(currentFinishReason) == false)
+                finishReason = currentFinishReason;
+
             if (choice.TryGet(Constants.ResponseFields.Delta, out BlittableJsonReaderObject delta))
             {
                 if (TryGetDeltaContent(delta, out LazyStringValue content))
@@ -275,6 +282,8 @@ public class ChatCompletionClient : IDisposable
                 }
             }
         }
+
+        ThrowIfLength(finishReason, message, GetRequestId(response.Headers));
 
         // Some OpenAI-like APIs return an empty array instead of omitting the field when no tool calls are made
         if (toolCallState.TryGetToolCallsForMessage(out var allToolCalls))
@@ -390,6 +399,8 @@ public class ChatCompletionClient : IDisposable
         var responseParser = new AiResponseParser(this, response, responseContent);
         responseParser.EnsureSuccessfulResponse();
         responseParser.ParseMessage(usage);
+        responseParser.ThrowIfLength();
+
         if (responseParser.TryParseToolCalls(out var tools))
         {
             return new AiResponse(AiResponseType.Tool) { ToolCalls = tools, Message = responseParser.Message };
@@ -398,6 +409,12 @@ public class ChatCompletionClient : IDisposable
         var result = responseParser.GetContent(context, schema != null);
 
         return new AiResponse(AiResponseType.Result) { Result = result, Message = responseParser.Message };
+    }
+
+    private static void ThrowIfLength(string finishReason, object responseContent, string requestId)
+    {
+        if (string.Equals(finishReason, Constants.ResponseFields.FinishReasonLength, StringComparison.OrdinalIgnoreCase))
+            AiLengthException.Throw(finishReason, responseContent?.ToString(), requestId);
     }
 
     private struct AiResponseParser(ChatCompletionClient client, HttpResponseMessage response, BlittableJsonReaderObject responseContent)
@@ -433,6 +450,12 @@ public class ChatCompletionClient : IDisposable
             usage.UpdateFrom(usageJson);
         }
 
+        public void ThrowIfLength()
+        {
+            var finishReason = client.GetFinishReason(_choice0);
+            ChatCompletionClient.ThrowIfLength(finishReason, responseContent, GetRequestId(response.Headers));
+        }
+
         public bool TryParseToolCalls(out List<AiToolCall> toolCalls)
         {
             if (Message.TryGet(Constants.ResponseFields.ToolCalls, out BlittableJsonReaderArray calls) is false || calls.Length == 0)
@@ -457,14 +480,13 @@ public class ChatCompletionClient : IDisposable
 
         public object GetContent(JsonOperationContext context, bool structuredOutput)
         {
-            // Try content, then reasoning_content, then reasoning (for LM Studio and other OpenAI-like APIs that still use the older mechanism)
             if (TryGetDeltaContent(Message, out var content) == false)
             {
-                _choice0.TryGet(Constants.ResponseFields.FinishReason, out string finishReason);
                 var refusal = client.GetRefusal(_choice0, Message);
                 if (string.IsNullOrEmpty(refusal))
                     throw UnexpectedResponseException.Create(message: "No response content", response, responseContent);
 
+                var finishReason = client.GetFinishReason(_choice0);
                 RefusedToAnswerException.Throw(refusal, responseContent.ToString(), finishReason, GetRequestId(response.Headers));
             }
 
@@ -791,6 +813,8 @@ public class ChatCompletionClient : IDisposable
 
     private string GetRefusal(BlittableJsonReaderObject choice0, BlittableJsonReaderObject message) => _settings.GetRefusal(choice0, message);
 
+    private string GetFinishReason(BlittableJsonReaderObject choice0) => _settings.GetFinishReason(choice0);
+
     internal static string GetRequestId(HttpResponseHeaders headers)
     {
         if (headers.TryGetValues(Constants.Headers.XRequestId, out IEnumerable<string> values))
@@ -1035,6 +1059,7 @@ public class ChatCompletionClient : IDisposable
             public const string ReasoningContent = "reasoning_content";
             public const string Reasoning = "reasoning";
             public const string FinishReason = "finish_reason";
+            public const string FinishReasonLength = "length";
             public const string ToolCalls = "tool_calls";
             public const string Refusal = "refusal";
             public const string Usage = "usage";
