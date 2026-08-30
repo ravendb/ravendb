@@ -33,20 +33,18 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
             _includes.ApplyIfNotNull(include => queryBuilder.AppendFormat("&include={0}", include));
 
             bool hasItems = false;
-            foreach (var id in _ids)
+            foreach (var (id, existsInSession) in _session.GetDocumentsRequiredToLoad(_ids, _includes))
             {
-                if (_session.IsLoadedOrDeleted(id))
+                if (existsInSession)
                 {
                     _alreadyInSession.Add(id);
+                    continue;
                 }
-                else
-                {
-                    hasItems = true;
-                    queryBuilder.AppendFormat("&id={0}", Uri.EscapeDataString(id));
-                }
+                
+                hasItems = true;
+                queryBuilder.AppendFormat("&id={0}", Uri.EscapeDataString(id));
             }
             
-
             if (hasItems == false)
             {
                 // no need to hit the server

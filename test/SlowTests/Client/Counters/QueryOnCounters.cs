@@ -3420,6 +3420,13 @@ from 'Users' as user select output(user)", query.ToString());
                         Company = "companies/1-A"
                     }, "orders/1-A");
                     session.CountersFor("orders/1-A").Increment("Downloads", 100);
+                    
+                    session.Store(new Order
+                    {
+                        Company = "companies/2-A"
+                    }, "orders/2-A");
+                    session.CountersFor("orders/2-A").Increment("Downloads", 50);
+                    
                     session.SaveChanges();
                 }
 
@@ -3456,6 +3463,13 @@ from 'Users' as user select output(user)", query.ToString());
                     session.Load<Order>("orders/1-A", i => i.IncludeCounter("Downloads"));
                     counterValue = session.CountersFor("orders/1-A").Get("Downloads");
                     Assert.Equal(700, counterValue);
+                    
+                    session.Load<Order>(["orders/1-A", "orders/2-A"], i => i.IncludeCounter("Downloads"));
+                    counterValue = session.CountersFor("orders/1-A").Get("Downloads");
+                    Assert.Equal(700, counterValue);
+                    
+                    var counterValue2 = session.CountersFor("orders/2-A").Get("Downloads");
+                    Assert.Equal(50, counterValue2);
                 }
             }
         }
