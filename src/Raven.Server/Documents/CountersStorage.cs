@@ -19,6 +19,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Voron;
+using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
@@ -210,27 +211,20 @@ namespace Raven.Server.Documents
             }
         }
 
-        public long GetNumberOfCounterGroupsToProcess(DocumentsOperationContext context, string collection, long afterEtag, out long totalCount,
-            Stopwatch overallDuration)
+        public NumberOfEntriesAfterResult GetNumberOfCounterGroupsToProcess(DocumentsOperationContext context, string collection, long afterEtag, Stopwatch overallDuration, bool exact)
         {
             var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)
-            {
-                totalCount = 0;
-                return 0;
-            }
+                return new NumberOfEntriesAfterResult();
 
             var table = GetCountersTable(context.Transaction.InnerTransaction, collectionName);
 
             if (table == null)
-            {
-                totalCount = 0;
-                return 0;
-            }
+                return new NumberOfEntriesAfterResult();
 
             var indexDef = CountersSchema.FixedSizeIndexes[CollectionCountersEtagsSlice];
 
-            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out totalCount, overallDuration);
+            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, overallDuration, exact);
         }
 
         public static CounterGroupDetail TableValueToCounterGroupDetail(JsonOperationContext context, ref TableValueReader tvr)
@@ -1947,25 +1941,28 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<CounterTombstoneDetailWithCollection> GetCounterWithCollectionTombstonesFrom(DocumentsOperationContext context, string collectionName, long etag)
+        public NumberOfEntriesAfterResult GetNumberOfTombstonesToProcess(DocumentsOperationContext context, long afterEtag, Stopwatch overallDuration, bool exact)
         {
             var table = new Table(CounterTombstonesSchema, context.Transaction.InnerTransaction);
+            var indexDef = CounterTombstonesSchema.FixedSizeIndexes[AllCounterTombstonesEtagSlice];
+            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, overallDuration, exact);
+        }
 
-            foreach (var result in table.SeekForwardFrom(CounterTombstonesSchema.FixedSizeIndexes[AllCounterTombstonesEtagSlice], etag, 0))
-            {
-                var tombstoneDetail = TableValueToCounterTombstoneDetail(context, ref result.Reader);
-                var documentOrTombstone = _documentsStorage.GetDocumentOrTombstone(context, tombstoneDetail.DocumentId);
+        public NumberOfEntriesAfterResult GetNumberOfTombstonesToProcess(DocumentsOperationContext context, string collectionName, long afterEtag, Stopwatch overallDuration, bool exact)
+        {
+            var collection = _documentsStorage.GetCollection(collectionName, throwIfDoesNotExist: false);
+            if (collection == null)
+                return new NumberOfEntriesAfterResult();
 
-                if (documentOrTombstone.Missing)
-                    continue;
+            var counterTombstonesTableName = collection.GetTableName(CollectionTableType.CounterTombstones);
+            var table = context.Transaction.InnerTransaction.OpenTable(CounterTombstonesSchema, counterTombstonesTableName);
 
-                string collection = documentOrTombstone.Document != null ?
-                    _documentDatabase.DocumentsStorage.ExtractCollectionName(context, documentOrTombstone.Document.Data).Name :
-                    documentOrTombstone.Tombstone.Collection;
+            if (table == null)
+                return new NumberOfEntriesAfterResult();
 
-                if (collection.Equals(collectionName))
-                    yield return new CounterTombstoneDetailWithCollection(tombstoneDetail, collection);
-            }
+            var indexDef = CounterTombstonesSchema.FixedSizeIndexes[CollectionCounterTombstonesEtagsSlice];
+
+            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, overallDuration, exact);
         }
 
         public long PurgeCountersAndCounterTombstones(DocumentsOperationContext context, string collection, long upto, long numberOfEntriesToDelete)
@@ -2182,7 +2179,7 @@ namespace Raven.Server.Documents
             return context.AllocateStringValue(null, p, sizeOfDocId);
         }
 
-        public static void ExtractDocIdAndCounterNameFromCounterTombstoneKey(JsonOperationContext context, ref TableValueReader tvr, out LazyStringValue docId, out LazyStringValue counterName)
+        private static void ExtractDocIdAndCounterNameFromCounterTombstoneKey(JsonOperationContext context, ref TableValueReader tvr, out LazyStringValue docId, out LazyStringValue counterName)
         {
             var p = tvr.Read((int)CounterTombstonesTable.CounterTombstoneKey, out var size);
             int sizeOfDocId = 0;
@@ -2198,6 +2195,21 @@ namespace Raven.Server.Documents
 
             Debug.Assert(docId != null);
             Debug.Assert(counterName != null);
+        }
+
+        private static void ExtractDocIdFromCounterTombstoneKey(JsonOperationContext context, ref TableValueReader tvr, out LazyStringValue docId)
+        {
+            var p = tvr.Read((int)CounterTombstonesTable.CounterTombstoneKey, out var size);
+            int sizeOfDocId = 0;
+
+            for (; sizeOfDocId < size; sizeOfDocId++)
+            {
+                if (p[sizeOfDocId] == SpecialChars.RecordSeparator)
+                    break;
+            }
+
+            docId = context.AllocateStringValue(null, p, sizeOfDocId);
+            Debug.Assert(docId != null);
         }
 
         public string UpdateDocumentCounters(DocumentsOperationContext context, Document document, string docId,

@@ -1993,7 +1993,7 @@ namespace Raven.Server.Documents.Replication
             return false;
         }
 
-        internal ReplicationProcessProgress GetOutgoingReplicationProgress(DocumentsOperationContext documentsContext, DatabaseOutgoingReplicationHandler handler)
+        internal ReplicationProcessProgress GetOutgoingReplicationProgress(DocumentsOperationContext documentsContext, DatabaseOutgoingReplicationHandler handler, bool exact)
         {
             var lastProcessedEtag = handler.LastSentDocumentEtag;
 
@@ -2010,32 +2010,46 @@ namespace Raven.Server.Documents.Replication
 
             var collections = Database.DocumentsStorage.GetCollections(documentsContext).Select(x => x.Name);
 
-            long total;
             var overallDuration = Stopwatch.StartNew();
 
             foreach (var collection in collections)
             {
-                progress.NumberOfDocumentsToProcess += Database.DocumentsStorage.GetNumberOfDocumentsToProcess(documentsContext, collection, lastProcessedEtag, out total, overallDuration);
-                progress.TotalNumberOfDocuments += total;
+                var entriesAfter = Database.DocumentsStorage.GetNumberOfDocumentsToProcess(documentsContext, collection, lastProcessedEtag, overallDuration, exact);
+                progress.NumberOfDocumentsToProcess += entriesAfter.Count;
+                progress.TotalNumberOfDocuments += entriesAfter.Total;
+                progress.Estimated |= entriesAfter.Estimated;
 
-                progress.NumberOfDocumentTombstonesToProcess += Database.DocumentsStorage.GetNumberOfTombstonesToProcess(documentsContext, collection, lastProcessedEtag, out total, overallDuration);
-                progress.TotalNumberOfDocumentTombstones += total;
+                entriesAfter = Database.DocumentsStorage.GetNumberOfTombstonesToProcess(documentsContext, collection, lastProcessedEtag, overallDuration, exact);
+                progress.NumberOfDocumentTombstonesToProcess += entriesAfter.Count;
+                progress.TotalNumberOfDocumentTombstones += entriesAfter.Total;
+                progress.Estimated |= entriesAfter.Estimated;
 
-                progress.NumberOfRevisionsToProcess += Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionsToProcess(documentsContext, collection, lastProcessedEtag, out total, overallDuration);
-                progress.TotalNumberOfRevisions += total;
+                entriesAfter = Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionsToProcess(documentsContext, collection, lastProcessedEtag, overallDuration, exact);
+                progress.NumberOfRevisionsToProcess += entriesAfter.Count;
+                progress.TotalNumberOfRevisions += entriesAfter.Total;
+                progress.Estimated |= entriesAfter.Estimated;
 
-                progress.NumberOfCounterGroupsToProcess += Database.DocumentsStorage.CountersStorage.GetNumberOfCounterGroupsToProcess(documentsContext, collection, lastProcessedEtag, out total, overallDuration);
-                progress.TotalNumberOfCounterGroups += total;
+                entriesAfter = Database.DocumentsStorage.CountersStorage.GetNumberOfCounterGroupsToProcess(documentsContext, collection, lastProcessedEtag, overallDuration, exact);
+                progress.NumberOfCounterGroupsToProcess += entriesAfter.Count;
+                progress.TotalNumberOfCounterGroups += entriesAfter.Total;
+                progress.Estimated |= entriesAfter.Estimated;
 
-                progress.NumberOfTimeSeriesSegmentsToProcess += Database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegmentsToProcess(documentsContext, collection, lastProcessedEtag, out total, overallDuration);
-                progress.TotalNumberOfTimeSeriesSegments += total;
+                entriesAfter = Database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegmentsToProcess(documentsContext, collection, lastProcessedEtag, overallDuration, exact);
+                progress.NumberOfTimeSeriesSegmentsToProcess += entriesAfter.Count;
+                progress.TotalNumberOfTimeSeriesSegments += entriesAfter.Total;
+                progress.Estimated |= entriesAfter.Estimated;
 
-                progress.NumberOfTimeSeriesDeletedRangesToProcess += Database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRangesToProcess(documentsContext, collection, lastProcessedEtag, out total, overallDuration);
-                progress.TotalNumberOfTimeSeriesDeletedRanges += total;
+                entriesAfter = Database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRangesToProcess(documentsContext, collection, lastProcessedEtag, overallDuration, exact);
+                progress.NumberOfTimeSeriesDeletedRangesToProcess += entriesAfter.Count;
+                progress.TotalNumberOfTimeSeriesDeletedRanges += entriesAfter.Total;
+                progress.Estimated |= entriesAfter.Estimated;
             }
 
-            progress.NumberOfAttachmentsToProcess = Database.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachmentsToProcess(documentsContext, lastProcessedEtag, out total, overallDuration);
-            progress.TotalNumberOfAttachments = total;
+            var result = Database.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachmentsToProcess(documentsContext, lastProcessedEtag, overallDuration, exact);
+            progress.NumberOfAttachmentsToProcess = result.Count;
+            progress.TotalNumberOfAttachments = result.Total;
+            progress.Estimated |= result.Estimated;
+
             progress.TotalNumberOfRevisionTombstones = Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionTombstones(documentsContext);
             progress.TotalNumberOfAttachmentTombstones = Database.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachmentTombstones(documentsContext);
 

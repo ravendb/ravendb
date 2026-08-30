@@ -17,6 +17,8 @@ interface ActionStatsLoaded {
 interface ActionProgressLoaded {
     location: databaseLocationSpecifier;
     progress: IndexProgress[];
+    // when set, only the listed indexes are updated (the response covers just a subset of the indexes)
+    scope?: string[];
     type: "ProgressLoaded";
 }
 
@@ -24,6 +26,13 @@ interface ActionProgressLoadError {
     location: databaseLocationSpecifier;
     error: JQueryXHR;
     type: "ProgressLoadError";
+}
+
+interface ActionSingleIndexProgressLoaded {
+    location: databaseLocationSpecifier;
+    indexName: string;
+    progress: IndexProgress | undefined;
+    type: "SingleIndexProgressLoaded";
 }
 
 interface ActionSetIndexPriority {
@@ -93,6 +102,7 @@ type IndexesStatsReducerAction =
     | ActionStatsLoaded
     | ActionProgressLoadError
     | ActionProgressLoaded
+    | ActionSingleIndexProgressLoaded
     | ActionSetIndexPriority
     | ActionSetIndexLockMode
     | ActionPauseIndexing
@@ -178,6 +188,7 @@ function mapProgress(progress: IndexProgress): IndexProgressInfo {
         const stats = progress.Collections[name];
         return {
             name,
+            estimated: stats.Estimated,
             documents: {
                 processedPerSecond: 0,
                 total: stats.TotalNumberOfItems,
@@ -222,6 +233,10 @@ export const indexesStatsReducer: Reducer<IndexesStatsState, IndexesStatsReducer
 
             return produce(state, (draft) => {
                 draft.indexes.forEach((index) => {
+                    if (action.scope && !action.scope.includes(index.name)) {
+                        return;
+                    }
+
                     const itemToUpdate = index.nodesInfo.find((x) =>
                         databaseLocationComparator(x.location, incomingLocation)
                     );
@@ -241,6 +256,36 @@ export const indexesStatsReducer: Reducer<IndexesStatsState, IndexesStatsReducer
                         }
                     }
                 });
+            });
+        }
+        case "SingleIndexProgressLoaded": {
+            return produce(state, (draft) => {
+                const index = draft.indexes.find((x) => x.name === action.indexName);
+                if (!index) {
+                    return;
+                }
+
+                const itemToUpdate = index.nodesInfo.find((x) =>
+                    databaseLocationComparator(x.location, action.location)
+                );
+                if (!itemToUpdate) {
+                    return;
+                }
+
+                if (action.progress) {
+                    itemToUpdate.progress = mapProgress(action.progress);
+                    if (itemToUpdate.details) {
+                        itemToUpdate.details.stale = action.progress.IsStale;
+                    }
+                } else {
+                    // the index is no longer stale on that location
+                    if (itemToUpdate.progress) {
+                        markProgressAsCompleted(itemToUpdate.progress);
+                    }
+                    if (itemToUpdate.details) {
+                        itemToUpdate.details.stale = false;
+                    }
+                }
             });
         }
         case "ProgressLoadError": {

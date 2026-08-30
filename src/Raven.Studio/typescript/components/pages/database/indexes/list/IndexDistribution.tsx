@@ -26,6 +26,8 @@ interface IndexDistributionProps {
     globalIndexingStatus: IndexRunningStatus;
     showStaleReason: (location: databaseLocationSpecifier) => void;
     openFaulty: (location: databaseLocationSpecifier) => void;
+    exactProgress: boolean;
+    toggleExactProgress: (location: databaseLocationSpecifier) => Promise<void>;
 }
 
 interface ItemWithTooltipProps {
@@ -33,6 +35,8 @@ interface ItemWithTooltipProps {
     globalIndexingStatus: IndexRunningStatus;
     showStaleReason: (location: databaseLocationSpecifier) => void;
     openFaulty: (location: databaseLocationSpecifier) => void;
+    exactProgress: boolean;
+    toggleExactProgress: (location: databaseLocationSpecifier) => Promise<void>;
     nodeInfo: IndexNodeInfo;
     sharded: boolean;
 }
@@ -42,7 +46,16 @@ function getFormattedTime(date: Date): string {
 }
 
 function ItemWithTooltip(props: ItemWithTooltipProps) {
-    const { nodeInfo, sharded, openFaulty, showStaleReason, globalIndexingStatus, index } = props;
+    const {
+        nodeInfo,
+        sharded,
+        openFaulty,
+        showStaleReason,
+        exactProgress,
+        toggleExactProgress,
+        globalIndexingStatus,
+        index,
+    } = props;
     const entriesCount = nodeInfo.details?.faulty ? "n/a" : (nodeInfo.details?.entriesCount ?? "");
 
     const shard = (
@@ -94,6 +107,8 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
                     index={index}
                     globalIndexingStatus={globalIndexingStatus}
                     showStaleReason={showStaleReason}
+                    exactProgress={exactProgress}
+                    toggleExactProgress={toggleExactProgress}
                 />
             )}
         </div>
@@ -101,7 +116,7 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
 }
 
 export function IndexDistribution(props: IndexDistributionProps) {
-    const { index, globalIndexingStatus, showStaleReason, openFaulty } = props;
+    const { index, globalIndexingStatus, showStaleReason, openFaulty, exactProgress, toggleExactProgress } = props;
 
     const totalErrors = index.nodesInfo
         .filter((x) => x.status === "success")
@@ -130,6 +145,8 @@ export function IndexDistribution(props: IndexDistributionProps) {
                             globalIndexingStatus={globalIndexingStatus}
                             showStaleReason={showStaleReason}
                             openFaulty={openFaulty}
+                            exactProgress={exactProgress}
+                            toggleExactProgress={toggleExactProgress}
                         />
                     );
                 })}

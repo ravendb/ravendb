@@ -30,6 +30,7 @@ using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using Voron;
+using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Impl;
 using static Raven.Server.Documents.Schemas.DeletedRanges;
@@ -2470,6 +2471,27 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
+        public NumberOfEntriesAfterResult GetNumberOfTombstonesToProcess(DocumentsOperationContext context, long afterEtag, Stopwatch overallDuration, bool exact)
+        {
+            var table = new Table(DeleteRangesSchema, context.Transaction.InnerTransaction);
+            TableSchema.FixedSizeKeyIndexDef indexDef = DeleteRangesSchema.FixedSizeIndexes[AllDeletedRangesEtagSlice];
+            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, overallDuration, exact);
+        }
+
+        public NumberOfEntriesAfterResult GetNumberOfTombstonesToProcess(DocumentsOperationContext context, string collection, long afterEtag, Stopwatch overallDuration, bool exact)
+        {
+            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            if (collectionName == null)
+                return new NumberOfEntriesAfterResult();
+
+            var table = GetOrCreateDeleteRangesTable(context.Transaction.InnerTransaction, collectionName);
+            if (table == null)
+                return new NumberOfEntriesAfterResult();
+
+            TableSchema.FixedSizeKeyIndexDef indexDef = DeleteRangesSchema.FixedSizeIndexes[CollectionDeletedRangesEtagsSlice];
+            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, overallDuration, exact);
+        }
+
         public IEnumerable<TimeSeriesDeletedRangeItem> GetDeletedRangesForDoc(DocumentsOperationContext context, string docId)
         {
             var table = new Table(DeleteRangesSchema, context.Transaction.InnerTransaction);
@@ -2953,48 +2975,36 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        public long GetNumberOfTimeSeriesSegmentsToProcess(DocumentsOperationContext context, string collection, in long afterEtag, out long totalCount, Stopwatch overallDuration)
+        public NumberOfEntriesAfterResult GetNumberOfTimeSeriesSegmentsToProcess(DocumentsOperationContext context, string collection, in long afterEtag, Stopwatch overallDuration, bool exact)
         {
             var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)
-            {
-                totalCount = 0;
-                return 0;
-            }
+                return new NumberOfEntriesAfterResult();
 
             var table = GetOrCreateTimeSeriesTable(context.Transaction.InnerTransaction, collectionName);
 
             if (table == null)
-            {
-                totalCount = 0;
-                return 0;
-            }
+                return new NumberOfEntriesAfterResult();
 
             var indexDef = TimeSeriesSchema.FixedSizeIndexes[CollectionTimeSeriesEtagsSlice];
 
-            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out totalCount, overallDuration);
+            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, overallDuration, exact);
         }
 
-        public long GetNumberOfTimeSeriesDeletedRangesToProcess(DocumentsOperationContext context, string collection, in long afterEtag, out long totalCount, Stopwatch overallDuration)
+        public NumberOfEntriesAfterResult GetNumberOfTimeSeriesDeletedRangesToProcess(DocumentsOperationContext context, string collection, in long afterEtag, Stopwatch overallDuration, bool exact)
         {
             var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)
-            {
-                totalCount = 0;
-                return 0;
-            }
+                return new NumberOfEntriesAfterResult();
 
             var table = GetOrCreateDeleteRangesTable(context.Transaction.InnerTransaction, collectionName);
 
             if (table == null)
-            {
-                totalCount = 0;
-                return 0;
-            }
+                return new NumberOfEntriesAfterResult();
 
             var indexDef = DeleteRangesSchema.FixedSizeIndexes[CollectionDeletedRangesEtagsSlice];
 
-            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out totalCount, overallDuration);
+            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, overallDuration, exact);
         }
 
         [Conditional("DEBUG")]

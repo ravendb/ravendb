@@ -77,12 +77,12 @@ namespace SlowTests.Issues
 
                 for (var i = 0; i < total; i++)
                 {
-                    var count = tree.GetNumberOfEntriesAfter(i, out long totalCount, Stopwatch.StartNew(), EstimationAccuracy.EstimateIfLongRunning);
+                    var result = tree.GetNumberOfEntriesAfter(i, Stopwatch.StartNew(), EstimationAccuracy.EstimateIfLongRunning);
                     var expectedCount = Calculate(tree, i, out long expectedTotalCount);
 
                     Assert.Equal(inserted, expectedTotalCount);
-                    Assert.Equal(expectedTotalCount, totalCount);
-                    Assert.Equal(expectedCount, count);
+                    Assert.Equal(expectedTotalCount, result.Total);
+                    Assert.Equal(expectedCount, result.Count);
                 }
             }
         }

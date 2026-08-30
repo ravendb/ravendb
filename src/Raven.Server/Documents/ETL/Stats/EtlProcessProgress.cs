@@ -24,6 +24,8 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public bool Disabled { get; set; }
 
+        public bool Estimated { get; set; }
+
         public double AverageProcessedPerSecond { get; set; }
 
         public long NumberOfDocumentsToProcess { get; set; }

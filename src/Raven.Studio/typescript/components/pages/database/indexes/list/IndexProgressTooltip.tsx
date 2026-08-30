@@ -2,7 +2,7 @@
 
 import moment = require("moment");
 
-import React from "react";
+import React, { useState } from "react";
 import { PopoverWithHover } from "components/common/PopoverWithHover";
 import classNames from "classnames";
 import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
@@ -18,7 +18,9 @@ import {
 import { NamedProgress, NamedProgressItem } from "components/common/NamedProgress";
 import { Icon } from "components/common/Icon";
 import copyToClipboard from "common/copyToClipboard";
+import messagePublisher from "common/messagePublisher";
 import Button from "react-bootstrap/Button";
+import Spinner from "react-bootstrap/Spinner";
 
 interface IndexProgressTooltipProps {
     target: HTMLElement;
@@ -26,10 +28,30 @@ interface IndexProgressTooltipProps {
     index: IndexSharedInfo;
     globalIndexingStatus: IndexRunningStatus;
     showStaleReason: (location: databaseLocationSpecifier) => void;
+    exactProgress: boolean;
+    toggleExactProgress: (location: databaseLocationSpecifier) => Promise<void>;
 }
 
 export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
-    const { target, nodeInfo, index, globalIndexingStatus, showStaleReason } = props;
+    const { target, nodeInfo, index, globalIndexingStatus, showStaleReason, exactProgress, toggleExactProgress } =
+        props;
+
+    const [togglingExactProgress, setTogglingExactProgress] = useState(false);
+
+    const onToggleExactProgress = async () => {
+        if (togglingExactProgress) {
+            return;
+        }
+
+        setTogglingExactProgress(true);
+        try {
+            await toggleExactProgress(nodeInfo.location);
+        } catch (e) {
+            messagePublisher.reportError("Failed to get index progress", e.responseText);
+        } finally {
+            setTogglingExactProgress(false);
+        }
+    };
 
     if (nodeInfo.status === "failure") {
         return (
@@ -115,8 +137,21 @@ export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
 
                 {nodeInfo.progress &&
                     nodeInfo.progress.collections.map((collection) => {
+                        const collectionName = collection.estimated ? (
+                            <>
+                                {collection.name}{" "}
+                                <small
+                                    className="text-muted"
+                                    title="Estimated value. The exact count takes too long to calculate and will be skipped for performance."
+                                >
+                                    (~)
+                                </small>
+                            </>
+                        ) : (
+                            collection.name
+                        );
                         return (
-                            <NamedProgress name={collection.name} key={collection.name}>
+                            <NamedProgress name={collectionName} key={collection.name}>
                                 <NamedProgressItem progress={collection.documents}>documents</NamedProgressItem>
                                 <NamedProgressItem progress={collection.tombstones}>tombstones</NamedProgressItem>
                                 {index.sourceType === "TimeSeries" && (
@@ -127,6 +162,18 @@ export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
                             </NamedProgress>
                         );
                     })}
+                {nodeInfo.progress && (exactProgress || nodeInfo.progress.collections.some((x) => x.estimated)) && (
+                    <div className="px-3 pb-2">
+                        <a href="#" onClick={withPreventDefault(onToggleExactProgress)}>
+                            {togglingExactProgress ? (
+                                <Spinner size="sm" className="me-1" />
+                            ) : (
+                                <Icon icon="refresh" margin="me-1" />
+                            )}
+                            {exactProgress ? "show estimated counts" : "show exact counts"}
+                        </a>
+                    </div>
+                )}
             </LocationSpecificDetails>
         </PopoverWithHover>
     );

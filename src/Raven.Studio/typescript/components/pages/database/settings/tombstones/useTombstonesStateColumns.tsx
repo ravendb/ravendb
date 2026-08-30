@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Getter, ColumnDef } from "@tanstack/react-table";
-import { CellValueWrapper } from "components/common/virtualTable/cells/CellValue";
+import CellValue, { CellValueWrapper } from "components/common/virtualTable/cells/CellValue";
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
 import SubscriptionInfoExtended = Raven.Server.Documents.TombstoneCleaner.TombstonesState.SubscriptionInfoExtended;
 
@@ -71,12 +71,12 @@ export function useTombstonesStateColumns(availableWidth: number) {
             {
                 header: "Number of tombstones left",
                 accessorKey: "NumberOfTombstoneLeft",
-                cell: CellValueWrapper,
+                cell: CellTombstoneCountWrapper,
                 size: getSize(10),
             },
             {
                 header: "Tombstone types",
-                accessorFn: (x) => formatTombstoneTypes(x.Types, x.Process),
+                accessorFn: (x) => formatTombstoneTypes(x.Types, x.Process, x.Estimated),
                 cell: CellValueWrapper,
                 size: getSize(25),
             },
@@ -119,17 +119,20 @@ function formatEtag(value: number) {
 }
 function formatTombstoneTypes(
     types: Raven.Server.Documents.TombstoneCleaner.TombstonesState.TombstoneTypes,
-    process: Raven.Server.Documents.ITombstoneAware.TombstoneDeletionBlockerType
+    process: Raven.Server.Documents.ITombstoneAware.TombstoneDeletionBlockerType,
+    estimated: boolean
 ) {
     if (!types) {
         return "";
     }
 
+    const fmt = (n: number) => (estimated ? `~${n.toLocaleString()}` : n.toLocaleString());
+
     if (process === "Index") {
-        return `Documents: ${types.Documents}`;
+        return `Documents: ${fmt(types.Documents)}`;
     }
 
-    return `Documents: ${types.Documents}, TimeSeries: ${types.TimeSeries}, Counters: ${types.Counters}`;
+    return `Documents: ${fmt(types.Documents)}, TimeSeries: ${fmt(types.TimeSeries)}, Counters: ${fmt(types.Counters)}`;
 }
 
 function getEtagTitle(etagValue: number) {
@@ -146,10 +149,30 @@ function getEtagTitle(etagValue: number) {
 
 function CellEtagWrapper({ getValue }: { getValue: Getter<number> }) {
     const value = getValue();
-    return <CellValue value={formatEtag(value)} title={getEtagTitle(value)} />;
+    return <CellEtagValue value={formatEtag(value)} title={getEtagTitle(value)} />;
 }
 
-function CellValue({ value, title }: { value: unknown; title?: string }) {
+function CellTombstoneCountWrapper({
+    getValue,
+    row,
+}: {
+    getValue: Getter<number>;
+    row: { original: SubscriptionInfoExtended };
+}) {
+    const value = getValue();
+
+    return row.original.Estimated ? (
+        <CellValue
+            value={`~${value.toLocaleString()}`}
+            className="value-number"
+            title="This value is estimated due to time constraints during calculation"
+        />
+    ) : (
+        <CellValue value={value} />
+    );
+}
+
+function CellEtagValue({ value, title }: { value: unknown; title?: string }) {
     return (
         <span title={title} className={`value-${typeof value}`}>
             {String(value)}
