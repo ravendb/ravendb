@@ -1,6 +1,6 @@
 $env:DISTRO_NAME = "ubuntu"
-$env:DISTRO_VERSION = "20.04"
-$env:DISTRO_VERSION_NAME ="focal"
+$env:DISTRO_VERSION = "24.04"
+$env:DISTRO_VERSION_NAME ="noble"
 
 $env:OUTPUT_DIR = "$PSScriptRoot/dist"
 
