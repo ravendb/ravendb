@@ -50,19 +50,38 @@ jobs:
             runs-on: ubuntu-24.04-arm
       fail-fast: false
     runs-on: ${{ matrix.runs-on }}
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+        with:
+          package_json_file: src/Raven.Quill.Web/package.json
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: src/Raven.Quill.Web/pnpm-lock.yaml
 
       - name: Set up buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
-      - name: Build image (two tags — verifies build.sh multi-tag accumulation)
+      - name: Build Quill payload
+        shell: pwsh
+        run: |
+          if ("${{ matrix.arch }}" -eq "arm64v8") { ./build.ps1 -Quill -LinuxArm64 } else { ./build.ps1 -Quill }
+
+      - name: Assemble image (two tags — verifies build.sh multi-tag accumulation)
         run: |
           ./docker/quill/scripts/build.sh \
             --tag "ravendb/quill:pr-check-${{ matrix.arch }}" \
             --tag "ravendb/quill:multi-tag-check-${{ matrix.arch }}" \
-            --platforms "${{ matrix.platform }}"
+            --platform "${{ matrix.platform }}"
 
       - name: Verify both tags attached (regression guard for RavenDB-26659 --tag fix)
         run: |

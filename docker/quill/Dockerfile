@@ -1,122 +1,19 @@
 # syntax=docker/dockerfile:1.7
 
-ARG SDK_IMAGE=mcr.microsoft.com/dotnet/sdk:10.0.400
 ARG RUNTIME_IMAGE=mcr.microsoft.com/dotnet/aspnet:10.0.11
-ARG NODE_IMAGE=node:24-bookworm-slim
-ARG STUDIO_NODE_MAJOR=24
-ARG PNPM_VERSION=11.24.0
 ARG S6_OVERLAY_VERSION=3.2.1.0
 
-FROM ${SDK_IMAGE} AS ravendb-server-build
-ARG TARGETARCH
-WORKDIR /src
-COPY . .
-
-RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
-    . docker/quill/scripts/dotnet-rid.sh \
-    && for proj in \
-         src/Raven.Server/Raven.Server.csproj \
-         tools/rvn/rvn.csproj \
-         tools/Raven.Debug/Raven.Debug.csproj \
-         tools/Voron.Recovery/Voron.Recovery.csproj \
-         tools/Raven.Migrator/Raven.Migrator.csproj ; do \
-        dotnet publish "$proj" \
-            -c Release \
-            -r "$DOTNET_RID" \
-            --self-contained false \
-            -o /publish/raven \
-            --nologo ; \
-       done
-
-FROM --platform=$BUILDPLATFORM ${SDK_IMAGE} AS ravendb-studio-build
-ARG STUDIO_NODE_MAJOR
-
+FROM ${RUNTIME_IMAGE} AS payload
+ARG QUILL_PAYLOAD
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl ca-certificates gnupg \
-    && curl -fsSL "https://deb.nodesource.com/setup_${STUDIO_NODE_MAJOR}.x" | bash - \
-    && apt-get install -y --no-install-recommends nodejs \
+    && apt-get install -y --no-install-recommends bzip2 \
     && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /src
-COPY . .
-
-RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
-    dotnet build tools/TypingsGenerator/TypingsGenerator.csproj \
-        -c Release \
-        --nologo
-
-WORKDIR /src/src/Raven.Studio
-RUN VERSION_PREFIX=$(sed -n 's/.*AssemblyVersion("\([^"]*\)").*/\1/p' /src/src/CommonAssemblyInfo.cs) \
-    && printf '{ "Version": "%s-custom-72" }\n' "$VERSION_PREFIX" > wwwroot/version.txt \
-    && cat wwwroot/version.txt
-
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci
-RUN --mount=type=cache,target=/root/.npm \
-    npm run release
+COPY ${QUILL_PAYLOAD} /tmp/quill.tar.bz2
+RUN mkdir -p /payload \
+    && tar -C /payload -xjf /tmp/quill.tar.bz2 \
+    && rm /tmp/quill.tar.bz2
 
 
-# Stage 2: build the backend just enough to emit the OpenAPI doc (consumed by Stage 3).
-FROM ${SDK_IMAGE} AS quill-openapi-build
-WORKDIR /src
-COPY . .
-
-RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
-    dotnet build src/Raven.Quill/Raven.Quill.csproj \
-        -c Release \
-        --nologo \
-        --tl:off
-
-
-# Stage 3: build the React/Vite frontend (consumes the OpenAPI doc from Stage 2).
-FROM ${NODE_IMAGE} AS quill-frontend-build
-ARG PNPM_VERSION
-WORKDIR /workspace
-
-RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
-
-COPY src/Raven.Quill.Web/package.json \
-     src/Raven.Quill.Web/pnpm-lock.yaml \
-     src/Raven.Quill.Web/pnpm-workspace.yaml \
-    ./src/Raven.Quill.Web/
-# The embeddable widget is its own workspace package, so its manifest belongs in the cached install layer too.
-COPY src/Raven.Quill.Web/packages/widget/package.json ./src/Raven.Quill.Web/packages/widget/
-
-WORKDIR /workspace/src/Raven.Quill.Web
-
-RUN --mount=type=cache,target=/root/.local/share/pnpm/store,sharing=locked \
-    pnpm install --frozen-lockfile
-
-WORKDIR /workspace
-
-COPY --from=quill-openapi-build /src/src/Raven.Quill/obj/openapi/quill.json ./src/Raven.Quill/obj/openapi/quill.json
-COPY src/Raven.Quill.Web/ ./src/Raven.Quill.Web/
-
-WORKDIR /workspace/src/Raven.Quill.Web
-ENV RAVEN_QUILL_OPENAPI_SKIP_SPEC_BUILD=1
-RUN pnpm build
-
-
-# Stage 4: publish the backend and overlay the Vite output into wwwroot.
-FROM ${SDK_IMAGE} AS web-build
-ARG TARGETARCH
-WORKDIR /src
-COPY . .
-
-RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
-    . docker/quill/scripts/dotnet-rid.sh \
-    && dotnet publish src/Raven.Quill/Raven.Quill.csproj \
-        -c Release \
-        -r "$DOTNET_RID" \
-        --self-contained false \
-        -o /publish/web \
-        --nologo \
-    && rm -rf /publish/web/wwwroot
-
-COPY --from=quill-frontend-build /workspace/src/Raven.Quill.Web/dist /publish/web/wwwroot
-
-
-# Stage 5: runtime - aspnet base + s6-overlay supervising RavenDB, the web app, and nginx.
 FROM ${RUNTIME_IMAGE} AS runtime
 ARG S6_OVERLAY_VERSION
 ARG TARGETARCH
@@ -160,10 +57,12 @@ tar -C / -Jxpf "s6-overlay-${S6_ARCH}.tar.xz"
 rm s6-overlay-*
 EOF
 
-COPY --from=ravendb-server-build /publish/raven /app/ravendb
-COPY --from=ravendb-studio-build /src/src/Raven.Studio/wwwroot/dist/Raven.Studio.zip /app/ravendb/
-COPY --from=web-build            /publish/web   /app/web
+# ravendb (server + tools + Studio.zip) and the Quill web app, from the pre-built payload.
+COPY --from=payload /payload/Quill/ravendb /app/ravendb
+COPY --from=payload /payload/Quill/web     /app/web
 
+# Only /app/ravendb needs to be quill-writable (RavenDB unpacks its studio/nuget Packages there at
+# runtime); /app/web stays root-owned so a compromised quill can't swap the parent root writes into.
 RUN chown -R quill:quill /app/ravendb
 COPY docker/quill/nginx.conf /etc/nginx/nginx.conf
 
