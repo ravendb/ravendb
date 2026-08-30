@@ -118,6 +118,13 @@ namespace Raven.Server.Documents.Handlers
                 await processor.ExecuteAsync();
         }
 
+        [RavenAction("/databases/*/indexes/heaviness/analyze", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task AnalyzeHeaviness()
+        {
+            using (var processor = new IndexHandlerProcessorForAnalyzeHeaviness(this))
+                await processor.ExecuteAsync();
+        }
+
         [RavenAction("/databases/*/indexes/staleness", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Stale()
         {
