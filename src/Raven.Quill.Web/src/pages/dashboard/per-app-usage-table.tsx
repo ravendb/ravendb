@@ -15,7 +15,7 @@ import { ChevronRight } from "lucide-react";
 import type { QuillApplicationUsage } from "@/api/generated/server-api";
 import { InfoHint } from "@/components/data/info-hint";
 import { WruLabel } from "@/components/data/wru-label";
-import { Badge } from "@/components/shadcn/ui/badge";
+import { CountBadge } from "@/components/data/count-badge";
 import { VirtualDataTable, VirtualDataTableSkeleton } from "@/components/table/virtual-data-table";
 import { cn } from "@/lib/utils";
 import { rowKey, SYSTEM_GROUP_DESCRIPTION, toUsageGroups, type UsageGroup } from "@/pages/dashboard/usage-groups";
@@ -114,9 +114,7 @@ function GroupName({
                     <InfoHint content={SYSTEM_GROUP_DESCRIPTION} />
                 </span>
             )}
-            <Badge variant="secondary" className="tabular-nums">
-                {group.rows.length}
-            </Badge>
+            <CountBadge>{group.rows.length}</CountBadge>
         </span>
     );
 }

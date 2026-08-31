@@ -2,9 +2,9 @@ import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { Database, Pencil, Plus, Trash2 } from "lucide-react";
 import type { ApplianceAppResponse, AppWrites } from "@/api/generated/server-api";
+import { CountBadge } from "@/components/data/count-badge";
 import { StatusIndicator } from "@/components/data/status-indicator";
 import { resolveStatusStyle } from "@/lib/app-status";
-import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { Skeleton } from "@/components/shadcn/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/ui/table";
@@ -16,6 +16,7 @@ import { formatCompact } from "@/lib/format";
 import { DeleteAppDialog } from "@/pages/apps/delete-app-dialog";
 import { EditAppConfirmDialog } from "@/pages/setup/add-app-wizard/edit-app-confirm-dialog";
 import { Heading, Text } from "@/components/typography";
+import { SectionHeader } from "@/components/section-header";
 
 export function DashboardAppsTable({
     apps,
@@ -35,12 +36,9 @@ export function DashboardAppsTable({
 
     return (
         <div className="space-y-4">
-            <AppsToolbar
-                count={
-                    <Badge variant="secondary" className="font-mono">
-                        {apps.length}
-                    </Badge>
-                }
+            <SectionHeader
+                title="Apps"
+                count={<CountBadge>{apps.length}</CountBadge>}
                 action={
                     <Button asChild size="sm">
                         <Link to={appRoutes.addApp()}>
@@ -64,25 +62,14 @@ export function DashboardAppsTableSkeleton({ period }: { period: DatePeriod }) {
         <div className="space-y-4">
             {/* The button is drawn rather than rendered: `ApiState` hides the skeleton from the
                 accessibility tree, and a real link in there would still take focus. */}
-            <AppsToolbar
+            <SectionHeader
+                title="Apps"
                 count={<Skeleton className="h-5 w-8 rounded-md" />}
                 action={<Skeleton className="h-8 w-36 rounded-md" />}
             />
             <AppsTableFrame period={period}>
                 <TableSkeletonRows columnCount={APPS_COLUMN_COUNT} rows={4} hasActionColumn />
             </AppsTableFrame>
-        </div>
-    );
-}
-
-function AppsToolbar({ count, action }: { count: ReactNode; action: ReactNode }) {
-    return (
-        <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-                <Heading variant="section">Apps</Heading>
-                {count}
-            </div>
-            {action}
         </div>
     );
 }
