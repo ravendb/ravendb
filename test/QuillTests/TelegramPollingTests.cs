@@ -574,6 +574,8 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         await Mock.WaitUntilAsync(() => Router.Requests.Count >= 1, "the first agent run");
         var first = Router.Requests[0];
         Assert.Equal("users/1", first.Parameters["customerId"].GetString());
+        await Mock.WaitUntilAsync(
+            () => Mock.LastGetUpdatesOffset(token) > 0, "the first update to be confirmed");
 
         await app.UpdateChannelAsync(channelId, new UpdateChannelRequest(null, null, null,
             new TelegramUpdateRequest(ParameterBindings: new Dictionary<string, ChannelParameterBinding>
@@ -581,15 +583,14 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
                 ["customerId"] = new() { Source = ChannelParameterSource.Constant, Value = "users/2" },
             })));
 
-        for (var attempt = 0; attempt < 40; attempt++)
-        {
-            Mock.EnqueueTextMessage(token, chatId, fromUserId: 640, $"after the update {attempt}");
-            await Task.Delay(250);
-            if (Router.Requests.Any(r => r.Parameters["customerId"].GetString() == "users/2"))
-                break;
-        }
+        await Mock.WaitUntilAsync(
+            () => Mock.LastGetUpdatesOffset(token) is null or 0, "the runtime swap after the update");
 
-        var second = Router.Requests.First(r => r.Parameters["customerId"].GetString() == "users/2");
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 640, "second question");
+        await Mock.WaitUntilAsync(() => Router.Requests.Count >= 2, "the second agent run");
+
+        var second = Router.Requests[^1];
+        Assert.Equal("users/2", second.Parameters["customerId"].GetString());
         Assert.NotEqual(first.ConversationId, second.ConversationId);
 
         await app.DeleteChannelAsync(channelId);
