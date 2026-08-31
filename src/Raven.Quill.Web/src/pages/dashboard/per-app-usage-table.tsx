@@ -124,7 +124,7 @@ function GroupName({
 const COLUMNS: ColumnDef<UsageRow>[] = [
     {
         id: "name",
-        header: "Name",
+        header: "Database",
         cell: ({ row }) =>
             isGroup(row.original) ? (
                 <GroupName group={row.original} isExpandable={row.getCanExpand()} isExpanded={row.getIsExpanded()} />
