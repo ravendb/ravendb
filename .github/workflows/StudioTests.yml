@@ -63,7 +63,7 @@ jobs:
       working-directory: ./src/Raven.Studio
 
   quill-web-storybook:
-    name: Quill.Web Storybook smoke tests
+    name: Quill Dashboard (storybook)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:

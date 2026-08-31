@@ -59,7 +59,7 @@ jobs:
           cache: pnpm
           cache-dependency-path: src/Raven.Quill.Web/pnpm-lock.yaml
 
-      - name: Install Quill.Web dependencies
+      - name: Install Quill Dashboard dependencies
         if: steps.quill.outputs.changed == 'true'
         run: pnpm install --frozen-lockfile
         working-directory: src/Raven.Quill.Web
@@ -67,12 +67,12 @@ jobs:
       # server-api.ts is generated but committed, and typechecks fine when stale. Asserted
       # before `pnpm build`, which re-runs generate:api itself: a stale client that also
       # breaks tsc would otherwise bury this diagnostic in type errors.
-      - name: Regenerate Quill.Web API client
+      - name: Regenerate Quill Dashboard API client
         if: steps.quill.outputs.changed == 'true'
         run: pnpm generate:api
         working-directory: src/Raven.Quill.Web
 
-      - name: Verify committed Quill.Web API client matches
+      - name: Verify committed Quill Dashboard API client matches
         if: steps.quill.outputs.changed == 'true'
         run: |
           if ! git diff --exit-code -- src/Raven.Quill.Web/src/api/generated/server-api.ts; then
@@ -80,7 +80,7 @@ jobs:
             exit 1
           fi
 
-      - name: Compile Quill.Web
+      - name: Compile Quill Dashboard
         if: steps.quill.outputs.changed == 'true'
         run: pnpm build
         working-directory: src/Raven.Quill.Web
