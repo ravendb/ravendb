@@ -34,7 +34,7 @@ public abstract class MergedTransactionCommand<TOperationContext, TTransaction> 
     public abstract IReplayableCommandDto<TOperationContext, TTransaction, MergedTransactionCommand<TOperationContext, TTransaction>> ToDto(TOperationContext context);
 
     [JsonIgnore]
-    public readonly TaskCompletionSource<object> TaskCompletionSource = new();
+    public readonly TaskCompletionSource<object> TaskCompletionSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     public Exception Exception;
 
