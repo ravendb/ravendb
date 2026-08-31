@@ -16,6 +16,7 @@ public static class QuillConventions
     public static string FindCollectionName(Type type) =>
         type == typeof(Channel) ? "@channels"
         : type == typeof(EmbedLink) ? "@embed-links"
+        : type == typeof(WidgetThemeDefaults) ? "@widget-theme-defaults"
         : type == typeof(TelegramLink) ? "@telegram-links"
         : type == typeof(TelegramBotReservation) ? "@telegram-bots"
         : type == typeof(SlackBotReservation) ? "@slack-bots"
