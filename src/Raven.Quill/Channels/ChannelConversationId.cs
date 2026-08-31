@@ -9,8 +9,11 @@ internal static class ChannelConversationId
     internal static string ForUtcDay(
         string kind, string channelId, string userId, DateTime utcNow,
         Dictionary<string, string> parameters) =>
+        UtcDayPrefix(kind, channelId, userId, utcNow) + Fingerprint(parameters);
+
+    internal static string UtcDayPrefix(string kind, string channelId, string userId, DateTime utcNow) =>
         string.Create(CultureInfo.InvariantCulture,
-            $"chats/{kind}/{channelId}/{userId}/{utcNow:yyyy-MM-dd}/{Fingerprint(parameters)}");
+            $"chats/{kind}/{channelId}/{userId}/{utcNow:yyyy-MM-dd}/");
 
     internal static string Fingerprint(Dictionary<string, string> parameters)
     {

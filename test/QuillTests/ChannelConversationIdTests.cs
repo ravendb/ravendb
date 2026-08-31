@@ -52,6 +52,17 @@ public class ChannelConversationIdTests(ITestOutputHelper output) : NoDisposalNe
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public void The_id_extends_the_utc_day_prefix_with_the_fingerprint()
+    {
+        var prefix = ChannelConversationId.UtcDayPrefix("discord", "abc123", "800000000000000001", Noon);
+        var id = ChannelConversationId.ForUtcDay("discord", "abc123", "800000000000000001", Noon,
+            new Dictionary<string, string> { ["userId"] = "users/1" });
+
+        Assert.Equal("chats/discord/abc123/800000000000000001/2026-08-17/", prefix);
+        Assert.StartsWith(prefix, id);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public void Values_cannot_bleed_across_parameter_boundaries()
     {
         var joined = ChannelConversationId.ForUtcDay("discord", "abc123", "800000000000000001", Noon,

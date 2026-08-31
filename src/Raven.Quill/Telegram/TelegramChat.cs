@@ -162,6 +162,13 @@ internal sealed class TelegramChat
         if (prompt.Length == 0)
             return;
 
+        if (IsCommand(prompt, "clear"))
+        {
+            await ClearConversationsAsync(TelegramConversationId.UtcDayPrefix(channel.ShortId, _chatId, DateTime.UtcNow));
+            await SendPlainAsync(_context.Messages.ConversationCleared);
+            return;
+        }
+
         var config = await AgentLookup.FindAsync(_context.Store, _context.Database, channel.AgentId, _ct);
         if (config is null)
             throw new InvalidOperationException($"agent '{channel.AgentId}' is no longer registered in this app");
@@ -179,13 +186,6 @@ internal sealed class TelegramChat
             return;
 
         var conversationId = TelegramConversationId.ForUtcDay(channel.ShortId, _chatId, DateTime.UtcNow, parameters);
-
-        if (IsCommand(prompt, "clear"))
-        {
-            await ClearConversationAsync(conversationId);
-            await SendPlainAsync(_context.Messages.ConversationCleared);
-            return;
-        }
 
         try
         {
@@ -348,11 +348,17 @@ internal sealed class TelegramChat
             },
             cancellationToken: _ct);
 
-    private async Task ClearConversationAsync(string conversationId)
+    private async Task ClearConversationsAsync(string conversationIdPrefix)
     {
         using var session = _context.Store.OpenAsyncSession(_context.Database);
-        session.Delete(conversationId);
-        session.Delete(ConversationPreview.IdFor(conversationId));
+        var conversations = await session.Advanced.LoadStartingWithAsync<object>(
+            conversationIdPrefix, pageSize: 1024, token: _ct);
+        var previews = await session.Advanced.LoadStartingWithAsync<object>(
+            ConversationPreview.IdPrefix + conversationIdPrefix, pageSize: 1024, token: _ct);
+
+        foreach (var doc in conversations.Concat(previews))
+            session.Delete(doc);
+
         await session.SaveChangesAsync(_ct);
     }
 
