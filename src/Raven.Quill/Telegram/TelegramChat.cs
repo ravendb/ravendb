@@ -162,16 +162,6 @@ internal sealed class TelegramChat
         if (prompt.Length == 0)
             return;
 
-        var conversationId = TelegramConversationId.ForUtcDay(
-            _context.ChannelDoc.ShortId, _chatId, DateTime.UtcNow, channel.Telegram!.ParameterBindings);
-
-        if (IsCommand(prompt, "clear"))
-        {
-            await ClearConversationAsync(conversationId);
-            await SendPlainAsync(_context.Messages.ConversationCleared);
-            return;
-        }
-
         var config = await AgentLookup.FindAsync(_context.Store, _context.Database, channel.AgentId, _ct);
         if (config is null)
             throw new InvalidOperationException($"agent '{channel.AgentId}' is no longer registered in this app");
@@ -187,6 +177,15 @@ internal sealed class TelegramChat
         var parameters = await BindParametersAsync(config, message);
         if (parameters is null)
             return;
+
+        var conversationId = TelegramConversationId.ForUtcDay(channel.ShortId, _chatId, DateTime.UtcNow, parameters);
+
+        if (IsCommand(prompt, "clear"))
+        {
+            await ClearConversationAsync(conversationId);
+            await SendPlainAsync(_context.Messages.ConversationCleared);
+            return;
+        }
 
         try
         {

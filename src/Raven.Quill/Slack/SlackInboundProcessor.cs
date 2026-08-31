@@ -173,9 +173,6 @@ internal sealed class SlackInboundProcessor(
         if (prompt.Length == 0)
             return;
 
-        var conversationId = SlackConversationId.ForUtcDay(
-            shortChannelId, sender, DateTime.UtcNow, settings.ParameterBindings);
-
         var config = await AgentLookup.FindAsync(store, database, channel.AgentId, ct);
         if (config is null)
             throw new InvalidOperationException($"agent '{channel.AgentId}' is no longer registered in this app");
@@ -188,6 +185,8 @@ internal sealed class SlackInboundProcessor(
             await TrySendAsync(slack, database, shortChannelId, settings, dmChannel, ErrorReply, ct);
             throw new InvalidOperationException(bindError);
         }
+
+        var conversationId = SlackConversationId.ForUtcDay(shortChannelId, sender, DateTime.UtcNow, parameters);
 
         var reply = new SlackStreamingReply(slack, settings.BotToken, dmChannel, options.Value.Slack, logger, ct);
 

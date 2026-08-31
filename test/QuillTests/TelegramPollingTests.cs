@@ -172,15 +172,10 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         Assert.Empty(Router.Requests);
         Assert.DoesNotContain(Mock.ChatActions, a => a.ChatId == chatId);
 
-        var conversationId = TelegramConversationId.ForUtcDay(channelId, chatId, DateTime.UtcNow,
-            new Dictionary<string, ChannelParameterBinding>
-            {
-                ["handle"] = new() { Source = ChannelParameterSource.Username },
-            });
         using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
-            Assert.Null(await session.LoadAsync<object>(conversationId));
-            Assert.Null(await session.LoadAsync<object>(ConversationPreview.IdFor(conversationId)));
+            Assert.Empty(await session.Advanced.LoadStartingWithAsync<object>("chats/"));
+            Assert.Empty(await session.Advanced.LoadStartingWithAsync<object>(ConversationPreview.IdPrefix));
         }
 
         await app.DeleteChannelAsync(channelId);
