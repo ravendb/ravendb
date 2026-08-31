@@ -602,12 +602,18 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         await using var appGuard = app;
 
         const long chatId = 300;
-        var conversationId = TelegramConversationId.ForUtcDay(channelId, chatId, DateTime.UtcNow, new());
+        var dayPrefix = TelegramConversationId.UtcDayPrefix(channelId, chatId, DateTime.UtcNow);
+        var currentId = TelegramConversationId.ForUtcDay(channelId, chatId, DateTime.UtcNow, new());
+        var supersededId = dayPrefix + "aaaaaaaaaaaaaaaa";
         using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
-            await session.StoreAsync(new ConversationPreview { ConversationId = conversationId },
-                ConversationPreview.IdFor(conversationId));
-            await session.StoreAsync(new { Seeded = true }, conversationId);
+            foreach (var conversationId in new[] { currentId, supersededId })
+            {
+                await session.StoreAsync(new ConversationPreview { ConversationId = conversationId },
+                    ConversationPreview.IdFor(conversationId));
+                await session.StoreAsync(new { Seeded = true }, conversationId);
+            }
+
             await session.SaveChangesAsync();
         }
 
@@ -618,9 +624,34 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         Assert.Empty(Router.Requests);
         using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
-            Assert.Null(await session.LoadAsync<object>(conversationId));
-            Assert.Null(await session.LoadAsync<object>(ConversationPreview.IdFor(conversationId)));
+            foreach (var conversationId in new[] { currentId, supersededId })
+            {
+                Assert.Null(await session.LoadAsync<object>(conversationId));
+                Assert.Null(await session.LoadAsync<object>(ConversationPreview.IdFor(conversationId)));
+            }
         }
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Clear_command_works_even_when_a_binding_cannot_be_satisfied()
+    {
+        var (app, channelId, token) = await ProvisionAsync(
+            bindings: new Dictionary<string, ChannelParameterBinding>
+            {
+                ["handle"] = new() { Source = ChannelParameterSource.Username },
+            },
+            declared: [new AiAgentParameter("handle", "sender's handle")]);
+        await using var appGuard = app;
+
+        const long chatId = 305;
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 305, "/clear");
+        await Mock.WaitUntilAsync(
+            () => Mock.SentMessages.Any(m => m.ChatId == chatId && m.Text.Contains("cleared")), "the confirmation");
+
+        Assert.DoesNotContain(Mock.SentMessages, m => m.ChatId == chatId && m.Text.Contains("username"));
+        Assert.Empty(Router.Requests);
 
         await app.DeleteChannelAsync(channelId);
     }

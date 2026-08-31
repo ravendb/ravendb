@@ -9,4 +9,8 @@ internal static class TelegramConversationId
         string channelId, long telegramChatId, DateTime utcNow, Dictionary<string, string> parameters) =>
         ChannelConversationId.ForUtcDay(
             "tg", channelId, telegramChatId.ToString(CultureInfo.InvariantCulture), utcNow, parameters);
+
+    internal static string UtcDayPrefix(string channelId, long telegramChatId, DateTime utcNow) =>
+        ChannelConversationId.UtcDayPrefix(
+            "tg", channelId, telegramChatId.ToString(CultureInfo.InvariantCulture), utcNow);
 }
