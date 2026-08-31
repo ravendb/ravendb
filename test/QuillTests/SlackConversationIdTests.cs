@@ -15,7 +15,7 @@ public class SlackConversationIdTests(ITestOutputHelper output) : NoDisposalNeed
         var id = SlackConversationId.ForUtcDay(
             "abc123", "U0SENDER01", new DateTime(2026, 8, 17, 13, 45, 0, DateTimeKind.Utc), NoParameters);
 
-        Assert.Matches("^chats/slack/abc123/U0SENDER01/2026-08-17/[0-9a-f]{8}$", id);
+        Assert.Matches("^chats/slack/abc123/U0SENDER01/2026-08-17/[0-9a-f]{16}$", id);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
