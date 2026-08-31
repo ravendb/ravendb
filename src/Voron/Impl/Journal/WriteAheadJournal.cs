@@ -1387,7 +1387,7 @@ namespace Voron.Impl.Journal
 
                 var rc = Pal.rvn_pager_writeback_dirty(dataPagerState.Handle, pipelineDepth: 0 /* initiate only */,
                     options.SyncWritebackBlockSizeInMb * Constants.Size.Megabyte,
-                    options.SyncWritebackMinContiguousSizeInKb * Constants.Size.Kilobyte, out _, out var error);
+                    options.SyncWritebackMinContiguousSizeInKb * Constants.Size.Kilobyte, out var stats, out var error);
 
                 if (rc == PalFlags.FailCodes.FailWritebackNotSupported)
                 {
@@ -1397,6 +1397,15 @@ namespace Voron.Impl.Journal
 
                 if (rc != PalFlags.FailCodes.Success)
                     PalHelper.ThrowLastError(rc, error, $"Failed to trickle writeback of {dataPager.FileName}");
+
+                if (_waj._logger.IsDebugEnabled && (stats.BytesWritten > 0 || stats.BytesSkipped > 0))
+                {
+                    _waj._logger.Debug(
+                        $"Trickle writeback initiated {stats.BytesWritten / Constants.Size.Kilobyte:#,#0} kb in {stats.RangesWritten:#,#} ranges " +
+                        $"({stats.BytesSkipped / Constants.Size.Kilobyte:#,#0} kb in sparse runs kept for merging, " +
+                        $"{stats.PagesDeferredHot:#,#0} hot pages deferred, " +
+                        $"{stats.SetBitsRemaining:#,#0} dirty pages remain) for {dataPager.FileName}");
+                }
             }
 
             public void WaitForSyncToCompleteOnDispose()
@@ -1584,17 +1593,24 @@ namespace Voron.Impl.Journal
                     var options = parent._waj._env.Options;
                     var gate = options.SyncWritebackBlockSizeInMb > 0 ? options.DeviceWriteBudget : null;
 
-                    // In trickle mode, we already initiated the writeback, so we don't need to do it again here. 
+                    // In trickle mode, we already initiated the writeback, so we don't need to do it again here.
                     // In drain mode, we drain first to avoid big I/O hitting all at once, causing congestion.
                     if (gate?.ShouldDrain() == true)
                         parent.WritebackDirtyRanges();
+
+                    // The coming sync will cover all the dirty pages, no need for trickling to the disk
+                    var resetRc = Pal.rvn_pager_reset_dirty_tracking(dataPagerState.Handle, out var resetPages, out var resetError);
+                    if (resetRc != PalFlags.FailCodes.Success)
+                        PalHelper.ThrowLastError(resetRc, resetError, $"Failed to reset dirty tracking of {dataPager.FileName}");
+
                     dataPager.Sync(dataPagerState, Interlocked.Read(ref parent._totalWrittenButUnsyncedBytes));
                     gate?.RecordSyncCost(sp.Elapsed.Ticks);
                     if (parent._waj._logger.IsDebugEnabled)
                     {
                         var sizeInKb = (dataPagerState.NumberOfAllocatedPages * Constants.Storage.PageSize) / Constants.Size.Kilobyte;
                         parent._waj._logger.Debug(
-                            $"Sync of {sizeInKb:#,#0} kb file with {_currentTotalWrittenBytes / Constants.Size.Kilobyte:#,#0} kb dirty in {sp.Elapsed}");
+                            $"Sync of {sizeInKb:#,#0} kb file with {_currentTotalWrittenBytes / Constants.Size.Kilobyte:#,#0} kb dirty in {sp.Elapsed}, " +
+                            $"dropped {resetPages:#,#0} dirty page hints not pushed by writeback");
                     }
                 }
 

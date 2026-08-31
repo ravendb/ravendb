@@ -67,14 +67,12 @@ namespace Voron.Impl.Journal
         private readonly DeviceQueueDepthReader _queueReader; // null = no queue signal on this platform
         private readonly string _pathOnDevice;
         private readonly long _syncThresholdTicks;
-        // queue depth is kept in per-mille units (1000 x the average in-flight request count),
-        // so the fractional aqu-sz signal fits SimpleEwma's longs without losing precision
-        private readonly long _enterQueueDepthPerMille;
-        private readonly long _exitQueueDepthPerMille;
+        private readonly double _enterQueueDepth;
+        private readonly double _exitQueueDepth;
         private readonly Stopwatch _clock = Stopwatch.StartNew();
-        private long _activeQueueThresholdPerMille; // the enter value while trickling, the exit value while draining
-        private Sparrow.Utils.SimpleEwma _syncCostTicksEwma = new(smoothing: 4);
-        private Sparrow.Utils.SimpleEwma _queueDepthPerMille = new(smoothing: 4);
+        private double _activeQueueThreshold; // the enter value while trickling, the exit value while draining
+        private Sparrow.Server.Utils.SimpleEwma<long> _syncCostTicksEwma = new(smoothing: 4);
+        private Sparrow.Server.Utils.SimpleEwma<double> _queueDepth = new(smoothing: 4);
         private long _lastSampleMs;
         private long _lastBusyMs;
         private bool _draining;
@@ -84,9 +82,9 @@ namespace Voron.Impl.Journal
             _queueReader = queueReader;
             _pathOnDevice = pathOnDevice;
             _syncThresholdTicks = syncCostThresholdTicks;
-            _enterQueueDepthPerMille = queueDepthThreshold * 1000L;
-            _exitQueueDepthPerMille = queueDepthThreshold * 600L; // leave only well below the entry point
-            _activeQueueThresholdPerMille = _enterQueueDepthPerMille;
+            _enterQueueDepth = queueDepthThreshold;
+            _exitQueueDepth = queueDepthThreshold * 0.6; // leave only well below the entry point
+            _activeQueueThreshold = _enterQueueDepth;
             _classifyAboveLatencyTicks = classifyAboveLatencyTicks;
         }
 
@@ -98,8 +96,8 @@ namespace Voron.Impl.Journal
         }
 
         // journal write telemetry across EVERY environment on this device
-        private Sparrow.Utils.SimpleEwma _journalWriteLatencyTicks = new(smoothing: 8);
-        private Sparrow.Utils.SimpleEwma _journalWriteSizeBytes = new(smoothing: 8);
+        private Sparrow.Server.Utils.SimpleEwma<long> _journalWriteLatencyTicks = new(smoothing: 8);
+        private Sparrow.Server.Utils.SimpleEwma<long> _journalWriteSizeBytes = new(smoothing: 8);
         private long _lastJournalWriteActivityTimestamp;
         private readonly long _classifyAboveLatencyTicks;
 
@@ -122,14 +120,17 @@ namespace Voron.Impl.Journal
         {
             get
             {
-                // small writes can be fast on a slow device, so we can't estimate from small writes only
-                // gp3 writes small batches in 1.3-1.9ms, gp2 in 3-4ms, we need more than that...
-                if (_journalWriteSizeBytes.Current < 256 * Voron.Global.Constants.Size.Kilobyte)
-                    return DeviceClass.Unknown;
-
                 var ewma = _journalWriteLatencyTicks.Current;
                 var threshold = _classifyAboveLatencyTicks;
                 if (ewma == 0 || threshold == 0)
+                    return DeviceClass.Unknown;
+
+                // This is really fast, consider it a fast disk regardless of the size threshold
+                if (ewma < threshold / 8)
+                    return DeviceClass.Fast;
+
+                // small writes can be fast on a slow device, so we can't estimate from small writes only
+                if (_journalWriteSizeBytes.Current < 256 * Global.Constants.Size.Kilobyte)
                     return DeviceClass.Unknown;
 
                 return ewma < threshold / 2 ? DeviceClass.Fast : DeviceClass.Budgeted;
@@ -163,18 +164,18 @@ namespace Voron.Impl.Journal
 
         public bool ShouldDrain()
         {
-            var (nowMs, queueDepthPerMille) = SampleQueue();
+            var (nowMs, queueDepth) = SampleQueue();
             // either high device queue depth, or high sync cost (too much I/O for the device to keep up)
-            if (queueDepthPerMille > _activeQueueThresholdPerMille || _syncCostTicksEwma.Current > _syncThresholdTicks)
+            if (queueDepth > _activeQueueThreshold || _syncCostTicksEwma.Current > _syncThresholdTicks)
             {
                 _lastBusyMs = nowMs;
                 if (_draining == false)
                 {
                     _draining = true;
-                    _activeQueueThresholdPerMille = _exitQueueDepthPerMille;
+                    _activeQueueThreshold = _exitQueueDepth;
                     if (Log.IsDebugEnabled)
                     {
-                        Log.Debug($"The device that holds '{_pathOnDevice}' is congested (queue {queueDepthPerMille / 1000.0:0.0}, " +
+                        Log.Debug($"The device that holds '{_pathOnDevice}' is congested (queue {queueDepth:0.0}, " +
                                   $"sync {_syncCostTicksEwma.Current / TimeSpan.TicksPerMillisecond}ms). Every environment on this device " +
                                   "moves to drain mode: flushes stop the writeback trickle, and each sync pushes its dirty ranges " +
                                   "in paced blocks before the fdatasync.");
@@ -191,10 +192,10 @@ namespace Voron.Impl.Journal
                 return true;
 
             _draining = false;
-            _activeQueueThresholdPerMille = _enterQueueDepthPerMille;
+            _activeQueueThreshold = _enterQueueDepth;
             if (Log.IsDebugEnabled)
             {
-                Log.Debug($"The device that holds '{_pathOnDevice}' is quiet again (queue {queueDepthPerMille / 1000.0:0.0}). Every environment " +
+                Log.Debug($"The device that holds '{_pathOnDevice}' is quiet again (queue {queueDepth:0.0}). Every environment " +
                             "on this device returns to trickle mode: flushes start writeback of their dirty ranges, and syncs " +
                             "use a plain fdatasync.");
             }
@@ -202,27 +203,27 @@ namespace Voron.Impl.Journal
             return false;
         }
 
-        private (long NowMs, long QueueDepthPerMille) SampleQueue()
+        private (long NowMs, double QueueDepth) SampleQueue()
         {
             var nowMs = _clock.ElapsedMilliseconds;
             if (_queueReader == null)
-                return (nowMs, _queueDepthPerMille.Current);
+                return (nowMs, _queueDepth.Current);
 
             var last = _lastSampleMs;
             if (nowMs - last < SampleIntervalMs ||
                 Interlocked.CompareExchange(ref _lastSampleMs, nowMs, last) != last)
-                return (nowMs, _queueDepthPerMille.Current); // not due yet, or another thread samples
+                return (nowMs, _queueDepth.Current); // not due yet, or another thread samples
 
             try
             {
-                _queueDepthPerMille.Update((long)(_queueReader.Read() * 1000));
+                _queueDepth.Update(_queueReader.Read());
             }
             catch
             {
                 // a failed read is a lost sample, nothing more
             }
 
-            return (nowMs, _queueDepthPerMille.Current);
+            return (nowMs, _queueDepth.Current);
         }
     }
 }
