@@ -114,6 +114,7 @@ namespace Sparrow.Server.Platform
             public long TotalWaitTicks;
             public long MaxRangeWaitTicks;
             public long BytesSkipped;
+            public long PagesDeferredHot; 
         }
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
@@ -181,6 +182,10 @@ namespace Sparrow.Server.Platform
             Int32 minWriteSizeBytes,
             out WritebackStats stats,
             out Int32 errorCode);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_pager_reset_dirty_tracking(
+            void* handle, out Int64 resetPages, out Int32 errorCode);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_pager_get_device_id(

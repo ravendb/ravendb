@@ -178,6 +178,7 @@ struct rvn_writeback_stats
     int64_t total_wait_ticks;
     int64_t max_range_wait_ticks;
     int64_t bytes_skipped;
+    int64_t pages_deferred_hot; 
 };
 
 /* Walks the pager's dirty pages and pushes the corresponding ranges to the device as a pipelined stream:
@@ -191,6 +192,11 @@ rvn_pager_writeback_dirty(void* handle,
     int32_t block_size_bytes,
     int32_t min_write_size_bytes,
     struct rvn_writeback_stats* stats,
+    int32_t* detailed_error_code);
+
+EXPORT int32_t
+rvn_pager_reset_dirty_tracking(void* handle,
+    int64_t* reset_pages,
     int32_t* detailed_error_code);
 
 /* st_dev on posix, volume serial number on windows - groups pagers that share
