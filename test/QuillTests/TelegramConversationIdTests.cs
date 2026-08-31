@@ -19,7 +19,7 @@ public class TelegramConversationIdTests(ITestOutputHelper output) : NoDisposalN
     {
         var id = TelegramConversationId.ForUtcDay(ChannelId, 42, new DateTime(2026, 8, 4, 13, 30, 0, DateTimeKind.Utc), NoParameters);
 
-        Assert.Matches($"^chats/tg/{ChannelId}/42/2026-08-04/[0-9a-f]{{8}}$", id);
+        Assert.Matches($"^chats/tg/{ChannelId}/42/2026-08-04/[0-9a-f]{{16}}$", id);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -57,7 +57,7 @@ public class TelegramConversationIdTests(ITestOutputHelper output) : NoDisposalN
     {
         var id = TelegramConversationId.ForUtcDay(ChannelId, -1001234567890, new DateTime(2026, 8, 4, 12, 0, 0, DateTimeKind.Utc), NoParameters);
 
-        Assert.Matches($"^chats/tg/{ChannelId}/-1001234567890/2026-08-04/[0-9a-f]{{8}}$", id);
+        Assert.Matches($"^chats/tg/{ChannelId}/-1001234567890/2026-08-04/[0-9a-f]{{16}}$", id);
     }
 
     [RavenFact(RavenTestCategory.Quill)]

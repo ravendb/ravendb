@@ -15,7 +15,7 @@ public class DiscordConversationIdTests(ITestOutputHelper output) : NoDisposalNe
         var id = DiscordConversationId.ForUtcDay(
             "abc123", "800000000000000001", new DateTime(2026, 8, 17, 13, 45, 0, DateTimeKind.Utc), NoParameters);
 
-        Assert.Matches("^chats/discord/abc123/800000000000000001/2026-08-17/[0-9a-f]{8}$", id);
+        Assert.Matches("^chats/discord/abc123/800000000000000001/2026-08-17/[0-9a-f]{16}$", id);
     }
 
     [RavenFact(RavenTestCategory.Quill)]

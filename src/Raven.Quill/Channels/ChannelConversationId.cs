@@ -22,6 +22,6 @@ internal static class ChannelConversationId
         }
 
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(canonical.ToString()));
-        return Convert.ToHexString(hash.AsSpan(0, 4)).ToLowerInvariant();
+        return Convert.ToHexStringLower(hash.AsSpan(0, 8));
     }
 }
