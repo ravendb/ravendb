@@ -196,7 +196,8 @@ internal sealed class SlackInboundProcessor(
                 new AgentRequest(database, config.Identifier, conversationId, prompt, channel.Id!,
                     parameters.ToDictionary(
                         parameter => parameter.Key,
-                        parameter => AgentParameterValue.FromString(parameter.Value))),
+                        parameter => AgentParameterValue.FromString(parameter.Value)),
+                    options.Value.ChannelConversationRetention),
                 reply.OnChunkAsync, config, ct);
 
             await reply.FinalizeAsync();
