@@ -177,9 +177,6 @@ internal sealed class DiscordInboundProcessor(
         if (prompt.Length == 0)
             return;
 
-        var conversationId = DiscordConversationId.ForUtcDay(
-            shortChannelId, sender, DateTime.UtcNow, settings.ParameterBindings);
-
         var config = await AgentLookup.FindAsync(store, database, channel.AgentId, ct);
         if (config is null)
             throw new InvalidOperationException($"agent '{channel.AgentId}' is no longer registered in this app");
@@ -191,6 +188,8 @@ internal sealed class DiscordInboundProcessor(
             await TrySendAsync(discord, database, shortChannelId, settings, dmChannel, ErrorReply, ct);
             throw new InvalidOperationException(bindError);
         }
+
+        var conversationId = DiscordConversationId.ForUtcDay(shortChannelId, sender, DateTime.UtcNow, parameters);
 
         var reply = new DiscordStreamingReply(
             discord, settings.BotToken, dmChannel, options.Value.Discord, logger, ct);
