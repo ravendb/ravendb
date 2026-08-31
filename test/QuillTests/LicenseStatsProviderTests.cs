@@ -82,6 +82,19 @@ public class LicenseStatsProviderTests(ITestOutputHelper output) : NoDisposalNee
         Assert.Equal(41, system.Usage);
     }
 
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task An_unparseable_usage_body_yields_an_empty_response()
+    {
+        var provider = new LicenseStatsProvider(
+            new StubAiHelperClient("not json"),
+            Options.Create(new ApplianceOptions { ConfigDatabase = "quill-config" }));
+
+        var usage = await provider.GetUsageAsync(2026, month: 6, day: null, CancellationToken.None);
+
+        Assert.Empty(usage.PerApplication);
+        Assert.Empty(usage.ByPeriod);
+    }
+
     private static async Task<QuillUsageResponse> GetUsageAsync(string configDatabase, params object[] perApplication)
     {
         var payload = JsonSerializer.Serialize(new { PerApplication = perApplication, ByPeriod = Array.Empty<object>() });
@@ -110,8 +123,17 @@ public class LicenseStatsProviderTests(ITestOutputHelper output) : NoDisposalNee
         public Task<(AiHelperStatus Transport, string Content)> SendAsync(string path, string method, object request, CancellationToken ct) =>
             Task.FromResult((AiHelperStatus.Success, content));
 
-        public Task<T> DeserializeAsync<T>(string json, CancellationToken ct) where T : class =>
-            Task.FromResult(JsonSerializer.Deserialize<T>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!);
+        public Task<T> DeserializeAsync<T>(string json, CancellationToken ct) where T : class
+        {
+            try
+            {
+                return Task.FromResult(JsonSerializer.Deserialize<T>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!);
+            }
+            catch (JsonException)
+            {
+                return Task.FromResult<T>(null!);
+            }
+        }
 
         public Task<SuggestCdcInternalResult> SuggestCdcAsync(object? schema, object? samples, string prompt, CancellationToken ct) =>
             throw new NotSupportedException();

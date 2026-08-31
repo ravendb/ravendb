@@ -1,5 +1,6 @@
 using QuillTests.E2E.Fixtures;
 using Raven.Quill.Metrics;
+using Raven.Quill.Wizard;
 using Tests.Infrastructure;
 using Xunit;
 using static QuillTests.E2E.Fixtures.ConversationSeed;
@@ -31,5 +32,41 @@ public class TokensByAppEndpointTests(ITestOutputHelper output, QuillCollectionH
         Assert.Equal(400, apps[0].Tokens);
         Assert.Equal(appOne.Slug, apps[1].Slug);
         Assert.Equal(150, apps[1].Tokens);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task TokensByApp_skips_an_app_whose_database_is_gone()
+    {
+        await using var app = await NewAppAsync();
+        var now = DateTime.UtcNow;
+        await SeedConversationAsync(app.Store, app.Slug, "chats/live", "demo", now.AddHours(-1), tokens: 75);
+
+        var ghostSlug = "ghost-" + Guid.NewGuid().ToString("N")[..8];
+        using (var session = app.Host.Config.OpenAsyncSession())
+        {
+            await session.StoreAsync(new App
+            {
+                Slug = ghostSlug,
+                AppName = "Ghost",
+                Database = ghostSlug,
+                CreatedAt = now,
+            }, "apps/" + ghostSlug);
+            await session.SaveChangesAsync();
+        }
+
+        try
+        {
+            var result = await Host.GetTokensByAppAsync();
+
+            var row = Assert.Single(result.Apps, a => a.Slug == app.Slug);
+            Assert.Equal(75, row.Tokens);
+            Assert.DoesNotContain(result.Apps, a => a.Slug == ghostSlug);
+        }
+        finally
+        {
+            using var session = app.Host.Config.OpenAsyncSession();
+            session.Delete("apps/" + ghostSlug);
+            await session.SaveChangesAsync();
+        }
     }
 }
