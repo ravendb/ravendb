@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type Ref } from "react";
 import { Text } from "@/components/typography";
 import { type Control, useFieldArray, useForm, useFormContext, useWatch } from "react-hook-form";
 import { useParams } from "react-router";
@@ -62,7 +62,10 @@ export function ReviewTestAgentButton({ isBusy }: WizardFooterComponentProps) {
                     Test agent
                 </Button>
             </SheetTrigger>
-            <SheetContent className="flex w-full flex-col gap-0 sm:max-w-lg data-[side=right]:sm:max-w-lg">
+            <SheetContent
+                className="flex w-full flex-col gap-0 sm:max-w-lg data-[side=right]:sm:max-w-lg"
+                onOpenAutoFocus={(event) => event.preventDefault()}
+            >
                 <SheetHeader className="border-b">
                     <SheetTitle>Test agent</SheetTitle>
                     <SheetDescription>
@@ -76,6 +79,8 @@ export function ReviewTestAgentButton({ isBusy }: WizardFooterComponentProps) {
         </Sheet>
     );
 }
+
+const NEWEST_PROMPT_TOP_GAP_IN_PX = 16;
 
 let messageIdCounter = 0;
 function nextMessageId(): string {
@@ -142,6 +147,25 @@ function TestAgentPanel() {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [isStreaming, setIsStreaming] = useState(false);
     const [areParametersCollapsed, setAreParametersCollapsed] = useState(false);
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const newestPromptRef = useRef<HTMLDivElement>(null);
+    const newestPromptId = messages.findLast((message) => message.role === "user")?.id;
+
+    // Keep the newest prompt near the top as its answer streams in, so the answer reads from its
+    // first line instead of the view chasing the bottom. Scrolling this container directly, rather
+    // than scrollIntoView, keeps the sheet itself from scrolling along.
+    useEffect(() => {
+        const scrollArea = scrollRef.current;
+        const newestPrompt = newestPromptRef.current;
+        if (!scrollArea || !newestPrompt) {
+            return;
+        }
+
+        scrollArea.scrollTop +=
+            newestPrompt.getBoundingClientRect().top -
+            scrollArea.getBoundingClientRect().top -
+            NEWEST_PROMPT_TOP_GAP_IN_PX;
+    }, [messages]);
 
     // Re-read the draft's output shape live from the wizard form (it stays mounted behind the
     // sheet), so the "Streamed field" options and the streaming preview track edits to the
@@ -178,6 +202,17 @@ function TestAgentPanel() {
     });
     const parameterFields = useFieldArray({ control: form.control, name: "parameters" });
     const prompt = useWatch({ control: form.control, name: "prompt" });
+
+    // The prompt box is disabled while a turn streams, which drops focus. Take it back once the
+    // turn ends, unless the operator has moved to a control in the transcript.
+    useEffect(() => {
+        if (isStreaming || scrollRef.current?.contains(document.activeElement)) {
+            return;
+        }
+
+        form.setFocus("prompt");
+    }, [form, isStreaming]);
+
     const streamFieldSelectOptions: FormSelectOption<string>[] = streamFieldOptions.map((name) => ({
         value: name,
         label: name,
@@ -295,7 +330,7 @@ function TestAgentPanel() {
 
     return (
         <div className="flex min-h-0 flex-1 flex-col">
-            <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
+            <div ref={scrollRef} className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
                 {streamFieldSelectOptions.length > 1 && (
                     <FormSelect
                         control={form.control}
@@ -327,6 +362,7 @@ function TestAgentPanel() {
                         {messages.map((message, index) => (
                             <TestMessage
                                 key={message.id}
+                                ref={message.id === newestPromptId ? newestPromptRef : undefined}
                                 message={message}
                                 // Only the in-flight agent turn (always the last message) shows the
                                 // "generating" indicator above its answer.
@@ -473,10 +509,21 @@ function TestParametersSection({
     );
 }
 
-function TestMessage({ message, isLoading }: { message: ChatMessage; isLoading: boolean }) {
+function TestMessage({
+    message,
+    isLoading,
+    ref,
+}: {
+    message: ChatMessage;
+    isLoading: boolean;
+    ref?: Ref<HTMLDivElement>;
+}) {
     if (message.role === "user") {
         return (
-            <div className="ml-auto max-w-[85%] rounded-lg bg-primary px-3 py-2 text-sm whitespace-pre-wrap text-primary-foreground">
+            <div
+                ref={ref}
+                className="ml-auto max-w-[85%] rounded-lg bg-primary px-3 py-2 text-sm whitespace-pre-wrap text-primary-foreground"
+            >
                 {message.text}
             </div>
         );
