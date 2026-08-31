@@ -10,6 +10,15 @@ public class ChannelConversationIdTests(ITestOutputHelper output) : NoDisposalNe
     private static readonly DateTime Noon = new(2026, 8, 17, 12, 0, 0, DateTimeKind.Utc);
 
     [RavenFact(RavenTestCategory.Quill)]
+    public void Fingerprint_canonical_form_is_pinned()
+    {
+        var id = ChannelConversationId.ForUtcDay("discord", "abc123", "800000000000000001", Noon,
+            new Dictionary<string, string> { ["userId"] = "users/1", ["handle"] = "dana.dev" });
+
+        Assert.Equal("chats/discord/abc123/800000000000000001/2026-08-17/e1b1ca337dd45908", id);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public void Changing_a_parameter_value_rolls_to_a_fresh_conversation()
     {
         var before = ChannelConversationId.ForUtcDay("discord", "abc123", "800000000000000001", Noon,

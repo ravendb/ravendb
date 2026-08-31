@@ -289,7 +289,7 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
         await app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
             Discord: new(ParameterBindings: new Dictionary<string, ChannelParameterBinding>
             {
-                ["userId"] = new() { Source = ChannelParameterSource.Constant, Value = "Users/2" },
+                ["userId"] = new() { Source = ChannelParameterSource.Constant, Value = "users/2" },
             })));
 
         await Discord.WaitUntilAsync(() => Discord.Identifies.Count >= 2, "the gateway swap after the update");
@@ -299,7 +299,7 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
         var first = Router.Requests[0];
         var second = Router.Requests[1];
         Assert.Equal("users/1", first.Parameters["userId"].GetString());
-        Assert.Equal("Users/2", second.Parameters["userId"].GetString());
+        Assert.Equal("users/2", second.Parameters["userId"].GetString());
         Assert.NotEqual(first.ConversationId, second.ConversationId);
     }
 
