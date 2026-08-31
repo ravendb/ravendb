@@ -207,6 +207,9 @@ internal sealed class TelegramChat
 
         foreach (var (name, binding) in _context.ChannelDoc.Telegram!.ParameterBindings)
         {
+            if (binding is null)
+                continue;
+
             switch (binding.Source)
             {
                 case ChannelParameterSource.Constant:
