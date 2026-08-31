@@ -34,6 +34,7 @@ internal sealed class DiscordInboundProcessor(
     private readonly Dictionary<string, SenderChain> _senderChains = new();
     private readonly object _chainsLock = new();
     private readonly CancellationTokenSource _stopping = new();
+    private readonly SemaphoreSlim _turnGate = new(options.Value.Discord.MaxConcurrentTurns);
 
     private readonly HashSet<string> _seenMessageIds = new(StringComparer.Ordinal);
     private readonly Queue<(string MessageId, DateTime SeenAt)> _seenOrder = new();
@@ -138,6 +139,15 @@ internal sealed class DiscordInboundProcessor(
     {
         try
         {
+            await _turnGate.WaitAsync(_stopping.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        try
+        {
             await HandleMessageAsync(
                 database, channelId, sender, senderUsername, dmChannel, kind, text, _stopping.Token);
         }
@@ -148,6 +158,10 @@ internal sealed class DiscordInboundProcessor(
         {
             if (logger.IsWarnEnabled)
                 logger.Warn($"Discord message handling failed for channel {channelId} sender {sender}: {e.Message}");
+        }
+        finally
+        {
+            _turnGate.Release();
         }
     }
 

@@ -762,6 +762,40 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         Assert.Equal(frozen, Mock.GetUpdatesCallCount(token));
     }
 
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task New_chats_beyond_the_active_chat_cap_are_dropped()
+    {
+        var host = await NewHostAsync(configure: opts => opts.Telegram.MaxActiveChats = 1);
+        var app = await NewAppAsync(host);
+        await using var appGuard = app;
+
+        var agentId = "tg-agent-" + Guid.NewGuid().ToString("N")[..8];
+        await app.ProvisionAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = agentId,
+            Name = "Telegram Demo Agent",
+            SystemPrompt = "You are a placeholder demo agent.",
+            ConnectionStringName = app.Host.ConnectionStringName,
+        });
+
+        var token = NewBotToken();
+        var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
+            ChannelType.Telegram, agentId, null, Telegram: new(token)));
+
+        Mock.EnqueueTextMessage(token, chatId: 21, fromUserId: 21, "first chat");
+        await Mock.WaitUntilAsync(() => Router.Requests.Count >= 1, "the first chat's turn");
+
+        Mock.EnqueueTextMessage(token, chatId: 22, fromUserId: 22, "second chat");
+        Mock.EnqueueTextMessage(token, chatId: 21, fromUserId: 21, "first chat again");
+        await Mock.WaitUntilAsync(
+            () => Router.Requests.Any(r => r.Prompt == "first chat again"), "the first chat's second turn");
+
+        Assert.DoesNotContain(Router.Requests, r => r.Prompt == "second chat");
+        Assert.DoesNotContain(Mock.SentMessages, m => m.ChatId == 22);
+
+        await app.DeleteChannelAsync(created.ChannelId);
+    }
+
     private async Task<(QuillApp App, string ChannelId, string Token)> ProvisionAsync(
         Dictionary<string, ChannelParameterBinding>? bindings = null, AiAgentParameter[]? declared = null)
     {

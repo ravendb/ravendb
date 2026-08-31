@@ -6,6 +6,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
+using Raven.Quill.Endpoints;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -290,6 +291,22 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
 
         var ex = await Assert.ThrowsAsync<QuillHttpException>(() => h.App.SendEmbedChatAsync(token, "over the cap"));
         Assert.Equal(HttpStatusCode.TooManyRequests, ex.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Oversized_prompt_is_rejected_before_the_turn_starts()
+    {
+        await using var h = await HarnessAsync();
+        var token = await MintAsync(h.App, h.ChannelId, maxInvocations: 1);
+
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() =>
+            h.App.SendEmbedChatAsync(token, new string('x', EmbedEndpoints.MaxPromptLength + 1)));
+        Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
+        Assert.Contains("prompt_too_long", ex.Body);
+
+        using var session = h.Store.OpenAsyncSession(h.Database);
+        var link = await session.LoadAsync<EmbedLink>(EmbedLink.IdPrefix + token);
+        Assert.Equal(0, link.InvocationCount);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
