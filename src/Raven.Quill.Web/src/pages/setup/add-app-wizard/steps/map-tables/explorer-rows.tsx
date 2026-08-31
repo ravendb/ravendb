@@ -41,10 +41,15 @@ export function ExplorerRowItem({ row }: { row: ExplorerRow }) {
 }
 
 export function SchemaRow({ label }: { label: string }) {
+    // The vertical padding sits outside the filled band: it separates the header from the
+    // previous group above and from its own first row below. Its height is part of
+    // SCHEMA_ROW_HEIGHT_PX in the explorer.
     return (
-        <Text variant="caption" as="div" className="rounded-sm bg-muted px-1.5 py-1 text-center font-mono">
-            {label}
-        </Text>
+        <div className="py-1">
+            <Text variant="caption" as="div" className="rounded-sm bg-muted px-1.5 py-1 text-center font-mono">
+                {label}
+            </Text>
+        </div>
     );
 }
 
@@ -143,8 +148,11 @@ function TableRowFrame({ row, depth, isDimmed, typeIcon, actions }: TableRowFram
     const collectionName = row.type === "root" ? row.table.collectionName : null;
 
     return (
+        // The frame stays taller than its inner controls so the rounded row highlights get a
+        // visible gap between them, while the frames themselves stay flush to keep the nested
+        // border-l connector line unbroken. Its height is TABLE_ROW_HEIGHT_PX in the explorer.
         <div
-            className={cn("flex h-8 items-center", depth > 0 && "border-l")}
+            className={cn("flex h-9 items-center", depth > 0 && "border-l")}
             style={{ marginLeft: depth * NESTED_TABLE_INDENT_PX }}
         >
             {expandableRow ? (

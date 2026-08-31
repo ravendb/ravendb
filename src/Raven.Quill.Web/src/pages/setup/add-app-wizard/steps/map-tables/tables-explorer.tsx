@@ -17,8 +17,11 @@ import { ExplorerRowItem, SchemaRow } from "@/pages/setup/add-app-wizard/steps/m
 import { getRootTablePath, type ExplorerRow } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-types";
 import { useTableActions } from "@/pages/setup/add-app-wizard/steps/map-tables/use-table-actions";
 
-const SCHEMA_ROW_HEIGHT_PX = 24;
-const TABLE_ROW_HEIGHT_PX = 32;
+// Band height (24) plus the py-1 (4 + 4) gap SchemaRow renders around it. The 4px pairs with
+// the 4px a row highlight sits inside its frame, so every inter-item gap lands at 8px.
+const SCHEMA_ROW_HEIGHT_PX = 32;
+// Frame height (h-9); its inner controls are shorter, leaving a gap between row highlights.
+const TABLE_ROW_HEIGHT_PX = 36;
 
 export function TablesExplorer() {
     const { control } = useFormContext<AppFormData>();
@@ -127,7 +130,10 @@ function VirtualizedExplorerRows({ rows }: { rows: ExplorerRow[] }) {
     });
 
     return (
-        <div ref={scrollContainerRef} className="min-h-0 flex-1 overflow-y-auto">
+        // -mt-1 cancels the first schema header's top padding (SchemaRow's py-1), so the gap from
+        // the filter input above lands at the same 8px (the container's gap-2) as every in-list gap,
+        // instead of 8 + 4. Headers still separate from each other by that padding inside the list.
+        <div ref={scrollContainerRef} className="-mt-1 min-h-0 flex-1 overflow-y-auto">
             {activeSchemaLabel !== null && (
                 // The negative margin keeps the overlay out of the flow so the list below
                 // starts at the container top. bg-background fills the corner pixels the
