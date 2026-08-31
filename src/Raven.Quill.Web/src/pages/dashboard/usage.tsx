@@ -84,7 +84,7 @@ export function DashboardUsage() {
             <Card>
                 <CardHeader>
                     <CardTitle asChild>
-                        <h2>Usage per app</h2>
+                        <h2>Usage by database</h2>
                     </CardTitle>
                     <CardDescription>Totals for {periodLabel}.</CardDescription>
                 </CardHeader>
