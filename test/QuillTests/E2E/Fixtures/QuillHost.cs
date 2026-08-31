@@ -42,6 +42,7 @@ public sealed class QuillHost : IAsyncDisposable
             configureOptions: opts =>
             {
                 opts.ConfigDatabase = config.Database;
+                opts.AllowPrivateWebhookTargets = true;
                 configure?.Invoke(opts);
             },
             configureServices: configureServices);

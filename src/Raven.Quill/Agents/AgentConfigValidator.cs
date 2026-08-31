@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
@@ -25,7 +27,8 @@ internal static class AgentConfigValidator
     /// on success; otherwise the error <see cref="IResult"/> the caller should return.
     /// </summary>
     public static async Task<IResult?> ValidateAndPrepareAsync(
-        IDocumentStore store, string slug, EditAgentRequest? request, CancellationToken ct)
+        IDocumentStore store, string slug, EditAgentRequest? request, bool allowPrivateWebhookTargets,
+        CancellationToken ct)
     {
         // STJ uses the param-less ctor, bypassing the 3-arg guards; validate here
         if (request?.Configuration is not { } body)
@@ -40,7 +43,7 @@ internal static class AgentConfigValidator
         if (string.IsNullOrWhiteSpace(body.ConnectionStringName))
             return Results.BadRequest(new ApiErrorResponse("connectionStringName is required"));
 
-        if (TryValidateActions(body, request.ActionBindings, out var actionErrors) == false)
+        if (TryValidateActions(body, request.ActionBindings, allowPrivateWebhookTargets, out var actionErrors) == false)
             return Results.BadRequest(new ApiErrorResponse(Errors: actionErrors.ToArray()));
 
         if (body.SubAgents is { Count: > 0 })
@@ -86,7 +89,8 @@ internal static class AgentConfigValidator
     }
 
     internal static bool TryValidateActions(
-        AiAgentConfiguration body, Dictionary<string, WebhookBinding>? bindings, out List<string> errors)
+        AiAgentConfiguration body, Dictionary<string, WebhookBinding>? bindings, bool allowPrivateWebhookTargets,
+        out List<string> errors)
     {
         errors = [];
 
@@ -125,6 +129,8 @@ internal static class AgentConfigValidator
                 errors.Add($"action '{action.Name}' has no binding");
             else if (IsHttpUrl(binding.Url) == false)
                 errors.Add($"action '{action.Name}': url must be http(s)");
+            else if (allowPrivateWebhookTargets == false && IsPublicHost(new Uri(binding.Url!)) == false)
+                errors.Add($"action '{action.Name}': url must not target a loopback, link-local, or private address");
         }
 
         foreach (var name in byName.Keys)
@@ -138,6 +144,43 @@ internal static class AgentConfigValidator
     private static bool IsHttpUrl(string? url) =>
         Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
         (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+
+    internal static bool IsPublicHost(Uri uri)
+    {
+        if (uri.HostNameType is UriHostNameType.IPv4 or UriHostNameType.IPv6)
+            return IPAddress.TryParse(uri.Host.Trim('[', ']'), out var ip) && IsPublicAddress(ip);
+
+        return uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) == false &&
+               uri.Host.EndsWith(".localhost", StringComparison.OrdinalIgnoreCase) == false;
+    }
+
+    private static bool IsPublicAddress(IPAddress ip)
+    {
+        if (ip.IsIPv4MappedToIPv6)
+            ip = ip.MapToIPv4();
+
+        if (IPAddress.IsLoopback(ip) || ip.Equals(IPAddress.Any) || ip.Equals(IPAddress.IPv6Any))
+            return false;
+
+        if (ip.AddressFamily == AddressFamily.InterNetwork)
+        {
+            var b = ip.GetAddressBytes();
+            return b[0] switch
+            {
+                0 or 10 or 127 => false,
+                100 when b[1] >= 64 && b[1] <= 127 => false,
+                169 when b[1] == 254 => false,
+                172 when b[1] >= 16 && b[1] <= 31 => false,
+                192 when b[1] == 168 => false,
+                _ => true,
+            };
+        }
+
+        if (ip.IsIPv6LinkLocal || ip.IsIPv6SiteLocal || ip.IsIPv6UniqueLocal)
+            return false;
+
+        return true;
+    }
 
     public static string EnforceLimit(string rql)
     {
