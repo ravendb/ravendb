@@ -53,14 +53,21 @@ describe("toUsageGroups", () => {
         expect(group!.isExpandable).toBe(true);
     });
 
-    it("sorts the system group last and keeps apps in the order they arrived", () => {
+    it("sorts apps by usage descending and keeps the system group last", () => {
         const groups = toUsageGroups([
-            row("t9", "quill-config", 40, true),
+            row("t9", "quill-config", 5000, true),
             row("t1", "zeta", 1),
             row("t2", "alpha", 2),
         ]);
 
-        expect(groups.map((g) => g.label)).toEqual(["zeta", "alpha", SYSTEM_GROUP_LABEL]);
+        // System stays last despite its far larger usage; apps above it order by usage descending.
+        expect(groups.map((g) => g.label)).toEqual(["alpha", "zeta", SYSTEM_GROUP_LABEL]);
+    });
+
+    it("breaks a usage tie between apps by label", () => {
+        const groups = toUsageGroups([row("t1", "beta", 10), row("t2", "alpha", 10)]);
+
+        expect(groups.map((g) => g.label)).toEqual(["alpha", "beta"]);
     });
 
     it("never groups an app with a system row that shares its name", () => {

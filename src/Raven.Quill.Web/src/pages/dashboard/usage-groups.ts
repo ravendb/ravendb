@@ -42,7 +42,7 @@ function toGroup(key: string, label: string, isSystem: boolean, rows: QuillAppli
     };
 }
 
-// Apps first, in the order the licence server listed them, then the system group last.
+// Apps first, ordered by usage descending, then the system group last.
 export function toUsageGroups(apps: QuillApplicationUsage[]): UsageGroup[] {
     const byName = new Map<string, QuillApplicationUsage[]>();
     const system: QuillApplicationUsage[] = [];
@@ -58,7 +58,9 @@ export function toUsageGroups(apps: QuillApplicationUsage[]): UsageGroup[] {
         else byName.set(app.applicationName, [app]);
     }
 
-    const groups = Array.from(byName, ([name, rows]) => toGroup(`app/${name}`, name, false, rows));
+    const groups = Array.from(byName, ([name, rows]) => toGroup(`app/${name}`, name, false, rows)).sort(
+        (a, b) => b.usage - a.usage || a.label.localeCompare(b.label),
+    );
 
     if (system.length > 0) groups.push(toGroup(SYSTEM_GROUP_KEY, SYSTEM_GROUP_LABEL, true, system));
 
