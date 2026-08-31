@@ -14,7 +14,7 @@
             class="relative flex min-h-svh flex-col items-center justify-center overflow-hidden bg-background px-4 py-10 font-sans text-foreground antialiased"
         >
             <div aria-hidden="true" class="expiry-wash pointer-events-none absolute inset-0"></div>
-            <div class="relative z-10 flex w-full max-w-88 flex-col items-center">
+            <div class="relative z-10 flex w-full max-w-lg flex-col items-center">
                 <!-- main.ts inlines src/components/brand/quill-logo.svg here, so the logo follows the theme via
                      currentColor. Width and entrance match the login screen (auth-screen-layout.tsx). The svg
                      carries its own role="img" and label, so the wrapper must not aria-hide it. -->
@@ -23,23 +23,85 @@
                     class="mb-8 flex animate-in items-center text-foreground duration-600 fade-in-0 zoom-in-90 [&_svg]:h-auto [&_svg]:w-[120px]"
                 ></div>
 
-                <h1 class="mb-2 text-center text-2xl leading-tight font-semibold tracking-tight text-balance">
+                <h1 class="mb-2 text-center text-3xl leading-tight font-semibold tracking-tight text-balance">
                     Quill needs updating
                 </h1>
-                <!-- The update steps and what happens to existing data live in the documentation, not here: an
-                     inline command invites a blind paste, and the right one depends on how this container is
-                     run. -->
-                <p class="mb-6 text-center text-sm text-pretty text-muted-foreground">
-                    This build has expired. The documentation walks through updating to the latest version and what
-                    happens to your data.
+                <!-- Introduces the value tiles below rather than listing the benefits, so the two don't repeat. -->
+                <p class="mb-5 text-center text-sm text-pretty text-muted-foreground">
+                    This build has expired. Here's what moving to the latest Quill brings - the guide walks you through
+                    the update, step by step.
                 </p>
+
+                <!-- Three Card tiles (src/components/shadcn/ui/card.tsx): rounded-xl bg-card + the same
+                     ring-1 ring-foreground/10 hairline. Icons in the brand tone (primary-strong = brand-400 here). -->
+                <div class="mb-5 grid w-full grid-cols-3 gap-2.5">
+                    <div
+                        class="flex flex-col items-center gap-2 rounded-xl bg-card px-2 py-3.5 text-center text-card-foreground ring-1 ring-foreground/10"
+                    >
+                        <svg
+                            class="size-5 text-primary-strong"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            aria-hidden="true"
+                        >
+                            <path
+                                d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"
+                            />
+                            <path d="M20 2v4" />
+                            <path d="M22 4h-4" />
+                            <circle cx="4" cy="20" r="2" />
+                        </svg>
+                        <span class="text-xs font-medium">New features</span>
+                    </div>
+                    <div
+                        class="flex flex-col items-center gap-2 rounded-xl bg-card px-2 py-3.5 text-center text-card-foreground ring-1 ring-foreground/10"
+                    >
+                        <svg
+                            class="size-5 text-primary-strong"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            aria-hidden="true"
+                        >
+                            <path
+                                d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"
+                            />
+                        </svg>
+                        <span class="text-xs font-medium">Enhancements</span>
+                    </div>
+                    <div
+                        class="flex flex-col items-center gap-2 rounded-xl bg-card px-2 py-3.5 text-center text-card-foreground ring-1 ring-foreground/10"
+                    >
+                        <svg
+                            class="size-5 text-primary-strong"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            aria-hidden="true"
+                        >
+                            <path d="m12 14 4-4" />
+                            <path d="M3.34 19a10 10 0 1 1 17.32 0" />
+                        </svg>
+                        <span class="text-xs font-medium">Speed &amp; stability</span>
+                    </div>
+                </div>
 
                 <!-- Mirrors Button variant="default" size="lg", which this page cannot render as React. -->
                 <a
                     href="https://ravendb.net/l/DE5KV9"
                     target="_blank"
                     rel="noreferrer"
-                    class="inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-transparent bg-primary px-2.5 text-sm font-medium text-primary-foreground no-underline transition-all outline-none select-none hover:bg-primary/80 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:translate-y-px"
+                    class="inline-flex h-9 w-full max-w-sm items-center justify-center gap-2 rounded-lg border border-transparent bg-primary px-2.5 text-sm font-medium text-primary-foreground no-underline transition-all outline-none select-none hover:bg-primary/80 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:translate-y-px"
                 >
                     How to update Quill
                     <!-- lucide's ExternalLink at lucide's own geometry, hand-inlined because this page cannot
