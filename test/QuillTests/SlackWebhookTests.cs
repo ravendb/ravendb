@@ -68,6 +68,58 @@ public class SlackWebhookTests(ITestOutputHelper output, QuillSlackFixture fixtu
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Updating_a_constant_binding_starts_a_fresh_conversation_with_the_new_value()
+    {
+        await using var app = await NewAppAsync();
+
+        var agentId = "slack-agent-" + Guid.NewGuid().ToString("N")[..8];
+        await app.ProvisionAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = agentId,
+            Name = "Slack Demo Agent",
+            SystemPrompt = "You are a placeholder demo agent.",
+            ConnectionStringName = app.Host.ConnectionStringName,
+            Parameters = [new AiAgentParameter("userId", "the customer's document id")],
+        });
+
+        var botToken = NewBotToken();
+        var teamId = NewTeamId();
+        var signingSecret = "signing-" + Guid.NewGuid().ToString("N");
+        Slack.AddBot(botToken, teamId, "Webhook Test Co", NewBotUserId());
+
+        var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
+            ChannelType.Slack, agentId, null,
+            Slack: new(botToken, signingSecret, ParameterBindings: new Dictionary<string, ChannelParameterBinding>
+            {
+                ["userId"] = new() { Source = ChannelParameterSource.Constant, Value = "users/1" },
+            })));
+
+        var info = await QuillHttp.GetAsync<SlackWebhookInfoResponse>(
+            Host.Client, QuillRoutes.SlackWebhookInfo(app.Slug, created.ChannelId));
+        var webhookToken = info.RequestUrl[(info.RequestUrl.LastIndexOf('/') + 1)..];
+
+        var first = EventBytes(teamId, "Ev-bind-1", DmMessage(Sender, "first question"));
+        await Host.Client.SendAsync(SignedPost(webhookToken, first, signingSecret));
+        await Slack.WaitUntilAsync(() => Router.Requests.Count == 1, "the first agent dispatch");
+
+        await app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
+            Slack: new(ParameterBindings: new Dictionary<string, ChannelParameterBinding>
+            {
+                ["userId"] = new() { Source = ChannelParameterSource.Constant, Value = "users/2" },
+            })));
+
+        var second = EventBytes(teamId, "Ev-bind-2", DmMessage(Sender, "second question"));
+        await Host.Client.SendAsync(SignedPost(webhookToken, second, signingSecret));
+        await Slack.WaitUntilAsync(() => Router.Requests.Count == 2, "the second agent dispatch");
+
+        var firstRequest = Router.Requests[0];
+        var secondRequest = Router.Requests[1];
+        Assert.Equal("users/1", firstRequest.Parameters["userId"].GetString());
+        Assert.Equal("users/2", secondRequest.Parameters["userId"].GetString());
+        Assert.NotEqual(firstRequest.ConversationId, secondRequest.ConversationId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Streaming_chunks_edit_the_same_message_in_place()
     {
         await using var app = await NewAppAsync();

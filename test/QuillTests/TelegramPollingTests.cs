@@ -559,6 +559,43 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Updating_a_constant_binding_starts_a_fresh_conversation_with_the_new_value()
+    {
+        var (app, channelId, token) = await ProvisionAsync(
+            bindings: new Dictionary<string, ChannelParameterBinding>
+            {
+                ["customerId"] = new() { Source = ChannelParameterSource.Constant, Value = "users/1" },
+            },
+            declared: [new AiAgentParameter("customerId", "scope")]);
+        await using var appGuard = app;
+
+        const long chatId = 640;
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 640, "first question");
+        await Mock.WaitUntilAsync(() => Router.Requests.Count >= 1, "the first agent run");
+        var first = Router.Requests[0];
+        Assert.Equal("users/1", first.Parameters["customerId"].GetString());
+
+        await app.UpdateChannelAsync(channelId, new UpdateChannelRequest(null, null, null,
+            new TelegramUpdateRequest(ParameterBindings: new Dictionary<string, ChannelParameterBinding>
+            {
+                ["customerId"] = new() { Source = ChannelParameterSource.Constant, Value = "users/2" },
+            })));
+
+        for (var attempt = 0; attempt < 40; attempt++)
+        {
+            Mock.EnqueueTextMessage(token, chatId, fromUserId: 640, $"after the update {attempt}");
+            await Task.Delay(250);
+            if (Router.Requests.Any(r => r.Parameters["customerId"].GetString() == "users/2"))
+                break;
+        }
+
+        var second = Router.Requests.First(r => r.Parameters["customerId"].GetString() == "users/2");
+        Assert.NotEqual(first.ConversationId, second.ConversationId);
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Clear_command_deletes_the_conversation_and_its_preview()
     {
         var (app, channelId, token) = await ProvisionAsync();
