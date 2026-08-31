@@ -7,7 +7,7 @@ import { getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-
 import { api } from "@/api/api";
 import type { DataCollectionDto } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
-import { Badge } from "@/components/shadcn/ui/badge";
+import { CountBadge } from "@/components/data/count-badge";
 import { VirtualDataTable, VirtualDataTableSkeleton } from "@/components/table/virtual-data-table";
 import { formatCompact } from "@/lib/format";
 import { SectionCard } from "@/pages/apps/section-card";
@@ -42,13 +42,7 @@ export function CollectionsSection({ slug }: { slug: string }) {
     return (
         <SectionCard
             title="Collections"
-            count={
-                collectionsQuery.data && (
-                    <Badge variant="secondary" className="font-mono">
-                        {collectionsQuery.data.length}
-                    </Badge>
-                )
-            }
+            count={collectionsQuery.data && <CountBadge>{collectionsQuery.data.length}</CountBadge>}
         >
             <ApiState
                 isLoading={collectionsQuery.isPending}

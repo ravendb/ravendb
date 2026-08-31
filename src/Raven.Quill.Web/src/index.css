@@ -38,7 +38,7 @@
        it respects the reader's browser font-size preference. Tailwind breakpoints use the initial
        font size in media queries, so they're unaffected by this. */
     html {
-        font-size: clamp(1rem, 0.8rem + 0.22vw, 1.125rem);
+        font-size: clamp(1rem, 0.77rem + 0.24vw, 1.125rem);
     }
 
     body {

@@ -7,8 +7,8 @@ import { api } from "@/api/api";
 import type { AgentSummaryResponse, ChannelSummaryResponse, ChannelType } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
 import { CardListSkeleton } from "@/components/data/loading-skeletons";
+import { CountBadge } from "@/components/data/count-badge";
 import { EnabledStatus } from "@/components/data/status-indicator";
-import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { Card, CardAction, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/shadcn/ui/card";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/shadcn/ui/input-group";
@@ -123,9 +123,7 @@ export function ChannelGroups({ slug }: { slug: string }) {
                                         <div className="mb-3 flex items-center gap-2">
                                             <group.icon className="size-4 text-muted-foreground" aria-hidden="true" />
                                             <Heading variant="label">{group.label}</Heading>
-                                            <Badge variant="secondary" className="tabular-nums">
-                                                {group.channels.length}
-                                            </Badge>
+                                            <CountBadge>{group.channels.length}</CountBadge>
                                             {group.label === "Web widgets" && (
                                                 <Button asChild variant="outline">
                                                     <Link to={appRoutes.app(slug, "web-widget/default-customize")}>

@@ -6,7 +6,7 @@ import type { CertificateItem, SecurityClearance } from "@/api/custom-services/c
 import type { AppResponse } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
 import { CardListSkeleton } from "@/components/data/loading-skeletons";
-import { Badge } from "@/components/shadcn/ui/badge";
+import { CountBadge } from "@/components/data/count-badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { CertificateCard } from "@/pages/dashboard/certificates/certificate-card";
 import {
@@ -133,7 +133,7 @@ function CertificateSection({
         <section className="space-y-3">
             <div className="flex items-center gap-2">
                 <Heading variant="label">{title}</Heading>
-                <Badge variant="secondary">{certificates.length}</Badge>
+                <CountBadge>{certificates.length}</CountBadge>
             </div>
             <div className="space-y-3">
                 {certificates.map((certificate) => (
