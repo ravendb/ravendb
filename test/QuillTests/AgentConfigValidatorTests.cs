@@ -87,10 +87,11 @@ public class AgentConfigValidatorTests(ITestOutputHelper output) : NoDisposalNee
         {
             ["CREATE_TICKET"] = Webhook("https://hooks.example/t"),   // key casing is irrelevant
             ["archive"] = Webhook("https://hooks.example/a"),
-        }, out var errors));
+        }, allowPrivateWebhookTargets: false, out var errors));
         Assert.Empty(errors);
 
-        Assert.True(AgentConfigValidator.TryValidateActions(ConfigWith(), null, out var noActions));
+        Assert.True(AgentConfigValidator.TryValidateActions(
+            ConfigWith(), null, allowPrivateWebhookTargets: false, out var noActions));
         Assert.Empty(noActions);
     }
 
@@ -103,7 +104,7 @@ public class AgentConfigValidatorTests(ITestOutputHelper output) : NoDisposalNee
         {
             ["create_ticket"] = Webhook("not-a-url"),
             ["ghost"] = Webhook("https://hooks.example/g"),
-        }, out var errors));
+        }, allowPrivateWebhookTargets: false, out var errors));
 
         Assert.Equal(
             [
@@ -165,7 +166,7 @@ public class AgentConfigValidatorTests(ITestOutputHelper output) : NoDisposalNee
             ErrorsOf(config, bindings));
 
         config.Actions[0].ParametersSchema = """{"type":"object"}""";
-        Assert.True(AgentConfigValidator.TryValidateActions(config, bindings, out var errors));
+        Assert.True(AgentConfigValidator.TryValidateActions(config, bindings, allowPrivateWebhookTargets: false, out var errors));
         Assert.Empty(errors);
     }
 
@@ -215,7 +216,7 @@ public class AgentConfigValidatorTests(ITestOutputHelper output) : NoDisposalNee
     private static List<string> ErrorsOf(
         AiAgentConfiguration config, Dictionary<string, WebhookBinding>? bindings)
     {
-        Assert.False(AgentConfigValidator.TryValidateActions(config, bindings, out var errors));
+        Assert.False(AgentConfigValidator.TryValidateActions(config, bindings, allowPrivateWebhookTargets: false, out var errors));
         return errors;
     }
 }

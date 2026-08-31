@@ -35,6 +35,7 @@ internal sealed class SlackInboundProcessor(
     private readonly Dictionary<string, SenderChain> _senderChains = new();
     private readonly object _chainsLock = new();
     private readonly CancellationTokenSource _stopping = new();
+    private readonly SemaphoreSlim _turnGate = new(options.Value.Slack.MaxConcurrentTurns);
 
     private readonly HashSet<string> _seenEventIds = new(StringComparer.Ordinal);
     private readonly Queue<(string EventId, DateTime SeenAt)> _seenOrder = new();
@@ -136,6 +137,15 @@ internal sealed class SlackInboundProcessor(
     {
         try
         {
+            await _turnGate.WaitAsync(_stopping.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        try
+        {
             await HandleMessageAsync(database, channelId, sender, dmChannel, kind, text, _stopping.Token);
         }
         catch (OperationCanceledException) when (_stopping.IsCancellationRequested)
@@ -145,6 +155,10 @@ internal sealed class SlackInboundProcessor(
         {
             if (logger.IsWarnEnabled)
                 logger.Warn($"Slack message handling failed for channel {channelId} sender {sender}: {e.Message}");
+        }
+        finally
+        {
+            _turnGate.Release();
         }
     }
 
