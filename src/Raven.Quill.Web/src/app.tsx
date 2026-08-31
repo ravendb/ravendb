@@ -17,6 +17,7 @@ import { AssistantPanel } from "@/components/layout/assistant-panel";
 import { ASSISTANT_PANEL_TITLE_ID, useAssistantPinning, useAssistantStore } from "@/components/layout/assistant-store";
 import { FeedbackSheet } from "@/components/layout/feedback-sheet";
 import { Heading } from "@/components/typography";
+import { PageContainer } from "@/components/page-container";
 import { Button } from "@/components/shadcn/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
 
@@ -153,9 +154,11 @@ function App() {
                 )}
             >
                 {!isPageTitleHidden && (
-                    <Heading as="h1" variant="page">
-                        {activeRoute?.title ?? "My apps"}
-                    </Heading>
+                    <PageContainer>
+                        <Heading as="h1" variant="page">
+                            {activeRoute?.title ?? "My apps"}
+                        </Heading>
+                    </PageContainer>
                 )}
                 <div
                     className={cn(
@@ -166,7 +169,15 @@ function App() {
                         isBareLayout ? "overflow-auto" : "-mx-4 overflow-x-clip overflow-y-auto px-4 lg:-mx-5 lg:px-5",
                     )}
                 >
-                    <Outlet />
+                    {/* Bare layouts (wizards) manage their own width; every other page is capped and
+                        centred here so content matches the title band instead of stretching on wide screens. */}
+                    {isBareLayout ? (
+                        <Outlet />
+                    ) : (
+                        <PageContainer>
+                            <Outlet />
+                        </PageContainer>
+                    )}
                 </div>
             </main>
 
