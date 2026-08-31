@@ -4,6 +4,7 @@ import { SectionHeader } from "@/components/section-header";
 
 export function SectionCard({
     title,
+    count,
     description,
     action,
     // Draw the section on a raised card instead of flush on the page background. For sections that are
@@ -15,6 +16,7 @@ export function SectionCard({
     level = "section",
 }: {
     title?: ReactNode;
+    count?: ReactNode;
     description?: ReactNode;
     action?: ReactNode;
     isRaised?: boolean;
@@ -23,8 +25,15 @@ export function SectionCard({
 }) {
     return (
         <section className={cn("min-w-0", isRaised && "rounded-md border bg-card p-4")}>
-            {(title || action) && (
-                <SectionHeader className="mb-2" level={level} title={title} description={description} action={action} />
+            {(title || count || action) && (
+                <SectionHeader
+                    className="mb-2"
+                    level={level}
+                    title={title}
+                    count={count}
+                    description={description}
+                    action={action}
+                />
             )}
             {children}
         </section>

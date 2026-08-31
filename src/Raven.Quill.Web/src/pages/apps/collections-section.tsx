@@ -42,7 +42,7 @@ export function CollectionsSection({ slug }: { slug: string }) {
     return (
         <SectionCard
             title="Collections"
-            action={
+            count={
                 collectionsQuery.data && (
                     <Badge variant="secondary" className="font-mono">
                         {collectionsQuery.data.length}

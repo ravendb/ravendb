@@ -15,12 +15,16 @@ type Level = keyof typeof LEVELS;
 export function SectionHeader({
     level = "section",
     title,
+    // A count sits inline next to the title (e.g. a total badge), unlike `action` which is pushed
+    // to the far edge for buttons/menus.
+    count,
     description,
     action,
     className,
 }: {
     level?: Level;
     title?: ReactNode;
+    count?: ReactNode;
     description?: ReactNode;
     action?: ReactNode;
     className?: string;
@@ -30,10 +34,15 @@ export function SectionHeader({
     return (
         <div className={cn("flex items-start justify-between gap-3", className)}>
             <div className="space-y-0.5">
-                {title && (
-                    <Heading as={as} variant={variant}>
-                        {title}
-                    </Heading>
+                {(title || count) && (
+                    <div className="flex items-center gap-2">
+                        {title && (
+                            <Heading as={as} variant={variant}>
+                                {title}
+                            </Heading>
+                        )}
+                        {count}
+                    </div>
                 )}
                 {description && <Text variant="muted">{description}</Text>}
             </div>
