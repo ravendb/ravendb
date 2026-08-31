@@ -1,10 +1,12 @@
-﻿using Raven.Client.Documents;
+﻿using Microsoft.Extensions.Options;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Exceptions;
 using Raven.Quill.Agents;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints.Helpers;
+using Raven.Quill.Hosting;
 using Raven.Quill.Logging;
 using Raven.Quill.Metrics;
 using Raven.Quill.Raven;
@@ -114,6 +116,7 @@ public static class AgentsEndpoints
         string slug,
         EditAgentRequest request,
         IDocumentStore store,
+        IOptions<ApplianceOptions> options,
         QuillLogger<AgentsLogger> logger,
         HttpContext ctx,
         CancellationToken ct)
@@ -130,7 +133,8 @@ public static class AgentsEndpoints
         if (existing is null)
             return Results.NotFound(new ApiErrorResponse($"no agent '{body.Identifier}' in app '{slug}'"));
 
-        var validationError = await AgentConfigValidator.ValidateAndPrepareAsync(store, slug, request, ct);
+        var validationError = await AgentConfigValidator.ValidateAndPrepareAsync(
+            store, slug, request, options.Value.AllowPrivateWebhookTargets, ct);
         if (validationError is not null)
             return validationError;
 
