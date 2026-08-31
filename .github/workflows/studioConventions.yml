@@ -55,7 +55,7 @@ jobs:
       working-directory: ./src/Raven.Studio
 
   quill-web-conventions:
-    name: Quill.Web Conventions
+    name: Quill Dashboard Conventions
     runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:
