@@ -36,3 +36,15 @@
         transparent 70%
     );
 }
+
+/* Data-safety note: a soft success wash that glows from the icon side and fades out, so the panel reads as
+   a distinct positive note without the heaviness of a flat green fill. The green border still defines the
+   panel edges where the gradient has faded to nothing. */
+.data-note {
+    background: linear-gradient(
+        105deg,
+        color-mix(in oklch, var(--success) 15%, transparent),
+        color-mix(in oklch, var(--success) 5%, transparent) 50%,
+        transparent 90%
+    );
+}
