@@ -1,8 +1,10 @@
 using System.Net;
 using QuillTests.E2E.Fixtures;
 using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Quill.Cdc;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
+using Raven.Quill.Metrics;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -44,6 +46,55 @@ public class DashboardAppsEndpointTests(ITestOutputHelper output, QuillCollectio
         var appResp = (await Host.GetDashboardAppsAsync()).Single(a => a.Slug == app.Slug);
         Assert.Equal("setup", appResp.Status);
         Assert.Equal(0, appResp.AgentsCount);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public void DashboardApps_status_is_running_when_the_sink_reports_no_errors()
+    {
+        var hasSyncErrors = CdcPerformanceShaper.HasErrors(new CdcSinkErrorsRaw
+        {
+            Results = [new CdcTaskErrorsRaw { TaskName = "cdc" }],
+        });
+        Assert.False(hasSyncErrors);
+
+        var (status, subtitle) = MetricsReadService.DeriveAppStatus(
+            agentsCount: 1, channelsCount: 1, enabledChannels: 1, cdcDisabled: false, hasSyncErrors);
+
+        Assert.Equal("running", status);
+        Assert.Null(subtitle);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public void DashboardApps_status_is_error_when_the_sink_reports_errors()
+    {
+        var hasSyncErrors = CdcPerformanceShaper.HasErrors(new CdcSinkErrorsRaw
+        {
+            Results =
+            [
+                new CdcTaskErrorsRaw
+                {
+                    TaskName = "cdc",
+                    ItemErrors =
+                    [
+                        new CdcTaskErrorRaw
+                        {
+                            TaskName = "cdc",
+                            CreatedAt = new DateTime(2026, 6, 25, 12, 0, 0, DateTimeKind.Utc),
+                            Step = "Transformation",
+                            Error = "bad row",
+                            DocumentId = "orders/1",
+                        },
+                    ],
+                },
+            ],
+        });
+        Assert.True(hasSyncErrors);
+
+        var (status, subtitle) = MetricsReadService.DeriveAppStatus(
+            agentsCount: 1, channelsCount: 1, enabledChannels: 1, cdcDisabled: false, hasSyncErrors);
+
+        Assert.Equal("error", status);
+        Assert.Equal("Sync errors detected", subtitle);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
