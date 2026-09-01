@@ -167,7 +167,7 @@ namespace SlowTests.Issues
                 // Wait for a tick that carries all three.
                 await WaitForValueAsync(() =>
                 {
-                    var reported = SnapshotEntryByDatabase(leader, store.Database)?.SystemCollectionsList?.SingleOrDefault()?.SystemCollections;
+                    var reported = SnapshotEntryByDatabase(leader, store.Database)?.Nodes?.SingleOrDefault()?.SystemCollections;
                     return reported != null && expected.All(reported.ContainsKey);
                 }, true, timeout: 30_000, interval: 100);
 
@@ -177,21 +177,17 @@ namespace SlowTests.Issues
                 var entry = SnapshotEntryByDatabase(leader, store.Database);
                 Assert.NotNull(entry);
 
-                // One entry per member, each carrying its own database id and its own stats.
-                var reportedByMember = entry.SystemCollectionsList.Single();
+                // One entry per member, each carrying its own database id and its own counts.
+                var reportedByMember = entry.Nodes.Single();
                 Assert.NotNull(reportedByMember.SystemCollections);
-
-                // Keyed by the same database id the last-etag tuple uses, so the two line up per member.
-                Assert.Equal(entry.Nodes.Single().DatabaseId, reportedByMember.DatabaseId);
 
                 var actual = string.Join(", ", reportedByMember.SystemCollections.Keys);
 
                 foreach (var collection in expected)
                 {
-                    Assert.True(reportedByMember.SystemCollections.TryGetValue(collection, out var stats),
+                    Assert.True(reportedByMember.SystemCollections.TryGetValue(collection, out var count),
                         $"Expected '{collection}' in the report, got: {actual}.");
-                    Assert.True(stats.Count > 0, $"Expected a document count for '{collection}', got {stats.Count}.");
-                    Assert.True(stats.Etag > 0, $"Expected a last etag for '{collection}', got {stats.Etag}.");
+                    Assert.True(count > 0, $"Expected a document count for '{collection}', got {count}.");
                 }
 
                 // Not reported: the user's own collection, which carries no '@' prefix. And '@all_docs',
@@ -221,33 +217,35 @@ namespace SlowTests.Issues
                 await WaitForDocumentInClusterAsync<object>(nodes, store.Database, "no-collection/1", x => x != null,
                     TimeSpan.FromSeconds(30));
 
-                // The '@empty' values each member should be reporting, read straight from its own storage.
+                // The values each member should be reporting, read straight from its own storage.
                 // Etags are node-local, so every member is checked against its own numbers - not the group's.
-                var expectedEtagByDatabaseId = new Dictionary<string, long>();
+                var expectedByDatabaseId = new Dictionary<string, (long LastEtag, long EmptyCount)>();
                 foreach (var node in nodes)
                 {
                     var database = await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     using (var tx = context.OpenReadTransaction())
                     {
-                        expectedEtagByDatabaseId[database.DbBase64Id] = database.DocumentsStorage.GetLastDocumentEtag(
-                            tx.InnerTransaction, Constants.Documents.Collections.EmptyCollection);
+                        expectedByDatabaseId[database.DbBase64Id] = (
+                            database.DocumentsStorage.ReadLastEtag(tx.InnerTransaction),
+                            database.DocumentsStorage.GetNumberOfDocumentsFor(Constants.Documents.Collections.EmptyCollection, context));
                     }
                 }
 
-                Assert.Equal(2, expectedEtagByDatabaseId.Count);
+                Assert.Equal(2, expectedByDatabaseId.Count);
 
-                // Wait for a tick where both members have reported their own '@empty' stats.
+                // Wait for a tick where both members have reported their own values.
                 await WaitForValueAsync(() =>
                 {
-                    var reported = SnapshotEntryByDatabase(leader, store.Database)?.SystemCollectionsList;
-                    if (reported == null || reported.Count != expectedEtagByDatabaseId.Count)
+                    var reported = SnapshotEntryByDatabase(leader, store.Database)?.Nodes;
+                    if (reported == null || reported.Count != expectedByDatabaseId.Count)
                         return false;
 
-                    return reported.All(s => s.SystemCollections != null &&
-                                             expectedEtagByDatabaseId.TryGetValue(s.DatabaseId, out var expectedEtag) &&
-                                             s.SystemCollections.TryGetValue(Constants.Documents.Collections.EmptyCollection, out var stats) &&
-                                             stats.Etag == expectedEtag);
+                    return reported.All(n => n.SystemCollections != null &&
+                                             expectedByDatabaseId.TryGetValue(n.DatabaseId, out var expected) &&
+                                             n.LastEtag == expected.LastEtag &&
+                                             n.SystemCollections.TryGetValue(Constants.Documents.Collections.EmptyCollection, out var count) &&
+                                             count == expected.EmptyCount);
                 }, true, timeout: 30_000, interval: 100);
 
                 // Freeze ticks for a deterministic read of the published snapshot.
@@ -258,24 +256,23 @@ namespace SlowTests.Issues
 
                 // One entry per member, keyed by its database id and carrying that member's own values - the
                 // group is not collapsed into a single summary, so the backend aggregates it itself.
-                Assert.Equal(expectedEtagByDatabaseId.Count, entry.SystemCollectionsList.Count);
-                Assert.Equal(expectedEtagByDatabaseId.Keys.OrderBy(id => id),
-                    entry.SystemCollectionsList.Select(s => s.DatabaseId).OrderBy(id => id));
+                Assert.Equal(expectedByDatabaseId.Count, entry.Nodes.Count);
+                Assert.Equal(expectedByDatabaseId.Keys.OrderBy(id => id),
+                    entry.Nodes.Select(n => n.DatabaseId).OrderBy(id => id));
 
-                // The same database ids the last-etag tuples use, so the two lists line up per member.
-                Assert.Equal(entry.Nodes.Select(n => n.DatabaseId).OrderBy(id => id),
-                    entry.SystemCollectionsList.Select(s => s.DatabaseId).OrderBy(id => id));
-
-                foreach (var reported in entry.SystemCollectionsList)
+                foreach (var reported in entry.Nodes)
                 {
+                    var expected = expectedByDatabaseId[reported.DatabaseId];
+                    Assert.Equal(expected.LastEtag, reported.LastEtag);
+
                     Assert.NotNull(reported.SystemCollections);
-                    Assert.True(reported.SystemCollections.TryGetValue(Constants.Documents.Collections.EmptyCollection, out var stats),
+                    Assert.True(reported.SystemCollections.TryGetValue(Constants.Documents.Collections.EmptyCollection, out var count),
                         $"Expected '{Constants.Documents.Collections.EmptyCollection}' for database id '{reported.DatabaseId}', " +
                         $"got: {string.Join(", ", reported.SystemCollections.Keys)}.");
 
-                    Assert.Equal(expectedEtagByDatabaseId[reported.DatabaseId], stats.Etag);
-                    Assert.True(stats.Count > 0,
-                        $"Expected a document count for '{Constants.Documents.Collections.EmptyCollection}', got {stats.Count}.");
+                    Assert.Equal(expected.EmptyCount, count);
+                    Assert.True(count > 0,
+                        $"Expected a document count for '{Constants.Documents.Collections.EmptyCollection}', got {count}.");
                 }
             }
         }

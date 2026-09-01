@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
-using Raven.Server.Commercial.WriteUsageMetering;
 using Raven.Server.ServerWide.Maintenance.Sharding;
 using Sparrow;
 using Sparrow.Json.Parsing;
@@ -70,7 +69,7 @@ namespace Raven.Server.ServerWide.Maintenance
         public Dictionary<string, long> LastSentEtag = new();
         public Dictionary<int, BucketReport> ReportPerBucket = new();
 
-        public Dictionary<string, SystemCollectionStats> SystemCollections = new();
+        public Dictionary<string, long> SystemCollections = new();
         public Dictionary<long, PeriodicBackupStatusReport> BackupStatuses;
 
         public long LastCompareExchangeIndex { get; set; }
