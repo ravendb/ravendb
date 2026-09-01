@@ -1014,23 +1014,33 @@ public unsafe partial class Hnsw
             private readonly ManualResetEventSlim _workerParked = new(false);
             private readonly ManualResetEventSlim _lltMoved = new(false);
 
-            // Worker thread: the first worker about to consume a node's edges at a level with real storage
-            // parks here until the LLT thread has moved that storage and the node array.
-            internal void OnWorkerCapturedEdgeListRef(SearchState searchState, int nodeIndex, int level)
+            // LLT thread: pick the victim here, where the node and its edge lists are stable because we
+            // own the allocator. Capturing it on a worker instead races the LLT thread's own SetCapacity /
+            // ResetAndEnsureCapacity on that node and dereferences a freed edge buffer (RavenDB-27393).
+            internal void OnLltPreparedEdges(int nodeIndex, int level, ref Node node, ref NativeList<int> edgeIndexes)
             {
-                if (SimulateConcurrentRealloc == false || Volatile.Read(ref _victim) >= 0)
+                if (SimulateConcurrentRealloc == false || _victim >= 0)
                     return;
-
-                ref var candidate = ref searchState.GetNodeByIndex(nodeIndex);
-                if (candidate.EdgesIndexesPerLevel.Count <= level || candidate.EdgesIndexesPerLevel[level].Count == 0)
-                    return;
-                if (Interlocked.CompareExchange(ref _victim, nodeIndex, -1) != -1)
+                if (edgeIndexes.Count == 0)
                     return;
 
                 _victimLevel = level;
-                _victimEdgeBufferBeforeMove = (nint)candidate.EdgesIndexesPerLevel[level].RawItems;
-                _victimNodePtr = (nint)Unsafe.AsPointer(ref candidate);
-                _victimNodeIdExpected = candidate.NodeId;
+                _victimEdgeBufferBeforeMove = (nint)edgeIndexes.RawItems;
+                _victimNodePtr = (nint)Unsafe.AsPointer(ref node);
+                _victimNodeIdExpected = node.NodeId;
+                // Published last: a worker that observes _victim also observes everything above it.
+                Volatile.Write(ref _victim, nodeIndex);
+            }
+
+            // Worker thread: the worker dispatched for the victim (node, level) parks here until the LLT
+            // thread has moved that storage and the node array. Reads no shared native state.
+            internal void OnWorkerCapturedEdgeListRef(int nodeIndex, int level)
+            {
+                if (SimulateConcurrentRealloc == false)
+                    return;
+                if (Volatile.Read(ref _victim) != nodeIndex || _victimLevel != level)
+                    return;
+
                 VictimSelected = true;
                 _workerParked.Set();
                 WakeLltLoop?.Invoke();
