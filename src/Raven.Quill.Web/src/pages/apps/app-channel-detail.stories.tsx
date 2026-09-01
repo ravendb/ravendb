@@ -6,7 +6,12 @@ import {
     SAMPLE_SLACK_CHANNEL_ID,
     SAMPLE_TELEGRAM_CHANNEL_ID,
 } from "@/mocks/channels-mocks";
-import { discordMocks, sampleDiscordHealth } from "@/mocks/discord-mocks";
+import {
+    discordMocks,
+    pausedDiscordHealth,
+    sampleDiscordHealth,
+    tokenRejectedDiscordHealth,
+} from "@/mocks/discord-mocks";
 import { embedLinksMocks } from "@/mocks/embed-links-mocks";
 import { sampleSlackHealth, slackMocks } from "@/mocks/slack-mocks";
 import { AppChannelDetail } from "./app-channel-detail";
@@ -137,6 +142,47 @@ export const DiscordGatewayDisconnected: Story = {
     },
 };
 
+export const DiscordTokenRejected: Story = {
+    parameters: {
+        router: {
+            initialPath: `/apps/demo/channels/${SAMPLE_DISCORD_CHANNEL_ID}`,
+            path: "/apps/:slug/channels/:channelId",
+        },
+        msw: {
+            handlers: {
+                discord: [discordMocks.health(tokenRejectedDiscordHealth)],
+            },
+        },
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        await canvas.findByText(/token rejected/i);
+        expect(canvas.getByText(/rotate bot token/i)).toBeInTheDocument();
+        // A rejected token blocks the gateway, so the panel must not also claim it's "Connecting...".
+        expect(canvas.queryByText(/connecting/i)).not.toBeInTheDocument();
+    },
+};
+
+export const DiscordPaused: Story = {
+    parameters: {
+        router: {
+            initialPath: `/apps/demo/channels/${SAMPLE_DISCORD_CHANNEL_ID}`,
+            path: "/apps/:slug/channels/:channelId",
+        },
+        msw: {
+            handlers: {
+                discord: [discordMocks.health(pausedDiscordHealth)],
+            },
+        },
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        await canvas.findByText(/paused/i);
+    },
+};
+
 export const DiscordParameters: Story = {
     parameters: {
         router: {
@@ -210,6 +256,8 @@ export const DiscordConnecting: Story = {
 
         await canvas.findByText(/connecting/i);
         expect(canvas.queryByText(/gateway disconnected/i)).not.toBeInTheDocument();
+        // No inbound message yet, so the connection card invites the first one instead of showing nothing.
+        expect(canvas.getByText(/waiting for the first message/i)).toBeInTheDocument();
     },
 };
 

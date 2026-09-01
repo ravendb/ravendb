@@ -177,6 +177,7 @@ builder.Services.AddSingleton<IBootstrapState, BootstrapStateFlag>();
 builder.Services.AddSingleton<IAgentRouter, AgentRouter>();
 builder.Services.AddSingleton<WebhookActionExecutor>();
 builder.Services.AddSingleton<IApiKeyStore, ApiKeyStore>();
+builder.Services.AddSingleton<IDnsResolver, SystemDnsResolver>();
 
 // Read once at startup: the widget manifest only changes when the image is rebuilt, and a missing one is
 // worth logging loudly the moment the process starts rather than on the first visitor's request.
@@ -384,6 +385,7 @@ AiModelsEndpoints.Map(app);
 AgentsEndpoints.Map(app);
 StatsEndpoints.Map(app);
 SettingsEndpoints.Map(app);
+DnsEndpoints.Map(app);
 WizardEndpoints.Map(app);
 ChatEndpoints.Map(app);
 AssistantEndpoints.Map(app);

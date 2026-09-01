@@ -55,7 +55,7 @@ export const defaultApiMocks = {
     channels: [channelsMocks.list(), channelsMocks.create(), channelsMocks.update(), channelsMocks.delete()],
     slack: [slackMocks.webhookInfo(), slackMocks.health()],
     discord: [discordMocks.health()],
-    dns: [dnsMocks.resolve()],
+    dns: [dnsMocks.ipBinding()],
     embedLinks: [embedLinksMocks.list(), embedLinksMocks.mint(), embedLinksMocks.revoke()],
     iframe: iframeHandlers(),
     settings: [

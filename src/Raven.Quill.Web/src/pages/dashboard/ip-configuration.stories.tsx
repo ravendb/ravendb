@@ -25,7 +25,7 @@ export const LookupFailed: Story = {
     parameters: {
         msw: {
             handlers: {
-                dns: [dnsMocks.resolveError()],
+                dns: [dnsMocks.ipBindingError()],
             },
         },
     },

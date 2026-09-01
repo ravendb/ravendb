@@ -4,7 +4,7 @@ ARG SDK_IMAGE=mcr.microsoft.com/dotnet/sdk:10.0.400
 ARG RUNTIME_IMAGE=mcr.microsoft.com/dotnet/aspnet:10.0.11
 ARG NODE_IMAGE=node:24-bookworm-slim
 ARG STUDIO_NODE_MAJOR=24
-ARG PNPM_VERSION=11.2.2
+ARG PNPM_VERSION=11.24.0
 ARG S6_OVERLAY_VERSION=3.2.1.0
 
 FROM ${SDK_IMAGE} AS ravendb-server-build

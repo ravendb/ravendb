@@ -6,8 +6,9 @@ import type { EmbedLinkSummaryResponse } from "@/api/generated/server-api";
 import { Parameters } from "@/components/data/parameters";
 import { StatusIndicator } from "@/components/data/status-indicator";
 import { Button } from "@/components/shadcn/ui/button";
-import { copyToClipboard, formatDateTime } from "@/lib/utils";
-import { type EmbedLinkStatusTone, getExpiryStatus, getUsageStatus } from "@/pages/apps/channels/embed-link-status";
+import { Timestamp } from "@/components/data/timestamp";
+import { copyToClipboard } from "@/lib/utils";
+import { type EmbedLinkStatusTone, getExpiryTone, getUsageStatus } from "@/pages/apps/channels/embed-link-status";
 import { buildEmbedUrl } from "@/pages/apps/channels/embed-link-utils";
 import { PreviewEmbedLinkDialog } from "@/pages/apps/channels/preview-embed-link-dialog";
 import { RevokeEmbedLinkDialog } from "@/pages/apps/channels/revoke-embed-link-dialog";
@@ -35,15 +36,12 @@ export function createActiveLinkColumns(slug: string): ColumnDef<EmbedLinkSummar
         {
             accessorKey: "createdAt",
             header: "Created",
-            cell: ({ row }) => <span className="text-muted-foreground">{formatDateTime(row.original.createdAt)}</span>,
+            cell: ({ row }) => <Timestamp value={row.original.createdAt} />,
         },
         {
             accessorKey: "expiresAt",
             header: "Expires",
-            cell: ({ row }) => {
-                const status = getExpiryStatus(row.original.expiresAt);
-                return <StatusValue tone={status.tone} title={status.title} label={status.label} />;
-            },
+            cell: ({ row }) => <ExpiryValue expiresAt={row.original.expiresAt} />,
         },
         {
             id: "usage",
@@ -63,8 +61,27 @@ export function createActiveLinkColumns(slug: string): ColumnDef<EmbedLinkSummar
     ];
 }
 
-// Renders an expiry/usage value, escalating from plain text to a status badge once the
-// link needs attention so problem rows stand out at a glance.
+// Escalates from plain text to a status badge once the link needs attention, so problem rows
+// stand out at a glance. Usage values below follow the same rule.
+function ExpiryValue({ expiresAt }: { expiresAt: string }) {
+    const tone = getExpiryTone(expiresAt);
+    if (tone === "normal") {
+        return <Timestamp value={expiresAt} />;
+    }
+
+    return (
+        <StatusIndicator
+            tone={tone === "critical" ? "danger" : "warning"}
+            label={
+                <>
+                    {tone === "critical" ? "Expired" : "Expires"}
+                    <Timestamp value={expiresAt} textVariant="inherit" />
+                </>
+            }
+        />
+    );
+}
+
 function StatusValue({ tone, title, label }: { tone: EmbedLinkStatusTone; title: string; label: string }) {
     if (tone === "normal") {
         return (

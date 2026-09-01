@@ -7,14 +7,14 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Quill build expired</title>
+        <title>Quill needs updating</title>
     </head>
     <body class="bg-background">
         <main
             class="relative flex min-h-svh flex-col items-center justify-center overflow-hidden bg-background px-4 py-10 font-sans text-foreground antialiased"
         >
             <div aria-hidden="true" class="expiry-wash pointer-events-none absolute inset-0"></div>
-            <div class="relative z-10 flex w-full max-w-xl flex-col items-center">
+            <div class="relative z-10 flex w-full max-w-lg flex-col items-center">
                 <!-- main.ts inlines src/components/brand/quill-logo.svg here, so the logo follows the theme via
                      currentColor. Width and entrance match the login screen (auth-screen-layout.tsx). The svg
                      carries its own role="img" and label, so the wrapper must not aria-hide it. -->
@@ -23,106 +23,103 @@
                     class="mb-8 flex animate-in items-center text-foreground duration-600 fade-in-0 zoom-in-90 [&_svg]:h-auto [&_svg]:w-[120px]"
                 ></div>
 
-                <h1 class="mb-2 text-center text-2xl leading-tight font-semibold tracking-tight text-balance">
-                    This build has expired
+                <h1 class="mb-2 text-center text-3xl leading-tight font-semibold tracking-tight text-balance">
+                    Quill needs updating
                 </h1>
-                <p class="mb-6 max-w-100 text-center text-sm text-pretty text-muted-foreground">
-                    Pull the latest image to get back up and running.
+                <!-- Introduces the value tiles below rather than listing the benefits, so the two don't repeat. -->
+                <p class="mb-5 text-center text-sm text-pretty text-muted-foreground">
+                    This build has expired. Here's what moving to the latest Quill brings - the guide walks you through
+                    the update, step by step.
                 </p>
 
-                <div class="w-full overflow-hidden rounded-lg border bg-card text-left">
-                    <ol role="list" class="flex flex-col gap-3.5 p-3.5">
-                        <li class="grid grid-cols-[1.25rem_1fr] gap-x-2.5">
-                            <span
-                                class="mt-px grid size-5 place-items-center rounded-full bg-muted font-mono text-[0.6875rem] leading-none text-foreground"
-                                aria-hidden="true"
-                                >1</span
-                            >
-                            <div class="flex min-w-0 flex-col gap-1">
-                                <div class="flex items-baseline justify-between gap-2">
-                                    <span class="text-sm font-medium">Pull the latest image</span>
-                                    <!-- Empty by default, and the row already has the title's height, so main.ts
-                                         writing "Copied" / "Press Ctrl+C" here shifts nothing. -->
-                                    <span
-                                        role="status"
-                                        id="copy-status"
-                                        class="shrink-0 text-[0.6875rem] text-muted-foreground"
-                                    ></span>
-                                </div>
-                                <div class="flex items-center gap-1 rounded-md bg-muted p-[3px] pl-0">
-                                    <div
-                                        class="flex min-w-0 flex-1 items-center overflow-x-auto py-1 pl-2.5 font-mono text-[0.8125rem]"
-                                    >
-                                        <span aria-hidden="true" class="pr-1 text-muted-foreground select-none">$</span>
-                                        <code id="command" class="whitespace-nowrap text-foreground"
-                                            >docker pull ravendb/quill:latest</code
-                                        >
-                                    </div>
-                                    <!-- Mirrors Button variant="ghost" size="icon-sm", minus the `hover:bg-muted` it
-                                         would use: this button sits on `bg-muted` already, so the hover needs to go
-                                         the other way. The icons are lucide's Copy and Check at lucide's own
-                                         geometry, hand-inlined because this page cannot render lucide-react. -->
-                                    <button
-                                        type="button"
-                                        id="copy"
-                                        aria-label="Copy command"
-                                        class="grid size-7 shrink-0 place-items-center rounded-[min(var(--radius-md),12px)] border border-transparent text-muted-foreground transition-all outline-none hover:bg-card hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 active:translate-y-px"
-                                    >
-                                        <svg
-                                            data-icon="idle"
-                                            class="size-3.5"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="2"
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            aria-hidden="true"
-                                        >
-                                            <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-                                            <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-                                        </svg>
-                                        <svg
-                                            data-icon="done"
-                                            class="hidden size-3.5"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="2"
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            aria-hidden="true"
-                                        >
-                                            <path d="M20 6 9 17l-5-5" />
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
-                        </li>
-
-                        <!-- No command block for this step: how the container is started belongs to the operator
-                             (compose, `docker run`, or an orchestrator), not to us. -->
-                        <li class="grid grid-cols-[1.25rem_1fr] gap-x-2.5">
-                            <span
-                                class="mt-px grid size-5 place-items-center rounded-full bg-muted font-mono text-[0.6875rem] leading-none text-foreground"
-                                aria-hidden="true"
-                                >2</span
-                            >
-                            <span class="min-w-0 text-sm font-medium"
-                                >After a successful update, run the Docker container again</span
-                            >
-                        </li>
-                    </ol>
+                <!-- Three Card tiles (src/components/shadcn/ui/card.tsx): rounded-xl bg-card + the same
+                     ring-1 ring-foreground/10 hairline. Icons in the brand tone (primary-strong = brand-400 here). -->
+                <div class="mb-5 grid w-full grid-cols-3 gap-2.5">
+                    <div
+                        class="flex flex-col items-center gap-2 rounded-xl bg-card px-2 py-3.5 text-center text-card-foreground ring-1 ring-foreground/10"
+                    >
+                        <svg
+                            class="size-5 text-primary-strong"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            aria-hidden="true"
+                        >
+                            <path
+                                d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"
+                            />
+                            <path d="M20 2v4" />
+                            <path d="M22 4h-4" />
+                            <circle cx="4" cy="20" r="2" />
+                        </svg>
+                        <span class="text-xs font-medium">New features</span>
+                    </div>
+                    <div
+                        class="flex flex-col items-center gap-2 rounded-xl bg-card px-2 py-3.5 text-center text-card-foreground ring-1 ring-foreground/10"
+                    >
+                        <svg
+                            class="size-5 text-primary-strong"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            aria-hidden="true"
+                        >
+                            <path
+                                d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"
+                            />
+                        </svg>
+                        <span class="text-xs font-medium">Enhancements</span>
+                    </div>
+                    <div
+                        class="flex flex-col items-center gap-2 rounded-xl bg-card px-2 py-3.5 text-center text-card-foreground ring-1 ring-foreground/10"
+                    >
+                        <svg
+                            class="size-5 text-primary-strong"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            aria-hidden="true"
+                        >
+                            <path d="m12 14 4-4" />
+                            <path d="M3.34 19a10 10 0 1 1 17.32 0" />
+                        </svg>
+                        <span class="text-xs font-medium">Speed &amp; stability</span>
+                    </div>
                 </div>
 
                 <!-- Mirrors Button variant="default" size="lg", which this page cannot render as React. -->
                 <a
-                    href="https://docs.ravendb.net/quill"
+                    href="https://ravendb.net/l/DE5KV9"
                     target="_blank"
                     rel="noreferrer"
-                    class="mt-4 inline-flex h-9 w-full items-center justify-center rounded-lg border border-transparent bg-primary px-2.5 text-sm font-medium text-primary-foreground no-underline transition-all outline-none select-none hover:bg-primary/80 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:translate-y-px"
+                    class="inline-flex h-9 w-full max-w-sm items-center justify-center gap-2 rounded-lg border border-transparent bg-primary px-2.5 text-sm font-medium text-primary-foreground no-underline transition-all outline-none select-none hover:bg-primary/80 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:translate-y-px"
                 >
-                    Read documentation
+                    How to update Quill
+                    <!-- lucide's ExternalLink at lucide's own geometry, hand-inlined because this page cannot
+                         render lucide-react. -->
+                    <svg
+                        class="size-3.5"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                    >
+                        <path d="M15 3h6v6" />
+                        <path d="M10 14 21 3" />
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h6" />
+                    </svg>
                 </a>
                 <p class="mt-3 text-center text-xs text-muted-foreground">
                     Still stuck?

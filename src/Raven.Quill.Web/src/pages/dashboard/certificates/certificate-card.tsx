@@ -3,10 +3,10 @@ import { Copy } from "lucide-react";
 import type { CertificateItem } from "@/api/custom-services/certificates-service";
 import type { AppResponse } from "@/api/generated/server-api";
 import { StatusIndicator, type StatusTone } from "@/components/data/status-indicator";
+import { Timestamp } from "@/components/data/timestamp";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { Heading, Text } from "@/components/typography";
-import { formatDate } from "@/lib/format";
 import { cn, copyToClipboard } from "@/lib/utils";
 import {
     CERTIFICATE_STATE_LABELS,
@@ -81,13 +81,13 @@ export function CertificateCard({ certificate, apps }: { certificate: Certificat
                         {SECURITY_CLEARANCE_LABELS[certificate.securityClearance]}
                     </CertificateField>
                     <CertificateField label="Valid from">
-                        {certificate.notBefore ? formatDate(certificate.notBefore) : "—"}
+                        <Timestamp value={certificate.notBefore} dateVariant="short" textVariant="inherit" />
                     </CertificateField>
                     <CertificateField label="Expiration">
                         <span
                             className={cn(state === "expired" && "text-destructive", isAboutToExpire && "text-warning")}
                         >
-                            {certificate.notAfter ? formatDate(certificate.notAfter) : "—"}
+                            <Timestamp value={certificate.notAfter} dateVariant="short" textVariant="inherit" />
                         </span>
                     </CertificateField>
                     <CertificateField label="App access">

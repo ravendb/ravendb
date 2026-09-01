@@ -1,63 +1,42 @@
-name: quill/build
+name: quill/docker
 
 permissions:
   contents: read
 
 on:
+  # Packaging paths only - the code the image bundles is checked by compile.yml,
+  # studioConventions.yml and StudioTests.yml.
   push:
+    branches:
+      - feature/*
+      - release/**
+      - 'v[4-9]+.[0-9]+'
     paths:
       - 'docker/quill/**'
-      - 'src/Raven.Quill/**'
-      - 'src/Raven.Quill.Web/**'
-      - '.github/workflows/quill-build.yml'
+      - '.github/workflows/quill-docker.yml'
   pull_request:
+    branches:
+      - feature/*
+      - release/**
+      - 'v[4-9]+.[0-9]+'
     paths:
       - 'docker/quill/**'
-      - 'src/Raven.Quill/**'
-      - 'src/Raven.Quill.Web/**'
-      - '.github/workflows/quill-build.yml'
+      - '.github/workflows/quill-docker.yml'
+
+  # Nightly full matrix: schedule ignores path filters, so it also covers the server and
+  # studio stages the paths above miss. Dormant until this file reaches the default
+  # branch (v7.2) - GitHub registers cron and workflow_dispatch only from there.
+  schedule:
+    - cron: '15 3 * * *'
+
+  workflow_dispatch:
+
+# Cancel superseded PR runs; long-lived-branch builds each keep a result.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # The web app, Storybook, and MSW mocks code against the committed generated client,
-  # while the Docker build regenerates it from a fresh OpenAPI spec — so a stale commit
-  # never fails a build on its own. This job catches that drift, including backend-only
-  # changes that quill/web-checks does not trigger on.
-  api-client-freshness:
-    name: Generated API client is up to date
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-dotnet@v4
-        with:
-          global-json-file: global.json
-
-      - uses: pnpm/action-setup@v4
-        with:
-          package_json_file: src/Raven.Quill.Web/package.json
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: src/Raven.Quill.Web/pnpm-lock.yaml
-
-      - name: Install dependencies
-        working-directory: ./src/Raven.Quill.Web
-        run: pnpm install --frozen-lockfile
-
-      - name: Regenerate API client
-        working-directory: ./src/Raven.Quill.Web
-        run: pnpm generate:api
-
-      - name: Verify committed client matches
-        run: |
-          if ! git diff --exit-code -- src/Raven.Quill.Web/src/api/generated/server-api.ts; then
-            echo "::error::src/api/generated/server-api.ts is stale. Run 'pnpm generate:api' in src/Raven.Quill.Web and commit the result."
-            exit 1
-          fi
-
   build:
     name: Build & smoke (${{ matrix.arch }})
     strategy:
@@ -73,10 +52,10 @@ jobs:
     runs-on: ${{ matrix.runs-on }}
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
       - name: Build image (two tags — verifies build.sh multi-tag accumulation)
         run: |

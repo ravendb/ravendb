@@ -11,6 +11,11 @@ import { FieldDescription, FieldLabel } from "@/components/shadcn/ui/field";
 import { Switch } from "@/components/shadcn/ui/switch";
 import { FormInput } from "@/components/form/form-input";
 import { FormStringList } from "@/components/form/form-string-list";
+import {
+    DISCORD_BOT_TOKEN_FORMAT,
+    SLACK_BOT_TOKEN_FORMAT,
+    rotatedTokenField,
+} from "@/pages/apps/channels/channel-token-fields";
 import { useFormUnsavedChanges } from "@/components/form/unsaved-changes/use-unsaved-changes";
 import { withNestedSubmit } from "@/lib/form-utils";
 import { cn } from "@/lib/utils";
@@ -20,9 +25,9 @@ const editChannelSchema = z.object({
     displayName: z.string().trim().min(1, "Channel name is required"),
     allowedOrigins: z.array(z.object({ value: z.string().trim() })),
     botToken: z.string().trim(),
-    slackBotToken: z.string().trim(),
+    slackBotToken: rotatedTokenField(SLACK_BOT_TOKEN_FORMAT),
     slackSigningSecret: z.string().trim(),
-    discordBotToken: z.string().trim(),
+    discordBotToken: rotatedTokenField(DISCORD_BOT_TOKEN_FORMAT),
 });
 
 type EditChannelFormData = z.infer<typeof editChannelSchema>;

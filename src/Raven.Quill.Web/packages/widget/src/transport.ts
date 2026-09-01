@@ -1,3 +1,5 @@
+import { tryParseJson } from "@/utils";
+
 /** The chat endpoint's NDJSON wire protocol. Fixed by the server - see `EmbedEndpoints.StreamEmbedChatAsync`. */
 type ServerEvent =
     | { type: "chunk"; text?: string }
@@ -64,7 +66,9 @@ async function* readLines(body: ReadableStream<Uint8Array>): AsyncGenerator<stri
 }
 
 function toChatEvent(line: string): ChatEvent | null {
-    const parsed = JSON.parse(line) as ServerEvent;
+    const parsed = tryParseJson<ServerEvent>(line);
+    if (parsed === null) return null;
+
     switch (parsed.type) {
         case "chunk":
             return typeof parsed.text === "string" ? { type: "chunk", text: parsed.text } : null;

@@ -4303,6 +4303,199 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
+        private static bool SupportsMariaDbNativeUuid(string connectionString)
+        {
+            using var conn = new MySqlConnector.MySqlConnection(connectionString);
+            conn.Open();
+            using var cmd = new MySqlConnector.MySqlCommand("SELECT VERSION()", conn);
+            var version = (string)cmd.ExecuteScalar();
+            if (version == null || version.Contains("MariaDB", StringComparison.OrdinalIgnoreCase) == false)
+                return false;
+            return Version.TryParse(version.Split('-')[0], out var v) && v >= new Version(10, 7);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
+        public async Task MariaDb_NativeUuid_StreamsFromBothPaths()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MySQL_MySqlConnector, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            if (SupportsMariaDbNativeUuid(connectionString) == false)
+                return;
+
+            ExecuteMySql(connectionString, @"
+                CREATE TABLE uuid_items (
+                    id  INT PRIMARY KEY,
+                    val UUID
+                )");
+            ExecuteMySql(connectionString, "INSERT INTO uuid_items (id, val) VALUES (1, '11111111-1111-1111-1111-111111111111');");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-mariadb-uuid",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "UuidItems",
+                        SourceTableSchema = schemaName,
+                        SourceTableName = "uuid_items",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "val", Name = "Val" }
+                        }
+                    }
+                }
+            };
+            AddCdcSink(store, config);
+            await WaitForCdcInitialLoadAsync(store, "test-mariadb-uuid");
+
+            using var commands = store.Commands();
+
+            var doc1 = (await commands.GetAsync("UuidItems/1")).BlittableJson;
+            Assert.True(doc1.TryGet("Val", out object val1));
+            Assert.Equal("11111111-1111-1111-1111-111111111111", val1?.ToString());
+
+            ExecuteMySqlInTransaction(connectionString,
+                "INSERT INTO uuid_items (id, val) VALUES (2, '3b241101-e2bb-4255-8caf-4136c566a962')",
+                "INSERT INTO uuid_items (id, val) VALUES (3, NULL)");
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                return await session.LoadAsync<dynamic>("UuidItems/3") != null;
+            }, true, timeout: 60_000);
+
+            var doc2 = (await commands.GetAsync("UuidItems/2")).BlittableJson;
+            Assert.True(doc2.TryGet("Val", out object val2));
+            Assert.Equal("3b241101-e2bb-4255-8caf-4136c566a962", val2?.ToString());
+
+            var doc3 = (await commands.GetAsync("UuidItems/3")).BlittableJson;
+            Assert.True(doc3.TryGet("Val", out object val3));
+            Assert.Null(val3);
+
+            ExecuteMySql(connectionString, "UPDATE uuid_items SET val = 'aaaaaaaa-bbbb-1ccc-8ddd-eeeeeeeeeeee' WHERE id = 2;");
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var doc = await session.LoadAsync<dynamic>("UuidItems/2");
+                return (string)doc?.Val;
+            }, "aaaaaaaa-bbbb-1ccc-8ddd-eeeeeeeeeeee", timeout: 60_000);
+
+            ExecuteMySql(connectionString, "DELETE FROM uuid_items WHERE id = 1;");
+
+            Assert.True(await WaitForDocumentDeletionAsync(store, "UuidItems/1", timeoutMs: 60_000));
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
+        public async Task MariaDb_UuidPrimaryKey_StreamsFromBothPaths()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MySQL_MySqlConnector, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            if (SupportsMariaDbNativeUuid(connectionString) == false)
+                return;
+
+            ExecuteMySql(connectionString, @"
+                CREATE TABLE uuid_keyed (
+                    id   UUID PRIMARY KEY,
+                    name VARCHAR(64) NOT NULL
+                )");
+            ExecuteMySql(connectionString, "INSERT INTO uuid_keyed (id, name) VALUES ('11111111-1111-1111-1111-111111111111', 'Alpha');");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-mariadb-uuid-pk",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "UuidKeyed",
+                        SourceTableSchema = schemaName,
+                        SourceTableName = "uuid_keyed",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "SourceId" },
+                            new CdcColumnMapping { Column = "name", Name = "Name" }
+                        }
+                    }
+                }
+            };
+            AddCdcSink(store, config);
+            await WaitForCdcInitialLoadAsync(store, "test-mariadb-uuid-pk");
+
+            using var commands = store.Commands();
+
+            var doc1 = (await commands.GetAsync("UuidKeyed/11111111-1111-1111-1111-111111111111")).BlittableJson;
+            Assert.NotNull(doc1);
+
+            ExecuteMySql(connectionString, "INSERT INTO uuid_keyed (id, name) VALUES ('3b241101-e2bb-4255-8caf-4136c566a962', 'Beta');");
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var doc = await session.LoadAsync<dynamic>("UuidKeyed/3b241101-e2bb-4255-8caf-4136c566a962");
+                return (string)doc?.Name;
+            }, "Beta", timeout: 60_000);
+
+            ExecuteMySql(connectionString, "DELETE FROM uuid_keyed WHERE id = '11111111-1111-1111-1111-111111111111';");
+
+            Assert.True(await WaitForDocumentDeletionAsync(store, "UuidKeyed/11111111-1111-1111-1111-111111111111", timeoutMs: 60_000));
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
+        public async Task MariaDb_UnsupportedMappedColumnType_FaultsInsteadOfSilentSkip()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MySQL_MySqlConnector, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            if (SupportsMariaDbNativeUuid(connectionString) == false)
+                return;
+
+            ExecuteMySql(connectionString, @"
+                CREATE TABLE net_items (
+                    id   INT PRIMARY KEY,
+                    addr INET6
+                )");
+            ExecuteMySql(connectionString, "INSERT INTO net_items (id, addr) VALUES (1, '::1');");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-mariadb-unsupported-type",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "NetItems",
+                        SourceTableSchema = schemaName,
+                        SourceTableName = "net_items",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "addr", Name = "Addr" }
+                        }
+                    }
+                }
+            };
+            AddCdcSink(store, config);
+
+            var fault = await WaitForProcessFaultAsync(store, config.Name);
+            Assert.IsType<Raven.Server.Documents.CdcSink.CdcSinkFaultedException>(fault);
+            Assert.Contains("'addr'", fault.Message);
+            Assert.Contains("not supported for binlog streaming", fault.Message);
+        }
+
         // --- MySQL-specific DTO classes (different nested type structure) ---
 
         private class NestedEmployee

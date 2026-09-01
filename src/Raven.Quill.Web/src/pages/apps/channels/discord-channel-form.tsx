@@ -10,13 +10,16 @@ import type { AgentSummaryResponse } from "@/api/generated/server-api";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/shadcn/ui/collapsible";
+import { Separator } from "@/components/shadcn/ui/separator";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { SheetClose, SheetFooter } from "@/components/shadcn/ui/sheet";
 import { ApiState } from "@/components/data/api-state";
+import { NumberedSteps, type NumberedStep } from "@/components/data/numbered-steps";
 import { Heading, Text } from "@/components/typography";
 import { FormInput } from "@/components/form/form-input";
 import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
 import { ParameterBindingFields } from "@/pages/apps/channels/parameter-binding-fields";
+import { DISCORD_BOT_TOKEN_FORMAT, newTokenField } from "@/pages/apps/channels/channel-token-fields";
 import {
     hasSameParameterNames,
     seedParameterRows,
@@ -34,6 +37,32 @@ import {
 import { DiscordStatusPanel } from "@/pages/apps/channels/discord-status-panel";
 import type { FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
 
+const DISCORD_APP_SETUP_STEPS: NumberedStep[] = [
+    {
+        title: "Create the application",
+        content: (
+            <Text variant="caption">
+                At{" "}
+                <a href={DISCORD_DEVELOPER_PORTAL_URL} target="_blank" rel="noreferrer" className="underline">
+                    discord.com/developers/applications
+                </a>
+                , choose <span className="font-medium">New Application</span> and name it.
+            </Text>
+        ),
+    },
+    {
+        title: "Reset and copy the bot token",
+        content: (
+            <Text variant="caption">
+                Open the <span className="font-medium">Bot</span> page, choose{" "}
+                <span className="font-medium">Reset Token</span> and copy the token it shows — Discord never shows it
+                again. Direct messages use a non-privileged intent, so nothing under Privileged Gateway Intents needs
+                turning on.
+            </Text>
+        ),
+    },
+];
+
 const parameterBindingSchema = z
     .object({
         name: z.string(),
@@ -49,11 +78,7 @@ const parameterBindingSchema = z
 const discordChannelSchema = z.object({
     agentId: z.string().min(1, "Select an agent to route conversations to"),
     displayName: z.string().trim(),
-    botToken: z
-        .string()
-        .trim()
-        .min(1, "Paste the bot token from the app's Bot page")
-        .refine((token) => /^\S+$/.test(token), "A bot token contains no spaces"),
+    botToken: newTokenField(DISCORD_BOT_TOKEN_FORMAT, "Paste the bot token from the app's Bot page"),
     parameters: z.array(parameterBindingSchema),
 });
 
@@ -193,32 +218,16 @@ function LoadedDiscordChannelForm({
                                 />
                             </CollapsibleTrigger>
                             <CollapsibleContent className="grid gap-2">
-                                <ol className="list-decimal space-y-1.5 ps-5 text-xs text-muted-foreground">
-                                    <li>
-                                        At{" "}
-                                        <a
-                                            href={DISCORD_DEVELOPER_PORTAL_URL}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="underline"
-                                        >
-                                            discord.com/developers/applications
-                                        </a>
-                                        , choose <span className="font-medium">New Application</span> and name it.
-                                    </li>
-                                    <li>
-                                        Open the <span className="font-medium">Bot</span> page, choose{" "}
-                                        <span className="font-medium">Reset Token</span> and copy the token it shows —
-                                        Discord never shows it again. Direct messages use a non-privileged intent, so
-                                        nothing under Privileged Gateway Intents needs turning on.
-                                    </li>
-                                </ol>
+                                <NumberedSteps steps={DISCORD_APP_SETUP_STEPS} size="sm" />
                                 <Text variant="caption">
                                     After the channel is created you get an invite link. A person can only DM a bot they
                                     share a server with, so the bot has to be invited to a server your users are in.
                                 </Text>
                             </CollapsibleContent>
                         </Collapsible>
+
+                        <Separator />
+
                         {!agent && (
                             <FormSelect
                                 control={form.control}

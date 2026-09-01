@@ -7,9 +7,9 @@ import { EnabledStatus } from "@/components/data/status-indicator";
 import { Button } from "@/components/shadcn/ui/button";
 import { TableCell, TableRow } from "@/components/shadcn/ui/table";
 import { SectionTable, SectionTableSkeleton } from "@/components/table/section-table";
+import { Timestamp } from "@/components/data/timestamp";
 import { appRoutes } from "@/lib/app-routes";
 import { formatCompact } from "@/lib/format";
-import { formatDateTime } from "@/lib/utils";
 import { DeleteAgentDialog } from "@/pages/apps/agents/delete-agent-dialog";
 import { SectionCard } from "@/pages/apps/section-card";
 
@@ -50,8 +50,8 @@ export function AgentsTable({ slug }: { slug: string }) {
                             <TableCell className="font-mono text-xs text-muted-foreground">
                                 {agent.model ?? "—"}
                             </TableCell>
-                            <TableCell className="whitespace-nowrap text-muted-foreground">
-                                {agent.lastInvokedAt ? formatDateTime(agent.lastInvokedAt) : "—"}
+                            <TableCell>
+                                <Timestamp value={agent.lastInvokedAt} />
                             </TableCell>
                             <TableCell className="tabular-nums">{formatCompact(agent.conversations)}</TableCell>
                             <TableCell className="tabular-nums">{formatCompact(agent.messages)}</TableCell>

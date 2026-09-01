@@ -50,3 +50,21 @@ describe("streamChat on a dead link", () => {
         }
     });
 });
+
+describe("streamChat on a malformed frame", () => {
+    it("skips the bad line and finishes the turn", async () => {
+        const body = [
+            JSON.stringify({ type: "chunk", text: "one" }),
+            "{not json",
+            JSON.stringify({ type: "chunk", text: "two" }),
+            JSON.stringify({ type: "done", answer: { reply: null } }),
+        ].join("\n");
+        const events = await eventsFor(new Response(`${body}\n`, { status: 200 }));
+
+        expect(events).toEqual([
+            { type: "chunk", text: "one" },
+            { type: "chunk", text: "two" },
+            { type: "done", reply: null },
+        ]);
+    });
+});

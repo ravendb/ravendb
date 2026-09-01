@@ -27,12 +27,17 @@ export function useUnsavedChanges(hasUnsavedChanges: boolean) {
 }
 
 /** Asks for confirmation before a dirty form is abandoned - by route change, overlay close, or page unload. */
-export function useFormUnsavedChanges<TValues extends FieldValues>(form: UseFormReturn<TValues>): UnsavedChangesHandle {
+export function useFormUnsavedChanges<TValues extends FieldValues>(
+    form: UseFormReturn<TValues>,
+    /** Pass the mutation's pending state when the save is mutation-driven: `isSubmitting` drops the moment
+     *  `mutate` returns, long before the save has settled. */
+    options: { isSaving?: boolean } = {},
+): UnsavedChangesHandle {
     const formId = useId();
     const { isDirty, isSubmitting } = useFormState({ control: form.control });
 
     // A save that navigates on success must not prompt on its way out.
-    const hasUnsavedChanges = isDirty && !isSubmitting;
+    const hasUnsavedChanges = isDirty && !isSubmitting && !options.isSaving;
     useRegisterUnsavedChanges(formId, hasUnsavedChanges);
 
     return {

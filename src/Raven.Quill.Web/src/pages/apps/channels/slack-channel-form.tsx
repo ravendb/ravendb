@@ -20,6 +20,7 @@ import { NumberedSteps } from "@/components/data/numbered-steps";
 import { FormInput } from "@/components/form/form-input";
 import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
 import { ParameterBindingFields } from "@/pages/apps/channels/parameter-binding-fields";
+import { SLACK_BOT_TOKEN_FORMAT, newTokenField } from "@/pages/apps/channels/channel-token-fields";
 import {
     hasSameParameterNames,
     seedParameterRows,
@@ -53,11 +54,7 @@ const parameterBindingSchema = z
 const slackChannelSchema = z.object({
     agentId: z.string().min(1, "Select an agent to route conversations to"),
     displayName: z.string().trim(),
-    botToken: z
-        .string()
-        .trim()
-        .min(1, "Paste the bot token from the Slack app's OAuth page")
-        .startsWith("xoxb-", "The bot token starts with xoxb- (not a user or app-level token)"),
+    botToken: newTokenField(SLACK_BOT_TOKEN_FORMAT, "Paste the bot token from the Slack app's OAuth page"),
     signingSecret: z.string().trim().min(1, "Paste the signing secret (Basic Information > App Credentials)"),
     parameters: z.array(parameterBindingSchema),
 });
