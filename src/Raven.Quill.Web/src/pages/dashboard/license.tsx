@@ -5,10 +5,10 @@ import type { ConnectivityStatus, LicensePlan, ServerLicenseResponse } from "@/a
 import { ApiState } from "@/components/data/api-state";
 import { DetailGridSkeleton } from "@/components/data/loading-skeletons";
 import { ConnectivityMetric } from "@/components/data/connectivity-metric";
+import { Timestamp } from "@/components/data/timestamp";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/shadcn/ui/card";
-import { formatDate } from "@/lib/format";
 import { getSupportUrl } from "@/lib/help-links";
 import { cn } from "@/lib/utils";
 import { Heading, Text } from "@/components/typography";
@@ -78,7 +78,7 @@ function LicenseSummaryCard({ license }: { license: ServerLicenseResponse }) {
                         Expiration date
                     </Text>
                     <Text as="div" variant="label">
-                        {formatDate(license.expiration)}
+                        <Timestamp value={license.expiration} dateVariant="short" textVariant="inherit" />
                     </Text>
                 </div>
                 <div className="space-y-1">

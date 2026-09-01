@@ -10,13 +10,13 @@ import { TableCell, TableRow } from "@/components/shadcn/ui/table";
 import { SectionTable, SectionTableSkeleton } from "@/components/table/section-table";
 import { appRoutes } from "@/lib/app-routes";
 import { CHANNEL_TYPE_LABELS } from "@/lib/channel-type-labels";
-import { formatDateTime } from "@/lib/utils";
 import { AddChannelMenu } from "@/pages/apps/channels/add-channel-menu";
 import type { FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
 import { GenerateEmbedLinkDialog } from "@/pages/apps/channels/generate-embed-link-dialog";
 import { DeleteChannelDialog } from "@/pages/apps/channels/delete-channel-dialog";
 import { SectionCard } from "@/pages/apps/section-card";
 import { Text } from "@/components/typography";
+import { Timestamp } from "@/components/data/timestamp";
 
 // When `agent` is set the section is scoped to that single agent: only its channels are listed,
 // the agent name column is dropped, and new channels are routed to it (e.g. the capability wizard).
@@ -123,8 +123,8 @@ export function ChannelsSection({
                                             (activeLinkCounts.get(channel.channelId) ?? 0).toLocaleString()
                                         )}
                                     </TableCell>
-                                    <TableCell className="text-muted-foreground">
-                                        {formatDateTime(channel.createdAt)}
+                                    <TableCell>
+                                        <Timestamp value={channel.createdAt} />
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex items-center justify-end gap-1">

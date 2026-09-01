@@ -5,7 +5,7 @@ import { MessageSquareText } from "lucide-react";
 import type { ConversationDto } from "@/api/generated/server-api";
 import { Parameters } from "@/components/data/parameters";
 import { Button } from "@/components/shadcn/ui/button";
-import { formatDateTime, formatRelativeTime } from "@/lib/utils";
+import { Timestamp } from "@/components/data/timestamp";
 import { agentAvatarColor } from "@/lib/palette";
 import { ConversationStateDot } from "@/pages/apps/conversations/conversation-state";
 import { ConversationTranscriptSheet } from "@/pages/apps/conversations/conversation-transcript-sheet";
@@ -41,13 +41,11 @@ export function createConversationColumns(slug: string): ColumnDef<ConversationD
         {
             accessorKey: "lastActivityAt",
             header: "Last activity",
-            size: 140,
+            size: 200,
             cell: ({ row }) => (
-                <span className="flex items-center gap-2 whitespace-nowrap text-muted-foreground">
+                <span className="flex items-center gap-2">
                     <ConversationStateDot state={row.original.state} />
-                    <span title={formatDateTime(row.original.lastActivityAt)}>
-                        {formatRelativeTime(row.original.lastActivityAt)}
-                    </span>
+                    <Timestamp value={row.original.lastActivityAt} />
                 </span>
             ),
         },

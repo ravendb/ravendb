@@ -1,4 +1,4 @@
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { CircleAlert, Loader2Icon, TriangleAlert } from "lucide-react";
 
 import { Badge } from "@/components/shadcn/ui/badge";
@@ -38,7 +38,7 @@ export function StatusIndicator({
     className,
 }: {
     tone: StatusTone;
-    label: string;
+    label: ReactNode;
     title?: string;
     className?: string;
 }) {

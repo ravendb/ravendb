@@ -15,8 +15,9 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/shadc
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/shadcn/ui/select";
 import { Skeleton } from "@/components/shadcn/ui/skeleton";
 import { Heading, Text } from "@/components/typography";
+import { Timestamp } from "@/components/data/timestamp";
 import { appRoutes } from "@/lib/app-routes";
-import { cn, formatDateTime, formatRelativeTime } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { DiscordIcon, SlackIcon } from "@/pages/apps/channels/channel-brand-icons";
 import { DeleteChannelDialog } from "@/pages/apps/channels/delete-channel-dialog";
 import { GenerateEmbedLinkDialog } from "@/pages/apps/channels/generate-embed-link-dialog";
@@ -322,11 +323,7 @@ function ChannelCard({
                     )}
                     <StatBox
                         label="Added"
-                        value={
-                            <span title={formatDateTime(channel.createdAt)}>
-                                {formatRelativeTime(channel.createdAt)}
-                            </span>
-                        }
+                        value={<Timestamp value={channel.createdAt} dateVariant="short" textVariant="inherit" />}
                     />
                 </div>
             </CardContent>

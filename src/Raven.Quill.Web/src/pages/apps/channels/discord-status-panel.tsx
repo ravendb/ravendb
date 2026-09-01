@@ -7,9 +7,9 @@ import { NumberedSteps, type NumberedStep } from "@/components/data/numbered-ste
 import { Alert, AlertDescription } from "@/components/shadcn/ui/alert";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Text } from "@/components/typography";
+import { Timestamp, TimestampTooltip } from "@/components/data/timestamp";
 import { DiscordIcon } from "@/pages/apps/channels/channel-brand-icons";
 import { discordInstallUrl } from "@/pages/apps/channels/discord-app-setup";
-import { formatDateTime, formatRelativeTime } from "@/lib/utils";
 
 function useDiscordHealth(slug: string, channelId: string) {
     const healthQuery = useQuery(api.queries.discord.health(slug));
@@ -71,8 +71,8 @@ function DiscordConnectionCardBody({ health }: { health: DiscordChannelHealthRes
                         <DiscordGatewayBadge health={health} />
                     </div>
                     {health.lastInboundAt ? (
-                        <Text as="span" variant="caption" title={formatDateTime(health.lastInboundAt)}>
-                            Last message {formatRelativeTime(health.lastInboundAt)}
+                        <Text as="span" variant="caption">
+                            Last message <Timestamp value={health.lastInboundAt} textVariant="inherit" />
                         </Text>
                     ) : (
                         <Text as="span" variant="caption">
@@ -155,13 +155,15 @@ function DiscordGatewayBadge({ health }: { health: DiscordChannelHealthResponse 
     }
 
     if (health.gatewayConnected) {
+        const badge = <Badge variant="success">Gateway connected</Badge>;
+        if (!health.lastConnectedAt) {
+            return badge;
+        }
+
         return (
-            <Badge
-                variant="success"
-                title={health.lastConnectedAt ? formatDateTime(health.lastConnectedAt) : undefined}
-            >
-                Gateway connected
-            </Badge>
+            <TimestampTooltip value={health.lastConnectedAt} prefix="Connected">
+                {badge}
+            </TimestampTooltip>
         );
     }
 
