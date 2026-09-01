@@ -50,7 +50,10 @@ public static class QueryPrimitives
     // Use as the complement for negation (NOT x means All Entries AND NOT x) 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void CtxFillAllEntries(Matches.CompiledQueryMatch ctx, int bitmapSlot)
-        => OrWithMatch(ctx.Searcher.AllEntries(), ref ctx.Bitmaps[bitmapSlot], ctx.OpLimit);
+    {
+        ctx.Bitmaps[bitmapSlot].Clear();
+        OrWithMatch(ctx.Searcher.AllEntries(), ref ctx.Bitmaps[bitmapSlot], ctx.OpLimit);
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void CtxFillFromTreeScan(Matches.CompiledQueryMatch ctx, int paramIndex, int bitmapSlot)
