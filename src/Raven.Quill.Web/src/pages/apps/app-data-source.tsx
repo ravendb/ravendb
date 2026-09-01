@@ -83,6 +83,11 @@ function DataSourceStatus({ status, isLoading }: { status: string | undefined; i
         return null;
     }
     const style = resolveStatusStyle(status);
+    // A failing sync is already reported below, with the error count and the way to read them.
+    // Repeating it here only adds a second red badge saying less than the section it sits above.
+    if (style.tone === "danger") {
+        return null;
+    }
     return <StatusIndicator tone={style.tone} label={style.label} />;
 }
 
