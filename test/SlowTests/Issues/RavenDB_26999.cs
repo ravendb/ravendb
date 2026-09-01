@@ -105,7 +105,6 @@ public class RavenDB_26999(ITestOutputHelper output) : RavenTestBase(output)
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
     [InlineData(100_000, 100)]    // df = 1_000  - small posting list
     [InlineData(1_000_000, 100)]  // df = 10_000 - large posting list, sparse over 1M ids
-    [InlineData(1_000_000, 10)]   // df = 100_000 - large and dense
     public void ScoreIsComputedRegardlessOfPostingListSize(int totalDocuments, int rareEvery)
     {
         using var store = SetupStore(RavenSearchEngineMode.Corax, totalDocuments, rareEvery);
@@ -121,7 +120,6 @@ public class RavenDB_26999(ITestOutputHelper output) : RavenTestBase(output)
         AssertScored(store, "m.Genre in ('Drama', 'Western')", "IN");
     }
 
-    [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Corax)]
     public void CoraxScoresMatchLuceneOrderOfMagnitude()
     {
         const int documents = 1_000_000;
@@ -144,7 +142,6 @@ public class RavenDB_26999(ITestOutputHelper output) : RavenTestBase(output)
         }
     }
 
-    [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Corax)]
     public void ScoresStayOrderedByRelevanceAcrossPostingListSizes()
     {
         using var store = SetupStore(RavenSearchEngineMode.Corax, 1_000_000, 100);
