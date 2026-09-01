@@ -21,7 +21,11 @@ internal sealed class PlanEmitter
             return ([new PlanOp { Kind = PlanOpKind.FillFromMatch, ParamIndex = 0 }], 2);
 
         var emitter = new PlanEmitter();
-        var (ops, bitmaps) = template.IsOr ? emitter.EmitOrPlan(executions) : emitter.EmitAndPlan(executions, scanEligible);
+        // Entry scan filters candidates without going through the matches, so a scored query cannot use it either:
+        // the scanned clauses would contribute nothing to the score.
+        var (ops, bitmaps) = template.IsOr
+            ? emitter.EmitOrPlan(executions)
+            : emitter.EmitAndPlan(executions, scanEligible && planParams.HasBoost == false);
         if (planParams.HasBoost)
         {
             // we require query match for boost, because the other options cannot compute it
