@@ -4,4 +4,6 @@ set -e
 exec 2>&1
 
 cd /app/web
-exec dotnet /app/web/Raven.Quill.dll
+
+export HOME=/var/lib/quill
+exec s6-setuidgid quill dotnet /app/web/Raven.Quill.dll

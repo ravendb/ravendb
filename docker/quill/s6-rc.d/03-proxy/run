@@ -31,10 +31,10 @@ while [ -z "$(ls "$CERT_DIR"/cluster.server.certificate.*.pfx 2>/dev/null)" ]; d
     sleep 1
 done
 
-proxy-certs
+s6-setuidgid quill proxy-certs
 
 cp /etc/nginx/nginx.conf "$PROXY_DIR/nginx.conf"
 sed -i "s|__RAVENDB_PORT__|$RAVENDB_PORT|g"             "$PROXY_DIR/nginx.conf"
 sed -i "s|__RAVENDB_PROXY_PORT__|$RAVENDB_PROXY_PORT|g" "$PROXY_DIR/nginx.conf"
 
-exec nginx -c "$PROXY_DIR/nginx.conf" -g 'daemon off;'
+exec s6-setuidgid quill nginx -c "$PROXY_DIR/nginx.conf" -g 'daemon off;'

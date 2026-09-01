@@ -121,9 +121,18 @@ FROM ${RUNTIME_IMAGE} AS runtime
 ARG S6_OVERLAY_VERSION
 ARG TARGETARCH
 
+ARG QUILL_USER_ID=999
+ARG QUILL_GROUP_ID=999
+
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends xz-utils curl ca-certificates nginx-full openssl jq \
+    && apt-get install -y --no-install-recommends xz-utils curl ca-certificates nginx-full openssl jq libcap2-bin \
     && rm -rf /var/lib/apt/lists/*
+
+RUN groupadd -r -g ${QUILL_GROUP_ID} quill
+RUN useradd -r -u ${QUILL_USER_ID} -g quill -d /var/lib/quill -s /usr/sbin/nologin quill
+
+RUN chown -R quill:quill /var/lib/nginx \
+    && setcap 'cap_net_bind_service=+ep' /usr/sbin/nginx
 
 RUN <<EOF
 set -eu
@@ -152,6 +161,8 @@ EOF
 COPY --from=ravendb-server-build /publish/raven /app/ravendb
 COPY --from=ravendb-studio-build /src/src/Raven.Studio/wwwroot/dist/Raven.Studio.zip /app/ravendb/
 COPY --from=web-build            /publish/web   /app/web
+
+RUN chown -R quill:quill /app
 COPY docker/quill/nginx.conf /etc/nginx/nginx.conf
 
 COPY docker/quill/s6-rc.d/ /etc/s6-overlay/s6-rc.d/
@@ -159,11 +170,13 @@ COPY docker/quill/scripts/update-dns.sh /usr/local/bin/update-dns
 COPY docker/quill/scripts/proxy-certs.sh /usr/local/bin/proxy-certs
 COPY docker/quill/scripts/cert-chain.sh /usr/local/bin/cert-chain
 COPY docker/quill/scripts/svc-log.sh /usr/local/bin/svc-log
+COPY docker/quill/scripts/prepare-volume.sh /usr/local/bin/prepare-volume
 RUN chmod +x /etc/s6-overlay/s6-rc.d/*/run \
              /usr/local/bin/update-dns \
              /usr/local/bin/proxy-certs \
              /usr/local/bin/cert-chain \
-             /usr/local/bin/svc-log
+             /usr/local/bin/svc-log \
+             /usr/local/bin/prepare-volume
 
 EXPOSE 443
 
