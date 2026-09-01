@@ -27,7 +27,7 @@ chain_ok() {
 }
 
 rebuild() {
-    proxy-certs
+    s6-setuidgid quill proxy-certs
     s6-svc -h /run/service/03-proxy
     echo "04-certwatch: $1; nginx reloaded."
 }
