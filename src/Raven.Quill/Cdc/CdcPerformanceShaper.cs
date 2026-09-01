@@ -74,6 +74,10 @@ internal static class CdcPerformanceShaper
     // Default cap on returned error details — mirrors the rolling perf window (~25 entries).
     private const int MaxErrors = 25;
 
+    public static bool HasErrors(CdcSinkErrorsRaw raw) =>
+        (raw.Results ?? new List<CdcTaskErrorsRaw>())
+            .Any(t => t.ProcessErrors?.Count > 0 || t.ItemErrors?.Count > 0);
+
     public static CdcError[] ShapeErrors(CdcSinkErrorsRaw raw) =>
         (raw.Results ?? new List<CdcTaskErrorsRaw>())
             .SelectMany(t => (t.ProcessErrors ?? new List<CdcTaskErrorRaw>())
