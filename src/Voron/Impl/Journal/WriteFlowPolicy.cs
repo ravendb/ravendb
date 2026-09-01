@@ -70,8 +70,6 @@ public sealed class WriteFlowPolicy
         QueueEmpty, 
         // the batching time window expired with work still queued - the batch could have grown
         MaxBatchTimeReached,
-        // consolidation stopped absorbing on purpose, leaving the queue's shallow tail to seed
-        // the next batch instead of draining it and letting the pipeline go idle
         // hit the transaction / consolidation size cap, batch hit max limit
         SizeReached,    
     }
