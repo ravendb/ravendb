@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc.Testing;
+﻿using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -7,6 +7,8 @@ using Raven.Client.Documents;
 using Raven.Quill.Auth;
 using Raven.Quill.Embed;
 using Raven.Quill.Hosting;
+
+using Raven.Quill.Logging;
 
 namespace QuillTests.E2E.Fixtures;
 
@@ -37,7 +39,7 @@ public sealed class ApplianceWebApplicationFactory : WebApplicationFactory<Progr
                                                  """;
 
     public static WidgetAssets StubWidgetAssets { get; } =
-        WidgetAssets.FromManifestJson(StubWidgetManifestJson, NullLogger.Instance);
+        WidgetAssets.FromManifestJson(StubWidgetManifestJson, new QuillLogger<WidgetAssets>());
 
     private readonly string _setupPackagePath;
     private readonly IDocumentStore _applianceStore;

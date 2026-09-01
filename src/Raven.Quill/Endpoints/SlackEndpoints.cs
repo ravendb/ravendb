@@ -1,3 +1,4 @@
+using Raven.Quill.Logging;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 using Raven.Client.Documents;
@@ -49,7 +50,7 @@ public static class SlackEndpoints
         SlackInboundProcessor processor,
         SlackHealthRegistry health,
         IOptions<ApplianceOptions> options,
-        ILogger<SlackLogger> logger,
+        QuillLogger<SlackLogger> logger,
         CancellationToken ct)
     {
         var limit = options.Value.Slack.MaxWebhookBodyBytes;
@@ -59,8 +60,8 @@ public static class SlackEndpoints
         var resolved = await ResolveTokenChannelAsync(store, token, ct);
         if (resolved is null)
         {
-            logger.LogDebug("Dropped Slack delivery for unknown webhook token {Token}",
-                EmbedLink.RedactToken(token));
+            if (logger.IsDebugEnabled)
+                logger.Debug($"Dropped Slack delivery for unknown webhook token {EmbedLink.RedactToken(token)}");
             return Results.Ok();
         }
 
@@ -76,9 +77,8 @@ public static class SlackEndpoints
                 options.Value.Slack.SignatureTolerance, DateTime.UtcNow) == false)
         {
             health.RecordSignatureFailure(database, channel.ShortId);
-            logger.LogWarning(
-                "Slack delivery for channel {ChannelId} failed signature verification (wrong signing secret or stale timestamp?)",
-                channel.ShortId);
+            if (logger.IsWarnEnabled)
+                logger.Warn($"Slack delivery for channel {channel.ShortId} failed signature verification (wrong signing secret or stale timestamp?)");
             return Results.Unauthorized();
         }
 
@@ -89,8 +89,8 @@ public static class SlackEndpoints
         }
         catch (JsonException e)
         {
-            logger.LogWarning("Dropped unparseable Slack delivery for channel {ChannelId}: {Error}",
-                channel.ShortId, e.Message);
+            if (logger.IsWarnEnabled)
+                logger.Warn($"Dropped unparseable Slack delivery for channel {channel.ShortId}: {e.Message}");
             return Results.Ok();
         }
 
@@ -102,8 +102,8 @@ public static class SlackEndpoints
 
         if (payload.TeamId != settings.TeamId)
         {
-            logger.LogDebug("Dropped Slack delivery for channel {ChannelId} from foreign team {TeamId}",
-                channel.ShortId, payload.TeamId);
+            if (logger.IsDebugEnabled)
+                logger.Debug($"Dropped Slack delivery for channel {channel.ShortId} from foreign team {payload.TeamId}");
             return Results.Ok();
         }
 

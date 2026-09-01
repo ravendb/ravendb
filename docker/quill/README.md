@@ -322,6 +322,70 @@ docker rm -f nw-postgres            # if you used the throwaway Postgres
 
 ---
 
+## Logs and the audit log
+
+**By default the appliance logs to the console only.** s6 pipes that stream to a rotated file at
+`/var/lib/quill/logs/web/` (3 × 10 MB) with a `web.log` symlink, not to `docker compose logs`.
+
+The `quill.log` and `quill.audit.log` file sinks are **opt-in** — the console stream is already captured,
+and these write to the volume that holds the database.
+
+**Logging is resolved once, at startup, and never changes while the appliance runs.** There is no
+request that reads or writes it: what was loaded and what it resolved to are written to the log as the
+appliance starts — grep the console stream for `Logging configured from`. Changing any of it is a
+restart. That is deliberate — what you set is what you get, and nothing rewrites your configuration
+behind your back.
+
+### The two variables
+
+For the things most often changed, no configuration file is needed:
+
+| variable | effect |
+| --- | --- |
+| `RAVEN_QUILL_LOGS_MINLEVEL` | minimum level for console **and** file. One of `Trace`, `Debug`, `Info`, `Warn`, `Error`, `Fatal`, `Off`. Defaults to `Info` |
+| `RAVEN_QUILL_LOGS_PATH` | absolute directory. **Setting it switches the `quill.log` sink on** and writes it there; unset means console only |
+| `RAVEN_QUILL_SECURITY_AUDITLOG_PATH` | absolute directory. **Setting it switches the audit log on**, the way RavenDB reads `Security.AuditLog.FolderPath` |
+
+Point the two directories at somewhere under `/var/lib/quill/` so the files survive a recreate. A
+relative path is refused rather than resolved — it would land inside the container image, where the next
+recreate destroys it — and so is a directory that cannot be written to; either is reported by the
+endpoint and warned about at startup rather than failing the container.
+
+### Taking the configuration over
+
+For anything else — rotation, filters, layouts, extra targets — copy the shipped
+template onto the volume and edit it there. It is picked up from `/var/lib/quill/quill.nlog.config`
+without any variable being set, and wins over the variables above:
+
+```bash
+docker compose cp quill:/app/web/quill.nlog.template.config ./quill.nlog.config    # then edit, and copy back to /var/lib/quill/quill.nlog.config
+```
+
+**To switch a sink on there, point its rule at its target** — the two `writeTo` attributes are the whole
+switch, and both ship off:
+
+```xml
+<logger ruleName="Raven_Default_Audit" name="Audit" levels="Info" final="true" writeTo="AuditAsyncTargetWrapper" />
+<logger ruleName="Raven_Default" name="*" minlevel="Info" writeTo="AsyncTargetWrapper,Console" />
+```
+
+Until one of the audit rule or `RAVEN_QUILL_SECURITY_AUDITLOG_PATH` sends it somewhere there is **no
+audit trail** and every audit call is a no-op. Once it is on, the startup line names the audit file
+alongside the others and the audit log itself opens with `AUDIT log started`.
+
+**A configuration mistake stops the appliance, it does not degrade quietly.** Naming a file through
+`RAVEN_QUILL_LOGS_CONFIG_PATH` that is not there, a file that will not parse, or a file that has lost
+either of `Raven_Default` or `Raven_Default_Audit` all fail startup with
+a message saying which — the same assertions RavenDB makes about its own `NLog.config`. So does a log
+directory that cannot be written to. What you asked for is either in force or the reason is on stderr.
+
+### What is audited
+
+Authentication events, and every operation that changes access, data flow or spend — credentials,
+certificates, agents and their webhook origins, channels, embed links, apps, activation, and the log
+configuration itself. Secrets, prompts and model output are never written. Attribution is per-key: lines
+identify a source IP and an authentication method, not a person.
+
 ## Production hardening (beyond this runbook)
 
 This is the local-run posture. For a real deployment:

@@ -7,6 +7,8 @@ using Raven.Quill.Agents;
 using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints.Helpers;
 
+using Raven.Quill.Logging;
+
 namespace Raven.Quill.Endpoints;
 
 public static class ChatEndpoints
@@ -26,7 +28,7 @@ public static class ChatEndpoints
         HttpContext ctx,
         IDocumentStore store,
         IAgentRouter router,
-        ILogger<ChatStreamLogger> logger)
+        QuillLogger<ChatStreamLogger> logger)
     {
         ChatRequest? body;
         try
@@ -86,7 +88,8 @@ public static class ChatEndpoints
         }
         catch (Exception e)
         {
-            logger.LogError(e, "Chat stream failed for agentId={AgentId}", body.AgentId);
+            if (logger.IsErrorEnabled)
+                logger.Error(e, $"Chat stream failed for agentId={body.AgentId}");
             try
             {
                 await NdjsonStream.WriteLineAsync(ctx, new

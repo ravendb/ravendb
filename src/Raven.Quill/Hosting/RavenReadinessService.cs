@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 using Polly;
 using Polly.Registry;
 using Polly.Retry;
@@ -8,6 +8,8 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Quill.Infrastructure;
 
+using Raven.Quill.Logging;
+
 namespace Raven.Quill.Hosting;
 
 public sealed class RavenReadinessService(
@@ -16,7 +18,7 @@ public sealed class RavenReadinessService(
     IServerReady ready,
     IBootstrapState bootstrap,
     ResiliencePipelineProvider<string> pipelines,
-    ILogger<RavenReadinessService> logger) : BackgroundService
+    QuillLogger<RavenReadinessService> logger) : BackgroundService
 {
     public const string PipelineName = "raven-startup";
 
@@ -46,16 +48,18 @@ public sealed class RavenReadinessService(
         {
             if (string.IsNullOrEmpty(opts.RavenDbS6Service) == false && bootstrap.StartedWithSetupPackage == false)
             {
-                logger.LogInformation("Started without the setup package; waiting for activation to restart the host before probing RavenDB.");
+                if (logger.IsInfoEnabled)
+                    logger.Info("Started without the setup package; waiting for activation to restart the host before probing RavenDB.");
                 await Task.Delay(Timeout.Infinite, stoppingToken);
             }
 
             // grace period: RavenDB needs ~10-15s; earlier probes just spam errors
             if (opts.ReadinessInitialDelay > TimeSpan.Zero)
             {
-                logger.LogInformation(
-                    "Waiting {Delay} for RavenDB to start before probing readiness...",
-                    opts.ReadinessInitialDelay);
+                if (logger.IsInfoEnabled)
+                    logger.Info(
+                        $"Waiting {opts.ReadinessInitialDelay} for RavenDB to start before probing " +
+                        "readiness...");
                 await Task.Delay(opts.ReadinessInitialDelay, stoppingToken);
             }
 
@@ -69,33 +73,37 @@ public sealed class RavenReadinessService(
                     }, stoppingToken);
 
                     var r = await RavenStoreFactory.EnsureDatabaseAsync(store, opts.ConfigDatabase, DatabaseLockMode.PreventDeletesError, stoppingToken);
-                    logger.LogInformation(
-                        "RavenDB ready at {Url}; config database {Database} {Action}.",
-                        opts.RavenUrl, opts.ConfigDatabase, r.Created ? "created" : "already present");
+                    if (logger.IsInfoEnabled)
+                        logger.Info(
+                            $"RavenDB ready at {opts.RavenUrl}; config database {opts.ConfigDatabase} " +
+                            $"{(r.Created ? "created" : "already present")}.");
 
                     ready.MarkReady();
 
                     // flip bootstrap Ready only from the post-restart secure start (don't clobber activation)
                     if (bootstrap.StartedWithSetupPackage)
                     {
-                        logger.LogInformation("Process started with the setup package present; marking bootstrap Ready.");
+                        if (logger.IsInfoEnabled)
+                            logger.Info("Process started with the setup package present; marking bootstrap Ready.");
                         bootstrap.MarkReady();
                     }
                     else
                     {
-                        logger.LogInformation(
-                            "RavenDB reachable but the process started without a setup package at {Path}; " +
-                            "bootstrap stays in its current phase until startup activation completes.",
-                            opts.SetupPackagePath);
+                        if (logger.IsInfoEnabled)
+                            logger.Info(
+                                "RavenDB reachable but the process started without a setup package at " +
+                                $"{opts.SetupPackagePath}; bootstrap stays in its current phase until " +
+                                "startup activation completes.");
                     }
 
                     return;
                 }
                 catch (Exception ex) when (stoppingToken.IsCancellationRequested == false)
                 {
-                    logger.LogError(ex,
-                        "RavenDB readiness probe failed after {Timeout}; retrying in {Delay}.",
-                        opts.ReadinessOverallTimeout, opts.ReadinessInitialDelay);
+                    if (logger.IsErrorEnabled)
+                        logger.Error(ex,
+                            $"RavenDB readiness probe failed after {opts.ReadinessOverallTimeout}; " +
+                            $"retrying in {opts.ReadinessInitialDelay}.");
                     ready.MarkFailed(ex.Message);
 
                     if (File.Exists(opts.SetupNodeSettingsPath))

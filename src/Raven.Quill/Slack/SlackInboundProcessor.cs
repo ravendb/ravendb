@@ -1,3 +1,4 @@
+using Raven.Quill.Logging;
 using Microsoft.Extensions.Options;
 using Raven.Client.Documents;
 using Raven.Quill.Agents;
@@ -13,7 +14,7 @@ internal sealed class SlackInboundProcessor(
     SlackHealthRegistry health,
     SlackUserDirectory users,
     IOptions<ApplianceOptions> options,
-    ILogger<SlackInboundProcessor> logger) : IHostedService
+    QuillLogger<SlackInboundProcessor> logger) : IHostedService
 {
     internal const string UnsupportedKindReply = "I can only read text messages right now.";
     internal const string ErrorReply = "Sorry - something went wrong handling that message. Please try again.";
@@ -55,7 +56,8 @@ internal sealed class SlackInboundProcessor(
         }
         catch (TimeoutException)
         {
-            logger.LogWarning("Slack sender chains did not drain within {Timeout}", StopDrainTimeout);
+            if (logger.IsWarnEnabled)
+                logger.Warn($"Slack sender chains did not drain within {StopDrainTimeout}");
         }
     }
 
@@ -141,9 +143,8 @@ internal sealed class SlackInboundProcessor(
         }
         catch (Exception e)
         {
-            logger.LogWarning(
-                "Slack message handling failed for channel {ChannelId} sender {Sender}: {Error}",
-                channelId, sender, e.Message);
+            if (logger.IsWarnEnabled)
+                logger.Warn($"Slack message handling failed for channel {channelId} sender {sender}: {e.Message}");
         }
     }
 
@@ -201,7 +202,8 @@ internal sealed class SlackInboundProcessor(
             await reply.FinalizeAsync();
 
             if (reply.IsEmpty)
-                logger.LogWarning("Slack agent turn produced an empty reply for channel {ChannelId}", channel.Id);
+                if (logger.IsWarnEnabled)
+                    logger.Warn($"Slack agent turn produced an empty reply for channel {channel.Id}");
         }
         catch (OperationCanceledException)
         {
@@ -234,7 +236,8 @@ internal sealed class SlackInboundProcessor(
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
-            logger.LogDebug("Slack overload notice failed for channel {ChannelId}: {Error}", channelId, e.Message);
+            if (logger.IsDebugEnabled)
+                logger.Debug($"Slack overload notice failed for channel {channelId}: {e.Message}");
         }
     }
 
@@ -251,9 +254,8 @@ internal sealed class SlackInboundProcessor(
             if (e is SlackApiException apiError)
                 health.RecordSendError(database, shortChannelId, apiError.Message);
 
-            logger.LogWarning(
-                "Slack send failed for channel {ChannelId} in {DmChannel}: {Error}",
-                shortChannelId, dmChannel, e.Message);
+            if (logger.IsWarnEnabled)
+                logger.Warn($"Slack send failed for channel {shortChannelId} in {dmChannel}: {e.Message}");
         }
     }
 }

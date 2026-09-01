@@ -1,16 +1,18 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
+using Raven.Quill.Logging;
+using Raven.Server.Logging;
 
 namespace Raven.Quill.Auth;
 
 public sealed class ApiKeyAuthenticationHandler(
     IOptionsMonitor<AuthenticationSchemeOptions> options,
-    ILoggerFactory logger,
+    ILoggerFactory loggerFactory,
     UrlEncoder encoder,
-    IApiKeyStore keys) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
+    IApiKeyStore keys,
+    QuillLogger<ApiKeyAuthenticationHandler> logger) : AuthenticationHandler<AuthenticationSchemeOptions>(options, loggerFactory, encoder)
 {
     public const string SchemeName = "ApiKey";
     public const string HeaderName = "X-Api-Key";
@@ -22,7 +24,11 @@ public sealed class ApiKeyAuthenticationHandler(
             return AuthenticateResult.NoResult();
 
         if (await keys.ValidateAsync(presented, Context.RequestAborted) == false)
+        {
+            if (logger.AuditEnabled)
+                logger.Audit("AUTH", $"rejected (invalid API key) {Request.Method} {Uri.EscapeDataString(Request.Path)}", Context);
             return AuthenticateResult.Fail("invalid API key");
+        }
 
         var identity = new ClaimsIdentity(SchemeName);
         identity.AddClaim(new Claim(ClaimTypes.Name, "operator"));

@@ -1,3 +1,4 @@
+using Raven.Quill.Logging;
 using Raven.Quill.Channels;
 using Raven.Quill.Hosting;
 
@@ -8,7 +9,7 @@ internal sealed class SlackStreamingReply(
     string botToken,
     string dmChannel,
     SlackOptions options,
-    ILogger logger,
+    QuillLogger<SlackInboundProcessor> logger,
     CancellationToken ct) : ChannelStreamingReply(options.MessageLimit, options.EditDebounce)
 {
     private static readonly TimeSpan MaxRetryDelay = TimeSpan.FromSeconds(60);
@@ -19,8 +20,11 @@ internal sealed class SlackStreamingReply(
 
     protected override void CloseCurrentMessage() => _currentTs = "";
 
-    protected override void LogFlushFailure(Exception error) =>
-        logger.LogDebug("Slack streaming flush failed for channel {DmChannel}: {Error}", dmChannel, error.Message);
+    protected override void LogFlushFailure(Exception error)
+    {
+        if (logger.IsDebugEnabled)
+            logger.Debug($"Slack streaming flush failed for channel {dmChannel}: {error.Message}");
+    }
 
     protected override async Task ShowPreviewAsync(string text)
     {

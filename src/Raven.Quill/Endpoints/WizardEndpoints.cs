@@ -1,4 +1,4 @@
-using Raven.Client.Documents;
+﻿using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.CdcSink.Schema;
 using Raven.Client.Documents.Operations.CdcSink.Test;
@@ -10,7 +10,9 @@ using Raven.Quill.AiHelper;
 using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints.Helpers;
 using Raven.Quill.Infrastructure;
+using Raven.Quill.Logging;
 using Raven.Quill.Wizard;
+using Raven.Server.Logging;
 
 namespace Raven.Quill.Endpoints;
 
@@ -81,7 +83,8 @@ public static class WizardEndpoints
     private static async Task<IResult> ConnectAsync(
         ConnectRequest body,
         IDocumentStore store,
-        ILogger<WizardLogger> logger,
+        QuillLogger<WizardLogger> logger,
+        HttpContext ctx,
         CancellationToken ct)
     {
         if (TryRejectInvalidRequest(body?.Provider, body?.ConnectionString, body?.Slug, out var factoryName, out var error))
@@ -97,7 +100,8 @@ public static class WizardEndpoints
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Connect: test-connection threw");
+            if (logger.IsErrorEnabled)
+                logger.Error(ex, "Connect: test-connection threw");
             result = new ConnectResult();
             result.Errors.Add(new WizardError(ex.ToString()));
         }
@@ -131,13 +135,17 @@ public static class WizardEndpoints
             await session.SaveChangesAsync(ct);
         }
 
+        if (logger.AuditEnabled)
+            logger.Audit("POST",
+                $"WizardSource '{body.Slug}' provider={factoryName} credential stored", ctx);
+
         return Results.Ok(result);
     }
 
     private static async Task<IResult> DiscoverAsync(
         DiscoverRequest body,
         IDocumentStore store,
-        ILogger<WizardLogger> logger,
+        QuillLogger<WizardLogger> logger,
         CancellationToken ct)
     {
         if (TryRejectInvalidRequest(body?.Provider, body?.ConnectionString, body?.Slug, out var factoryName, out var error))
@@ -172,7 +180,8 @@ public static class WizardEndpoints
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Discover: schema enumeration threw");
+            if (logger.IsErrorEnabled)
+                logger.Error(ex, "Discover: schema enumeration threw");
             schema = new CdcSinkSourceSchema();
             schema.Errors.Add(ex.ToString());
         }
@@ -189,7 +198,7 @@ public static class WizardEndpoints
     private static async Task<IResult> VerifyCdcAsync(
         VerifyCdcRequest body,
         IDocumentStore store,
-        ILogger<WizardLogger> logger,
+        QuillLogger<WizardLogger> logger,
         CancellationToken ct)
     {
         if (body.Tables is not { Length: > 0 })
@@ -210,7 +219,8 @@ public static class WizardEndpoints
         var configuration = ScaffoldDryRunConfiguration(state.LastDiscoveredSchema, body.Tables, out var scaffoldErrors);
         if (scaffoldErrors.Count > 0)
         {
-            logger.LogInformation("VerifyCdc: {Count} selected table(s) cannot be captured", scaffoldErrors.Count);
+            if (logger.IsInfoEnabled)
+                logger.Info($"VerifyCdc: {scaffoldErrors.Count} selected table(s) cannot be captured");
             return Results.Ok(VerifyCdcResponse.Failed([.. scaffoldErrors]));
         }
 
@@ -232,13 +242,16 @@ public static class WizardEndpoints
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "VerifyCdc: dry run threw");
+            if (logger.IsErrorEnabled)
+                logger.Error(ex, "VerifyCdc: dry run threw");
             result = new CdcTestResult { Success = false, Error = ex.ToString() };
         }
 
-        logger.LogInformation(
-            "VerifyCdc: success={Success} completedTables={CompletedTables}/{RequestedTables} warnings={Warnings}",
-            result.Success, result.CompletedTables.Count, configuration.Tables.Count, result.Warnings.Count);
+        if (logger.IsInfoEnabled)
+            logger.Info(
+                $"VerifyCdc: success={result.Success} " +
+                $"completedTables={result.CompletedTables.Count}/{configuration.Tables.Count} " +
+                $"warnings={result.Warnings.Count}");
 
         return Results.Ok(VerifyCdcResponse.From(result));
     }
@@ -332,7 +345,8 @@ public static class WizardEndpoints
     private static async Task<IResult> MapAsync(
         MapRequest body,
         IDocumentStore store,
-        ILogger<WizardLogger> logger,
+        QuillLogger<WizardLogger> logger,
+        HttpContext ctx,
         CancellationToken ct)
     {
         if (body is null)
@@ -349,7 +363,8 @@ public static class WizardEndpoints
 
         if (!cdcConfig.Validate(out var errors, validateName: true, validateConnection: false))
         {
-            logger.LogInformation("Map: configuration rejected by Validate ({Count} errors)", errors.Count);
+            if (logger.IsInfoEnabled)
+                logger.Info($"Map: configuration rejected by Validate ({errors.Count} errors)");
             return Results.BadRequest(new ApiErrorResponse(Errors: errors.ToArray()));
         }
 
@@ -365,6 +380,11 @@ public static class WizardEndpoints
             await session.SaveChangesAsync(ct);
         }
 
+        if (logger.AuditEnabled)
+            logger.Audit("POST",
+                $"WizardMapping '{body.Slug}' stored (cdcTask='{cdcConfig.Name}' tables={cdcConfig.Tables.Count})",
+                ctx);
+
         return Results.Ok(cdcConfig);
     }
 
@@ -372,7 +392,7 @@ public static class WizardEndpoints
         SuggestCdcRequest body,
         IDocumentStore store,
         IAiHelperClient aiClient,
-        ILogger<WizardLogger> logger,
+        QuillLogger<WizardLogger> logger,
         CancellationToken ct)
     {
         if (body is null)
@@ -407,14 +427,18 @@ public static class WizardEndpoints
 
         if (!result.Configuration.Validate(out var errors, validateName: false, validateConnection: false))
         {
-            logger.LogInformation("SuggestCdc: returned configuration failed validation ({Count} errors)", errors.Count);
+            if (logger.IsInfoEnabled)
+                logger.Info($"SuggestCdc: returned configuration failed validation ({errors.Count} errors)");
             return Results.UnprocessableEntity(new ApiErrorResponse(Errors: errors.ToArray()));
         }
 
         ValidateJoinColumnsAgainstSchema(result.Configuration, state.LastDiscoveredSchema, errors);
         if (errors.Count > 0)
         {
-            logger.LogInformation("SuggestCdc: returned configuration has {Count} join column(s) the source schema does not have", errors.Count);
+            if (logger.IsInfoEnabled)
+                logger.Info(
+                    $"SuggestCdc: returned configuration has {errors.Count} join column(s) the source " +
+                    "schema does not have");
             return Results.UnprocessableEntity(new ApiErrorResponse(Errors: errors.ToArray()));
         }
 
@@ -424,7 +448,7 @@ public static class WizardEndpoints
     private static async Task<IResult> TestMappingAsync(
         TestMappingRequest body,
         IDocumentStore store,
-        ILogger<WizardLogger> logger,
+        QuillLogger<WizardLogger> logger,
         CancellationToken ct)
     {
         if (body is null || string.IsNullOrWhiteSpace(body.SourceTableName))
@@ -464,7 +488,8 @@ public static class WizardEndpoints
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "TestMapping: SendAsync threw");
+            if (logger.IsErrorEnabled)
+                logger.Error(ex, "TestMapping: SendAsync threw");
             result = new TestCdcSinkMappingResult();
             result.Errors.Add(ex.ToString());
         }
@@ -475,7 +500,8 @@ public static class WizardEndpoints
     private static async Task<IResult> ProvisionAsync(
         ProvisionRequest body,
         IDocumentStore store,
-        ILogger<WizardLogger> logger,
+        QuillLogger<WizardLogger> logger,
+        HttpContext ctx,
         CancellationToken ct)
     {
         if (body is null || string.IsNullOrWhiteSpace(body.AppName))
@@ -551,8 +577,13 @@ public static class WizardEndpoints
         }
 
         await CreateOrUpdateCdcAsync(store, app, state.LastMapConfiguration, ct);
-        logger.LogInformation("Provisioned app slug={Slug} id={Id} cdcTask={CdcTaskName}",
-            app.Slug, app.Id, app.CdcTaskName);
+        if (logger.IsInfoEnabled)
+            logger.Info(
+                $"Provisioned app slug={app.Slug} id={app.Id} cdcTask={app.CdcTaskName}");
+
+        if (logger.AuditEnabled)
+            logger.Audit("POST",
+                $"App '{app.Slug}' provisioned (database={app.Database} cdcTask='{app.CdcTaskName}')", ctx);
 
         return Results.Ok(new ProvisionResponse(app.Id!, app.Slug));
     }

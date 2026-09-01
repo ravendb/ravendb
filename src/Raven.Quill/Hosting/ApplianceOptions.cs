@@ -1,4 +1,5 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
+using Raven.Quill.Logging;
 
 namespace Raven.Quill.Hosting;
 
@@ -25,10 +26,20 @@ public sealed class ApplianceOptions
 
     public string? RavenDbS6Service { get; set; }
 
+    /// <summary>
+    /// Base URL of the AI Helper service; unset, the RavenDB URL already connected to is used. No
+    /// environment variable sets this - it is the seam the tests point at their AI Helper mock.
+    /// </summary>
     [Url]
     public string? AiApiUrl { get; set; }
 
     public TelegramOptions Telegram { get; set; } = new();
+
+    /// <summary>
+    /// What the appliance was told about logging. Parsed and rejected on the way in, the way the readiness
+    /// timeouts are, so what lands here is already known good.
+    /// </summary>
+    public LogOptions Logs { get; set; } = new();
 
     public SlackOptions Slack { get; set; } = new();
 

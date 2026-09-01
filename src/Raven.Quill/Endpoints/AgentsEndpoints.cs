@@ -1,12 +1,14 @@
-using Raven.Client.Documents;
+﻿using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Exceptions;
 using Raven.Quill.Agents;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints.Helpers;
+using Raven.Quill.Logging;
 using Raven.Quill.Metrics;
 using Raven.Quill.Raven;
+using Raven.Server.Logging;
 
 namespace Raven.Quill.Endpoints;
 
@@ -112,7 +114,8 @@ public static class AgentsEndpoints
         string slug,
         EditAgentRequest request,
         IDocumentStore store,
-        ILogger<AgentsLogger> logger,
+        QuillLogger<AgentsLogger> logger,
+        HttpContext ctx,
         CancellationToken ct)
     {
         var app = await AppLookup.LoadAppAsync(store, slug, ct);
@@ -140,22 +143,27 @@ public static class AgentsEndpoints
         // canonical identifier (FindAsync is case-insensitive) so AddOrUpdate targets the same doc
         body.Identifier = existing.Identifier;
 
-        if (logger.IsEnabled(LogLevel.Information))
-            logger.LogInformation(
-                "Editing agent slug={Slug} agentId={AgentId} name={Name}", app.Slug, body.Identifier, body.Name);
+        if (logger.IsInfoEnabled)
+            logger.Info(
+                $"Editing agent slug={app.Slug} agentId={body.Identifier} name={body.Name}");
 
         try
         {
             var result = await AiAgentRegistrar.RegisterAsync(store, body, app.Database, ct);
             await AiAgentRegistrar.RegisterBindingsAsync(store, app.Database, result.Identifier, request.ActionBindings, ct);
+            if (logger.AuditEnabled)
+                logger.Audit("POST",
+                    $"AiAgentConfiguration '{result.Identifier}' in App '{app.Slug}' " +
+                    $"actions=[{AgentActionBindings.DescribeTargetsForAudit(request.ActionBindings)}]",
+                    ctx);
             return Results.Ok(new ProvisionAgentResponse(result.Identifier));
         }
         // map RavenDB validation to a 400 instead of a leaked 500
         catch (RavenException ex)
         {
-            if (logger.IsEnabled(LogLevel.Warning))
-                logger.LogWarning(ex,
-                    "Agent edit rejected by RavenDB for app slug={Slug} agentId={AgentId}", app.Slug, body.Identifier);
+            if (logger.IsWarnEnabled)
+                logger.Warn(ex,
+                    $"Agent edit rejected by RavenDB for app slug={app.Slug} agentId={body.Identifier}");
             return Results.BadRequest(new ApiErrorResponse("agent configuration rejected; see server logs for details"));
         }
     }
@@ -164,7 +172,8 @@ public static class AgentsEndpoints
         string slug,
         string agentId,
         IDocumentStore store,
-        ILogger<AgentsLogger> logger,
+        QuillLogger<AgentsLogger> logger,
+        HttpContext ctx,
         CancellationToken ct)
     {
         var app = await AppLookup.LoadAppAsync(store, slug, ct);
@@ -190,8 +199,10 @@ public static class AgentsEndpoints
             await session.SaveChangesAsync(ct);
         }
 
-        if (logger.IsEnabled(LogLevel.Information))
-            logger.LogInformation("Deleted agent slug={Slug} agentId={AgentId}", app.Slug, agent.Identifier);
+        if (logger.IsInfoEnabled)
+            logger.Info($"Deleted agent slug={app.Slug} agentId={agent.Identifier}");
+        if (logger.AuditEnabled)
+            logger.Audit("DELETE", $"AiAgentConfiguration '{agent.Identifier}' in App '{app.Slug}'", ctx);
         return Results.NoContent();
     }
 

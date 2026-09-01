@@ -1,4 +1,4 @@
-using Raven.Client.Documents;
+﻿using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.CdcSink;
@@ -13,11 +13,13 @@ using Raven.Quill.Cdc;
 using Raven.Quill.Contracts;
 using Raven.Quill.Discord;
 using Raven.Quill.Endpoints.Helpers;
+using Raven.Quill.Logging;
 using Raven.Quill.Live;
 using Raven.Quill.Raven;
 using Raven.Quill.Slack;
 using Raven.Quill.Telegram;
 using Raven.Quill.Wizard;
+using Raven.Server.Logging;
 
 namespace Raven.Quill.Endpoints;
 
@@ -103,13 +105,12 @@ public static class AppsEndpoints
         SlackHealthRegistry slackHealth,
         IDiscordChannelManager discordManager,
         DiscordHealthRegistry discordHealth,
-        ILogger<AppsLogger> logger,
+        QuillLogger<AppsLogger> logger,
+        HttpContext ctx,
         CancellationToken ct)
     {
-        if (logger.IsEnabled(LogLevel.Information))
-        {
-            logger.LogInformation("Deleting app with slug={Slug}", slug);
-        }
+        if (logger.IsInfoEnabled) 
+            logger.Info($"Deleting app with slug={slug}");
 
         var app = await AppLookup.LoadAppAsync(store, slug, ct);
 
@@ -121,6 +122,10 @@ public static class AppsEndpoints
 
         slackHealth.RemoveDatabase(app.Database);
         discordHealth.RemoveDatabase(app.Database);
+
+        if (logger.AuditEnabled)
+            logger.Audit("DELETE", $"App '{slug}' (database={slug})", ctx);
+
         telegramManager.Wake();
         discordManager.Wake();
 
@@ -132,7 +137,7 @@ public static class AppsEndpoints
         SuggestAgentRequest body,
         IDocumentStore store,
         IAiHelperClient aiClient,
-        ILogger<AppsLogger> logger,
+        QuillLogger<AppsLogger> logger,
         CancellationToken ct)
     {
         var app = await AppLookup.LoadAppAsync(store, slug, ct);
@@ -164,7 +169,8 @@ public static class AppsEndpoints
         var valid = result.Configurations.Where(IsStructurallyValidDraft).Take(maxCandidates).ToArray();
         if (valid.Length == 0)
         {
-            logger.LogInformation("SuggestAgent: no structurally valid candidate returned for slug={Slug}", slug);
+            if (logger.IsInfoEnabled)
+                logger.Info($"SuggestAgent: no structurally valid candidate returned for slug={slug}");
             return Results.UnprocessableEntity(new ApiErrorResponse("AI service returned no structurally valid agent configuration"));
         }
 
@@ -203,7 +209,8 @@ public static class AppsEndpoints
         string slug,
         EditAgentRequest request,
         IDocumentStore store,
-        ILogger<AppsLogger> logger,
+        QuillLogger<AppsLogger> logger,
+        HttpContext ctx,
         CancellationToken ct)
     {
         var app = await AppLookup.LoadAppAsync(store, slug, ct);
@@ -217,24 +224,30 @@ public static class AppsEndpoints
 
         var body = request.Configuration;
         
-        if (logger.IsEnabled(LogLevel.Information))
-            logger.LogInformation(
-                "Provisioning agent for app slug={Slug} name={Name} identifier={Identifier} cs={ConnectionStringName} queries={QueryCount}, webhooks={WebHooksCount}",
-                app.Slug, body.Name, string.IsNullOrWhiteSpace(body.Identifier) ? "(server-assigned)" : body.Identifier,
-                body.ConnectionStringName, body.Queries?.Count ?? 0, request.ActionBindings?.Count ?? 0);
+        if (logger.IsInfoEnabled)
+            logger.Info(
+                $"Provisioning agent for app slug={app.Slug} name={body.Name} " +
+                $"identifier={(string.IsNullOrWhiteSpace(body.Identifier) ? "(server-assigned)" : body.Identifier)} " +
+                $"cs={body.ConnectionStringName} queries={body.Queries?.Count ?? 0}, " +
+                $"webhooks={request.ActionBindings?.Count ?? 0}");
 
         try
         {
             var result = await AiAgentRegistrar.RegisterAsync(store, body, app.Database, ct);
             await AiAgentRegistrar.RegisterBindingsAsync(store, app.Database, result.Identifier, request.ActionBindings, ct);
+            if (logger.AuditEnabled)
+                logger.Audit("POST",
+                    $"AiAgentConfiguration '{result.Identifier}' in App '{app.Slug}' " +
+                    $"actions=[{AgentActionBindings.DescribeTargetsForAudit(request.ActionBindings)}]",
+                    ctx);
             return Results.Ok(new ProvisionAgentResponse(result.Identifier));
         }
         // map RavenDB validation to a 400 instead of a leaked 500
         catch (RavenException ex)
         {
-            if (logger.IsEnabled(LogLevel.Warning))
-                logger.LogWarning(ex,
-                    "Agent provisioning rejected by RavenDB for app slug={Slug} name={Name}", app.Slug, body.Name);
+            if (logger.IsWarnEnabled)
+                logger.Warn(ex,
+                    $"Agent provisioning rejected by RavenDB for app slug={app.Slug} name={body.Name}");
             return Results.BadRequest(new ApiErrorResponse("agent configuration rejected; see server logs for details"));
         }
     }
@@ -341,7 +354,7 @@ public static class AppsEndpoints
         string slug,
         SetupTryRequest body,
         IDocumentStore store,
-        ILogger<AppsLogger> logger,
+        QuillLogger<AppsLogger> logger,
         HttpContext ctx)
     {
         var ct = ctx.RequestAborted;
@@ -395,7 +408,8 @@ public static class AppsEndpoints
         }
         catch (Exception e)
         {
-            logger.LogError(e, "setup/try failed for slug={Slug}", slug);
+            if (logger.IsErrorEnabled)
+                logger.Error(e, $"setup/try failed for slug={slug}");
             try
             {
                 await NdjsonStream.WriteLineAsync(ctx, new { type = "error", message = "Agent test failed. See server logs for details." });

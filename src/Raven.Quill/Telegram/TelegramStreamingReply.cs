@@ -4,13 +4,15 @@ using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types.Enums;
 
+using Raven.Quill.Logging;
+
 namespace Raven.Quill.Telegram;
 
 internal sealed class TelegramStreamingReply(
     ITelegramBotClient bot,
     long chatId,
     TelegramOptions options,
-    ILogger logger,
+    QuillLogger<TelegramChannelManager> logger,
     CancellationToken ct) : ChannelStreamingReply(options.MessageLimit, options.EditDebounce)
 {
     private int _currentMessageId;
@@ -19,8 +21,11 @@ internal sealed class TelegramStreamingReply(
 
     protected override void CloseCurrentMessage() => _currentMessageId = 0;
 
-    protected override void LogFlushFailure(Exception error) =>
-        logger.LogDebug("Telegram streaming flush failed for chat {ChatId}: {Error}", chatId, error.Message);
+    protected override void LogFlushFailure(Exception error)
+    {
+        if (logger.IsDebugEnabled)
+            logger.Debug($"Telegram streaming flush failed for chat {chatId}: {error.Message}");
+    }
 
     protected override async Task ShowPreviewAsync(string text)
     {

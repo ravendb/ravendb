@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -7,6 +7,8 @@ using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Quill.AiHelper;
 using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints.Helpers;
+using Raven.Quill.Logging;
+using Raven.Server.Logging;
 
 namespace Raven.Quill.Endpoints;
 
@@ -44,7 +46,8 @@ public static class AiConnectionStringsEndpoints
     private static async Task<IResult> DeleteAsync(
         string name,
         IDocumentStore store,
-        ILogger<AiConnectionStringsLogger> logger,
+        QuillLogger<AiConnectionStringsLogger> logger,
+        HttpContext ctx,
         CancellationToken ct)
     {
 
@@ -67,8 +70,11 @@ public static class AiConnectionStringsEndpoints
         await store.Maintenance.Server
             .SendAsync(new RemoveServerWideConnectionStringOperation<AiConnectionString>(new AiConnectionString { Name = name }), ct);
 
-        if (logger.IsEnabled(LogLevel.Information))
-            logger.LogInformation("Deleted AI connection string name={Name}", name);
+        if (logger.IsInfoEnabled)
+            logger.Info($"Deleted AI connection string name={name}");
+
+        if (logger.AuditEnabled)
+            logger.Audit("DELETE", $"AiConnectionString '{name}'", ctx);
 
         return Results.NoContent();
     }
@@ -106,7 +112,8 @@ public static class AiConnectionStringsEndpoints
     private static async Task<IResult> PostAsync(
         AiConnectionString body,
         IDocumentStore store,
-        ILogger<AiConnectionStringsLogger> logger,
+        QuillLogger<AiConnectionStringsLogger> logger,
+        HttpContext ctx,
         CancellationToken ct)
     {
         if (body is null || string.IsNullOrWhiteSpace(body.Name))
@@ -134,9 +141,15 @@ public static class AiConnectionStringsEndpoints
         await store.Maintenance.Server
             .SendAsync(new PutServerWideConnectionStringOperation(serverWideConnection), ct);
 
-        if (logger.IsEnabled(LogLevel.Information))
-            logger.LogInformation(
-                "Created AI connection string name={Name} provider={Provider}", connectionString.Name, connectionString.GetActiveProvider());
+        if (logger.IsInfoEnabled)
+            logger.Info(
+                $"Created AI connection string name={connectionString.Name} " +
+                $"provider={connectionString.GetActiveProvider()}");
+
+        if (logger.AuditEnabled)
+            logger.Audit("POST",
+                $"AiConnectionString '{connectionString.Name}' provider={provider} modelType={connectionString.ModelType}",
+                ctx);
 
         return Results.Ok(new AiConnectionStringCreatedResponse(connectionString.Name));
     }
@@ -144,7 +157,8 @@ public static class AiConnectionStringsEndpoints
     private static async Task<IResult> TestAsync(
         AiConnectionString body,
         IAiHelperClient aiClient,
-        ILogger<AiConnectionStringsLogger> logger,
+        QuillLogger<AiConnectionStringsLogger> logger,
+        HttpContext ctx,
         CancellationToken ct)
     {
         var errors = new List<string>();
@@ -160,26 +174,37 @@ public static class AiConnectionStringsEndpoints
 
         var path = $"{TestConnectionPath}?type={provider}&modelType={AiModelType.Chat}";
         var (transport, content) = await aiClient.SendAsync(path, "POST", GetProviderSettings(body, provider), ct);
+
+        AiConnectionStringTestResponse response;
         if (transport != AiHelperStatus.Success)
         {
-            logger.LogWarning(
-                "Could not run the AI model test for connection string name={Name}: transport {Transport}.",
-                body.Name, transport);
-            return Results.Ok(new AiConnectionStringTestResponse(Success: false, Error: "Could not reach the provider to verify the model."));
+            if (logger.IsWarnEnabled)
+                logger.Warn(
+                    $"Could not run the AI model test for connection string name={body.Name}: " +
+                    $"transport {transport}.");
+            response = new AiConnectionStringTestResponse(
+                Success: false, Error: "Could not reach the provider to verify the model.");
+        }
+        else
+        {
+            var result = await aiClient.DeserializeAsync<AiTestConnectionResult>(content, ct);
+            response = result switch
+            {
+                null => new AiConnectionStringTestResponse(
+                    Success: false, Error: "Could not read the model test result."),
+                { Success: false } => new AiConnectionStringTestResponse(Success: false, Error: result.Error),
+                { SupportsTools: false } => new AiConnectionStringTestResponse(
+                    Success: false,
+                    Error: $"Model '{GetModelName(body, provider)}' does not support function tools, so it can't be used by an agent. Pick a different model."),
+                _ => new AiConnectionStringTestResponse(Success: true),
+            };
         }
 
-        var result = await aiClient.DeserializeAsync<AiTestConnectionResult>(content, ct);
-        if (result is null)
-            return Results.Ok(new AiConnectionStringTestResponse(Success: false, Error: "Could not read the model test result."));
+        if (logger.AuditEnabled)
+            logger.Audit("POST",
+                $"AiConnectionString '{body.Name}' tested provider={provider} success={response.Success}", ctx);
 
-        if (result.Success == false)
-            return Results.Ok(new AiConnectionStringTestResponse(Success: false, Error: result.Error));
-
-        return result.SupportsTools
-            ? Results.Ok(new AiConnectionStringTestResponse(Success: true))
-            : Results.Ok(new AiConnectionStringTestResponse(
-                Success: false,
-                Error: $"Model '{GetModelName(body, provider)}' does not support function tools, so it can't be used by an agent. Pick a different model."));
+        return Results.Ok(response);
     }
 
     private static object GetProviderSettings(AiConnectionString connection, AiConnectorType provider) =>

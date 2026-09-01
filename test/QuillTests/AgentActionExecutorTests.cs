@@ -1,8 +1,10 @@
-using FastTests;
+﻿using FastTests;
 using Microsoft.Extensions.Logging.Abstractions;
 using QuillTests.E2E.Fixtures;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Quill.Agents;
+using Raven.Client.ServerWide.Operations.Logs;
+using Raven.Quill.Logging;
 using Tests.Infrastructure;
 using Xunit;
 using static QuillTests.E2E.Fixtures.ActionFixtures;
@@ -164,9 +166,10 @@ public class AgentActionExecutorTests(ITestOutputHelper output) : NoDisposalNeed
     private static string BodyOf(string result) =>
         result[(result.IndexOf(BodySeparator, StringComparison.Ordinal) + BodySeparator.Length)..];
 
+    // QuillLogger reads the process-wide RavenLogManager, which is unconfigured here, so it is a no-op
     private WebhookActionExecutor WebhookExecutor(TimeSpan? timeout = null) =>
         new(new SingleClientFactory(new HttpClient { Timeout = timeout ?? TimeSpan.FromSeconds(30) }),
-            NullLogger<WebhookActionExecutor>.Instance);
+            new QuillLogger<WebhookActionExecutor>());
 
     private sealed class SingleClientFactory(HttpClient client) : IHttpClientFactory
     {

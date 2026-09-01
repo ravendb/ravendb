@@ -1,8 +1,10 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Options;
 using Raven.Client.Documents;
 using Raven.Quill.Hosting;
+using Raven.Quill.Logging;
+using Raven.Server.Logging;
 
 namespace Raven.Quill.Auth;
 
@@ -14,7 +16,7 @@ public interface IApiKeyStore
 public sealed class ApiKeyStore(
     IDocumentStore store,
     IOptions<ApplianceOptions> options,
-    ILogger<ApiKeyStore> logger) : IApiKeyStore
+    QuillLogger<ApiKeyStore> logger) : IApiKeyStore
 {
     private const int SaltBytes = 16;
     private const int MinRecommendedApiKeyLength = 16;
@@ -62,17 +64,23 @@ public sealed class ApiKeyStore(
             Record[] records;
             if (string.IsNullOrWhiteSpace(envKey))
             {
-                logger.LogWarning(
-                    "QUILL_API_KEY is not set; appliance admin authentication is disabled (fail-closed). " +
-                    "Set QUILL_API_KEY to enable the dashboard and API.");
+                if (logger.IsWarnEnabled)
+                    logger.Warn(
+                        "QUILL_API_KEY is not set; appliance admin authentication is disabled (fail-closed). " +
+                        "Set QUILL_API_KEY to enable the dashboard and API.");
+                if (logger.AuditEnabled)
+                    logger.Audit("AUTH",
+                        "QUILL_API_KEY is not configured; admin authentication is disabled (fail-closed)",
+                        context: null);
                 records = [];
             }
             else
             {
                 if (envKey.Length < MinRecommendedApiKeyLength)
-                    logger.LogWarning(
-                        "QUILL_API_KEY is shorter than {Min} characters; use a high-entropy key in production.",
-                        MinRecommendedApiKeyLength);
+                    if (logger.IsWarnEnabled)
+                        logger.Warn(
+                            $"QUILL_API_KEY is shorter than {MinRecommendedApiKeyLength} characters; " +
+                            "use a high-entropy key in production.");
 
                 var salt = RandomNumberGenerator.GetBytes(SaltBytes);
                 var hash = SHA256.HashData(Combine(salt, Encoding.UTF8.GetBytes(envKey)));
@@ -107,7 +115,8 @@ public sealed class ApiKeyStore(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to persist the API key hash to the config database.");
+            if (logger.IsWarnEnabled)
+                logger.Warn(ex, "Failed to persist the API key hash to the config database.");
         }
     }
 

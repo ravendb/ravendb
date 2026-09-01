@@ -1,7 +1,9 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
+
+using Raven.Quill.Logging;
 
 namespace Raven.Quill.Embed;
 
@@ -34,21 +36,23 @@ public sealed class WidgetAssets
 
     public static WidgetAssets Unavailable { get; } = new(null, [], []);
 
-    public static WidgetAssets Load(IWebHostEnvironment environment, ILogger logger)
+    public static WidgetAssets Load(IWebHostEnvironment environment, QuillLogger<WidgetAssets> logger)
     {
         var webRoot = environment.WebRootPath;
         if (string.IsNullOrEmpty(webRoot))
         {
-            logger.LogError("no web root configured; the embeddable widget cannot be served");
+            if (logger.IsErrorEnabled)
+                logger.Error("no web root configured; the embeddable widget cannot be served");
             return Unavailable;
         }
 
         var manifestPath = Path.Combine(webRoot, ManifestRelativePath.Replace('/', Path.DirectorySeparatorChar));
         if (File.Exists(manifestPath) == false)
         {
-            logger.LogError(
-                "widget asset manifest not found at {ManifestPath}; embed pages will return 503 until the widget bundle is built into wwwroot/widget",
-                manifestPath);
+            if (logger.IsErrorEnabled)
+                logger.Error(
+                    $"widget asset manifest not found at {manifestPath}; embed pages will return 503 until " +
+                    "the widget bundle is built into wwwroot/widget");
             return Unavailable;
         }
 
@@ -58,18 +62,20 @@ public sealed class WidgetAssets
         }
         catch (Exception e)
         {
-            logger.LogError(e, "could not read the widget asset manifest at {ManifestPath}", manifestPath);
+            if (logger.IsErrorEnabled)
+                logger.Error(e, $"could not read the widget asset manifest at {manifestPath}");
             return Unavailable;
         }
     }
 
-    public static WidgetAssets FromManifestJson(string json, ILogger logger)
+    public static WidgetAssets FromManifestJson(string json, QuillLogger<WidgetAssets> logger)
     {
         var manifest = JsonSerializer.Deserialize<Manifest>(json, ManifestJsonOptions);
         var entry = manifest?.Values.FirstOrDefault(chunk => chunk.IsEntry);
         if (manifest is null || entry?.File is null)
         {
-            logger.LogError("the widget asset manifest has no entry chunk");
+            if (logger.IsErrorEnabled)
+                logger.Error("the widget asset manifest has no entry chunk");
             return Unavailable;
         }
 

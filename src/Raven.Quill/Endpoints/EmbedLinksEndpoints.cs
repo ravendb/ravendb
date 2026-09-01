@@ -1,12 +1,10 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
-using Raven.Client.Documents;
+﻿using Raven.Client.Documents;
 using Raven.Quill.Agents;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints.Helpers;
 using Raven.Quill.Raven;
+using Raven.Quill.Logging;
 
 namespace Raven.Quill.Endpoints;
 
@@ -74,7 +72,7 @@ public static class EmbedLinksEndpoints
         string slug,
         MintEmbedLinkRequest body,
         IDocumentStore store,
-        ILogger<EmbedLinksLogger> logger,
+        QuillLogger<EmbedLinksLogger> logger,
         HttpContext ctx,
         CancellationToken ct)
     {
@@ -144,9 +142,16 @@ public static class EmbedLinksEndpoints
         // embed is served on public.*; swap the leading DNS label regardless of caller host
         var publicHost = ApplianceHost.WithSubdomain(ctx.Request.Host, "public");
         var url = $"{ctx.Request.Scheme}://{publicHost.ToUriComponent()}{ctx.Request.PathBase}/apps/{app.Slug}/embed/{token}";
-        logger.LogInformation(
-            "Minted embed link slug={Slug} channelId={ChannelId} agentId={AgentId} ttlSeconds={Ttl} maxInvocations={Max}",
-            app.Slug, body.ChannelId, config.Identifier, ttlSeconds, maxInvocations);
+        if (logger.IsInfoEnabled)
+            logger.Info(
+                $"Minted embed link slug={app.Slug} channelId={body.ChannelId} agentId={config.Identifier} " +
+                $"ttlSeconds={ttlSeconds} maxInvocations={maxInvocations}");
+
+        if (logger.AuditEnabled)
+            logger.Audit("POST",
+                $"EmbedLink minted token={EmbedLink.RedactToken(token)} in App '{app.Slug}' " +
+                $"channel='{body.ChannelId}' agent='{config.Identifier}' ttl={ttlSeconds}s cap={maxInvocations}",
+                ctx);
 
         return Results.Ok(new MintEmbedLinkResponse(token, url, expiresAt, maxInvocations));
     }
@@ -155,7 +160,8 @@ public static class EmbedLinksEndpoints
         string slug,
         string token,
         IDocumentStore store,
-        ILogger<EmbedLinksLogger> logger,
+        QuillLogger<EmbedLinksLogger> logger,
+        HttpContext ctx,
         CancellationToken ct)
     {
         if (EmbedLink.IsWellFormedToken(token) == false)
@@ -176,7 +182,12 @@ public static class EmbedLinksEndpoints
             {
                 link.Revoked = true;
                 await session.SaveChangesAsync(ct);
-                logger.LogInformation("Revoked embed link slug={Slug} tokenPrefix={TokenPrefix}", app.Slug, EmbedLink.RedactToken(token));
+                if (logger.IsInfoEnabled)
+                    logger.Info(
+                        $"Revoked embed link slug={app.Slug} tokenPrefix={EmbedLink.RedactToken(token)}");
+                if (logger.AuditEnabled)
+                    logger.Audit("DELETE",
+                        $"EmbedLink revoked token={EmbedLink.RedactToken(token)} in App '{app.Slug}'", ctx);
             }
         }
 

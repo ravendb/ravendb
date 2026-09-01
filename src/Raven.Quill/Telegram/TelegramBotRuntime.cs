@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using Raven.Client.Documents;
 using Raven.Quill.Agents;
 using Raven.Quill.Channels;
@@ -8,6 +8,8 @@ using Telegram.Bot.Args;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+
+using Raven.Quill.Logging;
 
 namespace Raven.Quill.Telegram;
 
@@ -27,7 +29,8 @@ internal sealed class TelegramBotRuntime
 
     private TelegramBotRuntime(
         string database, Channel channel, string? channelChangeVector, ITelegramBotClient client,
-        IDocumentStore store, IAgentRouter router, ApplianceOptions options, ILogger logger)
+        IDocumentStore store, IAgentRouter router, ApplianceOptions options,
+        QuillLogger<TelegramChannelManager> logger)
     {
         Client = client;
         ChannelChangeVector = channelChangeVector;
@@ -43,7 +46,8 @@ internal sealed class TelegramBotRuntime
 
     public static TelegramBotRuntime Start(
         string database, Channel channel, string? channelChangeVector, ITelegramBotClientFactory botFactory,
-        IDocumentStore store, IAgentRouter router, ApplianceOptions options, ILogger logger)
+        IDocumentStore store, IAgentRouter router, ApplianceOptions options,
+        QuillLogger<TelegramChannelManager> logger)
     {
         var runtime = new TelegramBotRuntime(
             database, channel, channelChangeVector, botFactory.Create(channel.Telegram!.BotToken),
@@ -111,9 +115,9 @@ internal sealed class TelegramBotRuntime
                 continue;
             }
 
-            _context.Logger.LogWarning(
-                "Telegram chat {ChatId} on channel {ChannelId} dropped a message: queue full",
-                message.Chat.Id, _context.ChannelDoc.Id);
+            _context.Logger.Warn(
+                $"Telegram chat {message.Chat.Id} on channel {_context.ChannelDoc.Id} dropped a " +
+                "message: queue full");
             chat.NotifyOverloadOnce();
             break;
         }
@@ -131,9 +135,9 @@ internal sealed class TelegramBotRuntime
     {
         var message = e.InnerException is null ? e.Message : $"{e.Message}: {e.InnerException.Message}";
 
-        _context.Logger.LogWarning(
-            "Telegram poll failed for channel {ChannelId} (bot @{Bot}): {Error}",
-            _context.ChannelDoc.Id, _context.ChannelDoc.Telegram?.BotUsername, message);
+        _context.Logger.Warn(
+            $"Telegram poll failed for channel {_context.ChannelDoc.Id} " +
+            $"(bot @{_context.ChannelDoc.Telegram?.BotUsername}): {message}");
 
         if (source != HandleErrorSource.PollingError)
             return;
@@ -160,9 +164,9 @@ internal sealed class TelegramBotRuntime
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
-            _context.Logger.LogDebug(
-                "Telegram send failed for chat {ChatId} on channel {ChannelId}: {Error}",
-                chatId, _context.ChannelDoc.Id, e.Message);
+            _context.Logger.Debug(
+                $"Telegram send failed for chat {chatId} on channel {_context.ChannelDoc.Id}: " +
+                $"{e.Message}");
         }
     }
 
@@ -177,8 +181,8 @@ internal sealed class TelegramBotRuntime
         }
         catch (TimeoutException)
         {
-            _context.Logger.LogWarning(
-                "Telegram bot for channel {ChannelId} did not drain within 10s", _context.ChannelDoc.Id);
+            _context.Logger.Warn(
+                $"Telegram bot for channel {_context.ChannelDoc.Id} did not drain within 10s");
             return;
         }
         catch (OperationCanceledException)
@@ -206,7 +210,8 @@ internal sealed class TelegramChatContext
 {
     public TelegramChatContext(
         string database, Channel channel,
-        IDocumentStore store, IAgentRouter router, ApplianceOptions options, ILogger logger)
+        IDocumentStore store, IAgentRouter router, ApplianceOptions options,
+        QuillLogger<TelegramChannelManager> logger)
     {
         Database = database;
         ChannelDoc = channel;
@@ -229,5 +234,5 @@ internal sealed class TelegramChatContext
 
     public ApplianceOptions Options { get; }
 
-    public ILogger Logger { get; }
+    public QuillLogger<TelegramChannelManager> Logger { get; }
 }

@@ -4,6 +4,8 @@ using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Quill.Metrics;
 
+using Raven.Quill.Logging;
+
 namespace Raven.Quill.Agents;
 
 public sealed record AgentRequest(
@@ -34,7 +36,7 @@ public sealed class UnknownAgentException(string agentId)
 }
 
 internal sealed class AgentRouter(
-    IDocumentStore store, WebhookActionExecutor actionExecutor, ILogger<AgentRouter> logger) : IAgentRouter
+    IDocumentStore store, WebhookActionExecutor actionExecutor, QuillLogger<AgentRouter> logger) : IAgentRouter
 {
     public async Task<AgentRunResult> RunAsync(AgentRequest request, Func<string, ValueTask> onChunk, AiAgentConfiguration config, CancellationToken ct)
     {
@@ -125,9 +127,10 @@ internal sealed class AgentRouter(
         if (bindings?.Bindings?.TryGetValue(action.Name, out var binding) == true)
             return actionExecutor.ExecuteAsync(action, binding, ct);
 
-        logger.LogWarning(
-            "Agent '{AgentId}' invoked action '{Action}' (toolId {ToolId}) with no binding configured",
-            config.Identifier, action.Name, action.ToolId);
+        if (logger.IsWarnEnabled)
+            logger.Warn(
+                $"Agent '{config.Identifier}' invoked action '{action.Name}' (toolId {action.ToolId}) " +
+                "with no binding configured");
 
         return Task.FromResult($"action failed: no binding configured for '{action.Name}'");
     }

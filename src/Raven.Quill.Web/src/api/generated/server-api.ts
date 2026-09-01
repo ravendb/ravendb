@@ -1030,7 +1030,8 @@ export interface components {
             policy?: components["schemas"]["AiAgentParameterPolicy"];
             type?: components["schemas"]["AiAgentParameterValueType"];
         };
-        AiAgentParameterPolicy: string;
+        /** @enum {string} */
+        AiAgentParameterPolicy: "Default" | "ForbidModelGeneration";
         /** @enum {unknown} */
         AiAgentParameterValueType: "Default" | "String" | "Number" | "Boolean" | "ArrayOfString" | "ArrayOfNumber" | "ArrayOfBoolean" | "Null";
         AiAgentSummarizationByTokens: {

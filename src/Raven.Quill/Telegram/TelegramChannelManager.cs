@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using Microsoft.Extensions.Options;
 using Raven.Client.Documents;
 using Raven.Client.Exceptions.Database;
@@ -12,6 +12,8 @@ using Sparrow.Server;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using TelegramUser = Telegram.Bot.Types.User;
+
+using Raven.Quill.Logging;
 
 namespace Raven.Quill.Telegram;
 
@@ -28,7 +30,7 @@ internal sealed class TelegramChannelManager(
     IAgentRouter router,
     IOptions<ApplianceOptions> options,
     IServerReady ready,
-    ILogger<TelegramChannelManager> logger) : BackgroundService, ITelegramChannelManager
+    QuillLogger<TelegramChannelManager> logger) : BackgroundService, ITelegramChannelManager
 {
     private readonly ConcurrentDictionary<(string Database, string ChannelId), TelegramBotRuntime> _bots = new();
 
@@ -60,7 +62,8 @@ internal sealed class TelegramChannelManager(
             }
             catch (Exception e)
             {
-                logger.LogWarning("Telegram apply-changes pass failed: {Error}", e.Message);
+                if (logger.IsWarnEnabled)
+                    logger.Warn($"Telegram apply-changes pass failed: {e.Message}");
             }
 
             await wake.WaitAsync(options.Value.Telegram.ApplyChangesInterval);
@@ -81,7 +84,8 @@ internal sealed class TelegramChannelManager(
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
-            logger.LogWarning("Telegram apply-changes could not list apps: {Error}", e.Message);
+            if (logger.IsWarnEnabled)
+                logger.Warn($"Telegram apply-changes could not list apps: {e.Message}");
             return;
         }
 
@@ -107,7 +111,8 @@ internal sealed class TelegramChannelManager(
             catch (Exception e) when (e is not OperationCanceledException)
             {
                 unreadable.Add(app.Database);
-                logger.LogWarning("Telegram apply-changes skipped app {Slug}: {Error}", app.Slug, e.Message);
+                if (logger.IsWarnEnabled)
+                    logger.Warn($"Telegram apply-changes skipped app {app.Slug}: {e.Message}");
             }
         }
 
@@ -128,14 +133,14 @@ internal sealed class TelegramChannelManager(
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {
-                logger.LogWarning(
-                    "Telegram bot stop failed for channel {ChannelId} on {Database}: {Error}",
-                    key.ChannelId, key.Database, e.Message);
+                if (logger.IsWarnEnabled)
+                    logger.Warn(
+                        $"Telegram bot stop failed for channel {key.ChannelId} on {key.Database}: {e.Message}");
                 continue;
             }
 
-            logger.LogInformation(
-                "Telegram bot stopped for channel {ChannelId} on {Database}", key.ChannelId, key.Database);
+            if (logger.IsInfoEnabled)
+                logger.Info($"Telegram bot stopped for channel {key.ChannelId} on {key.Database}");
         }
 
         foreach (var (key, entry) in desired)
@@ -154,15 +159,17 @@ internal sealed class TelegramChannelManager(
             catch (Exception e) when (e is not OperationCanceledException)
             {
                 // an unstartable channel doc must not starve the entries after it
-                logger.LogWarning(
-                    "Telegram bot failed to start for channel {ChannelId} on {Database}: {Error}",
-                    key.ChannelId, key.Database, e.Message);
+                if (logger.IsWarnEnabled)
+                    logger.Warn(
+                        $"Telegram bot failed to start for channel {key.ChannelId} on {key.Database}: " +
+                        $"{e.Message}");
                 continue;
             }
 
-            logger.LogInformation(
-                "Telegram bot started for channel {ChannelId} (bot @{Bot}) on {Database}",
-                key.ChannelId, entry.Channel.Telegram!.BotUsername, key.Database);
+            if (logger.IsInfoEnabled)
+                logger.Info(
+                    $"Telegram bot started for channel {key.ChannelId} " +
+                    $"(bot @{entry.Channel.Telegram!.BotUsername}) on {key.Database}");
         }
     }
 
@@ -211,7 +218,8 @@ internal sealed class TelegramChannelManager(
         }
         catch (Exception e) when (e is TimeoutException or OperationCanceledException)
         {
-            logger.LogWarning("Telegram runtime did not drain within 10s");
+            if (logger.IsWarnEnabled)
+                logger.Warn("Telegram runtime did not drain within 10s");
         }
     }
 }

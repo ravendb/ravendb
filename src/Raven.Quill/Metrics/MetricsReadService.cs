@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
@@ -31,7 +31,7 @@ internal static class MetricsReadService
 
     public static async Task<UsageResponse> GetUsageAsync(
         ILicenseStatsProvider provider,
-        IDocumentStore store, List<App> apps, int year, int? month, int? day, ILogger? log, CancellationToken ct)
+        IDocumentStore store, List<App> apps, int year, int? month, int? day, CancellationToken ct)
     {
         var period = new UsagePeriod(year, month, day);
 
@@ -116,7 +116,7 @@ internal static class MetricsReadService
     }
 
     public static async Task<TokensByAppResponse> GetTokensByAppAsync(
-        IDocumentStore store, ILogger? log, CancellationToken ct)
+        IDocumentStore store, CancellationToken ct)
     {
         var apps = await LoadAllAppsAsync(store, ct);
         var results = await Task.WhenAll(apps.Select(async app =>
@@ -306,7 +306,7 @@ internal static class MetricsReadService
     }
 
     public static async Task<List<ApplianceAppResponse>> GetDashboardAppsAsync(
-        IDocumentStore store, ILogger? log, CancellationToken ct)
+        IDocumentStore store, CancellationToken ct)
     {
         var apps = await LoadAllAppsAsync(store, ct);
 

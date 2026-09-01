@@ -1,4 +1,4 @@
-using System.Net.Mail;
+﻿using System.Net.Mail;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Exceptions;
@@ -7,7 +7,7 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Quill.Contracts;
 using Raven.Quill.Feedback;
 using Raven.Quill.Licensing;
-using Raven.Quill.Metrics;
+using Raven.Quill.Logging;
 
 namespace Raven.Quill.Endpoints;
 
@@ -39,7 +39,7 @@ public static class SettingsEndpoints
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status502BadGateway);
 
-        group.MapGet("/certificates/get", (IDocumentStore store, int start, int pageSize, ILogger<SettingsLogger> logger, CancellationToken token) =>
+        group.MapGet("/certificates/get", (IDocumentStore store, int start, int pageSize, QuillLogger<SettingsLogger> logger, CancellationToken token) =>
                 GuardCertificateErrorsAsync(logger, async () =>
                 {
                     var op = new GetCertificatesOperation(start, pageSize);
@@ -50,18 +50,25 @@ public static class SettingsEndpoints
             .WithName("settings.certificates")
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
 
-        group.MapPost("/certificates/generate", (IDocumentStore store, GenerateClientCertificateRequest body, ILogger<SettingsLogger> logger, CancellationToken token) =>
+        group.MapPost("/certificates/generate", (IDocumentStore store, GenerateClientCertificateRequest body, QuillLogger<SettingsLogger> logger, HttpContext ctx, CancellationToken token) =>
                 GuardCertificateErrorsAsync(logger, async () =>
                 {
                     var op = new CreateClientCertificateOperation(body.Name, body.Permissions, body.Clearance, body.Password);
                     var fileBytes = await store.Maintenance.Server.SendAsync(op, token);
+
+                    if (logger.AuditEnabled)
+                        logger.Audit("POST",
+                            $"Certificate '{body.Name}' clearance={body.Clearance} " +
+                            $"permissions={{{DescribePermissions(body.Permissions)}}}",
+                            ctx);
+
                     return Results.File(fileBytes.RawData, "application/octet-stream", $"{body.Name}_certificates.zip");
                 }))
             .WithName("settings.certificatesGenerate")
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status403Forbidden);
 
-        group.MapPost("/certificates/edit", (IDocumentStore store, string thumbprint, string name, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance, bool disable, ILogger<SettingsLogger> logger, CancellationToken token) =>
+        group.MapPost("/certificates/edit", (IDocumentStore store, string thumbprint, string name, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance, bool disable, QuillLogger<SettingsLogger> logger, HttpContext ctx, CancellationToken token) =>
                 GuardCertificateErrorsAsync(logger, async () =>
                 {
                     var existing = await store.Maintenance.Server.SendAsync(new GetCertificateOperation(thumbprint), token);
@@ -77,6 +84,13 @@ public static class SettingsEndpoints
                         Clearance = clearance
                     });
                     await store.Maintenance.Server.SendAsync(op, token);
+
+                    if (logger.AuditEnabled)
+                        logger.Audit("POST",
+                            $"Certificate '{name}' thumbprint={thumbprint} clearance={clearance} disabled={disable} " +
+                            $"permissions={{{DescribePermissions(permissions)}}}",
+                            ctx);
+
                     return Results.Ok();
                 }))
             .WithName("settings.certificatesEdit")
@@ -85,7 +99,7 @@ public static class SettingsEndpoints
             .Produces<ApiErrorResponse>(StatusCodes.Status403Forbidden);
     }
 
-    private static async Task<IResult> GuardCertificateErrorsAsync(ILogger logger, Func<Task<IResult>> action)
+    private static async Task<IResult> GuardCertificateErrorsAsync(QuillLogger<SettingsLogger> logger, Func<Task<IResult>> action)
     {
         try
         {
@@ -93,7 +107,8 @@ public static class SettingsEndpoints
         }
         catch (LicenseLimitException ex)
         {
-            logger.LogWarning(ex, "certificate operation rejected by license");
+            if (logger.IsWarnEnabled)
+                logger.Warn(ex, "certificate operation rejected by license");
             var error = ex.LimitType switch
             {
                 LimitType.ReadOnlyCertificates =>
@@ -106,7 +121,8 @@ public static class SettingsEndpoints
         }
         catch (RavenException ex)
         {
-            logger.LogWarning(ex, "certificate operation rejected by RavenDB");
+            if (logger.IsWarnEnabled)
+                logger.Warn(ex, "certificate operation rejected by RavenDB");
             return Results.BadRequest(new ApiErrorResponse("certificate request rejected; see server logs for details"));
         }
     }
@@ -174,6 +190,13 @@ public static class SettingsEndpoints
                 new ApiErrorResponse("failed to send feedback"),
                 statusCode: StatusCodes.Status502BadGateway);
     }
+
+    private static string DescribePermissions(Dictionary<string, DatabaseAccess>? permissions) =>
+        permissions is null || permissions.Count == 0
+            ? string.Empty
+            : string.Join(", ", permissions
+                .OrderBy(permission => permission.Key, StringComparer.Ordinal)
+                .Select(permission => $"{permission.Key}:{permission.Value}"));
 
     private static string? NormalizeOptional(string? value)
     {

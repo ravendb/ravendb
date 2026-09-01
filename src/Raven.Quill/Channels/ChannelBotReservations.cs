@@ -1,3 +1,4 @@
+using Raven.Quill.Logging;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
@@ -15,6 +16,11 @@ internal interface IChannelBotReservation
 internal static class ChannelBotReservations
 {
     internal readonly record struct Claim(bool Acquired, string? OwnerDatabase, string? ChangeVector);
+
+    internal sealed class ReservationsLogger;
+
+    // its own, rather than a parameter every caller has to thread through
+    private static readonly QuillLogger<ReservationsLogger> Logger = new();
 
     internal static async Task<Claim> TryClaimAsync<TReservation>(
         IDocumentStore store,
@@ -94,8 +100,7 @@ internal static class ChannelBotReservations
         string reservationId,
         string database,
         string channelId,
-        Func<IAsyncDocumentSession, Task>? releaseCompanions,
-        ILogger logger)
+        Func<IAsyncDocumentSession, Task>? releaseCompanions)
         where TReservation : class, IChannelBotReservation
     {
         try
@@ -114,7 +119,8 @@ internal static class ChannelBotReservations
         catch (Exception e)
         {
             // an unreleased reservation is an orphan the next claim reclaims
-            logger.LogWarning("Bot reservation {ReservationId} was not released: {Error}", reservationId, e.Message);
+            if (Logger.IsWarnEnabled)
+                Logger.Warn($"Bot reservation {reservationId} was not released: {e.Message}");
         }
     }
 

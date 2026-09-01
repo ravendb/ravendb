@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
@@ -17,6 +17,8 @@ using Raven.Quill.Embed;
 using Raven.Quill.Endpoints.Helpers;
 using Raven.Quill.Metrics;
 using Raven.Quill.Wizard;
+
+using Raven.Quill.Logging;
 
 namespace Raven.Quill.Endpoints;
 
@@ -42,7 +44,7 @@ public static class EmbedEndpoints
         string token,
         IDocumentStore store,
         WidgetAssets assets,
-        ILogger<EmbedLogger> logger,
+        QuillLogger<EmbedLogger> logger,
         HttpContext ctx)
     {
         var ct = ctx.RequestAborted;
@@ -146,7 +148,7 @@ public static class EmbedEndpoints
         EmbedChatRequest body,
         IDocumentStore store,
         IAgentRouter router,
-        ILogger<EmbedLogger> logger,
+        QuillLogger<EmbedLogger> logger,
         HttpContext ctx)
     {
         var ct = ctx.RequestAborted;
@@ -226,7 +228,8 @@ public static class EmbedEndpoints
         }
         catch (Exception e)
         {
-            logger.LogError(e, "embed chat failed for tokenPrefix={TokenPrefix}", EmbedLink.RedactToken(token));
+            if (logger.IsErrorEnabled)
+                logger.Error(e, $"embed chat failed for tokenPrefix={EmbedLink.RedactToken(token)}");
 
             // refund the reserved invocation only if nothing streamed (mid-stream abort stays consumed)
             if (streamedAny == false)
@@ -293,7 +296,7 @@ public static class EmbedEndpoints
     }
 
     private static async Task RefundInvocationAsync(
-        IDocumentStore store, string database, string token, ILogger<EmbedLogger> logger)
+        IDocumentStore store, string database, string token, QuillLogger<EmbedLogger> logger)
     {
         const int maxAttempts = 4;
         try
@@ -321,7 +324,9 @@ public static class EmbedEndpoints
         }
         catch (Exception e)
         {
-            logger.LogWarning(e, "failed to refund invocation for tokenPrefix={TokenPrefix}", EmbedLink.RedactToken(token));
+            if (logger.IsWarnEnabled)
+                logger.Warn(e,
+                    $"failed to refund invocation for tokenPrefix={EmbedLink.RedactToken(token)}");
         }
     }
 
@@ -404,7 +409,7 @@ public static class EmbedEndpoints
 
     private static async Task<HistoryTurn[]> BuildHistoryAsync(
         IDocumentStore store, string database, string? conversationId, string replyField,
-        ILogger<EmbedLogger> logger, CancellationToken ct)
+        QuillLogger<EmbedLogger> logger, CancellationToken ct)
     {
         if (string.IsNullOrEmpty(conversationId))
             return [];
@@ -426,7 +431,8 @@ public static class EmbedEndpoints
         catch (Exception e) when (e is not OperationCanceledException)
         {
             // the page still works without history, but the visitor's transcript is gone - say so in the logs
-            logger.LogWarning(e, "failed to load embed history for conversationId={ConversationId}", conversationId);
+            if (logger.IsWarnEnabled)
+                logger.Warn(e, $"failed to load embed history for conversationId={conversationId}");
             return [];
         }
     }

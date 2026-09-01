@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Threading.Channels;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Quill.Agents;
@@ -8,6 +8,8 @@ using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
+
+using Raven.Quill.Logging;
 
 namespace Raven.Quill.Telegram;
 
@@ -134,9 +136,9 @@ internal sealed class TelegramChat
         }
         catch (Exception e)
         {
-            _context.Logger.LogWarning(
-                "Telegram message handling failed for channel {ChannelId} chat {ChatId}: {Error}",
-                _context.ChannelDoc.Id, _chatId, e.Message);
+            _context.Logger.Warn(
+                $"Telegram message handling failed for channel {_context.ChannelDoc.Id} chat {_chatId}: " +
+                $"{e.Message}");
         }
 
         Interlocked.Exchange(ref _overloadNotified, 0);

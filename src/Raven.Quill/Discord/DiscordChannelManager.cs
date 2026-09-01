@@ -1,3 +1,4 @@
+using Raven.Quill.Logging;
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Options;
 using Raven.Client.Documents;
@@ -23,7 +24,7 @@ internal sealed class DiscordChannelManager(
     IServiceScopeFactory scopes,
     IOptions<ApplianceOptions> options,
     IServerReady ready,
-    ILogger<DiscordChannelManager> logger) : BackgroundService, IDiscordChannelManager
+    QuillLogger<DiscordChannelManager> logger) : BackgroundService, IDiscordChannelManager
 {
     private readonly ConcurrentDictionary<(string Database, string ChannelId), DiscordGatewayRuntime> _runtimes = new();
 
@@ -55,7 +56,8 @@ internal sealed class DiscordChannelManager(
             }
             catch (Exception e)
             {
-                logger.LogWarning("Discord apply-changes pass failed: {Error}", e.Message);
+                if (logger.IsWarnEnabled)
+                    logger.Warn($"Discord apply-changes pass failed: {e.Message}");
             }
 
             await wake.WaitAsync(options.Value.Discord.ApplyChangesInterval);
@@ -76,7 +78,8 @@ internal sealed class DiscordChannelManager(
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
-            logger.LogWarning("Discord apply-changes could not list apps: {Error}", e.Message);
+            if (logger.IsWarnEnabled)
+                logger.Warn($"Discord apply-changes could not list apps: {e.Message}");
             return;
         }
 
@@ -102,7 +105,8 @@ internal sealed class DiscordChannelManager(
             catch (Exception e) when (e is not OperationCanceledException)
             {
                 unreadable.Add(app.Database);
-                logger.LogWarning("Discord apply-changes skipped app {Slug}: {Error}", app.Slug, e.Message);
+                if (logger.IsWarnEnabled)
+                    logger.Warn($"Discord apply-changes skipped app {app.Slug}: {e.Message}");
             }
         }
 
@@ -124,14 +128,13 @@ internal sealed class DiscordChannelManager(
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {
-                logger.LogWarning(
-                    "Discord gateway stop failed for channel {ChannelId} on {Database}: {Error}",
-                    key.ChannelId, key.Database, e.Message);
+                if (logger.IsWarnEnabled)
+                    logger.Warn($"Discord gateway stop failed for channel {key.ChannelId} on {key.Database}: {e.Message}");
                 continue;
             }
 
-            logger.LogInformation(
-                "Discord gateway stopped for channel {ChannelId} on {Database}", key.ChannelId, key.Database);
+            if (logger.IsInfoEnabled)
+                logger.Info($"Discord gateway stopped for channel {key.ChannelId} on {key.Database}");
         }
 
         foreach (var (key, entry) in desired)
@@ -150,15 +153,13 @@ internal sealed class DiscordChannelManager(
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {
-                logger.LogWarning(
-                    "Discord gateway failed to start for channel {ChannelId} on {Database}: {Error}",
-                    key.ChannelId, key.Database, e.Message);
+                if (logger.IsWarnEnabled)
+                    logger.Warn($"Discord gateway failed to start for channel {key.ChannelId} on {key.Database}: {e.Message}");
                 continue;
             }
 
-            logger.LogInformation(
-                "Discord gateway starting for channel {ChannelId} (bot {BotUserId}) on {Database}",
-                key.ChannelId, entry.Channel.Discord!.BotUserId, key.Database);
+            if (logger.IsInfoEnabled)
+                logger.Info($"Discord gateway starting for channel {key.ChannelId} (bot {entry.Channel.Discord!.BotUserId}) on {key.Database}");
         }
     }
 
@@ -181,7 +182,8 @@ internal sealed class DiscordChannelManager(
         }
         catch (Exception e) when (e is TimeoutException or OperationCanceledException)
         {
-            logger.LogWarning("Discord runtimes did not drain within 15s");
+            if (logger.IsWarnEnabled)
+                logger.Warn("Discord runtimes did not drain within 15s");
         }
     }
 }

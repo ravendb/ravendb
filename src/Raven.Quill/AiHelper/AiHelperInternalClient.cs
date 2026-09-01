@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Text;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -7,12 +7,14 @@ using Microsoft.Extensions.Logging;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
 
+using Raven.Quill.Logging;
+
 namespace Raven.Quill.AiHelper;
 
 public sealed class AiHelperInternalClient(
     HttpClient httpClient,
     IDocumentStore store,
-    ILogger<AiHelperInternalClient> logger) : IAiHelperClient
+    QuillLogger<AiHelperInternalClient> logger) : IAiHelperClient
 {
     private const string AssistPath = "/assistant/assist";
 
@@ -107,16 +109,17 @@ public sealed class AiHelperInternalClient(
                 _ => AiHelperStatus.InternalError,
             };
 
-            logger.Log(
-                status == AiHelperStatus.ConsentRequired ? LogLevel.Information : LogLevel.Warning,
-                "AI Helper {Path} failed: upstream {Code}, mapped {Status}. Body: {Body}",
-                path, (int)response.StatusCode, status, TruncateForLog(text));
+            if (logger.IsInfoEnabled)
+                logger.Info(
+                    $"AI Helper {path} failed: upstream {(int)response.StatusCode}, mapped {status}. " +
+                    $"Body: {TruncateForLog(text)}");
             return (status, text);
         }
         catch (Exception e) when (e is HttpRequestException ||
                                   (e is OperationCanceledException && ct.IsCancellationRequested == false))
         {
-            logger.LogWarning(e, "AI Helper {Path} failed (transport).", path);
+            if (logger.IsWarnEnabled)
+                logger.Warn(e, $"AI Helper {path} failed (transport).");
             return (AiHelperStatus.InternalError, string.Empty);
         }
     }
@@ -148,10 +151,10 @@ public sealed class AiHelperInternalClient(
 
             if (status != AiHelperStatus.Success)
             {
-                logger.Log(
-                    status == AiHelperStatus.ConsentRequired ? LogLevel.Information : LogLevel.Warning,
-                    "AI Helper {Path}: upstream {Code}, mapped {Status}. Body: {Body}",
-                    path, (int)response.StatusCode, status, TruncateForLog(text));
+                if (logger.IsInfoEnabled)
+                    logger.Info(
+                        $"AI Helper {path}: upstream {(int)response.StatusCode}, mapped {status}. " +
+                        $"Body: {TruncateForLog(text)}");
             }
 
             return status;
@@ -159,7 +162,8 @@ public sealed class AiHelperInternalClient(
         catch (Exception e) when (e is HttpRequestException ||
                                   (e is OperationCanceledException && ct.IsCancellationRequested == false))
         {
-            logger.LogWarning(e, "AI Helper {Path} failed (transport).", path);
+            if (logger.IsWarnEnabled)
+                logger.Warn(e, $"AI Helper {path} failed (transport).");
             return AiHelperStatus.InternalError;
         }
     }

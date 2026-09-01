@@ -1,5 +1,6 @@
-using System.Reflection;
+﻿using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.RateLimiting;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication;
@@ -21,13 +22,19 @@ using Raven.Quill.Licensing;
 using Raven.Quill.Discord;
 using Raven.Quill.Slack;
 using Raven.Quill.Telegram;
+using Raven.Quill.Logging;
+using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Raven.Client.Documents;
+// top-level statements live in the global namespace, where an unqualified Constants would find
+// Polly's internal one instead
+using Constants = Raven.Quill.Constants;
 
 var builder = WebApplication.CreateBuilder(args);
 var isOpenApiDocumentGeneration = Assembly.GetEntryAssembly()?.GetName().Name == "GetDocument.Insider";
 
-// loopback by default; the container sets the bind via RAVEN_QUILL_WEB_LISTEN_URL
-var listenUrl = Environment.GetEnvironmentVariable("RAVEN_QUILL_WEB_LISTEN_URL") ?? "http://127.0.0.1:5000";
+// loopback by default; the container sets the bind via Constants.Configuration.WebListenUrl
+var listenUrl = Environment.GetEnvironmentVariable(Constants.Configuration.WebListenUrl) ?? "http://127.0.0.1:5000";
 builder.WebHost.UseUrls(listenUrl);
 
 // enums as string names so operators can paste Studio JSON
@@ -41,6 +48,16 @@ builder.Services.ConfigureHttpJsonOptions(static options =>
 
 builder.Services.AddOpenApi(options =>
 {
+    // Create union types form [Flags] enums
+    options.AddSchemaTransformer((schema, context, _) =>
+    {
+        var type = Nullable.GetUnderlyingType(context.JsonTypeInfo.Type) ?? context.JsonTypeInfo.Type;
+        if (type.IsEnum && schema.Enum is not { Count: > 0 })
+            schema.Enum = Enum.GetNames(type).Select(JsonNode (name) => JsonValue.Create(name)).ToList();
+
+        return Task.CompletedTask;
+    });
+
     options.AddSchemaTransformer((schema, context, _) =>
     {
         if (schema.Properties is null || schema.Properties.Count == 0)
@@ -66,36 +83,49 @@ builder.Services.AddOpenApi(options =>
     });
 });
 
-builder.Logging.AddFilter("Polly", LogLevel.None);
+// NLog backs RavenLogManager, the way Raven.Server does it in its own Program.Main. The configuration
+// itself is applied after the host is built, once ApplianceOptions.Logs can be read.
+RavenLogManager.Set(RavenNLogLogManager.Instance);
 
+// Nothing bridges ILogger to NLog - everything Quill logs goes through QuillLogger - so the framework's
+// own Microsoft.* and System.* output has nowhere to go. Clearing the providers is what stops the default
+// console one writing it out separately, in its own format, alongside what NLog renders.
+builder.Logging.ClearProviders();
+
+builder.Services.AddSingleton(typeof(QuillLogger<>), typeof(QuillLogger<>));
 builder.Services.AddOptions<ApplianceOptions>()
     .Configure(options =>
     {
-        ReadEnv("RAVEN_QUILL_RAVEN_URL", v => options.RavenUrl = v);
-        ReadEnv("RAVEN_QUILL_WEB_LISTEN_URL", v => options.WebListenUrl = v);
-        ReadEnv("RAVEN_QUILL_CONFIG_DB", v => options.ConfigDatabase = v);
-        ReadEnv("RAVEN_QUILL_SETUP_PACKAGE_PATH", v => options.SetupPackagePath = v);
-        ReadEnv("RAVEN_QUILL_RAVENDB_S6_SERVICE", v => options.RavenDbS6Service = v);
-        ReadEnv("RAVEN_QUILL_API_URL", v => options.AiApiUrl = v);
-        ReadEnv("RAVEN_QUILL_TELEGRAM_API_URL", v => options.Telegram.ApiUrl = v);
-        ReadEnv("RAVEN_QUILL_SLACK_API_URL", v => options.Slack.ApiUrl = v);
-        ReadEnv("RAVEN_QUILL_DISCORD_API_URL", v => options.Discord.ApiUrl = v);
-        ReadEnv("QUILL_LICENSE_KEY", v => options.LicenseKey = v);
-        ReadEnv("QUILL_API_KEY", v => options.ApiKey = v);
-        ReadEnv("RAVEN_QUILL_RAVENDB_INTERNAL_PORT", v =>
+        ReadEnv(Constants.Configuration.RavenUrl, v => options.RavenUrl = v);
+        ReadEnv(Constants.Configuration.WebListenUrl, v => options.WebListenUrl = v);
+        ReadEnv(Constants.Configuration.ConfigDatabase, v => options.ConfigDatabase = v);
+        ReadEnv(Constants.Configuration.SetupPackagePath, v => options.SetupPackagePath = v);
+        ReadEnv(Constants.Configuration.RavenDbS6Service, v => options.RavenDbS6Service = v);
+        ReadEnv(Constants.Configuration.TelegramApiUrl, v => options.Telegram.ApiUrl = v);
+        ReadEnv(Constants.Configuration.SlackApiUrl, v => options.Slack.ApiUrl = v);
+        ReadEnv(Constants.Configuration.DiscordApiUrl, v => options.Discord.ApiUrl = v);
+        ReadEnv(Constants.Configuration.LicenseKey, v => options.LicenseKey = v);
+        ReadEnv(Constants.Configuration.ApiKey, v => options.ApiKey = v);
+        ReadEnv(Constants.Configuration.RavenDbInternalPort, v =>
         {
             if (int.TryParse(v, out var p)) options.RavenInternalPort = p;
         });
-        ReadEnv("RAVEN_QUILL_AI_ASSIST_TIMEOUT_SECONDS", v =>
+        ReadEnv(Constants.Configuration.AiAssistTimeoutSeconds, v =>
         {
             if (int.TryParse(v, out var s) && s > 0) options.AiAssistTimeout = TimeSpan.FromSeconds(s);
         });
-        ReadEnv("RAVEN_QUILL_READINESS_INITIAL_DELAY_SECONDS", v =>
-            options.ReadinessInitialDelay = ParsePositiveSeconds("RAVEN_QUILL_READINESS_INITIAL_DELAY_SECONDS", v));
-        ReadEnv("RAVEN_QUILL_READINESS_ATTEMPT_TIMEOUT_SECONDS", v =>
-            options.ReadinessAttemptTimeout = ParsePositiveSeconds("RAVEN_QUILL_READINESS_ATTEMPT_TIMEOUT_SECONDS", v));
-        ReadEnv("RAVEN_QUILL_READINESS_OVERALL_TIMEOUT_SECONDS", v =>
-            options.ReadinessOverallTimeout = ParsePositiveSeconds("RAVEN_QUILL_READINESS_OVERALL_TIMEOUT_SECONDS", v));
+        ParseEnv(Constants.Configuration.ReadinessInitialDelaySeconds, ParsePositiveSeconds,
+            t => options.ReadinessInitialDelay = t);
+        ParseEnv(Constants.Configuration.ReadinessAttemptTimeoutSeconds, ParsePositiveSeconds,
+            t => options.ReadinessAttemptTimeout = t);
+        ParseEnv(Constants.Configuration.ReadinessOverallTimeoutSeconds, ParsePositiveSeconds,
+            t => options.ReadinessOverallTimeout = t);
+
+        ReadEnv(Constants.Configuration.LogsConfigPath, v => options.Logs.ConfigPath = v.Trim());
+        ParseEnv(Constants.Configuration.LogsPath, ParseAbsolutePath, p => options.Logs.Path = p);
+        ParseEnv(Constants.Configuration.SecurityAuditLogPath, ParseAbsolutePath,
+            p => options.Logs.AuditPath = p);
+        ParseEnv(Constants.Configuration.LogsMinLevel, ParseLogLevel, l => options.Logs.MinLevel = l);
     })
     .ValidateDataAnnotations()
     .Validate(o => string.IsNullOrEmpty(o.Telegram.ApiUrl) ||
@@ -153,7 +183,7 @@ builder.Services.AddSingleton<IDnsResolver, SystemDnsResolver>();
 // worth logging loudly the moment the process starts rather than on the first visitor's request.
 builder.Services.AddSingleton(sp => WidgetAssets.Load(
     sp.GetRequiredService<IWebHostEnvironment>(),
-    sp.GetRequiredService<ILoggerFactory>().CreateLogger<WidgetAssets>()));
+    sp.GetRequiredService<QuillLogger<WidgetAssets>>()));
 builder.Services.AddTransient<IFeedbackSender, FeedbackSender>();
 builder.Services.AddTransient<ILicenseStatsProvider, LicenseStatsProvider>();
 builder.Services.AddSingleton<ITelegramBotClientFactory, TelegramBotClientFactory>();
@@ -294,6 +324,10 @@ builder.Services
         };
         options.Events.OnRedirectToAccessDenied = ctx =>
         {
+            var logger = ctx.HttpContext.RequestServices.GetRequiredService<QuillLogger<AuthEndpoints.AuthLogger>>();
+            if (logger.AuditEnabled)
+                logger.Audit("AUTH",
+                    $"denied {ctx.Request.Method} {Uri.EscapeDataString(ctx.Request.Path)}", ctx.HttpContext);
             ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
             return Task.CompletedTask;
         };
@@ -319,6 +353,8 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 });
 
 var app = builder.Build();
+
+RavenLogManager.Instance.ConfigureLogging(app.Services.GetRequiredService<IOptions<ApplianceOptions>>().Value.Logs);
 
 if (app.Environment.IsDevelopment())
     app.MapOpenApi();
@@ -365,6 +401,36 @@ static void ReadEnv(string name, Action<string> apply)
 {
     var v = Environment.GetEnvironmentVariable(name);
     if (!string.IsNullOrEmpty(v)) apply(v);
+}
+
+// For a value that has to be parsed before it can be assigned. The parser is handed the variable
+// name so a rejection can quote it, which is why the call site names it only once: two copies drift,
+// and the message then blames the wrong variable.
+static void ParseEnv<T>(string name, Func<string, string, T> parse, Action<T> assign)
+{
+    var v = Environment.GetEnvironmentVariable(name);
+    if (!string.IsNullOrEmpty(v)) assign(parse(name, v));
+}
+
+// Absolute only: a relative directory resolves inside the container image, where the next recreate
+// destroys whatever was written there.
+static string ParseAbsolutePath(string name, string value)
+{
+    var path = value.Trim();
+    if (Path.IsPathRooted(path) == false)
+        throw new InvalidOperationException(
+            $"{name} must be an absolute path, got '{path}'. A relative directory resolves inside the " +
+            "container image and is lost on the next recreate.");
+    return path;
+}
+
+static Sparrow.Logging.LogLevel ParseLogLevel(string name, string value)
+{
+    if (Enum.TryParse<Sparrow.Logging.LogLevel>(value.Trim(), ignoreCase: true, out var level) == false)
+        throw new InvalidOperationException(
+            $"{name} must be one of {string.Join(", ", Enum.GetNames<Sparrow.Logging.LogLevel>())}, " +
+            $"got '{value.Trim()}'");
+    return level;
 }
 
 static TimeSpan ParsePositiveSeconds(string name, string value)

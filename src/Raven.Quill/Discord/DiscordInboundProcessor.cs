@@ -1,3 +1,4 @@
+using Raven.Quill.Logging;
 using Microsoft.Extensions.Options;
 using Raven.Client.Documents;
 using Raven.Quill.Agents;
@@ -12,7 +13,7 @@ internal sealed class DiscordInboundProcessor(
     IServiceScopeFactory scopes,
     DiscordHealthRegistry health,
     IOptions<ApplianceOptions> options,
-    ILogger<DiscordInboundProcessor> logger) : IHostedService
+    QuillLogger<DiscordInboundProcessor> logger) : IHostedService
 {
     internal const string UnsupportedKindReply = "I can only read text messages right now.";
     internal const string ErrorReply = "Sorry - something went wrong handling that message. Please try again.";
@@ -54,7 +55,8 @@ internal sealed class DiscordInboundProcessor(
         }
         catch (TimeoutException)
         {
-            logger.LogWarning("Discord sender chains did not drain within {Timeout}", StopDrainTimeout);
+            if (logger.IsWarnEnabled)
+                logger.Warn($"Discord sender chains did not drain within {StopDrainTimeout}");
         }
     }
 
@@ -144,9 +146,8 @@ internal sealed class DiscordInboundProcessor(
         }
         catch (Exception e)
         {
-            logger.LogWarning(
-                "Discord message handling failed for channel {ChannelId} sender {Sender}: {Error}",
-                channelId, sender, e.Message);
+            if (logger.IsWarnEnabled)
+                logger.Warn($"Discord message handling failed for channel {channelId} sender {sender}: {e.Message}");
         }
     }
 
@@ -206,7 +207,8 @@ internal sealed class DiscordInboundProcessor(
             health.RecordSendSuccess(database, shortChannelId);
 
             if (reply.IsEmpty)
-                logger.LogWarning("Discord agent turn produced an empty reply for channel {ChannelId}", channel.Id);
+                if (logger.IsWarnEnabled)
+                    logger.Warn($"Discord agent turn produced an empty reply for channel {channel.Id}");
         }
         catch (OperationCanceledException)
         {
@@ -241,7 +243,8 @@ internal sealed class DiscordInboundProcessor(
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
-            logger.LogDebug("Discord overload notice failed for channel {ChannelId}: {Error}", channelId, e.Message);
+            if (logger.IsDebugEnabled)
+                logger.Debug($"Discord overload notice failed for channel {channelId}: {e.Message}");
         }
     }
 
@@ -259,9 +262,8 @@ internal sealed class DiscordInboundProcessor(
             if (e is DiscordApiException apiError)
                 health.RecordSendError(database, shortChannelId, apiError.Message);
 
-            logger.LogWarning(
-                "Discord send failed for channel {ChannelId} in {DmChannel}: {Error}",
-                shortChannelId, dmChannel, e.Message);
+            if (logger.IsWarnEnabled)
+                logger.Warn($"Discord send failed for channel {shortChannelId} in {dmChannel}: {e.Message}");
         }
     }
 }

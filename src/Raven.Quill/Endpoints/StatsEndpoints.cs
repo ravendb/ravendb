@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using Raven.Client.Documents;
 using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints.Helpers;
@@ -89,7 +89,6 @@ public static class StatsEndpoints
     private static async Task<IResult> GetUsageAsync(
         ILicenseStatsProvider provider,
         IDocumentStore store,
-        ILoggerFactory loggerFactory,
         string? app,
         int year,
         int? month,
@@ -110,28 +109,23 @@ public static class StatsEndpoints
             apps = await MetricsReadService.LoadAllAppsAsync(store, ct);
         }
 
-        var usage = await MetricsReadService.GetUsageAsync(provider,
-            store, apps, year, month, day, loggerFactory.CreateLogger(nameof(MetricsReadService)), ct);
+        var usage = await MetricsReadService.GetUsageAsync(provider, store, apps, year, month, day, ct);
         return Results.Ok(usage);
     }
 
     private static async Task<IResult> GetTokensByAppAsync(
         IDocumentStore store,
-        ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
-        var byApp = await MetricsReadService.GetTokensByAppAsync(
-            store, loggerFactory.CreateLogger(nameof(MetricsReadService)), ct);
+        var byApp = await MetricsReadService.GetTokensByAppAsync(store, ct);
         return Results.Ok(byApp);
     }
 
     private static async Task<IResult> GetDashboardAppsAsync(
         IDocumentStore store,
-        ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
-        var apps = await MetricsReadService.GetDashboardAppsAsync(
-            store, loggerFactory.CreateLogger(nameof(MetricsReadService)), ct);
+        var apps = await MetricsReadService.GetDashboardAppsAsync(store, ct);
         return Results.Ok(apps);
     }
 
