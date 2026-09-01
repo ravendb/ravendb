@@ -87,7 +87,7 @@ public static class ResidualScanIlEmitter
         for (int p = 0; p < predicates.Length; p++)
         {
             d.CsLine("");
-            EmitPredicate(ref d, in predicates[p], rejected.Il, ref rootIdx, ref inSetIdx, ref paramSlotIdx, readerRefLocal, p);
+            EmitPredicate(ref d, in predicates[p], rejected.Il, ContinueTarget, ref rootIdx, ref inSetIdx, ref paramSlotIdx, readerRefLocal, p);
         }
 
         // All passed: entryIds[writeIdx] = entryIds[i]
@@ -177,11 +177,11 @@ public static class ResidualScanIlEmitter
     }
 
     /// <summary>If the predicate failed, we jump to the failLabel, success means falling from the end </summary>
-    private static void EmitPredicate(ref DualEmit d, in ScanPredicateInfo pred, Label failLabel, ref int rootIdx, ref int inSetIdx, ref int paramSlotIdx, LocalBuilder readerRefLocal, int pIdx)
+    private static void EmitPredicate(ref DualEmit d, in ScanPredicateInfo pred, Label failLabel, string failName, ref int rootIdx, ref int inSetIdx, ref int paramSlotIdx, LocalBuilder readerRefLocal, int pIdx)
     {
         if (pred.SubPredicates == null)
         {
-            EmitLeafPredicate(ref d, in pred, failLabel, ContinueTarget, rootIdx, ref inSetIdx, paramSlotIdx, readerRefLocal);
+            EmitLeafPredicate(ref d, in pred, failLabel, failName, rootIdx, ref inSetIdx, paramSlotIdx, readerRefLocal);
             if (ConsumesFieldRootPage(in pred))
                 rootIdx++;
             if (ConsumesScalarParam(in pred))
@@ -189,37 +189,31 @@ public static class ResidualScanIlEmitter
             return;
         }
 
+        // Recurse into nested groups: ScanParamExtractor counts every leaf, so folding a group into one
+        // would shift every later root page / param index.
+        RuntimeHelpers.EnsureSufficientExecutionStack();
+
         if (pred.Group == GroupKind.Or)
         {
             var groupPassed = d.DefineLabelPair($"gp_{pIdx}");
             foreach (var predicate in pred.SubPredicates)
             {
                 var nextSub = d.DefineLabelPair("nextBranch");
-                EmitLeafPredicate(ref d, in predicate, nextSub.Il, nextSub.Name, rootIdx, ref inSetIdx, paramSlotIdx, readerRefLocal);
+                EmitPredicate(ref d, in predicate, nextSub.Il, nextSub.Name, ref rootIdx, ref inSetIdx, ref paramSlotIdx, readerRefLocal, pIdx);
                 // Branch succeeded — skip remaining alternatives.
                 d.GotoAlways(groupPassed);
                 d.MarkLabel(nextSub);
-                if (ConsumesFieldRootPage(in predicate))
-                    rootIdx++;
-                if (ConsumesScalarParam(in predicate))
-                    paramSlotIdx++;
             }
 
             // All branches fell through → group fails.
             d.Il.Emit(OpCodes.Br, failLabel);
-            d.CsLine(Jump(ContinueTarget));
+            d.CsLine(Jump(failName));
             d.MarkLabel(groupPassed);
         }
         else
         {
             foreach (var predicate in pred.SubPredicates)
-            {
-                EmitLeafPredicate(ref d, in predicate, failLabel, ContinueTarget, rootIdx, ref inSetIdx, paramSlotIdx, readerRefLocal);
-                if (ConsumesFieldRootPage(in predicate))
-                    rootIdx++;
-                if (ConsumesScalarParam(in predicate))
-                    paramSlotIdx++;
-            }
+                EmitPredicate(ref d, in predicate, failLabel, failName, ref rootIdx, ref inSetIdx, ref paramSlotIdx, readerRefLocal, pIdx);
         }
     }
 
