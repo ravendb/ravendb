@@ -25,6 +25,7 @@ using Sparrow.Server.LowMemory;
 using Sparrow.Server.Meters;
 using Sparrow.Server.Platform;
 using Sparrow.Server.Utils;
+using Sparrow.Utils;
 using Sparrow.Server.Utils.VxSort;
 using Sparrow.Threading;
 using Voron.Data.BTrees;
@@ -51,14 +52,6 @@ namespace Voron.Impl.Journal
             TaskCompletionSource Tcs,
             Pal.journal_entry Entry);
 
-        public record PendingJournalStateRecord(
-            LowLevelTransaction Transaction,
-            TaskCompletionSource Tcs,
-            Pal.journal_entry Entry)
-        {
-            public JournalStateRecord JournalStateRecord => new JournalStateRecord(Transaction, Tcs, Entry);
-        }
-
         private long _currentJournalFileSize;
         private DateTime _lastFile;
 
@@ -80,6 +73,10 @@ namespace Voron.Impl.Journal
         private readonly RavenLogger _logger;
 
         private readonly object _writeLock = new object();
+        private readonly JournalWritePipeline _writePipeline;
+
+        // write lock only - the acks of the journal write that is being assembled
+        private readonly List<LowLevelTransaction> _transactionsForCurrentWrite = [];
         private int _maxNumberOfPagesRequiredForCompressionBuffer;
         private int _numberOfUsedCompressionBufferPagesSinceZeroing;
 
@@ -191,6 +188,60 @@ namespace Voron.Impl.Journal
             }
         }
 
+        public class JournalHeaderRecord : IDisposable
+        {
+            public static readonly long TransactionIdMarker = MemoryMarshal.Read<long>("JrnlHead"u8);
+
+            /// <summary>
+            /// The record always occupies exactly this much of the start of a journal file, so it is
+            /// both what a new journal must be sized for on top of its first batch, and where the
+            /// first transaction of the file is written.
+            /// </summary>
+            public const int SizeIn4Kb = 1;
+
+            private byte* _buffer;
+            private NativeMemory.ThreadStats _threadStats;
+            private const int BufferSize = SizeIn4Kb * 4 * Constants.Size.Kilobyte;
+
+            /// <summary>
+            /// Record a Guid whenever we create / recycle a journal file. We XOR that value with the transaction 
+            /// ids, ensuring that we discard old transactions on journal recycle.
+            /// </summary>
+            public Pal.journal_entry CreateEntry(Guid incarnation)
+            {
+                if (_buffer == null)
+                    _buffer = PlatformSpecific.NativeMemory.Allocate4KbAlignedMemory(BufferSize, out _threadStats);
+
+                Memory.Set(_buffer, 0, BufferSize);
+                var header = (TransactionHeader*)_buffer;
+                header->HeaderMarker = Constants.TransactionHeaderMarker;
+                header->TransactionId = TransactionIdMarker;
+                header->Flags = TransactionPersistenceModeFlags.JournalHeaderRecord;
+                header->TxMarker = TransactionMarker.Commit;
+                header->CompressedSize = -1;
+                header->UncompressedSize = sizeof(Guid);
+                header->TimeStampTicksUtc = DateTime.UtcNow.Ticks;
+
+                var payload = (Guid*)(_buffer + sizeof(TransactionHeader));
+                *payload = incarnation;
+
+                header->Hash = Hashing.XXHash64.Calculate((byte*)payload, (ulong)sizeof(Guid), (ulong)header->TransactionId);
+
+                return new Pal.journal_entry
+                {
+                    Base = header,
+                    NumberOf4Kbs = SizeIn4Kb
+                };
+            }
+
+            public void Dispose()
+            {
+                if (_buffer is not null)
+                    PlatformSpecific.NativeMemory.Free4KbAlignedMemory(_buffer, BufferSize, _threadStats);
+                _buffer = null;
+            }
+        }
+
         public ScopeForSharedJournals SharedJournalsScope()
         {
             if (_rootJournalMergedCommitsCts != null)
@@ -220,10 +271,13 @@ namespace Voron.Impl.Journal
 
             (_compressionPager, _compressionPagerState) = CreateCompressionPager(_env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize);
             _journalApplicator = new WriteAheadJournal.JournalApplicator(this);
+            _writePipeline = new JournalWritePipeline(_env);
 
             _disposeRunner = new DisposeOnce<SingleAttempt>(() =>
             {
                 RejectCommitsToMerge();
+
+                _writePipeline.Dispose();
 
                 _compressionPager.Dispose();
 
@@ -238,14 +292,22 @@ namespace Voron.Impl.Journal
 
                 _files = ImmutableAppendOnlyList<JournalFile>.Empty;
                 _linkedJournalsRecord.Dispose();
+                _journalHeaderRecord.Dispose();
             });
         }
 
         public ImmutableAppendOnlyList<JournalFile> Files => _files;
 
+        internal StorageEnvironment Env => _env;
+
         public WriteAheadJournal.JournalApplicator Applicator => _journalApplicator;
         
         public bool HasBranchCommits => SharedJournalState.HasBranchCommits;
+
+        internal JournalCompressionAlgorithm ResolveJournalCompressionAlgorithm() =>
+            _env.WriteFlow.ResolveJournalCompressionAlgorithm(_env.Options.JournalCompressionAlgorithm);
+
+        public bool IsJournalWriteActive => _writePipeline.HasInFlightWrites;
 
         private JournalFile NextFile(long numberOf4Kbs)
         {
@@ -253,7 +315,7 @@ namespace Voron.Impl.Journal
             
             long maxLogFileSize = _env.Options.MaxLogFileSize;
 
-            if ((now - _lastFile).TotalSeconds < 90)
+            if (now - _lastFile < JournalSizeDoublingWindow)
             {
                 _currentJournalFileSize = Math.Min(maxLogFileSize, _currentJournalFileSize * 2);
             }
@@ -268,15 +330,22 @@ namespace Voron.Impl.Journal
                 actualLogSize = _currentJournalFileSize;
             }
 
-            var journalPager = _env.Options.CreateJournalWriter(_journalIndex + 1, actualLogSize);
+            var incarnation = Guid.NewGuid();
+            var headerEntry = _journalHeaderRecord.CreateEntry(incarnation);
+            if (_env.Options.Encryption.IsEnabled)
+                EncryptTransaction((byte*)headerEntry.Base);
 
-            // we modify the in memory state _after_ we created the file, because we have to make sure that 
-            // we have created it successfully first. 
+            var journalPager = _env.Options.CreateNewJournalWriter(_journalIndex + 1, minRequiredSize, actualLogSize, headerEntry, this);
+
+            // we modify the in memory state _after_ we created the file, because we have to make sure that
+            // we have created it successfully first.
             _journalIndex++;
 
             _lastFile = now;
 
             var journal = new JournalFile(_env, journalPager, _journalIndex, FrozenSet<Guid>.Empty);
+            journal.Incarnation = incarnation;
+            journal.InitialWritePosIn4Kb = JournalHeaderRecord.SizeIn4Kb;
             journal.NewlyCreatedFile = true;
             journal.DoneWriting = new SingleUseFlag();
             journal.AddRef(); // one reference added by a creator - write ahead log
@@ -284,6 +353,28 @@ namespace Voron.Impl.Journal
             _files = _files.Append(journal);
 
             return journal;
+        }
+
+        // NextFile doubles the journal size when the previous file filled in under this time
+        internal static readonly TimeSpan JournalSizeDoublingWindow = TimeSpan.FromSeconds(90);
+
+        private void MaybePrepareNextJournal(long positionIn4Kbs)
+        {
+            var current = CurrentFile;
+            if (current.PrewarmChecked == false && positionIn4Kbs * 2 >= current.JournalWriter.NumberOfAllocated4Kb)
+            {
+                current.PrewarmChecked = true;
+                PrepareNextJournalInBackground(DateTime.UtcNow - _lastFile >= JournalSizeDoublingWindow / 2);
+            }
+        }
+
+        private void PrepareNextJournalInBackground(bool sameSize)
+        {
+            var size = sameSize
+                ? _currentJournalFileSize
+                : Math.Min(_currentJournalFileSize * 2, _env.Options.MaxLogFileSize);
+
+            _env.Options.PrepareRecyclableJournalInBackground(size, _env.Journal);
         }
 
         public bool RecoverDatabase(TransactionHeader* txHeader, Action<LogLevel, string> addToInitLog, out long lastJournalNumber, out bool skippedInvalidJournals)
@@ -409,11 +500,19 @@ namespace Voron.Impl.Journal
 
                         var jrnlFile = new JournalFile(_env, jrnlWriter, journalNumber, journalReader.RecoveredJournalIds.ToFrozenSet())
                         {
-                            IsHardLinked = isHardLinked
+                            IsHardLinked = isHardLinked,
+                            Incarnation = journalReader.Incarnation
                         };
                         jrnlFile.DoneWriting = new SingleUseFlag();
-                        
-                        
+                
+                        if (journalReader.BypassedInvalidRegion)
+                        {
+                            jrnlFile.DoneWriting.Raise();
+
+                            addToInitLog?.Invoke(LogLevel.Info,
+                                $"Journal '{jrnlWriter.FileName.FullPath}' has an invalid region that recovery had to bypass, it will not be used for further writes.");
+                        }
+
                         if (isHardLinked || _env.Options.RootJournal != null)
                         {
                             // a hard link is read-only and a branch writes via the root's merger - in both cases mark the journal
@@ -600,7 +699,7 @@ namespace Voron.Impl.Journal
                     lastFile.DoneWriting.Raise();
                     if (mustRollToNewFile)
                         addToInitLog?.Invoke(LogLevel.Info,
-                            $"Journal '{lastFile.JournalWriter.FileName.FullPath}' is hard-linked or owned by a branch; rolling to a new file.");
+                            $"Journal '{lastFile.JournalWriter.FileName.FullPath}' is not fit for further writes; rolling to a new file.");
                 }
             }
 
@@ -626,6 +725,7 @@ namespace Voron.Impl.Journal
 
                     var ptr = PlatformSpecific.NativeMemory.Allocate4KbAlignedMemory( fourKb, out var threadStats);
 
+                    using var eraseContext = SafeJournalWriteContext.Create();
                     try
                     {
                         Memory.Set(ptr, 0, fourKb);
@@ -635,7 +735,7 @@ namespace Voron.Impl.Journal
                         entries[0].Base = ptr;
                         for (long pos = CurrentFile.GetWritePosIn4KbPosition(_env.CurrentStateRecord); pos < CurrentFile.JournalWriter.NumberOfAllocated4Kb; pos++)
                         {
-                            CurrentFile.JournalWriter.Write(pos, entries, 1);
+                            CurrentFile.JournalWriter.Write(pos, entries, 1, eraseContext);
                         }
                     }
                     finally
@@ -700,7 +800,7 @@ namespace Voron.Impl.Journal
             private readonly object _flushingLock = new();
             private readonly SemaphoreSlim _fsyncLock = new(1);
             private readonly WriteAheadJournal _waj;
-            private readonly ManualResetEventSlim _onWriteTransactionCompleted = new();
+            private readonly ManualResetEventSlim _flusherShouldRecheckJournalState = new();
             private readonly LockTaskResponsible _flushLockTaskResponsible;
 
             public int FlushInProgress;
@@ -723,9 +823,51 @@ namespace Voron.Impl.Journal
             private LastFlushState _lastFlushed = LastFlushState.Empty;
             // touched only under _flushingLock
             private readonly List<(long Start, long Count)> _pendingSparseRegions = new();
+
+            // touched only under _flushingLock
+            private FlushBuffers _flushBuffers;
+
+            private struct FlushBuffers
+            {
+                private const int MinSize = 1024;
+                private const int ShrinkAfterUnderusedStreakOf = 16;
+
+                public Pal.page_to_write[] Pages;
+                public long[] Candidates;
+                public int[] Order;
+                private int _underusedStreak;
+
+                public void EnsureCapacity(int required)
+                {
+                    if (Pages == null || required > Pages.Length)
+                    {
+                        var size = required > 1 << 30 ? required : Math.Max(MinSize, Bits.PowerOf2(required));
+                        Allocate(size);
+                        return;
+                    }
+
+                    if (Pages.Length > MinSize && required < Pages.Length / 2)
+                    {
+                        if (++_underusedStreak >= ShrinkAfterUnderusedStreakOf)
+                            Allocate(Math.Max(MinSize, Pages.Length / 2));
+                        return;
+                    }
+
+                    _underusedStreak = 0;
+                }
+
+                private void Allocate(int size)
+                {
+                    Pages = GC.AllocateUninitializedArray<Pal.page_to_write>(size);
+                    Candidates = GC.AllocateUninitializedArray<long>(size);
+                    Order = GC.AllocateUninitializedArray<int>(size);
+                    _underusedStreak = 0;
+                }
+            }
             private long _totalWrittenButUnsyncedBytes;
             private bool _ignoreLockAlreadyTaken;
-            private Action<LowLevelTransaction> _updateJournalStateAfterFlush;
+            private Func<LowLevelTransaction, bool> _updateJournalStateAfterFlush;
+            private bool _updateJournalStateApplied;// only ever touched under the write tx lock
             private DateTime _lastFlushTime;
             private DateTime _lastSyncTime;
 
@@ -739,22 +881,37 @@ namespace Voron.Impl.Journal
             public void OnTransactionCommitted(LowLevelTransaction tx)
             {
                 var action = _updateJournalStateAfterFlush;
-                action?.Invoke(tx);
+                if (action == null)
+                    return;
+                if (action.Invoke(tx)) // ensures that we know which transaction completed the flush
+                    tx.AppliedJournalStateAction = action;
             }
 
             public void OnTransactionCompleted(LowLevelTransaction tx)
             {
                 // we are getting the transaction here just to verify that the write lock is held
                 Debug.Assert(tx.Flags is TransactionFlags.ReadWrite);
-                if (tx.Committed && tx.AppliedJournalStateAfterFlush)
+                if (tx.AppliedJournalStateAction == null ||
+                    // we may get a _previous_ transaction that _also_ applied a flush, but not the most recent one...
+                    ReferenceEquals(tx.AppliedJournalStateAction, _updateJournalStateAfterFlush) == false)
+                    return;
+
+                if (tx.Committed)
                 {
                     _updateJournalStateAfterFlush = null;
+                    _flusherShouldRecheckJournalState.Set();
+                }
+                else
+                {
+                    // the carrier applied the cycle's update but failed to commit: must run again on the next tx
+                    // safe to run again. Freed scratch entries were zeroed, and the journal pruning re-resolves
+                    _updateJournalStateApplied = false;
                 }
             }
 
             public void AfterTransactionWriteLockReleased()
             {
-                _onWriteTransactionCompleted.Set();
+                _flusherShouldRecheckJournalState.Set();
             }
 
             public long LastFlushedTransactionId => _lastFlushed.TransactionId;
@@ -950,24 +1107,28 @@ namespace Voron.Impl.Journal
                 // we don't actually have to do that in our own transaction, what we'll do is to setup things so if there is a running
                 // write transaction, we'll piggy back on its commit to complete our process, without interrupting its work
                 var transactionPersistentContext = new TransactionPersistentContext(true);
-                _onWriteTransactionCompleted.Reset();
+                _flusherShouldRecheckJournalState.Reset();
                 ExceptionDispatchInfo edi = null;
                 var sp = Stopwatch.StartNew();
 
-                var executedSuccessfully = false;
+                _updateJournalStateApplied = false;
 
                 var applied = WaitForJournalStateToBeUpdated(token, transactionPersistentContext, txw =>
                 {
+                    if (_updateJournalStateApplied) // no concurrency, the tx write lock ensures this
+                        return false; // a previous transaction in the async chain already applied this cycle
+
                     try
                     {
-                        txw.AppliedJournalStateAfterFlush = true;
                         txw.UpdateDataPagerState(dataPagerState);
                         UpdateJournalStateUnderWriteTransactionLock(txw, bufferOfPageFromScratchBuffersToFree, record);
 
-                        executedSuccessfully = true;
+                        _updateJournalStateApplied = true;
 
                         if (_waj._logger.IsDebugEnabled)
                             _waj._logger.Debug($"Updated journal state under write tx lock (txId: {txw.Id}) after waiting for {sp.Elapsed}");
+
+                        return true;
                     }
                     catch (Exception e)
                     {
@@ -981,13 +1142,13 @@ namespace Voron.Impl.Journal
 
                 if (edi != null)
                     edi.Throw();
-                else if (applied && executedSuccessfully == false)
+                else if (applied && _updateJournalStateApplied == false)
                     throw new InvalidOperationException($"Journal state was not applied successfully after the flush (waited - {sp.Elapsed}, last flushed tx: id - {record.TransactionId}, written to journal - {record.FlushedToJournal})");
             }
 
 
             private bool WaitForJournalStateToBeUpdated(CancellationToken token, TransactionPersistentContext transactionPersistentContext,
-                Action<LowLevelTransaction> currentAction, ByteStringContext byteStringContext)
+                Func<LowLevelTransaction, bool> currentAction, ByteStringContext byteStringContext)
             {
                 _forTestingPurposes?.OnWaitForJournalStateToBeUpdated_BeforeAssigning_updateJournalStateAfterFlush?.Invoke();
 
@@ -1023,14 +1184,13 @@ namespace Voron.Impl.Journal
                             // - we got a notification that the transaction is over (for any reason)
                             //   and we'll try to acquire the write tx lock again
 
-                            var satisfiedIndex = WaitHandle.WaitAny(new[] { _onWriteTransactionCompleted.WaitHandle, token.WaitHandle }, TimeSpan.FromMilliseconds(250));
+                            var satisfiedIndex = WaitHandle.WaitAny([_flusherShouldRecheckJournalState.WaitHandle, token.WaitHandle], TimeSpan.FromMilliseconds(250));
 
                             switch (satisfiedIndex)
                             {
                                 case 0:
-                                    // once we get a signal (_onWriteTransactionCompleted), we should be able to acquire the write tx lock since we prevent new write transactions.
                                     // this is just a precaution in order to prevent a loop here if the implementation will change in the future.
-                                    _onWriteTransactionCompleted.Reset();
+                                    _flusherShouldRecheckJournalState.Reset();
                                     continue;
 
                                 case 1:
@@ -1066,7 +1226,9 @@ namespace Voron.Impl.Journal
                 _forTestingPurposes?.OnUpdateJournalStateUnderWriteTransactionLock?.Invoke();
 
                 JournalFile journalFile = _waj._files.FirstOrDefault(x => x.Number == flushedRecord.FlushedToJournal);
-                if (journalFile is null)
+                if (journalFile is null &&
+                    // a rerun after a tx rollback: previously pruned the flushed journal
+                    _journalsToDelete.TryGetValue(flushedRecord.FlushedToJournal, out journalFile) == false)
                 {
                     throw new InvalidOperationException($"Unable to find journal file {flushedRecord.FlushedToJournal} in {_waj._env.DataPager.FileName}");
                 }
@@ -1107,13 +1269,13 @@ namespace Voron.Impl.Journal
                 }
 
                 List<string> pathsToSync = null;
-                if (unusedJournals.Count > 0)
+                var journalsToDelete = _journalsToDelete.Values.ToList();
+                if (journalsToDelete.Count > 0)
                 {
-                    pathsToSync = _waj._linkedJournalsRecord.GetFoldersToSync(unusedJournals[^1].Number);
+                    pathsToSync = _waj._linkedJournalsRecord.GetFoldersToSync(journalsToDelete.Max(x => x.Number));
                 }
 
-                SetLastFlushed(flushedRecord.TransactionId, journalFile,
-                    _journalsToDelete.Values.ToList(), pathsToSync);
+                SetLastFlushed(flushedRecord.TransactionId, journalFile, journalsToDelete, pathsToSync);
 
                 if (_waj._files.Count == 0)
                 {
@@ -1130,23 +1292,21 @@ namespace Voron.Impl.Journal
                 var minScratchNumber = int.MaxValue;
                 var maxScratchNumber = int.MinValue;
 #endif
-                
-                for (var i = 0; i < bufferOfPageFromScratchBuffersToFree.Count; i++)
+                var bufferedToFree = CollectionsMarshal.AsSpan(bufferOfPageFromScratchBuffersToFree);
+                for (var i = 0; i < bufferedToFree.Length; i++)
                 {
-                    var pageFromScratchBuffer = bufferOfPageFromScratchBuffersToFree[i];
-                    if (pageFromScratchBuffer == null)
-                        continue; // it could be already freed in a previous (partial) execution of this action
+                    ref var pageFromScratchBuffer = ref bufferedToFree[i];
                     if (pageFromScratchBuffer.File == null)
-                        throw new ArgumentNullException(nameof(pageFromScratchBuffer.File));
+                        continue;
 
                     scratchBufferPool.Free(txw, pageFromScratchBuffer.File.Number, pageFromScratchBuffer.PositionInScratchBuffer);
-                    bufferOfPageFromScratchBuffersToFree[i] = null;
 
 #if DEBUG
                     freedUpToTx = long.Max(freedUpToTx, pageFromScratchBuffer.AllocatedInTransaction);
                     maxScratchNumber = int.Max(maxScratchNumber, pageFromScratchBuffer.File.Number);
                     minScratchNumber = int.Min(minScratchNumber, pageFromScratchBuffer.File.Number);
 #endif
+                    pageFromScratchBuffer = default;
                 }
 
 #if DEBUG
@@ -1160,6 +1320,96 @@ namespace Voron.Impl.Journal
                     scratchBufferFile.AssertNoPagesAllocatedInTransactionOlderThan(freedUpToTx);
                 }
 #endif
+            }
+
+            private const int DefaultWritebackPipelineDepth = 4;
+
+            private static readonly int? PinnedWritebackDepth =
+                int.TryParse(Environment.GetEnvironmentVariable("VORON_WRITEBACK_DEPTH"), out var pinned) && pinned >= 1
+                    ? pinned : null;
+
+            private bool _writebackNotSupported;
+
+            /// <summary>
+            /// Push data to the drive, in a paced manner, so if we have 1GB to write, we won't push that all at once. 
+            /// We send it in blocks, and that avoids saturating the I/O channels, so journal writes aren't "stuck in a traffic jam".
+            /// </summary>
+            private void WritebackDirtyRanges()
+            {
+                var options = _waj._env.Options;
+                if (_writebackNotSupported)
+                    return;
+
+                var dataPager = _waj._env.DataPager;
+                var dataPagerState = _waj._env.CurrentStateRecord.DataPagerState;
+                var depth = PinnedWritebackDepth ?? DefaultWritebackPipelineDepth;
+
+                var rc = Pal.rvn_pager_writeback_dirty(dataPagerState.Handle, depth,
+                    options.SyncWritebackBlockSizeInMb * Constants.Size.Megabyte,
+                    options.SyncWritebackMinContiguousSizeInKb * Constants.Size.Kilobyte, out var stats, out var error);
+
+                if (rc == PalFlags.FailCodes.FailWritebackNotSupported)
+                {
+                    _writebackNotSupported = true;
+                    return;
+                }
+
+                if (rc != PalFlags.FailCodes.Success)
+                    PalHelper.ThrowLastError(rc, error, $"Failed to writeback dirty ranges of {dataPager.FileName}");
+
+                if (_waj._logger.IsDebugEnabled && stats.BytesWritten > 0)
+                {
+                    _waj._logger.Debug(
+                        $"Writeback of {stats.BytesWritten / Constants.Size.Kilobyte:#,#0} kb in {stats.RangesWritten:#,#} ranges " +
+                        $"(depth {depth}, waited {TimeSpan.FromTicks(stats.TotalWaitTicks).TotalMilliseconds:#,#0} ms, max range {TimeSpan.FromTicks(stats.MaxRangeWaitTicks).TotalMilliseconds:#,#0} ms, " +
+                        $"{stats.BytesSkipped / Constants.Size.Kilobyte:#,#0} kb in sparse runs left to the kernel, " +
+                        $"{stats.SetBitsRemaining:#,#0} dirty pages remain) for {dataPager.FileName}");
+                }
+            }
+
+            /// <summary>
+            /// After each flush, initiate-only writeback of the freshly accumulated dirty ranges to the drive.
+            /// This trickle the writes to the disk on a roughly constant basis, so we don't have a huge writeback at the end of 
+            /// a long flush, which would stall journal writes. Under load, this will be deferred to the explict sync to avoid 
+            /// slowing down journal writes.
+            /// </summary>
+            private void TrickleWriteback(Pager dataPager, Pager.State dataPagerState)
+            {
+                var options = _waj._env.Options;
+                if (_writebackNotSupported || options.SyncWritebackBlockSizeInMb <= 0)
+                    return;
+
+                if (PlatformDetails.RunningOnPosix == false)
+                    return; // FlushViewOfFile has no initiate-only form - it would stall the flush
+
+                if (options.RootJournal != null)
+                    return; // non-root (shared-journal) environments never trickle
+
+                var gate = options.DeviceWriteBudget;
+                if (gate != null && gate.ShouldDrain())
+                    return; // drain mode - the sync owns the writeback now
+
+                var rc = Pal.rvn_pager_writeback_dirty(dataPagerState.Handle, pipelineDepth: 0 /* initiate only */,
+                    options.SyncWritebackBlockSizeInMb * Constants.Size.Megabyte,
+                    options.SyncWritebackMinContiguousSizeInKb * Constants.Size.Kilobyte, out var stats, out var error);
+
+                if (rc == PalFlags.FailCodes.FailWritebackNotSupported)
+                {
+                    _writebackNotSupported = true;
+                    return;
+                }
+
+                if (rc != PalFlags.FailCodes.Success)
+                    PalHelper.ThrowLastError(rc, error, $"Failed to trickle writeback of {dataPager.FileName}");
+
+                if (_waj._logger.IsDebugEnabled && (stats.BytesWritten > 0 || stats.BytesSkipped > 0))
+                {
+                    _waj._logger.Debug(
+                        $"Trickle writeback initiated {stats.BytesWritten / Constants.Size.Kilobyte:#,#0} kb in {stats.RangesWritten:#,#} ranges " +
+                        $"({stats.BytesSkipped / Constants.Size.Kilobyte:#,#0} kb in sparse runs kept for merging, " +
+                        $"{stats.PagesDeferredHot:#,#0} hot pages deferred, " +
+                        $"{stats.SetBitsRemaining:#,#0} dirty pages remain) for {dataPager.FileName}");
+                }
             }
 
             public void WaitForSyncToCompleteOnDispose()
@@ -1344,12 +1594,27 @@ namespace Voron.Impl.Journal
                     var dataPager = parent._waj._env.DataPager;
                     var currentStateRecord = parent._waj._env.CurrentStateRecord;
                     var dataPagerState = currentStateRecord.DataPagerState;
+                    var options = parent._waj._env.Options;
+                    var gate = options.SyncWritebackBlockSizeInMb > 0 ? options.DeviceWriteBudget : null;
+
+                    // In trickle mode, we already initiated the writeback, so we don't need to do it again here.
+                    // In drain mode, we drain first to avoid big I/O hitting all at once, causing congestion.
+                    if (gate?.ShouldDrain() == true)
+                        parent.WritebackDirtyRanges();
+
+                    // The coming sync will cover all the dirty pages, no need for trickling to the disk
+                    var resetRc = Pal.rvn_pager_reset_dirty_tracking(dataPagerState.Handle, out var resetPages, out var resetError);
+                    if (resetRc != PalFlags.FailCodes.Success)
+                        PalHelper.ThrowLastError(resetRc, resetError, $"Failed to reset dirty tracking of {dataPager.FileName}");
+
                     dataPager.Sync(dataPagerState, Interlocked.Read(ref parent._totalWrittenButUnsyncedBytes));
+                    gate?.RecordSyncCost(sp.Elapsed.Ticks);
                     if (parent._waj._logger.IsDebugEnabled)
                     {
                         var sizeInKb = (dataPagerState.NumberOfAllocatedPages * Constants.Storage.PageSize) / Constants.Size.Kilobyte;
                         parent._waj._logger.Debug(
-                            $"Sync of {sizeInKb:#,#0} kb file with {_currentTotalWrittenBytes / Constants.Size.Kilobyte:#,#0} kb dirty in {sp.Elapsed}");
+                            $"Sync of {sizeInKb:#,#0} kb file with {_currentTotalWrittenBytes / Constants.Size.Kilobyte:#,#0} kb dirty in {sp.Elapsed}, " +
+                            $"dropped {resetPages:#,#0} dirty page hints not pushed by writeback");
                     }
                 }
 
@@ -1373,6 +1638,8 @@ namespace Voron.Impl.Journal
                         return false;
 
                     _lastFlushed.DoneFlag.Raise();
+
+                    parent._waj._env.Options.SetLastReusedJournalCountOnSync(_lastFlushed.JournalsToDelete.Count);
 
                     return true;
                 }
@@ -1506,16 +1773,18 @@ namespace Voron.Impl.Journal
                 var dataPager = _waj._env.DataPager;
                 var currentStateRecord = _waj._env.CurrentStateRecord;
                 var dataPagerState = currentStateRecord.DataPagerState;
-                var record = state.Record;
+                int pagesFlushed = 0;
                 using (var meter = options.IoMetrics.MeterIoRate(dataPager.FileName, IoMetrics.MeterType.DataFlush, 0))
                 {
-                    var pagesBuffer = ArrayPool<Pal.page_to_write>.Shared.Rent(record.ScratchPagesTable.Count);
                     Pager.PagerTransactionState txState = default;
+                    _flushBuffers.EnsureCapacity(state.Buffers.Count);
                     try
                     {
-                        Span<Pal.page_to_write> pages = GetSortedPages(ref txState, record, pagesBuffer, out written);
+                        Span<Pal.page_to_write> pages = GetSortedPages(ref txState, state, out written);
                         if (pages.IsEmpty)
                             return dataPagerState;
+
+                        pagesFlushed = pages.Length;
 
                         if (flushedPageRanges != null)
                         {
@@ -1533,10 +1802,11 @@ namespace Voron.Impl.Journal
                                 Pager.RaiseError(dataPager.FileName, errorCode, rc, dataPagerState.TotalAllocatedSize);
                             }
                         }
+
+                        TrickleWriteback(dataPager, dataPagerState);
                     }
                     finally
                     {
-                        ArrayPool<Pal.page_to_write>.Shared.Return(pagesBuffer);
                         txState.InvokeDispose(_waj._env, ref dataPagerState, ref txState);
                     }
 
@@ -1545,9 +1815,9 @@ namespace Voron.Impl.Journal
                 }
 
                 if (_waj._logger.IsDebugEnabled)
-                    _waj._logger.Debug($"Flushed {record.ScratchPagesTable.Count:#,#} pages to {dataPager.FileName} with {new Size(written, SizeUnit.Bytes)} in {sp.Elapsed}.");
+                    _waj._logger.Debug($"Flushed {pagesFlushed:#,#} pages to {dataPager.FileName} with {new Size(written, SizeUnit.Bytes)} in {sp.Elapsed}.");
                 else if (_waj._logger.IsWarnEnabled && sp.Elapsed > options.LongRunningFlushingWarning)
-                    _waj._logger.Warn($"Very long data flushing. It took {sp.Elapsed} to flush {record.ScratchPagesTable.Count:#,#} pages to {dataPager.FileName} with {new Size(written, SizeUnit.Bytes)}.");
+                    _waj._logger.Warn($"Very long data flushing. It took {sp.Elapsed} to flush {pagesFlushed:#,#} pages to {dataPager.FileName} with {new Size(written, SizeUnit.Bytes)}.");
 
                 Interlocked.Add(ref _totalWrittenButUnsyncedBytes, written);
 
@@ -1659,21 +1929,58 @@ namespace Voron.Impl.Journal
                 }
             }
 
-            private Span<Pal.page_to_write> GetSortedPages(ref Pager.PagerTransactionState txState, EnvironmentStateRecord record,
-                Pal.page_to_write[] pagesBuffer, out long written)
+            private Span<Pal.page_to_write> GetSortedPages(ref Pager.PagerTransactionState txState, ApplyLogsToDataFileState state,
+                out long written)
             {
-                int index = 0;
                 written = 0;
                 var lastFlushedTx = _lastFlushed.TransactionId;
-                foreach (var (pageNum, pageValue) in record.ScratchPagesTable)
-                {
-                    if (lastFlushedTx >= pageValue.AllocatedInTransaction)
-                        continue; // We already wrote those pages to disk in a previous flush... 
 
-                    Debug.Assert(pageValue.AllocatedInTransaction <= record.TransactionId, "pageValue.AllocatedInTransaction <= record.TransactionId");
-                    
+                var buffers = CollectionsMarshal.AsSpan(state.Buffers);
+                var pagesBuffer = _flushBuffers.Pages;
+                var candidates = _flushBuffers.Candidates;
+                var order = _flushBuffers.Order;
+                for (var i = 0; i < buffers.Length; i++)
+                {
+                    candidates[i] = buffers[i].PageNumberInDataFile;
+                    order[i] = i;
+                }
+
+                candidates.AsSpan(0, buffers.Length).Sort(order.AsSpan(0, buffers.Length));
+
+                int index = 0;
+                long lastEndPage = -1;
+                long lastTx = -1;
+                for (var i = 0; i < buffers.Length;)
+                {
+                    var pageNum = candidates[i];
+
+                    var newest = order[i];
+                    for (i++; i < buffers.Length && candidates[i] == pageNum; i++)
+                    {
+                        if (buffers[order[i]].AllocatedInTransaction > buffers[newest].AllocatedInTransaction)
+                            newest = order[i];
+                    }
+
+                    ref readonly var pageValue = ref buffers[newest];
+                    if (lastFlushedTx >= pageValue.AllocatedInTransaction)
+                        continue;
+
+                    Debug.Assert(pageValue.AllocatedInTransaction <= state.Record.TransactionId, "pageValue.AllocatedInTransaction <= state.Record.TransactionId");
+
                     var page = PreparePage(ref txState, pageValue);
                     int countOfPages = page.GetNumberOfPages();
+                    Debug.Assert(pageNum == page.PageNumber, "pageNum == page.PageNumber");
+
+                    if (pageNum < lastEndPage)
+                    {
+                        Debug.Assert(pageValue.AllocatedInTransaction != lastTx, "spans within one transaction are disjoint");
+                        if (pageValue.AllocatedInTransaction < lastTx)
+                            continue;
+
+                        index--;
+                        written -= (long)pagesBuffer[index].count_of_pages * Constants.Storage.PageSize;
+                    }
+
                     written += countOfPages * Constants.Storage.PageSize;
                     pagesBuffer[index++] = new Pal.page_to_write
                     {
@@ -1681,14 +1988,14 @@ namespace Voron.Impl.Journal
                         ptr = page.Pointer,
                         count_of_pages = countOfPages
                     };
-                    Debug.Assert(pageNum == page.PageNumber, "pageNum == page.PageNumber");
+                    lastEndPage = page.PageNumber + countOfPages;
+                    lastTx = pageValue.AllocatedInTransaction;
                 }
-                var pages = new Span<Pal.page_to_write>(pagesBuffer, 0, index);
-                pages.Sort();
-                return pages;
+
+                return new Span<Pal.page_to_write>(pagesBuffer, 0, index);
             }
 
-            private Page PreparePage(ref Pager.PagerTransactionState txState, PageFromScratchBuffer pageValue)
+            private Page PreparePage(ref Pager.PagerTransactionState txState, in PageFromScratchBuffer pageValue)
             {
                 byte* page = pageValue.ReadRaw(ref txState);
 
@@ -1704,7 +2011,7 @@ namespace Voron.Impl.Journal
             }
 
             [DoesNotReturn]
-            private static void ThrowInvalidChecksumOnPageFromScratch(int scratchNumber, PageFromScratchBuffer pagePosition, PageHeader* page, ulong checksum, ulong expectedChecksum)
+            private static void ThrowInvalidChecksumOnPageFromScratch(int scratchNumber, in PageFromScratchBuffer pagePosition, PageHeader* page, ulong checksum, ulong expectedChecksum)
             {
                 var message = $"During apply logs to data, tried to copy {scratchNumber} / {pagePosition.File.Number} ({page->PageNumber}) " +
                               $"has checksum {checksum} but expected {expectedChecksum}. ";
@@ -1869,7 +2176,7 @@ namespace Voron.Impl.Journal
 
             public void SetLastFlushed(long lastTransactionId, JournalFile journalFile, List<JournalFile> journalFiles, List<string> pathsToSync)
             {
-                var lastFlushedTxHeader = journalFile.GetLastReadTxHeader(lastTransactionId);
+                var lastFlushedTxHeader = journalFile.GetLastReadTxHeader(lastTransactionId, _waj._env.HeaderAccessor.JournalId);
          
                 var newState = new LastFlushState(lastTransactionId, 
                     journalFile, journalFiles, pathsToSync,
@@ -1914,6 +2221,8 @@ namespace Voron.Impl.Journal
 
         private void CurrentFileIsDone()
         {
+            _writePipeline.Drain();
+
             // Note, if this is a root/branch situation, the same
             // flag is used by all instances of this journal file
             CurrentFile?.DoneWriting.Raise();
@@ -1930,7 +2239,7 @@ namespace Voron.Impl.Journal
                 Pager.PagerTransactionState tempTxState = new() { IsWriteTransaction = true };
                 long numberOfUncompressedPages = 0;
                 long numberOf4Kbs = 0;
-                TaskCompletionSource branchCommit = null;
+                TaskCompletionSource branchCommit = tx.PreparedDurableCommit;
                 try
                 {
                     var rootJournal = _env.Options.RootJournal ?? this;
@@ -1944,13 +2253,12 @@ namespace Voron.Impl.Journal
                     {
                         var start = Stopwatch.GetTimestamp();
                         var entry = PrepareToWriteToJournal(tx, ref tempTxState, out numberOfUncompressedPages, out var numberOfUsedCompressionBufferPages);
-                        branchCommit = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                        Debug.Assert(branchCommit != null, "stage 1 creates PreparedDurableCommit for every ModifiedPages commit");
                         numberOf4Kbs = entry.NumberOf4Kbs;
-                        var pendingJournalStateRecord = new PendingJournalStateRecord(tx, branchCommit, entry);
-                        journalStateRecord = pendingJournalStateRecord.JournalStateRecord;
+                        journalStateRecord = new JournalStateRecord(tx, branchCommit, entry);
                         if (this != rootJournal)
                         {
-                            rootJournal.SharedJournalState.Enqueue(pendingJournalStateRecord);
+                            rootJournal.SharedJournalState.Enqueue(journalStateRecord);
                         }
                         
                         _numberOfUsedCompressionBufferPagesSinceZeroing = Math.Max(_numberOfUsedCompressionBufferPagesSinceZeroing, numberOfUsedCompressionBufferPages);
@@ -1984,7 +2292,10 @@ namespace Voron.Impl.Journal
                 }
                 catch (Exception e)
                 {
+                    // failure happened *preparing* the write, before anything was written to disk
+                    // so no need for catastrophic error, the transaction rolls back cleanly, don't poison the env
                     branchCommit?.TrySetException(e);
+                    tx.AcknowledgeDurableCommit();
                     throw;
                 }
                 finally
@@ -2065,7 +2376,7 @@ namespace Voron.Impl.Journal
                 }
 
                 requiredSizeIn4Kbs += cur.Entry.NumberOf4Kbs;
-                SharedJournalState.PrepareForCommit(cur.JournalStateRecord);
+                SharedJournalState.PrepareForCommit(cur);
             }
 
             FlushMergedJournalEntries(tx, requiredSizeIn4Kbs);
@@ -2087,7 +2398,7 @@ namespace Voron.Impl.Journal
                 CurrentFile.GetAvailable4Kbs(tx.CurrentStateRecord) < requiredSizeIn4Kbs)
             {
                 CurrentFileIsDone();
-                CurrentFile = NextFile(requiredSizeIn4Kbs);
+                CurrentFile = NextFile(requiredSizeIn4Kbs + JournalHeaderRecord.SizeIn4Kb);
                 if (_logger.IsDebugEnabled)
                     _logger.Debug($"New journal file created {CurrentFile.Number:D19} with size {CurrentFile.JournalSize}");
             }
@@ -2158,6 +2469,7 @@ namespace Voron.Impl.Journal
                 if (available4Kbs < requiredSizeIn4Kbs)
                 {
                     long newSize = (CurrentFile.JournalWriter.NumberOfAllocated4Kb - available4Kbs + requiredSizeIn4Kbs) * 4 * Constants.Size.Kilobyte;
+                    _writePipeline.Drain();
                     CurrentFile.JournalWriter.Truncate(newSize);
                     if (_logger.IsDebugEnabled)
                         _logger.Debug($"Journal file {CurrentFile.Number:D19} was extended to size {CurrentFile.JournalSize} to allow the linked journals entry");
@@ -2165,36 +2477,77 @@ namespace Voron.Impl.Journal
             }
             
             var entries = SharedJournalState.Entries;
-            var start = Stopwatch.GetTimestamp();
 
-            tx._forTestingPurposes?.ActionToCallJustBeforeWritingToJournal?.Invoke();
-            long positionIn4Kbs = CurrentFile.Write(tx, entries);
-            // We must update the _root_ transaction as well here, since if we have a batch
-            // that does not include the root env, then we have to update the position of 
-            // the journal writer
-            tx.UpdateJournal(CurrentFile.Number, positionIn4Kbs);
+            var currentIncarnation = CurrentFile.Incarnation;
+            foreach (var entry in entries) // stamp the tx headers with the file guid, to allow journal reuse
+            {
+                var entryHeader = (TransactionHeader*)entry.Base;
+                entryHeader->JournalId = entryHeader->JournalId.Xor(currentIncarnation);
+            }
 
-            var elapsed = Stopwatch.GetElapsedTime(start);
+            long totalNumberOf4Kbs = 0;
+            foreach (var entry in entries)
+                totalNumberOf4Kbs += entry.NumberOf4Kbs;
+
+            var writePosIn4Kbs = CurrentFile.GetWritePosIn4KbPosition(tx.CurrentStateRecord);
+            long positionIn4Kbs = writePosIn4Kbs + totalNumberOf4Kbs;
+
+            _transactionsForCurrentWrite.Clear();
 
             foreach (var rec in SharedJournalState.JournalRecords)
             {
                 if (failedBranchRecords != null && failedBranchRecords.ContainsKey(rec))
                     continue; // hard-link fallback: exception will be set below, after the write.
 
-                if (rec.Tcs.Task.IsCompleted)
-                    continue;
-
                 var llt = rec.Transaction;
+                var environment = llt.Environment;
+                var header = (TransactionHeader*)rec.Entry.Base;
+
+                if (rec.Tcs.Task.IsCompleted)
+                {
+                    // indicates that there is no env _to_ report to, we still write to the jounral, but we'll let recovery deal with any holes as corruption
+                    header->DurableTxIdDeltaAtSubmit = 0;
+                    continue;
+                }
+
+                header->SetLastDurableTxIdAtSubmit(environment.DurableTransactionId);
+
+                _transactionsForCurrentWrite.Add(llt);
+
                 llt.UpdateJournal(llt.WrittenToJournalNumber, positionIn4Kbs);
-                rec.Tcs.TrySetResult();
             }
+
+            CurrentFile.LastTransactionId = tx.Id;
+
+            // We must update the _root_ transaction as well here, since if we have a batch
+            // that does not include the root env, then we have to update the position of
+            // the journal writer
+            tx.UpdateJournal(CurrentFile.Number, positionIn4Kbs);
+
+            var start = Stopwatch.GetTimestamp();
+
+            tx._forTestingPurposes?.ActionToCallJustBeforeWritingToJournal?.Invoke();
+
+            if (tx.IsAsyncCommit && _env.WriteFlow.CanPipeline(totalNumberOf4Kbs))
+                _writePipeline.SubmitPipelined(CurrentFile, writePosIn4Kbs, entries, totalNumberOf4Kbs, _transactionsForCurrentWrite);
+            else
+                _writePipeline.WriteInline(CurrentFile, writePosIn4Kbs, entries, totalNumberOf4Kbs, _transactionsForCurrentWrite);
+
+            var elapsed = Stopwatch.GetElapsedTime(start);
+
+            MaybePrepareNextJournal(positionIn4Kbs);
 
             SharedJournalState.Reset();
 
             if (failedBranchRecords != null)
             {
                 foreach (var (rec, ex) in failedBranchRecords)
+                {
+                    // deliberately not FailDurableCommit: because this is *not* a catastrophic failure
+                    // the environment survives this & already fell back to standalone journaling
                     rec.Tcs.TrySetException(ex);
+                    rec.Transaction.AcknowledgeDurableCommit();
+                }
             }
 
             if (_logger.IsDebugEnabled)
@@ -2203,6 +2556,8 @@ namespace Voron.Impl.Journal
 
             if (CurrentFile.GetAvailable4Kbs(tx.CurrentStateRecord) == 0)
             {
+                // the file is complete, the next batch rolls - last chance to have the pool ready
+                PrepareNextJournalInBackground(DateTime.UtcNow - _lastFile >= JournalSizeDoublingWindow);
                 CurrentFileIsDone();
             }
         }
@@ -2251,7 +2606,8 @@ namespace Voron.Impl.Journal
                 var journalWriter = _env.Options.CreateJournalWriterForBranchEnvironment(index, existingJournalFileName, journalFile);
                 var journal = new JournalFile(_env, journalWriter, index, FrozenSet<Guid>.Empty)
                 {
-                    IsHardLinked = isHardLinked
+                    IsHardLinked = isHardLinked,
+                    Incarnation = journalFile.Incarnation
                 };
                 journal.NewlyCreatedFile = true;
                 journal.DoneWriting = journalFile.DoneWriting;
@@ -2285,13 +2641,9 @@ namespace Voron.Impl.Journal
         private Pal.journal_entry PrepareToWriteToJournal(LowLevelTransaction tx, ref Pager.PagerTransactionState txState, out long numberOfUncompressedPages, 
             out int totalNumberOfUsedCompressionBufferPages)
         {
-            var txPages = tx.GetTransactionPages();
-            var numberOfPages = txPages.Count;
-            var pagesCountIncludingAllOverflowPages = 0;
-            foreach (var page in txPages)
-            {
-                pagesCountIncludingAllOverflowPages += page.NumberOfPages;
-            }
+            var txPages = CollectionsMarshal.AsSpan(tx.GetTransactionPages());
+            var numberOfPages = txPages.Length;
+            var pagesCountIncludingAllOverflowPages = tx.PagesCountIncludingAllOverflowPages;
 
             var sizeOfPagesHeader = numberOfPages * sizeof(TransactionHeaderPageInfo);
             var overhead = sizeOfPagesHeader + (long)numberOfPages * sizeof(long);
@@ -2301,18 +2653,18 @@ namespace Voron.Impl.Journal
             var pagesRequired = (transactionHeaderPageOverhead + pagesCountIncludingAllOverflowPages + overheadInPages);
             
             var freedPages = tx.GetFreedPages();
-            
+
             if (freedPages is { Count: > 0 })
             {
                 // we need to remove the freed pages that were reused and modified later on during the transaction
-                foreach (var page in txPages)
+                foreach (ref readonly var page in txPages)
                 {
                     for (int i = 0; i < page.NumberOfPages; i++)
                     {
                         freedPages.Remove(page.PageNumberInDataFile + i);
                     }
-                } 
-                
+                }
+
                 if (freedPages.Count > 0)
                 {
                     var freePagesOverhead = freedPages.Count * sizeof(long) * 2; // twice as much as the number of pages guarantees enough space for the encoding
@@ -2353,7 +2705,7 @@ namespace Voron.Impl.Journal
             var write = txPageInfoPtr + sizeOfPagesHeader;
             var pageSequentialNumber = 0;
             var pagesEncountered = 0;
-            foreach (var txPage in txPages)
+            foreach (ref readonly var txPage in txPages)
             {
                 var scratchPage = txPage.ReadWritable(ref tx.PagerTransactionState);
                 var pageHeader = (PageHeader*)scratchPage;
@@ -2430,14 +2782,15 @@ namespace Voron.Impl.Journal
             long compressedLen = 0;
 
             // We want to do compression when the size of the data to store is bigger than the threshold.
-            // This is essentially a threshold between IO blocks usage and the CPU consumption of LZ4
-            // PERF: Before v7.0 we would avoid doing the diff if the amount of pages was big, however,
-            // the speed of diffing is roughly that of a memory copy, which is so fast that the benefit of always doing
-            // it is big enough to just do it every time. 
-            var performCompression = totalSizeWritten > _env.Options.CompressTxAboveSizeInBytes;
+            // On NVMe devices, writing the full data to disk is _faster_ than compressing it first.
+            var compressTxAboveSizeInBytes = _env.WriteFlow.GetCompressTxAboveSizeInBytes(_env.Options.CompressTxAboveSizeInBytes);
+            var performCompression = totalSizeWritten > compressTxAboveSizeInBytes;
+            var compressionAlgorithm = ResolveJournalCompressionAlgorithm();
             if (performCompression)
             {
-                var outputBufferSize = LZ4.MaximumOutputLength(totalSizeWritten);
+                var outputBufferSize = compressionAlgorithm == JournalCompressionAlgorithm.Zstd
+                    ? ZstdLib.GetMaxCompression(totalSizeWritten)
+                    : LZ4.MaximumOutputLength(totalSizeWritten);
                 int outputBufferInPages = checked((int)((outputBufferSize + sizeof(TransactionHeader)) / Constants.Storage.PageSize +
                                                         ((outputBufferSize + sizeof(TransactionHeader)) % Constants.Storage.PageSize == 0 ? 0 : 1)));
 
@@ -2471,6 +2824,7 @@ namespace Voron.Impl.Journal
 
                 _compressionPager.EnsureMapped(_compressionPagerState, ref tx.PagerTransactionState, pagesWritten, outputBufferInPages);
 
+                var rawTxHeaderPtr = txHeaderPtr;
                 txHeaderPtr = _compressionPager.MakeWritable(_compressionPagerState,
                     _compressionPager.AcquireRawPagePointer(_compressionPagerState, ref tx.PagerTransactionState, pagesWritten)
                 );
@@ -2480,14 +2834,18 @@ namespace Voron.Impl.Journal
                 using (var metrics = _env.Options.IoMetrics.MeterIoRate(path, IoMetrics.MeterType.Compression, 0)) // Note that the last journal may be replaced if we switch journals, however it doesn't affect web graph
                 {
                     int compressionAcceleration = _env.Options.JournalsCompressionAcceleration;
-                    compressedLen = LZ4.Encode64LongBuffer(
-                        txPageInfoPtr,
-                        compressionBuffer,
-                        totalSizeWritten,
-                        outputBufferSize,
-                        compressionAcceleration);
+                    compressedLen = compressionAlgorithm == JournalCompressionAlgorithm.Zstd
+                        ? ZstdLib.CompressWithLevel(txPageInfoPtr, totalSizeWritten, compressionBuffer, outputBufferSize, level: 1)
+                        : LZ4.Encode64LongBuffer(txPageInfoPtr, compressionBuffer, totalSizeWritten, outputBufferSize, compressionAcceleration);
 
                     metrics.SetCompressionResults(totalSizeWritten, compressedLen, compressionAcceleration);
+                }
+
+                if (compressedLen >= totalSizeWritten)
+                {
+                    // didn't compress, so let's use the raw output, instead
+                    txHeaderPtr = rawTxHeaderPtr;
+                    performCompression = false;
                 }
             }
             else
@@ -2511,6 +2869,8 @@ namespace Voron.Impl.Journal
             var reportedCompressionLength = performCompression ? compressedLen : -1;
 
             txHeader.CompressedSize = reportedCompressionLength;
+            if (performCompression && compressionAlgorithm == JournalCompressionAlgorithm.Zstd)
+                txHeader.TxMarker |= TransactionMarker.ZstdCompressed;
             txHeader.UncompressedSize = totalSizeWritten;
             txHeader.PageCount = numberOfPages;
             txHeader.JournalId = _headerAccessor.JournalId;
@@ -2722,19 +3082,22 @@ namespace Voron.Impl.Journal
         private readonly int _minimumSharedJournalsMergeCount;
 
         private readonly LinkedJournalsRecord _linkedJournalsRecord = new();
+        private readonly JournalHeaderRecord _journalHeaderRecord = new();
 
         internal TestingStuff ForTestingPurposesOnly()
         {
             if (_forTestingPurposes != null)
                 return _forTestingPurposes;
 
-            return _forTestingPurposes = new TestingStuff();
+            return _forTestingPurposes = new TestingStuff(this);
         }
 
-        internal sealed class TestingStuff
+        internal sealed class TestingStuff(WriteAheadJournal journal)
         {
             internal Action OnReduceSizeOfCompressionBufferIfNeeded_RightAfterDisposingCompressionPager;
-            internal Action<ConcurrentQueue<WriteAheadJournal.PendingJournalStateRecord>> OnWriteBuffersToJournal;
+            internal Action<ConcurrentQueue<WriteAheadJournal.JournalStateRecord>> OnWriteBuffersToJournal;
+
+            internal int InFlightJournalWrites => journal._writePipeline.ForTestingPurposesOnly().InFlightCount;
         }
 
         private void RejectCommitsToMerge() => SharedJournalState.SetCancel();

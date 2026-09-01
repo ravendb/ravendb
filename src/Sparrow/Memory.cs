@@ -925,6 +925,50 @@ namespace Sparrow
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsEqualConstant(ReadOnlySpan<byte> constant, ReadOnlySpan<byte> value)
+        {
+#if NET7_0_OR_GREATER
+            if (constant.Length >= 64)
+                throw new NotSupportedException("The size must not be bigger or equal to 64. The intended usage of this method is against constant short utf8 strings.");
+
+            if (value.Length != constant.Length)
+                return false;
+
+            ref byte constantRef = ref MemoryMarshal.GetReference(constant);
+            ref byte valueRef = ref MemoryMarshal.GetReference(value);
+
+            if (AdvInstructionSet.X86.IsSupportedAvx256)
+                return IsEqualConstantAvx256(ref constantRef, ref valueRef, value.Length);
+
+            return IsEqualConstantVector128(ref constantRef, ref valueRef, value.Length);
+#else
+            return constant.SequenceEqual(value);
+#endif
+        }
+
+        #if NET7_0_OR_GREATER
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private static bool IsEqualConstantAvx256(ref byte constantRef, ref byte valueRef, int size)
+            {
+        #if NET8_0_OR_GREATER
+                return CompareAvx256(in constantRef, in valueRef, size) == 0;
+        #else
+                return CompareAvx256(ref constantRef, ref valueRef, size) == 0;
+        #endif
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private static bool IsEqualConstantVector128(ref byte constantRef, ref byte valueRef, int size)
+            {
+        #if NET8_0_OR_GREATER
+                return CompareInline(in constantRef, in valueRef, size) == 0;
+        #else
+                return CompareInline(ref constantRef, ref valueRef, size) == 0;
+        #endif
+            }
+        #endif
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsEqualConstant(ReadOnlySpan<byte> constant, byte* ptr)
         {
 #if NET7_0_OR_GREATER
@@ -944,8 +988,9 @@ namespace Sparrow
                 return IsEqualConstantAvx256(ref constantRef, ptr, constant.Length);
 
             return IsEqualConstantVector128(ref constantRef, ptr, constant.Length);
+#else
+            return constant.SequenceEqual(new ReadOnlySpan<byte>(ptr, constant.Length));
 #endif
-            throw new NotSupportedException($"{nameof(IsEqualConstant)} is not supported in frameworks lesser than 7.0");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -969,7 +1014,7 @@ namespace Sparrow
 
             return IsEqualConstantVector128(ref constantRef, ptr, size);
 #else
-            throw new NotSupportedException($"{nameof(IsEqualConstant)} is not supported in frameworks lesser than 7.0");
+            return new ReadOnlySpan<byte>(constant, size).SequenceEqual(new ReadOnlySpan<byte>(ptr, size));
 #endif
         }
 
@@ -997,7 +1042,10 @@ namespace Sparrow
 
             return IsEqualConstantVector128(ref constantRef, ptr, constant.Length);
 #else
-            throw new NotSupportedException($"{nameof(IsEqualConstant)} is not supported in frameworks lesser than 7.0");
+            if (size != constant.Length)
+                return false;
+
+            return constant.SequenceEqual(new ReadOnlySpan<byte>(ptr, size));
 #endif
         }
     }

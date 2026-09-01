@@ -7,6 +7,7 @@ namespace Voron
     {
         Encrypted = 1,
         LinkedJournalsRecord = 16,
-        HasFreePages = 32
+        HasFreePages = 32,
+        JournalHeaderRecord = 64
     }
 }

@@ -531,7 +531,7 @@ public class RavenDB_24327 : StorageTest
             tx.Commit();
         }
         
-        var header = Env.Journal.CurrentFile.GetLastReadTxHeader(txIdToCheck);
+        var header = Env.Journal.CurrentFile.GetLastReadTxHeader(txIdToCheck, Env.HeaderAccessor.JournalId);
         
         Assert.False(header.Flags.HasFlag(TransactionPersistenceModeFlags.HasFreePages));
     }
@@ -584,7 +584,7 @@ public class RavenDB_24327 : StorageTest
             tx.Commit();
         }
         
-        var header = Env.Journal.CurrentFile.GetLastReadTxHeader(txIdToCheck);
+        var header = Env.Journal.CurrentFile.GetLastReadTxHeader(txIdToCheck, Env.HeaderAccessor.JournalId);
         
         Assert.False(header.Flags.HasFlag(TransactionPersistenceModeFlags.HasFreePages));
     }

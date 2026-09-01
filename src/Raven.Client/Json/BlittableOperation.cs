@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using Raven.Client;
 using Raven.Client.Documents.Session;
 using Sparrow;
 using Sparrow.Extensions;
@@ -12,21 +13,6 @@ namespace Raven.Client.Json
 {
     internal static class BlittableOperation
     {
-        private static readonly Lazy<JsonOperationContext> Context = new Lazy<JsonOperationContext>(JsonOperationContext.ShortTermSingleUse);
-
-        private static readonly LazyStringValue LastModified;
-        private static readonly LazyStringValue Collection;
-        private static readonly LazyStringValue ChangeVector;
-        private static readonly LazyStringValue Id;
-
-        static BlittableOperation()
-        {
-            LastModified = Context.Value.GetLazyString(Constants.Documents.Metadata.LastModified);
-            Collection = Context.Value.GetLazyString(Constants.Documents.Metadata.Collection);
-            ChangeVector = Context.Value.GetLazyString(Constants.Documents.Metadata.ChangeVector);
-            Id = Context.Value.GetLazyString(Constants.Documents.Metadata.Id);
-        }
-
         public static bool EntityChanged(BlittableJsonReaderObject newObj, DocumentInfo documentInfo, IDictionary<string, DocumentsChanges[]> changes)
         {
             var docChanges = changes != null ? new List<DocumentsChanges>() : null;
@@ -49,43 +35,35 @@ namespace Raven.Client.Json
             BlittableJsonReaderObject.AssertNoModifications(originalBlittable, id, assertChildren: false);
             BlittableJsonReaderObject.AssertNoModifications(newBlittable, id, assertChildren: false);
 
-            var newBlittableProps = newBlittable.GetPropertyNames();
-            var oldBlittableProps = originalBlittable.GetPropertyNames();
-            var newFields = new HashSet<string>(newBlittableProps);
-            newFields.ExceptWith(oldBlittableProps);
-            var removedFields = new HashSet<string>(oldBlittableProps);
-            removedFields.ExceptWith(newBlittableProps);
-
             using var orderedProperties = newBlittable.GetPropertiesByInsertionOrder();
 
             var newProp = new BlittableJsonReaderObject.PropertyDetails();
             var oldProp = new BlittableJsonReaderObject.PropertyDetails();
 
-            foreach (var field in removedFields)
+            for (int i = 0; i < originalBlittable.Count; i++)
             {
-                if (field.Equals(LastModified) ||
-                    field.Equals(ChangeVector) ||
-                    field.Equals(Id))
+                var oldName = originalBlittable.GetPropertyNameByIndexAsSpan(i);
+                if (newBlittable.GetPropertyIndex(oldName) != -1)
+                    continue;
+
+                if (IsMetadataPropertyToSkip(oldName, includeCollection: false))
                     continue;
                 if (changes == null)
                     return true;
 
-                var oldPropId = originalBlittable.GetPropertyIndex(field);
-                originalBlittable.GetPropertyByIndex(oldPropId, ref oldProp);
-                NewChange(fieldPath, field, null, oldProp.Value, docChanges, DocumentsChanges.ChangeType.RemovedField);
+                originalBlittable.GetPropertyByIndex(i, ref oldProp);
+                NewChange(fieldPath, oldProp.Name, null, oldProp.Value, docChanges, DocumentsChanges.ChangeType.RemovedField);
             }
 
             for (int i = 0; i < orderedProperties.Size; i++)
             {
                 newBlittable.GetPropertyByIndex(orderedProperties.Properties[i], ref newProp);
 
-                if (newProp.Name.Equals(LastModified) ||
-                    newProp.Name.Equals(Collection) ||
-                    newProp.Name.Equals(ChangeVector) ||
-                    newProp.Name.Equals(Id))
+                if (IsMetadataPropertyToSkip(newProp.Name.AsSpan(), includeCollection: true))
                     continue;
 
-                if (newFields.Contains(newProp.Name))
+                var oldPropId = originalBlittable.GetPropertyIndex(newProp.Name);
+                if (oldPropId == -1)
                 {
                     if (changes == null)
                         return true;
@@ -93,7 +71,6 @@ namespace Raven.Client.Json
                     continue;
                 }
 
-                var oldPropId = originalBlittable.GetPropertyIndex(newProp.Name);
                 originalBlittable.GetPropertyByIndex(oldPropId, ref oldProp);
 
                 switch ((newProp.Token & BlittableJsonReaderBase.TypesMask))
@@ -205,6 +182,14 @@ namespace Raven.Client.Json
                 }
             }
             return false;
+        }
+
+        private static bool IsMetadataPropertyToSkip(ReadOnlySpan<byte> name, bool includeCollection)
+        {
+            return Memory.IsEqualConstant(Constants.Documents.Metadata.LastModifiedAsSpan, name) ||
+                   Memory.IsEqualConstant(Constants.Documents.Metadata.ChangeVectorAsSpan, name) ||
+                   Memory.IsEqualConstant(Constants.Documents.Metadata.IdAsSpan, name) ||
+                   (includeCollection && Memory.IsEqualConstant(Constants.Documents.Metadata.CollectionAsSpan, name));
         }
 
         private static string FieldPathCombine(string path1, string path2)

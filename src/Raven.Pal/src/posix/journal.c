@@ -127,6 +127,22 @@ error_clean_With_error:
 }
 
 EXPORT int32_t
+rvn_create_journal_write_context(void** context, int32_t* detailed_error_code)
+{
+    // nothing to do here
+    *context = NULL;
+    return SUCCESS;
+}
+
+EXPORT int32_t
+rvn_free_journal_write_context(void* context, int32_t* detailed_error_code)
+{
+    (void)context;
+    (void)detailed_error_code;
+    return SUCCESS;
+}
+
+EXPORT int32_t
 rvn_close_journal(void *handle, int32_t *detailed_error_code)
 {
     int32_t rc;
@@ -233,6 +249,104 @@ rvn_hard_link_non_durable(const char *src, const char *dst, int32_t *detailed_er
     // Note: we do not sync the directory here, so a hard reset may cause the directory to be "lose"
     // the file. The caller is responsible for handling that, see linked journals handling
     return SUCCESS;
+}
+
+EXPORT int32_t
+rvn_move_file_durable(const char *src, const char *dst, int32_t *detailed_error_code)
+{
+    if (rename(src, dst))
+    {
+        *detailed_error_code = errno;
+        return FAIL_MOVE_FILE;
+    }
+
+    int32_t rc = _sync_directory_for(dst, detailed_error_code);
+    if (rc != SUCCESS)
+        return rc;
+
+    return _sync_directory_for(src, detailed_error_code);
+}
+
+static int32_t
+_open_file_for_zeroing(const char *path, int32_t *detailed_error_code)
+{
+    // we intentionally skip the page cache with O_DIRECT, to avoid polluting it with lot of nonesense.
+    int fd = open(path, O_WRONLY | O_CREAT | O_EXCL | O_DIRECT, S_IWUSR | S_IRUSR);
+    if (fd == -1)
+    {
+        *detailed_error_code = errno;
+        return -1;
+    }
+    if (_finish_open_file_with_odirect(fd) == -1)
+    {
+        *detailed_error_code = errno;
+        close(fd);
+        unlink(path);
+        return -1;
+    }
+    return fd;
+}
+
+EXPORT int32_t
+rvn_create_zeroed_file(const char *path, int64_t size,
+                       rvn_zeroing_pacing pacing, void *pacing_state,
+                       int64_t *zeroed_bytes, int32_t *detailed_error_code)
+{
+    // This will land in the .bss, so these all will be mapped to the same physical page (zero).
+    static char _zeroed_file_buffer[1024 * 1024] __attribute__((aligned(4096)));
+
+    *zeroed_bytes = 0;
+
+    int fd = _open_file_for_zeroing(path, detailed_error_code);
+    if (fd == -1)
+        return FAIL_OPEN_FILE;
+
+    int32_t rc = _allocate_file_space(fd, size, detailed_error_code);
+    if (rc != SUCCESS)
+        goto error;
+
+    int64_t offset = 0;
+    while (offset < size)
+    {
+        for (;;)
+        {
+            int32_t wait_ms = pacing(pacing_state);
+            if (wait_ms == 0)
+                break;
+            if (wait_ms < 0)
+                goto done;
+            usleep((useconds_t)wait_ms * 1000);
+        }
+
+        int64_t len = size - offset < (int64_t)sizeof(_zeroed_file_buffer) ? size - offset : (int64_t)sizeof(_zeroed_file_buffer);
+        rc = _pwrite(fd, (void *)_zeroed_file_buffer, (uint64_t)len, (uint64_t)offset, detailed_error_code);
+        if (rc != SUCCESS)
+            goto error;
+        offset += len;
+    }
+
+done:
+    *zeroed_bytes = offset;
+
+    if (fsync(fd) == -1)
+    {
+        *detailed_error_code = errno;
+        rc = FAIL_SYNC_FILE;
+        goto error;
+    }
+
+    if (close(fd) == -1)
+    {
+        *detailed_error_code = errno;
+        return FAIL_CLOSE;
+    }
+
+    return SUCCESS;
+
+error:
+    close(fd);
+    unlink(path);
+    return rc;
 }
 
 EXPORT int32_t

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
@@ -15,7 +15,7 @@ public class AutoMapReduceIndexResultsAggregator
 {
     protected Action<DynamicJsonValue> ModifyOutputToStore;
 
-    internal AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, AutoMapReduceIndexDefinition indexDefinition, TransactionOperationContext indexContext, IndexingStatsScope stats, ref BlittableJsonReaderObject currentlyProcessedResult, CancellationToken token)
+    internal unsafe AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, AutoMapReduceIndexDefinition indexDefinition, TransactionOperationContext indexContext, IndexingStatsScope stats, ref BlittableJsonReaderObject currentlyProcessedResult, CancellationToken token)
     {
         var aggregatedResultsByReduceKey = new Dictionary<BlittableJsonReaderObject, Dictionary<string, PropertyResult>>(ReduceKeyComparer.Instance);
 
@@ -27,9 +27,16 @@ public class AutoMapReduceIndexResultsAggregator
 
             var aggregatedResult = new Dictionary<string, PropertyResult>();
 
-            foreach (var propertyName in obj.GetPropertyNames())
+            // the fill order of aggregatedResult becomes the property order of the reduce output, so
+            // we keep walking in insertion order - but the value comes along with the name now
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+            using (var propertiesByInsertionOrder = obj.GetPropertiesByInsertionOrder())
             {
-                HandleProperty(indexDefinition, propertyName, obj, aggregatedResult);
+                for (int i = 0; i < propertiesByInsertionOrder.Size; i++)
+                {
+                    obj.GetPropertyByIndex(propertiesByInsertionOrder.Properties[i], ref prop);
+                    HandleProperty(indexDefinition, in prop, obj, aggregatedResult);
+                }
             }
 
             var reduceKey = indexContext.ReadObject(obj, "reduce key");
@@ -75,31 +82,28 @@ public class AutoMapReduceIndexResultsAggregator
         return djv;
     }
 
-    internal virtual void HandleProperty(AutoMapReduceIndexDefinition indexDefinition, string propertyName, BlittableJsonReaderObject json, Dictionary<string, PropertyResult> aggregatedResult)
+    internal virtual void HandleProperty(AutoMapReduceIndexDefinition indexDefinition, in BlittableJsonReaderObject.PropertyDetails prop, BlittableJsonReaderObject json, Dictionary<string, PropertyResult> aggregatedResult)
     {
+        // the property was read out of json, so its value is already in hand - no second lookup
+        string propertyName = prop.Name;
+
         if (indexDefinition.TryGetField(propertyName, out var indexField))
         {
             switch (indexField.Aggregation)
             {
                 case AggregationOperation.None:
-                    if (json.TryGet(propertyName, out object groupByValue) == false)
-                        throw new InvalidOperationException($"Could not read group by value of '{propertyName}' property");
-
-                    aggregatedResult[propertyName] = new PropertyResult { ResultValue = groupByValue };
+                    aggregatedResult[propertyName] = new PropertyResult { ResultValue = prop.Value };
                     break;
                 case AggregationOperation.Count:
                 case AggregationOperation.Sum:
 
-                    if (json.TryGetMember(propertyName, out var value) == false)
-                        throw new InvalidOperationException($"Could not read numeric value of '{propertyName}' property");
-
-                    if (value == null)
+                    if (prop.Value == null)
                     {
                         aggregatedResult[propertyName] = PropertyResult.NullNumber();
                         break;
                     }
 
-                    aggregatedResult[propertyName] = HandleSumAndCount(value);
+                    aggregatedResult[propertyName] = HandleSumAndCount(prop.Value);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException($"Unhandled field type '{indexField.Aggregation}' to aggregate on");

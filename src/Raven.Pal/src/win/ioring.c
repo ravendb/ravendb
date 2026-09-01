@@ -342,6 +342,10 @@ int32_t rvn_write_io_ring(
         *detailed_error_code = submittion.result;
         rc = FAIL_IO_RING_WRITE;
     }
+    else
+    {
+        _mark_dirty_pages(handle, buffers, count);
+    }
 
 exit:
     LeaveCriticalSection(&handle_ptr->global_state->lock);

@@ -1,8 +1,10 @@
-﻿using System;
+using System;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -48,6 +50,122 @@ namespace Raven.Server.Documents.TransactionMerger
         private StorageEnvironment _env;
 
         private readonly ConcurrentQueue<List<MergedTransactionCommand<TOperationContext, TTransaction>>> _opsBuffers = new();
+
+        private sealed class AsyncCommittedTransaction
+        {
+            public TOperationContext Context;
+            public IDisposable ReturnContext;
+            public List<MergedTransactionCommand<TOperationContext, TTransaction>> PendingOps;
+        }
+
+        private sealed class AsyncCommitCompletionPump(AbstractTransactionOperationsMerger<TOperationContext, TTransaction> parent)
+        {
+            private readonly Queue<AsyncCommittedTransaction> _inFlight = new();
+            private ExceptionDispatchInfo _failure;
+
+            public bool HasPendingCompletions => _inFlight.Count > 0;
+
+            private Task _headDurableCommit;
+
+            public bool OldestTransactionIsDurable => _headDurableCommit is { IsCompleted: true };
+
+            private void UpdateHeadDurableCommit()
+            {
+                _headDurableCommit = _inFlight.TryPeek(out var head)
+                    ? head.Context.Transaction.InnerTransaction.LowLevelTransaction.DurableCommit
+                    : null;
+            }
+
+            public void Release(AsyncCommittedTransaction entry)
+            {
+                _inFlight.Enqueue(entry);
+                if (_inFlight.Count == 1)
+                    UpdateHeadDurableCommit();
+
+                if (entry.Context.Transaction.InnerTransaction.LowLevelTransaction.DurableCommit is not { IsCompleted: false })
+                    DrainCompleted(); // can be completed inline, if the durable commit is already done, otherwise we wait for the completion
+            }
+
+            public void DrainCompleted()
+            {
+                while (_inFlight.TryPeek(out var head)) // in commit order, so no tx can be raised before its predecessor is completed
+                {
+                    if (_failure == null &&
+                        head.Context.Transaction.InnerTransaction.LowLevelTransaction.DurableCommit is { IsCompleted: false })
+                        break; // its ack wakes us again
+
+                    Complete(_inFlight.Dequeue());
+                }
+
+                UpdateHeadDurableCommit();
+            }
+
+            public void DrainAll()
+            {
+                while (_inFlight.Count > 0)
+                    Complete(_inFlight.Dequeue());
+
+                _headDurableCommit = null;
+            }
+
+            private void Complete(AsyncCommittedTransaction entry)
+            {
+                // once one of them failed, all the following ones failed, a journal write failure will throw on EndAsyncCommit
+                var error = _failure?.SourceException;
+
+                try
+                {
+                    parent._recording.State?.TryRecord(entry.Context, TxInstruction.EndAsyncCommit);
+                    entry.Context.Transaction.EndAsyncCommit();
+
+                    if (parent._log.IsDebugEnabled)
+                        parent._log.Debug($"EndAsyncCommit on {entry.Context.Transaction.InnerTransaction.LowLevelTransaction.Id}");
+
+                    parent._recording.State?.TryRecord(entry.Context, TxInstruction.DisposePrevTx, entry.Context.Disposed == false);
+                }
+                catch (Exception e)
+                {
+                    error ??= e;
+                    _failure ??= ExceptionDispatchInfo.Capture(e);
+                }
+
+                try
+                {
+                    entry.Context.Transaction.Dispose();
+                    entry.ReturnContext?.Dispose();
+                }
+                catch (Exception e)
+                {
+                    error ??= e;
+                    _failure ??= ExceptionDispatchInfo.Capture(e);
+                }
+
+                if (error != null)
+                {
+                    foreach (var op in entry.PendingOps)
+                    {
+                        op.Exception = error;
+                    }
+                }
+
+                try
+                {
+                    parent.NotifyOnThreadPool(entry.PendingOps);
+                }
+                catch (Exception e)
+                {
+                    _failure ??= ExceptionDispatchInfo.Capture(e);
+                }
+            }
+
+            public void ThrowOnFailure()
+            {
+                _failure?.Throw();
+            }
+        }
+
+        private readonly AsyncCommitCompletionPump _completionPump;
+
         private readonly ManualResetEventSlim _waitHandle = new(false);
         private ExceptionDispatchInfo _edi;
         private readonly RavenLogger _log;
@@ -55,6 +173,14 @@ namespace Raven.Server.Documents.TransactionMerger
 
         private readonly double _maxTimeToWaitForPreviousTxInMs;
         private readonly long _maxTxSizeInBytes;
+
+        private double GetBatchingWindowDurationInMs()
+        {
+            if (_is32Bits)
+                return _maxTimeToWaitForPreviousTxInMs;
+
+            return _env.WriteFlow.GetBatchingWindowDurationInMs(_maxTimeToWaitForPreviousTxInMs);
+        }
         private readonly double _maxTimeToWaitForPreviousTxBeforeRejectingInMs;
 
         private bool _isEncrypted;
@@ -80,6 +206,7 @@ namespace Raven.Server.Documents.TransactionMerger
             _maxTimeToWaitForPreviousTxBeforeRejectingInMs = configuration.TransactionMergerConfiguration.MaxTimeToWaitForPreviousTxBeforeRejecting.AsTimeSpan.TotalMilliseconds;
             _timeToCheckHighDirtyMemory = configuration.Memory.TemporaryDirtyMemoryChecksPeriod;
             _lastHighDirtyMemCheck = time.GetUtcNow();
+            _completionPump = new AsyncCommitCompletionPump(this);
         }
         
         public void Initialize([NotNull] JsonContextPoolBase<TOperationContext> contextPool, bool isEncrypted, bool is32Bits)
@@ -88,7 +215,20 @@ namespace Raven.Server.Documents.TransactionMerger
             _isEncrypted = isEncrypted;
             _is32Bits = is32Bits;
             _env = GetStorageEnvironment(contextPool);
+            _env.DurableCommitAcknowledged = OnDurableCommitAcknowledged; // raise the event when the journal write is durable, so we can drain the async commit queue
             _initialized = true;
+        }
+
+        private void OnDurableCommitAcknowledged()
+        {
+            try
+            {
+                _waitHandle.Set();
+            }
+            catch (ObjectDisposedException)
+            {
+                // an ack racing the merger's dispose - nothing is waiting anymore
+            }
         }
 
         protected abstract StorageEnvironment GetStorageEnvironment(JsonContextPoolBase<TOperationContext> contextPool);
@@ -493,6 +633,9 @@ namespace Raven.Server.Documents.TransactionMerger
         {
             TOperationContext current = null;
             IDisposable currentReturnContext = null;
+
+            Debug.Assert(_completionPump.HasPendingCompletions == false, "every async committed transaction of the previous chain must have been completed");
+
             try
             {
                 while (true)
@@ -509,65 +652,83 @@ namespace Raven.Server.Documents.TransactionMerger
                     }
                     catch (Exception e)
                     {
-                        foreach (var op in previousPendingOps)
+                        using (currentReturnContext)
                         {
-                            op.Exception = e;
-                        }
-                        NotifyOnThreadPool(previousPendingOps);
+                            foreach (var op in previousPendingOps)
+                            {
+                                op.Exception = e;
+                            }
 
-                        if (e is OutOfMemoryException)
-                        {
+                            // complete whatever the chain already has in flight
+                            _completionPump.DrainAll();
+
                             try
                             {
-                                //already throwing, attempt to complete previous tx
+                                // already throwing, complete the previous tx, whose own async commit may have started before the failure
+                                // leaving it open would keep the write lock held forever
                                 CompletePreviousTransaction(previous, returnPreviousContext, ref previousPendingOps, throwOnError: false);
                             }
                             finally
                             {
                                 current.Transaction?.Dispose();
-                                currentReturnContext.Dispose();
                             }
                         }
 
                         return;
                     }
 
+                    var previousInFlight = previous.Transaction.InnerTransaction.LowLevelTransaction;
+                    Task batchingWindow = previousInFlight.DurableCommit ?? previousInFlight.AsyncCommit;
+
+                    _completionPump.Release(new AsyncCommittedTransaction
+                    {
+                        Context = previous,
+                        ReturnContext = returnPreviousContext, // the pump owns returning the context now
+                        PendingOps = previousPendingOps
+                    });
+                    returnPreviousContext = null;
+
                     var currentPendingOps = GetBufferForPendingOps();
                     PendingOperations result;
-                    bool calledCompletePreviousTx = false;
+                    bool startedCompletingInFlight = false;
                     try
                     {
                         var transactionMeter = TransactionPerformanceMetrics.MeterPerformanceRate();
                         try
                         {
+                            // accumulate operations into the current transaction while the previous one is in flight
                             result = ExecutePendingOperationsInTransaction(
                                 currentPendingOps, current,
-                                previous.Transaction.InnerTransaction.LowLevelTransaction.AsyncCommit, ref transactionMeter);
+                                batchingWindow, ref transactionMeter);
                             UpdateGlobalReplicationInfoBeforeCommit(current);
                         }
                         finally
                         {
                             transactionMeter.Dispose();
                         }
-                        calledCompletePreviousTx = true;
-                        CompletePreviousTransaction(previous, previous.Transaction, ref previousPendingOps, throwOnError: true);
+                        startedCompletingInFlight = true;
+                        _completionPump.DrainCompleted();
+                        _completionPump.ThrowOnFailure();
                     }
                     catch (Exception e)
                     {
                         using (current.Transaction)
                         using (currentReturnContext)
                         {
-                            if (calledCompletePreviousTx == false)
+                            if (startedCompletingInFlight == false)
                             {
-                                CompletePreviousTransaction(
-                                    previous,
-                                    previous.Transaction,
-                                    ref previousPendingOps,
-                                    // if this previous threw, it won't throw again
-                                    throwOnError: false);
+                                // the current transaction failed, but the previous ones should be completed
+                                _completionPump.DrainAll();
                             }
                             else
                             {
+                                // a previous transaction failed, therefore _we_ failed, and need to report this to our callers
+                                foreach (var op in currentPendingOps)
+                                {
+                                    op.Exception = e;
+                                }
+                                NotifyOnThreadPool(currentPendingOps);
+
                                 throw;
                             }
                         }
@@ -603,6 +764,9 @@ namespace Raven.Server.Documents.TransactionMerger
                         case PendingOperations.CompletedAll:
                             try
                             {
+                                _completionPump.DrainAll(); // everything in flight must be completed first
+                                _completionPump.ThrowOnFailure();
+
                                 _recording.State?.TryRecord(current, TxInstruction.Commit);
                                 previous.Transaction.Commit();
                             }
@@ -628,6 +792,8 @@ namespace Raven.Server.Documents.TransactionMerger
             }
             catch
             {
+                _completionPump.DrainAll();
+
                 if (current?.Transaction != null)
                 {
                     _recording.State?.TryRecord(current, TxInstruction.DisposeTx, current.Transaction.Disposed == false);
@@ -685,6 +851,51 @@ namespace Raven.Server.Documents.TransactionMerger
 
         private bool _alreadyListeningToPreviousOperationEnd;
 
+        private struct BatchShaper(AbstractTransactionOperationsMerger<TOperationContext, TTransaction> merger)
+        {
+            public readonly Stopwatch Timer = Stopwatch.StartNew();
+
+            public WriteFlowPolicy.BatchCloseReason CloseReason = WriteFlowPolicy.BatchCloseReason.QueueEmpty;
+
+            // called when the _previous_ tx is done, and we *can* close, we check whether we _should_ 
+            // if we keep the tx open longer, we get better batch and better throughput (min latency cost)
+            public bool ShouldCloseBatch(int batchOperations, long modifiedSize)
+            {
+                var windowMs = merger.GetBatchingWindowDurationInMs();
+
+                if (merger._operations.IsEmpty)
+                {
+                    // we have no more operations to process, we can close the batch and return results to the callers
+                    CloseReason = WriteFlowPolicy.BatchCloseReason.QueueEmpty;
+                    return true;
+                }
+
+                if (Timer.ElapsedMilliseconds > windowMs)
+                {
+                    // a batch this small closing as soon as it may is arrival-capped, treat it as such
+                    CloseReason = batchOperations < WriteFlowPolicy.TinyBatchOperations
+                        ? WriteFlowPolicy.BatchCloseReason.QueueEmpty
+                        : WriteFlowPolicy.BatchCloseReason.MaxBatchTimeReached;
+                    return true; // too much time
+                }
+
+                if (modifiedSize > merger._maxTxSizeInBytes)
+                {
+                    CloseReason = WriteFlowPolicy.BatchCloseReason.SizeReached;
+                    return true; // transaction is too big, let's clean it
+                }
+
+                // even though we can close the tx, we choose to keep it a bit longer:
+                // keep processing operations until the queue clears or time / size limits hit
+                return false;
+            }
+
+            public void ClosedBySizeRejection() => CloseReason = WriteFlowPolicy.BatchCloseReason.SizeReached;
+
+            public readonly void Publish(int operations, long modifiedBytes) =>
+                merger._env.WriteFlow.RecordBatchClosed(CloseReason, operations, modifiedBytes);
+        }
+
         private PendingOperations ExecutePendingOperationsInTransaction(
             List<MergedTransactionCommand<TOperationContext, TTransaction>> executedOps,
             TOperationContext context,
@@ -692,7 +903,8 @@ namespace Raven.Server.Documents.TransactionMerger
         {
             _alreadyListeningToPreviousOperationEnd = false;
             context.TransactionMarkerOffset = 1;  // ensure that we are consistent here and don't use old values
-            var sp = Stopwatch.StartNew();
+            var shaper = new BatchShaper(this);
+            long modifiedSize = 0;
 
             do
             {
@@ -733,25 +945,15 @@ namespace Raven.Server.Documents.TransactionMerger
                 if (op.UpdateAccessTime)
                     UpdateLastAccessTime(_time.GetUtcNow());
 
-                var modifiedSize = llt.NumberOfModifiedPages * Constants.Storage.PageSize;
+                modifiedSize = llt.NumberOfModifiedPages * Constants.Storage.PageSize + llt.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
 
-                modifiedSize += llt.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
 
                 var canCloseCurrentTx = previousOperation == null || previousOperation.IsCompleted;
                 if (canCloseCurrentTx || _is32Bits)
                 {
-                    if (_operations.IsEmpty)
-                        break; // nothing remaining to do, let's us close this work
+                    if (shaper.ShouldCloseBatch(executedOps.Count, modifiedSize))
+                        break;
 
-                    if (sp.ElapsedMilliseconds > _maxTimeToWaitForPreviousTxInMs)
-                        break; // too much time
-
-                    if (modifiedSize > _maxTxSizeInBytes)
-                        break; // transaction is too big, let's clean it
-
-                    // even though we can close the tx, we choose to keep it a bit longer
-                    // we want to keep processing operations until we clear the queue, time / size
-                    // limits are reached
                     continue;
                 }
 
@@ -760,15 +962,18 @@ namespace Raven.Server.Documents.TransactionMerger
                 if (modifiedSize < _maxTxSizeInBytes)
                     continue; // we can still process requests at this time, so let's do that...
 
-                UnlikelyRejectOperations(previousOperation, sp, llt, modifiedSize);
+                UnlikelyRejectOperations(previousOperation, shaper.Timer, llt, modifiedSize);
+                shaper.ClosedBySizeRejection();
                 break;
             } while (true);
+
+            shaper.Publish(executedOps.Count, modifiedSize);
 
             var status = GetPendingOperationsStatus(context, executedOps.Count is 0);
             if (_log.IsDebugEnabled)
             {
                 var opType = previousOperation == null ? string.Empty : "(async) ";
-                _log.Debug($"Merged {executedOps.Count:#,#;;0} operations in {sp.Elapsed} {opType}with {_operations.Count:#,#;;0} operations remaining. Status: {status}");
+                _log.Debug($"Merged {executedOps.Count:#,#;;0} operations in {shaper.Timer.Elapsed} {opType}with {_operations.Count:#,#;;0} operations remaining. Status: {status}");
             }
             return status;
         }
@@ -830,6 +1035,9 @@ namespace Raven.Server.Documents.TransactionMerger
 
         private bool TryGetNextOperation(Task previousOperation, out MergedTransactionCommand<TOperationContext, TTransaction> op, ref PerformanceMetrics.DurationMeasurement meter)
         {
+            if (_completionPump.OldestTransactionIsDurable)
+                _completionPump.DrainCompleted();
+
             if (_operations.TryDequeue(out op))
                 return true;
 
@@ -857,6 +1065,9 @@ namespace Raven.Server.Documents.TransactionMerger
                     meter.MarkInternalWindowStart();
                     _waitHandle.Wait(_shutdown);
                     _waitHandle.Reset();
+
+                    _completionPump.DrainCompleted(); // complete any completed txs, and notify their waiters
+
                     if (previousOperation.IsCompleted)
                     {
                         op = null;
@@ -898,7 +1109,48 @@ namespace Raven.Server.Documents.TransactionMerger
             if (commands == null)
                 return;
 
-            TaskExecutor.Execute(DoCommandsNotification, commands);
+            var n = commands.Count;
+            var cores = Environment.ProcessorCount;
+            var shardSize = Math.Min(2 * cores, (n + cores - 1) / cores);
+            if (n <= shardSize)
+            {
+                TaskExecutor.Execute(DoCommandsNotification, commands);
+                return;
+            }
+
+            var sharded = new ShardedNotification(this, commands, n, shardSize);
+            var workers = (n + shardSize - 1) / shardSize;
+
+            TaskExecutor.Execute(static s => ((ShardedNotification)s).Run(), sharded);
+            for (var i = 1; i < workers; i++)
+                ThreadPool.UnsafeQueueUserWorkItem(static s => s.Run(), sharded, preferLocal: false);
+        }
+
+        private sealed class ShardedNotification(AbstractTransactionOperationsMerger<TOperationContext, TTransaction> parent, List<MergedTransactionCommand<TOperationContext, TTransaction>> commands, int total, int shardSize)
+        {
+            private int _next;
+            private int _completed;
+
+            public void Run()
+            {
+                while (true)
+                {
+                    var start = Interlocked.Add(ref _next, shardSize) - shardSize;
+                    if (start >= total)
+                        return;
+
+                    var end = Math.Min(start + shardSize, total);
+                    for (var i = start; i < end; i++)
+                        DoCommandNotification(commands[i]);
+
+                    if (Interlocked.Add(ref _completed, end - start) == total)
+                    {
+                        commands.Clear();
+                        parent._opsBuffers.Enqueue(commands);
+                        return;
+                    }
+                }
+            }
         }
 
         private void RunEachOperationIndependently(List<MergedTransactionCommand<TOperationContext, TTransaction>> pendingOps)
@@ -963,6 +1215,15 @@ namespace Raven.Server.Documents.TransactionMerger
             _waitHandle.Set();
             _txLongRunningOperation?.Join(int.MaxValue);
 
+            // the merger thread released everything before exiting; finish ending those transactions
+            // before the environment they belong to goes away
+            _completionPump.DrainAll();
+
+            // late acks (sync commits during the environment's own teardown) must not touch the
+            // wait handle once it is disposed
+            if (_env != null)
+                _env.DurableCommitAcknowledged = null;
+
             _waitHandle.Dispose();
             _recording.State?.Dispose();
             _recording.Stream?.Dispose();
@@ -986,7 +1247,7 @@ namespace Raven.Server.Documents.TransactionMerger
 
             while (_operations.TryDequeue(out MergedTransactionCommand<TOperationContext, TTransaction> result))
             {
-                result.TaskCompletionSource.TrySetCanceled();
+                TaskExecutor.Execute(static s => ((MergedTransactionCommand<TOperationContext, TTransaction>)s).TaskCompletionSource.TrySetCanceled(), result);
             }
         }
 

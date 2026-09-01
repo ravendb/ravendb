@@ -191,24 +191,12 @@ namespace Raven.Server.Documents
 
         private static void InitializeOptions(StorageEnvironmentOptions options, RavenConfiguration configuration, DocumentDatabase documentDatabase, byte[] key)
         {
-            options.ForceUsing32BitsPager = configuration.Storage.ForceUsing32BitsPager;
-            options.EnablePrefetching = documentDatabase.Configuration.Storage.EnablePrefetching;
-            options.DiscardVirtualMemory = documentDatabase.Configuration.Storage.DiscardVirtualMemory;
-            options.UseSequentialReadAheadHintForJournalRecovery = documentDatabase.Configuration.Storage.UseSequentialReadAheadHintForJournalRecovery;
             options.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;
             options.OnRecoverableFailure += documentDatabase.HandleRecoverableFailure;
             options.OnRecoveryError += documentDatabase.HandleOnDatabaseRecoveryError;
             options.OnIntegrityErrorOfAlreadySyncedData += documentDatabase.HandleOnDatabaseIntegrityErrorOfAlreadySyncedData;
-            options.CompressTxAboveSizeInBytes = configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
-            options.TimeToSyncAfterFlushInSec = (int)configuration.Storage.TimeToSyncAfterFlush.AsTimeSpan.TotalSeconds;
-            options.Encryption.MasterKey = key?.ToArray(); // clone 
-            options.DoNotConsiderMemoryLockFailureAsCatastrophicError = documentDatabase.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
-            if (configuration.Storage.MaxScratchBufferSize.HasValue)
-                options.MaxScratchBufferSize = configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
-            options.PrefetchSegmentSize = configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
-            options.PrefetchResetThreshold = configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
-            options.SyncJournalsCountThreshold = documentDatabase.Configuration.Storage.SyncJournalsCountThreshold;
-            options.SkipChecksumValidationOnDatabaseLoading = documentDatabase.Configuration.Storage.SkipChecksumValidationOnDatabaseLoading;
+            options.Encryption.MasterKey = key?.ToArray(); // clone
+            VoronOptionsFromConfiguration.Apply(options, configuration);
         }
 
         private static void SwitchDatabaseDirectories(string basePath, string backupDirectory, string compactDirectory)

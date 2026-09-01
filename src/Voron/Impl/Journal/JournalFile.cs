@@ -3,7 +3,6 @@ using System;
 using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.ExceptionServices;
 using Sparrow.Server.Platform;
 using Sparrow.Threading;
 using Constants = Voron.Global.Constants;
@@ -20,6 +19,15 @@ namespace Voron.Impl.Journal
 
         public FrozenSet<Guid> RecoveredJournalIds = recoveredJournalIds;
 
+        // JournalId XORed with this, invalidates entries left over from a  recycled file.
+        public Guid Incarnation;
+
+        // 1 for a newly created file - the first write goes past the journal header record at position 0
+        public long InitialWritePosIn4Kb;
+
+        // the half-fill pool-preparation trigger fires once per file; merger thread only
+        public bool PrewarmChecked;
+
         public bool IsHardLinked { get; init; }
 
         public override string ToString()
@@ -27,7 +35,7 @@ namespace Voron.Impl.Journal
             return $"Number: {Number}";
         }
 
-        internal long GetWritePosIn4KbPosition(EnvironmentStateRecord record) => record.Journal.Number == Number ? record.Journal.Last4KWritePosition : 0;
+        internal long GetWritePosIn4KbPosition(EnvironmentStateRecord record) => record.Journal.Number == Number ? record.Journal.Last4KWritePosition : InitialWritePosIn4Kb;
 
         public long Number { get; } = journalNumber;
 
@@ -80,40 +88,36 @@ namespace Voron.Impl.Journal
             return (first, last, count);
         }
 
-        public TransactionHeader GetLastReadTxHeader(long maxTransactionId)
+
+        public TransactionHeader GetLastReadTxHeader(long maxTransactionId, Guid journalId)
         {
-            int low = 0;
-            int high = _transactionHeaders.Count - 1;
+            long lastSeenTxId = long.MaxValue;
 
-            while (low <= high)
+            // we have to scan here, since we get transactions from multiple environments
+            for (int i = _transactionHeaders.Count - 1; i >= 0; i--)
             {
-                int mid = (low + high) >> 1;
-                long midValTxId = _transactionHeaders[mid].TransactionId;
+                var header = _transactionHeaders[i];
 
-                if (midValTxId < maxTransactionId)
-                    low = mid + 1;
-                else if (midValTxId > maxTransactionId)
-                    high = mid - 1;
-                else // found the max tx id
-                {
-                    return _transactionHeaders[mid];
-                }
+                // an empty journal id is a pre-8.0 transaction, from before journals could be shared, so it
+                // can only belong to the environment that owns this file
+                if (header.JournalId != journalId && header.JournalId != Guid.Empty)
+                    continue;
+
+                Debug.Assert(header.TransactionId < lastSeenTxId,
+                    $"Transactions of a single journal id are appended in order, but {header.TransactionId} came before {lastSeenTxId}");
+                lastSeenTxId = header.TransactionId;
+
+                if (header.TransactionId <= maxTransactionId)
+                    return header;
             }
-            if (low == 0)
-            {
-                return new TransactionHeader{ TransactionId = -1}; // not found
-            }
-            if (high != _transactionHeaders.Count - 1)
-            {
-                throw new InvalidOperationException("Found a gap in the transaction headers held by this journal file in memory, shouldn't be possible");
-            }
-            return _transactionHeaders[^1];
+
+            return new TransactionHeader { TransactionId = -1 };
         }
 
         /// <summary>
         /// Write a buffer of transactions (from lazy, usually) to the file
         /// </summary>
-        public long Write(long posBy4Kb, Span<Pal.journal_entry> entries)
+        public long Write(long posBy4Kb, Span<Pal.journal_entry> entries, SafeJournalWriteContext context)
         {
             Debug.Assert(DoneWriting is null || DoneWriting.IsRaised() == false, $"Journal {Number} was written after DoneWriting was raised.");
 
@@ -125,31 +129,9 @@ namespace Voron.Impl.Journal
                 Debug.Assert(readTxHeader->HeaderMarker == Constants.TransactionHeaderMarker);
             }
 
-            JournalWriter.Write(posBy4Kb, entries, totalNumberOf4Kbs);
+            JournalWriter.Write(posBy4Kb, entries, totalNumberOf4Kbs, context);
             
             return totalNumberOf4Kbs;
-        }
-
-        /// <summary>
-        /// write transaction's raw page data into journal
-        /// </summary>
-        public long Write(LowLevelTransaction tx, Span<Pal.journal_entry> pages)
-        {
-            var cur4KbPos = tx.CurrentStateRecord.Journal.Number == Number ? tx.CurrentStateRecord.Journal.Last4KWritePosition : 0;
-
-            Debug.Assert(pages.IsEmpty is false && pages[0].NumberOf4Kbs > 0, "pages.IsEmpty is false && pages[0].NumberOf4Kbs > 0");
-
-            try
-            {
-                long totalSizeIn4Kbs = Write(cur4KbPos, pages);
-                LastTransactionId = tx.Id;
-                return cur4KbPos + totalSizeIn4Kbs;
-            }
-            catch (Exception e)
-            {
-                env.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
-                throw;
-            }
         }
 
         public void InitFrom(StorageEnvironment storageEnvironment, JournalReader journalReader, List<TransactionHeader> transactionHeaders)

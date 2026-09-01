@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Buffers;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -10,7 +10,7 @@ namespace Sparrow.Server.Platform
 {
     public static unsafe class Pal
     {
-        public const int PAL_VER = 70889; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
+        public const int PAL_VER = 70899; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
         static Pal()
         {
@@ -105,6 +105,18 @@ namespace Sparrow.Server.Platform
             DoNotMap = 1 << 9,
         }
 
+        [StructLayout(LayoutKind.Sequential)]
+        public struct WritebackStats
+        {
+            public long BytesWritten;
+            public long RangesWritten;
+            public long SetBitsRemaining;
+            public long TotalWaitTicks;
+            public long MaxRangeWaitTicks;
+            public long BytesSkipped;
+            public long PagesDeferredHot; 
+        }
+
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.ErrnoSpecialCodes rvn_get_error_meaning(Int32 error);
 
@@ -159,6 +171,25 @@ namespace Sparrow.Server.Platform
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_sync_pager(
             void* handle, out Int32 errorCode);
+
+        
+        // This is advisory in general, for performance. but any failure MUST be treated as a sync failure (see fsync-gate)
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_pager_writeback_dirty(
+            void* handle,
+            Int32 pipelineDepth,
+            Int32 blockSizeBytes,
+            Int32 minWriteSizeBytes,
+            out WritebackStats stats,
+            out Int32 errorCode);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_pager_reset_dirty_tracking(
+            void* handle, out Int64 resetPages, out Int32 errorCode);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_pager_get_device_id(
+            void* handle, out UInt64 deviceId, out Int32 errorCode);
 
         public static PalFlags.FailCodes rvn_init_pager(
             string filename,
@@ -357,6 +388,29 @@ namespace Sparrow.Server.Platform
             return rvn_hard_link_non_durable(convertSrc.Pointer, convertDst.Pointer, out errorCode);
         }
 
+        public static PalFlags.FailCodes rvn_move_file_durable(string src, string dst, out Int32 errorCode)
+        {
+            using var convertSrc = new Converter(src);
+            using var convertDst = new Converter(dst);
+            return rvn_move_file_durable(convertSrc.Pointer, convertDst.Pointer, out errorCode);
+        }
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        private static extern PalFlags.FailCodes rvn_move_file_durable(byte* src, byte* dst, out Int32 errorCode);
+
+        public static PalFlags.FailCodes rvn_create_zeroed_file(string path, long size,
+            delegate* unmanaged<void*, int> pacing, void* pacingState,
+            out Int64 zeroedBytes, out Int32 errorCode)
+        {
+            using var convertPath = new Converter(path);
+            return rvn_create_zeroed_file(convertPath.Pointer, size, pacing, pacingState, out zeroedBytes, out errorCode);
+        }
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        private static extern PalFlags.FailCodes rvn_create_zeroed_file(byte* path, Int64 size,
+            delegate* unmanaged<void*, int> pacing, void* pacingState,
+            out Int64 zeroedBytes, out Int32 errorCode);
+
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         private static extern PalFlags.FailCodes rvn_hard_link_non_durable(byte* src, byte* dst, out Int32 errorCode);
@@ -369,8 +423,21 @@ namespace Sparrow.Server.Platform
         }
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_create_journal_write_context(
+            out SafeJournalWriteContext context,
+            out Int32 errorCode
+        );
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_free_journal_write_context(
+            IntPtr context,
+            out Int32 errorCode
+        );
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_write_journal(
             SafeJournalHandle handle,
+            SafeJournalWriteContext context,
             journal_entry* entries,
             Int64 countOfEntries,
             Int64 offset,

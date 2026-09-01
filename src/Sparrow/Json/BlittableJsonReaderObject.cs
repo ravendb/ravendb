@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -904,6 +904,121 @@ namespace Sparrow.Json
             return comparer.Compare(propertyNameRelativePosition + propertyNameLengthDataLength, size);
         }
 
+        // --- allocation-free property access, used for structural document comparison ---
+
+        private ReadOnlySpan<byte> GetPropertyNameAsSpan(int propertyId)
+        {
+            var propertyNameOffsetPtr = _propNames + 1 + propertyId * _propNamesDataOffsetSize;
+            var propertyNameOffset = ReadNumber(propertyNameOffsetPtr, _propNamesDataOffsetSize);
+            var propertyNameRelativePosition = _propNames - propertyNameOffset;
+            var size = VariableSizeEncoding.Read<int>(propertyNameRelativePosition, out var lengthOfLength);
+            return new ReadOnlySpan<byte>(propertyNameRelativePosition + lengthOfLength, size);
+        }
+
+        internal ReadOnlySpan<byte> GetPropertyNameByIndexAsSpan(int index)
+        {
+            AssertContextNotDisposed();
+            var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
+            GetPropertyTypeAndPosition(index, metadataSize, out _, out _, out int propertyId);
+            return GetPropertyNameAsSpan(propertyId);
+        }
+
+        internal int GetPropertyIndex(ReadOnlySpan<byte> name)
+        {
+            AssertContextNotDisposed();
+            if (_propCount == 0)
+                return -1;
+
+            int min = 0, max = _propCount - 1;
+            long metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
+            byte* metadataPtr = _metadataPtr;
+
+            int mid = (min + max) / 2;
+            do
+            {
+                var propertyIntPtr = metadataPtr + mid * metadataSize;
+                var propertyId = ReadNumber(propertyIntPtr + _currentOffsetSize, _currentPropertyIdSize);
+
+                // same ordering as LazyStringValue.Compare: memcmp on the common prefix, then by length
+                var cmpResult = name.SequenceCompareTo(GetPropertyNameAsSpan(propertyId));
+                if (cmpResult == 0)
+                    return mid;
+                if (cmpResult > 0)
+                    min = mid + 1;
+                else
+                    max = mid - 1;
+
+                mid = (min + max) / 2;
+            } while (min <= max);
+
+            return -1;
+        }
+
+        // materializes just the value - not the property name
+        internal object GetValueByIndex(int index)
+        {
+            AssertContextNotDisposed();
+            var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
+            GetPropertyTypeAndPosition(index, metadataSize, out var token, out var position, out _);
+            return GetObject(token, (int)(_objStart - _mem - position), out _);
+        }
+
+        // Compares two property values without allocating when the token pair allows it. Returns
+        // false when the caller must fall back to materialized comparison (nested objects and
+        // arrays, compressed strings, or a string/compressed-string mix).
+        internal static bool TryCompareValuesByIndex(BlittableJsonReaderObject a, int aIndex, BlittableJsonReaderObject b, int bIndex, out bool equal)
+        {
+            equal = false;
+
+            var aMetadataSize = a._currentOffsetSize + a._currentPropertyIdSize + sizeof(byte);
+            var bMetadataSize = b._currentOffsetSize + b._currentPropertyIdSize + sizeof(byte);
+            a.GetPropertyTypeAndPosition(aIndex, aMetadataSize, out var aToken, out var aPosition, out _);
+            b.GetPropertyTypeAndPosition(bIndex, bMetadataSize, out var bToken, out var bPosition, out _);
+
+            var aType = aToken & TypesMask;
+            var bType = bToken & TypesMask;
+            var aPos = (int)(a._objStart - a._mem - aPosition);
+            var bPos = (int)(b._objStart - b._mem - bPosition);
+
+            if (aType != bType)
+            {
+                // these pairs can still be equal in content - let the materialized path decide
+                if (aType is BlittableJsonToken.StartObject or BlittableJsonToken.EmbeddedBlittable &&
+                    bType is BlittableJsonToken.StartObject or BlittableJsonToken.EmbeddedBlittable)
+                    return false;
+                if (aType is BlittableJsonToken.String or BlittableJsonToken.CompressedString &&
+                    bType is BlittableJsonToken.String or BlittableJsonToken.CompressedString)
+                    return false;
+
+                return true; // different types are not equal, same as the boxed Equals behavior
+            }
+
+            switch (aType)
+            {
+                case BlittableJsonToken.Integer:
+                    equal = a.ReadVariableSizeLong(aPos) == b.ReadVariableSizeLong(bPos);
+                    return true;
+
+                case BlittableJsonToken.String:
+                // LazyNumberValue equality on values that were never parsed is a raw comparison
+                // of the underlying number string, so the raw bytes are the same answer
+                case BlittableJsonToken.LazyNumber:
+                    equal = a.ReadStringAsSpan(aPos).SequenceEqual(b.ReadStringAsSpan(bPos));
+                    return true;
+
+                case BlittableJsonToken.Boolean:
+                    equal = *(a._mem + aPos) == *(b._mem + bPos);
+                    return true;
+
+                case BlittableJsonToken.Null:
+                    equal = true;
+                    return true;
+
+                default:
+                    return false; // objects, arrays, compressed strings, blobs - materialize
+            }
+        }
+
         public struct InsertionOrderProperties : IDisposable
         {
             internal int* Properties;
@@ -912,6 +1027,15 @@ namespace Sparrow.Json
 
             private readonly JsonOperationContext _context;
             private AllocatedMemoryData _allocation;
+
+            public ReadOnlySpan<int> PropertiesSpan => new(Properties, Size);
+
+            public int GetPropertyIdByInsertionOrder(int index)
+            {
+                Debug.Assert(index >= 0 && index < Size, "index is out of range");
+
+                return Properties[index];
+            }
 
             public InsertionOrderProperties(JsonOperationContext context, int size)
             {

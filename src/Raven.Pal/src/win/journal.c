@@ -14,51 +14,38 @@ rvn_sync_directories(void* handle, char** folders, int32_t count, int32_t *detai
     return SUCCESS;
 }
 
-int32_t
-rvn_write_journal_gather(void* handle, struct journal_entry* buffer, int64_t count_of_entries, int64_t offset, int32_t* detailed_error_code);
-int32_t
-rvn_write_journal_file(void* handle, struct journal_entry* buffer, int64_t count_of_entries, int64_t offset, int32_t* detailed_error_code);
-
 EXPORT int32_t
 rvn_open_journal_for_writes(const char* file_name, int32_t transaction_mode, int64_t initial_file_size, int32_t durability_support, void** handle, int64_t* actual_size, int32_t* detailed_error_code)
 {
     assert(initial_file_size > 0);
 
-    struct journal_handle* jrnl_handle = calloc(1, sizeof(struct journal_handle));
-    if(jrnl_handle == NULL)
-    {
-        *detailed_error_code = GetLastError();
-        return FAIL_CALLOC;
-    }
     DWORD access_flags;
     DWORD share_flags = FILE_SHARE_READ;
     switch (transaction_mode)
     {
         case JOURNAL_MODE_DANGER :
             access_flags = 0;
-            jrnl_handle->writer = rvn_write_journal_file;
             break;
         case JOURNAL_MODE_PURE_MEMORY:
             access_flags = FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE;
             share_flags |= FILE_SHARE_WRITE | FILE_SHARE_DELETE;
-            jrnl_handle->writer = rvn_write_journal_file;
             break;
         default:
             if (durability_support == DURABILITY_NOT_SUPPORTED)
             {
                 access_flags = 0;
-                jrnl_handle->writer = rvn_write_journal_file;
             }
             else
             {
+                /* FILE_FLAG_OVERLAPPED is required so that concurrent journal writes are not serialized on the
+                 * file object - each one brings its own completion event through the write context */
                 access_flags = FILE_FLAG_NO_BUFFERING | FILE_FLAG_WRITE_THROUGH | FILE_FLAG_OVERLAPPED;
-                jrnl_handle->writer = rvn_write_journal_gather;
             }
             break;
     }
 
     int32_t rc;
-    jrnl_handle->hFile = CreateFileW(
+    HANDLE hFile = CreateFileW(
         (LPCWSTR)file_name,
         GENERIC_WRITE | GENERIC_READ,
         share_flags,
@@ -67,20 +54,14 @@ rvn_open_journal_for_writes(const char* file_name, int32_t transaction_mode, int
         access_flags,
         NULL);
     
-    if (jrnl_handle->hFile  == INVALID_HANDLE_VALUE)
+    if (hFile == INVALID_HANDLE_VALUE)
     {
-        rc = FAIL_OPEN_FILE;
-        goto error_cleanup;
+        *detailed_error_code = GetLastError();
+        return FAIL_OPEN_FILE;
     }
 
-    jrnl_handle->hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-    if(!jrnl_handle->hEvent)
-    {
-        rc = FAIL_CREATE_EVENT;
-        goto error_cleanup;
-    }
     LARGE_INTEGER size;
-    if (GetFileSizeEx(jrnl_handle->hFile, &size) == FALSE)
+    if (GetFileSizeEx(hFile, &size) == FALSE)
     {
         rc = FAIL_GET_FILE_SIZE;
         goto error_cleanup;
@@ -88,7 +69,7 @@ rvn_open_journal_for_writes(const char* file_name, int32_t transaction_mode, int
 
     if (size.QuadPart <= initial_file_size)
     {
-        rc = _pre_allocate_file(jrnl_handle->hFile, initial_file_size, detailed_error_code);
+        rc = _pre_allocate_file(hFile, initial_file_size, detailed_error_code);
         if (rc != SUCCESS)
             goto error_clean_With_error;
         *actual_size = initial_file_size;
@@ -98,196 +79,69 @@ rvn_open_journal_for_writes(const char* file_name, int32_t transaction_mode, int
         *actual_size = size.QuadPart;
     }
 
-    *handle = jrnl_handle;
+    *handle = hFile;
     return SUCCESS;
 
 error_cleanup:
     *detailed_error_code = GetLastError();
 error_clean_With_error:
-    
-    if(jrnl_handle != NULL)
-    {
-        int32_t ignored;
-        rvn_close_journal(jrnl_handle, &ignored);
-    }   
+
+    CloseHandle(hFile);
     return rc;
 }
 
 EXPORT int32_t
 rvn_close_journal(void* handle, int32_t* detailed_error_code)
 {
-    struct journal_handle* jrnl_handle = handle;
-    bool failure = false;
-    if (jrnl_handle->hEvent != INVALID_HANDLE_VALUE &&
-        jrnl_handle->hEvent != NULL &&
-        !CloseHandle(jrnl_handle->hEvent))
+    HANDLE hFile = (HANDLE)handle;
+    if (hFile != INVALID_HANDLE_VALUE &&
+        hFile != NULL &&
+        !CloseHandle(hFile))
     {
         *detailed_error_code = GetLastError();
-        failure = true;
+        return FAIL_CLOSE;
     }
-    if (jrnl_handle->hFile != INVALID_HANDLE_VALUE &&
-        jrnl_handle->hFile != NULL &&
-        !CloseHandle(jrnl_handle->hFile))
-    {
-        *detailed_error_code = GetLastError();
-        failure = true;
-    }
-    free(jrnl_handle->elements);
-    free(jrnl_handle);
-    return failure ? FAIL_CLOSE : SUCCESS;
-}
 
-PRIVATE
-int32_t ensure_enough_elements(struct journal_handle *jrnl_handle, uint64_t required, int32_t* detailed_error_code){
-     if(required < jrnl_handle->elements_count)
-        return SUCCESS;
-    uint64_t new_count = nextPowerOf2(required + 1);
-    uint64_t new_bytes = new_count * sizeof(FILE_SEGMENT_ELEMENT);
-    if(new_bytes / new_count != sizeof(FILE_SEGMENT_ELEMENT))
-    {
-        *detailed_error_code = ERROR_ARITHMETIC_OVERFLOW;
-        return FAIL_NOMEM;
-    }
-    void* new_elements = realloc(jrnl_handle->elements, new_bytes);
-    if(new_elements == NULL)
-    {
-        *detailed_error_code = GetLastError();
-        return FAIL_NOMEM;
-    }
-    jrnl_handle->elements = new_elements;
-    jrnl_handle->elements_count = new_count;
-    return SUCCESS;
-}
-
-PRIVATE
-int32_t flush_entries(struct journal_handle *jrnl_handle, int64_t offset, DWORD bytesWritten, int32_t* detailed_error_code)
-{
-    if(bytesWritten == 0)
-        return SUCCESS;
-
-    OVERLAPPED ov = {
-        .Offset = (int)(offset & 0xffffffff),
-        .OffsetHigh = (int)(offset >> 32),
-        .hEvent = jrnl_handle->hEvent
-    };
-    ResetEvent(jrnl_handle->hEvent);
-    if (WriteFileGather(jrnl_handle->hFile, jrnl_handle->elements, bytesWritten, NULL, &ov) == FALSE)
-    {
-        DWORD err = GetLastError();
-        if (err != ERROR_IO_PENDING)
-        {
-            *detailed_error_code = err;
-            return FAIL_WRITE_FILE;
-        }
-        DWORD expectedBytesWritten;
-        if(GetOverlappedResult(jrnl_handle->hFile, &ov, &expectedBytesWritten, TRUE) == FALSE || 
-            expectedBytesWritten != bytesWritten)
-        {
-            *detailed_error_code = GetLastError();
-            return FAIL_WRITE_COMPLETION;
-        }
-    }
-    return SUCCESS;
-}
-
-
-EXPORT int32_t
-rvn_write_journal(void* handle, struct journal_entry* buffer, int64_t count_of_entries, int64_t offset, int32_t* detailed_error_code)
-{
-    struct journal_handle *jrnl_handle = handle;
-    return rvn_write_journal_file(jrnl_handle, buffer, count_of_entries, offset, detailed_error_code);
-}
-
-PRIVATE int32_t
-rvn_write_journal_gather(void* handle, struct journal_entry* buffer, int64_t count_of_entries, int64_t offset, int32_t* detailed_error_code)
-{
-    struct journal_handle *jrnl_handle = handle;
-    int64_t element_idx = 0;
-    DWORD bytesWritten = 0;
-    int32_t rc = SUCCESS;
-    for (int64_t entryIdx = 0; entryIdx < count_of_entries; entryIdx++)
-    {
-        int64_t required = element_idx + buffer[entryIdx].number_of_4kbs;
-        rc = ensure_enough_elements(jrnl_handle, required, detailed_error_code);
-        if(rc != SUCCESS)
-        {
-            return rc;
-        }
-
-        for (int64_t i = 0; i < buffer[entryIdx].number_of_4kbs; i++)
-        {
-            jrnl_handle->elements[element_idx++].Buffer = (char*)buffer[entryIdx].base + (i * SYS_PAGE_SIZE);
-            bytesWritten += SYS_PAGE_SIZE;
-            if (bytesWritten >= INT_MAX)
-            {
-                rc = flush_entries(jrnl_handle, offset, bytesWritten, detailed_error_code);
-                if(rc != SUCCESS)
-                    return rc;
-
-                offset += bytesWritten;
-                bytesWritten = 0;
-                element_idx = 0;
-            }
-        }
-    }
-    return flush_entries(jrnl_handle, offset, bytesWritten, detailed_error_code);
-}
-
-EXPORT int32_t
-rvn_open_journal_for_reads(const char *file_name, void **handle, int32_t *detailed_error_code)
-{
-    struct journal_handle* jrnl_handle = calloc(1, sizeof(struct journal_handle));
-    if(jrnl_handle == NULL)
-    {
-        *detailed_error_code = GetLastError();
-        return FAIL_CALLOC;
-    }
-    jrnl_handle->writer = NULL;
-    int rc = _open_file_to_read(file_name, &jrnl_handle->hFile, detailed_error_code);
-    if(rc != SUCCESS)
-    {
-        int32_t ignored;
-        rvn_close_journal(jrnl_handle, &ignored);
-        return rc;
-    }
-    *handle = jrnl_handle;
     return SUCCESS;
 }
 
 EXPORT int32_t
-rvn_read_journal(void* handle, void* buffer, int64_t required_size, int64_t offset, int64_t* actual_size, int32_t* detailed_error_code)
+rvn_create_journal_write_context(void** context, int32_t* detailed_error_code)
 {
-    struct journal_handle* jrnl_handle = handle;
-    return _read_file(jrnl_handle->hFile, buffer, required_size, offset, actual_size, detailed_error_code);
+    HANDLE hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+    if (!hEvent)
+    {
+        *detailed_error_code = GetLastError();
+        return FAIL_CREATE_EVENT;
+    }
+    *context = hEvent;
+    return SUCCESS;
 }
 
 EXPORT int32_t
-rvn_truncate_journal(void* handle, int64_t size, int32_t* detailed_error_code)
+rvn_free_journal_write_context(void* context, int32_t* detailed_error_code)
 {
-    struct journal_handle* jrnl_handle = handle;
-    
-    if (FlushFileBuffers(jrnl_handle->hFile) == FALSE)
+    if (context == NULL)
+        return SUCCESS;
+
+    HANDLE hEvent = (HANDLE)context;    
+
+    if (hEvent != INVALID_HANDLE_VALUE &&
+        hEvent != NULL &&
+        !CloseHandle(hEvent))
     {
         *detailed_error_code = GetLastError();
-        return FAIL_FLUSH_FILE;
+        return FAIL_CLOSE;
     }
 
-    return _truncate_file(jrnl_handle->hFile, size, detailed_error_code);
+    return SUCCESS;
 }
 
-EXPORT int32_t 
-rvn_hard_link_non_durable(const char *src, const char *dst, int32_t *detailed_error_code)
+EXPORT int32_t
+rvn_write_journal(void* handle, void* context, struct journal_entry* buffer, int64_t count_of_entries, int64_t offset, int32_t* detailed_error_code)
 {
-    if(CreateHardLinkW((LPCWSTR)dst, (LPCWSTR)src, NULL))
-        return SUCCESS;
-    *detailed_error_code = GetLastError();
-    return FAIL_HARD_LINK;
-}
-
-PRIVATE int32_t
-rvn_write_journal_file(void* handle, struct journal_entry* buffer, int64_t count_of_entries, int64_t offset, int32_t* detailed_error_code)
-{
-    struct journal_handle* jrnl_handle = handle;
+    HANDLE hFile = (HANDLE)handle;
+    HANDLE hEvent = (HANDLE)context;
 
     for (int64_t entryIdx = 0; entryIdx < count_of_entries; entryIdx++)
     {
@@ -297,12 +151,123 @@ rvn_write_journal_file(void* handle, struct journal_entry* buffer, int64_t count
             *detailed_error_code = ERROR_ARITHMETIC_OVERFLOW;
             return FAIL_MATH_OVERFLOW;
         }
-        int32_t rc = _write_file(jrnl_handle, buffer[entryIdx].base, size, offset, detailed_error_code);
+        int32_t rc = _write_file(hFile, hEvent, buffer[entryIdx].base, size, offset, detailed_error_code);
         if(rc != SUCCESS)
             return rc;
         offset += size;
     }
     return SUCCESS;
+}
+
+EXPORT int32_t
+rvn_open_journal_for_reads(const char *file_name, void **handle, int32_t *detailed_error_code)
+{
+    HANDLE hFile;
+    int rc = _open_file_to_read(file_name, &hFile, detailed_error_code);
+    if(rc != SUCCESS)
+        return rc;
+
+    *handle = hFile;
+    return SUCCESS;
+}
+
+EXPORT int32_t
+rvn_read_journal(void* handle, void* buffer, int64_t required_size, int64_t offset, int64_t* actual_size, int32_t* detailed_error_code)
+{
+    return _read_file((HANDLE)handle, buffer, required_size, offset, actual_size, detailed_error_code);
+}
+
+EXPORT int32_t
+rvn_truncate_journal(void* handle, int64_t size, int32_t* detailed_error_code)
+{
+    HANDLE hFile = (HANDLE)handle;
+
+    if (FlushFileBuffers(hFile) == FALSE)
+    {
+        *detailed_error_code = GetLastError();
+        return FAIL_FLUSH_FILE;
+    }
+
+    return _truncate_file(hFile, size, detailed_error_code);
+}
+
+EXPORT int32_t
+rvn_create_zeroed_file(const char *path, int64_t size,
+                       rvn_zeroing_pacing pacing, void *pacing_state,
+                       int64_t *zeroed_bytes, int32_t *detailed_error_code)
+{
+    // This will land in the .bss, so these all will be mapped to the same physical page (zero). 
+    static char _zeroed_file_buffer[1024 * 1024] __attribute__((aligned(4096)));
+
+    *zeroed_bytes = 0;
+
+    HANDLE h = CreateFileW((LPCWSTR)path, GENERIC_WRITE, 0, NULL, CREATE_NEW,
+                           FILE_ATTRIBUTE_NORMAL | FILE_FLAG_NO_BUFFERING, NULL);
+    if (h == INVALID_HANDLE_VALUE)
+    {
+        *detailed_error_code = GetLastError();
+        return FAIL_OPEN_FILE;
+    }
+
+    int64_t offset = 0;
+    while (offset < size)
+    {
+        for (;;)
+        {
+            int32_t wait_ms = pacing(pacing_state);
+            if (wait_ms == 0)
+                break;
+            if (wait_ms < 0)
+                goto done;
+            Sleep((DWORD)wait_ms);
+        }
+
+        DWORD len = (DWORD)(size - offset < (int64_t)sizeof(_zeroed_file_buffer) ? size - offset : (int64_t)sizeof(_zeroed_file_buffer));
+        DWORD written = 0;
+        OVERLAPPED ov = {0};
+        ov.Offset = (DWORD)(offset & 0xFFFFFFFF);
+        ov.OffsetHigh = (DWORD)(offset >> 32);
+        if (WriteFile(h, _zeroed_file_buffer, len, &written, &ov) == FALSE || written != len)
+        {
+            *detailed_error_code = GetLastError();
+            CloseHandle(h);
+            DeleteFileW((LPCWSTR)path);
+            return FAIL_WRITE_FILE;
+        }
+        offset += len;
+    }
+
+done:
+    *zeroed_bytes = offset;
+
+    if (FlushFileBuffers(h) == FALSE)
+    {
+        *detailed_error_code = GetLastError();
+        CloseHandle(h);
+        DeleteFileW((LPCWSTR)path);
+        return FAIL_SYNC_FILE;
+    }
+
+    CloseHandle(h);
+    return SUCCESS;
+}
+
+EXPORT int32_t
+rvn_move_file_durable(const char *src, const char *dst, int32_t *detailed_error_code)
+{
+    if (MoveFileExW((LPCWSTR)src, (LPCWSTR)dst, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
+        return SUCCESS;
+    *detailed_error_code = GetLastError();
+    return FAIL_MOVE_FILE;
+}
+
+EXPORT int32_t 
+rvn_hard_link_non_durable(const char *src, const char *dst, int32_t *detailed_error_code)
+{
+    if(CreateHardLinkW((LPCWSTR)dst, (LPCWSTR)src, NULL))
+        return SUCCESS;
+    *detailed_error_code = GetLastError();
+    return FAIL_HARD_LINK;
 }
 
 EXPORT int32_t

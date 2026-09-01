@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
@@ -15,6 +15,7 @@ using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Extensions;
 using Sparrow;
+using Sparrow.Binary;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -428,9 +429,9 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
+        [SkipLocalsInit]
         private unsafe void WriteBlittableInstance(BlittableObjectInstance obj, bool isRoot, bool filterProperties)
         {
-            HashSet<string> modifiedProperties = null;
             if (obj.DocumentId != null &&
                 _usageMode == BlittableJsonDocumentBuilder.UsageMode.None)
             {
@@ -439,6 +440,15 @@ namespace Raven.Server.Documents.Patch
             }
             if (obj.Blittable != null)
             {
+                var ownValuesLookup = obj.OwnValues is not null
+                    ? obj.OwnValues.GetAlternateLookup<ReadOnlySpan<char>>()
+                    : default;
+                var deletesLookup = obj.Deletes is not null
+                    ? obj.Deletes.GetAlternateLookup<ReadOnlySpan<char>>()
+                    : default;
+
+                Span<char> propNameBuffer = stackalloc char[256];
+
                 using var propertiesByInsertionOrder = obj.Blittable.GetPropertiesByInsertionOrder();
                 for (int i = 0; i < propertiesByInsertionOrder.Size; i++)
                 {
@@ -446,22 +456,25 @@ namespace Raven.Server.Documents.Patch
                     var propIndex = propertiesByInsertionOrder.Properties[i];
                     obj.Blittable.GetPropertyByIndex(propIndex, ref prop);
 
+
                     BlittableObjectInstance.BlittableObjectProperty modifiedValue = default;
-                    string key = prop.Name.ToString();
-                    var existInObject = obj.OwnValues?
-                        .TryGetValue(key, out modifiedValue) == true;
-
-                    if (existInObject == false && obj.Deletes?.Contains(key) == true)
-                        continue;
-
-                    if (existInObject)
+                    string key = null;
+                    if (prop.Name.TryAsCharSpan(propNameBuffer, out var propName, out int reqSize) == false)
                     {
-                        modifiedProperties ??= new HashSet<string>();
-
-                        modifiedProperties.Add(key);
+                        // the name is longer than the buffer we have, grow it - the bigger buffer is
+                        // then reused for the rest of the properties on this object
+                        propNameBuffer = new char[Bits.PowerOf2(reqSize)];
+                        if(prop.Name.TryAsCharSpan(propNameBuffer, out propName, out reqSize) is false) // should always work
+                            throw new InvalidOperationException($"Failed to get property name '{prop.Name}' as char span, size {reqSize} does not fit into {propNameBuffer.Length} after extension.");
                     }
 
-                    if (ShouldFilterProperty(filterProperties, key))
+                    var existInObject = obj.OwnValues is not null &&
+                                        ownValuesLookup.TryGetValue(propName, out key, out modifiedValue);
+
+                    var skipProperty = (existInObject == false && obj.Deletes is not null && deletesLookup.Contains(propName)) ||
+                                       ShouldFilterProperty(filterProperties, propName);
+
+                    if (skipProperty)
                         continue;
 
                     _writer.WritePropertyName(prop.Name);
@@ -483,7 +496,7 @@ namespace Raven.Server.Documents.Patch
             foreach (var modificationKvp in obj.OwnValues)
             {
                 //We already iterated through those properties while iterating the original properties set.
-                if (modifiedProperties != null && modifiedProperties.Contains(modificationKvp.Key))
+                if (obj.Blittable != null && obj.Blittable.GetPropertyIndex(modificationKvp.Key) != -1)
                     continue;
 
                 var propertyName = modificationKvp.Key;
@@ -499,6 +512,25 @@ namespace Raven.Server.Documents.Patch
                 WriteJsonValue(obj, isRoot, propertyNameAsString, blittableObjectProperty.Value);
             }
         }
+
+        private static readonly HashSet<string> FilteredProperties =
+        [
+            Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName,
+            Constants.Documents.Indexing.Fields.DocumentIdFieldName,
+            Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName,
+            Constants.Documents.Metadata.Id,
+            Constants.Documents.Metadata.LastModified,
+            Constants.Documents.Metadata.IndexScore,
+            Constants.Documents.Metadata.ChangeVector,
+            Constants.Documents.Metadata.Flags
+        ];
+
+        private static readonly HashSet<string>.AlternateLookup<ReadOnlySpan<char>> FilteredPropertiesLookup =
+            FilteredProperties.GetAlternateLookup<ReadOnlySpan<char>>();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool ShouldFilterProperty(bool filterProperties, ReadOnlySpan<char> property) 
+            => filterProperties && FilteredPropertiesLookup.Contains(property);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool ShouldFilterProperty(bool filterProperties, string property)

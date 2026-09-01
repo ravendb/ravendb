@@ -32,27 +32,10 @@ public class SharedIndexJournals : IJournalMerger, IDisposable
                 documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification, LoggingResource.Database(documentDatabaseName),
                 LoggingComponent.Name(documentDatabaseName));
         
-        options.CompressTxAboveSizeInBytes = documentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
-        options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
-        options.EnablePrefetching = documentDatabase.Configuration.Storage.EnablePrefetching;
-        options.DiscardVirtualMemory = documentDatabase.Configuration.Storage.DiscardVirtualMemory;
-        options.TimeToSyncAfterFlushInSec = (int)documentDatabase.Configuration.Storage.TimeToSyncAfterFlush.AsTimeSpan.TotalSeconds;
         options.AddToInitLog = documentDatabase.AddToInitLog;
         options.Encryption.MasterKey = documentDatabase.MasterKey?.ToArray();
         options.Encryption.RegisterForJournalCompressionHandler();
-        options.DoNotConsiderMemoryLockFailureAsCatastrophicError = documentDatabase.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
-        if (documentDatabase.Configuration.Storage.MaxScratchBufferSize.HasValue)
-            options.MaxScratchBufferSize = documentDatabase.Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
-        options.PrefetchSegmentSize = documentDatabase.Configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
-        options.PrefetchResetThreshold = documentDatabase.Configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
-        options.SyncJournalsCountThreshold = documentDatabase.Configuration.Storage.SyncJournalsCountThreshold;
-        options.IgnoreInvalidJournalErrors = documentDatabase.Configuration.Storage.IgnoreInvalidJournalErrors;
-        options.SkipChecksumValidationOnDatabaseLoading = documentDatabase.Configuration.Storage.SkipChecksumValidationOnDatabaseLoading;
-        options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions = documentDatabase.Configuration.Storage.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions;
-        options.DisableSparseRegions = documentDatabase.Configuration.Storage.DisableSparseRegions;
-        options.JournalsCompressionAcceleration = documentDatabase.Configuration.Storage.JournalsCompressionAcceleration;
-        options.MinimumSharedJournalsMergeCount = documentDatabase.Configuration.Indexing.MinimumSharedJournalsMergeCount;
-        options.MaxLogFileSize = documentDatabase.Configuration.Storage.MaxJournalFileSize.GetValue(SizeUnit.Bytes);
+        VoronOptionsFromConfiguration.Apply(options, documentDatabase.Configuration);
 
         options.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;
         options.OnRecoveryError += (s, e) => documentDatabase.HandleOnIndexRecoveryError(IndexingConfiguration.SharedJournalsStorageName, s, e);

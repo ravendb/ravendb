@@ -691,7 +691,6 @@ namespace Raven.Server.ServerWide
                         throw new FileLoadException($"The server store secret key is provided in {secretKey} but the server failed to read the file. Admin assistance required.", e);
                     }
 
-                    options.DoNotConsiderMemoryLockFailureAsCatastrophicError = Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
                     try
                     {
                         options.Encryption.MasterKey = Secrets.Unprotect(buffer);
@@ -844,24 +843,38 @@ namespace Raven.Server.ServerWide
                     Logger.Info("An error occurred while raising the high read_ahead_kb alert", e);
             }
 
+            options.OnRecoverableFailure += (obj, e) =>
+            {
+                var title = "Recoverable Voron error - System Storage";
+                var message = $"Failure {e.FailureMessage} in the following environment: {e.EnvironmentPath}";
+
+                if (Logger.IsWarnEnabled)
+                    Logger.Warn($"{title}. {message}", e.Exception);
+
+                var alert = AlertRaised.Create(
+                    null,
+                    title,
+                    message,
+                    AlertReason.RecoverableVoronFailure,
+                    NotificationSeverity.Warning,
+                    key: e.EnvironmentId.ToString(),
+                    details: new ExceptionDetails(e.Exception));
+
+                if (NotificationCenter.IsInitialized)
+                {
+                    NotificationCenter.Add(alert);
+                }
+                else
+                {
+                    _storeAlertForLateRaise.Add(alert);
+                }
+            };
+
             options.SchemaVersion = SchemaUpgrader.CurrentVersion.ServerVersion;
             options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Server, null, null, this);
             options.BeforeSchemaUpgrade = _server.BeforeSchemaUpgrade;
             options.AfterDatabaseCreation = _server.AfterDatabaseCreation;
-            options.ForceUsing32BitsPager = Configuration.Storage.ForceUsing32BitsPager;
-            options.EnablePrefetching = Configuration.Storage.EnablePrefetching;
-            options.DiscardVirtualMemory = Configuration.Storage.DiscardVirtualMemory;
-            options.UseSequentialReadAheadHintForJournalRecovery = Configuration.Storage.UseSequentialReadAheadHintForJournalRecovery;
-
-            if (Configuration.Storage.MaxScratchBufferSize.HasValue)
-                options.MaxScratchBufferSize = Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
-            options.PrefetchSegmentSize = Configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
-            options.PrefetchResetThreshold = Configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
-            options.SyncJournalsCountThreshold = Configuration.Storage.SyncJournalsCountThreshold;
-            options.IgnoreInvalidJournalErrors = Configuration.Storage.IgnoreInvalidJournalErrors;
-            options.SkipChecksumValidationOnDatabaseLoading = Configuration.Storage.SkipChecksumValidationOnDatabaseLoading;
-            options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions = Configuration.Storage.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions;
-            options.MaxLogFileSize = Configuration.Storage.MaxJournalFileSize.GetValue(SizeUnit.Bytes);
+            VoronOptionsFromConfiguration.Apply(options, Configuration);
 
             DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, Configuration.Storage, nameof(DirectoryExecUtils.EnvironmentType.System), DirectoryExecUtils.EnvironmentType.System, Logger);
 

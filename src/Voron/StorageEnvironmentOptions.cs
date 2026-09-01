@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Win32.SafeHandles;
 using Sparrow;
 using Sparrow.Binary;
@@ -193,6 +194,11 @@ namespace Voron
                 if (value < 0)
                     throw new InvalidOperationException($"Cannot set {nameof(MaxScratchBufferSize)} to negative value: {value}");
 
+                const long maxSupportedScratchBufferSize = (long)uint.MaxValue * Constants.Storage.PageSize;
+                if (value > maxSupportedScratchBufferSize)
+                    throw new InvalidOperationException(
+                        $"Cannot set {nameof(MaxScratchBufferSize)} to {value:#,#} bytes: a position inside a scratch buffer must fit in 32 bits (as pages), so the maximum supported value is {maxSupportedScratchBufferSize:#,#} bytes");
+
                 if (_forceUsing32BitsPager && _maxScratchBufferSize > 0)
                 {
                     _maxScratchBufferSize = Math.Min(value, _maxScratchBufferSize);
@@ -227,6 +233,14 @@ namespace Voron
         public abstract bool IsLinked(long journalNumber, string filePath, out string finalFilePath);
         
         public abstract JournalWriter CreateJournalWriter(long journalNumber, long journalSize);
+
+        public abstract JournalWriter CreateNewJournalWriter(long journalNumber, long minRequiredSize, long preferredSize, Pal.journal_entry journalHeaderRecord, WriteAheadJournal journal);
+
+        public virtual void PrepareRecyclableJournalInBackground(long size, WriteAheadJournal journal)
+        {
+        }
+
+        public bool EnableJournalPoolPrewarming { get; set; } = true;
 
         public abstract JournalWriter CreateReadOnlyJournalWriter(long journalNumber, long journalSize);
 
@@ -423,6 +437,11 @@ namespace Voron
 
             private readonly ConcurrentDictionary<string, LazyWithExceptionRetry<JournalWriter>> _journals = new(StringComparer.OrdinalIgnoreCase);
 
+            private readonly SortedList<long, string> _journalsForReuse = new();
+            private long _reuseCounter;
+            private long _lastJournalCreatedTicks;
+            private long _journalFillIntervalTicks;
+
             public DirectoryStorageEnvironmentOptions(VoronPathSetting basePath, VoronPathSetting tempPath, VoronPathSetting journalPath,
                 IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification, LoggingResource loggingResource,
                 LoggingComponent loggingComponent)
@@ -447,6 +466,8 @@ namespace Voron
 
                 // have to be before the journal check, so we'll fail on files in use
                 DeleteAllTempFiles();
+
+                GatherRecyclableJournalFiles(); // if there are any (e.g. after a rude db shut down) let us reuse them
 
                 InitializePathsInfo();
             }
@@ -473,9 +494,11 @@ namespace Voron
                     flags |= Pal.OpenFileFlags.Encrypted;
                 if (ForceUsing32BitsPager || PlatformDetails.Is32Bits)
                     flags |= Pal.OpenFileFlags.DoNotMap;
-                return Pager.Create(this, FilePath.FullPath,
+                var result = Pager.Create(this, FilePath.FullPath,
                     InitialFileSize ?? 0,
                     flags);
+                InitializeWritebackGate(result.State, FilePath.FullPath);
+                return result;
             }
 
             public override string ToString()
@@ -532,6 +555,180 @@ namespace Voron
                 return result.Value;
             }
 
+            public override JournalWriter CreateNewJournalWriter(long journalNumber, long minRequiredSize, long preferredSize, Pal.journal_entry journalHeaderRecord, WriteAheadJournal journal)
+            {
+                Volatile.Write(ref _currentJournalSizeHint, preferredSize);
+
+                var name = JournalName(journalNumber);
+                var path = JournalPath.Combine(name);
+
+                long journalSize = preferredSize;
+                if (AttemptToReuseJournal(path, minRequiredSize, preferredSize, journalNumber, journalHeaderRecord, out var reusedSize))
+                {
+                    journalSize = reusedSize;
+                    if (reusedSize < preferredSize)
+                    {
+                        // next time, we want to already have a ready journal of this size
+                        PrepareRecyclableJournalInBackground(preferredSize, journal);
+                    }
+                }
+                else // nothing to reuse, we need to create a new one
+                {
+                    var tmp = new VoronPathSetting(Path.Combine(JournalPath.FullPath, RecyclableJournalName(Interlocked.Increment(ref _reuseCounter))));
+                    using (var headerWriter = new JournalWriter(this, tmp, journalNumber, preferredSize))
+                        headerWriter.WriteHeaderRecord(journalHeaderRecord);
+                    MoveFileDurably(tmp.FullPath, path.FullPath);
+                }
+
+                return CreateJournalWriter(journalNumber, journalSize);
+            }
+
+            private long _currentJournalSizeHint;
+            private int _journalPoolPreparationInFlight;
+
+           
+            private sealed class JournalZeroingPacingState
+            {
+                public WriteAheadJournal Journal;
+                public int StalledMs;
+
+                [UnmanagedCallersOnly]
+                public static unsafe int JournalZeroingPacing(void* state)
+                {
+                    var pacing = (JournalZeroingPacingState)GCHandle.FromIntPtr((IntPtr)state).Target;
+
+                    var writeFlow = pacing.Journal.Env.WriteFlow;
+                    var jrnl = pacing.Journal;
+                    var step = writeFlow.NextJournalZeroingStepMs(jrnl.IsJournalWriteActive, pacing.StalledMs);
+                    if (step > 0)
+                        pacing.StalledMs += step;
+                    return step;
+                }
+            }
+
+            public override void PrepareRecyclableJournalInBackground(long size, WriteAheadJournal journal)
+            {
+                if (EnableJournalPoolPrewarming == false || Disposed)
+                    return;
+
+                if (journal.Env.WriteFlow.ShouldPrepareZeroedJournalsInBackground == false)
+                    return;
+
+                size = Math.Min(size, MaxLogFileSize);
+
+                if (HasAdequateRecyclableJournal(size))
+                    return;
+
+                if (Interlocked.CompareExchange(ref _journalPoolPreparationInFlight, 1, 0) != 0)
+                    return;
+
+                EnsureJournalPoolPreparationThread();
+                JournalPoolPreparationQueue.Add(new JournalPoolPreparationRequest(this, size, journal));
+            }
+
+            private sealed record JournalPoolPreparationRequest(DirectoryStorageEnvironmentOptions Options, long Size, WriteAheadJournal Journal);
+
+            private static readonly BlockingCollection<JournalPoolPreparationRequest> JournalPoolPreparationQueue = new();
+            private static Thread _journalPoolPreparationThread;
+
+            private static void EnsureJournalPoolPreparationThread()
+            {
+                if (Volatile.Read(ref _journalPoolPreparationThread) != null)
+                    return;
+
+                var threadName = ThreadNames.GetNameToUse(ThreadNames.ForJournalZeroing("Voron Zero Journals"));
+                var thread = new Thread(JournalPoolPreparationLoop)
+                {
+                    IsBackground = true,
+                    Name = threadName
+                };
+
+                if (Interlocked.CompareExchange(ref _journalPoolPreparationThread, thread, null) == null)
+                    thread.Start();
+            }
+
+            private static void JournalPoolPreparationLoop()
+            {
+                ThreadNames.AddFullThreadName(Environment.CurrentManagedThreadId, "Voron Zero Journals");
+
+                foreach (var request in JournalPoolPreparationQueue.GetConsumingEnumerable())
+                {
+                    try
+                    {
+                        if (request.Options.Disposed == false)
+                            request.Options.PrepareRecyclableJournal(request.Size, request.Journal);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (request.Options._log.IsDebugEnabled)
+                            request.Options._log.Debug($"Failed to prepare a recyclable journal of size {request.Size}", ex);
+                    }
+                    finally
+                    {
+                        Volatile.Write(ref request.Options._journalPoolPreparationInFlight, 0);
+                    }
+                }
+            }
+
+            private unsafe void PrepareRecyclableJournal(long size, WriteAheadJournal journal)
+            {
+                var path = Path.Combine(JournalPath.FullPath, RecyclableJournalName(Interlocked.Increment(ref _reuseCounter)));
+
+                long zeroedBytes;
+                var pacingHandle = GCHandle.Alloc(new JournalZeroingPacingState { Journal = journal });
+                try
+                {
+                    PalFlags.FailCodes rc;
+                    int errorCode;
+                    using (IoMetrics.MeterIoRate(path, IoMetrics.MeterType.JournalWrite, size))
+                    {
+                        rc = Pal.rvn_create_zeroed_file(path, size,
+                            &JournalZeroingPacingState.JournalZeroingPacing, (void*)GCHandle.ToIntPtr(pacingHandle),
+                            out zeroedBytes, out errorCode);
+                    }
+
+                    if (rc != PalFlags.FailCodes.Success)
+                        PalHelper.ThrowLastError(rc, errorCode, $"Failed to create a zeroed pool journal {path} of size {size}");
+                }
+                finally
+                {
+                    pacingHandle.Free();
+                }
+
+                lock (_journalsForReuse)
+                {
+                    if (Disposed)
+                    {
+                        TryDelete(path);
+                        return;
+                    }
+
+                    var ticks = new FileInfo(path).LastWriteTimeUtc.Ticks;
+                    while (_journalsForReuse.TryAdd(ticks, path) is false)
+                        ticks++;
+                }
+            }
+
+            private bool HasAdequateRecyclableJournal(long size)
+            {
+                lock (_journalsForReuse)
+                {
+                    foreach (var file in _journalsForReuse.Values)
+                    {
+                        try
+                        {
+                            if (new FileInfo(file).Length >= size)
+                                return true;
+                        }
+                        catch (IOException)
+                        {
+                        }
+                    }
+                }
+
+                return false;
+            }
+
             public override JournalWriter CreateJournalWriter(long journalNumber, long journalSize)
             {
                 var name = JournalName(journalNumber);
@@ -578,11 +775,19 @@ namespace Voron
                     return;
 
                 Disposed = true;
-                
+
                 foreach (var journal in _journals)
                 {
                     if (journal.Value.IsValueCreated)
                         journal.Value.Value.Dispose();
+                }
+
+                lock (_journalsForReuse)
+                {
+                    foreach (var reusableFile in _journalsForReuse.Values)
+                    {
+                        TryDelete(reusableFile);
+                    }
                 }
             }
 
@@ -632,17 +837,287 @@ namespace Voron
                 if (File.Exists(file.FullPath) == false)
                     return false;
 
+                if (TryRecycleJournal(file))
+                    return true;
+
+                TryDelete(file.FullPath);
+
+                return true;
+            }
+
+            private bool TryRecycleJournal(VoronPathSetting file)
+            {
+                // Writing to a recycled file is safe only when we hold the last link (st_nlink == 1), when ware the sole owners
+                var rc = Pal.rvn_is_hard_link(file.FullPath, out var isHardLink, out _);
+                if (rc != PalFlags.FailCodes.Success || isHardLink)
+                    return false;
+
+                if (RootJournal == null)
+                {
+                    TryStoreJournalForReuse(file); // my own pool, I am the root
+                    return true;
+                }
+
+                if (RootJournal.Env.Options is not DirectoryStorageEnvironmentOptions rootOptions ||
+                    rootOptions.Disposed ||
+                    CanJournalsBeLinkedWith(rootOptions) == false) // a rename cannot cross volumes
+                    return false;
+                    
+                // we donate this to the root's pool, so it can be reused by any of its branches (or the root itself)
+                rootOptions.TryStoreJournalForReuse(file);
+                return true;
+            }
+
+            private static void MoveFileDurably(string src, string dst)
+            {
+                var rc = Pal.rvn_move_file_durable(src, dst, out var errorCode);
+                if (rc != PalFlags.FailCodes.Success)
+                    PalHelper.ThrowLastError(rc, errorCode, $"Failed to move {src} to {dst}");
+            }
+
+            private void GatherRecyclableJournalFiles()
+            {
+                foreach (string reusableFile in GetRecyclableJournalFiles())
+                {
+                    var reuseNameWithoutExt = Path.GetExtension(reusableFile.AsSpan())[1..];
+
+                    if (long.TryParse(reuseNameWithoutExt, out var reuseNum))
+                    {
+                        _reuseCounter = Math.Max(_reuseCounter, reuseNum);
+                    }
+
+                    try
+                    {
+                        var lastWriteTimeUtcTicks = new FileInfo(reusableFile).LastWriteTimeUtc.Ticks;
+
+                        while (_journalsForReuse.TryAdd(lastWriteTimeUtcTicks, reusableFile) is false)
+                        {
+                            lastWriteTimeUtcTicks++;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        if (_log.IsDebugEnabled)
+                            _log.Debug("On Storage Environment Options : Can't store journal for reuse : " + reusableFile, ex);
+                        TryDelete(reusableFile);
+                    }
+                }
+            }
+
+            private string[] GetRecyclableJournalFiles()
+            {
                 try
                 {
-                    File.Delete(file.FullPath);
+                    return Directory.GetFiles(JournalPath.FullPath, $"{RecyclableJournalFileNamePrefix}.*");
+                }
+                catch (Exception)
+                {
+                    return [];
+                }
+            }
+
+            private static readonly long TicksInHour = TimeSpan.FromHours(1).Ticks;
+
+           
+            private long ComputeMaxRecyclableJournalAgeInTicks()
+            {
+                // _journalFillIntervalTicks has the time between the last two journal creations (the current creation pace).
+                // The maximum usable age allows us to keep enough journals to cover MaxNumberOfRecyclableJournals at that rate.
+                var fillInterval = Volatile.Read(ref _journalFillIntervalTicks);
+                if (fillInterval <= 0)
+                    return 72 * TicksInHour;
+
+                var maxAge = fillInterval * Math.Max(1, MaxNumberOfRecyclableJournals);
+                // minimum age is 15 minutes, maximum is 72 hours
+                return Math.Clamp(maxAge, TicksInHour / 4, 72 * TicksInHour);
+            }
+
+            private void PruneStaleRecyclableJournals()
+            {
+                Debug.Assert(Monitor.IsEntered(_journalsForReuse));
+
+                var maxAgeTicks = ComputeMaxRecyclableJournalAgeInTicks();
+                var now = DateTime.UtcNow.Ticks;
+
+                while (_journalsForReuse.Count > 1) // we want to keep the _next_ journal available
+                {
+                    try
+                    {
+                        var fileInfo = new FileInfo(_journalsForReuse.Values[0]);
+                        if (fileInfo.Exists == false)
+                        {
+                            _journalsForReuse.RemoveAt(0);
+                            continue;
+                        }
+
+                        if (now - fileInfo.LastWriteTimeUtc.Ticks > maxAgeTicks)
+                        {
+                            _journalsForReuse.RemoveAt(0);
+                            TryDelete(fileInfo.FullName);
+                            continue;
+                        }
+                    }
+                    catch (IOException)
+                    {
+                        // explicitly ignoring all file errors, we don't care, we want to prune them
+                        var path = _journalsForReuse.Values[0];
+                        _journalsForReuse.RemoveAt(0);
+                        TryDelete(path);
+                        continue;
+                    }
+
+                    break; // the list is sorted by time - the first non-stale entry ends the scan
+                }
+            }
+
+            private void TryStoreJournalForReuse(VoronPathSetting filename)
+            {
+                var reusedCount = 0;
+                var reusedLimit = Math.Min(_lastReusedJournalCountOnSync, MaxNumberOfRecyclableJournals);
+
+                try
+                {
+                    var fileInfo = new FileInfo(filename.FullPath);
+                    if (fileInfo.Length < Volatile.Read(ref _currentJournalSizeHint))
+                    {
+                        // journal sizes only grow, this file can never satisfy a future request
+                        TryDelete(filename.FullPath);
+                        return;
+                    }
+
+                    var fileModifiedDate = fileInfo.LastWriteTimeUtc;
+                    var counter = Interlocked.Increment(ref _reuseCounter);
+                    var newName = Path.Combine(JournalPath.FullPath, RecyclableJournalName(counter));
+
+                    File.Move(filename.FullPath, newName);
+                    lock (_journalsForReuse)
+                    {
+                        PruneStaleRecyclableJournals();
+
+                        reusedCount = _journalsForReuse.Count;
+
+                        if (ExceededReuseLimits())
+                        {
+                            TryDelete(filename.FullPath);
+                            return;
+                        }
+
+                        var ticks = fileModifiedDate.Ticks;
+
+                        while (_journalsForReuse.TryAdd(ticks, newName) is false)
+                            ticks++;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    if (_log.IsDebugEnabled)
+                        _log.Debug((ExceededReuseLimits() ? "Can't remove" : "Can't store") + " journal for reuse : " + filename, ex);
+                    TryDelete(filename.FullPath);
+                }
+
+                bool ExceededReuseLimits() => reusedCount >= reusedLimit;
+            }
+
+            private bool AttemptToReuseJournal(VoronPathSetting desiredPath, long minRequiredSize, long preferredSize, long journalNumber, Pal.journal_entry journalHeaderRecord, out long reusedSize)
+            {
+                reusedSize = 0;
+                var nowTicks = DateTime.UtcNow.Ticks;
+                var lastCreated = Interlocked.Exchange(ref _lastJournalCreatedTicks, nowTicks);
+                if (lastCreated != 0)
+                    Volatile.Write(ref _journalFillIntervalTicks, nowTicks - lastCreated);
+
+                lock (_journalsForReuse)
+                {
+                    var reused = false;
+
+                    while (_journalsForReuse.Count > 0)
+                    {
+                        var filename = _journalsForReuse.Values[_journalsForReuse.Count - 1];
+                        _journalsForReuse.RemoveAt(_journalsForReuse.Count - 1);
+
+                        try
+                        {
+                            var journalFile = new FileInfo(filename);
+                            if (journalFile.Exists == false)
+                                continue;
+
+                            if (journalFile.Length > MaxLogFileSize && preferredSize <= MaxLogFileSize)
+                            {
+                                TryDelete(filename);
+                                continue;
+                            }
+
+                            if (journalFile.Length < minRequiredSize)
+                            {
+                                TryDelete(filename);
+                                continue;
+                            }
+
+                            using (var headerWriter = new JournalWriter(this, new VoronPathSetting(filename), journalNumber, journalFile.Length))
+                            {
+                                // the header record must be durable BEFORE the file gets the journal name.
+                                headerWriter.WriteHeaderRecord(journalHeaderRecord);
+                            }
+
+                            MoveFileDurably(filename, desiredPath.FullPath);
+                            reusedSize = journalFile.Length;
+                            reused = true;
+                            break;
+                        }
+                        catch (Exception ex)
+                        {
+                            TryDelete(filename);
+
+                            if (_log.IsDebugEnabled)
+                                _log.Debug("Failed to prepare " + filename + " for reuse as " + desiredPath, ex);
+                        }
+                    }
+
+                    PruneStaleRecyclableJournals();
+
+                    return reused;
+                }
+            }
+
+            private void TryDelete(string file)
+            {
+                try
+                {
+                    File.Delete(file);
                 }
                 catch (Exception ex)
                 {
                     if (_log.IsInfoEnabled)
-                        _log.Info("Failed to delete " + file.FullPath, ex);
+                        _log.Info("Failed to delete " + file, ex);
                 }
+            }
 
-                return true;
+            public override void TryCleanupRecycledJournals()
+            {
+                if (Monitor.TryEnter(_journalsForReuse, 10) == false)
+                    return;
+
+                try
+                {
+                    foreach (var recyclableJournal in _journalsForReuse)
+                    {
+                        TryDelete(recyclableJournal.Value);
+                    }
+
+                    _journalsForReuse.Clear();
+                }
+                finally
+                {
+                    Monitor.Exit(_journalsForReuse);
+                }
+            }
+
+            public override int GetNumberOfJournalsForReuse()
+            {
+                lock (_journalsForReuse)
+                {
+                    return _journalsForReuse.Count;
+                }
             }
 
             public override unsafe bool ReadValidMetadata(string filename, out MetadataFile metadata)
@@ -1017,6 +1492,13 @@ namespace Voron
                 return value;
             }
 
+            public override JournalWriter CreateNewJournalWriter(long journalNumber, long minRequiredSize, long preferredSize, Pal.journal_entry journalHeaderRecord, WriteAheadJournal journal)
+            {
+                var writer = CreateJournalWriter(journalNumber, preferredSize);
+                writer.WriteHeaderRecord(journalHeaderRecord);
+                return writer;
+            }
+
             public override JournalWriter CreateReadOnlyJournalWriter(long journalNumber, long journalSize)
             {
                 throw new NotSupportedException("Pure-memory env has no hard links; CreateReadOnlyJournalWriter must not be called.");
@@ -1173,6 +1655,31 @@ namespace Voron
             return string.Format("{0:D19}.recovery", number);
         }
 
+        public const string RecyclableJournalFileNamePrefix = "recyclable-journal";
+
+        public static string RecyclableJournalName(long number)
+        {
+            return $"{RecyclableJournalFileNamePrefix}.{number:D19}";
+        }
+
+        public int MaxNumberOfRecyclableJournals { get; set; } = 32;
+
+        protected int _lastReusedJournalCountOnSync;
+
+        public void SetLastReusedJournalCountOnSync(int journalNum)
+        {
+            _lastReusedJournalCountOnSync = journalNum;
+        }
+
+        public virtual void TryCleanupRecycledJournals()
+        {
+        }
+
+        public virtual int GetNumberOfJournalsForReuse()
+        {
+            return 0;
+        }
+
         public static string ScratchBufferName(long number)
         {
             return $"scratch.{number:D10}{DirectoryStorageEnvironmentOptions.BuffersFileExtension}";
@@ -1261,6 +1768,43 @@ namespace Voron
         public long PrefetchResetThreshold { get; set; }
         public long SyncJournalsCountThreshold { get; set; }
 
+        public long MaxUnsyncedBytesBeforeSync { get; set; } = 256 * Constants.Size.Megabyte;
+
+        public long MaxUnsyncedBytesBeforeMandatorySync { get; set; } = 768L * Constants.Size.Megabyte;
+
+        public int SyncWritebackBlockSizeInMb { get; set; } = 32;
+
+        public int SyncWritebackMinContiguousSizeInKb { get; set; } = 64;
+
+        public int SyncWritebackBarrierCostThresholdInMs { get; set; } = 100;
+
+        internal long SyncWritebackBarrierCostThresholdTicks => SyncWritebackBarrierCostThresholdInMs * TimeSpan.TicksPerMillisecond;
+
+        public int SyncWritebackDrainQueueDepthThreshold { get; set; } = 5;
+
+        public const int MaxSupportedConcurrentJournalWrites = 64;
+
+        public long PipelineJournalWritesAboveLatencyInTicks { get; set; } = 2 * TimeSpan.TicksPerMillisecond;
+
+        private int _maxConcurrentJournalWrites = 4;
+
+        public int MaxConcurrentJournalWrites
+        {
+            get => _maxConcurrentJournalWrites;
+            set => _maxConcurrentJournalWrites = Math.Clamp(value, 1, MaxSupportedConcurrentJournalWrites);
+        }
+
+        internal DeviceWriteBudget DeviceWriteBudget { get; private set; } 
+
+        private protected unsafe void InitializeWritebackGate(Pager.State state, string dataFilePath)
+        {
+            if (Pal.rvn_pager_get_device_id(state.Handle, out var deviceId, out _) != PalFlags.FailCodes.Success)
+                return;
+                
+            DeviceWriteBudget = DeviceWriteBudget.GetForDevice(deviceId, dataFilePath,
+                SyncWritebackBarrierCostThresholdTicks, SyncWritebackDrainQueueDepthThreshold, PipelineJournalWritesAboveLatencyInTicks);
+        }
+
         internal bool SimulateFailureOnDbCreation { get; set; }
         internal bool ManualSyncing { get; set; } = false;
         public bool? IgnoreInvalidJournalErrors { get; set; }
@@ -1269,6 +1813,9 @@ namespace Voron
         public bool DiscardVirtualMemory { get; set; } = true;
         public bool DisableSparseRegions { get; set; }
         public int JournalsCompressionAcceleration { get; set; } = 1;
+
+        public JournalCompressionAlgorithm JournalCompressionAlgorithm { get; set; } = JournalCompressionAlgorithm.Auto;
+        public long ConsolidationTargetWriteSizeInBytes { get; set; }
         public int MinimumSharedJournalsMergeCount { get; set; } = 8;
         public bool UseSequentialReadAheadHintForJournalRecovery { get; set; } = true;
 
@@ -1429,6 +1976,10 @@ namespace Voron
             internal bool SimulateCannotLinkJournals;
 
             internal Func<long, PartialJournalWriteFailure> SimulatePartialJournalWriteFailure;
+
+            internal Action<long, long> OnJournalWrite;
+
+            internal Action<long, long> OnJournalWriteCompleted;
 
             internal sealed class PartialJournalWriteFailure
             {
