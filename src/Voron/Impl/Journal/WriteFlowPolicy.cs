@@ -72,7 +72,6 @@ public sealed class WriteFlowPolicy
         MaxBatchTimeReached,
         // consolidation stopped absorbing on purpose, leaving the queue's shallow tail to seed
         // the next batch instead of draining it and letting the pipeline go idle
-        YieldedQueueTail,
         // hit the transaction / consolidation size cap, batch hit max limit
         SizeReached,    
     }
@@ -163,7 +162,6 @@ public sealed class WriteFlowPolicy
         {
             case BatchCloseReason.QueueEmpty: _batchesClosedQueueEmpty++; break;
             case BatchCloseReason.MaxBatchTimeReached: _batchesClosedOnTime++; break;
-            case BatchCloseReason.YieldedQueueTail: _batchesClosedOnTime++; break; // grow-capable close, same bucket as time
             case BatchCloseReason.SizeReached: _batchesClosedOnSize++; break;
         }
 
@@ -291,10 +289,6 @@ public sealed class WriteFlowPolicy
             ? Math.Max(configuredMinimumMs, MaxBatchConsolidationWindowInMs)
             : configuredMinimumMs;
     }
-    // Leave a tail in the queue when consolidating to seed the next batch immediately. Draining those 
-    // last few ops means all clients have to be notified, instead of staggering the work to increase throughput
-    public int MinQueueDepthToKeepAbsorbing => _consolidatingBatches ? 8 : 0;
-
     // batches so small they aren't worth considering in our calculations
     public const int TinyBatchOperations = 8;
 
