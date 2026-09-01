@@ -942,7 +942,7 @@ namespace Sparrow
 
             return IsEqualConstantVector128(ref constantRef, ref valueRef, value.Length);
 #else
-            throw new NotSupportedException($"{nameof(IsEqualConstant)} is not supported in frameworks lesser than 7.0");
+            return constant.SequenceEqual(value);
 #endif
         }
 
@@ -988,8 +988,9 @@ namespace Sparrow
                 return IsEqualConstantAvx256(ref constantRef, ptr, constant.Length);
 
             return IsEqualConstantVector128(ref constantRef, ptr, constant.Length);
+#else
+            return constant.SequenceEqual(new ReadOnlySpan<byte>(ptr, constant.Length));
 #endif
-            throw new NotSupportedException($"{nameof(IsEqualConstant)} is not supported in frameworks lesser than 7.0");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1013,7 +1014,7 @@ namespace Sparrow
 
             return IsEqualConstantVector128(ref constantRef, ptr, size);
 #else
-            throw new NotSupportedException($"{nameof(IsEqualConstant)} is not supported in frameworks lesser than 7.0");
+            return new ReadOnlySpan<byte>(constant, size).SequenceEqual(new ReadOnlySpan<byte>(ptr, size));
 #endif
         }
 
@@ -1041,7 +1042,10 @@ namespace Sparrow
 
             return IsEqualConstantVector128(ref constantRef, ptr, constant.Length);
 #else
-            throw new NotSupportedException($"{nameof(IsEqualConstant)} is not supported in frameworks lesser than 7.0");
+            if (size != constant.Length)
+                return false;
+
+            return constant.SequenceEqual(new ReadOnlySpan<byte>(ptr, size));
 #endif
         }
     }
