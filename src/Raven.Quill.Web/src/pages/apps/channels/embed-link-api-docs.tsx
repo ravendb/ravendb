@@ -14,7 +14,13 @@ import {
     MIN_INVOCATIONS,
     MIN_TTL_SECONDS,
 } from "@/pages/apps/channels/embed-link-utils";
-import { buildBackedHostPageSnippet } from "@/pages/apps/channels/embed-host-page-snippets";
+import {
+    buildBackedHostPageSnippet,
+    buildKotlinHostSnippet,
+    buildReactHostSnippet,
+    buildSwiftHostSnippet,
+    buildVueHostSnippet,
+} from "@/pages/apps/channels/embed-host-page-snippets";
 import { InlineCode } from "@/components/data/inline-code";
 import { NumberedSteps } from "@/components/data/numbered-steps";
 import { SectionCard } from "@/pages/apps/section-card";
@@ -28,10 +34,7 @@ import {
 } from "@/pages/apps/channels/agent-parameter-values";
 
 const LANGUAGE_STORAGE_KEY = "quill-embed-api-docs-language";
-
-// The host page snippet grows to its natural height, but never shrinks below this so the block still
-// reads as a code viewport.
-const HOST_PAGE_MIN_LINES = 16;
+const HOST_STACK_STORAGE_KEY = "quill-embed-api-docs-host-stack";
 
 type Language = "bash" | "powershell" | "csharp" | "python" | "node";
 
@@ -54,6 +57,28 @@ function readLanguage(): Language {
     return LANGUAGE_OPTIONS.some((language) => language.value === stored) ? (stored as Language) : "bash";
 }
 
+type HostStack = "html" | "react" | "vue" | "kotlin" | "swift";
+
+type HostStackOption = {
+    value: HostStack;
+    label: string;
+    mode: HighlightLanguage;
+    build: (embedOrigin: string) => string;
+};
+
+const HOST_STACK_OPTIONS: HostStackOption[] = [
+    { value: "html", label: "HTML", mode: "html", build: buildBackedHostPageSnippet },
+    { value: "react", label: "React", mode: "jsx", build: buildReactHostSnippet },
+    { value: "vue", label: "Vue", mode: "vue", build: buildVueHostSnippet },
+    { value: "kotlin", label: "Kotlin", mode: "kotlin", build: buildKotlinHostSnippet },
+    { value: "swift", label: "Swift", mode: "swift", build: buildSwiftHostSnippet },
+];
+
+function readHostStack(): HostStack {
+    const stored = readStoredValue(HOST_STACK_STORAGE_KEY);
+    return HOST_STACK_OPTIONS.some((stack) => stack.value === stored) ? (stored as HostStack) : "html";
+}
+
 type EmbedLinkApiDocsProps = {
     slug: string;
     channelId: string;
@@ -71,6 +96,14 @@ export function EmbedLinkApiDocs({ slug, channelId, parameters }: EmbedLinkApiDo
         const next = value as Language;
         writeStoredValue(LANGUAGE_STORAGE_KEY, next);
         setLanguage(next);
+    };
+
+    const [hostStack, setHostStack] = useState<HostStack>(readHostStack);
+
+    const onHostStackChange = (value: string) => {
+        const next = value as HostStack;
+        writeStoredValue(HOST_STACK_STORAGE_KEY, next);
+        setHostStack(next);
     };
 
     const fields = [
@@ -143,22 +176,20 @@ export function EmbedLinkApiDocs({ slug, channelId, parameters }: EmbedLinkApiDo
                             content: (
                                 <>
                                     <Text variant="muted" className="max-w-prose">
-                                        Then in the page, point an iframe at the <InlineCode>url</InlineCode> your
-                                        endpoint returned:
+                                        Then point an iframe — or a mobile WebView — at the <InlineCode>url</InlineCode>{" "}
+                                        your endpoint returned, and re-mint when it expires:
                                     </Text>
                                     <CodeBlockTabs
-                                        value="html"
-                                        copyLabel="Copy host page"
-                                        minLines={HOST_PAGE_MIN_LINES}
+                                        value={hostStack}
+                                        onValueChange={onHostStackChange}
+                                        copyLabel="Copy embed snippet"
                                         className="mt-3"
-                                        tabs={[
-                                            {
-                                                value: "html",
-                                                label: "Host page",
-                                                language: "html",
-                                                code: buildBackedHostPageSnippet(embedOrigin),
-                                            },
-                                        ]}
+                                        tabs={HOST_STACK_OPTIONS.map(({ value, label, mode, build }) => ({
+                                            value,
+                                            label,
+                                            language: mode,
+                                            code: build(embedOrigin),
+                                        }))}
                                     />
                                 </>
                             ),
