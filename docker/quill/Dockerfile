@@ -128,6 +128,8 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends xz-utils curl ca-certificates nginx-full openssl jq libcap2-bin \
     && rm -rf /var/lib/apt/lists/*
 
+# no top-level USER by design: s6/pid 1 needs root for setup, 
+# so each exposed daemon drops to this quill user via s6-setuidgid in its run script 
 RUN groupadd -r -g ${QUILL_GROUP_ID} quill
 RUN useradd -r -u ${QUILL_USER_ID} -g quill -d /var/lib/quill -s /usr/sbin/nologin quill
 
