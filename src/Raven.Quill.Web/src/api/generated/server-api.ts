@@ -292,6 +292,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/apps/{slug}/cdc/restart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Restarts the app's CDC task by disabling and re-enabling it. A task that is already disabled is left alone; enable it instead. */
+        post: operations["apps.cdcRestart"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/apps/{slug}/setup/try": {
         parameters: {
             query?: never;
@@ -2601,6 +2618,53 @@ export interface operations {
             };
         };
     };
+    "apps.cdcRestart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
     "apps.setupTry": {
         parameters: {
             query?: never;
@@ -4514,6 +4578,7 @@ export const API_ENDPOINTS = {
         cdcErrors: (slug: string) => `/apps/${encodeURIComponent(slug)}/cdc/errors`,
         cdcGet: (slug: string) => `/apps/${encodeURIComponent(slug)}/cdc`,
         cdcPerformance: (slug: string) => `/apps/${encodeURIComponent(slug)}/cdc/performance`,
+        cdcRestart: (slug: string) => `/apps/${encodeURIComponent(slug)}/cdc/restart`,
         delete: (slug: string) => `/apps/${encodeURIComponent(slug)}`,
         detail: (slug: string) => `/apps/${encodeURIComponent(slug)}`,
         list: "/apps",
@@ -4620,6 +4685,7 @@ export function createServerApi(client: ApiClient) {
             cdcErrors: (slug: string) => client.get<CdcError[], ApiErrorResponse>(API_ENDPOINTS.apps.cdcErrors(slug)),
             cdcGet: (slug: string) => client.get<AppCdcConfigurationResponse, ApiErrorResponse>(API_ENDPOINTS.apps.cdcGet(slug)),
             cdcPerformance: (slug: string) => client.get<CdcPerformanceResponse, ApiErrorResponse>(API_ENDPOINTS.apps.cdcPerformance(slug)),
+            cdcRestart: (slug: string) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.apps.cdcRestart(slug)),
             delete: (slug: string) => client.delete<void, ApiErrorResponse>(API_ENDPOINTS.apps.delete(slug)),
             detail: (slug: string) => client.get<AppResponse, ApiErrorResponse>(API_ENDPOINTS.apps.detail(slug)),
             list: () => client.get<AppResponse[]>(API_ENDPOINTS.apps.list),

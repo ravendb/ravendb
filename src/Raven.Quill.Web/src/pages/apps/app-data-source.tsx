@@ -14,6 +14,7 @@ import { CdcPerformanceSection } from "@/pages/apps/cdc-performance-section";
 import { CollectionsSection } from "@/pages/apps/collections-section";
 import { appRoutes } from "@/lib/app-routes";
 import { DeleteAppDialog } from "@/pages/apps/delete-app-dialog";
+import { RestartSyncButton } from "@/pages/apps/restart-sync-button";
 import { buildConfigExportFromCdc, downloadConfig } from "@/pages/setup/add-app-wizard/config-io";
 import { PROVIDER_OPTIONS } from "@/pages/setup/add-app-wizard/steps/connect/connect-source-options";
 
@@ -112,6 +113,8 @@ function DataSourceActions({
 
     return (
         <>
+            <RestartSyncButton slug={slug} />
+
             <DetailHeaderMenu>
                 <DropdownMenuItem onSelect={() => navigate(appRoutes.editApp(slug))}>
                     <Pencil aria-hidden="true" />

@@ -31,6 +31,7 @@ export const appsMocks = {
         apiHttp.get("/api/apps/{slug}/cdc", ({ response }) => response(200).json(cdc)),
     cdcErrors: (errors: CdcError[] = sampleCdcErrors) =>
         apiHttp.get("/api/apps/{slug}/cdc/errors", ({ response }) => response(200).json(errors)),
+    cdcRestart: () => apiHttp.post("/api/apps/{slug}/cdc/restart", ({ response }) => response(204).empty()),
     delete: () => apiHttp.delete("/api/apps/{slug}", ({ response }) => response(204).empty()),
     detail: (apps: AppResponse[] = sampleApps) =>
         apiHttp.get("/api/apps/{slug}", ({ params, response }) => {
