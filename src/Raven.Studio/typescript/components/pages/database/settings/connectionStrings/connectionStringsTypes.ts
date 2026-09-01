@@ -201,6 +201,7 @@ export interface AiConnection extends ConnectionBase {
         model?: string;
         organizationId?: string;
         projectId?: string;
+        reasoningEffort?: string;
         dimensions?: number;
         embeddingsMaxConcurrentBatches?: number;
         enablePromptCache?: boolean;
