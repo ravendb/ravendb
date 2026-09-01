@@ -412,7 +412,7 @@ internal static class MetricsReadService
         return CdcPerformanceShaper.HasErrors(errors);
     }
 
-    private static (string Status, string? Subtitle) DeriveAppStatus(
+    internal static (string Status, string? Subtitle) DeriveAppStatus(
         int agentsCount, int channelsCount, int enabledChannels, bool cdcDisabled, bool hasSyncErrors)
     {
         if (agentsCount == 0) return ("setup", "No AI agent yet");
