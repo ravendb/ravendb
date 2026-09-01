@@ -52,14 +52,6 @@ namespace Voron.Impl.Journal
             TaskCompletionSource Tcs,
             Pal.journal_entry Entry);
 
-        public record PendingJournalStateRecord(
-            LowLevelTransaction Transaction,
-            TaskCompletionSource Tcs,
-            Pal.journal_entry Entry)
-        {
-            public JournalStateRecord JournalStateRecord => new JournalStateRecord(Transaction, Tcs, Entry);
-        }
-
         private long _currentJournalFileSize;
         private DateTime _lastFile;
 
@@ -84,7 +76,7 @@ namespace Voron.Impl.Journal
         private readonly JournalWritePipeline _writePipeline;
 
         // write lock only - the acks of the journal write that is being assembled
-        private readonly List<JournalWritePipeline.Ack> _acksForCurrentWrite = [];
+        private readonly List<LowLevelTransaction> _transactionsForCurrentWrite = [];
         private int _maxNumberOfPagesRequiredForCompressionBuffer;
         private int _numberOfUsedCompressionBufferPagesSinceZeroing;
 
@@ -875,6 +867,7 @@ namespace Voron.Impl.Journal
             private long _totalWrittenButUnsyncedBytes;
             private bool _ignoreLockAlreadyTaken;
             private Func<LowLevelTransaction, bool> _updateJournalStateAfterFlush;
+            private bool _updateJournalStateApplied;// only ever touched under the write tx lock
             private DateTime _lastFlushTime;
             private DateTime _lastSyncTime;
 
@@ -898,12 +891,21 @@ namespace Voron.Impl.Journal
             {
                 // we are getting the transaction here just to verify that the write lock is held
                 Debug.Assert(tx.Flags is TransactionFlags.ReadWrite);
-                if (tx.Committed && tx.AppliedJournalStateAction != null &&
+                if (tx.AppliedJournalStateAction == null ||
                     // we may get a _previous_ transaction that _also_ applied a flush, but not the most recent one...
-                    ReferenceEquals(tx.AppliedJournalStateAction, _updateJournalStateAfterFlush))
+                    ReferenceEquals(tx.AppliedJournalStateAction, _updateJournalStateAfterFlush) == false)
+                    return;
+
+                if (tx.Committed)
                 {
                     _updateJournalStateAfterFlush = null;
                     _flusherShouldRecheckJournalState.Set();
+                }
+                else
+                {
+                    // the carrier applied the cycle's update but failed to commit: must run again on the next tx
+                    // safe to run again. Freed scratch entries were zeroed, and the journal pruning re-resolves
+                    _updateJournalStateApplied = false;
                 }
             }
 
@@ -1109,11 +1111,11 @@ namespace Voron.Impl.Journal
                 ExceptionDispatchInfo edi = null;
                 var sp = Stopwatch.StartNew();
 
-                var executedSuccessfully = false;
+                _updateJournalStateApplied = false;
 
                 var applied = WaitForJournalStateToBeUpdated(token, transactionPersistentContext, txw =>
                 {
-                    if (executedSuccessfully) // no concurrency, the tx write lock ensures this
+                    if (_updateJournalStateApplied) // no concurrency, the tx write lock ensures this
                         return false; // a previous transaction in the async chain already applied this cycle
 
                     try
@@ -1121,7 +1123,7 @@ namespace Voron.Impl.Journal
                         txw.UpdateDataPagerState(dataPagerState);
                         UpdateJournalStateUnderWriteTransactionLock(txw, bufferOfPageFromScratchBuffersToFree, record);
 
-                        executedSuccessfully = true;
+                        _updateJournalStateApplied = true;
 
                         if (_waj._logger.IsDebugEnabled)
                             _waj._logger.Debug($"Updated journal state under write tx lock (txId: {txw.Id}) after waiting for {sp.Elapsed}");
@@ -1140,7 +1142,7 @@ namespace Voron.Impl.Journal
 
                 if (edi != null)
                     edi.Throw();
-                else if (applied && executedSuccessfully == false)
+                else if (applied && _updateJournalStateApplied == false)
                     throw new InvalidOperationException($"Journal state was not applied successfully after the flush (waited - {sp.Elapsed}, last flushed tx: id - {record.TransactionId}, written to journal - {record.FlushedToJournal})");
             }
 
@@ -1224,7 +1226,9 @@ namespace Voron.Impl.Journal
                 _forTestingPurposes?.OnUpdateJournalStateUnderWriteTransactionLock?.Invoke();
 
                 JournalFile journalFile = _waj._files.FirstOrDefault(x => x.Number == flushedRecord.FlushedToJournal);
-                if (journalFile is null)
+                if (journalFile is null &&
+                    // a rerun after a tx rollback: previously pruned the flushed journal
+                    _journalsToDelete.TryGetValue(flushedRecord.FlushedToJournal, out journalFile) == false)
                 {
                     throw new InvalidOperationException($"Unable to find journal file {flushedRecord.FlushedToJournal} in {_waj._env.DataPager.FileName}");
                 }
@@ -1265,13 +1269,13 @@ namespace Voron.Impl.Journal
                 }
 
                 List<string> pathsToSync = null;
-                if (unusedJournals.Count > 0)
+                var journalsToDelete = _journalsToDelete.Values.ToList();
+                if (journalsToDelete.Count > 0)
                 {
-                    pathsToSync = _waj._linkedJournalsRecord.GetFoldersToSync(unusedJournals[^1].Number);
+                    pathsToSync = _waj._linkedJournalsRecord.GetFoldersToSync(journalsToDelete.Max(x => x.Number));
                 }
 
-                SetLastFlushed(flushedRecord.TransactionId, journalFile,
-                    _journalsToDelete.Values.ToList(), pathsToSync);
+                SetLastFlushed(flushedRecord.TransactionId, journalFile, journalsToDelete, pathsToSync);
 
                 if (_waj._files.Count == 0)
                 {
@@ -2251,11 +2255,10 @@ namespace Voron.Impl.Journal
                         var entry = PrepareToWriteToJournal(tx, ref tempTxState, out numberOfUncompressedPages, out var numberOfUsedCompressionBufferPages);
                         Debug.Assert(branchCommit != null, "stage 1 creates PreparedDurableCommit for every ModifiedPages commit");
                         numberOf4Kbs = entry.NumberOf4Kbs;
-                        var pendingJournalStateRecord = new PendingJournalStateRecord(tx, branchCommit, entry);
-                        journalStateRecord = pendingJournalStateRecord.JournalStateRecord;
+                        journalStateRecord = new JournalStateRecord(tx, branchCommit, entry);
                         if (this != rootJournal)
                         {
-                            rootJournal.SharedJournalState.Enqueue(pendingJournalStateRecord);
+                            rootJournal.SharedJournalState.Enqueue(journalStateRecord);
                         }
                         
                         _numberOfUsedCompressionBufferPagesSinceZeroing = Math.Max(_numberOfUsedCompressionBufferPagesSinceZeroing, numberOfUsedCompressionBufferPages);
@@ -2289,7 +2292,10 @@ namespace Voron.Impl.Journal
                 }
                 catch (Exception e)
                 {
+                    // failure happened *preparing* the write, before anything was written to disk
+                    // so no need for catastrophic error, the transaction rolls back cleanly, don't poison the env
                     branchCommit?.TrySetException(e);
+                    tx.AcknowledgeDurableCommit();
                     throw;
                 }
                 finally
@@ -2370,7 +2376,7 @@ namespace Voron.Impl.Journal
                 }
 
                 requiredSizeIn4Kbs += cur.Entry.NumberOf4Kbs;
-                SharedJournalState.PrepareForCommit(cur.JournalStateRecord);
+                SharedJournalState.PrepareForCommit(cur);
             }
 
             FlushMergedJournalEntries(tx, requiredSizeIn4Kbs);
@@ -2486,7 +2492,7 @@ namespace Voron.Impl.Journal
             var writePosIn4Kbs = CurrentFile.GetWritePosIn4KbPosition(tx.CurrentStateRecord);
             long positionIn4Kbs = writePosIn4Kbs + totalNumberOf4Kbs;
 
-            _acksForCurrentWrite.Clear();
+            _transactionsForCurrentWrite.Clear();
 
             foreach (var rec in SharedJournalState.JournalRecords)
             {
@@ -2506,7 +2512,7 @@ namespace Voron.Impl.Journal
 
                 header->SetLastDurableTxIdAtSubmit(environment.DurableTransactionId);
 
-                _acksForCurrentWrite.Add(new JournalWritePipeline.Ack(environment, llt.Id, rec.Tcs));
+                _transactionsForCurrentWrite.Add(llt);
 
                 llt.UpdateJournal(llt.WrittenToJournalNumber, positionIn4Kbs);
             }
@@ -2523,9 +2529,9 @@ namespace Voron.Impl.Journal
             tx._forTestingPurposes?.ActionToCallJustBeforeWritingToJournal?.Invoke();
 
             if (tx.IsAsyncCommit && _env.WriteFlow.CanPipeline(totalNumberOf4Kbs))
-                _writePipeline.SubmitPipelined(CurrentFile, writePosIn4Kbs, entries, totalNumberOf4Kbs, _acksForCurrentWrite);
+                _writePipeline.SubmitPipelined(CurrentFile, writePosIn4Kbs, entries, totalNumberOf4Kbs, _transactionsForCurrentWrite);
             else
-                _writePipeline.WriteInline(CurrentFile, writePosIn4Kbs, entries, totalNumberOf4Kbs, _acksForCurrentWrite);
+                _writePipeline.WriteInline(CurrentFile, writePosIn4Kbs, entries, totalNumberOf4Kbs, _transactionsForCurrentWrite);
 
             var elapsed = Stopwatch.GetElapsedTime(start);
 
@@ -2536,7 +2542,12 @@ namespace Voron.Impl.Journal
             if (failedBranchRecords != null)
             {
                 foreach (var (rec, ex) in failedBranchRecords)
+                {
+                    // deliberately not FailDurableCommit: because this is *not* a catastrophic failure
+                    // the environment survives this & already fell back to standalone journaling
                     rec.Tcs.TrySetException(ex);
+                    rec.Transaction.AcknowledgeDurableCommit();
+                }
             }
 
             if (_logger.IsDebugEnabled)
@@ -3084,7 +3095,7 @@ namespace Voron.Impl.Journal
         internal sealed class TestingStuff(WriteAheadJournal journal)
         {
             internal Action OnReduceSizeOfCompressionBufferIfNeeded_RightAfterDisposingCompressionPager;
-            internal Action<ConcurrentQueue<WriteAheadJournal.PendingJournalStateRecord>> OnWriteBuffersToJournal;
+            internal Action<ConcurrentQueue<WriteAheadJournal.JournalStateRecord>> OnWriteBuffersToJournal;
 
             internal int InFlightJournalWrites => journal._writePipeline.ForTestingPurposesOnly().InFlightCount;
         }
