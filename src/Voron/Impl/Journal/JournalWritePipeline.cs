@@ -17,11 +17,9 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
 {
     internal const int MaxPipelinedBatch4Kbs = Constants.Size.Megabyte / Constants.Storage.JournalPageSize;
 
-    internal readonly record struct Ack(StorageEnvironment Environment, long TransactionId, TaskCompletionSource CommitCompleted);
-
     private sealed class PendingWrite(JournalWritePipeline pipeline) : IThreadPoolWorkItem, IDisposable
     {
-        public readonly List<Ack> Acks = [];
+        public readonly List<LowLevelTransaction> Transactions = [];
         public SafeJournalWriteContext Context;
         public JournalFile File;
         public long PosBy4Kb;
@@ -35,7 +33,7 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
 
         public void Reset()
         {
-            Acks.Clear();
+            Transactions.Clear();
             File = null;
             PosBy4Kb = 0;
             Buffer = null;
@@ -80,9 +78,9 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
 
     internal bool HasInFlightWrites => Volatile.Read(ref _nextSequence) - Volatile.Read(ref _reapedSequence) > 0;
 
-    public void SubmitPipelined(JournalFile file, long posBy4Kb, Span<Pal.journal_entry> entries, long totalNumberOf4Kbs, List<Ack> acks)
+    public void SubmitPipelined(JournalFile file, long posBy4Kb, Span<Pal.journal_entry> entries, long totalNumberOf4Kbs, List<LowLevelTransaction> transactions)
     {
-        var write = RentWrite(file, posBy4Kb, (int)totalNumberOf4Kbs, acks);
+        var write = RentWrite(file, posBy4Kb, (int)totalNumberOf4Kbs, transactions);
 
         file.AddRef();
 
@@ -102,7 +100,7 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
 
             Debug.Assert(copied4Kbs == write.NumberOf4Kbs, $"copied {copied4Kbs} of {write.NumberOf4Kbs} 4KB blocks");
 
-            RecordSubmitted(acks);
+            RecordSubmitted(transactions);
 
             ThreadPool.UnsafeQueueUserWorkItem(write, preferLocal: false);
         }
@@ -114,7 +112,7 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
         }
     }
 
-    public void WriteInline(JournalFile file, long posBy4Kb, Span<Pal.journal_entry> entries, long totalNumberOf4Kbs, List<Ack> acks)
+    public void WriteInline(JournalFile file, long posBy4Kb, Span<Pal.journal_entry> entries, long totalNumberOf4Kbs, List<LowLevelTransaction> transactions)
     {
         Drain(throwOnFailure: false); // we mustn't have anything else concurrently running with us
         Debug.Assert(_disposed is false, "WriteInline called after the pipeline was disposed");
@@ -122,19 +120,19 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
         var failure = Volatile.Read(ref _failure);
         if (failure != null) // previous error, fail
         {
-            ErrorAck(acks, failure.SourceException);
+            FailDurableCommits(transactions, failure.SourceException);
             failure.Throw();
         }
         
-        WriteDirect(file, posBy4Kb, entries, totalNumberOf4Kbs, acks);
+        WriteDirect(file, posBy4Kb, entries, totalNumberOf4Kbs, transactions);
     }
 
     private SafeJournalWriteContext _inlineContext;
 
-    private void WriteDirect(JournalFile file, long posBy4Kb, Span<Pal.journal_entry> entries, long totalNumberOf4Kbs, List<Ack> acks)
+    private void WriteDirect(JournalFile file, long posBy4Kb, Span<Pal.journal_entry> entries, long totalNumberOf4Kbs, List<LowLevelTransaction> transactions)
     {
         _env.WriteFlow.RecordJournalWriteSubmitted();
-        RecordSubmitted(acks);
+        RecordSubmitted(transactions);
 
         try
         {
@@ -146,26 +144,24 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
         }
         catch (Exception e)
         {
-            ErrorAck(acks, e);
+            FailDurableCommits(transactions, e);
             throw;
         }
 
-        foreach (var ack in acks)
+        foreach (var tx in transactions)
         {
-            ack.Environment.MarkJournalWriteDurable(ack.TransactionId);
-            ack.CommitCompleted?.TrySetResult();
+            tx.CompleteDurableCommit();
         }
     }
 
-    private void ErrorAck(List<Ack> acks, Exception e)
+    private void FailDurableCommits(List<LowLevelTransaction> transactions, Exception e)
     {
         var error = ExceptionDispatchInfo.Capture(e);
         Interlocked.CompareExchange(ref _failure, error, null);
         MarkFailed(_env, Volatile.Read(ref _failure));
-        foreach (var ack in acks)
+        foreach (var tx in transactions)
         {
-            MarkFailed(ack.Environment, Volatile.Read(ref _failure));
-            ack.CommitCompleted?.TrySetException(e);
+            tx.FailDurableCommit(e);
         }
     }
 
@@ -201,11 +197,11 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
             Monitor.PulseAll(_waiters);
     }
 
-    private static void RecordSubmitted(List<Ack> acks)
+    private static void RecordSubmitted(List<LowLevelTransaction> transactions)
     {
-        foreach (var ack in acks)
+        foreach (var tx in transactions)
         {
-            ack.Environment.RecordJournalWriteSubmitted(ack.TransactionId);
+            tx.Environment.RecordJournalWriteSubmitted(tx.Id);
         }
     }
 
@@ -286,9 +282,9 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
         try
         {
             if (write.Sequence >= Volatile.Read(ref _lowestFailedSequence))
-                FailAcks(write);
+                FailDurableCommits(write);
             else
-                CompleteAcks(write);
+                CompleteDurableCommits(write);
         }
         finally
         {
@@ -306,7 +302,7 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
 
     private ulong SlotMask(long sequence) => 1UL << (int)(sequence % _maxConcurrentWrites);
 
-    private PendingWrite RentWrite(JournalFile file, long posBy4Kb, int numberOf4Kbs, List<Ack> acks)
+    private PendingWrite RentWrite(JournalFile file, long posBy4Kb, int numberOf4Kbs, List<LowLevelTransaction> transactions)
     {
         var sequence = _nextSequence;
         var slot = SlotMask(sequence);
@@ -330,7 +326,7 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
                 break;
         }
 
-        Debug.Assert(pending.Acks.Count == 0, "the slot was left dirty by its previous write");
+        Debug.Assert(pending.Transactions.Count == 0, "the slot was left dirty by its previous write");
         Debug.Assert(pending.File == null, "the slot was left dirty by its previous write");
         Debug.Assert(pending.Buffer == null, "the slot was left dirty by its previous write");
 
@@ -340,7 +336,7 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
             pending.File = file;
             pending.PosBy4Kb = posBy4Kb;
             pending.NumberOf4Kbs = numberOf4Kbs;
-            pending.Acks.AddRange(acks);
+            pending.Transactions.AddRange(transactions);
         }
         catch
         {
@@ -362,25 +358,23 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
         SlotsChanged();
     }
 
-    private static void CompleteAcks(PendingWrite write)
+    private static void CompleteDurableCommits(PendingWrite write)
     {
-        foreach (var ack in write.Acks)
+        foreach (var tx in write.Transactions)
         {
-            ack.Environment.MarkJournalWriteDurable(ack.TransactionId);
-            ack.CommitCompleted?.TrySetResult();
+            tx.CompleteDurableCommit();
         }
     }
 
-    private void FailAcks(PendingWrite write)
+    private void FailDurableCommits(PendingWrite write)
     {
         var error = Volatile.Read(ref _failure);
 
         MarkFailed(_env, error);
 
-        foreach (var ack in write.Acks)
+        foreach (var tx in write.Transactions)
         {
-            MarkFailed(ack.Environment, error);
-            ack.CommitCompleted?.TrySetException(error.SourceException);
+            tx.FailDurableCommit(error.SourceException);
         }
     }
 
