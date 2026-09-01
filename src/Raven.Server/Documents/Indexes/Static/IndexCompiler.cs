@@ -27,6 +27,7 @@ using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.Counters;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.TimeSeries;
 using Sparrow.Logging;
+using Sparrow.Platform;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -53,6 +54,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         [ThreadStatic]
         private static bool DisableMatchingAdditionalAssembliesByNameValue;
+
+        private static readonly int MaxChainDepth = PlatformDetails.Is32Bits ? 64 : 16;
 
         static IndexCompiler()
         {
@@ -547,7 +550,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 var map = maps[i];
                 statements.AddRange(HandleMap(definition.SourceType, map, fieldNamesValidator, methodDetector, stackDepthRetriever, ref members));
                 
-                maxDepthInRecursiveLinqQuery = Math.Max(maxDepthInRecursiveLinqQuery, stackDepthRetriever.StackSize);
+                maxDepthInRecursiveLinqQuery = Math.Max(maxDepthInRecursiveLinqQuery, stackDepthRetriever.StackSizeLetCounter);
                 stackDepthRetriever.Clear();
             }
 
@@ -561,7 +564,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 statements.Add(RoslynHelper.This(nameof(AbstractStaticIndexBase.GroupByFields)).Assign(groupByFieldsArray).AsExpressionStatement());
                 
-                maxDepthInRecursiveLinqQuery = Math.Max(maxDepthInRecursiveLinqQuery, stackDepthRetriever.StackSize);
+                maxDepthInRecursiveLinqQuery = Math.Max(maxDepthInRecursiveLinqQuery, stackDepthRetriever.StackSizeLetCounter);
             }
 
             var fields = GetIndexedFields(definition, fieldNamesValidator);
@@ -574,7 +577,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             var methods = methodDetector.Methods;
 
-            statements.Add(RoslynHelper.This(nameof(AbstractStaticIndexBase.StackSizeInSelectClause)).Assign(SyntaxFactory.ParseExpression($"{maxDepthInRecursiveLinqQuery}")).AsExpressionStatement());
+            statements.Add(RoslynHelper.This(nameof(AbstractStaticIndexBase.LetClausesDepth)).Assign(SyntaxFactory.ParseExpression($"{maxDepthInRecursiveLinqQuery}")).AsExpressionStatement());
             
             if (methods.HasCreateField)
                 statements.Add(RoslynHelper.This(nameof(AbstractStaticIndexBase.HasDynamicFields)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
@@ -649,7 +652,21 @@ namespace Raven.Server.Documents.Indexes.Static
                 
                 stackDepthRetriever.Visit(expression);
                 stackDepthRetriever.VisitMethodQuery(map);
-                
+
+                if (stackDepthRetriever.LinqChainDepth > MaxChainDepth)
+                {
+                    throw new IndexCompilationException(
+                        $"Index map contains a deeply chained sequence of LINQ method calls ({stackDepthRetriever.LinqChainDepth} levels deep). " +
+                        $"This will cause a StackOverflowException at indexing time because each chained call (Concat, Where, Select, etc.) " +
+                        $"creates a nested iterator that recurses on MoveNext(). " +
+                        $"Replace chained calls with a flat array + SelectMany, e.g.: " +
+                        $"new[] {{ col1, col2, col3 }}.Where(x => x != null).SelectMany(x => x).ToArray()")
+                    {
+                        IndexDefinitionProperty = nameof(IndexDefinition.Maps),
+                        ProblematicText = map
+                    };
+                }
+
                 var queryExpression = expression as QueryExpressionSyntax;
                 if (queryExpression != null)
                 {
