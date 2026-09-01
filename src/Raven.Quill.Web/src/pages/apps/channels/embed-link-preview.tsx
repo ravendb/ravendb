@@ -3,7 +3,8 @@ import { Text } from "@/components/typography";
 import { CopyableCode } from "@/components/data/copyable-code";
 import { Field, FieldLabel } from "@/components/shadcn/ui/field";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/shadcn/ui/input-group";
-import { formatDateTime, copyToClipboard } from "@/lib/utils";
+import { Timestamp } from "@/components/data/timestamp";
+import { copyToClipboard } from "@/lib/utils";
 
 type EmbedLinkPreviewProps = {
     url: string;
@@ -41,7 +42,8 @@ export function EmbedLinkPreview({ url, expiresAt, maxInvocations }: EmbedLinkPr
                 <CopyableCode code={iframeSnippet} copyLabel="Copy embed snippet" />
             </Field>
             <Text variant="caption">
-                Expires {formatDateTime(expiresAt)} · up to {maxInvocations.toLocaleString()} chats.
+                Expires <Timestamp value={expiresAt} textVariant="inherit" /> · up to {maxInvocations.toLocaleString()}{" "}
+                chats.
             </Text>
             <iframe
                 src={url}

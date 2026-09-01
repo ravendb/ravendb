@@ -81,6 +81,8 @@ const textVariants = cva("", {
 
 type TextElement = "p" | "span" | "div";
 
+type TextVariant = NonNullable<VariantProps<typeof textVariants>["variant"]>;
+
 function Text({
     className,
     variant = "body",
@@ -97,4 +99,4 @@ function Text({
     );
 }
 
-export { Heading, headingVariants, Text, textVariants };
+export { Heading, headingVariants, Text, textVariants, type TextVariant };

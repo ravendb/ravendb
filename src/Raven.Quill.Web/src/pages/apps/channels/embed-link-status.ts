@@ -1,5 +1,3 @@
-import { formatDateTime, formatRelativeTime } from "@/lib/utils";
-
 // "normal" links need no attention; "warning" links are close to expiry/limit;
 // "critical" links have already expired or exhausted their invocations.
 export type EmbedLinkStatusTone = "normal" | "warning" | "critical";
@@ -17,19 +15,17 @@ export type EmbedLinkStatus = {
     title: string;
 };
 
-export function getExpiryStatus(expiresAt: string, now: number = Date.now()): EmbedLinkStatus {
+export function getExpiryTone(expiresAt: string, now: number = Date.now()): EmbedLinkStatusTone {
     const expiry = new Date(expiresAt).getTime();
     if (Number.isNaN(expiry)) {
-        return { tone: "normal", label: expiresAt, title: expiresAt };
+        return "normal";
     }
 
     const remainingMs = expiry - now;
     if (remainingMs <= 0) {
-        return { tone: "critical", label: "Expired", title: `Expired ${formatDateTime(expiresAt)}` };
+        return "critical";
     }
-
-    const tone: EmbedLinkStatusTone = remainingMs <= EXPIRY_SOON_MS ? "warning" : "normal";
-    return { tone, label: formatRelativeTime(expiresAt), title: `Expires ${formatDateTime(expiresAt)}` };
+    return remainingMs <= EXPIRY_SOON_MS ? "warning" : "normal";
 }
 
 export function getUsageStatus(invocationCount: number, maxInvocations: number): EmbedLinkStatus {

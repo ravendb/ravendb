@@ -7,6 +7,7 @@ import { api } from "@/api/api";
 import type { AiConversationMessage, ConversationParam } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
 import { CardListSkeleton } from "@/components/data/loading-skeletons";
+import { Timestamp } from "@/components/data/timestamp";
 import {
     Sheet,
     SheetContent,
@@ -15,7 +16,7 @@ import {
     SheetTitle,
     SheetTrigger,
 } from "@/components/shadcn/ui/sheet";
-import { cn, formatDateTime } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { ConversationParams } from "@/pages/apps/conversations/conversation-params";
 import { ConversationSystemPrompt } from "@/pages/apps/conversations/conversation-system-prompt";
 import { ConversationToolCall } from "@/pages/apps/conversations/conversation-tool-call";
@@ -175,11 +176,7 @@ function TranscriptTurn({ turn, turnKey }: { turn: AiConversationMessage; turnKe
                         <Streamdown>{content}</Streamdown>
                     </div>
                 ))}
-            {turn.timestamp && (
-                <Text as="span" variant="caption">
-                    {formatDateTime(turn.timestamp)}
-                </Text>
-            )}
+            {turn.timestamp && <Timestamp value={turn.timestamp} textVariant="caption" />}
         </div>
     );
 }

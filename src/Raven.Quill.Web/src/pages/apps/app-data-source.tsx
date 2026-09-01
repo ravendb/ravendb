@@ -8,8 +8,8 @@ import { DetailHeader, DetailHeaderMenu, DetailHeaderMetaItem } from "@/componen
 import { StatusIndicator } from "@/components/data/status-indicator";
 import { ConfirmDialog } from "@/components/shadcn/ui/confirm-dialog";
 import { DropdownMenuItem } from "@/components/shadcn/ui/dropdown-menu";
+import { Timestamp } from "@/components/data/timestamp";
 import { resolveStatusStyle } from "@/lib/app-status";
-import { formatDate } from "@/lib/format";
 import { CdcPerformanceSection } from "@/pages/apps/cdc-performance-section";
 import { CollectionsSection } from "@/pages/apps/collections-section";
 import { appRoutes } from "@/lib/app-routes";
@@ -44,8 +44,9 @@ export function AppDataSource() {
                             <DetailHeaderMetaItem icon={Database} mono tooltip="Source database">
                                 {appQuery.data.database}
                             </DetailHeaderMetaItem>
-                            <DetailHeaderMetaItem icon={CalendarClock} tooltip="Connected">
-                                {formatDate(appQuery.data.createdAt)}
+                            <DetailHeaderMetaItem icon={CalendarClock}>
+                                Connected{" "}
+                                <Timestamp value={appQuery.data.createdAt} dateVariant="short" textVariant="inherit" />
                             </DetailHeaderMetaItem>
                         </>
                     )

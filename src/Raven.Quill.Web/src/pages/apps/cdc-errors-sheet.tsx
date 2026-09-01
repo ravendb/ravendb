@@ -7,6 +7,7 @@ import { ApiState } from "@/components/data/api-state";
 import { ErrorDetails } from "@/components/data/error-details";
 import { CardListSkeleton } from "@/components/data/loading-skeletons";
 import { Badge } from "@/components/shadcn/ui/badge";
+import { Timestamp } from "@/components/data/timestamp";
 import {
     Sheet,
     SheetContent,
@@ -16,7 +17,6 @@ import {
     SheetTrigger,
 } from "@/components/shadcn/ui/sheet";
 import { formatCompact } from "@/lib/format";
-import { formatDateTime } from "@/lib/utils";
 
 export function CdcErrorsSheet({ slug, trigger }: { slug: string; trigger: ReactNode }) {
     const [isOpen, setIsOpen] = useState(false);
@@ -66,9 +66,7 @@ function CdcErrorCard({ error }: { error: CdcError }) {
                 <Text as="span" variant="label">
                     {error.taskName}
                 </Text>
-                <Text as="span" variant="caption">
-                    {formatDateTime(error.createdAt)}
-                </Text>
+                <Timestamp value={error.createdAt} textVariant="caption" />
             </div>
             <Badge variant="secondary">{error.step}</Badge>
             {shortMessage && <p className="text-sm break-words whitespace-pre-wrap text-destructive">{shortMessage}</p>}

@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
 import type { SlackSummaryResponse } from "@/api/generated/server-api";
-import { Alert } from "@/components/shadcn/ui/alert";
+import { Alert, AlertDescription } from "@/components/shadcn/ui/alert";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Text } from "@/components/typography";
+import { Timestamp } from "@/components/data/timestamp";
 import { SlackIcon } from "@/pages/apps/channels/channel-brand-icons";
-import { formatDateTime, formatRelativeTime } from "@/lib/utils";
 
 // The connection identity + live health for a Slack channel: which workspace and bot it is wired to,
 // whether the token still works, when the last message arrived, and any recent delivery failure. Shown
@@ -49,8 +49,8 @@ export function SlackConnectionCard({
                 <div className="flex flex-wrap items-center gap-2 text-sm">
                     <SlackTokenBadge tokenValid={health?.tokenValid} tokenError={health?.tokenError} />
                     {health?.lastInboundAt ? (
-                        <Text as="span" variant="caption" title={formatDateTime(health.lastInboundAt)}>
-                            Last message {formatRelativeTime(health.lastInboundAt)}
+                        <Text as="span" variant="caption">
+                            Last message <Timestamp value={health.lastInboundAt} textVariant="inherit" />
                         </Text>
                     ) : (
                         <Text as="span" variant="caption">
@@ -62,17 +62,27 @@ export function SlackConnectionCard({
 
             {hasRecentSignatureFailure && health?.lastSignatureFailureAt && (
                 <Alert variant="destructive">
-                    A delivery failed signature verification {formatRelativeTime(health.lastSignatureFailureAt)} — the
-                    signing secret configured here likely differs from the Slack app&apos;s. Rotate the signing secret
-                    on this channel to match.
+                    <AlertDescription>
+                        A delivery failed signature verification at{" "}
+                        <Timestamp value={health.lastSignatureFailureAt} textVariant="inherit" /> — the signing secret
+                        configured here likely differs from the Slack app&apos;s. Rotate the signing secret on this
+                        channel to match.
+                    </AlertDescription>
                 </Alert>
             )}
 
             {health?.lastSendError && (
                 <Alert variant="destructive">
-                    The bot couldn&apos;t deliver a reply
-                    {health.lastSendErrorAt ? ` ${formatRelativeTime(health.lastSendErrorAt)}` : ""}:{" "}
-                    {health.lastSendError}
+                    <AlertDescription>
+                        The bot couldn&apos;t deliver a reply
+                        {health.lastSendErrorAt ? (
+                            <>
+                                {" at "}
+                                <Timestamp value={health.lastSendErrorAt} textVariant="inherit" />
+                            </>
+                        ) : null}
+                        : {health.lastSendError}
+                    </AlertDescription>
                 </Alert>
             )}
         </div>
