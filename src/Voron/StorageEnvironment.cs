@@ -543,6 +543,8 @@ namespace Voron
 
         public long NextPageNumber => _currentStateRecord.NextPageNumber;
 
+        internal Action DurableCommitAcknowledged;
+
         public StorageEnvironmentOptions Options => _options;
 
         public WriteAheadJournal Journal => _journal;

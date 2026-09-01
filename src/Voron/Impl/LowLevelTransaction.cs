@@ -1153,6 +1153,37 @@ namespace Voron.Impl
         // This task completes when the journal write for this transaction is durably stored on disk.
         internal Task DurableCommit;
         internal TaskCompletionSource PreparedDurableCommit;
+
+        internal void AcknowledgeDurableCommit()
+        {
+            _env.DurableCommitAcknowledged?.Invoke();
+        }
+
+        internal void CompleteDurableCommit()
+        {
+            _env.MarkJournalWriteDurable(Id);
+            PreparedDurableCommit?.TrySetResult();
+            AcknowledgeDurableCommit();
+        }
+
+        
+        internal void FailDurableCommit(Exception e)
+        {
+            try
+            {   // a durable-commit failure is catastrophic by definition
+                _env.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
+            }
+            catch{ /* best effort  */ }
+
+            PreparedDurableCommit?.TrySetException(e);
+            AcknowledgeDurableCommit();
+        }
+
+        internal void CancelDurableCommit()
+        {
+            PreparedDurableCommit?.TrySetCanceled();
+            AcknowledgeDurableCommit();
+        }
         
         private LowLevelTransaction _asyncCommitNextTransaction;
         private LowLevelTransaction _asyncCommitPreviousTransaction;
@@ -1280,8 +1311,7 @@ namespace Voron.Impl
                 // come to a known good state
                 _txStatus |= TxStatus.Errored;
                 // stage2 may have died before reaching the journal - nothing else will complete the window task
-                PreparedDurableCommit?.TrySetException(e);
-                _env.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
+                FailDurableCommit(e);
 
                 throw;
             }
