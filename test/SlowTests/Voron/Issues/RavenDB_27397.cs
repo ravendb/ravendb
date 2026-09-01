@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -356,23 +357,30 @@ public class RavenDB_27397 : StorageTest
         Env.WriteFlow.ForTestingPurposesOnly().ForceZeroedJournalPreparation = true;
 
         // a prepared file appears after the half-fill trigger fires, and every roll consumes it
-        // again - so probe between small write batches, when no roll can take it away
+        // again - so probe between small write batches, when no roll can take it away. The file
+        // shows up on disk before the zeroing finishes writing it (on Windows it is created empty
+        // and grows), so wait for it to reach full size, not merely to exist.
         var next = 0;
+        string prepared = null;
         Assert.True(SpinWait.SpinUntil(() =>
         {
-            if (GetRecyclableJournalFiles().Length > 0)
-                return true;
+            var pool = GetRecyclableJournalFiles();
+            if (pool.Length > 0)
+            {
+                prepared = pool[0];
+                return new FileInfo(prepared).Length >= 128 * 1024;
+            }
+
             WriteItems(next, 2);
             next += 2;
-            return GetRecyclableJournalFiles().Length > 0;
-        }, TimeSpan.FromSeconds(60)), "the half-fill trigger did not prepare a pool file");
-
-        var prepared = GetRecyclableJournalFiles()[0];
-        var file = new FileInfo(prepared);
-        Assert.True(file.Length >= 128 * 1024, $"prepared file is too small: {file.Length}");
+            return false;
+        }, TimeSpan.FromSeconds(60)), prepared == null
+            ? "the half-fill trigger did not prepare a pool file"
+            : $"prepared file did not reach full size: {new FileInfo(prepared).Length}");
 
         // fully written (zeroed), not sparse - the writes are what convert the extents
-        Assert.True(GetAllocatedBytes(prepared) >= file.Length, "prepared file is sparse - the zeros were not written");
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            Assert.True(GetAllocatedBytes(prepared) >= new FileInfo(prepared).Length, "prepared file is sparse - the zeros were not written");
 
         // the next roll must take the prepared file instead of creating a fresh one
         var journalsBefore = Directory.GetFiles(JournalPath, "*.journal").Length;
