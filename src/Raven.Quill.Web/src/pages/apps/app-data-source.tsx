@@ -14,7 +14,8 @@ import { CdcPerformanceSection } from "@/pages/apps/cdc-performance-section";
 import { CollectionsSection } from "@/pages/apps/collections-section";
 import { appRoutes } from "@/lib/app-routes";
 import { DeleteAppDialog } from "@/pages/apps/delete-app-dialog";
-import { RestartSyncButton } from "@/pages/apps/restart-sync-button";
+import { RestartSyncButton, RestartSyncDialog, RestartSyncMenuItem } from "@/pages/apps/restart-sync";
+import { useRestartSync } from "@/pages/apps/use-restart-sync";
 import { buildConfigExportFromCdc, downloadConfig } from "@/pages/setup/add-app-wizard/config-io";
 import { PROVIDER_OPTIONS } from "@/pages/setup/add-app-wizard/steps/connect/connect-source-options";
 
@@ -103,6 +104,7 @@ function DataSourceActions({
 }) {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
+    const restartSync = useRestartSync(slug);
     const [isExportOpen, setIsExportOpen] = useState(false);
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
@@ -117,7 +119,9 @@ function DataSourceActions({
 
     return (
         <>
-            <RestartSyncButton slug={slug} />
+            {restartSync.hasSyncErrors && (
+                <RestartSyncButton isRestarting={restartSync.isRestarting} onClick={restartSync.confirm} />
+            )}
 
             <DetailHeaderMenu>
                 <DropdownMenuItem onSelect={() => navigate(appRoutes.editApp(slug))}>
@@ -130,11 +134,14 @@ function DataSourceActions({
                         Export configuration
                     </DropdownMenuItem>
                 )}
+                <RestartSyncMenuItem isRestarting={restartSync.isRestarting} onSelect={restartSync.confirm} />
                 <DropdownMenuItem variant="destructive" onSelect={() => setIsDeleteOpen(true)}>
                     <Trash2 aria-hidden="true" />
                     Delete
                 </DropdownMenuItem>
             </DetailHeaderMenu>
+
+            <RestartSyncDialog {...restartSync.dialogProps} />
 
             <ConfirmDialog
                 open={isExportOpen}
