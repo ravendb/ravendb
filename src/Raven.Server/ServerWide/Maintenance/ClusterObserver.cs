@@ -250,11 +250,10 @@ namespace Raven.Server.ServerWide.Maintenance
 
                             // Collect the current write-usage values for this topology (database or shard):
                             // the MEMBER change vectors merged into a single cluster-wide change vector, and each
-                            // member's own (database id, last etag) and (database id, system collection stats)
-                            // kept unmerged - the backend gets every member's raw values and aggregates them.
+                            // member's own (database id, last etag, system collection document counts) kept
+                            // unmerged - the backend gets every member's raw values and aggregates them.
                             var memberChangeVectors = new List<string>();
-                            var dbLastEtag = new List<LastEtagSnapshot>();
-                            var systemCollectionsList = new List<SystemCollectionsSnapshot>();
+                            var nodeSnapshots = new List<WriteUsageNodeSnapshot>();
                             foreach (var member in state.DatabaseTopology.Members)
                             {
                                 var memberReport = state.GetCurrentDatabaseReport(member);
@@ -266,13 +265,12 @@ namespace Raven.Server.ServerWide.Maintenance
                                 if (string.IsNullOrEmpty(memberReport.DatabaseId))
                                     continue;
 
-                                dbLastEtag.Add(new LastEtagSnapshot(memberReport.DatabaseId, memberReport.LastEtag));
-                                systemCollectionsList.Add(new SystemCollectionsSnapshot(memberReport.DatabaseId, memberReport.SystemCollections));
+                                nodeSnapshots.Add(new WriteUsageNodeSnapshot(memberReport.DatabaseId, memberReport.LastEtag, memberReport.SystemCollections));
                             }
 
                             var mergedChangeVector = ChangeVectorUtils.MergeVectors(memberChangeVectors);
                             writeUsageSnapshots.Add(new WriteUsageApplicationSnapshot(state.Name, state.DatabaseTopology.DatabaseTopologyIdBase64, mergedChangeVector,
-                                dbLastEtag, systemCollectionsList));
+                                nodeSnapshots));
 
                             try
                             {

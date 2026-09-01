@@ -10,60 +10,30 @@ namespace Raven.Server.Commercial.WriteUsageMetering
         public const string UsageEndpointPath = "/api/v1/quill/usage";
     }
 
-    public sealed class LastEtagSnapshot
+    public sealed class WriteUsageNodeSnapshot
     {
-        public LastEtagSnapshot(string databaseId, long lastEtag)
+        public WriteUsageNodeSnapshot(string databaseId, long lastEtag, Dictionary<string, long> systemCollections)
         {
             DatabaseId = databaseId;
             LastEtag = lastEtag;
+            SystemCollections = systemCollections;
         }
 
         public string DatabaseId { get; }
 
         public long LastEtag { get; }
 
-        public DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(DatabaseId)] = DatabaseId,
-                [nameof(LastEtag)] = LastEtag
-            };
-        }
-    }
-
-    public sealed class SystemCollectionStats : IDynamicJson
-    {
-        public long Etag;
-        public long Count;
-
-        public DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(Etag)] = Etag,
-                [nameof(Count)] = Count
-            };
-        }
-    }
-
-    public sealed class SystemCollectionsSnapshot
-    {
-        public SystemCollectionsSnapshot(string databaseId, Dictionary<string, SystemCollectionStats> systemCollections)
-        {
-            DatabaseId = databaseId;
-            SystemCollections = systemCollections;
-        }
-
-        public string DatabaseId { get; }
-
-        public Dictionary<string, SystemCollectionStats> SystemCollections { get; }
+        /// <summary>
+        /// Document count per system ('@'-prefixed) collection of this member.
+        /// </summary>
+        public Dictionary<string, long> SystemCollections { get; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
                 [nameof(DatabaseId)] = DatabaseId,
+                [nameof(LastEtag)] = LastEtag,
                 [nameof(SystemCollections)] = DynamicJsonValue.Convert(SystemCollections)
             };
         }
@@ -71,14 +41,12 @@ namespace Raven.Server.Commercial.WriteUsageMetering
 
     public sealed class WriteUsageApplicationSnapshot
     {
-        public WriteUsageApplicationSnapshot(string applicationName, string topologyId, string changeVector, IReadOnlyList<LastEtagSnapshot> nodes,
-            IReadOnlyList<SystemCollectionsSnapshot> systemCollectionsList)
+        public WriteUsageApplicationSnapshot(string applicationName, string topologyId, string changeVector, IReadOnlyList<WriteUsageNodeSnapshot> nodes)
         {
             ApplicationName = applicationName;
             TopologyId = topologyId;
             ChangeVector = changeVector;
             Nodes = nodes;
-            SystemCollectionsList = systemCollectionsList;
         }
 
         public string ApplicationName { get; }
@@ -88,17 +56,13 @@ namespace Raven.Server.Commercial.WriteUsageMetering
         public string ChangeVector { get; }
 
         /// <summary>
-        /// One entry per member of the database group. Members that haven't reported yet, or that report
-        /// without a database id (unloaded, faulted, or a sharded orchestrator), are not included.
+        /// One entry per member of the database group, pairing the member's database id with its last etag
+        /// and the document count of each of its system ('@'-prefixed) collections. Reported unmerged - the
+        /// backend receives every member's own values and aggregates them itself. Members that haven't
+        /// reported yet, or that report without a database id (unloaded, faulted, or a sharded orchestrator),
+        /// are not included.
         /// </summary>
-        public IReadOnlyList<LastEtagSnapshot> Nodes { get; }
-
-        /// <summary>
-        /// One entry per member of the database group, pairing the member's database id with the last etag
-        /// and document count of each of its system ('@'-prefixed) collections. Reported unmerged - the
-        /// backend receives every member's own values and aggregates them itself.
-        /// </summary>
-        public IReadOnlyList<SystemCollectionsSnapshot> SystemCollectionsList { get; }
+        public IReadOnlyList<WriteUsageNodeSnapshot> Nodes { get; }
 
         public DynamicJsonValue ToJson()
         {
@@ -107,8 +71,7 @@ namespace Raven.Server.Commercial.WriteUsageMetering
                 [nameof(ApplicationName)] = ApplicationName,
                 [nameof(TopologyId)] = TopologyId,
                 [nameof(ChangeVector)] = ChangeVector,
-                [nameof(Nodes)] = new DynamicJsonArray(Nodes.Select(n => n.ToJson())),
-                [nameof(SystemCollectionsList)] = new DynamicJsonArray(SystemCollectionsList.Select(s => s.ToJson()))
+                [nameof(Nodes)] = new DynamicJsonArray(Nodes.Select(n => n.ToJson()))
             };
         }
     }

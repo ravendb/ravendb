@@ -6,7 +6,6 @@ using Raven.Client;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
-using Raven.Server.Commercial.WriteUsageMetering;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Sharding;
@@ -407,28 +406,23 @@ namespace Raven.Server.ServerWide.Maintenance
                     report.NumberOfConflicts = documentsStorage.ConflictsStorage.ConflictsCount;
                     report.NumberOfDocuments = documentsStorage.GetNumberOfDocuments(context);
                     report.DatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
-                    report.SystemCollections = GetSystemCollectionsStats(tx, context, documentsStorage);
+                    report.SystemCollections = GetSystemCollectionsStats(context, documentsStorage);
                 }
             }
         }
 
-        // Last etag and document count for every '@'-prefixed collection of this database, except '@hilo'.
+        // Document count for every '@'-prefixed collection of this database, except '@hilo'.
         // Nothing else is filtered out beyond the prefix - '@empty' included - so the backend sees everything and decides.
-        private static Dictionary<string, SystemCollectionStats> GetSystemCollectionsStats(DocumentsTransaction tx, DocumentsOperationContext context,
-            DocumentsStorage documentsStorage)
+        private static Dictionary<string, long> GetSystemCollectionsStats(DocumentsOperationContext context, DocumentsStorage documentsStorage)
         {
-            var stats = new Dictionary<string, SystemCollectionStats>(StringComparer.OrdinalIgnoreCase);
+            var stats = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var collection in documentsStorage.GetCollectionsNames(context))
             {
                 if (collection.StartsWith('@') == false || CollectionName.IsHiLoCollection(collection))
                     continue;
 
-                stats[collection] = new SystemCollectionStats
-                {
-                    Etag = documentsStorage.GetLastDocumentEtag(tx.InnerTransaction, collection),
-                    Count = documentsStorage.GetNumberOfDocumentsFor(collection, context)
-                };
+                stats[collection] = documentsStorage.GetNumberOfDocumentsFor(collection, context);
             }
 
             return stats;
