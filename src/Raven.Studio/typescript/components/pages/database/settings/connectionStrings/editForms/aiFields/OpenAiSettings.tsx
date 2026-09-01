@@ -219,6 +219,7 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                         name="openAiSettings.reasoningEffort"
                         placeholder="Select a reasoning effort or enter a new one (leave empty for model default)"
                         options={reasoningEffortOptions}
+                        isClearable
                     />
                 </div>
             )}
