@@ -1,4 +1,5 @@
 using System.Text.Json;
+using FastTests;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Quill.Agents;
 using Tests.Infrastructure;
@@ -6,7 +7,7 @@ using Xunit;
 
 namespace QuillTests;
 
-public class AgentParameterValueTests
+public class AgentParameterValueTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 {
     [RavenTheory(RavenTestCategory.Quill)]
     [InlineData(AiAgentParameterValueType.Number, "42", "42")]

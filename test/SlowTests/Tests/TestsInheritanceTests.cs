@@ -23,7 +23,7 @@ namespace SlowTests.Tests
         [RavenMultiplatformFact(RavenTestCategory.Codebase, RavenPlatform.Windows | RavenPlatform.OsX)]
         public void NonDisposableTestShouldNotExist()
         {
-            var types = from assembly in GetAssemblies(typeof(TestsInheritanceTests).Assembly)
+            var types = from assembly in GetAssemblies(GetType().Assembly)
                         from test in GetAssemblyTypes(assembly)
                         where test.GetMethods().Any(x => x.GetCustomAttributes(typeof(FactAttribute), true).Count() != 0 || x.GetCustomAttributes(typeof(TheoryAttribute), true).Count() != 0)
                         where typeof(IAsyncDisposable).IsAssignableFrom(test) == false
@@ -40,7 +40,7 @@ namespace SlowTests.Tests
         [RavenMultiplatformFact(RavenTestCategory.Codebase, RavenPlatform.Windows | RavenPlatform.OsX)]
         public void TestsShouldInheritFromRightBaseClasses()
         {
-            var types = from assembly in GetAssemblies(typeof(TestsInheritanceTests).Assembly)
+            var types = from assembly in GetAssemblies(GetType().Assembly)
                         from test in GetAssemblyTypes(assembly)
                         where test.GetMethods().Any(x => x.GetCustomAttributes(typeof(FactAttribute), true).Count() != 0 || x.GetCustomAttributes(typeof(TheoryAttribute), true).Count() != 0)
                         where test.IsSubclassOf(typeof(ParallelTestBase)) == false
@@ -57,7 +57,7 @@ namespace SlowTests.Tests
         [RavenMultiplatformFact(RavenTestCategory.Codebase, RavenPlatform.Windows | RavenPlatform.OsX)]
         public void HandlersShouldNotInheritStraightFromRequestHandler()
         {
-            var types = from assembly in GetAssemblies(typeof(TestsInheritanceTests).Assembly)
+            var types = from assembly in GetAssemblies(GetType().Assembly)
                         from handler in GetAssemblyTypes(assembly)
                         where handler.IsAbstract == false
                         where handler != typeof(DatabaseRequestHandler) && handler != typeof(ServerRequestHandler) && handler != typeof(ShardedDatabaseRequestHandler)
@@ -75,7 +75,7 @@ namespace SlowTests.Tests
         [RavenFact(RavenTestCategory.Codebase)]
         public void AllTestsShouldUseRavenFactOrRavenTheoryAttributes()
         {
-            var types = from assembly in GetAssemblies(typeof(TestsInheritanceTests).Assembly)
+            var types = from assembly in GetAssemblies(GetType().Assembly)
                         from test in GetAssemblyTypes(assembly)
                         from method in test.GetMethods()
                         where Filter(method)
