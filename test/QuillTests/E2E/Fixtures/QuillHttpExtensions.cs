@@ -33,6 +33,13 @@ internal static class QuillHttp
         return await ReadBodyAsync<T>(resp);
     }
 
+    /// For endpoints that answer 204; a non-2xx still throws <see cref="QuillHttpException"/>.
+    public static async Task PostAsync(HttpClient client, string route, object? body = null,
+        Action<HttpRequestMessage>? configureRequest = null, CancellationToken ct = default)
+    {
+        using var resp = await SendAsync(client, HttpMethod.Post, route, body, configureRequest, ct);
+    }
+
     public static async Task<T> GetAsync<T>(HttpClient client, string route,
         Action<HttpRequestMessage>? configureRequest = null, CancellationToken ct = default)
     {
@@ -155,6 +162,7 @@ internal static class QuillRoutes
     public static string AppCdc(string slug) => $"/api/apps/{slug}/cdc";
     public static string AppCdcPerformance(string slug) => $"/api/apps/{slug}/cdc/performance";
     public static string AppCdcErrors(string slug) => $"/api/apps/{slug}/cdc/errors";
+    public static string AppCdcRestart(string slug) => $"/api/apps/{slug}/cdc/restart";
 
     public static string EmbedLinks(string slug) => $"/api/apps/{slug}/embed-links";
     public static string EmbedLink(string slug, string token) => $"/api/apps/{slug}/embed-links/{token}";

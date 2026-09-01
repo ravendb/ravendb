@@ -277,6 +277,9 @@ public sealed class QuillHost : IAsyncDisposable
     public Task<IReadOnlyList<CdcError>> GetCdcErrorsAsync(string slug) =>
         QuillHttp.GetAsync<IReadOnlyList<CdcError>>(Client, QuillRoutes.AppCdcErrors(slug));
 
+    public Task RestartCdcAsync(string slug) =>
+        QuillHttp.PostAsync(Client, QuillRoutes.AppCdcRestart(slug));
+
     public async ValueTask DisposeAsync()
     {
         Client.Dispose();
