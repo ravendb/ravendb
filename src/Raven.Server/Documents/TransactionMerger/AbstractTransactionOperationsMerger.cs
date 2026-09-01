@@ -215,8 +215,20 @@ namespace Raven.Server.Documents.TransactionMerger
             _isEncrypted = isEncrypted;
             _is32Bits = is32Bits;
             _env = GetStorageEnvironment(contextPool);
-            _env.DurableCommitAcknowledged = _waitHandle.Set; // raise the event when the journal write is durable, so we can drain the async commit queue
+            _env.DurableCommitAcknowledged = OnDurableCommitAcknowledged; // raise the event when the journal write is durable, so we can drain the async commit queue
             _initialized = true;
+        }
+
+        private void OnDurableCommitAcknowledged()
+        {
+            try
+            {
+                _waitHandle.Set();
+            }
+            catch (ObjectDisposedException)
+            {
+                // an ack racing the merger's dispose - nothing is waiting anymore
+            }
         }
 
         protected abstract StorageEnvironment GetStorageEnvironment(JsonContextPoolBase<TOperationContext> contextPool);
@@ -845,8 +857,6 @@ namespace Raven.Server.Documents.TransactionMerger
 
             public WriteFlowPolicy.BatchCloseReason CloseReason = WriteFlowPolicy.BatchCloseReason.QueueEmpty;
 
-            private long _queueDepthSnapshot = -1;
-
             // called when the _previous_ tx is done, and we *can* close, we check whether we _should_ 
             // if we keep the tx open longer, we get better batch and better throughput (min latency cost)
             public bool ShouldCloseBatch(int batchOperations, long modifiedSize)
@@ -869,12 +879,6 @@ namespace Raven.Server.Documents.TransactionMerger
                     return true; // too much time
                 }
 
-                if (ShouldYieldPendingOpsToNextTransaction(batchOperations))
-                {
-                    CloseReason = WriteFlowPolicy.BatchCloseReason.YieldedQueueTail;
-                    return true;
-                }
-
                 if (modifiedSize > merger._maxTxSizeInBytes)
                 {
                     CloseReason = WriteFlowPolicy.BatchCloseReason.SizeReached;
@@ -884,32 +888,6 @@ namespace Raven.Server.Documents.TransactionMerger
                 // even though we can close the tx, we choose to keep it a bit longer:
                 // keep processing operations until the queue clears or time / size limits hit
                 return false;
-            }
-
-            // counter-intuitive: we leave a small number of operations to the *next* transaction, 
-            // so that it can start on them immediately. That allow to interleave operations from clients, 
-            // to max out over all concurrency. Otherwise, we may "sync up" everything, and then we have 
-            // high peaks and completely idle periods. Better to leave work to the next transaction instead.
-            private bool ShouldYieldPendingOpsToNextTransaction(int currentBatchSize)
-            {
-                int minimumQueueDepthToAbsorb = merger._env.WriteFlow.MinQueueDepthToKeepAbsorbing;
-                
-                // No consolidation or batch too small to benefit from leaving work to the next tx
-                if (minimumQueueDepthToAbsorb == 0 || currentBatchSize < WriteFlowPolicy.TinyBatchOperations)
-                    return false;
-
-                if (_queueDepthSnapshot > 0)
-                    _queueDepthSnapshot--; // each call absorbed one op since the snapshot was taken
-
-                int requiredQueueDepthToContinue = Math.Max(minimumQueueDepthToAbsorb, currentBatchSize);
-
-                if (_queueDepthSnapshot >= requiredQueueDepthToContinue)
-                    return false;
-
-                // Slow path: refresh snapshot (acquires lock) before finalizing the decision to stop absorbing ops
-                _queueDepthSnapshot = merger._operations.Count;
-
-                return _queueDepthSnapshot < requiredQueueDepthToContinue;
             }
 
             public void ClosedBySizeRejection() => CloseReason = WriteFlowPolicy.BatchCloseReason.SizeReached;
@@ -1240,6 +1218,11 @@ namespace Raven.Server.Documents.TransactionMerger
             // the merger thread released everything before exiting; finish ending those transactions
             // before the environment they belong to goes away
             _completionPump.DrainAll();
+
+            // late acks (sync commits during the environment's own teardown) must not touch the
+            // wait handle once it is disposed
+            if (_env != null)
+                _env.DurableCommitAcknowledged = null;
 
             _waitHandle.Dispose();
             _recording.State?.Dispose();
