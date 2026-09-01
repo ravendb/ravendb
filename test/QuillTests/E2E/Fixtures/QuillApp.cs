@@ -114,6 +114,8 @@ public sealed class QuillApp : IAsyncDisposable
 
     public Task<IReadOnlyList<CdcError>> GetCdcErrorsAsync() => Host.GetCdcErrorsAsync(Slug);
 
+    public Task RestartCdcAsync() => Host.RestartCdcAsync(Slug);
+
     public async ValueTask DisposeAsync()
     {
         Host.RemoveApp(this);

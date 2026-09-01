@@ -57,6 +57,15 @@ public static class AppsEndpoints
             .WithName("apps.cdcGet")
             .Produces<AppCdcConfigurationResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
+        group.MapPost("/{slug}/cdc/restart", RestartCdcAsync)
+            .WithName("apps.cdcRestart")
+            .WithDescription(
+                "Restarts the app's CDC task by disabling and re-enabling it. A task that is already " +
+                "disabled is left alone; enable it instead.")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound)
+            .Produces<ApiErrorResponse>(StatusCodes.Status409Conflict)
+            .Produces<ApiErrorResponse>(StatusCodes.Status500InternalServerError);
 
         group.MapPost("/{slug}/setup/try", SetupTryAsync)
             .WithName("apps.setupTry")
@@ -152,8 +161,7 @@ public static class AppsEndpoints
         if (mode == "from-prompt" && string.IsNullOrWhiteSpace(body!.IntentPrompt))
             return Results.BadRequest(new ApiErrorResponse("intentPrompt is required for from-prompt mode"));
 
-        var task = await store.Maintenance.ForDatabase(slug).SendAsync(new GetOngoingTaskInfoOperation(app.CdcTaskName, OngoingTaskType.CdcSink), ct);
-        var cdcConfig = (task as OngoingTaskCdcSink)?.Configuration;
+        var cdcConfig = (await AppLookup.LoadCdcTaskAsync(store, app, ct))?.Configuration;
 
         if (mode == "from-data" && cdcConfig is null)
             return Results.BadRequest(new ApiErrorResponse(
@@ -288,9 +296,9 @@ public static class AppsEndpoints
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
-        var task = await store.Maintenance.ForDatabase(slug).SendAsync(new GetOngoingTaskInfoOperation(app.CdcTaskName, OngoingTaskType.CdcSink), ct);
-        if (task is not OngoingTaskCdcSink cdc)
-            return Results.NotFound(new ApiErrorResponse("cdc task not found"));
+        var cdc = await AppLookup.LoadCdcTaskAsync(store, app, ct);
+        if (cdc is null)
+            return Results.NotFound(AppLookup.NoCdcTaskError(slug));
 
         var raw = await CdcPerformanceReader.ReadAsync(store.Maintenance.ForDatabase(app.Database), ct);
         var (state, lastModified) = await AppLookup.LoadCdcStateAsync(store, app.Database, app.CdcTaskName, ct);
@@ -322,16 +330,60 @@ public static class AppsEndpoints
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
-        // The app database is the source of truth: the wizard's state document is scratch space
-        // that a later setup run for the same slug may reset.
-        var task = await store.Maintenance.ForDatabase(app.Database).SendAsync(
-            new GetOngoingTaskInfoOperation(app.CdcTaskName, OngoingTaskType.CdcSink), ct);
-        if (task is not OngoingTaskCdcSink cdc)
-            return Results.NotFound(new ApiErrorResponse($"no cdc config for {slug} found"));
+        var cdc = await AppLookup.LoadCdcTaskAsync(store, app, ct);
+        if (cdc is null)
+            return Results.NotFound(AppLookup.NoCdcTaskError(slug));
 
         return Results.Ok(new AppCdcConfigurationResponse(
             cdc.Configuration,
             await LoadSourceConnectionStringAsync(store, app.Database, cdc.Configuration.ConnectionStringName, ct)));
+    }
+
+    private static async Task<IResult> RestartCdcAsync(
+        string slug,
+        IDocumentStore store,
+        ILogger<AppsLogger> logger,
+        CancellationToken ct)
+    {
+        var app = await AppLookup.LoadAppAsync(store, slug, ct);
+        if (app is null)
+            return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
+
+        var cdc = await AppLookup.LoadCdcTaskAsync(store, app, ct);
+        if (cdc is null)
+            return Results.NotFound(AppLookup.NoCdcTaskError(slug));
+
+        if (cdc.Configuration.Disabled)
+            return Results.Conflict(new ApiErrorResponse(
+                $"cdc task for '{slug}' is disabled; enable it instead of restarting"));
+
+        if (logger.IsEnabled(LogLevel.Information))
+            logger.LogInformation(
+                "Restarting CDC task {TaskName} (id={TaskId}) for app slug={Slug}", app.CdcTaskName, cdc.TaskId, slug);
+
+        var maintenance = store.Maintenance.ForDatabase(app.Database);
+        await maintenance.SendAsync(
+            new ToggleOngoingTaskStateOperation(cdc.TaskId, OngoingTaskType.CdcSink, disable: true), ct);
+
+        // Past this point the sink is stopped, so the re-enable must not ride on the request token:
+        // a caller that navigates away would otherwise leave the sync disabled with nobody told.
+        try
+        {
+            await maintenance.SendAsync(
+                new ToggleOngoingTaskStateOperation(cdc.TaskId, OngoingTaskType.CdcSink, disable: false),
+                CancellationToken.None);
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e,
+                "Failed to re-enable CDC task {TaskName} (id={TaskId}) for app slug={Slug}; the sync is left disabled",
+                app.CdcTaskName, cdc.TaskId, slug);
+            return Results.Json(
+                new ApiErrorResponse($"the sync for '{slug}' was stopped but could not be restarted; it is now disabled"),
+                statusCode: StatusCodes.Status500InternalServerError);
+        }
+
+        return Results.NoContent();
     }
 
     private static async Task<string?> LoadSourceConnectionStringAsync(
