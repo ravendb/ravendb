@@ -73,10 +73,7 @@ namespace Voron.Impl.Journal
             _currentJournalFileSize = env.Options.InitialLogFileSize;
             _headerAccessor = env.HeaderAccessor;
 
-            lock (_writeLock)
-            {
-                _compressionPager = CreateCompressionPager(_env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize);
-            }
+            _compressionPager = CreateCompressionPager(_env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize);
 
             _journalApplicator = new JournalApplicator(this);
             _lastCompressionAccelerationInfo = new CompressionAccelerationStats(env.Options);
@@ -88,11 +85,12 @@ namespace Voron.Impl.Journal
                 lock (_writeLock)
                 {
                     _compressionPager.Dispose();
-
-                    _forTestingPurposes?.OnJournalDispose_AfterDisposingCompressionPager?.Invoke();
                 }
 
+                _forTestingPurposes?.OnJournalDispose_AfterDisposingCompressionPager?.Invoke();
+
                 _journalApplicator.Dispose();
+
                 if (_env.Options.OwnsPagers)
                 {
                     foreach (var logFile in _files)
@@ -2124,7 +2122,7 @@ namespace Voron.Impl.Journal
 
         private AbstractPager CreateCompressionPager(long initialSize)
         {
-            Debug.Assert(Monitor.IsEntered(_writeLock), "PublishNewCompressionPager must be called under _writeLock");
+            Debug.Assert(Monitor.IsEntered(_writeLock) || _compressionPager == null, "CreateCompressionPager must be called under _writeLock");
 
             return _env.Options.CreateTemporaryBufferPager($"compression.{_compressionPagerCounter++:D10}{StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.BuffersFileExtension}", initialSize);
         }
