@@ -1243,18 +1243,7 @@ namespace Raven.Server.Documents.Indexes
             }
 
             if (indexTempPath != null)
-            {
-                try
-                {
-                    IOExtensions.DeleteDirectory(indexTempPath.FullPath);
-                }
-                catch (Exception e)
-                {
-                    // same as above - the index storage is already gone at this point
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Could not delete the temporary directory of the index {name}", e);
-                }
-            }
+                IOExtensions.DeleteDirectory(indexTempPath.FullPath);
         }
 
         public IndexRunningStatus Status
