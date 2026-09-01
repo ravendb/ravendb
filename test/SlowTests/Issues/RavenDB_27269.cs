@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
@@ -11,7 +12,7 @@ using Raven.Server.Documents.Indexes.Configuration;
 using Tests.Infrastructure;
 using Xunit;
 
-namespace FastTests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_27269(ITestOutputHelper output) : RavenLowLevelTestBase(output)
     {
@@ -42,6 +43,24 @@ namespace FastTests.Issues
                 $"Per-index settings must be marked {nameof(IndexUpdateType)}.{nameof(IndexUpdateType.Refresh)} or " +
                 $"{nameof(IndexUpdateType)}.{nameof(IndexUpdateType.Reset)}, otherwise changing them rebuilds the index " +
                 $"side by side for nothing:{Environment.NewLine}{string.Join(Environment.NewLine, offenders)}");
+        }
+
+        [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Indexes)]
+        public async Task ChangingHnswBuildParallelismDoesNotRebuildTheIndex()
+        {
+            using (var database = CreateDocumentDatabase())
+            {
+                var index = await database.IndexStore.CreateIndex(CreateIndexDefinition(), Guid.NewGuid().ToString());
+                Assert.NotNull(index);
+
+                var changed = CreateIndexDefinition();
+                changed.Configuration[RavenConfiguration.GetKey(x => x.Indexing.MaximumConcurrentBatchesForHnswAcceleration)] = "256";
+
+                var options = IndexStore.GetIndexCreationOptions(changed, index.Instance.ToIndexInformationHolder(), database.Configuration, out var differences);
+
+                Assert.Equal(IndexDefinitionCompareDifferences.Configuration, differences);
+                Assert.Equal(IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex, options);
+            }
         }
 
         [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Indexes)]
