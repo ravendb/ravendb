@@ -235,7 +235,8 @@ public static class AppsEndpoints
             if (logger.IsEnabled(LogLevel.Warning))
                 logger.LogWarning(ex,
                     "Agent provisioning rejected by RavenDB for app slug={Slug} name={Name}", app.Slug, body.Name);
-            return Results.BadRequest(new ApiErrorResponse("agent configuration rejected; see server logs for details"));
+            return Results.BadRequest(new ApiErrorResponse(
+                $"agent configuration rejected: {RavenErrorText.Reason(ex)}"));
         }
     }
 
@@ -280,10 +281,12 @@ public static class AppsEndpoints
             return Results.NotFound(new ApiErrorResponse("cdc task not found"));
 
         var raw = await CdcPerformanceReader.ReadAsync(store.Maintenance.ForDatabase(app.Database), ct);
+        var errors = await CdcPerformanceReader.ReadErrorsAsync(store.Maintenance.ForDatabase(app.Database), ct);
         var (state, lastModified) = await AppLookup.LoadCdcStateAsync(store, app.Database, app.CdcTaskName, ct);
 
         var snapshot = CdcPerformanceShaper.Shape(
-            raw, disabled: cdc.Configuration.Disabled, DateTime.UtcNow, lastActivityAt: lastModified);
+            raw, disabled: cdc.Configuration.Disabled, DateTime.UtcNow, lastActivityAt: lastModified,
+            storedErrorCount: CdcPerformanceShaper.CountErrors(errors));
         return Results.Ok(snapshot);
     }
 
@@ -353,12 +356,27 @@ public static class AppsEndpoints
             return;
         }
 
+        if (body.Prompt.Length > ChatLimits.MaxPromptLength)
+        {
+            ctx.Response.StatusCode = StatusCodes.Status413PayloadTooLarge;
+            await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse(
+                $"prompt exceeds the {ChatLimits.MaxPromptLength:N0} character limit", Code: "prompt_too_large"), ct);
+            return;
+        }
+
         var app = await AppLookup.LoadAppAsync(store, slug, ct);
 
         if (app is null)
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
             await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse($"no app with slug '{slug}'"), ct);
+            return;
+        }
+
+        if (AgentConfigValidator.TryValidateJsonShapes(body.Configuration, out var shapeErrors) == false)
+        {
+            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse(Errors: shapeErrors.ToArray()), ct);
             return;
         }
 
@@ -395,10 +413,17 @@ public static class AppsEndpoints
         }
         catch (Exception e)
         {
-            logger.LogError(e, "setup/try failed for slug={Slug}", slug);
+            var failure = ProviderFailures.Classify(e);
+            logger.LogError(e, "setup/try failed for slug={Slug}: {Reason}", slug, failure.OperatorMessage);
             try
             {
-                await NdjsonStream.WriteLineAsync(ctx, new { type = "error", message = "Agent test failed. See server logs for details." });
+                await NdjsonStream.WriteLineAsync(ctx, new
+                {
+                    type = "error",
+                    message = ChatFailureText.ForOperator(failure, e),
+                    code = failure.Code,
+                    retryable = failure.Retryable,
+                });
             }
             catch
             {

@@ -937,7 +937,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Creates the app, or updates it when one already exists under the same slug. The slug (also the app's database name, used in public embed URLs) derives from appName unless an explicit slug is supplied; either is normalized to lowercase ASCII alphanumerics with hyphens. A slug whose database exists without an app behind it => 409. */
+        /** @description Creates the app. Updating one that already exists under the same slug requires updateExisting, so a new app cannot silently take over a live one. The slug (also the app's database name, used in public embed URLs) derives from appName unless an explicit slug is supplied; either is normalized to lowercase ASCII alphanumerics with hyphens. A slug already taken, or whose database exists without an app behind it => 409. */
         post: operations["setup.provision"];
         delete?: never;
         options?: never;
@@ -1696,6 +1696,8 @@ export interface components {
         ProvisionRequest: {
             appName: string;
             slug?: null | string;
+            /** @default false */
+            updateExisting: boolean;
         };
         ProvisionResponse: {
             id: string;
@@ -2336,6 +2338,15 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthStatusResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };

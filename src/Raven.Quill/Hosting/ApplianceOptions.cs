@@ -40,4 +40,6 @@ public sealed class ApplianceOptions
     public TimeSpan ReadinessOverallTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
     public TimeSpan AiAssistTimeout { get; set; } = TimeSpan.FromMinutes(5);
+
+    public TimeSpan AgentTurnDeadline { get; set; } = TimeSpan.FromSeconds(120);
 }

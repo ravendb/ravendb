@@ -1,7 +1,9 @@
 using System.Text.Json;
+using Microsoft.Extensions.Options;
 using Raven.Client.Documents;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Quill.Hosting;
 using Raven.Quill.Metrics;
 
 namespace Raven.Quill.Agents;
@@ -34,9 +36,27 @@ public sealed class UnknownAgentException(string agentId)
 }
 
 internal sealed class AgentRouter(
-    IDocumentStore store, WebhookActionExecutor actionExecutor, ILogger<AgentRouter> logger) : IAgentRouter
+    IDocumentStore store, WebhookActionExecutor actionExecutor, IOptions<ApplianceOptions> options,
+    ILogger<AgentRouter> logger) : IAgentRouter
 {
     public async Task<AgentRunResult> RunAsync(AgentRequest request, Func<string, ValueTask> onChunk, AiAgentConfiguration config, CancellationToken ct)
+    {
+        var deadline = options.Value.AgentTurnDeadline;
+
+        using var turn = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        turn.CancelAfter(deadline);
+
+        try
+        {
+            return await RunTurnAsync(request, onChunk, config, turn.Token);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested == false && turn.IsCancellationRequested)
+        {
+            throw new ProviderTimeoutException(deadline);
+        }
+    }
+
+    private async Task<AgentRunResult> RunTurnAsync(AgentRequest request, Func<string, ValueTask> onChunk, AiAgentConfiguration config, CancellationToken ct)
     {
         if (config is null)
             throw new UnknownAgentException(request.AgentId);
@@ -52,16 +72,12 @@ internal sealed class AgentRouter(
             conversationId: conversationId,
             creationOptions: creationOptions);
 
-        conversation.AddUserPrompt(request.Prompt);
-
         conversation.OnUnhandledAction += static _ => Task.CompletedTask; // we handle that manually
 
         var replyField = AgentOutputShape.ResolveReplyField(config);
 
-        var result = await conversation.StreamAsync<Dictionary<string, object>>(
-            replyField,
-            async chunk => await onChunk(chunk),
-            ct);
+        var result = await StreamWithRetryAsync(
+            conversation, () => conversation.AddUserPrompt(request.Prompt), replyField, onChunk, ct);
 
         using var session = store.OpenAsyncSession(request.Database);
         var lazyBindings = session.Advanced.Lazily.LoadAsync<AgentActionBindings>(AgentActionBindings.IdFor(config.Identifier), ct);
@@ -69,19 +85,76 @@ internal sealed class AgentRouter(
         while (result.Status == AiConversationResult.ActionRequired)
         {
             var bindings = await lazyBindings.Value;
-            await RunActionsAsync(conversation, config, bindings, ct);
+            var responses = await RunActionsAsync(conversation, config, bindings, ct);
 
-            result = await conversation.StreamAsync<Dictionary<string, object>>(
+            result = await StreamWithRetryAsync(
+                conversation,
+                () =>
+                {
+                    foreach (var (toolId, response) in responses)
+                        conversation.AddActionResponse(toolId, response);
+                },
                 replyField,
-                async chunk => await onChunk(chunk),
+                onChunk,
                 ct);
         }
 
         var reply = AgentOutputShape.ExtractReplyText(result.Answer, replyField);
+        if (string.IsNullOrWhiteSpace(reply))
+            throw new EmptyAnswerException();
 
         await UpsertPreviewAsync(store, request, config.Identifier, conversation.Id, reply, DateTime.UtcNow, ct);
 
         return new AgentRunResult(new { reply }, conversation.Id);
+    }
+
+    private async Task<AiAnswer<Dictionary<string, object>>> StreamWithRetryAsync(
+        IAiConversationOperations conversation, Action arm, string replyField,
+        Func<string, ValueTask> onChunk, CancellationToken ct)
+    {
+        for (var attempt = 0; ; attempt++)
+        {
+            var streamed = false;
+            arm();
+
+            try
+            {
+                return await conversation.StreamAsync<Dictionary<string, object>>(
+                    replyField,
+                    async chunk =>
+                    {
+                        streamed = true;
+                        await onChunk(chunk);
+                    },
+                    ct);
+            }
+            catch (Exception e) when (streamed == false && RetryDelayFor(e, attempt) is { } delay)
+            {
+                logger.LogWarning(e,
+                    "AI provider rate-limited the turn; retrying in {DelaySeconds}s (attempt {Attempt} of {Max})",
+                    delay.TotalSeconds, attempt + 1, ProviderLimits.MaxRateLimitedRetries);
+
+                await Task.Delay(delay, ct);
+            }
+        }
+    }
+
+    private static TimeSpan? RetryDelayFor(Exception e, int attempt)
+    {
+        if (attempt >= ProviderLimits.MaxRateLimitedRetries)
+            return null;
+
+        var failure = ProviderFailures.Classify(e);
+        if (failure.Kind != ProviderFailureKind.RateLimited)
+            return null;
+
+        if (failure.RetryAfter is not { } retryAfter)
+            return ProviderLimits.MinRetryDelay * Math.Pow(2, attempt);
+
+        if (retryAfter > ProviderLimits.MaxRetryDelay)
+            return null;
+
+        return retryAfter < ProviderLimits.MinRetryDelay ? ProviderLimits.MinRetryDelay : retryAfter;
     }
 
     private static Dictionary<string, object?> ConvertParameters(AgentRequest request, AiAgentConfiguration config)
@@ -107,15 +180,18 @@ internal sealed class AgentRouter(
         return converted;
     }
 
-    private async Task RunActionsAsync(
+    private async Task<List<(string ToolId, string Response)>> RunActionsAsync(
         IAiConversationOperations conversation, AiAgentConfiguration config,
         AgentActionBindings bindings, CancellationToken ct)
     {
         var pending = conversation.RequiredActions().ToList();
         var responses = await Task.WhenAll(pending.Select(action => RunActionAsync(action, config, bindings, ct)));
 
+        var applied = new List<(string ToolId, string Response)>(pending.Count);
         for (var i = 0; i < pending.Count; i++)
-            conversation.AddActionResponse(pending[i].ToolId, responses[i]);
+            applied.Add((pending[i].ToolId, responses[i]));
+
+        return applied;
     }
 
     private Task<string> RunActionAsync(

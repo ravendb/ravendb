@@ -137,7 +137,8 @@ public static class EmbedLinksEndpoints
                 CreatedAt = DateTime.UtcNow,
             };
             await session.StoreAsync(link, ct);
-            session.Advanced.GetMetadataFor(link)[Client.Constants.Documents.Metadata.Expires] = expiresAt;
+            session.Advanced.GetMetadataFor(link)[Client.Constants.Documents.Metadata.Expires] =
+                expiresAt + EmbedLinkLimits.SpentLinkRetention;
             await session.SaveChangesAsync(ct);
         }
 

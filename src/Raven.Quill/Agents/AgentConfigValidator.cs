@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
@@ -19,6 +20,10 @@ internal static class AgentConfigValidator
         new(@"\blimit\s+(?:\S+\s*,\s*)?(\S+)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.RightToLeft);
 
     private const int MaxLimit = 32;
+
+    private const long DefaultMaxTokensBeforeSummarization = 32 * 1024;
+
+    private const long DefaultMaxTokensAfterSummarization = 4 * 1024;
 
     /// <summary>
     /// Validates and prepares <paramref name="request"/>'s configuration in place. Returns <c>null</c>
@@ -42,6 +47,12 @@ internal static class AgentConfigValidator
 
         if (TryValidateActions(body, request.ActionBindings, out var actionErrors) == false)
             return Results.BadRequest(new ApiErrorResponse(Errors: actionErrors.ToArray()));
+
+        if (TryValidateJsonShapes(body, out var shapeErrors) == false)
+            return Results.BadRequest(new ApiErrorResponse(Errors: shapeErrors.ToArray()));
+
+        if (TryPrepareChatTrimming(body, out var trimmingErrors) == false)
+            return Results.BadRequest(new ApiErrorResponse(Errors: trimmingErrors.ToArray()));
 
         if (body.SubAgents is { Count: > 0 })
             return Results.BadRequest(new ApiErrorResponse("subAgents are not supported in demo"));
@@ -76,13 +87,63 @@ internal static class AgentConfigValidator
         }
 
         body.Disabled = false;
-        body.ChatTrimming = new AiAgentChatTrimmingConfiguration(new AiAgentSummarizationByTokens
-        {
-            MaxTokensBeforeSummarization = 256 * 1024, // max context window of gpt5.4-mini is 400k tokens
-            MaxTokensAfterSummarization = 4 * 1024
-        });
 
         return null;
+    }
+
+    internal static bool TryPrepareChatTrimming(AiAgentConfiguration body, out List<string> errors)
+    {
+        errors = [];
+
+        body.ChatTrimming ??= new AiAgentChatTrimmingConfiguration();
+        var tokens = body.ChatTrimming.Tokens ??= new AiAgentSummarizationByTokens();
+
+        tokens.MaxTokensBeforeSummarization ??= DefaultMaxTokensBeforeSummarization;
+        tokens.MaxTokensAfterSummarization ??= DefaultMaxTokensAfterSummarization;
+
+        if (tokens.MaxTokensBeforeSummarization <= 0)
+            errors.Add("chatTrimming.tokens.maxTokensBeforeSummarization must be greater than 0");
+
+        if (tokens.MaxTokensAfterSummarization <= 0)
+            errors.Add("chatTrimming.tokens.maxTokensAfterSummarization must be greater than 0");
+
+        if (errors.Count == 0 && tokens.MaxTokensAfterSummarization >= tokens.MaxTokensBeforeSummarization)
+            errors.Add("chatTrimming.tokens.maxTokensAfterSummarization must be smaller than maxTokensBeforeSummarization");
+
+        return errors.Count == 0;
+    }
+
+    internal static bool TryValidateJsonShapes(AiAgentConfiguration body, out List<string> errors)
+    {
+        errors = [];
+
+        if (string.IsNullOrWhiteSpace(body.SampleObject) == false && IsJsonObject(body.SampleObject) == false)
+            errors.Add("""sampleObject must be a JSON object, e.g. {"reply":""}""");
+
+        if (string.IsNullOrWhiteSpace(body.OutputSchema) == false && IsJsonObject(body.OutputSchema) == false)
+            errors.Add("outputSchema must be a JSON object");
+
+        foreach (var action in body.Actions ?? [])
+        {
+            AddActionShapeErrors(action, errors);
+        }
+
+        return errors.Count == 0;
+    }
+
+    private static void AddActionShapeErrors(AiAgentToolAction action, List<string> errors)
+    {
+        if (string.IsNullOrWhiteSpace(action.ParametersSampleObject) == false &&
+            IsJsonObject(action.ParametersSampleObject) == false)
+        {
+            errors.Add($"action '{action.Name}': parametersSampleObject must be a JSON object");
+        }
+
+        if (string.IsNullOrWhiteSpace(action.ParametersSchema) == false &&
+            IsJsonObject(action.ParametersSchema) == false)
+        {
+            errors.Add($"action '{action.Name}': parametersSchema must be a JSON object");
+        }
     }
 
     internal static bool TryValidateActions(
@@ -121,6 +182,8 @@ internal static class AgentConfigValidator
                     : $"action '{action.Name}': parametersSampleObject or parametersSchema is required");
             }
 
+            AddActionShapeErrors(action, errors);
+
             if (byName.Remove(action.Name, out var binding) == false)
                 errors.Add($"action '{action.Name}' has no binding");
             else if (IsHttpUrl(binding.Url) == false)
@@ -133,6 +196,19 @@ internal static class AgentConfigValidator
         }
 
         return errors.Count == 0;
+    }
+
+    private static bool IsJsonObject(string text)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(text);
+            return doc.RootElement.ValueKind == JsonValueKind.Object;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     private static bool IsHttpUrl(string? url) =>

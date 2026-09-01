@@ -67,11 +67,12 @@ public static class WizardEndpoints
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
         group.MapPost("/provision", ProvisionAsync)
             .WithName("setup.provision")
-            .WithDescription("Creates the app, or updates it when one already exists under the same slug. " +
+            .WithDescription("Creates the app. Updating one that already exists under the same slug requires " +
+                             "updateExisting, so a new app cannot silently take over a live one. " +
                              "The slug (also the app's database name, used in public embed URLs) derives " +
                              "from appName unless an explicit slug is supplied; either is normalized to " +
-                             "lowercase ASCII alphanumerics with hyphens. A slug whose database exists " +
-                             "without an app behind it => 409.")
+                             "lowercase ASCII alphanumerics with hyphens. A slug already taken, or whose " +
+                             "database exists without an app behind it => 409.")
             .Accepts<ProvisionRequest>("application/json")
             .Produces<ProvisionResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
@@ -506,6 +507,10 @@ public static class WizardEndpoints
         }
 
         var app = await AppLookup.LoadAppAsync(store, slug, ct);
+        if (app is not null && body.UpdateExisting == false)
+            return Results.Conflict(new ApiErrorResponse(
+                $"slug '{slug}' is already used by app '{app.AppName}'; set updateExisting to change that app instead"));
+
         if (app is null)
         {
             RavenStoreFactory.DatabaseCreationStatus status;

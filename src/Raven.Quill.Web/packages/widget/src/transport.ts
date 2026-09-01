@@ -17,6 +17,7 @@ export type ChatEvent =
 const LINK_INACTIVE_MESSAGE = "This conversation link is no longer active.";
 const LIMIT_MESSAGE = "This conversation has reached its usage limit.";
 const RATE_LIMITED_MESSAGE = "Too many requests right now. Please try again in a moment.";
+const TOO_LONG_MESSAGE = "That message is too long. Please shorten it and try again.";
 const GENERIC_MESSAGE = "Something went wrong. Please try again.";
 
 /** The server answers 429 from two places: a link whose invocation budget is spent (a JSON body carrying
@@ -38,6 +39,7 @@ async function statusFailure(response: Response): Promise<ChatEvent | null> {
         return (await carriesInvocationLimitCode(response))
             ? { type: "error", kind: "limit", message: LIMIT_MESSAGE }
             : { type: "error", kind: "failed", message: RATE_LIMITED_MESSAGE };
+    if (response.status === 413) return { type: "error", kind: "failed", message: TOO_LONG_MESSAGE };
     return null;
 }
 
