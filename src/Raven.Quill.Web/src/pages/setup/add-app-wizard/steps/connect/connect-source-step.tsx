@@ -12,6 +12,7 @@ import { TestConnectionButton } from "@/pages/setup/add-app-wizard/steps/connect
 import { toSlug } from "@/pages/setup/add-app-wizard/slugify";
 import { InputGroupAddon } from "@/components/shadcn/ui/input-group";
 import { Button } from "@/components/shadcn/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
 import { RefreshCw } from "lucide-react";
 
 export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
@@ -27,6 +28,8 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
         field: { value },
         fieldState: { error, invalid },
     } = useController({ control, name: "externalConnection.provider" });
+
+    const isProviderSelected = Boolean(value);
 
     return (
         <div className="grid gap-5">
@@ -106,8 +109,21 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
                 </div>
                 {error?.message && <FieldDescription className="text-destructive">{error.message}</FieldDescription>}
             </Field>
-            <ConnectionEditor isDisabled={isBusy} />
-            <TestConnectionButton disabled={isBusy} />
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <div className="grid gap-5">
+                            <ConnectionEditor isDisabled={isBusy || !isProviderSelected} />
+                            <TestConnectionButton disabled={isBusy || !isProviderSelected} />
+                        </div>
+                    </TooltipTrigger>
+                    {!isProviderSelected && !isBusy && (
+                        <TooltipContent>
+                            Select a source database type to fill in its connection details.
+                        </TooltipContent>
+                    )}
+                </Tooltip>
+            </TooltipProvider>
         </div>
     );
 }

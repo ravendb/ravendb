@@ -8,9 +8,9 @@ import { DEFAULT_PORT_BY_PROVIDER, type Provider, type SslMode } from "@/pages/s
 import { useConnectionSync } from "@/pages/setup/add-app-wizard/steps/connect/use-connection-sync";
 
 const CONNECTION_STRING_PLACEHOLDER_BY_PROVIDER: Record<Provider, string> = {
-    Npgsql: "Host=localhost;Port=5432;Database=my_db;Username=admin;Password=pass",
-    SqlClient: "Server=localhost,1433;Database=my_db;User ID=sa;Password=pass",
-    MySqlConnectorFactory: "Server=localhost;Port=3306;Database=my_db;User ID=admin;Password=pass",
+    Npgsql: "e.g. Host=localhost;Port=5432;Database=my_db;Username=admin;Password=pass",
+    SqlClient: "e.g. Server=localhost,1433;Database=my_db;User ID=sa;Password=pass",
+    MySqlConnectorFactory: "e.g. Server=localhost;Port=3306;Database=my_db;User ID=admin;Password=pass",
 };
 
 const SSL_OPTIONS: FormToggleGroupOption<SslMode>[] = [
@@ -69,7 +69,7 @@ function ConnectionFieldsEditor({ isDisabled }: { isDisabled: boolean }) {
                     name="externalConnection.fields.port"
                     label="Port"
                     type="number"
-                    placeholder={provider ? String(DEFAULT_PORT_BY_PROVIDER[provider]) : undefined}
+                    placeholder={provider ? `e.g. ${DEFAULT_PORT_BY_PROVIDER[provider]}` : undefined}
                     disabled={isDisabled}
                 />
             </div>
