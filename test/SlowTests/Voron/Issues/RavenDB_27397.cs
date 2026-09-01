@@ -353,6 +353,7 @@ public class RavenDB_27397 : StorageTest
     {
         RequireFileBasedPager();
         Options.EnableJournalPoolPrewarming = true;
+        Env.WriteFlow.ForTestingPurposesOnly().ForceZeroedJournalPreparation = true;
 
         // a prepared file appears after the half-fill trigger fires, and every roll consumes it
         // again - so probe between small write batches, when no roll can take it away

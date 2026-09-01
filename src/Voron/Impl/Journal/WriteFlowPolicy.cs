@@ -259,9 +259,6 @@ public sealed class WriteFlowPolicy
 
     private bool HasBatchTelemetry => Volatile.Read(ref _batchesClosedQueueEmpty) + Volatile.Read(ref _batchesClosedOnTime) + Volatile.Read(ref _batchesClosedOnSize) > 0;
 
-    // how many async-committed transactions the merger leaves in flight instead of completing
-    public int KeepInFlightJournalWrites => ShouldPipeline ? _maxConcurrentJournalWrites - 1 : 0;
-
     private const long MaxBatchConsolidationWindowInMs = 50;
 
     public bool ConsolidatingBatches => _consolidatingBatches;
@@ -349,8 +346,26 @@ public sealed class WriteFlowPolicy
         return totalWrittenButUnsyncedBytes > _options.MaxUnsyncedBytesBeforeMandatorySync;
     }
 
-    public bool ShouldPrepareZeroedJournalsInBackground => Device.ShouldPrepareZeroedJournalsInBackground;
+    public bool ShouldPrepareZeroedJournalsInBackground =>
+        _forTestingPurposes?.ForceZeroedJournalPreparation ?? Device.ShouldPrepareZeroedJournalsInBackground;
 
     public int NextJournalZeroingStepMs(bool journalWriteActive, int stalledSoFarMs) =>
-        Device.NextJournalZeroingStepMs(journalWriteActive, stalledSoFarMs);
+        _forTestingPurposes?.ForceZeroedJournalPreparation == true
+            ? 0 // force uses zero to run at full speed
+            : Device.NextJournalZeroingStepMs(journalWriteActive, stalledSoFarMs);
+
+    private TestingStuff _forTestingPurposes;
+
+    internal TestingStuff ForTestingPurposesOnly()
+    {
+        if (_forTestingPurposes != null)
+            return _forTestingPurposes;
+
+        return _forTestingPurposes = new TestingStuff();
+    }
+
+    internal sealed class TestingStuff
+    {
+        internal bool? ForceZeroedJournalPreparation;
+    }
 }
