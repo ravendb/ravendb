@@ -74,7 +74,7 @@ jobs:
 
       - name: Start container
         run: |
-          docker run -d --name quill-pr-check -p 5000:5000 \
+          docker run -d --name quill-pr-check \
             -e QUILL_API_KEY=test \
             -e QUILL_LICENSE_KEY=test \
             -e RAVEN_API_ENV=test \
@@ -85,7 +85,7 @@ jobs:
         # Accept 200 too if/when a real license/setup-package is wired into repo secrets.
         run: |
           for i in $(seq 1 60); do
-            CODE=$(curl -sS -o /dev/null -w "%{http_code}" http://localhost:5000/healthz 2>/dev/null || true)
+            CODE=$(docker exec quill-pr-check curl -sS -o /dev/null -w "%{http_code}" http://127.0.0.1:5000/healthz 2>/dev/null || true)
             case "$CODE" in
               200|503) echo "healthz responded HTTP $CODE - OK"; exit 0 ;;
               000|"")  echo "attempt $i: not yet"; sleep 2 ;;

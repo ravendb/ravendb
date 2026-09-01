@@ -190,7 +190,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=180s \
 # S6_VERBOSITY=0 keeps the supervisor's lifecycle chatter off stdout
 ENV S6_VERBOSITY=0 \
     RAVEN_QUILL_RAVEN_URL=http://127.0.0.1:8080 \
-    RAVEN_QUILL_WEB_LISTEN_URL=http://0.0.0.0:5000 \
+    RAVEN_QUILL_WEB_LISTEN_URL=http://127.0.0.1:5000 \
     RAVEN_QUILL_CONFIG_DB=quill-config \
     RAVEN_QUILL_SETUP_PACKAGE_PATH=/var/lib/quill/setup \
     RAVEN_QUILL_RAVENDB_S6_SERVICE=/run/service/01-ravendb \
