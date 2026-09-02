@@ -107,7 +107,7 @@ export function buildReactHostSnippet(embedOrigin: string) {
         "",
         "    useEffect(() => {",
         "        const onMessage = (event) => {",
-        ...indent(indent(indent(envelopeHandlerLines("void openSession(); // mint a fresh link and keep chatting")))),
+        ...indent(envelopeHandlerLines("void openSession(); // mint a fresh link and keep chatting"), 3),
         "        };",
         "",
         '        window.addEventListener("message", onMessage);',
@@ -220,9 +220,9 @@ export function buildKotlinHostSnippet(embedOrigin: string) {
         "    }",
         "",
         "    fun openSession() {",
-        ...indent(indent(MOBILE_MINT_COMMENT)),
+        ...indent(MOBILE_MINT_COMMENT, 2),
         '        val url = fetchSessionUrl() // POST https://your.site/api/quill-session -> { "url": ... }',
-        ...indent(indent(MOBILE_BASE_URL_COMMENT)),
+        ...indent(MOBILE_BASE_URL_COMMENT, 2),
         "        //",
         `        ${MOBILE_PIN_APPEARANCE_COMMENT}`,
         "        webView.post {",
@@ -231,7 +231,7 @@ export function buildKotlinHostSnippet(embedOrigin: string) {
         "    }",
         "",
         '    private fun hostPage(url: String) = """',
-        ...indent(indent(webviewHostPageLines(embedOrigin, "$url", "QuillBridge.onQuillEvent(message.type);"))),
+        ...indent(webviewHostPageLines(embedOrigin, "$url", "QuillBridge.onQuillEvent(message.type);"), 2),
         '    """.trimIndent()',
         "}",
     ].join("\n");
@@ -260,13 +260,13 @@ export function buildSwiftHostSnippet(embedOrigin: string) {
         "",
         "    func openSession() {",
         "        Task { @MainActor in",
-        ...indent(indent(indent(MOBILE_MINT_COMMENT))),
+        ...indent(MOBILE_MINT_COMMENT, 3),
         '            var request = URLRequest(url: URL(string: "https://your.site/api/quill-session")!)',
         '            request.httpMethod = "POST"',
         "            let (data, _) = try await URLSession.shared.data(for: request)",
         "",
         "            let url = try JSONDecoder().decode(Mint.self, from: data).url",
-        ...indent(indent(indent(MOBILE_BASE_URL_COMMENT))),
+        ...indent(MOBILE_BASE_URL_COMMENT, 3),
         "            //",
         `            ${MOBILE_PIN_APPEARANCE_COMMENT}`,
         '            webView.loadHTMLString(hostPage(url: url), baseURL: URL(string: "https://your.site"))',
@@ -276,13 +276,12 @@ export function buildSwiftHostSnippet(embedOrigin: string) {
         "    private func hostPage(url: String) -> String {",
         '        """',
         ...indent(
-            indent(
-                webviewHostPageLines(
-                    embedOrigin,
-                    "\\(url)",
-                    "window.webkit.messageHandlers.quill.postMessage(message.type);",
-                ),
+            webviewHostPageLines(
+                embedOrigin,
+                "\\(url)",
+                "window.webkit.messageHandlers.quill.postMessage(message.type);",
             ),
+            2,
         ),
         '        """',
         "    }",
@@ -290,6 +289,7 @@ export function buildSwiftHostSnippet(embedOrigin: string) {
     ].join("\n");
 }
 
-function indent(lines: string[]) {
-    return lines.map((line) => (line.length === 0 ? line : `    ${line}`));
+function indent(lines: string[], depth = 1) {
+    const padding = "    ".repeat(depth);
+    return lines.map((line) => (line.length === 0 ? line : `${padding}${line}`));
 }
