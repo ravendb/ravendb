@@ -393,7 +393,15 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             GC.SuppressFinalize(this);
             await FlushAndEncryptBufferAsync();
-            await FlushAsync();
+
+            // the last partial block is written just above and nothing flushes it afterwards, so this is our only
+            // chance to make it durable. Only a FileStream can fsync, and there is no async FlushFileBuffers to await -
+            // every other inner must stay on the async path, since Kestrel's response body forbids synchronous IO.
+            if (_inner is FileStream)
+                Flush(flushToDisk: true);
+            else
+                await FlushAsync();
+
             await _inner.DisposeAsync();
         }
     }

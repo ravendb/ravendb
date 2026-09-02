@@ -1057,6 +1057,11 @@ namespace Voron.Impl
                 }
             }
 
+            // The locator caches the page's scratch translation. The discard makes that entry
+            // stale. A re-allocation of the same page number would not overwrite it, because
+            // SetWritable skips entries that are already writable.
+            _pageLocator.Reset(pageNumber);
+
             _dirtyPages.Remove(pageNumber);
 
             UntrackDirtyPage(pageNumber);
