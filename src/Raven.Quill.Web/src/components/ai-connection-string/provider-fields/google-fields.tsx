@@ -4,6 +4,7 @@ import { FormAutocomplete } from "@/components/form/form-autocomplete";
 import { FormInput } from "@/components/form/form-input";
 import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
 import type { ConnectionStringFormData } from "@/components/ai-connection-string/ai-connection-string-utils";
+import { useIsModelLocked } from "@/components/ai-connection-string/model-lock-context";
 import { AdvancedFields } from "@/components/ai-connection-string/provider-fields/advanced-fields";
 import {
     DimensionsField,
@@ -22,6 +23,7 @@ const AI_VERSION_OPTIONS: FormSelectOption<ConnectionStringFormData["googleSetti
 
 export function GoogleFields({ modelType }: { modelType: AiModelType }) {
     const { control, getValues } = useFormContext<ConnectionStringFormData>();
+    const isModelLocked = useIsModelLocked();
     const isChat = modelType === "Chat";
 
     const settings = getValues("googleSettings");
@@ -47,6 +49,7 @@ export function GoogleFields({ modelType }: { modelType: AiModelType }) {
                 label="Model"
                 placeholder="gemini-3-flash-preview, …"
                 options={isChat ? CHAT_MODELS : EMBEDDINGS_MODELS}
+                disabled={isModelLocked}
             />
             <AdvancedFields defaultOpen={hasAdvancedValues}>
                 <FormSelect
@@ -55,6 +58,7 @@ export function GoogleFields({ modelType }: { modelType: AiModelType }) {
                     label="AI Version (optional)"
                     placeholder="Default"
                     options={AI_VERSION_OPTIONS}
+                    disabled={isModelLocked}
                 />
                 <FormAutocomplete
                     control={control}

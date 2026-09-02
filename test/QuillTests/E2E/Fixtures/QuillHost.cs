@@ -91,14 +91,17 @@ public sealed class QuillHost : IAsyncDisposable
     public Task<AiConnectionStringCreatedResponse> PostConnectionStringAsync(AiConnectionString body) =>
         QuillHttp.PostAsync<AiConnectionStringCreatedResponse>(Client, QuillRoutes.ConnectionStrings, body);
 
-    public Task<IReadOnlyList<AiConnectionString>> GetConnectionStringsAsync() =>
-        QuillHttp.GetAsync<IReadOnlyList<AiConnectionString>>(Client, QuillRoutes.ConnectionStrings);
+    public Task<IReadOnlyList<AiConnectionStringResponse>> GetConnectionStringsAsync() =>
+        QuillHttp.GetAsync<IReadOnlyList<AiConnectionStringResponse>>(Client, QuillRoutes.ConnectionStrings);
 
     public Task<AiConnectionStringTestResponse> TestConnectionStringAsync(AiConnectionString body) =>
         QuillHttp.PostAsync<AiConnectionStringTestResponse>(Client, QuillRoutes.ConnectionStringsTest, body);
 
-    public Task<AiConnectionString> GetConnectionStringAsync(string name) =>
-        QuillHttp.GetAsync<AiConnectionString>(Client, QuillRoutes.ConnectionString(name));
+    public async Task<AiConnectionString> GetConnectionStringAsync(string name) =>
+        (await GetConnectionStringResponseAsync(name)).ConnectionString;
+
+    public Task<AiConnectionStringResponse> GetConnectionStringResponseAsync(string name) =>
+        QuillHttp.GetAsync<AiConnectionStringResponse>(Client, QuillRoutes.ConnectionString(name));
 
     public Task DeleteConnectionStringAsync(string name) =>
         QuillHttp.DeleteAsync(Client, QuillRoutes.ConnectionString(name));

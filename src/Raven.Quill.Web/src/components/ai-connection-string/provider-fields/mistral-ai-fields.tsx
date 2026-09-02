@@ -2,6 +2,7 @@ import { useFormContext } from "react-hook-form";
 import { FormAutocomplete } from "@/components/form/form-autocomplete";
 import { FormInput } from "@/components/form/form-input";
 import type { ConnectionStringFormData } from "@/components/ai-connection-string/ai-connection-string-utils";
+import { useIsModelLocked } from "@/components/ai-connection-string/model-lock-context";
 import { AdvancedFields } from "@/components/ai-connection-string/provider-fields/advanced-fields";
 import { EmbeddingsMaxConcurrentBatchesField } from "@/components/ai-connection-string/provider-fields/shared-fields";
 
@@ -10,6 +11,7 @@ const MODELS = ["mistral-embed"];
 
 export function MistralAiFields() {
     const { control, getValues } = useFormContext<ConnectionStringFormData>();
+    const isModelLocked = useIsModelLocked();
 
     const hasAdvancedValues = getValues("mistralAiSettings").embeddingsMaxConcurrentBatches != null;
 
@@ -35,6 +37,7 @@ export function MistralAiFields() {
                 label="Model"
                 placeholder="mistral-embed"
                 options={MODELS}
+                disabled={isModelLocked}
             />
             <AdvancedFields defaultOpen={hasAdvancedValues}>
                 <EmbeddingsMaxConcurrentBatchesField baseName="mistralAiSettings" />
