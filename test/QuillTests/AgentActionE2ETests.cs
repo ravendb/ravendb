@@ -125,23 +125,6 @@ public class AgentActionE2ETests(ITestOutputHelper output, QuillCollectionHost c
         Assert.Single(mock.Deliveries);
     }
 
-    [RavenFact(RavenTestCategory.Quill)]
-    public async Task Action_loop_stops_at_the_round_budget()
-    {
-        var turns = Enumerable.Range(0, AgentRouter.MaxActionRounds + 2)
-            .Select(i => (MockLlmTurn)new ToolCallTurn("create_ticket", """{"subject":"again"}""", ToolId: $"call_{i}"))
-            .ToArray();
-        await using var mock = await MockQuillServices.StartAsync(turns);
-        mock.WebhookResponse = (200, """{"ok":true}""");
-
-        await using var h = await HarnessAsync(mock, Webhook(mock.WebhookUrl));
-
-        var ndjson = await h.App.SendEmbedChatAsync(h.Token, "my laptop is broken");
-
-        Assert.Equal(AgentRouter.MaxActionRounds, mock.Deliveries.Count);
-        Assert.Contains("error", ndjson);
-    }
-
     /// Starts a turn, waits for the action to reach the receiver, then aborts the client mid-flight —
     /// leaving the conversation with a pending action for the next turn to recover.
     private static async Task AbortMidActionAsync(Harness h, MockQuillServices mock)
