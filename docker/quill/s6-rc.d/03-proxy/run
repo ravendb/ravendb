@@ -33,8 +33,10 @@ done
 
 s6-setuidgid quill proxy-certs
 
-cp /etc/nginx/nginx.conf "$PROXY_DIR/nginx.conf"
-sed -i "s|__RAVENDB_PORT__|$RAVENDB_PORT|g"             "$PROXY_DIR/nginx.conf"
-sed -i "s|__RAVENDB_PROXY_PORT__|$RAVENDB_PROXY_PORT|g" "$PROXY_DIR/nginx.conf"
+DEST_CONF="$PROXY_DIR/nginx.conf"
+[ -h "$DEST_CONF" ] && rm -f "$DEST_CONF"
+cp --remove-destination /etc/nginx/nginx.conf "$DEST_CONF"
+sed -i "s|__RAVENDB_PORT__|$RAVENDB_PORT|g"             "$DEST_CONF"
+sed -i "s|__RAVENDB_PROXY_PORT__|$RAVENDB_PROXY_PORT|g" "$DEST_CONF"
 
 exec s6-setuidgid quill nginx -c "$PROXY_DIR/nginx.conf" -g 'daemon off;'
