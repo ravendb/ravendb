@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { api } from "@/api/api";
-import type { AiConnectionStringUsage } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
@@ -12,11 +11,11 @@ import { TableSkeletonRows } from "@/components/table/table-skeleton";
 import { AddAiConnectionString } from "@/components/ai-connection-string/add-ai-connection-string";
 import { EditAiConnectionString } from "@/components/ai-connection-string/edit-ai-connection-string";
 import { DeleteAiConnectionStringDialog } from "@/components/ai-connection-string/delete-ai-connection-string-dialog";
-import { AiConnectionStringUsageList } from "@/components/ai-connection-string/ai-connection-string-usage";
+import { AiConnectionStringUsageBadge } from "@/components/ai-connection-string/ai-connection-string-usage";
 import { getProviderLabel, MODEL_TYPE_LABELS } from "@/components/ai-connection-string/ai-connection-string-utils";
 import { Heading, Text } from "@/components/typography";
 
-const CONNECTION_STRINGS_COLUMN_COUNT = 4;
+const CONNECTION_STRINGS_COLUMN_COUNT = 5;
 
 export function DashboardConnectionStrings() {
     const connectionStringsQuery = useQuery(api.queries.aiConnectionStrings.list());
@@ -80,6 +79,9 @@ export function DashboardConnectionStrings() {
                                     <TableCell>
                                         <Badge variant="secondary">{MODEL_TYPE_LABELS[modelType]}</Badge>
                                     </TableCell>
+                                    <TableCell>
+                                        <AiConnectionStringUsageBadge usedBy={usedBy} />
+                                    </TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex justify-end gap-1">
                                             <EditAiConnectionString
@@ -92,7 +94,7 @@ export function DashboardConnectionStrings() {
                                                     </Button>
                                                 }
                                             />
-                                            <DeleteConnectionStringAction name={name} usedBy={usedBy} />
+                                            <DeleteConnectionStringAction name={name} isUsed={usedBy.length > 0} />
                                         </div>
                                     </TableCell>
                                 </TableRow>
@@ -107,11 +109,11 @@ export function DashboardConnectionStrings() {
 
 type DeleteConnectionStringActionProps = {
     name: string;
-    usedBy: AiConnectionStringUsage[];
+    isUsed: boolean;
 };
 
-function DeleteConnectionStringAction({ name, usedBy }: DeleteConnectionStringActionProps) {
-    if (usedBy.length === 0) {
+function DeleteConnectionStringAction({ name, isUsed }: DeleteConnectionStringActionProps) {
+    if (!isUsed) {
         return (
             <DeleteAiConnectionStringDialog
                 name={name}
@@ -126,8 +128,8 @@ function DeleteConnectionStringAction({ name, usedBy }: DeleteConnectionStringAc
 
     return (
         <Tooltip>
-            {/* The tooltip is the only place the reason appears, so the button stays focusable
-                (aria-disabled, not disabled) and keeps carrying its own name and description. */}
+            {/* aria-disabled, not disabled, so the button stays focusable and its tooltip
+                reaches keyboard and screen reader users as the button's description. */}
             <TooltipTrigger asChild>
                 <Button
                     variant="ghost"
@@ -139,12 +141,7 @@ function DeleteConnectionStringAction({ name, usedBy }: DeleteConnectionStringAc
                     <Trash2 className="size-3.5" aria-hidden="true" />
                 </Button>
             </TooltipTrigger>
-            <TooltipContent>
-                <div className="grid gap-1">
-                    <span>This connection string is in use and can’t be deleted. Used by:</span>
-                    <AiConnectionStringUsageList usedBy={usedBy} />
-                </div>
-            </TooltipContent>
+            <TooltipContent>Can’t be deleted while in use</TooltipContent>
         </Tooltip>
     );
 }
@@ -159,6 +156,7 @@ function ConnectionStringsTableFrame({ children }: { children: ReactNode }) {
                             <TableHead className="text-xs font-medium text-muted-foreground">Name</TableHead>
                             <TableHead className="text-xs font-medium text-muted-foreground">Provider</TableHead>
                             <TableHead className="text-xs font-medium text-muted-foreground">Model type</TableHead>
+                            <TableHead className="text-xs font-medium text-muted-foreground">Used by</TableHead>
                             <TableHead className="w-0 text-right text-xs font-medium text-muted-foreground">
                                 <span className="sr-only">Actions</span>
                             </TableHead>
