@@ -183,6 +183,7 @@ export function EmbedLinkApiDocs({ slug, channelId, parameters }: EmbedLinkApiDo
                                         value={hostStack}
                                         onValueChange={onHostStackChange}
                                         copyLabel="Copy embed snippet"
+                                        maxLines={20}
                                         className="mt-3"
                                         tabs={HOST_STACK_OPTIONS.map(({ value, label, mode, build }) => ({
                                             value,
