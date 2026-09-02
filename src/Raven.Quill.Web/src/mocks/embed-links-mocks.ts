@@ -1,6 +1,7 @@
 import type { ApiErrorResponse, EmbedLinkSummaryResponse, MintEmbedLinkResponse } from "@/api/generated/server-api";
 import { SAMPLE_CHANNEL_ID } from "./channels-mocks";
 import { apiHttp } from "./api-http";
+import { MS_IN } from "@/lib/time";
 
 export const embedLinksMocks = {
     list: (links: EmbedLinkSummaryResponse[] = sampleEmbedLinks) =>
@@ -13,8 +14,6 @@ export const embedLinksMocks = {
     revoke: () => apiHttp.delete("/api/apps/{slug}/embed-links/{token}", ({ response }) => response(204).empty()),
 };
 
-const HOUR_MS = 60 * 60 * 1000;
-const DAY_MS = 24 * HOUR_MS;
 const fromNow = (offsetMs: number) => new Date(Date.now() + offsetMs).toISOString();
 
 // Dates are relative to "now" so the channel detail always shows the full spread of
@@ -25,8 +24,8 @@ export const sampleEmbedLinks: EmbedLinkSummaryResponse[] = [
         channelId: SAMPLE_CHANNEL_ID,
         agentId: "agents/sales",
         parameters: { customerId: "users/1" },
-        createdAt: fromNow(-3 * DAY_MS),
-        expiresAt: fromNow(6 * DAY_MS),
+        createdAt: fromNow(-3 * MS_IN.day),
+        expiresAt: fromNow(6 * MS_IN.day),
         maxInvocations: 100,
         invocationCount: 12,
     },
@@ -35,8 +34,8 @@ export const sampleEmbedLinks: EmbedLinkSummaryResponse[] = [
         channelId: SAMPLE_CHANNEL_ID,
         agentId: "agents/sales",
         parameters: { customerId: "users/42" },
-        createdAt: fromNow(-2 * DAY_MS),
-        expiresAt: fromNow(8 * HOUR_MS),
+        createdAt: fromNow(-2 * MS_IN.day),
+        expiresAt: fromNow(8 * MS_IN.hour),
         maxInvocations: 50,
         invocationCount: 44,
     },
@@ -45,8 +44,8 @@ export const sampleEmbedLinks: EmbedLinkSummaryResponse[] = [
         channelId: SAMPLE_CHANNEL_ID,
         agentId: "agents/sales",
         parameters: { customerId: "users/108" },
-        createdAt: fromNow(-10 * DAY_MS),
-        expiresAt: fromNow(-2 * DAY_MS),
+        createdAt: fromNow(-10 * MS_IN.day),
+        expiresAt: fromNow(-2 * MS_IN.day),
         maxInvocations: 200,
         invocationCount: 200,
     },

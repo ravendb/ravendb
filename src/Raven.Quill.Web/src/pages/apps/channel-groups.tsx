@@ -266,7 +266,8 @@ function ChannelCard({
 
     return (
         // The title's stretched ::after overlay turns the whole card into the "open details" link;
-        // interactive children (the footer actions) sit above it with `relative z-10`.
+        // children that need their own pointer events (the footer actions, the hoverable date) sit above
+        // it with `relative z-10`.
         <Card
             size="sm"
             className="relative gap-3 transition-[background-color,box-shadow] hover:bg-muted/40 hover:ring-foreground/25 has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-ring"
@@ -321,7 +322,14 @@ function ChannelCard({
                     )}
                     <StatBox
                         label="Added"
-                        value={<Timestamp value={channel.createdAt} dateVariant="short" textVariant="inherit" />}
+                        value={
+                            <Timestamp
+                                value={channel.createdAt}
+                                dateVariant="short"
+                                textVariant="inherit"
+                                className="relative z-10"
+                            />
+                        }
                     />
                 </div>
             </CardContent>

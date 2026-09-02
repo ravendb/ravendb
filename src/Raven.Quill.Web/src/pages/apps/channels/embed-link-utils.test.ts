@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-    MAX_TTL_SECONDS,
-    MIN_TTL_SECONDS,
-    TTL_UNIT_SECONDS,
-    ttlToSeconds,
-} from "@/pages/apps/channels/embed-link-utils";
+import { SECONDS_IN } from "@/lib/time";
+import { MAX_TTL_SECONDS, MIN_TTL_SECONDS, ttlToSeconds } from "@/pages/apps/channels/embed-link-utils";
 
 describe("ttlToSeconds", () => {
     it("returns the value unchanged for seconds", () => {
@@ -18,7 +14,7 @@ describe("ttlToSeconds", () => {
     });
 
     it("scales linearly with the value", () => {
-        expect(ttlToSeconds(3, "hour")).toBe(3 * TTL_UNIT_SECONDS.hour);
+        expect(ttlToSeconds(3, "hour")).toBe(3 * SECONDS_IN.hour);
     });
 
     it("maps the server bounds to selectable durations", () => {

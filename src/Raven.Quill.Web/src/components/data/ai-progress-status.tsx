@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Text } from "@/components/typography";
 import { SparklesIcon } from "lucide-react";
+import { MS_IN, SECONDS_IN } from "@/lib/time";
 
 export type AiProgressStage = {
     fromSeconds: number;
@@ -40,17 +41,17 @@ function useElapsedSeconds(startedAt?: number) {
     const [now, setNow] = useState(mountedAt);
 
     useEffect(() => {
-        const interval = setInterval(() => setNow(Date.now()), 1_000);
+        const interval = setInterval(() => setNow(Date.now()), MS_IN.second);
 
         return () => clearInterval(interval);
     }, []);
 
-    return Math.max(0, Math.round((now - (startedAt ?? mountedAt)) / 1_000));
+    return Math.max(0, Math.round((now - (startedAt ?? mountedAt)) / MS_IN.second));
 }
 
 function formatElapsed(totalSeconds: number): string {
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
+    const minutes = Math.floor(totalSeconds / SECONDS_IN.minute);
+    const seconds = totalSeconds % SECONDS_IN.minute;
 
     return minutes > 0 ? `${minutes}m ${String(seconds).padStart(2, "0")}s` : `${seconds}s`;
 }

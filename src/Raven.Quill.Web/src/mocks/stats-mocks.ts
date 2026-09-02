@@ -1,3 +1,4 @@
+import { MS_IN } from "@/lib/time";
 import type {
     ApplianceAppResponse,
     AppUsageResponse,
@@ -141,7 +142,7 @@ export const sampleDashboardApps: ApplianceAppResponse[] = [
         adaptersCount: 0,
         agentsCount: 2,
         channelsLabel: "Telegram",
-        statusSubtitle: "Sync failed · 2h ago",
+        statusSubtitle: "Sync failed · stalled for 2h",
         createdAt: "2026-04-28T12:00:00Z",
         updatedAt: "2026-06-25T07:05:00Z",
     },
@@ -173,9 +174,8 @@ export const sampleCollections: DataCollectionDto[] = [
     { appId: "demo", name: "Customers", documentsCount: 23000, fields: ["Email", "Name"] },
 ];
 
-// Timestamps are relative to "now" so the "Last activity" column always reads like a live feed
-// ("19m ago", "1h ago") regardless of when the mocks are served.
-const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
+// Timestamps are relative to "now" so the conversations always look recent regardless of when the mocks are served.
+const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * MS_IN.minute).toISOString();
 
 export const sampleConversations: ConversationDto[] = [
     {

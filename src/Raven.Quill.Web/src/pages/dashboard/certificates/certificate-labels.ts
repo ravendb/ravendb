@@ -2,6 +2,7 @@ import type { CertificateItem, SecurityClearance } from "@/api/custom-services/c
 import type { AppResponse, DatabaseAccess } from "@/api/generated/server-api";
 import type { FormSelectOption } from "@/components/form/form-select";
 import { GRANTABLE_DATABASE_ACCESS } from "@/pages/dashboard/certificates/certificate-permissions";
+import { MS_IN } from "@/lib/time";
 
 export const DATABASE_ACCESS_LABELS: Record<DatabaseAccess, string> = {
     Admin: "Admin",
@@ -38,7 +39,7 @@ export function isExpiredCertificate(certificate: CertificateItem, now: number =
     return certificate.notAfter != null && new Date(certificate.notAfter).getTime() < now;
 }
 
-const ABOUT_TO_EXPIRE_WINDOW_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
+const ABOUT_TO_EXPIRE_WINDOW_MS = 14 * MS_IN.day;
 
 export function isAboutToExpireCertificate(certificate: CertificateItem, now: number = Date.now()): boolean {
     return (

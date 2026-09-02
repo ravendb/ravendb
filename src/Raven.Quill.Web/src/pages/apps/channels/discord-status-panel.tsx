@@ -161,7 +161,7 @@ function DiscordGatewayBadge({ health }: { health: DiscordChannelHealthResponse 
         }
 
         return (
-            <TimestampTooltip value={health.lastConnectedAt} prefix="Connected">
+            <TimestampTooltip value={health.lastConnectedAt} prefix="Connected on">
                 {badge}
             </TimestampTooltip>
         );

@@ -1,10 +1,11 @@
 import { queryOptions } from "@tanstack/react-query";
 import type { ServerApi } from "@/api/generated/server-api";
 import { recordFetchStartedAt } from "@/lib/query-fetch-start";
+import { MS_IN } from "@/lib/time";
 
 const baseKey = "apps";
 
-const CDC_ERRORS_POLL_INTERVAL_MS = 5_000;
+const CDC_ERRORS_POLL_INTERVAL_MS = 5 * MS_IN.second;
 
 // Partial key covering every app's connection strings list, so mutations on the
 // (server-wide) connection strings can invalidate all of them at once.

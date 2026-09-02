@@ -1,6 +1,7 @@
 import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 import { isApiError } from "@/api/http-client";
 import { AUTH_STATUS_QUERY_KEY, UNAUTHENTICATED_STATUS } from "@/lib/auth-query";
+import { MS_IN } from "@/lib/time";
 
 export function markSessionExpired() {
     queryClient.setQueryData(AUTH_STATUS_QUERY_KEY, UNAUTHENTICATED_STATUS);
@@ -18,7 +19,7 @@ export const queryClient = new QueryClient({
     mutationCache: new MutationCache({ onError: handleUnauthorized }),
     defaultOptions: {
         queries: {
-            staleTime: 60_000,
+            staleTime: MS_IN.minute,
             refetchOnWindowFocus: false,
             retry: 1,
         },

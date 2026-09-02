@@ -1,4 +1,5 @@
 import { originForSubdomain } from "@/lib/subdomain-origin";
+import { SECONDS_IN } from "@/lib/time";
 
 /** Builds the absolute, paste-ready embed URL from the app slug and a token. The embed surface is
  *  served on the public.* subdomain only, so swap the operator host's leading label (dashboard.* /
@@ -18,24 +19,21 @@ export function buildMintEmbedLinkUrl(slug: string) {
 
 // Server-enforced bounds for minting embed links (see the embed-links mint contract). Shared by the
 // generate dialog (range validation + defaults) and the API docs (documented ranges + example body).
-export const MIN_TTL_SECONDS = 60;
-export const MAX_TTL_SECONDS = 2_592_000;
+export const MIN_TTL_SECONDS = SECONDS_IN.minute;
+export const MAX_TTL_SECONDS = 30 * SECONDS_IN.day;
 export const MIN_INVOCATIONS = 1;
 export const MAX_INVOCATIONS = 1_000_000;
-export const DEFAULT_TTL_SECONDS = 3_600;
+export const DEFAULT_TTL_SECONDS = SECONDS_IN.hour;
 export const DEFAULT_MAX_INVOCATIONS = 100;
 
 // Units offered by the custom-duration input. Days is the largest practical unit: the server caps
 // TTL at MAX_TTL_SECONDS (30 days), so weeks/months could not be honored.
-export const TTL_UNIT_SECONDS = {
-    second: 1,
-    minute: 60,
-    hour: 3_600,
-    day: 86_400,
-} as const;
-
-export type TtlUnit = keyof typeof TTL_UNIT_SECONDS;
+export type TtlUnit = "second" | "minute" | "hour" | "day";
 
 export function ttlToSeconds(value: number, unit: TtlUnit) {
-    return value * TTL_UNIT_SECONDS[unit];
+    if (unit === "second") {
+        return value;
+    }
+
+    return value * SECONDS_IN[unit];
 }
