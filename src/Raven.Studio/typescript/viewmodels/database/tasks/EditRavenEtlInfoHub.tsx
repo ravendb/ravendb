@@ -4,7 +4,9 @@ import { useAppSelector } from "components/store";
 import React from "react";
 import { Icon } from "components/common/Icon";
 import { useRavenLink } from "hooks/useRavenLink";
-import FeatureAvailabilitySummaryWrapper, { FeatureAvailabilityData } from "components/common/FeatureAvailabilitySummary";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 
 export function EditRavenEtlInfoHub() {
@@ -18,7 +20,7 @@ export function EditRavenEtlInfoHub() {
             },
         ],
     });
-    
+
     const ravenDbEtlDocsLink = useRavenLink({ hash: "GFSWLI" });
 
     return (
@@ -35,14 +37,15 @@ export function EditRavenEtlInfoHub() {
                     transfers data from documents from this RavenDB database to another RavenDB database.
                 </p>
                 <ul>
-                    <li>The sent data can be filtered and modified by multiple transformation JavaScript scripts that
+                    <li>
+                        The sent data can be filtered and modified by multiple transformation JavaScript scripts that
                         are added to the task.
                     </li>
                     <li className="margin-top-xxs">
                         Custom logic for Attachments, Counters, Time series,
-                        <br/>
+                        <br />
                         and deletion behavior can also be applied.
-                        <br/>
+                        <br />
                         Revisions are not sent by the ETL process.
                     </li>
                     <li className="margin-top-xxs">
@@ -57,7 +60,7 @@ export function EditRavenEtlInfoHub() {
                         You can test each script in this view to preview the resulting documents that will be sent.
                     </li>
                 </ul>
-                <hr/>
+                <hr />
                 <div>
                     Task definition includes:
                     <ul>
@@ -72,10 +75,7 @@ export function EditRavenEtlInfoHub() {
                     <Icon icon="newtab" /> Docs - RavenDB ETL
                 </a>
             </AccordionItemWrapper>
-            <FeatureAvailabilitySummaryWrapper
-                isUnlimited={hasRavenEtl}
-                data={featureAvailability}
-            />
+            <FeatureAvailabilitySummaryWrapper isUnlimited={hasRavenEtl} data={featureAvailability} />
         </AboutViewFloating>
     );
 }
