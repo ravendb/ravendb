@@ -12,6 +12,7 @@ using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server.Logging;
@@ -277,9 +278,10 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                                 numberOfReferencedItemLoad++;
 
+                                                var numberOfResults = 0;
                                                 try
                                                 {
-                                                    var numberOfResults = _index.HandleMap(current, mapResults, writeOperation, indexContext, collectionStats);
+                                                    numberOfResults = _index.HandleMap(current, mapResults, writeOperation, indexContext, collectionStats);
 
                                                     resultsCount += numberOfResults;
                                                     collectionStats.RecordMapReferenceSuccess();
@@ -298,6 +300,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                         $"Failed to execute mapping function on {current.Id}. Exception: {e}");
                                                 }
 
+                                                totalSeenItemsCount += numberOfResults - (numberOfResults > 0).ToInt32();
                                                 totalSeenItemsCount += CurrentIndexingScope.Current.LoadedItemsCount;
                                                 CurrentIndexingScope.Current.LoadedItemsCount = 0;
 

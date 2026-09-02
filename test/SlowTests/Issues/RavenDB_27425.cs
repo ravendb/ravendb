@@ -182,6 +182,63 @@ public class RavenDB_27425 : RavenTestBase
         }
     }
 
+    [RavenFact(RavenTestCategory.Indexes)]
+    public async Task FanoutReferenceHandlingShouldRespectManagedAllocationsBatchLimitWhenBatchHasFewerThan128Documents()
+    {
+        using (var store = GetDocumentStore(new Options
+        {
+            ModifyDatabaseRecord = r =>
+            {
+                r.Settings[RavenConfiguration.GetKey(x => x.Indexing.ManagedAllocationsBatchLimit)] = "1";
+            }
+        }))
+        {
+            await using (var bulk = store.BulkInsert())
+            {
+                for (var i = 0; i < FanoutDocsCount; i++)
+                {
+                    var items = Enumerable.Range(0, FanoutPerDocument)
+                        .Select(j => $"{i:D4}-{j:D6}-" + new string('x', 100))
+                        .ToList();
+
+                    await bulk.StoreAsync(new FanoutEntity { RefDocId = $"RefDocs/ref-{i}", Items = items }, $"fanouts/{i}");
+                    await bulk.StoreAsync(new RefDoc { NestedId = "nested/" + i }, $"RefDocs/ref-{i}");
+                }
+            }
+
+            var index = new FanoutEntities_ByItemAndRefDoc();
+            await index.ExecuteAsync(store);
+            await Indexes.WaitForIndexingAsync(store, timeout: TimeSpan.FromMinutes(5));
+
+            await store.Maintenance.SendAsync(new StopIndexOperation(index.IndexName));
+
+            using (var session = store.OpenAsyncSession())
+            {
+                for (var i = 0; i < FanoutDocsCount; i++)
+                    await session.StoreAsync(new RefDoc { NestedId = "nested-updated/" + i }, $"RefDocs/ref-{i}");
+
+                await session.SaveChangesAsync();
+            }
+
+            await store.Maintenance.SendAsync(new StartIndexOperation(index.IndexName));
+            await Indexes.WaitForIndexingAsync(store, timeout: TimeSpan.FromMinutes(5));
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var count = await session.Query<FanoutEntities_ByItemAndRefDoc.Result, FanoutEntities_ByItemAndRefDoc>()
+                    .Where(x => x.RefNestedId.StartsWith("nested-updated/"))
+                    .CountAsync();
+
+                Assert.Equal(FanoutDocsCount * FanoutPerDocument, count);
+            }
+
+            var referenceDetails = await GetReferenceRunDetails(store, index.IndexName);
+
+            Assert.NotEmpty(referenceDetails);
+            Assert.Contains(referenceDetails, x => x.BatchCompleteReason?.Contains("Reached managed allocations limit") == true);
+        }
+    }
+
     [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.CompareExchange)]
     public async Task CompareExchangeReferenceHandlingShouldRespectManagedAllocationsBatchLimit()
     {
@@ -437,6 +494,7 @@ public class RavenDB_27425 : RavenTestBase
     private class FanoutEntity
     {
         public string Id { get; set; }
+        public string RefDocId { get; set; }
         public List<string> Items { get; set; }
     }
 
@@ -500,6 +558,27 @@ public class RavenDB_27425 : RavenTestBase
                               select new
                               {
                                   Item = item
+                              };
+        }
+    }
+
+    private class FanoutEntities_ByItemAndRefDoc : AbstractIndexCreationTask<FanoutEntity>
+    {
+        public class Result
+        {
+            public string Item { get; set; }
+            public string RefNestedId { get; set; }
+        }
+
+        public FanoutEntities_ByItemAndRefDoc()
+        {
+            Map = entities => from entity in entities
+                              let refDoc = LoadDocument<RefDoc>(entity.RefDocId, "RefDocs")
+                              from item in entity.Items
+                              select new
+                              {
+                                  Item = item,
+                                  RefNestedId = refDoc == null ? null : refDoc.NestedId
                               };
         }
     }
