@@ -34,7 +34,7 @@ function DeleteErrorMessage({ error }: { error: unknown }) {
         return (
             <>
                 <p>This connection string is still in use. Remove what uses it first:</p>
-                <AiConnectionStringUsageList usedBy={conflict.usedBy} className="mt-1 pl-5" />
+                <AiConnectionStringUsageList usedBy={conflict.usedBy} className="mt-1" />
             </>
         );
     }
