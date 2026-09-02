@@ -9,6 +9,8 @@ chown quill:quill /var/lib/quill
 for d in certs proxy setup logs; do
     chown -R quill:quill "/var/lib/quill/$d"
 done
-if [ "$(stat -c %U /var/lib/quill/ravendb 2>/dev/null)" != quill ]; then
+
+if [ ! -f /var/lib/quill/ravendb/.ownership-v1 ]; then
     chown -R quill:quill /var/lib/quill/ravendb
+    touch /var/lib/quill/ravendb/.ownership-v1
 fi
