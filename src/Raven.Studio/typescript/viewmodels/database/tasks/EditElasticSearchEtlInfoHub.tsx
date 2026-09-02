@@ -4,7 +4,9 @@ import { useAppSelector } from "components/store";
 import React from "react";
 import { Icon } from "components/common/Icon";
 import { useRavenLink } from "hooks/useRavenLink";
-import FeatureAvailabilitySummaryWrapper, { FeatureAvailabilityData } from "components/common/FeatureAvailabilitySummary";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 
 export function EditElasticSearchEtlInfoHub() {
@@ -18,16 +20,12 @@ export function EditElasticSearchEtlInfoHub() {
             },
         ],
     });
-    
+
     const elasticSearchEtlDocsLink = useRavenLink({ hash: "AHPBTX" });
 
     return (
         <AboutViewFloating defaultOpen={hasElasticSearchEtl ? null : "licensing"}>
-            <AccordionItemWrapper
-                targetId="about"
-                icon="about"
-                color="info"
-            >
+            <AccordionItemWrapper targetId="about" icon="about" color="info">
                 <p>
                     An <strong>Elasticsearch ETL</strong> ongoing-task is an ETL (Extract, Transform & Load) process
                     that transfers data from this RavenDB database to an Elasticsearch destination.
@@ -35,7 +33,7 @@ export function EditElasticSearchEtlInfoHub() {
                 <ul>
                     <li>
                         Data is extracted from documents only.
-                        <br/>
+                        <br />
                         Attachments, Counters, Time series, and Revisions are not sent.
                     </li>
                     <li className="margin-top-xxs">
@@ -55,16 +53,16 @@ export function EditElasticSearchEtlInfoHub() {
                         Elasticsearch.
                     </li>
                 </ul>
-                <hr/>
+                <hr />
                 <div>
                     Task definition includes:
                     <ul>
                         <li>The transformation scripts definitions.</li>
-                        <li>List of Elasticsearch indexes the ETL task will access, including the property
-                            used for the RavenDB document ID.
+                        <li>
+                            List of Elasticsearch indexes the ETL task will access, including the property used for the
+                            RavenDB document ID.
                         </li>
-                        <li>A connection string with URLs to the Elasticsearch nodes and the authentication method.
-                        </li>
+                        <li>A connection string with URLs to the Elasticsearch nodes and the authentication method.</li>
                         <li>A responsible node to handle this task can be set.</li>
                     </ul>
                 </div>
@@ -74,10 +72,7 @@ export function EditElasticSearchEtlInfoHub() {
                     <Icon icon="newtab" /> Docs - Elasticsearch ETL
                 </a>
             </AccordionItemWrapper>
-            <FeatureAvailabilitySummaryWrapper
-                isUnlimited={hasElasticSearchEtl}
-                data={featureAvailability}
-            />
+            <FeatureAvailabilitySummaryWrapper isUnlimited={hasElasticSearchEtl} data={featureAvailability} />
         </AboutViewFloating>
     );
 }
