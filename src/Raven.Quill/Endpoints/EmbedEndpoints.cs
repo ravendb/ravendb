@@ -26,6 +26,8 @@ public static class EmbedEndpoints
 {
     public const string ChatRateLimitPolicy = "embed-chat";
 
+    internal const int MaxPromptLength = 32_000;
+
     public static void Map(WebApplication app)
     {
         app.MapGet("/apps/{slug}/embed/{token}", ServeEmbedPageAsync)
@@ -157,6 +159,14 @@ public static class EmbedEndpoints
         {
             ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
             await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse("prompt is required"), ct);
+            return;
+        }
+
+        if (body.Prompt.Length > MaxPromptLength)
+        {
+            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await ctx.Response.WriteAsJsonAsync(
+                new ApiErrorResponse($"prompt exceeds {MaxPromptLength} characters", Code: "prompt_too_long"), ct);
             return;
         }
 

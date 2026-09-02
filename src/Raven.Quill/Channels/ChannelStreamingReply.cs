@@ -16,6 +16,8 @@ internal abstract class ChannelStreamingReply(int messageLimit, TimeSpan editDeb
 
     protected abstract bool HasOpenMessage { get; }
 
+    protected virtual bool CanPreview => true;
+
     protected abstract Task ShowPreviewAsync(string text);
 
     protected abstract Task SendFinalAsync(string text);
@@ -71,21 +73,24 @@ internal abstract class ChannelStreamingReply(int messageLimit, TimeSpan editDeb
             var cut = MessageSplitter.CutPoint(pending, messageLimit);
 
             var segment = pending[..cut].TrimEnd();
-            if (HasOpenMessage)
-                await EditFinalAsync(segment);
-            else
-                await SendFinalAsync(segment);
+            if (segment.Length > 0)
+            {
+                if (HasOpenMessage)
+                    await EditFinalAsync(segment);
+                else
+                    await SendFinalAsync(segment);
+
+                CloseCurrentMessage();
+                LastShownText = "";
+            }
 
             _flushedUpTo += cut;
             while (PendingLength > 0 && char.IsWhiteSpace(_buffer[_flushedUpTo]))
                 _flushedUpTo++;
-
-            CloseCurrentMessage();
-            LastShownText = "";
         }
 
         var preview = _buffer.ToString(_flushedUpTo, PendingLength);
-        if (preview.Length == 0 || preview == LastShownText)
+        if (preview.Length == 0 || preview == LastShownText || CanPreview == false)
             return;
 
         await ShowPreviewAsync(preview);

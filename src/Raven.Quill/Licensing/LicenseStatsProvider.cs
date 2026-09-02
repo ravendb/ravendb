@@ -48,6 +48,8 @@ internal sealed class LicenseStatsProvider : ILicenseStatsProvider
         }, token);
 
         var usage = await _ravendb.DeserializeAsync<QuillUsageResponse>(r.Content, token);
+        if (usage is null)
+            return new QuillUsageResponse([], []);
 
         var perApplicationUsages = (usage.PerApplication ?? [])
             .GroupBy(p => (p.TopologyId, p.ApplicationName))

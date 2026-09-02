@@ -16,7 +16,6 @@ internal sealed class DiscordGatewayRuntime
     private const int AttemptsBeforeSessionReset = 3;
 
     private static readonly TimeSpan MinBackoff = TimeSpan.FromSeconds(1);
-    private static readonly TimeSpan StopTimeout = TimeSpan.FromSeconds(10);
 
     private static readonly JsonSerializerOptions JsonOptions = new();
 
@@ -90,22 +89,24 @@ internal sealed class DiscordGatewayRuntime
 
     public async Task StopAsync()
     {
-        await _cts.CancelAsync();
+        try
+        {
+            await _cts.CancelAsync();
+        }
+        catch (ObjectDisposedException)
+        {
+        }
 
         try
         {
-            await _run.WaitAsync(StopTimeout);
+            await _run.WaitAsync(_options.GatewayStopTimeout);
         }
         catch (TimeoutException)
         {
             if (_logger.IsWarnEnabled)
-                _logger.Warn($"Discord gateway for channel {_shortChannelId} did not stop within {StopTimeout}");
-            return;
+                _logger.Warn($"Discord gateway for channel {_shortChannelId} did not stop within {_options.GatewayStopTimeout}");
+            throw;
         }
-
-        _cts.Dispose();
-        _sendLock.Dispose();
-        _frameBuffer.Dispose();
     }
 
     private async Task RunAsync()
@@ -117,6 +118,9 @@ internal sealed class DiscordGatewayRuntime
         finally
         {
             Interlocked.Exchange(ref _exitedAtTicks, DateTime.UtcNow.Ticks);
+            _cts.Dispose();
+            _sendLock.Dispose();
+            _frameBuffer.Dispose();
         }
     }
 

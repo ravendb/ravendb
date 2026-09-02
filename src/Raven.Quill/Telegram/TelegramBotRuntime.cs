@@ -26,6 +26,7 @@ internal sealed class TelegramBotRuntime
     private readonly bool _acceptsContactShares;
     private Task _receive = Task.CompletedTask;
     private TimeSpan _backoff = MinBackoff;
+    private int _chatCapDropWarned;
 
     private TelegramBotRuntime(
         string database, Channel channel, string? channelChangeVector, ITelegramBotClient client,
@@ -103,7 +104,19 @@ internal sealed class TelegramBotRuntime
 
         while (true)
         {
-            var chat = _chats.GetOrAdd(message.Chat.Id, id => new TelegramChat(id, this, _context, _cts.Token));
+            if (_chats.TryGetValue(message.Chat.Id, out var chat) == false)
+            {
+                if (_chats.Count >= _context.Options.Telegram.MaxActiveChats)
+                {
+                    if (Interlocked.Exchange(ref _chatCapDropWarned, 1) == 0)
+                        _context.Logger.Warn(
+                            $"Telegram channel {_context.ChannelDoc.Id} is at its active chat limit " +
+                            $"({_context.Options.Telegram.MaxActiveChats}); dropping messages from new chats");
+                    return Task.CompletedTask;
+                }
+
+                chat = _chats.GetOrAdd(message.Chat.Id, id => new TelegramChat(id, this, _context, _cts.Token));
+            }
 
             if (chat.TryPost(message))
                 break;
@@ -127,8 +140,11 @@ internal sealed class TelegramBotRuntime
 
     internal int ActiveChatCount => _chats.Count;
 
-    internal void OnChatRetired(long chatId, TelegramChat chat) =>
+    internal void OnChatRetired(long chatId, TelegramChat chat)
+    {
         _chats.TryRemove(new KeyValuePair<long, TelegramChat>(chatId, chat));
+        Interlocked.Exchange(ref _chatCapDropWarned, 0);
+    }
 
     private async Task OnErrorAsync(
         ITelegramBotClient client, Exception e, HandleErrorSource source, CancellationToken ct)
