@@ -53,7 +53,7 @@ const PIN_APPEARANCE_COMMENT =
     "// Optional: pin the color scheme at load with `${url}?appearance=dark` (or light/system)";
 
 /** Your backend holds the Dashboard API key and exposes a thin mint endpoint of its own. */
-export function buildBackedHostPageSnippet(embedOrigin: string) {
+export function buildHtmlHostSnippet(embedOrigin: string) {
     return [
         IFRAME_MARKUP,
         '<script type="module">',

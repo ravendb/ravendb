@@ -15,7 +15,7 @@ import {
     MIN_TTL_SECONDS,
 } from "@/pages/apps/channels/embed-link-utils";
 import {
-    buildBackedHostPageSnippet,
+    buildHtmlHostSnippet,
     buildKotlinHostSnippet,
     buildReactHostSnippet,
     buildSwiftHostSnippet,
@@ -67,7 +67,7 @@ type HostStackOption = {
 };
 
 const HOST_STACK_OPTIONS: HostStackOption[] = [
-    { value: "html", label: "HTML", mode: "html", build: buildBackedHostPageSnippet },
+    { value: "html", label: "HTML", mode: "html", build: buildHtmlHostSnippet },
     { value: "react", label: "React", mode: "jsx", build: buildReactHostSnippet },
     { value: "vue", label: "Vue", mode: "vue", build: buildVueHostSnippet },
     { value: "kotlin", label: "Kotlin", mode: "kotlin", build: buildKotlinHostSnippet },
