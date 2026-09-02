@@ -1,7 +1,6 @@
 import type { ServerLicenseResponse } from "@/api/generated/server-api";
 import { parseStartDate } from "@/lib/date-period";
-
-const DAY_MS = 24 * 60 * 60 * 1000;
+import { MS_IN } from "@/lib/time";
 
 // Days until the license expires, replacing the daysLeft the server used to send.
 export function getLicenseDaysLeft(license: ServerLicenseResponse): number {
@@ -12,7 +11,7 @@ export function getLicenseDaysLeft(license: ServerLicenseResponse): number {
     if (Number.isNaN(expiration)) {
         return 0;
     }
-    return Math.max(0, Math.ceil((expiration - Date.now()) / DAY_MS));
+    return Math.max(0, Math.ceil((expiration - Date.now()) / MS_IN.day));
 }
 
 // Day one of this setup: the server behind it has never run before this date, so nothing

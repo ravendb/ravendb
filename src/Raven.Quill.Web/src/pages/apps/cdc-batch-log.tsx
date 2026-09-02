@@ -8,6 +8,7 @@ import { Switch } from "@/components/shadcn/ui/switch";
 import { formatCompact } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { CdcLiveBatch, CdcLiveBatchState } from "@/pages/apps/use-cdc-live-performance";
+import { MS_IN } from "@/lib/time";
 
 // The h-10 header button plus the 1px row separator, so an unmeasured collapsed row already
 // estimates to its real height and the total size barely moves once measuring catches up.
@@ -304,10 +305,8 @@ function format(formatter: Intl.DateTimeFormat, value: string): string {
     return Number.isNaN(date.getTime()) ? value : formatter.format(date);
 }
 
-const SECOND_IN_MS = 1000;
-
 function formatBatchDuration(durationInMs: number): string {
-    return durationInMs < SECOND_IN_MS
+    return durationInMs < MS_IN.second
         ? `${Math.round(durationInMs)} ms`
-        : `${(durationInMs / SECOND_IN_MS).toFixed(2)} s`;
+        : `${(durationInMs / MS_IN.second).toFixed(2)} s`;
 }

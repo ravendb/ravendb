@@ -5,9 +5,10 @@ import { Badge } from "@/components/shadcn/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/shadcn/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/ui/table";
 import { Heading, Text } from "@/components/typography";
+import { MS_IN } from "@/lib/time";
 import { Timestamp } from "./timestamp";
 
-const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
+const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * MS_IN.minute).toISOString();
 
 const SAMPLE_CHANNELS = [
     { name: "Support widget", type: "Web widget", createdAt: minutesAgo(0.5) },
@@ -53,7 +54,8 @@ function TimestampGallery() {
                     Timestamp
                 </Heading>
                 <Text variant="muted">
-                    Hover any value for the relative reading. The short variant carries the time of day there too.
+                    The full variant shows the date and time outright. The short variant drops the time of day and
+                    carries it in a tooltip instead.
                 </Text>
             </div>
 

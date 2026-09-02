@@ -1,4 +1,5 @@
 import { delay, http, HttpResponse, ws, type RequestHandler } from "msw";
+import { MS_IN } from "@/lib/time";
 import type {
     AiConnectionString,
     AppCdcConfigurationResponse,
@@ -128,7 +129,7 @@ export function sampleCdcProgressFrame(): CdcLiveRawFrame {
                 Stats: [
                     {
                         Performance: Array.from({ length: 51 }, (_, index) => {
-                            const startedMs = Date.now() - 5_000 - index * 90_000;
+                            const startedMs = Date.now() - 5 * MS_IN.second - index * 90 * MS_IN.second;
                             const durationInMs = 900 + Math.round(Math.abs(Math.sin(index)) * 800);
                             const read = 480 + index * 7;
 

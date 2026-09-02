@@ -2,6 +2,7 @@ import { http, HttpResponse } from "msw";
 import type { LicenseResponse, QuillApplicationUsage, QuillUsageResponse } from "@/api/generated/server-api";
 import type { CertificateItem } from "@/api/custom-services/certificates-service";
 import { apiHttp } from "./api-http";
+import { MS_IN } from "@/lib/time";
 
 export const settingsMocks = {
     feedback: () => apiHttp.post("/api/settings/feedback", ({ response }) => response(204).empty()),
@@ -89,7 +90,7 @@ export const sampleCertificates: CertificateItem[] = [
         securityClearance: "ValidUser",
         notBefore: "2025-08-01T00:00:00Z",
         // Expires one week from now so the "About to expire" badge always renders.
-        notAfter: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        notAfter: new Date(Date.now() + MS_IN.week).toISOString(),
         permissions: { "demo-shop": "ReadWrite" },
         disabled: false,
     },

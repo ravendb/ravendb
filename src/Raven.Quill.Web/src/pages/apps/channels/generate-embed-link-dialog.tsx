@@ -47,6 +47,7 @@ import {
     ttlToSeconds,
     type TtlUnit,
 } from "@/pages/apps/channels/embed-link-utils";
+import { SECONDS_IN } from "@/lib/time";
 
 type GenerateEmbedLinkDialogProps = {
     slug: string;
@@ -56,15 +57,24 @@ type GenerateEmbedLinkDialogProps = {
     trigger: ReactNode;
 };
 
-const DEFAULT_TTL_PRESET = "3600";
+const ttlPresetSchema = z.enum(["1h", "4h", "24h", "7d", "custom"]);
 
-const ttlPresetSchema = z.enum(["3600", "14400", "86400", "604800", "custom"]);
+type TtlPreset = z.infer<typeof ttlPresetSchema>;
 
-const TTL_PRESET_OPTIONS: readonly FormSelectOption<z.infer<typeof ttlPresetSchema>>[] = [
-    { value: "3600", label: "1 hour" },
-    { value: "14400", label: "4 hours" },
-    { value: "86400", label: "24 hours" },
-    { value: "604800", label: "7 days" },
+const DEFAULT_TTL_PRESET: TtlPreset = "1h";
+
+const TTL_PRESET_SECONDS: Record<Exclude<TtlPreset, "custom">, number> = {
+    "1h": SECONDS_IN.hour,
+    "4h": 4 * SECONDS_IN.hour,
+    "24h": SECONDS_IN.day,
+    "7d": SECONDS_IN.week,
+};
+
+const TTL_PRESET_OPTIONS: readonly FormSelectOption<TtlPreset>[] = [
+    { value: "1h", label: "1 hour" },
+    { value: "4h", label: "4 hours" },
+    { value: "24h", label: "24 hours" },
+    { value: "7d", label: "7 days" },
     { value: "custom", label: "Custom" },
 ];
 
@@ -194,10 +204,9 @@ export function GenerateEmbedLinkDialog({
     const result = mintMutation.data;
 
     const submit = form.handleSubmit((values) => {
-        const ttlSeconds =
-            values.ttlPreset === "custom" && values.customTtlValue != null
-                ? ttlToSeconds(values.customTtlValue, values.customTtlUnit)
-                : Number(values.ttlPreset);
+        const customTtlSeconds =
+            values.customTtlValue == null ? null : ttlToSeconds(values.customTtlValue, values.customTtlUnit);
+        const ttlSeconds = values.ttlPreset === "custom" ? customTtlSeconds : TTL_PRESET_SECONDS[values.ttlPreset];
         const bound = Object.fromEntries(
             values.parameters.map((parameter) => [parameter.name, toJsonValue(parameter)]),
         );

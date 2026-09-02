@@ -1,15 +1,15 @@
 import type { ComponentProps, ReactNode } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
 import { Text, type TextVariant } from "@/components/typography";
-import { formatDate, formatDateTime, formatRelativeTime } from "@/lib/format";
+import { formatDate, formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-// The one way to show a moment in time: an exact date, with the relative reading in a tooltip.
-// `dateVariant="short"` drops the time of day, which the tooltip then carries instead.
+// The one way to show a moment in time: an exact date.
+// `dateVariant="short"` drops the time of day, which a tooltip then carries instead.
 // `textVariant="inherit"` leaves the type to whatever the value sits inside (an alert, a badge).
 //
 // When the visible trigger is something other than the date itself — a badge that names a state,
-// with the time behind it — wrap that trigger in <TimestampTooltip> so the tooltip reads the same.
+// with the time behind it — wrap that trigger in <TimestampTooltip>.
 
 type TimestampDateVariant = "full" | "short";
 type TimestampTextVariant = TextVariant | "inherit";
@@ -35,55 +35,33 @@ export function Timestamp({
         );
     }
 
-    return (
-        <TimestampTooltip value={value} withDateTime={dateVariant === "short"}>
+    if (dateVariant === "full") {
+        return (
             <TimestampLabel textVariant={textVariant} className={className}>
-                {dateVariant === "short" ? formatDate(value) : formatDateTime(value)}
+                {formatDateTime(value)}
+            </TimestampLabel>
+        );
+    }
+
+    return (
+        <TimestampTooltip value={value}>
+            <TimestampLabel textVariant={textVariant} className={className}>
+                {formatDate(value)}
             </TimestampLabel>
         </TimestampTooltip>
     );
 }
 
-export function TimestampTooltip({
-    value,
-    prefix,
-    withDateTime = true,
-    children,
-}: {
-    value: string;
-    prefix?: string;
-    withDateTime?: boolean;
-    children: ReactNode;
-}) {
+export function TimestampTooltip({ value, prefix, children }: { value: string; prefix?: string; children: ReactNode }) {
+    const dateTime = formatDateTime(value);
+
     return (
         <TooltipProvider>
             <Tooltip>
                 <TooltipTrigger asChild>{children}</TooltipTrigger>
-                <TooltipContent className="flex-col items-start gap-0.5">
-                    <TimestampTooltipBody value={value} prefix={prefix} withDateTime={withDateTime} />
-                </TooltipContent>
+                <TooltipContent>{prefix ? `${prefix} ${dateTime}` : dateTime}</TooltipContent>
             </Tooltip>
         </TooltipProvider>
-    );
-}
-
-// Its own component so the age is read when the tooltip opens rather than when the trigger rendered
-function TimestampTooltipBody({
-    value,
-    prefix,
-    withDateTime,
-}: {
-    value: string;
-    prefix?: string;
-    withDateTime: boolean;
-}) {
-    const relative = formatRelativeTime(value);
-
-    return (
-        <>
-            <span>{prefix ? `${prefix} ${relative}` : relative}</span>
-            {withDateTime && <span>{formatDateTime(value)}</span>}
-        </>
     );
 }
 

@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import type { ServerApi } from "@/api/generated/server-api";
+import { MS_IN } from "@/lib/time";
 
 const baseKey = "slack";
 
@@ -14,7 +15,7 @@ export function createSlackQueries(api: ServerApi["slack"]) {
             queryOptions({
                 queryKey: [baseKey, "health", slug],
                 queryFn: () => api.health(slug),
-                refetchInterval: 30_000,
+                refetchInterval: 30 * MS_IN.second,
             }),
     };
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { MS_IN } from "@/lib/time";
 
 // Frame shape of RavenDB's cdc-sink live stats feed, relayed verbatim by the WS-only
 // /api/apps/{slug}/cdc/progress route, so it is not part of the generated OpenAPI client.
@@ -152,7 +153,7 @@ function mergeFrame(batches: Map<string, TrackedBatch>, frame: CdcLiveRawFrame) 
 
 // Client-side twin of the backend CdcPerformanceShaper, minus the inputs the live feed
 // does not carry (task disabled flag, persisted last-activity timestamp).
-const ACTIVE_WINDOW_MS = 60_000;
+const ACTIVE_WINDOW_MS = MS_IN.minute;
 
 function shape(batches: Map<string, TrackedBatch>, nowMs: number): CdcLivePerformance {
     const orderedBatches = [...batches.values()]
