@@ -303,11 +303,15 @@ internal sealed class PlanEmitter
         if (firstNegated)
             _ops.Add(new PlanOp { Kind = PlanOpKind.FillAllEntries, BitmapLocal = destSlot });
         var followupAction = isOr ? MergeKind.AndInto : MergeKind.OrInto;
-        EmitClauseInto(subExecs[0], firstNegated ? MergeKind.AndNotInto : MergeKind.Fill, suppressEarlyExit, destSlot);
+
+        // An emptied OR branch is not an empty result: the other branches still get unioned in, so no short-circuit here.
+        bool suppress = suppressEarlyExit || isOr == false;
+
+        EmitClauseInto(subExecs[0], firstNegated ? MergeKind.AndNotInto : MergeKind.Fill, suppress, destSlot);
         for (int i = 1; i < subExecs.Count; i++)
         {
             MergeKind kind = isOr && subExecs[i].IsNegated ? MergeKind.AndNotInto : followupAction;
-            EmitClauseInto(subExecs[i], kind, suppressEarlyExit, destSlot);
+            EmitClauseInto(subExecs[i], kind, suppress, destSlot);
         }
     }
 
