@@ -175,7 +175,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     // Include the processed fanout results as well. We might not have seen more documents
                                     // on disk, but we certainly processed more than usual. Since fanouts might be big,
                                     // it's better to account for them too.
-                                    totalSeenItemsCount += numberOfResults - (numberOfResults > 1).ToInt32();
+                                    totalSeenItemsCount += numberOfResults - (numberOfResults > 0).ToInt32();
 
                                     totalSeenItemsCount += currentIndexingScope.LoadedItemsCount;
                                     currentIndexingScope.LoadedItemsCount = 0;
