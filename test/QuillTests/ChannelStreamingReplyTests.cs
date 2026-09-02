@@ -1,8 +1,8 @@
 using System.Net;
-using Microsoft.Extensions.Logging.Abstractions;
 using Raven.Quill.Channels;
 using Raven.Quill.Discord;
 using Raven.Quill.Hosting;
+using Raven.Quill.Logging;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -45,7 +45,7 @@ public class ChannelStreamingReplyTests
         var client = new RateLimitingDiscordClient();
         var options = new DiscordOptions { EditDebounce = TimeSpan.Zero };
         var reply = new DiscordStreamingReply(
-            client, "bot-token", "dm-channel", options, NullLogger.Instance, CancellationToken.None);
+            client, "bot-token", "dm-channel", options, new QuillLogger<DiscordInboundProcessor>(), CancellationToken.None);
 
         await reply.OnChunkAsync("a");
 

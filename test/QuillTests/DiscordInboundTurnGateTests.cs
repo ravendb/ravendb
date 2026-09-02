@@ -1,12 +1,12 @@
 using System.Diagnostics;
 using FastTests;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using QuillTests.E2E.Fixtures;
 using Raven.Quill.Channels;
 using Raven.Quill.Discord;
 using Raven.Quill.Hosting;
+using Raven.Quill.Logging;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -44,7 +44,7 @@ public class DiscordInboundTurnGateTests(ITestOutputHelper output) : RavenTestBa
             new ApplianceOptions { Discord = { MaxConcurrentTurns = 1 } });
         var processor = new DiscordInboundProcessor(
             store, new FakeAgentRouter(), services.GetRequiredService<IServiceScopeFactory>(),
-            new DiscordHealthRegistry(), options, NullLogger<DiscordInboundProcessor>.Instance);
+            new DiscordHealthRegistry(), options, new QuillLogger<DiscordInboundProcessor>());
 
         processor.Enqueue(store.Database, channelId, "sender-1", null, "dm-1", "m1", "image", null);
         await client.WaitForCallsAsync(1);

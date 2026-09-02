@@ -109,9 +109,9 @@ internal sealed class TelegramBotRuntime
                 if (_chats.Count >= _context.Options.Telegram.MaxActiveChats)
                 {
                     if (Interlocked.Exchange(ref _chatCapDropWarned, 1) == 0)
-                        _context.Logger.LogWarning(
-                            "Telegram channel {ChannelId} is at its active chat limit ({Max}); dropping messages from new chats",
-                            _context.ChannelDoc.Id, _context.Options.Telegram.MaxActiveChats);
+                        _context.Logger.Warn(
+                            $"Telegram channel {_context.ChannelDoc.Id} is at its active chat limit " +
+                            $"({_context.Options.Telegram.MaxActiveChats}); dropping messages from new chats");
                     return Task.CompletedTask;
                 }
 
