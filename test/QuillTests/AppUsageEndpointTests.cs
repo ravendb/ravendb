@@ -53,14 +53,15 @@ public class AppUsageEndpointTests(ITestOutputHelper output) : QuillTestBase(out
         })).AgentId;
 
         var now = DateTime.UtcNow;
-        await SeedConversationAsync(app.Store, app.Slug, "chats/a", agentId, now, tokens: 100_000);
-        await SeedConversationAsync(app.Store, app.Slug, "chats/b", agentId, now, tokens: 200_000);
-
         var channel = await app.ProvisionChannelAsync(
             new ProvisionChannelRequest(ChannelType.IFrame, agentId, Array.Empty<string>(), "Support Widget"));
+
+        await SeedConversationAsync(app.Store, app.Slug, "chats/a", agentId, now, tokens: 100_000, channelId: channel.ChannelId);
+        await SeedConversationAsync(app.Store, app.Slug, "chats/b", agentId, now, tokens: 200_000, channelId: channel.ChannelId);
+
         using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
-            for (var i = 0; i < 2; i++)
+            for (var i = 0; i < 3; i++)
             {
                 await session.StoreAsync(new EmbedLink
                 {
@@ -159,10 +160,10 @@ public class AppUsageEndpointTests(ITestOutputHelper output) : QuillTestBase(out
                 await session.StoreAsync(
                     new Channel { Type = ChannelType.IFrame, DisplayName = id, AgentId = "demo", Enabled = true, CreatedAt = now },
                     $"{Channel.IdPrefix}{id}");
-            await session.StoreAsync(new EmbedLink { ChannelId = "t", AgentId = "demo", ExpiresAt = now.AddHours(1), MaxInvocations = 5, ConversationId = "chats/x", CreatedAt = now }, $"{EmbedLink.IdPrefix}{Guid.NewGuid():N}");
-            await session.StoreAsync(new EmbedLink { ChannelId = "alpha", AgentId = "demo", ExpiresAt = now.AddHours(1), MaxInvocations = 5, ConversationId = "chats/y", CreatedAt = now }, $"{EmbedLink.IdPrefix}{Guid.NewGuid():N}");
             await session.SaveChangesAsync();
         }
+        await SeedConversationAsync(app.Store, app.Slug, "chats/x", "demo", now, channelId: "t");
+        await SeedConversationAsync(app.Store, app.Slug, "chats/y", "demo", now, channelId: "alpha");
 
         // GetUsageAsync asserts 2xx → a 500 from the "t" collision fails here
         var byChannel = (await app.GetUsageAsync(now.Year, now.Month)).ConversationsByChannel;
