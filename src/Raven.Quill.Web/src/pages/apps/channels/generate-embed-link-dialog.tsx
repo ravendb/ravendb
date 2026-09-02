@@ -1,6 +1,6 @@
-import { useState, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, useWatch, type Control } from "react-hook-form";
+import { useController, useForm, useWatch, type Control } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { api } from "@/api/api";
@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 import type { AgentParameterSummary, MintEmbedLinkRequest, MintEmbedLinkResponse } from "@/api/generated/server-api";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { Field, FieldDescription, FieldLabel } from "@/components/shadcn/ui/field";
+import { InputGroup, InputGroupInput } from "@/components/shadcn/ui/input-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/shadcn/ui/select";
 import { Button } from "@/components/shadcn/ui/button";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import {
@@ -42,6 +44,8 @@ import {
     MAX_TTL_SECONDS,
     MIN_INVOCATIONS,
     MIN_TTL_SECONDS,
+    ttlToSeconds,
+    type TtlUnit,
 } from "@/pages/apps/channels/embed-link-utils";
 
 type GenerateEmbedLinkDialogProps = {
@@ -64,6 +68,15 @@ const TTL_PRESET_OPTIONS: readonly FormSelectOption<z.infer<typeof ttlPresetSche
     { value: "custom", label: "Custom" },
 ];
 
+const ttlUnitSchema = z.enum(["second", "minute", "hour", "day"]);
+
+const TTL_UNIT_OPTIONS: readonly { value: TtlUnit; label: string }[] = [
+    { value: "second", label: "Seconds" },
+    { value: "minute", label: "Minutes" },
+    { value: "hour", label: "Hours" },
+    { value: "day", label: "Days" },
+];
+
 const generateEmbedLinkSchema = z
     .object({
         parameters: z.array(
@@ -76,7 +89,8 @@ const generateEmbedLinkSchema = z
             }),
         ),
         ttlPreset: ttlPresetSchema,
-        customTtlSeconds: z.number().int().nullable(),
+        customTtlValue: z.number().int().positive().nullable(),
+        customTtlUnit: ttlUnitSchema,
         maxInvocations: z
             .number({ message: "Enter a number" })
             .int()
@@ -121,17 +135,20 @@ const generateEmbedLinkSchema = z
         if (values.ttlPreset !== "custom") {
             return;
         }
-        if (values.customTtlSeconds == null) {
+        if (values.customTtlValue == null) {
             ctx.addIssue({
                 code: "custom",
-                path: ["customTtlSeconds"],
-                message: "Enter a duration in seconds",
+                path: ["customTtlValue"],
+                message: "Enter a duration",
             });
-        } else if (values.customTtlSeconds < MIN_TTL_SECONDS || values.customTtlSeconds > MAX_TTL_SECONDS) {
+            return;
+        }
+        const seconds = ttlToSeconds(values.customTtlValue, values.customTtlUnit);
+        if (seconds < MIN_TTL_SECONDS || seconds > MAX_TTL_SECONDS) {
             ctx.addIssue({
                 code: "custom",
-                path: ["customTtlSeconds"],
-                message: `Enter ${MIN_TTL_SECONDS}–${MAX_TTL_SECONDS.toLocaleString()} seconds`,
+                path: ["customTtlValue"],
+                message: "Must be between 1 minute and 30 days",
             });
         }
     });
@@ -150,7 +167,8 @@ export function GenerateEmbedLinkDialog({
     const getDefaultValues = (): GenerateEmbedLinkFormData => ({
         parameters: parameters.map(defaultFormValue),
         ttlPreset: DEFAULT_TTL_PRESET,
-        customTtlSeconds: null,
+        customTtlValue: null,
+        customTtlUnit: "hour",
         maxInvocations: DEFAULT_MAX_INVOCATIONS,
     });
 
@@ -177,8 +195,8 @@ export function GenerateEmbedLinkDialog({
 
     const submit = form.handleSubmit((values) => {
         const ttlSeconds =
-            values.ttlPreset === "custom" && values.customTtlSeconds != null
-                ? values.customTtlSeconds
+            values.ttlPreset === "custom" && values.customTtlValue != null
+                ? ttlToSeconds(values.customTtlValue, values.customTtlUnit)
                 : Number(values.ttlPreset);
         const bound = Object.fromEntries(
             values.parameters.map((parameter) => [parameter.name, toJsonValue(parameter)]),
@@ -248,17 +266,7 @@ export function GenerateEmbedLinkDialog({
                             label="Link expires after"
                             options={TTL_PRESET_OPTIONS}
                         />
-                        {ttlPreset === "custom" && (
-                            <FormInput
-                                control={form.control}
-                                name="customTtlSeconds"
-                                type="number"
-                                label="Custom duration (seconds)"
-                                placeholder="e.g. 7200"
-                                min={MIN_TTL_SECONDS}
-                                max={MAX_TTL_SECONDS}
-                            />
-                        )}
+                        {ttlPreset === "custom" && <CustomDurationField control={form.control} />}
 
                         <FormInput
                             control={form.control}
@@ -351,6 +359,53 @@ function ParameterField({
             description={description}
             placeholder={placeholderFor(parameter.type)}
         />
+    );
+}
+
+function CustomDurationField({ control }: { control: Control<GenerateEmbedLinkFormData> }) {
+    const inputId = useId();
+    const {
+        field: { onBlur, onChange, ref, value },
+        fieldState: { error, invalid },
+        formState,
+    } = useController({ control, name: "customTtlValue" });
+    const { field: unit } = useController({ control, name: "customTtlUnit" });
+
+    const isDisabled = formState.isSubmitting;
+
+    return (
+        <Field data-invalid={invalid}>
+            <FieldLabel htmlFor={inputId}>Custom duration</FieldLabel>
+            <div className="flex items-center gap-2">
+                <InputGroup className="flex-1">
+                    <InputGroupInput
+                        id={inputId}
+                        type="number"
+                        min={1}
+                        placeholder="e.g. 12"
+                        value={value ?? ""}
+                        onChange={(event) => onChange(event.target.value === "" ? null : Number(event.target.value))}
+                        onBlur={onBlur}
+                        ref={ref}
+                        aria-invalid={invalid}
+                        disabled={isDisabled}
+                    />
+                </InputGroup>
+                <Select value={unit.value} onValueChange={unit.onChange} disabled={isDisabled}>
+                    <SelectTrigger className="w-32" aria-label="Duration unit">
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {TTL_UNIT_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+            {error?.message && <FieldDescription className="text-destructive">{error.message}</FieldDescription>}
+        </Field>
     );
 }
 

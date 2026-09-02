@@ -24,3 +24,18 @@ export const MIN_INVOCATIONS = 1;
 export const MAX_INVOCATIONS = 1_000_000;
 export const DEFAULT_TTL_SECONDS = 3_600;
 export const DEFAULT_MAX_INVOCATIONS = 100;
+
+// Units offered by the custom-duration input. Days is the largest practical unit: the server caps
+// TTL at MAX_TTL_SECONDS (30 days), so weeks/months could not be honored.
+export const TTL_UNIT_SECONDS = {
+    second: 1,
+    minute: 60,
+    hour: 3_600,
+    day: 86_400,
+} as const;
+
+export type TtlUnit = keyof typeof TTL_UNIT_SECONDS;
+
+export function ttlToSeconds(value: number, unit: TtlUnit) {
+    return value * TTL_UNIT_SECONDS[unit];
+}
