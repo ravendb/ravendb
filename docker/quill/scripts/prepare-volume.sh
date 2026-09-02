@@ -1,6 +1,8 @@
 #!/bin/sh
 set -e
 
+umask 077
+
 for d in ravendb certs proxy setup logs logs/ravendb-server logs/web logs/proxy logs/certwatch; do
     mkdir -p "/var/lib/quill/$d"
 done
