@@ -4,7 +4,9 @@ import { useAppSelector } from "components/store";
 import React from "react";
 import { Icon } from "components/common/Icon";
 import { useRavenLink } from "components/hooks/useRavenLink";
-import FeatureAvailabilitySummaryWrapper, {FeatureAvailabilityData} from "components/common/FeatureAvailabilitySummary";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 
 export function EditManualBackupTaskInfoHub() {
@@ -44,8 +46,13 @@ export function EditManualBackupTaskInfoHub() {
                 <div>
                     Generate a one-time backup of this database.
                     <ul className="margin-top-xxs">
-                        <li>Creating an ad-hoc backup may be essential before an upgrade or whenever an unscheduled backup is needed.</li>
-                        <li>No retention period is defined for this backup, so it will not be automatically deleted.</li>
+                        <li>
+                            Creating an ad-hoc backup may be essential before an upgrade or whenever an unscheduled
+                            backup is needed.
+                        </li>
+                        <li>
+                            No retention period is defined for this backup, so it will not be automatically deleted.
+                        </li>
                     </ul>
                 </div>
                 <div>
@@ -77,18 +84,20 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         featureIcon: "encryption",
         community: { value: false },
         professional: { value: true },
-        enterprise: { value: true }
-    },{
+        enterprise: { value: true },
+    },
+    {
         featureName: "Remote destinations",
         featureIcon: "cloud",
         community: { value: false },
         professional: { value: true },
-        enterprise: { value: true }
-    },{
+        enterprise: { value: true },
+    },
+    {
         featureName: "Snapshot backups",
         featureIcon: "snapshot-backup",
         community: { value: false },
         professional: { value: false },
-        enterprise: { value: true }
+        enterprise: { value: true },
     },
 ];

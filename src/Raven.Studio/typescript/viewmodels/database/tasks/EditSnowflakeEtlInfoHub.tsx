@@ -4,7 +4,9 @@ import { useAppSelector } from "components/store";
 import React from "react";
 import { Icon } from "components/common/Icon";
 import { useRavenLink } from "hooks/useRavenLink";
-import FeatureAvailabilitySummaryWrapper, { FeatureAvailabilityData } from "components/common/FeatureAvailabilitySummary";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 
 export function EditSnowflakeEtlInfoHub() {
@@ -20,7 +22,7 @@ export function EditSnowflakeEtlInfoHub() {
     });
 
     const snowflakeEtlDocsLink = useRavenLink({ hash: "TODO" }); //TODO: HASH
-    
+
     return (
         <AboutViewFloating defaultOpen={hasSnowflakeEtl ? null : "licensing"}>
             <AccordionItemWrapper
@@ -31,13 +33,13 @@ export function EditSnowflakeEtlInfoHub() {
                 description="Get additional info on this feature"
             >
                 <p>
-                    A <strong>Snowflake ETL</strong> ongoing-task is an ETL (Extract, Transform & Load)
-                    process that transfers data from this RavenDB database to a Snowflake data warehouse.
+                    A <strong>Snowflake ETL</strong> ongoing-task is an ETL (Extract, Transform & Load) process that
+                    transfers data from this RavenDB database to a Snowflake data warehouse.
                 </p>
                 <ul>
                     <li>
                         Data is extracted from documents & attachments only.
-                        <br/>
+                        <br />
                         Counters, Time series, and Revisions are not sent.
                     </li>
                     <li className="margin-top-xxs">
@@ -52,36 +54,36 @@ export function EditSnowflakeEtlInfoHub() {
                         deleted.
                     </li>
                     <li className="margin-top-xxs">
-                        You can test each script in this view to preview the SQL statements the ETL task would send
-                        the Snowflake database.
+                        You can test each script in this view to preview the SQL statements the ETL task would send the
+                        Snowflake database.
                     </li>
                 </ul>
-                <hr/>
+                <hr />
                 <div>
                     Task definition includes:
                     <ul>
                         <li>The transformation scripts definitions.</li>
-                        <li>List of Snowflake tables the ETL task will access,
-                            <br/>    
+                        <li>
+                            List of Snowflake tables the ETL task will access,
+                            <br />
                             including the column name used for the RavenDB document ID.
                         </li>
-                        <li>A connection string specifying the Snowflake storage destination,
-                            <br/>
-                            where &quot;<i>Account</i>&quot;, &quot;<i>Database</i>&quot;, and &quot;<i>Schema</i>&quot; are mandatory parameters.
+                        <li>
+                            A connection string specifying the Snowflake storage destination,
+                            <br />
+                            where &quot;<i>Account</i>&quot;, &quot;<i>Database</i>&quot;, and &quot;<i>Schema</i>&quot;
+                            are mandatory parameters.
                         </li>
                         <li>A responsible node to handle this task can be set.</li>
                     </ul>
                 </div>
-                <hr/>
+                <hr />
                 <div className="small-label mb-2">useful links</div>
                 <a href={snowflakeEtlDocsLink} target="_blank">
                     <Icon icon="newtab" /> Docs - Snowflake ETL
                 </a>
             </AccordionItemWrapper>
-            <FeatureAvailabilitySummaryWrapper
-                isUnlimited={hasSnowflakeEtl}
-                data={featureAvailability}
-            />
+            <FeatureAvailabilitySummaryWrapper isUnlimited={hasSnowflakeEtl} data={featureAvailability} />
         </AboutViewFloating>
     );
 }

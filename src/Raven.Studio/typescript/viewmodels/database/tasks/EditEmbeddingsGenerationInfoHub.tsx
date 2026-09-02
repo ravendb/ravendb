@@ -1,7 +1,9 @@
 ﻿import AboutViewFloating, { AccordionItemWrapper } from "components/common/AboutView";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
-import FeatureAvailabilitySummaryWrapper, { FeatureAvailabilityData } from "components/common/FeatureAvailabilitySummary";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import { useAppUrls } from "hooks/useAppUrls";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
@@ -19,7 +21,7 @@ export function EditEmbeddingsGenerationInfoHub() {
     const embeddingsGenerationTaskDocsLink = useRavenLink({ hash: "MKXRLR" });
     const chunkingMethodsDocsLink = useRavenLink({ hash: "TLJF56" });
     const quantizationOptionsDocsLink = useRavenLink({ hash: "JWJPZE" });
-    
+
     const featureAvailability = useLimitedFeatureAvailability({
         defaultFeatureAvailability,
         overwrites: [

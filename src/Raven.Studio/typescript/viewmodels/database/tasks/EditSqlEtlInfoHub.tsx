@@ -4,7 +4,9 @@ import { useAppSelector } from "components/store";
 import React from "react";
 import { Icon } from "components/common/Icon";
 import { useRavenLink } from "hooks/useRavenLink";
-import FeatureAvailabilitySummaryWrapper, { FeatureAvailabilityData } from "components/common/FeatureAvailabilitySummary";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 
 export function EditSqlEtlInfoHub() {
@@ -31,13 +33,13 @@ export function EditSqlEtlInfoHub() {
                 description="Get additional info on this feature"
             >
                 <p>
-                    A <strong>SQL ETL</strong> ongoing-task is an ETL (Extract, Transform & Load) process
-                    that transfers data from this RavenDB database to a relational database.
+                    A <strong>SQL ETL</strong> ongoing-task is an ETL (Extract, Transform & Load) process that transfers
+                    data from this RavenDB database to a relational database.
                 </p>
                 <ul>
                     <li>
                         Data is extracted from documents & attachments only.
-                        <br/>
+                        <br />
                         Counters, Time series, and Revisions are not sent.
                     </li>
                     <li className="margin-top-xxs">
@@ -52,20 +54,20 @@ export function EditSqlEtlInfoHub() {
                         deleted.
                     </li>
                     <li className="margin-top-xxs">
-                        You can test each script in this view to preview the SQL statements the ETL task would send
-                        the relational database.
+                        You can test each script in this view to preview the SQL statements the ETL task would send the
+                        relational database.
                     </li>
                 </ul>
-                <hr/>
+                <hr />
                 <div>
                     Task definition includes:
                     <ul>
                         <li>The transformation scripts definitions.</li>
-                        <li>List of SQL tables the ETL task will access, including the column name used for the RavenDB
+                        <li>
+                            List of SQL tables the ETL task will access, including the column name used for the RavenDB
                             document ID.
                         </li>
-                        <li>The destination RDBMS factory name and its corresponding connection string.
-                        </li>
+                        <li>The destination RDBMS factory name and its corresponding connection string.</li>
                         <li>A responsible node to handle this task can be set.</li>
                     </ul>
                 </div>
@@ -75,10 +77,7 @@ export function EditSqlEtlInfoHub() {
                     <Icon icon="newtab" /> Docs - SQL ETL
                 </a>
             </AccordionItemWrapper>
-            <FeatureAvailabilitySummaryWrapper
-                isUnlimited={hasSqlEtl}
-                data={featureAvailability}
-            />
+            <FeatureAvailabilitySummaryWrapper isUnlimited={hasSqlEtl} data={featureAvailability} />
         </AboutViewFloating>
     );
 }
