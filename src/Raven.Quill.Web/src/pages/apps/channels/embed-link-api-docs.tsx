@@ -36,47 +36,42 @@ import {
 const LANGUAGE_STORAGE_KEY = "quill-embed-api-docs-language";
 const HOST_STACK_STORAGE_KEY = "quill-embed-api-docs-host-stack";
 
-type Language = "bash" | "powershell" | "csharp" | "python" | "node";
+type TabOption = { value: string; label: string; mode: HighlightLanguage };
 
-type LanguageOption = {
-    value: Language;
-    label: string;
-    mode: HighlightLanguage;
-};
-
-const LANGUAGE_OPTIONS: LanguageOption[] = [
+const LANGUAGE_OPTIONS = [
     { value: "bash", label: "cURL", mode: "sh" },
     { value: "powershell", label: "PowerShell", mode: "powershell" },
     { value: "csharp", label: "C#", mode: "csharp" },
     { value: "python", label: "Python", mode: "python" },
     { value: "node", label: "Node.js", mode: "javascript" },
-];
+] as const satisfies readonly TabOption[];
 
-function readLanguage(): Language {
-    const stored = readStoredValue(LANGUAGE_STORAGE_KEY);
-    return LANGUAGE_OPTIONS.some((language) => language.value === stored) ? (stored as Language) : "bash";
-}
+type Language = (typeof LANGUAGE_OPTIONS)[number]["value"];
 
-type HostStack = "html" | "react" | "vue" | "kotlin" | "swift";
-
-type HostStackOption = {
-    value: HostStack;
-    label: string;
-    mode: HighlightLanguage;
-    build: (embedOrigin: string) => string;
-};
-
-const HOST_STACK_OPTIONS: HostStackOption[] = [
+const HOST_STACK_OPTIONS = [
     { value: "html", label: "HTML", mode: "html", build: buildHtmlHostSnippet },
     { value: "react", label: "React", mode: "jsx", build: buildReactHostSnippet },
     { value: "vue", label: "Vue", mode: "vue", build: buildVueHostSnippet },
     { value: "kotlin", label: "Kotlin", mode: "kotlin", build: buildKotlinHostSnippet },
     { value: "swift", label: "Swift", mode: "swift", build: buildSwiftHostSnippet },
-];
+] as const satisfies readonly (TabOption & { build: (embedOrigin: string) => string })[];
 
-function readHostStack(): HostStack {
-    const stored = readStoredValue(HOST_STACK_STORAGE_KEY);
-    return HOST_STACK_OPTIONS.some((stack) => stack.value === stored) ? (stored as HostStack) : "html";
+function useStoredTabValue<T extends string>(storageKey: string, options: readonly { value: T }[]) {
+    const [value, setValue] = useState(() => {
+        const stored = readStoredValue(storageKey);
+        return options.find((option) => option.value === stored)?.value ?? options[0].value;
+    });
+
+    const onValueChange = (next: string) => {
+        const match = options.find((option) => option.value === next);
+        if (!match) {
+            return;
+        }
+        writeStoredValue(storageKey, match.value);
+        setValue(match.value);
+    };
+
+    return [value, onValueChange] as const;
 }
 
 type EmbedLinkApiDocsProps = {
@@ -90,21 +85,8 @@ export function EmbedLinkApiDocs({ slug, channelId, parameters }: EmbedLinkApiDo
     const requests = buildRequestSnippets(slug, channelId, parameters);
     const embedOrigin = originForSubdomain("public");
 
-    const [language, setLanguage] = useState<Language>(readLanguage);
-
-    const onLanguageChange = (value: string) => {
-        const next = value as Language;
-        writeStoredValue(LANGUAGE_STORAGE_KEY, next);
-        setLanguage(next);
-    };
-
-    const [hostStack, setHostStack] = useState<HostStack>(readHostStack);
-
-    const onHostStackChange = (value: string) => {
-        const next = value as HostStack;
-        writeStoredValue(HOST_STACK_STORAGE_KEY, next);
-        setHostStack(next);
-    };
+    const [language, onLanguageChange] = useStoredTabValue(LANGUAGE_STORAGE_KEY, LANGUAGE_OPTIONS);
+    const [hostStack, onHostStackChange] = useStoredTabValue(HOST_STACK_STORAGE_KEY, HOST_STACK_OPTIONS);
 
     const fields = [
         { name: "channelId", description: "The web widget channel the link is minted for (already filled in)." },
