@@ -26,7 +26,8 @@ fi
 # next to the unpacked package as the file `admin-thumbprint`. Reading it here
 # rather than extracting from the PFX with openssl avoids PKCS#12 bag-ordering
 # quirks and one less binary dependency in the runtime image.
-cp "$SETUP_SETTINGS" /app/ravendb/settings.json
+[ -h "$SETUP_SETTINGS" ] && { echo "01-ravendb: refusing symlinked settings source; aborting." >&2; exit 1; }
+cp --remove-destination "$SETUP_SETTINGS" /app/ravendb/settings.json
 
 # Phase 1: nginx owns :443, so bind RavenDB's HTTPS to loopback:$RAVENDB_PORT instead. settings.json
 # wins over env in RavenDB's config precedence, so rewrite the copied file (keep https — the
@@ -45,14 +46,28 @@ CERT_DIR=/var/lib/quill/certs
 mkdir -p "$CERT_DIR"
 
 PFX="$(basename "$(ls "$SETUP_DIR"/A/cluster.server.certificate.*.pfx | head -n1)")"
-[ -f "$CERT_DIR/$PFX" ] || cp "$SETUP_DIR/A/$PFX" "$CERT_DIR/"
 
-chown quill:quill "$CERT_DIR/$PFX"
-chmod 600 "$CERT_DIR/$PFX"
+if ! printf '%s\n' "$PFX" | grep -qE '^cluster\.server\.certificate\.[A-Za-z0-9._-]+\.pfx$'; then
+    echo "01-ravendb: refusing certificate with unexpected filename '$PFX'; aborting." >&2
+    exit 1
+fi
 
-chmod 700 "$CERT_DIR" "$SETUP_DIR" "$SETUP_DIR/A" 2>/dev/null || true
+SRC_PFX="$SETUP_DIR/A/$PFX"
+DEST_PFX="$CERT_DIR/$PFX"
 
-sed -i "s#\"$PFX\"#\"$CERT_DIR/$PFX\"#" /app/ravendb/settings.json
+[ -h "$SRC_PFX" ] && { echo "01-ravendb: refusing symlinked certificate source; aborting." >&2; exit 1; }
+[ -h "$DEST_PFX" ] && rm -f "$DEST_PFX"
+[ -f "$DEST_PFX" ] || cp --remove-destination "$SRC_PFX" "$DEST_PFX"
+
+chown -h quill:quill "$DEST_PFX"
+chmod 600 "$DEST_PFX"
+
+for d in "$CERT_DIR" "$SETUP_DIR" "$SETUP_DIR/A"; do
+    [ -h "$d" ] && continue
+    chmod 700 "$d" 2>/dev/null || true
+done
+
+sed -i "s#\"$PFX\"#\"$DEST_PFX\"#" /app/ravendb/settings.json
 
 if [ -f "$SETUP_DIR/admin-thumbprint" ]; then
     export RAVEN_Security_WellKnownCertificates_Admin="$(cat "$SETUP_DIR/admin-thumbprint")"
