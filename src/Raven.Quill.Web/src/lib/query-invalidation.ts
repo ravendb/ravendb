@@ -27,6 +27,7 @@ export function invalidateAgentQueries(queryClient: QueryClient, slug: string) {
     return Promise.all([
         queryClient.invalidateQueries({ queryKey: api.queries.agents.list(slug).queryKey }),
         queryClient.invalidateQueries({ queryKey: api.queries.stats.dashboardApps().queryKey }),
+        queryClient.invalidateQueries({ queryKey: api.queries.aiConnectionStrings.list().queryKey }),
     ]);
 }
 
