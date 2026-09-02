@@ -1,6 +1,8 @@
 #!/bin/sh
 set -e
 
+umask 077
+
 DIR="/var/lib/quill/logs/$1"
 mkdir -p "$DIR"
 
