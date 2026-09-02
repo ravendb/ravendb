@@ -55,8 +55,9 @@ export default function AddAttachmentWithRemoteParametersModal({
     );
 
     const selectedDestination = useWatch({
-        control, name: "identifier"
-    })
+        control,
+        name: "identifier",
+    });
 
     const handleSubmit = async (formData: AttachmentWithRemoteParametersFormData) => {
         try {
@@ -163,7 +164,8 @@ function RemoteAttachmentWarning({ config, selectedDestination }: RemoteAttachme
     if (config?.Disabled) {
         return (
             <RichAlert className="mt-2" icon="warning" variant="warning">
-                Remote attachments feature is currently <b>disabled</b>. You can add an attachment to the remote storage, but it will be uploaded only after the feature is enabled.
+                Remote attachments feature is currently <b>disabled</b>. You can add an attachment to the remote
+                storage, but it will be uploaded only after the feature is enabled.
             </RichAlert>
         );
     }
@@ -171,7 +173,8 @@ function RemoteAttachmentWarning({ config, selectedDestination }: RemoteAttachme
     if (config?.Destinations[selectedDestination]?.Disabled) {
         return (
             <RichAlert className="mt-2" icon="warning" variant="warning">
-                Destination is currently <b>disabled</b>. You can add an attachment to the remote storage, but it will be uploaded only after the destination is enabled.
+                Destination is currently <b>disabled</b>. You can add an attachment to the remote storage, but it will
+                be uploaded only after the destination is enabled.
             </RichAlert>
         );
     }
@@ -194,7 +197,9 @@ const mapToDto = (values: AttachmentWithRemoteParametersFormData): RemoteAttachm
     };
 };
 
-const getRemoteAttachmentsDestinationsOptions = (remoteAttachmentsConfiguration?: RemoteAttachmentsStudioConfiguration) => {
+const getRemoteAttachmentsDestinationsOptions = (
+    remoteAttachmentsConfiguration?: RemoteAttachmentsStudioConfiguration
+) => {
     if (!remoteAttachmentsConfiguration) {
         return [];
     }
@@ -238,12 +243,12 @@ function RemoteAttachmentDestinationOption(props: RemoteAttachmentDestinationOpt
     const { data, label } = props;
     return (
         <components.Option {...props}>
-                {label}
-                {data.disabled && (
-                    <PopoverWithHoverWrapper message="Destination is disabled, so it will not be uploaded to the server. Destination must be enabled to do it.">
-                        <Icon icon="warning" color="warning" margin="ms-1" />
-                    </PopoverWithHoverWrapper>
-                )}
+            {label}
+            {data.disabled && (
+                <PopoverWithHoverWrapper message="Destination is disabled, so it will not be uploaded to the server. Destination must be enabled to do it.">
+                    <Icon icon="warning" color="warning" margin="ms-1" />
+                </PopoverWithHoverWrapper>
+            )}
         </components.Option>
     );
 }
