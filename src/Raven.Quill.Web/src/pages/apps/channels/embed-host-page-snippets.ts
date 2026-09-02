@@ -255,7 +255,11 @@ export function buildKotlinHostSnippet(embedOrigin: string) {
         "",
         '    private fun hostPage(url: String) = """',
         ...indent(
-            webviewHostPageLines(embedOrigin, "$url", 'QuillBridge.onQuillEvent(message.type, message.payload.message ?? "");'),
+            webviewHostPageLines(
+                embedOrigin,
+                "$url",
+                'QuillBridge.onQuillEvent(message.type, message.payload.message ?? "");',
+            ),
             2,
         ),
         '    """.trimIndent()',
