@@ -94,7 +94,6 @@ public class RavenDB_26999(ITestOutputHelper output) : RavenTestBase(output)
         var scores = Scores(store, where);
 
         Assert.NotEmpty(scores);
-        output.WriteLine($"{what,-46} -> {string.Join(", ", scores.Select(s => s.ToString("G6")))}");
 
         foreach (var score in scores)
             Assert.False(Math.Abs(score - InitialScoreValue) < 1e-12,
@@ -132,8 +131,6 @@ public class RavenDB_26999(ITestOutputHelper output) : RavenTestBase(output)
             var coraxScore = Scores(corax, where).First();
             var luceneScore = Scores(lucene, where).First();
 
-            output.WriteLine($"{where,-50} corax={coraxScore:G6} lucene={luceneScore:G6}");
-
             // The formulas differ, so the scores are not equal - but they must live in the same range instead of
             // Corax collapsing to 1e-6 while Lucene reports a healthy score.
             Assert.True(coraxScore > luceneScore / 100 && coraxScore < luceneScore * 100,
@@ -149,8 +146,6 @@ public class RavenDB_26999(ITestOutputHelper output) : RavenTestBase(output)
         // term whose posting list was large.
         var rare = Scores(store, "m.Genre = 'Drama'").First();      // df = 10_000
         var common = Scores(store, "m.Status = 'Released'").First(); // df = 333_334
-
-        output.WriteLine($"rare(df=10k)={rare:G6} common(df=333k)={common:G6}");
 
         Assert.True(rare > common, $"rare term scored {rare}, common term scored {common}");
         Assert.True(common > InitialScoreValue * 10, $"common term collapsed to {common}");
