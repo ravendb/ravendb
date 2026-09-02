@@ -215,6 +215,7 @@ const MOBILE_PIN_APPEARANCE_COMMENT =
 
 export function buildKotlinHostSnippet(embedOrigin: string) {
     return [
+        "import android.util.Log",
         "import android.webkit.JavascriptInterface",
         "import android.webkit.WebView",
         "import kotlinx.coroutines.CoroutineScope",
@@ -232,8 +233,11 @@ export function buildKotlinHostSnippet(embedOrigin: string) {
         "    }",
         "",
         "    @JavascriptInterface",
-        "    fun onQuillEvent(type: String) {",
-        '        if (type == "expired") openSession() // mint a fresh link and keep chatting',
+        "    fun onQuillEvent(type: String, detail: String) {",
+        "        when (type) {",
+        '            "expired" -> openSession() // mint a fresh link and keep chatting',
+        '            "error" -> Log.e("Quill", detail)',
+        "        }",
         "    }",
         "",
         "    fun openSession() {",
@@ -250,7 +254,10 @@ export function buildKotlinHostSnippet(embedOrigin: string) {
         "    }",
         "",
         '    private fun hostPage(url: String) = """',
-        ...indent(webviewHostPageLines(embedOrigin, "$url", "QuillBridge.onQuillEvent(message.type);"), 2),
+        ...indent(
+            webviewHostPageLines(embedOrigin, "$url", 'QuillBridge.onQuillEvent(message.type, message.payload.message ?? "");'),
+            2,
+        ),
         '    """.trimIndent()',
         "}",
     ].join("\n");
@@ -275,8 +282,14 @@ export function buildSwiftHostSnippet(embedOrigin: string) {
         "    }",
         "",
         "    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {",
-        '        if message.body as? String == "expired" {',
+        "        guard let body = message.body as? [String: String] else { return }",
+        '        switch body["type"] {',
+        '        case "expired":',
         "            openSession() // mint a fresh link and keep chatting",
+        '        case "error":',
+        '            print("Quill widget error: \\(body["detail"] ?? "")")',
+        "        default:",
+        "            break",
         "        }",
         "    }",
         "",
@@ -303,7 +316,7 @@ export function buildSwiftHostSnippet(embedOrigin: string) {
             webviewHostPageLines(
                 embedOrigin,
                 "\\(url)",
-                "window.webkit.messageHandlers.quill.postMessage(message.type);",
+                'window.webkit.messageHandlers.quill.postMessage({ type: message.type, detail: message.payload.message ?? "" });',
             ),
             2,
         ),
