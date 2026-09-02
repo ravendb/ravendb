@@ -12,6 +12,7 @@ using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints.Helpers;
 using Raven.Quill.Licensing;
+using Raven.Quill.Logging;
 using Raven.Quill.Raven;
 using Raven.Quill.Wizard;
 
@@ -19,6 +20,10 @@ namespace Raven.Quill.Metrics;
 
 internal static class MetricsReadService
 {
+    internal sealed class MetricsLogger;
+
+    private static readonly QuillLogger<MetricsLogger> Log = new();
+
     private const int ChannelPageSize = 1024;
 
     private const string AppIdPrefix = "apps/";
@@ -41,7 +46,7 @@ internal static class MetricsReadService
             fallback: app => (
                 Usage: (Conversations: new long[buckets.Count], Messages: new long[buckets.Count], Tokens: new long[buckets.Count]),
                 App: app),
-            log, ct);
+            ct);
 
         var conversations = new long[buckets.Count];
         var messages = new long[buckets.Count];
@@ -118,7 +123,7 @@ internal static class MetricsReadService
             using var session = store.OpenAsyncSession(app.Database);
             var metricRows = await QueryAllMetricRowsAsync(session, ct);
             return new AppTokens(app.Slug, metricRows.Sum(r => r.Tokens));
-        }, fallback: null, log, ct);
+        }, fallback: null, ct);
 
         var sorted = results
             .OrderByDescending(a => a.Tokens)
@@ -322,7 +327,7 @@ internal static class MetricsReadService
                 StatusSubtitle: "Database unavailable",
                 CreatedAt: Utc(app.CreatedAt),
                 UpdatedAt: Utc(app.CreatedAt)),
-            log, ct);
+            ct);
     }
 
     public static async Task<ApplianceAppResponse?> GetDashboardAppAsync(
@@ -659,7 +664,6 @@ internal static class MetricsReadService
         IReadOnlyList<App> apps,
         Func<App, Task<TResult>> body,
         Func<App, TResult>? fallback,
-        ILogger? log,
         CancellationToken ct)
     {
         using var gate = new SemaphoreSlim(MaxFanoutConcurrency);
@@ -672,7 +676,8 @@ internal static class MetricsReadService
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {
-                log?.LogWarning(e, "Dashboard fan-out: skipping app {Slug} ({Database})", app.Slug, app.Database);
+                if (Log.IsWarnEnabled)
+                    Log.Warn(e, $"Dashboard fan-out: skipping app {app.Slug} ({app.Database})");
                 return fallback is null ? (HasValue: false, Value: default!) : (HasValue: true, Value: fallback(app));
             }
             finally

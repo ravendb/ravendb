@@ -1,9 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
 using Raven.Quill.Discord;
 using Raven.Quill.Hosting;
+using Raven.Quill.Logging;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -35,7 +35,7 @@ public class DiscordGatewayRuntimeStopTests
         var options = new DiscordOptions { GatewayStopTimeout = TimeSpan.FromMilliseconds(250) };
         var runtime = DiscordGatewayRuntime.Start(
             "db", channel, channelChangeVector: null, processor: null!, new DiscordHealthRegistry(),
-            services.GetRequiredService<IServiceScopeFactory>(), options, NullLogger.Instance);
+            services.GetRequiredService<IServiceScopeFactory>(), options, new QuillLogger<DiscordChannelManager>());
 
         await client.Started.Task.WaitAsync(TimeSpan.FromSeconds(10));
 
