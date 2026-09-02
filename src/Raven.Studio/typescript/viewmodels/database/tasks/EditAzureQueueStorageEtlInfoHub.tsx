@@ -2,7 +2,9 @@ import AboutViewFloating, { AccordionItemWrapper } from "components/common/About
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
 import React from "react";
-import FeatureAvailabilitySummaryWrapper, { FeatureAvailabilityData } from "components/common/FeatureAvailabilitySummary";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 
 export function EditAzureQueueStorageEtlInfoHub() {
@@ -16,7 +18,7 @@ export function EditAzureQueueStorageEtlInfoHub() {
             },
         ],
     });
-    
+
     return (
         <AboutViewFloating defaultOpen={hasQueueEtl ? null : "licensing"}>
             <AccordionItemWrapper
@@ -27,13 +29,13 @@ export function EditAzureQueueStorageEtlInfoHub() {
                 description="Get additional info on this feature"
             >
                 <p>
-                    An <strong>Azure Queue Storage ETL</strong> ongoing-task is an ETL (Extract, Transform & Load) process
-                    that transfers data from this RavenDB database to Azure Queue Storage.
+                    An <strong>Azure Queue Storage ETL</strong> ongoing-task is an ETL (Extract, Transform & Load)
+                    process that transfers data from this RavenDB database to Azure Queue Storage.
                 </p>
                 <ul>
                     <li>
                         Data is extracted from documents only.
-                        <br/>
+                        <br />
                         Attachments, Counters, Time series, and Revisions are not sent.
                     </li>
                     <li className="margin-top-xxs">
@@ -48,34 +50,32 @@ export function EditAzureQueueStorageEtlInfoHub() {
                         (excluding deletes).
                     </li>
                     <li className="margin-top-xxs">
-                        You can test each script in this view to preview the messages that will be sent by the ETL
-                        task to the destination.
+                        You can test each script in this view to preview the messages that will be sent by the ETL task
+                        to the destination.
                     </li>
                 </ul>
-                <hr/>
+                <hr />
                 <div>
                     Task definition includes:
                     <ul>
                         <li>A connection string to the Azure Queue Storage server.</li>
                         <li>The transformation scripts definitions.</li>
-                        <li>Per queue, select whether processed documents will be deleted from your source RavenDB database.
+                        <li>
+                            Per queue, select whether processed documents will be deleted from your source RavenDB
+                            database.
                         </li>
                         <li>A responsible node to handle this task can be set.</li>
                     </ul>
                 </div>
                 <hr />
-                {
-                /* TODO
+                {/* TODO
                 <div className="small-label mb-2">useful links</div>    
                 <a href={azureQueueStorageEtlDocsLink} target="_blank">
                     <Icon icon="newtab" /> Docs - Azure Queue Storage ETL
                 </a>
                  */}
             </AccordionItemWrapper>
-            <FeatureAvailabilitySummaryWrapper
-                isUnlimited={hasQueueEtl}
-                data={featureAvailability}
-            />
+            <FeatureAvailabilitySummaryWrapper isUnlimited={hasQueueEtl} data={featureAvailability} />
         </AboutViewFloating>
     );
 }
