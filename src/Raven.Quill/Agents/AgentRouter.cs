@@ -38,8 +38,6 @@ public sealed class UnknownAgentException(string agentId)
 internal sealed class AgentRouter(
     IDocumentStore store, WebhookActionExecutor actionExecutor, QuillLogger<AgentRouter> logger) : IAgentRouter
 {
-    internal const int MaxActionRounds = 8;
-
     public async Task<AgentRunResult> RunAsync(AgentRequest request, Func<string, ValueTask> onChunk, AiAgentConfiguration config, CancellationToken ct)
     {
         if (config is null)
@@ -70,13 +68,8 @@ internal sealed class AgentRouter(
         using var session = store.OpenAsyncSession(request.Database);
         var lazyBindings = session.Advanced.Lazily.LoadAsync<AgentActionBindings>(AgentActionBindings.IdFor(config.Identifier), ct);
 
-        var actionRounds = 0;
         while (result.Status == AiConversationResult.ActionRequired)
         {
-            if (++actionRounds > MaxActionRounds)
-                throw new InvalidOperationException(
-                    $"agent '{config.Identifier}' exceeded {MaxActionRounds} action rounds in a single turn");
-
             var bindings = await lazyBindings.Value;
             await RunActionsAsync(conversation, config, bindings, ct);
 
