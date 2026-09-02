@@ -14,8 +14,6 @@ export function AppConversations() {
     return (
         <div className="space-y-8">
             <div className="space-y-6">
-                {/* The period governs the whole view (the stat cards and the conversations
-                    table below), so its picker rides in the page header. */}
                 <div className="flex items-start justify-between gap-3">
                     <div className="space-y-1">
                         <Heading as="h1" variant="page">

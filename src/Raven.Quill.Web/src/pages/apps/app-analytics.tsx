@@ -40,8 +40,6 @@ export function AppAnalytics() {
     return (
         <PagePanel>
             <div className="space-y-6">
-                {/* The period governs the whole view (metric cards and every chart below), so its
-                    picker rides in the page header. The route hides the shell title in favour of this. */}
                 <header className="flex items-center justify-between gap-3">
                     <Heading as="h1" variant="page">
                         Analytics
