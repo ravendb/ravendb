@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Text } from "@/components/typography";
+import { Heading, Text } from "@/components/typography";
 import { useParams } from "react-router";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
@@ -9,7 +9,7 @@ import { SeriesBarChart } from "@/components/data/charts";
 import { DatePeriodPicker } from "@/components/data/date-period-picker";
 import { ChartSkeleton, DetailGridSkeleton } from "@/components/data/loading-skeletons";
 import { PagePanel } from "@/components/data/page-panel";
-import { canDrillInto, drillInto, getDefaultDatePeriod, type DatePeriod } from "@/lib/date-period";
+import { canDrillInto, drillInto, getDefaultDatePeriod } from "@/lib/date-period";
 import { useAppStartDate } from "@/lib/use-start-date";
 import { TableCell, TableRow } from "@/components/shadcn/ui/table";
 import { SectionTable } from "@/components/table/section-table";
@@ -39,61 +39,56 @@ export function AppAnalytics() {
 
     return (
         <PagePanel>
-            <ApiState
-                isLoading={appUsageQuery.isPending}
-                isError={appUsageQuery.isError}
-                errorTitle="Could not load analytics"
-                onRetry={() => void appUsageQuery.refetch()}
-                loadingLabel="Loading analytics..."
-                skeleton={
-                    <div className="space-y-8">
-                        <DetailGridSkeleton count={4} className="sm:grid-cols-4" />
-                        <ChartSkeleton />
-                    </div>
-                }
-            >
-                {appUsageQuery.data && (
-                    <div className="space-y-8">
-                        <AnalyticsMetricCards
-                            usage={appUsageQuery.data}
-                            period={period}
-                            earliest={appStartDate}
-                            onPeriodChange={setPeriod}
-                        />
-                        <AnalyticsSeriesSection
-                            title="Tokens by capability"
-                            series={appUsageQuery.data.tokensByCapability}
-                            onBarClick={drillFromBar}
-                        />
-                        <AnalyticsSeriesSection
-                            title="Tokens by model"
-                            series={appUsageQuery.data.tokensByModel}
-                            onBarClick={drillFromBar}
-                        />
-                        <AnalyticsSeriesSection
-                            title="Conversations by channel"
-                            series={appUsageQuery.data.conversationsByChannel}
-                            onBarClick={drillFromBar}
-                        />
-                        <TopCapabilitiesSection capabilities={appUsageQuery.data.topCapabilities} />
-                    </div>
-                )}
-            </ApiState>
+            <div className="space-y-6">
+                {/* The period governs the whole view (metric cards and every chart below), so its
+                    picker rides in the page header. The route hides the shell title in favour of this. */}
+                <header className="flex items-center justify-between gap-3">
+                    <Heading as="h1" variant="page">
+                        Analytics
+                    </Heading>
+                    <DatePeriodPicker value={period} earliest={appStartDate} onChange={setPeriod} />
+                </header>
+                <ApiState
+                    isLoading={appUsageQuery.isPending}
+                    isError={appUsageQuery.isError}
+                    errorTitle="Could not load analytics"
+                    onRetry={() => void appUsageQuery.refetch()}
+                    loadingLabel="Loading analytics..."
+                    skeleton={
+                        <div className="space-y-8">
+                            <DetailGridSkeleton count={4} className="sm:grid-cols-4" />
+                            <ChartSkeleton />
+                        </div>
+                    }
+                >
+                    {appUsageQuery.data && (
+                        <div className="space-y-8">
+                            <AnalyticsMetricCards usage={appUsageQuery.data} />
+                            <AnalyticsSeriesSection
+                                title="Tokens by capability"
+                                series={appUsageQuery.data.tokensByCapability}
+                                onBarClick={drillFromBar}
+                            />
+                            <AnalyticsSeriesSection
+                                title="Tokens by model"
+                                series={appUsageQuery.data.tokensByModel}
+                                onBarClick={drillFromBar}
+                            />
+                            <AnalyticsSeriesSection
+                                title="Conversations by channel"
+                                series={appUsageQuery.data.conversationsByChannel}
+                                onBarClick={drillFromBar}
+                            />
+                            <TopCapabilitiesSection capabilities={appUsageQuery.data.topCapabilities} />
+                        </div>
+                    )}
+                </ApiState>
+            </div>
         </PagePanel>
     );
 }
 
-function AnalyticsMetricCards({
-    usage,
-    period,
-    earliest,
-    onPeriodChange,
-}: {
-    usage: AppUsageResponse;
-    period: DatePeriod;
-    earliest: Date | undefined;
-    onPeriodChange: (value: DatePeriod) => void;
-}) {
+function AnalyticsMetricCards({ usage }: { usage: AppUsageResponse }) {
     const { conversations, tokens } = usage.metrics;
     const cards: DashboardStatCard[] = [
         {
@@ -106,12 +101,7 @@ function AnalyticsMetricCards({
         { label: "Tokens", value: tokens.value, isLoading: false, delta: tokens.delta, series: tokens.sparkline },
     ];
 
-    return (
-        <StatCardsSection
-            cards={cards}
-            action={<DatePeriodPicker value={period} earliest={earliest} onChange={onPeriodChange} />}
-        />
-    );
+    return <StatCardsSection cards={cards} />;
 }
 
 function AnalyticsSeriesSection({

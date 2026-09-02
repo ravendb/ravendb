@@ -269,6 +269,8 @@ const appPages: AppRouteDefinition[] = [
             icon: LineChart,
             section: "settings",
         },
+        // The page renders its own header so the period picker can sit beside the title.
+        isPageTitleHidden: true,
         element: <AppAnalytics />,
     },
 ];

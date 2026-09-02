@@ -25,16 +25,14 @@ export function DashboardHome() {
                 <Heading as="h1" variant="page">
                     My apps
                 </Heading>
+                {/* The period governs the whole view (the stat cards and the apps table below),
+                    so its picker rides in the page header rather than in a section header. */}
+                {appsQuery.data && appsQuery.data.length > 0 && (
+                    <DatePeriodPicker value={period} earliest={setupStartDate} onChange={setPeriod} />
+                )}
             </header>
 
-            {appsQuery.data && appsQuery.data.length > 0 && (
-                // The period lives here because it also drives the apps table below, but the
-                // picker itself renders inline with the "Activity" header via the action slot.
-                <StatCardsSection
-                    cards={cards}
-                    action={<DatePeriodPicker value={period} earliest={setupStartDate} onChange={setPeriod} />}
-                />
-            )}
+            {appsQuery.data && appsQuery.data.length > 0 && <StatCardsSection cards={cards} />}
 
             <ApiState
                 isLoading={appsQuery.isPending}

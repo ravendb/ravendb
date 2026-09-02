@@ -3,7 +3,6 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
 import type { ConversationDto } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
-import { DatePeriodPicker } from "@/components/data/date-period-picker";
 import { TablePagination } from "@/components/table/table-pagination";
 import type { DatePeriod } from "@/lib/date-period";
 import { StatCardsSection, type DashboardStatCard } from "@/pages/dashboard/dashboard-stat-cards";
@@ -20,12 +19,7 @@ interface ConversationsSectionProps {
     period: DatePeriod;
 }
 
-export function ConversationStatsCards({
-    slug,
-    period,
-    earliest,
-    onPeriodChange,
-}: ConversationsSectionProps & { earliest: Date | undefined; onPeriodChange: (value: DatePeriod) => void }) {
+export function ConversationStatsCards({ slug, period }: ConversationsSectionProps) {
     const conversationStatsQuery = useQuery(api.queries.stats.conversationStats(slug, period));
     const stats = conversationStatsQuery.data;
 
@@ -35,12 +29,7 @@ export function ConversationStatsCards({
         { label: "Tokens", value: stats?.tokens, isLoading: conversationStatsQuery.isPending },
     ];
 
-    return (
-        <StatCardsSection
-            cards={cards}
-            action={<DatePeriodPicker value={period} earliest={earliest} onChange={onPeriodChange} />}
-        />
-    );
+    return <StatCardsSection cards={cards} />;
 }
 
 const EMPTY_CONVERSATIONS: ConversationDto[] = [];

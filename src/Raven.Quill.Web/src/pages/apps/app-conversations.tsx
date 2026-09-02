@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useParams } from "react-router";
+import { DatePeriodPicker } from "@/components/data/date-period-picker";
 import { getDefaultDatePeriod } from "@/lib/date-period";
 import { useAppStartDate } from "@/lib/use-start-date";
 import { ConversationStatsCards, ConversationsSection } from "@/pages/apps/conversations-section";
@@ -13,18 +14,18 @@ export function AppConversations() {
     return (
         <div className="space-y-8">
             <div className="space-y-6">
-                <div className="space-y-1">
-                    <Heading as="h1" variant="page">
-                        Conversations
-                    </Heading>
-                    <Text variant="muted">Live and historical chats across all channels.</Text>
+                {/* The period governs the whole view (the stat cards and the conversations
+                    table below), so its picker rides in the page header. */}
+                <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                        <Heading as="h1" variant="page">
+                            Conversations
+                        </Heading>
+                        <Text variant="muted">Live and historical chats across all channels.</Text>
+                    </div>
+                    <DatePeriodPicker value={period} earliest={appStartDate} onChange={setPeriod} />
                 </div>
-                <ConversationStatsCards
-                    slug={slug}
-                    period={period}
-                    earliest={appStartDate}
-                    onPeriodChange={setPeriod}
-                />
+                <ConversationStatsCards slug={slug} period={period} />
             </div>
             <ConversationsSection slug={slug} period={period} />
         </div>
