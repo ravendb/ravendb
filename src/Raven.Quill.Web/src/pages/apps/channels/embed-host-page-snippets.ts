@@ -176,6 +176,7 @@ export function buildVueHostSnippet(embedOrigin: string) {
 function webviewHostPageLines(embedOrigin: string, src: string, forward: string) {
     return [
         "<!doctype html>",
+        '<meta name="viewport" content="width=device-width, initial-scale=1">',
         '<body style="margin:0">',
         `<iframe src="${src}" title="Assistant" style="width:100vw;height:100vh;border:0"></iframe>`,
         "<script>",
