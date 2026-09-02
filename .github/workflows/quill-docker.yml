@@ -72,30 +72,96 @@ jobs:
       - name: Report image size
         run: docker images "ravendb/quill:pr-check-${{ matrix.arch }}" --format "{{.Repository}}:{{.Tag}} - {{.Size}}"
 
+      - name: Seed a fake setup package
+        run: |
+          set -eu
+          mkdir -p fakepkg/A
+          openssl req -x509 -newkey rsa:2048 -nodes -days 2 \
+            -subj "/CN=*.test.myquill.ai" \
+            -addext "subjectAltName=DNS:*.test.myquill.ai" \
+            -addext "keyUsage=digitalSignature,keyEncipherment" \
+            -addext "extendedKeyUsage=serverAuth,clientAuth" \
+            -keyout sk.pem -out sc.pem
+
+          openssl pkcs12 -export -inkey sk.pem -in sc.pem -passout pass: \
+            -out fakepkg/A/cluster.server.certificate.test.pfx
+
+
+          openssl req -x509 -newkey rsa:2048 -nodes -days 2 \
+            -subj "/CN=admin.test" \
+            -addext "keyUsage=digitalSignature,keyEncipherment" \
+            -addext "extendedKeyUsage=clientAuth" \
+            -keyout ak.pem -out ac.pem
+
+          openssl pkcs12 -export -inkey ak.pem -in ac.pem -passout pass: \
+            -out fakepkg/admin.client.certificate.test.pfx
+
+          openssl x509 -in ac.pem -noout -fingerprint -sha1 | sed 's/.*=//; s/://g' > fakepkg/admin-thumbprint
+
+          printf '%s\n' \
+            '{' \
+            '  "Setup.Mode": "Secured",' \
+            '  "Security.Certificate.Path": "cluster.server.certificate.test.pfx",' \
+            '  "ServerUrl": "https://127.0.0.1",' \
+            '  "ServerUrl.Tcp": "tcp://127.0.0.1:38888",' \
+            '  "PublicServerUrl": "https://a.test.myquill.ai:443",' \
+            '  "PublicServerUrl.Tcp": "tcp://a.test.myquill.ai:38888"' \
+            '}' > fakepkg/A/settings.json
+
+          docker volume create quill-pr-check-data
+          docker run --rm -v quill-pr-check-data:/v -v "$PWD/fakepkg:/pkg:ro" busybox \
+            sh -c 'mkdir -p /v/setup && cp -r /pkg/. /v/setup/'
+
       - name: Start container
+        # no license --> activation skips --> the seeded package boots ravendb, the web app and nginx.
         run: |
           docker run -d --name quill-pr-check \
-            -e QUILL_API_KEY=test \
-            -e QUILL_LICENSE_KEY=test \
-            -e RAVEN_API_ENV=test \
+            -v quill-pr-check-data:/var/lib/quill \
             "ravendb/quill:pr-check-${{ matrix.arch }}"
 
-      - name: Probe /healthz
-        # We expect 503: no real QUILL_LICENSE_KEY means RavenHealthCheck reports unhealthy (activation didn't run).
-        # Accept 200 too if/when a real license/setup-package is wired into repo secrets.
+      - name: Verify the privilege drops
         run: |
+          set -eu
+          c=quill-pr-check
+          fail() { echo "::error::$1"; docker logs --tail 50 "$c"; exit 1; }
+
+          daemons() {
+            docker exec "$c" sh -c 'for s in /proc/[0-9]*/status; do
+                printf "uid=%s %s\n" "$(awk "/^Uid:/{print \$2}" "$s")" "$(tr "\0" " " <"${s%status}cmdline")"
+              done' 2>/dev/null \
+              | grep -E "Raven.Server.dll|Raven.Quill.dll|nginx: master" | grep -v s6-setuidgid | sort -u
+          }
+
+          for _ in $(seq 1 90); do
+            [ "$(docker inspect -f '{{.State.Running}}' "$c")" = true ] || fail "container exited during startup"
+            [ "$(daemons | grep -c .)" = 3 ] && break
+            sleep 2
+          done
+
+          uids=$(daemons); echo "$uids"
+          [ "$(echo "$uids" | grep -c '^uid=999 ')" = 3 ] || fail "the 3 daemons are not all running as uid 999"
+          # 443 == 0x01BB in /proc/net/tcp's local_address column
+          docker exec "$c" sh -c 'awk "{print \$2}" /proc/net/tcp | grep -qi ":01BB$"' || fail "nginx did not bind :443"
+          [ "$(docker exec "$c" stat -c '%U' /var/lib/quill/proxy/privkey.pem)" = quill ] || fail "proxy key not owned by quill"
+          echo "ok: 3 daemons uid=999, :443 bound, proxy key owned by quill"
+
+      - name: Probe /healthz through nginx :443
+        run: |
+          set -eu
           for i in $(seq 1 60); do
-            CODE=$(docker exec quill-pr-check curl -sS -o /dev/null -w "%{http_code}" http://127.0.0.1:5000/healthz 2>/dev/null || true)
+            CODE=$(docker exec quill-pr-check curl -sk -o /dev/null -w "%{http_code}" https://127.0.0.1/healthz 2>/dev/null || true)
             case "$CODE" in
-              200|503) echo "healthz responded HTTP $CODE - OK"; exit 0 ;;
+              200|503) echo "healthz responded HTTP $CODE via :443 - OK"; exit 0 ;;
               000|"")  echo "attempt $i: not yet"; sleep 2 ;;
-              *)       echo "healthz responded with unexpected HTTP $CODE"; docker logs quill-pr-check; exit 1 ;;
+              *)       echo "::error::healthz returned unexpected HTTP $CODE"; docker logs --tail 50 quill-pr-check; exit 1 ;;
             esac
           done
-          echo "healthz never responded"
-          docker logs quill-pr-check
+          echo "::error::healthz never responded via :443"
+          docker logs --tail 50 quill-pr-check
           exit 1
 
       - name: Cleanup
         if: always()
-        run: docker rm -f quill-pr-check || true
+        run: |
+          docker rm -f quill-pr-check || true
+          docker volume rm quill-pr-check-data || true
