@@ -18,7 +18,7 @@ import { AddCapabilityWizard } from "./add-capability-wizard";
 import { suggestionToAgentConfiguration } from "./agent-config-form";
 import { CAPABILITY_FLOW, useCapabilitySteps } from "./capability-wizard-flow";
 import { useCapabilityWizardStore } from "./capability-wizard-store";
-import { agentSchema, type AgentFormData, type AgentStepId } from "./capability-wizard-validation";
+import { createAgentSchema, type AgentFormData, type AgentStepId } from "./capability-wizard-validation";
 
 const meta = {
     title: "Setup/Add Capability Wizard",
@@ -78,7 +78,7 @@ function CapabilityWizardAtStep({
     const form = useForm<AgentFormData>({
         mode: "onChange",
         defaultValues: SEED,
-        resolver: zodResolver(agentSchema),
+        resolver: zodResolver(createAgentSchema()),
     });
 
     return (

@@ -167,8 +167,11 @@ public static class AppsEndpoints
             return Results.BadRequest(new ApiErrorResponse(
                 $"app '{slug}' has no CDC configuration to derive an agent from; use mode 'from-prompt'"));
 
+        var agents = await LoadAgentsForSteerAsync(store, app.Database, logger, ct);
+
         var result = await aiClient.SuggestAiAgentAsync(
-            cdcConfig ?? new CdcSinkConfiguration(), collectionsSample: null, mode, body!.IntentPrompt, ct);
+            cdcConfig ?? new CdcSinkConfiguration(), collectionsSample: null, mode,
+            WithExistingAgents(body!.IntentPrompt, agents), ct);
 
         if (result.Status != AiHelperStatus.Success)
             return Results.Ok(new SuggestAgentResponse([], result.Rationale, result.Status.ToString()));
@@ -183,6 +186,40 @@ public static class AppsEndpoints
         }
 
         return Results.Ok(new SuggestAgentResponse(valid, result.Rationale, result.Status.ToString()));
+    }
+
+    private static async Task<List<AiAgentConfiguration>> LoadAgentsForSteerAsync(
+        IDocumentStore store, string database, QuillLogger<AppsLogger> logger, CancellationToken ct)
+    {
+        try
+        {
+            var agents = await store.Maintenance.ForDatabase(database).SendAsync(new GetAiAgentsOperation(), ct);
+            return agents.AiAgents ?? [];
+        }
+        catch (Exception ex) when (ct.IsCancellationRequested == false)
+        {
+            if (logger.IsWarnEnabled)
+                logger.Warn(ex, $"SuggestAgent: could not read the existing agents of database={database}; suggesting without them");
+            return [];
+        }
+    }
+
+    private static string? WithExistingAgents(string? intentPrompt, List<AiAgentConfiguration> agents)
+    {
+        var names = agents
+            .Where(agent => string.IsNullOrWhiteSpace(agent.Name) == false)
+            .Select(agent => $"\"{agent.Name}\"")
+            .ToArray();
+
+        if (names.Length == 0)
+            return intentPrompt;
+
+        var steer =
+            $"The app already has these agents: {string.Join(", ", names)}. " +
+            "Every suggested agent must have a name that is not one of those, and must cover a need they do not " +
+            "already cover.";
+
+        return string.IsNullOrWhiteSpace(intentPrompt) ? steer : $"{intentPrompt}\n\n{steer}";
     }
 
     private static bool IsStructurallyValidDraft(AiAgentConfiguration agent) =>
