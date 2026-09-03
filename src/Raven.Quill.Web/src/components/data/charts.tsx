@@ -69,7 +69,8 @@ function BarChartFrame({
                         tickLine={false}
                         axisLine={false}
                         tickMargin={8}
-                        width={44}
+                        // Size to the labels so large values (e.g. "429.1K") aren't clipped.
+                        width="auto"
                         tickFormatter={(value) => formatCompact(value as number)}
                     />
                     {children}
