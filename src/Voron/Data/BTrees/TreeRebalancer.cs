@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -45,7 +45,7 @@ namespace Voron.Data.BTrees
                 if (_cursor.PageCount <= 1) // the root page
                 {
                     RebalanceRoot(page);
-                    return null;
+                    return default;
                 }
 
                 _cursor.Pop();
@@ -80,7 +80,7 @@ namespace Voron.Data.BTrees
                     VoronUnrecoverableErrorException.Raise(_tx,
                         $"The page {page.PageNumber} being rebalanced is not referenced by its cursor parent page {parentPage.PageNumber}, tree: {_tree.Name}");
 
-                parentPage.LastSearchPosition = positionInParent;
+                parentPage.LastSearchPosition = (short)positionInParent;
 
                 if (page.NumberOfEntries == 0) // empty page, just delete it and fixup parent
                 {
@@ -118,23 +118,24 @@ namespace Voron.Data.BTrees
 
                 var minKeys = page.IsBranch ? 2 : 1;
                 if (page.UseMoreSizeThan(Constants.Tree.PageMinSpace) && page.NumberOfEntries >= minKeys) 
-                    return null; // above space/keys thresholds
+                    return default; // above space/keys thresholds
 
                 Debug.Assert(parentPage.NumberOfEntries >= 2); // if we have less than 2 entries in the parent, the tree is invalid
 
-                var sibling = SetupMoveOrMerge(page, parentPage);
+                var sibling = SetupMoveOrMerge(ref page, ref parentPage);
+                _cursor.SyncTopPage(parentPage);
                 Debug.Assert(sibling.PageNumber != page.PageNumber);
 
                 if (page.TreeFlags != sibling.TreeFlags)
-                    return null;
+                    return default;
 
                 if (sibling.IsCompressed)
-                    return null;
+                    return default;
 
                 if (sibling.PageSize != page.PageSize)
                     // if the current page is compressed (but already opened), we need to 
                     // avoid merging it with the right (uncompressed) page
-                    return null;
+                    return default;
 
                 Debug.Assert(page.IsCompressed == false);
 
@@ -144,22 +145,24 @@ namespace Voron.Data.BTrees
                 {
                     // neighbor is over the min size and has enough key, can move just one key to  the current page
                     if (page.IsBranch)
-                        MoveBranchNode(parentPage, sibling, page);
+                        MoveBranchNode(ref parentPage, sibling, page);
                     else
-                        MoveLeafNode(parentPage, sibling, page);
+                        MoveLeafNode(ref parentPage, sibling, page);
 
                     return parentPage;
                 }
 
                 if (page.LastSearchPosition == 0) // this is the right page, merge left
                 {
-                    if (TryMergePages(parentPage, sibling, page) == false)
-                        return null;
+                    var merged = TryMergePages(parentPage, sibling, ref page);
+                    if (merged == false)
+                        return default;
                 }
                 else // this is the left page, merge right
                 {
-                    if (TryMergePages(parentPage, page, sibling) == false)
-                        return null;
+                    var merged = TryMergePages(parentPage, page, ref sibling);
+                    if (merged == false)
+                        return default;
                 }
 
                 return parentPage;
@@ -187,7 +190,8 @@ namespace Voron.Data.BTrees
             _tree.FreePage(page);
         }
 
-        private bool TryMergePages(TreePage parentPage, TreePage left, TreePage right)
+
+        private bool TryMergePages(TreePage parentPage, TreePage left, ref TreePage right)
         {
             using (_tx.GetTempPage(left.PageSize, out var mergedPage))
             {
@@ -197,7 +201,7 @@ namespace Voron.Data.BTrees
 
                 for (int i = 0; i < right.NumberOfEntries; i++)
                 {
-                    right.LastSearchPosition = i;
+                    right.LastSearchPosition = (short)i;
 
                     Slice key;
                     using (GetActualKey(right, right.LastSearchPositionOrLastEntry, out key))
@@ -256,7 +260,7 @@ namespace Voron.Data.BTrees
             }
         }
 
-        private TreePage SetupMoveOrMerge(TreePage page, TreePage parentPage)
+        private TreePage SetupMoveOrMerge(ref TreePage page, ref TreePage parentPage)
         {
             TreePage sibling;
             if (parentPage.LastSearchPosition == 0) // we are the left most item
@@ -264,7 +268,7 @@ namespace Voron.Data.BTrees
                 sibling = _tree.ModifyPage(parentPage.GetNode(1)->PageNumber);
 
                 sibling.LastSearchPosition = 0;
-                page.LastSearchPosition = page.NumberOfEntries;
+                page.LastSearchPosition = (short)page.NumberOfEntries;
                 parentPage.LastSearchPosition = 1;
             }
             else // there is at least 1 page to our left
@@ -277,13 +281,13 @@ namespace Voron.Data.BTrees
                 parentPage.LastSearchPosition++;
                 if (beyondLast)
                     parentPage.LastSearchPosition++;
-                sibling.LastSearchPosition = sibling.NumberOfEntries - 1;
+                sibling.LastSearchPosition = (short)(sibling.NumberOfEntries - 1);
                 page.LastSearchPosition = 0;
             }
             return sibling;
         }
 
-        private void MoveLeafNode(TreePage parentPage, TreePage from, TreePage to)
+        private void MoveLeafNode(ref TreePage parentPage, TreePage from, TreePage to)
         {
             Debug.Assert(from.IsBranch == false);
             Slice originalFromKeyStart;
@@ -338,7 +342,7 @@ namespace Voron.Data.BTrees
                         scope = GetActualKey(from, 0, out newSeparatorKey);
                     }
 
-                    AddSeparatorToParentPage(to, parentPage, pageNumber, newSeparatorKey, pos);
+                    AddSeparatorToParentPage(to, ref parentPage, pageNumber, newSeparatorKey, pos);
                 }
                 finally
                 {
@@ -347,17 +351,19 @@ namespace Voron.Data.BTrees
             }
         }
 
-        private void AddSeparatorToParentPage(TreePage childPage, TreePage parentPage, long pageNumber, Slice seperatorKey, int separatorKeyPosition)
+        private void AddSeparatorToParentPage(TreePage childPage, ref TreePage parentPage, long pageNumber, Slice seperatorKey, int separatorKeyPosition)
         {
             var parent = new ParentPageAction(parentPage, childPage, _tree, _cursor, _tx);
 
             parent.AddSeparator(seperatorKey, pageNumber, separatorKeyPosition);
 
+            parentPage = parent.ParentPage;
+
             if (parent.PerformedSplit)
                 _ancestorsChanged = true;
         }
 
-        private void MoveBranchNode(TreePage parentPage, TreePage from, TreePage to)
+        private void MoveBranchNode(ref TreePage parentPage, TreePage from, TreePage to)
         {
             Debug.Assert(from.IsBranch);
 
@@ -438,7 +444,7 @@ namespace Voron.Data.BTrees
                     scope = GetActualKey(from, 0, out newSeparatorKey);
                 }
 
-                AddSeparatorToParentPage(to, parentPage, pageNumber, newSeparatorKey, pos);
+                AddSeparatorToParentPage(to, ref parentPage, pageNumber, newSeparatorKey, pos);
             }
             finally
             {
@@ -470,10 +476,10 @@ namespace Voron.Data.BTrees
                     decompressedLeafPage?.Dispose();
                     decompressedLeafPage = _tree.DecompressPage(page, DecompressionUsage.Read, skipCache: true);
 
-                    if (decompressedLeafPage.NumberOfEntries > 0)
+                    if (decompressedLeafPage.Page.NumberOfEntries > 0)
                     {
                         if (page.NumberOfEntries == 0)
-                            node = decompressedLeafPage.GetNode(0);
+                            node = decompressedLeafPage.Page.GetNode(0);
                         else
                         {
                             // we want to find the smallest key in compressed page
@@ -481,7 +487,7 @@ namespace Voron.Data.BTrees
                             // in particular, it can be the key of compression tombstone node that we don't see after decompression
                             // so we need to take first keys from decompressed and compressed page and compare them
 
-                            var decompressedNode = decompressedLeafPage.GetNode(0);
+                            var decompressedNode = decompressedLeafPage.Page.GetNode(0);
                             var compressedNode = page.GetNode(0);
 
                             using (TreeNodeHeader.ToSlicePtr(_tx.Allocator, decompressedNode, out var firstDecompressedKey))

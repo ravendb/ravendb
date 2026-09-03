@@ -28,7 +28,7 @@ namespace Voron.Data.BTrees
             var pageToCompress = page;
 
             if (alreadyCompressed) 
-                pageToCompress = DecompressPage(page, usage: DecompressionUsage.Write, skipCache: false); // no need to dispose, it's going to be cached anyway
+                pageToCompress = DecompressPage(page, usage: DecompressionUsage.Write, skipCache: false).Page; // no need to dispose, it's going to be cached anyway
 
             using (LeafPageCompressor.TryGetCompressedTempPage(_llt, pageToCompress, out CompressionResult result, defrag: alreadyCompressed == false))
             {
@@ -89,7 +89,7 @@ namespace Voron.Data.BTrees
             }
             finally
             {
-                decompressedPage.DebugValidate(this, ReadHeader().RootPageNumber);
+                decompressedPage.Page.DebugValidate(this, ReadHeader().RootPageNumber);
 
                 if (skipCache == false && decompressedPage != cached)
                 {
@@ -124,23 +124,23 @@ namespace Voron.Data.BTrees
         {
             var result = GetDecompressedPage(input.DecompressedPageSize, usage, input.Page);
 
-            var decompressedNodesOffset = (ushort)(result.PageSize - input.DecompressedSize);
+            var decompressedNodesOffset = (ushort)(result.Page.PageSize - input.DecompressedSize);
 
             if (input.CompressedSize > 0)
             {
                 LZ4.Decode64LongBuffers(
                     input.Data,
                     input.CompressedSize,
-                    result.Base + decompressedNodesOffset,
+                    result.Page.Base + decompressedNodesOffset,
                     input.DecompressedSize, true);
             }
 
-            result.Lower += input.KeysOffsetsSize;
-            result.Upper = decompressedNodesOffset;
+            result.Page.Lower += input.KeysOffsetsSize;
+            result.Page.Upper = decompressedNodesOffset;
 
             for (var i = 0; i < input.NumberOfEntries; i++)
             {
-                result.KeysOffsets[i] = (ushort)(input.KeysOffsets[i] + result.Upper);
+                result.Page.KeysOffsets[i] = (ushort)(input.KeysOffsets[i] + result.Page.Upper);
             }
             return result;
         }
@@ -148,22 +148,22 @@ namespace Voron.Data.BTrees
         private DecompressedLeafPage ReuseCachedPage(DecompressedLeafPage cached, DecompressionUsage usage, ref DecompressionInput input)
         {
 
-            var sizeDiff = input.DecompressedPageSize - cached.PageSize;
+            var sizeDiff = input.DecompressedPageSize - cached.Page.PageSize;
             if (sizeDiff <= 0)
                 return cached;
 
             var result = GetDecompressedPage(input.DecompressedPageSize, usage, input.Page);
 
-            Memory.Copy(result.Base, cached.Base, cached.Lower);
-            Memory.Copy(result.Base + cached.Upper + sizeDiff,
-                cached.Base + cached.Upper,
-                cached.PageSize - cached.Upper);
+            Memory.Copy(result.Page.Base, cached.Page.Base, cached.Page.Lower);
+            Memory.Copy(result.Page.Base + cached.Page.Upper + sizeDiff,
+                cached.Page.Base + cached.Page.Upper,
+                cached.Page.PageSize - cached.Page.Upper);
 
-            result.Upper += (ushort)sizeDiff;
+            result.Page.Upper += (ushort)sizeDiff;
 
-            for (var i = 0; i < result.NumberOfEntries; i++)
+            for (var i = 0; i < result.Page.NumberOfEntries; i++)
             {
-                result.KeysOffsets[i] += (ushort)sizeDiff;
+                result.Page.KeysOffsets[i] += (ushort)sizeDiff;
             }
 
             return result;
@@ -184,14 +184,14 @@ namespace Voron.Data.BTrees
                         continue;
                     }
 
-                    if (decompressedPage.HasSpaceFor(_llt, TreeSizeOf.NodeEntry(uncompressedNode)) == false)
+                    if (decompressedPage.Page.HasSpaceFor(_llt, TreeSizeOf.NodeEntry(uncompressedNode)) == false)
                         throw new InvalidOperationException("Could not add uncompressed node to decompressed page");
 
                     int index;
 
-                    if (decompressedPage.NumberOfEntries > 0)
+                    if (decompressedPage.Page.NumberOfEntries > 0)
                     {
-                        using (decompressedPage.GetNodeKey(_llt, decompressedPage.NumberOfEntries - 1, out Slice lastKey))
+                        using (decompressedPage.Page.GetNodeKey(_llt, decompressedPage.Page.NumberOfEntries - 1, out Slice lastKey))
                         {
                             // optimization: it's very likely that uncompressed nodes have greater keys than compressed ones 
                             // when we insert sequential keys
@@ -201,21 +201,21 @@ namespace Voron.Data.BTrees
                             switch (cmp)
                             {
                                 case > 0:
-                                    index = decompressedPage.NumberOfEntries;
+                                    index = decompressedPage.Page.NumberOfEntries;
                                     break;
                                 case 0:
 
                                     // update of the last entry, just decrement NumberOfEntries in the page and
                                     // put it at the last position
-                                    index = decompressedPage.NumberOfEntries - 1;
-                                    decompressedPage.Lower -= Constants.Tree.NodeOffsetSize;
+                                    index = decompressedPage.Page.NumberOfEntries - 1;
+                                    decompressedPage.Page.Lower -= Constants.Tree.NodeOffsetSize;
                                     break;
                                 default:
                                 {
-                                    index = decompressedPage.NodePositionFor(_llt, nodeKey);
-                                    if (decompressedPage.LastMatch == 0) // update
+                                    index = decompressedPage.Page.NodePositionFor(_llt, nodeKey);
+                                    if (decompressedPage.Page.LastMatch == 0) // update
                                     {
-                                        decompressedPage.RemoveNode(index);
+                                        decompressedPage.Page.RemoveNode(index);
 
                                         if (usage == DecompressionUsage.Write)
                                         {
@@ -238,10 +238,10 @@ namespace Voron.Data.BTrees
                     switch (uncompressedNode->Flags)
                     {
                         case TreeNodeFlags.PageRef:
-                            decompressedPage.AddPageRefNode(index, nodeKey, uncompressedNode->PageNumber);
+                            decompressedPage.Page.AddPageRefNode(index, nodeKey, uncompressedNode->PageNumber);
                             break;
                         case TreeNodeFlags.Data:
-                            var pos = decompressedPage.AddDataNode(index, nodeKey, uncompressedNode->DataSize);
+                            var pos = decompressedPage.Page.AddDataNode(index, nodeKey, uncompressedNode->DataSize);
                             var nodeValue = TreeNodeHeader.Reader(_llt, uncompressedNode);
                             Memory.Copy(pos, nodeValue.Base, nodeValue.Length);
                             break;
@@ -257,12 +257,12 @@ namespace Voron.Data.BTrees
 
         private void HandleTombstone(DecompressedLeafPage decompressedPage, Slice nodeKey, DecompressionUsage usage)
         {
-            decompressedPage.Search(_llt, nodeKey);
+            decompressedPage.Page.Search(_llt, nodeKey);
 
-            if (decompressedPage.LastMatch != 0)
+            if (decompressedPage.Page.LastMatch != 0)
                 return;
 
-            var node = decompressedPage.GetNode(decompressedPage.LastSearchPosition);
+            var node = decompressedPage.Page.GetNode(decompressedPage.Page.LastSearchPosition);
 
             if (usage == DecompressionUsage.Write)
             {
@@ -276,7 +276,7 @@ namespace Voron.Data.BTrees
                 }
             }
 
-            decompressedPage.RemoveNode(decompressedPage.LastSearchPosition);
+            decompressedPage.Page.RemoveNode(decompressedPage.Page.LastSearchPosition);
         }
 
         private void DeleteOnCompressedPage(TreePage page, Slice keyToDelete, ref TreeCursorConstructor cursorConstructor)
@@ -298,20 +298,20 @@ namespace Voron.Data.BTrees
 
             try
             {
-                decompressed.Search(_llt, keyToDelete);
-                if (decompressed.LastMatch != 0)
+                decompressed.Page.Search(_llt, keyToDelete);
+                if (decompressed.Page.LastMatch != 0)
                     return;
 
                 ref var header = ref ModifyHeader();
                 header.NumberOfEntries--;
 
-                RemoveLeafNode(decompressed);
+                RemoveLeafNode(decompressed.Page);
 
                 using (var cursor = cursorConstructor.Build(keyToDelete))
                 {
                     var treeRebalancer = new TreeRebalancer(_llt, this, cursor);
-                    var changedPage = (TreePage)decompressed;
-                    while (changedPage != null)
+                    var changedPage = decompressed.Page;
+                    while (changedPage.IsValid)
                     {
                         changedPage = treeRebalancer.Execute(changedPage);
                     }
@@ -331,9 +331,9 @@ namespace Voron.Data.BTrees
 
             if (DecompressionsCache.TryFindPageForReading(key, _llt, out DecompressedLeafPage decompressed))
             {
-                node = decompressed.Search(_llt, key);
+                node = decompressed.Page.Search(_llt, key);
 
-                if (decompressed.LastMatch != 0)
+                if (decompressed.Page.LastMatch != 0)
                     return null;
             }
             else
@@ -342,7 +342,7 @@ namespace Voron.Data.BTrees
 
                 if (page.IsCompressed)
                 {
-                    page = decompressed = DecompressPage(page, DecompressionUsage.Read, skipCache: false);
+                    page = (decompressed = DecompressPage(page, DecompressionUsage.Read, skipCache: false)).Page;
                     node = page.Search(_llt, key);
                 }
 

@@ -533,7 +533,7 @@ namespace Voron.Debugging
             {
                 decompressedPage = tree.DecompressPage(page.TreePage, DecompressionUsage.Read, skipCache: true);
 
-                page = new TreePageSafe(page.Tree, decompressedPage);
+                page = new TreePageSafe(page.Tree, decompressedPage.Page);
             }
 
             try
@@ -575,7 +575,7 @@ namespace Voron.Debugging
             public TreePageSafe(Tree tree, TreePage page)
             {
                 _tree = tree ?? throw new ArgumentNullException(nameof(tree));
-                _page = page ?? throw new ArgumentNullException(nameof(page));
+                _page = page.IsValid ? page : throw new ArgumentException("page must be valid", nameof(page));
             }
 
             public Tree Tree => _tree;

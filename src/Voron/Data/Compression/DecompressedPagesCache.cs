@@ -33,7 +33,7 @@ namespace Voron.Data.Compression
                     continue;
                 }
 
-                if (page.PageNumber == pageNumber && page.Usage == usage)
+                if (page.Page.PageNumber == pageNumber && page.Usage == usage)
                 {
                     Debug.Assert(page.Cached);
                     
@@ -69,7 +69,7 @@ namespace Voron.Data.Compression
                     return;
                 }
 
-                if (old.PageNumber == decompressed.PageNumber && old.Usage == decompressed.Usage)
+                if (old.Page.PageNumber == decompressed.Page.PageNumber && old.Usage == decompressed.Usage)
                 {
                     Debug.Assert(old != decompressed);
 
@@ -104,7 +104,7 @@ namespace Voron.Data.Compression
             for (int i = 0; i < _cache.Length; i++)
             {
                 var cached = _cache[i];
-                if (cached != null && cached.PageNumber == pageNumber && cached.Usage == usage)
+                if (cached != null && cached.Page.PageNumber == pageNumber && cached.Usage == usage)
                 {
                     cached.Cached = false;
                     cached.Dispose();
@@ -142,7 +142,7 @@ namespace Voron.Data.Compression
             while (itemsLeft > 0)
             {
                 var page = _cache[position % Size];
-                if (page == null || page.Usage != DecompressionUsage.Read || page.NumberOfEntries == 0) // decompressed page can has 0 entries if each compressed entry had a tombstone marker
+                if (page == null || page.Usage != DecompressionUsage.Read || page.Page.NumberOfEntries == 0) // decompressed page can has 0 entries if each compressed entry had a tombstone marker
                 {
                     itemsLeft--;
                     position++;
@@ -150,8 +150,8 @@ namespace Voron.Data.Compression
                     continue;
                 }
 
-                using (page.GetNodeKey(tx, 0, out Slice first))
-                using (page.GetNodeKey(tx, page.NumberOfEntries - 1, out Slice last))
+                using (page.Page.GetNodeKey(tx, 0, out Slice first))
+                using (page.Page.GetNodeKey(tx, page.Page.NumberOfEntries - 1, out Slice last))
                 {
                     if (SliceComparer.Compare(key, first) >= 0 && SliceComparer.Compare(key, last) <= 0)
                     {

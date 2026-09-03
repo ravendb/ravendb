@@ -8,18 +8,25 @@ using Voron.Impl;
 
 namespace Voron.Data.Compression
 {
-    public sealed unsafe class DecompressedLeafPage : TreePage, IDisposable
+    public sealed unsafe class DecompressedLeafPage : IDisposable
     {
-        public DecompressedLeafPage(byte* basePtr, int pageSize, DecompressionUsage usage, TreePage original, ByteStringContext.InternalScope disposable) : base(basePtr, pageSize)
+        public DecompressedLeafPage(byte* basePtr, int pageSize, DecompressionUsage usage, TreePage original, ByteStringContext.InternalScope disposable)
         {
+            Page = new TreePage(basePtr, pageSize);
             Original = original;
             _disposable = disposable;
             Usage = usage;
 
-            PageNumber = Original.PageNumber;
-            TreeFlags = Original.TreeFlags;
-            Flags = Original.Flags & ~PageFlags.Compressed;
+            Page.PageNumber = Original.PageNumber;
+            Page.TreeFlags = Original.TreeFlags;
+            Page.Flags = Original.Flags & ~PageFlags.Compressed;
         }
+
+        /// <summary>
+        /// The decompressed page itself, held by composition rather than inheritance so that
+        /// TreePage can stay a pointer-free value type.
+        /// </summary>
+        public TreePage Page;
 
         public TreePage Original;
         private ByteStringContext.InternalScope _disposable;
@@ -38,32 +45,32 @@ namespace Voron.Data.Compression
 
         public void CopyToOriginal(LowLevelTransaction tx, bool defragRequired, bool wasModified, Tree tree)
         {
-            if (CalcSizeUsed() < Original.PageMaxSpace)
+            if (Page.CalcSizeUsed() < Original.PageMaxSpace)
             {
                 // no need to compress
                 Original.Lower = (ushort)Constants.Tree.PageHeaderSize;
                 Original.Upper = (ushort)Original.PageSize;
                 Original.Flags &= ~PageFlags.Compressed;
 
-                for (var i = 0; i < NumberOfEntries; i++)
+                for (var i = 0; i < Page.NumberOfEntries; i++)
                 {
-                    var node = GetNode(i);
+                    var node = Page.GetNode(i);
                     using (TreeNodeHeader.ToSlicePtr(tx.Allocator, node, out var slice))
                         Original.CopyNodeDataToEndOfPage(node, slice);
                 }
 
-                tree.DecompressionsCache.Invalidate(PageNumber, DecompressionUsage.Write);
+                tree.DecompressionsCache.Invalidate(Page.PageNumber, DecompressionUsage.Write);
             }
             else
             {
-                using (LeafPageCompressor.TryGetCompressedTempPage(tx, this, out var compressed, defrag: defragRequired))
+                using (LeafPageCompressor.TryGetCompressedTempPage(tx, Page, out var compressed, defrag: defragRequired))
                 {
                     if (compressed == null)
                     {
                         if (wasModified == false)
                             return;
 
-                        if (NumberOfEntries > 0)
+                        if (Page.NumberOfEntries > 0)
                         {
                             // we aren't able to compress the page back to 8KB page
                             // let's split it and try to copy it then
@@ -72,7 +79,7 @@ namespace Voron.Data.Compression
                         }
                         else
                         {
-                            ThrowCouldNotCompressEmptyDecompressedPage(PageNumber);
+                            ThrowCouldNotCompressEmptyDecompressedPage(Page.PageNumber);
                         }
 
                         CopyToOriginal(tx, defragRequired: true, wasModified: true, tree);
@@ -90,9 +97,9 @@ namespace Voron.Data.Compression
             // let's take a node from the middle and add it again with the page splitting
             // this way we'll copy half of the page to a new page
 
-            var middleNodeIndex = NumberOfEntries / 2;
+            var middleNodeIndex = Page.NumberOfEntries / 2;
 
-            using (GetNodeKey(tx, middleNodeIndex, out var middleNodeKey))
+            using (Page.GetNodeKey(tx, middleNodeIndex, out var middleNodeKey))
             {
                 tree.FindPageFor(middleNodeKey, node: out _, cursor: out var cursorConstructor, allowCompressed: true);
 
@@ -100,7 +107,7 @@ namespace Voron.Data.Compression
 
                 var key = middleNodeKey.Clone(tx.Allocator);
 
-                var node = GetNode(middleNodeIndex);
+                var node = Page.GetNode(middleNodeIndex);
 
                 var flags = node->Flags;
                 var valueReader = tree.GetValueReaderFromHeader(node);
@@ -109,15 +116,15 @@ namespace Voron.Data.Compression
                 {
                     Memory.Copy(tempValueOutput.Ptr, valueReader.Base, valueReader.Length);
 
-                    RemoveNode(middleNodeIndex);
+                    Page.RemoveNode(middleNodeIndex);
 
-                    Search(tx, key);
+                    Page.Search(tx, key);
 
                     using (var cursor = cursorConstructor.Build(key))
                     {
-                        cursor.SetTopPage(this); // we need to use uncompressed page here because it might have some modifications (e.g. deleted node)
+                        cursor.SetTopPage(Page); // we need to use uncompressed page here because it might have some modifications (e.g. deleted node)
 
-                        var pageSplitter = new TreePageSplitter(tx, tree, key, valueReader.Length, PageNumber, flags, cursor,
+                        var pageSplitter = new TreePageSplitter(tx, tree, key, valueReader.Length, Page.PageNumber, flags, cursor,
                             splittingOnDecompressed: true);
 
                         var pos = pageSplitter.Execute();
