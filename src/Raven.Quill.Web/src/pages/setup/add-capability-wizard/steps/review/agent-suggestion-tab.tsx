@@ -1,15 +1,20 @@
 import { type ReactNode } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { Sparkles } from "lucide-react";
+import { CircleAlert, Sparkles } from "lucide-react";
 import { Text } from "@/components/typography";
+import { Alert, AlertDescription, AlertTitle } from "@/components/shadcn/ui/alert";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { ExpandableText } from "@/components/data/expandable-text";
 import { FormTextarea } from "@/components/form/form-textarea";
-import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
+import {
+    findExistingAgentConflicts,
+    type AgentFormData,
+} from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
 import { AgentPromptProgress } from "@/pages/setup/add-capability-wizard/agent-prompt-progress";
 import { SuggestionPicker } from "@/pages/setup/add-capability-wizard/suggestion-picker";
+import { useExistingAgents } from "@/pages/setup/add-capability-wizard/use-existing-agents";
 import { useRegenerateAgentFromPromptMutation } from "@/pages/setup/add-capability-wizard/steps/review/use-regenerate-agent-from-prompt";
 
 // Overview of the AI-generated agent: choose a data candidate ("ai" mode) or edit the prompt
@@ -27,6 +32,7 @@ export function AgentSuggestionTab() {
 
     return (
         <div className="grid gap-5">
+            <ExistingAgentConflictAlert />
             {mode === "prompt" ? <PromptEditor /> : <SuggestionPicker />}
 
             <div className="grid gap-2">
@@ -57,6 +63,35 @@ export function AgentSuggestionTab() {
                 </div>
             </div>
         </div>
+    );
+}
+
+function ExistingAgentConflictAlert() {
+    const { control } = useFormContext<AgentFormData>();
+    const name = useWatch({ control, name: "review.name" });
+    const identifier = useWatch({ control, name: "review.identifier" });
+    const existingAgents = useExistingAgents();
+
+    const conflicts = findExistingAgentConflicts({ name, identifier }, existingAgents);
+
+    if (conflicts.length === 0) {
+        return null;
+    }
+
+    return (
+        <Alert variant="destructive">
+            <CircleAlert />
+            <AlertTitle>
+                This agent already exists. Rename it in the &quot;Agent configuration&quot; tab before saving.
+            </AlertTitle>
+            <AlertDescription>
+                <ul className="grid gap-1">
+                    {conflicts.map((conflict) => (
+                        <li key={conflict.field}>{conflict.message}</li>
+                    ))}
+                </ul>
+            </AlertDescription>
+        </Alert>
     );
 }
 

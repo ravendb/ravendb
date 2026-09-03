@@ -1,10 +1,15 @@
 import type { ReactNode } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { SparklesIcon } from "lucide-react";
+import { RefreshCw, SparklesIcon } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/shadcn/ui/alert";
+import { Button } from "@/components/shadcn/ui/button";
+import { InputGroupAddon } from "@/components/shadcn/ui/input-group";
 import { FormInput } from "@/components/form/form-input";
 import { FormTextarea } from "@/components/form/form-textarea";
-import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
+import {
+    toAgentIdentifier,
+    type AgentFormData,
+} from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
 import { AgentActionsSection } from "@/pages/setup/add-capability-wizard/steps/review/agent-actions-section";
 import { AgentParametersSection } from "@/pages/setup/add-capability-wizard/steps/review/agent-parameters-section";
 import { AgentQueryToolsSection } from "@/pages/setup/add-capability-wizard/steps/review/agent-query-tools-section";
@@ -15,12 +20,21 @@ export const SYSTEM_PROMPT_PLACEHOLDER =
     "E.g.: You are a customer support assistant for an e-commerce platform, " +
     "capable of answering questions about products and orders.";
 
-export function AgentConfigurationTab() {
-    const { control } = useFormContext<AgentFormData>();
+type AgentConfigurationTabProps = {
+    hasEditedIdentifier: boolean;
+    setHasEditedIdentifier: (hasEdited: boolean) => void;
+};
+
+export function AgentConfigurationTab({ hasEditedIdentifier, setHasEditedIdentifier }: AgentConfigurationTabProps) {
+    const { control, getValues, setValue } = useFormContext<AgentFormData>();
     const mode = useWatch({ control, name: "create.mode" });
     // The AI-made configuration is seeded into the same editable fields as a manual one, so this
     // notice is the only cue that edits diverge from what the AI produced.
     const isAiMade = mode === "ai" || mode === "prompt";
+
+    function setIdentifierFromName(name: string) {
+        setValue("review.identifier", toAgentIdentifier(name), { shouldValidate: true });
+    }
 
     return (
         <div className="grid gap-4">
@@ -44,13 +58,35 @@ export function AgentConfigurationTab() {
                             name="review.name"
                             label="Agent name"
                             placeholder="e.g. Customer Service Agent"
+                            afterChange={(event) => {
+                                if (!hasEditedIdentifier) {
+                                    setIdentifierFromName(event.target.value);
+                                }
+                            }}
                         />
                         <FormInput
                             control={control}
                             name="review.identifier"
-                            label="Identifier (optional)"
+                            label="Identifier"
                             placeholder="e.g. customer-service-agent"
-                            description="A unique identifier for the agent. Generated from the agent name when left empty."
+                            description="A unique identifier for the agent. Permanent once the agent is created."
+                            // The identifier follows the agent name until the operator types their own.
+                            afterChange={() => setHasEditedIdentifier(true)}
+                            addons={
+                                <InputGroupAddon align="inline-end">
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        onClick={() => {
+                                            setIdentifierFromName(getValues("review.name"));
+                                            setHasEditedIdentifier(false);
+                                        }}
+                                    >
+                                        <RefreshCw />
+                                        Regenerate
+                                    </Button>
+                                </InputGroupAddon>
+                            }
                         />
                         <FormTextarea
                             control={control}

@@ -1,4 +1,4 @@
-import { hashKey } from "@tanstack/react-query";
+import { hashKey, type QueryClient, type QueryFilters } from "@tanstack/react-query";
 
 const startedAtByHashedKey = new Map<string, number>();
 
@@ -16,6 +16,14 @@ export function getFetchStartedAt(queryKey: readonly unknown[]): number | undefi
     return startedAtByHashedKey.get(hashKey(queryKey));
 }
 
-export function clearFetchStartedAt(queryKey: readonly unknown[]): void {
+function clearFetchStartedAt(queryKey: readonly unknown[]): void {
     startedAtByHashedKey.delete(hashKey(queryKey));
+}
+
+export function dropQueries(queryClient: QueryClient, filters: QueryFilters): void {
+    for (const query of queryClient.getQueryCache().findAll(filters)) {
+        clearFetchStartedAt(query.queryKey);
+    }
+
+    queryClient.removeQueries(filters);
 }

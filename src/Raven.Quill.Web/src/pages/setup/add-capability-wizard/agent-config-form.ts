@@ -6,12 +6,13 @@ import type {
     AiAgentToolQuery,
     WebhookBinding,
 } from "@/api/generated/server-api";
-import type {
-    AgentActionFormData,
-    AgentConfigurationFormData,
-    AgentFormData,
-    AgentParameterFormData,
-    AgentQueryToolFormData,
+import {
+    toAgentIdentifier,
+    type AgentActionFormData,
+    type AgentConfigurationFormData,
+    type AgentFormData,
+    type AgentParameterFormData,
+    type AgentQueryToolFormData,
 } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
 
 // Mapping between the wizard's editable agent configuration (form values) and the
@@ -142,7 +143,7 @@ export function suggestionToAgentConfiguration(
 
     return {
         name: suggestion.name ?? "",
-        identifier: suggestion.identifier ?? "",
+        identifier: suggestion.identifier ?? toAgentIdentifier(suggestion.name ?? ""),
         systemPrompt: suggestion.systemPrompt ?? "",
         // The response shape is not editable while the editor is hidden, so any suggested or
         // stored shape is replaced with the fixed one.
@@ -182,7 +183,7 @@ export function buildAgentConfigurationPayload(
 
     return {
         name: config.name.trim(),
-        identifier: config.identifier.trim() || null,
+        identifier: config.identifier.trim(),
         connectionStringName: values.connection.connectionStringName,
         systemPrompt: config.systemPrompt.trim(),
         sampleObject: config.sampleObject.trim() || null,
