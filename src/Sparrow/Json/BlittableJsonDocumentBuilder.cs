@@ -25,6 +25,7 @@ namespace Sparrow.Json
         // (WriteNone vs. WriteFull, ObjectJsonParser vs. UnmanagedJsonParser).
         // Instead, we decide once in the constructor or Renew(...) and store that strategy here.
         private Func<bool> _readInternalFunc;
+        private UsageMode _readInternalFuncMode = (UsageMode)(-1);
 
         private readonly BlittableWriter<UnmanagedWriteBuffer> _writer;
         private readonly JsonParserState _state;
@@ -120,7 +121,11 @@ namespace Sparrow.Json
             // Renew is now also responsible for re-binding the read function
             // if the UsageMode changes. This resets parsing state and ensures
             // we're using the correct specialized read routine going forward.
-            _readInternalFunc = GetReadInternalFunction(_reader, mode);
+            if (_readInternalFunc == null || _readInternalFuncMode != mode)
+            {
+                _readInternalFunc = GetReadInternalFunction(_reader, mode);
+                _readInternalFuncMode = mode;
+            }
 
             ClearState();
 
