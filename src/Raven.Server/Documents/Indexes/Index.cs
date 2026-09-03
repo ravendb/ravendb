@@ -4657,11 +4657,10 @@ namespace Raven.Server.Documents.Indexes
                 return CanContinueBatchResult.False;
             }
 
-            var cpuCreditsAlertFlag = DocumentDatabase.ServerStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised;
-            if (cpuCreditsAlertFlag.IsRaised())
+            if (DocumentDatabase.ServerStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised())
             {
                 HandleStoppedBatchesConcurrently(parameters.Stats, parameters.Count,
-                   canContinue: () => cpuCreditsAlertFlag.IsRaised() == false,
+                   canContinue: () => DocumentDatabase.ServerStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised() == false,
                    reason: "CPU credits balance is low", parameters.WorkType);
 
                 parameters.Stats.RecordBatchCompletedReason(parameters.WorkType, $"The batch was stopped after processing {parameters.Count:#,#;;0} documents because the CPU credits balance is almost completely used");
