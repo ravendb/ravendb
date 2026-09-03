@@ -1,0 +1,102 @@
+import "./NavigationCard.scss";
+import Card from "react-bootstrap/Card";
+import React, { ReactNode } from "react";
+import { Icon } from "components/common/Icon";
+import IconName from "typings/server/icons";
+import classNames from "classnames";
+import { useEventsCollector } from "components/hooks/useEventsCollector";
+import LicenseRestrictedBadge, { LicenseBadgeText } from "components/common/LicenseRestrictedBadge";
+import { useAppSelector } from "components/store";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
+import { AccessPopover } from "components/common/AccessPopover";
+
+// Each variant must have matching styles registered via the navigation-card-variant
+// mixin (navigationCardVariants.scss) in the stylesheet of the page using the card.
+interface NavigationCardBaseProps<TVariant extends string = string> {
+    title: string;
+    description: string;
+    iconName: IconName;
+    variant: TVariant;
+    link: string;
+    target: string;
+    counterBadge?: ReactNode;
+    isShardingSupported?: boolean;
+    accessRequired: accessLevel;
+    customDisabledReason?: ReactNode;
+    compact?: boolean;
+}
+
+// A shown badge always needs its tier: rendering LicenseRestrictedBadge without one produces an
+// unstyled badge with an empty tooltip, so the two props travel together.
+export type NavigationCardLicenseProps =
+    | { showLicenseBadge: true; licenseBadge: LicenseBadgeText }
+    | { showLicenseBadge?: false; licenseBadge?: LicenseBadgeText };
+
+export type NavigationCardProps<TVariant extends string = string> = NavigationCardBaseProps<TVariant> &
+    NavigationCardLicenseProps;
+
+export default function NavigationCard({
+    title,
+    description,
+    link,
+    iconName,
+    target,
+    variant,
+    licenseBadge,
+    showLicenseBadge,
+    counterBadge,
+    isShardingSupported,
+    accessRequired,
+    customDisabledReason,
+    compact,
+}: NavigationCardProps) {
+    const { reportEvent } = useEventsCollector();
+    const isSharded = useAppSelector(databaseSelectors.activeDatabase)?.isSharded;
+    const canHandleOperation = useAppSelector(accessManagerSelectors.getCanHandleOperation)(accessRequired);
+
+    const isShardingNotSupported = !isShardingSupported && isSharded;
+    const isDisabled = isShardingNotSupported || !canHandleOperation || !!customDisabledReason;
+
+    return (
+        <AccessPopover
+            className="w-100 h-100"
+            accessRequired={accessRequired}
+            conditions={[
+                {
+                    isActive: isShardingNotSupported,
+                    message: "Sharding is not supported for this task",
+                },
+                {
+                    isActive: !!customDisabledReason,
+                    message: customDisabledReason,
+                },
+            ]}
+        >
+            <a
+                href={isDisabled ? undefined : link}
+                onClick={() => reportEvent(target, "new")}
+                className={classNames("card no-decor w-100 h-100 navigation-card", `variant-${variant}`, {
+                    "item-disabled": !!isDisabled,
+                    compact,
+                })}
+            >
+                <Card.Body className={compact ? "d-flex align-items-center" : "d-flex flex-column gap-1"}>
+                    <div className="d-flex align-items-center">
+                        <Icon icon={iconName} className="task-icon" margin="me-2" />
+                        <h4 className="mb-0">{title}</h4>
+                        {counterBadge}
+                    </div>
+                    {!compact && <div className="small">{description}</div>}
+                </Card.Body>
+
+                {showLicenseBadge && licenseBadge && (
+                    <LicenseRestrictedBadge
+                        className="position-absolute top-0 end-0 m-2"
+                        licenseRequired={licenseBadge}
+                    />
+                )}
+            </a>
+        </AccessPopover>
+    );
+}

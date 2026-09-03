@@ -703,8 +703,8 @@ function FormToggle<TFieldValues extends FieldValues, TName extends FieldPath<TF
                     isInvalid={invalid}
                     onBlur={onBlur}
                     color="primary"
-                    disabled={formState.isSubmitting}
                     {...rest}
+                    disabled={formState.isSubmitting || rest.disabled}
                 />
             </div>
         </div>
@@ -965,12 +965,13 @@ export function FormErrorIcon<TFieldValues extends FieldValues>({
     iconClassName,
 }: FormErrorIconProps<TFieldValues>) {
     const { hasErrors, message } = useErrorMessage({ control, paths });
+    const { submitCount } = useFormState({ control });
 
     useEffect(() => {
         if (hasErrors) {
             onError?.();
         }
-    }, [hasErrors]);
+    }, [hasErrors, submitCount]);
 
     if (!hasErrors) {
         return null;

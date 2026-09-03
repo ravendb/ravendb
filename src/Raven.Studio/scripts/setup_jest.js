@@ -104,6 +104,12 @@ Object.defineProperty(HTMLElement.prototype, "scrollTo", {
     value: jest.fn(),
 });
 
+// jsdom implements neither of these
+Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+    configurable: true,
+    value: jest.fn(),
+});
+
 if (!window.ResizeObserver) {
   window.ResizeObserver = ROP.ResizeObserver;
 }
