@@ -23,9 +23,6 @@ namespace Raven.Server.Commercial.WriteUsageMetering
 
         public long LastEtag { get; }
 
-        /// <summary>
-        /// Document count per system ('@'-prefixed) collection of this member.
-        /// </summary>
         public Dictionary<string, long> SystemCollections { get; }
 
         public DynamicJsonValue ToJson()
@@ -55,13 +52,6 @@ namespace Raven.Server.Commercial.WriteUsageMetering
 
         public string ChangeVector { get; }
 
-        /// <summary>
-        /// One entry per member of the database group, pairing the member's database id with its last etag
-        /// and the document count of each of its system ('@'-prefixed) collections. Reported unmerged - the
-        /// backend receives every member's own values and aggregates them itself. Members that haven't
-        /// reported yet, or that report without a database id (unloaded, faulted, or a sharded orchestrator),
-        /// are not included.
-        /// </summary>
         public IReadOnlyList<WriteUsageNodeSnapshot> Nodes { get; }
 
         public DynamicJsonValue ToJson()
