@@ -676,7 +676,7 @@ public partial class Hnsw
                 _edgeIndexSnapshot.Clear();
                 _edgeIndexSnapshot.AddRange(edgesIndexes.ToSpan());
 
-                parent._forTestingPurposes?.OnLltPreparedEdges(currentNodeIndex, level, ref n, ref edgesIndexes);
+                parent._forTestingPurposes?.OnLltPreparedEdges(_searchState, currentNodeIndex, level);
 
                 return true; // always dispatch; worker decides via _indexes.Count after fill
             }
@@ -706,7 +706,7 @@ public partial class Hnsw
                     _vectors.Add(n.GetVectorUnmanagedSpan(_searchState));
                 }
 
-                parent._forTestingPurposes?.OnWorkerCapturedEdgeListRef(currentNodeIndex, level);
+                parent._forTestingPurposes?.OnWorkerAboutToConsumeEdges(currentNodeIndex, level);
                 // Read the per-task snapshot captured on the LLT thread in PrepareEdgesOnLLT, NOT the
                 // shared EdgesIndexesPerLevel native buffer: that buffer's storage can be freed and
                 // reallocated by the LLT thread in a later round while this worker is still running
