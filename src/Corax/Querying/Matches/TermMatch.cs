@@ -24,6 +24,8 @@ namespace Corax.Querying.Matches
         private PostingList.Iterator _set;
         private FastPForBufferedReader _containerReader;
         public bool IsBoosting => _scoreFunc != null;
+        // Scoring reads what Fill saved only in the stored mode; bigger posting lists are re-read at score time.
+        internal bool ScoringNeedsFill => _scoreFunc != null && _bm25Relevance is { IsStored: true };
         public long Count => _totalResults;
 
 #if DEBUG
