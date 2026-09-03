@@ -174,7 +174,9 @@ public partial class ShardedDatabaseContext
             {
             }
 
-            public static ShardedSubscriptionWorkerInfo Create(string shard, ShardedSubscriptionWorker w)
+            // disposeTimeUtc is when the worker was disposed, or null for a worker that is still running. It has no
+            // default on purpose: filling it in for a live worker reports a dispose that never happened.
+            public static ShardedSubscriptionWorkerInfo Create(string shard, ShardedSubscriptionWorker w, DateTime? disposeTimeUtc)
             {
                 string address = null;
                 try
@@ -193,7 +195,7 @@ public partial class ShardedDatabaseContext
                 return new ShardedSubscriptionWorkerInfo()
                 {
                     Shard = shard,
-                    DisposeTimeUtc = DateTime.UtcNow,
+                    DisposeTimeUtc = disposeTimeUtc,
                     Exception = w.SubscriptionTask.Exception?.ToString(),
                     IsCanceled = w.SubscriptionTask.IsCanceled,
                     IsFaulted = w.SubscriptionTask.IsFaulted,

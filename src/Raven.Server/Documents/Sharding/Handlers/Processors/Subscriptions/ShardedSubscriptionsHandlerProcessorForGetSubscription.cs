@@ -69,7 +69,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
             if (subscriptionList == null)
                 return new DynamicJsonArray();
 
-            return new DynamicJsonArray(subscriptionList.Select(w => ShardedSubscriptionWorkerInfo.Create(w.Key, w.Value).ToJson()));
+            return new DynamicJsonArray(subscriptionList.Select(w => ShardedSubscriptionWorkerInfo.Create(w.Key, w.Value, disposeTimeUtc: null).ToJson()));
         }
     }
 }
