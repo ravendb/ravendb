@@ -17,15 +17,17 @@ namespace Voron.Data.BTrees
             _llt.RegisterDisposable(DecompressionsCache);
         }
 
-        private bool TryCompressPageNodes(Slice key, int len, TreePage page)
+        private bool TryCompressPageNodes(Slice key, int len, TreePage page, out DecompressedLeafPage decompressedPageToSplit)
         {
+            decompressedPageToSplit = null;
+
             var alreadyCompressed = page.IsCompressed;
             if (alreadyCompressed && page.NumberOfEntries == 0) // there isn't any entry what we could compress
                 return false;
 
             var pageToCompress = page;
 
-            if (alreadyCompressed) 
+            if (alreadyCompressed)
                 pageToCompress = DecompressPage(page, usage: DecompressionUsage.Write, skipCache: false); // no need to dispose, it's going to be cached anyway
 
             using (LeafPageCompressor.TryGetCompressedTempPage(_llt, pageToCompress, out CompressionResult result, defrag: alreadyCompressed == false))
@@ -40,9 +42,8 @@ namespace Voron.Data.BTrees
 
                     if (alreadyCompressed)
                     {
-                        // we've just put a decompressed page to the cache however we aren't going to compress it
-                        // need to invalidate it from the cache
-                        DecompressionsCache.Invalidate(page.PageNumber, DecompressionUsage.Write);
+                        // the caller must split the page using this decompressed version, see DecompressPage (RavenDB-27347)
+                        decompressedPageToSplit = (DecompressedLeafPage)pageToCompress;
                     }
 
                     return false;
@@ -57,6 +58,9 @@ namespace Voron.Data.BTrees
             }
         }
 
+        // Write usage applies the compression tombstones and updates to the tree state (NumberOfEntries, freed overflow pages). The caller
+        // must rewrite the original page from the result, otherwise the next Write decompression applies them again (RavenDB-27347).
+        // A cached Write decompression is reusable only while the uncompressed section of the original page stayed empty since caching.
         public DecompressedLeafPage DecompressPage(TreePage p, DecompressionUsage usage, bool skipCache)
         {
             var input = new DecompressionInput(p.CompressionHeader, p);
