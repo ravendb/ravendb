@@ -1097,12 +1097,24 @@ export interface components {
         };
         AiConnectionStringDeleteConflictResponse: {
             error: string;
-            referencingAgentIds: string[];
+            usedBy: components["schemas"]["AiConnectionStringUsage"][];
+        };
+        AiConnectionStringResponse: {
+            connectionString: components["schemas"]["AiConnectionString"];
+            usedBy: components["schemas"]["AiConnectionStringUsage"][];
         };
         AiConnectionStringTestResponse: {
             success: boolean;
             error?: null | string;
         };
+        AiConnectionStringUsage: {
+            kind: components["schemas"]["AiConnectionStringUsageKind"];
+            identifier: null | string;
+            name: null | string;
+            databaseName: null | string;
+        };
+        /** @enum {unknown} */
+        AiConnectionStringUsageKind: "AiAgent" | "GenAi" | "EmbeddingsGeneration";
         /** @enum {unknown} */
         AiConnectorType: "None" | "OpenAi" | "AzureOpenAi" | "Ollama" | "Embedded" | "Google" | "HuggingFace" | "MistralAi" | "Vertex";
         AiConversationMessage: {
@@ -3334,7 +3346,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AiConnectionString"][];
+                    "application/json": components["schemas"]["AiConnectionStringResponse"][];
                 };
             };
             /** @description Not Found */
@@ -3440,7 +3452,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AiConnectionString"];
+                    "application/json": components["schemas"]["AiConnectionStringResponse"];
                 };
             };
             /** @description Not Found */
@@ -4417,7 +4429,10 @@ export type AiAgentToolSubAgent = components["schemas"]["AiAgentToolSubAgent"];
 export type AiConnectionString = components["schemas"]["AiConnectionString"];
 export type AiConnectionStringCreatedResponse = components["schemas"]["AiConnectionStringCreatedResponse"];
 export type AiConnectionStringDeleteConflictResponse = components["schemas"]["AiConnectionStringDeleteConflictResponse"];
+export type AiConnectionStringResponse = components["schemas"]["AiConnectionStringResponse"];
 export type AiConnectionStringTestResponse = components["schemas"]["AiConnectionStringTestResponse"];
+export type AiConnectionStringUsage = components["schemas"]["AiConnectionStringUsage"];
+export type AiConnectionStringUsageKind = components["schemas"]["AiConnectionStringUsageKind"];
 export type AiConnectorType = components["schemas"]["AiConnectorType"];
 export type AiConversationMessage = components["schemas"]["AiConversationMessage"];
 export type AiHelperStatus = components["schemas"]["AiHelperStatus"];
@@ -4673,8 +4688,8 @@ export function createServerApi(client: ApiClient) {
         aiConnectionStrings: {
             create: (request: AiConnectionString) => client.post<AiConnectionStringCreatedResponse, ApiErrorResponse>(API_ENDPOINTS.aiConnectionStrings.create, request),
             delete: (name: string) => client.delete<void, ApiErrorResponse | AiConnectionStringDeleteConflictResponse>(API_ENDPOINTS.aiConnectionStrings.delete(name)),
-            detail: (name: string) => client.get<AiConnectionString, ApiErrorResponse>(API_ENDPOINTS.aiConnectionStrings.detail(name)),
-            list: () => client.get<AiConnectionString[], ApiErrorResponse>(API_ENDPOINTS.aiConnectionStrings.list),
+            detail: (name: string) => client.get<AiConnectionStringResponse, ApiErrorResponse>(API_ENDPOINTS.aiConnectionStrings.detail(name)),
+            list: () => client.get<AiConnectionStringResponse[], ApiErrorResponse>(API_ENDPOINTS.aiConnectionStrings.list),
             test: (request: AiConnectionString) => client.post<AiConnectionStringTestResponse, ApiErrorResponse>(API_ENDPOINTS.aiConnectionStrings.test, request),
         },
         aiModels: {

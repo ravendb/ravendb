@@ -6,14 +6,16 @@ import { ApiState } from "@/components/data/api-state";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
 import { TableSkeletonRows } from "@/components/table/table-skeleton";
 import { AddAiConnectionString } from "@/components/ai-connection-string/add-ai-connection-string";
 import { EditAiConnectionString } from "@/components/ai-connection-string/edit-ai-connection-string";
 import { DeleteAiConnectionStringDialog } from "@/components/ai-connection-string/delete-ai-connection-string-dialog";
+import { AiConnectionStringUsageBadge } from "@/components/ai-connection-string/ai-connection-string-usage";
 import { getProviderLabel, MODEL_TYPE_LABELS } from "@/components/ai-connection-string/ai-connection-string-utils";
 import { Heading, Text } from "@/components/typography";
 
-const CONNECTION_STRINGS_COLUMN_COUNT = 4;
+const CONNECTION_STRINGS_COLUMN_COUNT = 5;
 
 export function DashboardConnectionStrings() {
     const connectionStringsQuery = useQuery(api.queries.aiConnectionStrings.list());
@@ -67,15 +69,18 @@ export function DashboardConnectionStrings() {
                             </TableCell>
                         </TableRow>
                     ) : (
-                        items.map((item) => {
-                            const name = item.name ?? "";
-                            const modelType = item.modelType ?? "Chat";
+                        items.map(({ connectionString, usedBy }) => {
+                            const name = connectionString.name ?? "";
+                            const modelType = connectionString.modelType ?? "Chat";
                             return (
                                 <TableRow key={name}>
                                     <TableCell className="font-medium">{name}</TableCell>
-                                    <TableCell>{getProviderLabel(item)}</TableCell>
+                                    <TableCell>{getProviderLabel(connectionString)}</TableCell>
                                     <TableCell>
                                         <Badge variant="secondary">{MODEL_TYPE_LABELS[modelType]}</Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                        <AiConnectionStringUsageBadge usedBy={usedBy} />
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex justify-end gap-1">
@@ -89,18 +94,7 @@ export function DashboardConnectionStrings() {
                                                     </Button>
                                                 }
                                             />
-                                            <DeleteAiConnectionStringDialog
-                                                name={name}
-                                                trigger={
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon-sm"
-                                                        aria-label={`Delete ${name}`}
-                                                    >
-                                                        <Trash2 className="size-3.5" aria-hidden="true" />
-                                                    </Button>
-                                                }
-                                            />
+                                            <DeleteConnectionStringAction name={name} isUsed={usedBy.length > 0} />
                                         </div>
                                     </TableCell>
                                 </TableRow>
@@ -113,22 +107,64 @@ export function DashboardConnectionStrings() {
     );
 }
 
+type DeleteConnectionStringActionProps = {
+    name: string;
+    isUsed: boolean;
+};
+
+function DeleteConnectionStringAction({ name, isUsed }: DeleteConnectionStringActionProps) {
+    if (!isUsed) {
+        return (
+            <DeleteAiConnectionStringDialog
+                name={name}
+                trigger={
+                    <Button variant="ghost" size="icon-sm" aria-label={`Delete ${name}`}>
+                        <Trash2 className="size-3.5" aria-hidden="true" />
+                    </Button>
+                }
+            />
+        );
+    }
+
+    return (
+        <Tooltip>
+            {/* aria-disabled, not disabled, so the button stays focusable and its tooltip
+                reaches keyboard and screen reader users as the button's description. */}
+            <TooltipTrigger asChild>
+                <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={`Delete ${name}`}
+                    aria-disabled
+                    className="aria-disabled:opacity-50 aria-disabled:hover:bg-transparent"
+                >
+                    <Trash2 className="size-3.5" aria-hidden="true" />
+                </Button>
+            </TooltipTrigger>
+            <TooltipContent>Can’t be deleted while in use</TooltipContent>
+        </Tooltip>
+    );
+}
+
 function ConnectionStringsTableFrame({ children }: { children: ReactNode }) {
     return (
-        <div className="overflow-hidden rounded-lg border">
-            <Table>
-                <TableHeader>
-                    <TableRow className="hover:bg-transparent">
-                        <TableHead className="text-xs font-medium text-muted-foreground">Name</TableHead>
-                        <TableHead className="text-xs font-medium text-muted-foreground">Provider</TableHead>
-                        <TableHead className="text-xs font-medium text-muted-foreground">Model type</TableHead>
-                        <TableHead className="w-0 text-right text-xs font-medium text-muted-foreground">
-                            <span className="sr-only">Actions</span>
-                        </TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>{children}</TableBody>
-            </Table>
-        </div>
+        <TooltipProvider>
+            <div className="overflow-hidden rounded-lg border">
+                <Table>
+                    <TableHeader>
+                        <TableRow className="hover:bg-transparent">
+                            <TableHead className="text-xs font-medium text-muted-foreground">Name</TableHead>
+                            <TableHead className="text-xs font-medium text-muted-foreground">Provider</TableHead>
+                            <TableHead className="text-xs font-medium text-muted-foreground">Model type</TableHead>
+                            <TableHead className="text-xs font-medium text-muted-foreground">Used by</TableHead>
+                            <TableHead className="w-0 text-right text-xs font-medium text-muted-foreground">
+                                <span className="sr-only">Actions</span>
+                            </TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>{children}</TableBody>
+                </Table>
+            </div>
+        </TooltipProvider>
     );
 }
