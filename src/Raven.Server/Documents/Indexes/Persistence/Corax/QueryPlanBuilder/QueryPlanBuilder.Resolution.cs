@@ -166,6 +166,8 @@ internal static partial class QueryPlanBuilder
             {
                 var (low, lowType) = ResolveBindingScalar(bindings[BindingIndex.BetweenLow], slotBindings, queryParameters, builderParameters);
                 var (high, highType) = ResolveBindingScalar(bindings[BindingIndex.BetweenHigh], slotBindings, queryParameters, builderParameters);
+                (low, lowType) = ToTicksIfFieldHasTimeValues(exec, low, lowType, builderParameters);
+                (high, highType) = ToTicksIfFieldHasTimeValues(exec, high, highType, builderParameters);
                 bool lowIsSentinel = low is RavenConstants.Documents.Querying.Terms.LeftNullValueOfBetweenQuery;
                 bool highIsSentinel = high is RavenConstants.Documents.Querying.Terms.RightNullValueOfBetweenQuery;
                 switch (lowIsSentinel, highIsSentinel)
@@ -203,6 +205,7 @@ internal static partial class QueryPlanBuilder
                 break;
             default: // Simple clause (Equals, Range, Search, Regex, etc.): single value at Bindings[0]
                 var (value, valueType) = ResolveBindingScalar(bindings[BindingIndex.Value], slotBindings, queryParameters, builderParameters);
+                (value, valueType) = ToTicksIfFieldHasTimeValues(exec, value, valueType, builderParameters);
                 if (value == null && exec.Clause.ClauseType is ClauseType.StartsWith or ClauseType.EndsWith or ClauseType.Search or ClauseType.Regex)
                 {
                     throw new InvalidQueryException(  // reject null (matches Lucene behavior).
@@ -232,6 +235,29 @@ internal static partial class QueryPlanBuilder
         exec.PackedParamValue = new PackedParam(packedType, startIdx);
         exec.InTermCount = written;
         exec.HasNullTerm = hasNullTerm;
+    }
+
+    // A date-shaped value becomes ticks only when the field actually holds time values - the same check Corax 1.0
+    // does before converting. Without it a string field is searched with a long term and matches nothing.
+    private static (object Value, ParamValueType Type) ToTicksIfFieldHasTimeValues(ClauseExecution exec, object value, ParamValueType type,
+        QueryBuilderParameters builderParameters)
+    {
+        if (type != ParamValueType.String || value == null || builderParameters == null)
+            return (value, type);
+
+        if (exec.Clause.ClauseType is not (ClauseType.Equals or ClauseType.NotEquals
+            or ClauseType.GreaterThan or ClauseType.GreaterThanOrEqual
+            or ClauseType.LessThan or ClauseType.LessThanOrEqual
+            or ClauseType.Between or ClauseType.In or ClauseType.AllIn))
+            return (value, type);
+
+        if (exec.Clause.FieldName is not { } fieldName
+            || builderParameters.Index is not { } index
+            || index.IndexFieldsPersistence.HasTimeValues(fieldName) == false
+            || QueryBuilderHelper.TryGetTime(index, value, out long ticks) == false)
+            return (value, type);
+
+        return (ticks, ParamValueType.Long);
     }
 
     private static (object Value, ParamValueType Type) ResolveBindingScalar(ParameterBinding binding, ParameterBinding[] slotBindings, BlittableJsonReaderObject queryParameters, QueryBuilderParameters builderParameters)
