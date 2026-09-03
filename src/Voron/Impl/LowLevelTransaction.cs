@@ -10,7 +10,6 @@ using CollectionsMarshal = System.Runtime.InteropServices.CollectionsMarshal;
 using System.Threading;
 using System.Threading.Tasks;
 using Sparrow;
-using Sparrow.Collections;
 using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Server.Collections;

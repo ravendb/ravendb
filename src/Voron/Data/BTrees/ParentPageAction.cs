@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Voron.Global;
@@ -6,27 +6,23 @@ using Voron.Impl;
 
 namespace Voron.Data.BTrees
 {
-    public sealed unsafe class ParentPageAction
+    public unsafe ref struct ParentPageAction
     {
         private readonly TreePage _currentPage;
-        private TreePage _parentPage;
+        private readonly ref TreePage _parentPage;
         private readonly Tree _tree;
-        private readonly TreeCursor _cursor;
+        private readonly ref TreeCursor _cursor;
         private readonly LowLevelTransaction _tx;
 
-        public ParentPageAction(TreePage parentPage, TreePage currentPage, Tree tree, TreeCursor cursor, LowLevelTransaction tx)
+        public ParentPageAction(ref TreePage parentPage, TreePage currentPage, Tree tree, ref TreeCursor cursor, LowLevelTransaction tx)
         {
-            _parentPage = parentPage;
+            _parentPage = ref parentPage;
             _currentPage = currentPage;
             _tree = tree;
-            _cursor = cursor;
+            _cursor = ref cursor;
             _tx = tx;
         }
 
-        /// <summary>
-        /// The parent page as this action left it. AddSeparator can move the page and fix up its
-        /// search position, and TreePage is a value type, so the caller has to read it back.
-        /// </summary>
         public TreePage ParentPage => _parentPage;
 
         public TreePage ParentOfAddedPageRef { get; private set; }
@@ -45,11 +41,9 @@ namespace Voron.Data.BTrees
                 // the sequential-insert optimization that appends without a key search - so it must reflect
                 // the position of this separator instead of a leftover from the descent or another fix-up
                 _parentPage.NodePositionFor(_tx, separator);
-                // the splitter works off the cursor's copy of this page, so the position has to be
-                // published there before it runs
                 _cursor.SyncTopPage(_parentPage);
 
-                var pageSplitter = new TreePageSplitter(_tx, _tree, separator, -1, pageRefNumber, TreeNodeFlags.PageRef, _cursor);
+                var pageSplitter = new TreePageSplitter(_tx, _tree, separator, -1, pageRefNumber, TreeNodeFlags.PageRef, ref _cursor);
 
                 var posToInsert = pageSplitter.Execute();
 
@@ -81,8 +75,11 @@ namespace Voron.Data.BTrees
 
                 Debug.Assert(_cursor.CurrentPage.GetNode(_cursor.CurrentPage.LastSearchPosition)->PageNumber == _currentPage.PageNumber, 
                             "The parent page is not referencing a page which is being split");
-                Debug.Assert(Enumerable.Range(0, ParentOfAddedPageRef.NumberOfEntries).Any(i => ParentOfAddedPageRef.GetNode(i)->PageNumber == pageRefNumber),
+#if DEBUG
+                var parentOfAddedPageRef = ParentOfAddedPageRef;
+                Debug.Assert(Enumerable.Range(0, parentOfAddedPageRef.NumberOfEntries).Any(i => parentOfAddedPageRef.GetNode(i)->PageNumber == pageRefNumber),
                             "The parent page of a page reference isn't referencing it");
+#endif
 
                 return posToInsert;
             }
