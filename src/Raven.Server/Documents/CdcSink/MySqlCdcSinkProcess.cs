@@ -43,7 +43,7 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
     private bool _isMariaDb;
     private string _serverGtid; // Current GTID set fetched from server during startup
 
-    private enum MySqlColumnCategory { Other, Text, Decimal, Json, Boolean }
+    private enum MySqlColumnCategory { Other, Text, Decimal, Json, Boolean, Uuid }
 
     private readonly record struct ColumnInfo(string Name, MySqlColumnCategory Category, string DataType);
 
@@ -127,6 +127,15 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
         ["set"]        = 254, // MYSQL_TYPE_STRING (encoded as string)
         ["json"]       = 245, // MYSQL_TYPE_JSON
         ["geometry"]   = 255, // MYSQL_TYPE_GEOMETRY
+        ["point"]              = 255,
+        ["linestring"]         = 255,
+        ["polygon"]            = 255,
+        ["multipoint"]         = 255,
+        ["multilinestring"]    = 255,
+        ["multipolygon"]       = 255,
+        ["geomcollection"]     = 255,
+        ["geometrycollection"] = 255,
+        ["uuid"]               = 254,
     };
 
     internal static byte MapDataTypeToBinlogType(string dataType)
@@ -134,8 +143,6 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
         if (MySqlDataTypeToBinlogType.TryGetValue(dataType, out var binlogType))
             return binlogType;
 
-        // Unknown types are not fatal — we just can't do prefix comparison for this position.
-        // Use 0 as a wildcard that won't match anything, forcing a restart if it matters.
         return 0;
     }
 
@@ -296,6 +303,7 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
                     (_, "tinyint(1)") or (_, "tinyint(1) unsigned") => MySqlColumnCategory.Boolean,
                     ("bit", "bit(1)")                                => MySqlColumnCategory.Boolean,
                     ("json", _)                                      => MySqlColumnCategory.Json,
+                    ("uuid", _)                                      => MySqlColumnCategory.Uuid,
                     ("decimal" or "numeric", _)                      => MySqlColumnCategory.Decimal,
                     ("text" or "tinytext" or "mediumtext" or "longtext"
                         or "char" or "varchar" or "enum" or "set", _) => MySqlColumnCategory.Text,
@@ -319,7 +327,15 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
             var requiredLen = processor.RequiredPrefixLength;
             var expectedPrefix = new byte[requiredLen];
             for (int i = 0; i < requiredLen && i < columnsArray.Length; i++)
-                expectedPrefix[i] = MapDataTypeToBinlogType(columnsArray[i].DataType);
+            {
+                var binlogType = MapDataTypeToBinlogType(columnsArray[i].DataType);
+                if (binlogType == 0)
+                    throw new CdcSinkFaultedException(
+                        $"Column '{columnsArray[i].Name}' in table {tableInfo.Schema}.{tableInfo.TableName} has data type " +
+                        $"'{columnsArray[i].DataType}', which is not supported for binlog streaming. " +
+                        "Remove the column from the CDC Sink mapping, or change its type to a supported one.");
+                expectedPrefix[i] = binlogType;
+            }
 
             var tableKey = (tableInfo.Schema, tableInfo.TableName);
             _resolvedTables[tableKey] = new TableInfo
@@ -771,6 +787,9 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
                     // Use MySqlCdc's JsonParser to convert to a JSON string.
                     byte[] bytes when col.Category is MySqlColumnCategory.Json
                         => MySqlCdc.Providers.MySql.JsonParser.Parse(bytes),
+
+                    byte[] bytes when col.Category is MySqlColumnCategory.Uuid
+                        => new Guid(bytes, bigEndian: true).ToString(),
 
                     // MySQL's binlog uses the same BLOB type codes for TEXT and BLOB columns.
                     // TEXT columns should be UTF-8 decoded; true binary columns pass through.

@@ -1,0 +1,73 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RuntimeFrameworkVersion>10.0.11</RuntimeFrameworkVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>QuillTests</AssemblyName>
+    <PackageId>QuillTests</PackageId>
+    <RootNamespace>QuillTests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
+    <Compile Include="..\..\src\CommonAssemblyInfo.Windows.cs" Link="Properties\CommonAssemblyInfo.Windows.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(OS)' != 'Windows_NT'">
+    <Compile Include="..\..\src\CommonAssemblyInfo.Linux.cs" Link="Properties\CommonAssemblyInfo.Linux.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Raven.Quill\Raven.Quill.csproj" />
+    <ProjectReference Include="..\SlowTests\SlowTests.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      egor-ai.Cluster.Settings.zip is intentionally NOT copied here — it carries a real
+      license + admin cert and is never committed. The E2E test reads it at runtime from
+      the path in APPLIANCE_E2E_SETUP_PACKAGE_PATH.
+    -->
+    <Content Include="E2E\Fixtures\northwind-cdc-config.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!--
+    SqlAwareTestBase.WithNpgSqlDatabase hard-codes the "SlowTests.Data.npgsql.*"
+    resource prefix and reads from GetType().Assembly. Since our test lives in
+    QuillTests, we embed the same fixtures here under the same logical
+    name so the helper finds them. Source files stay single-sourced in SlowTests.
+  -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\SlowTests\Data\npgsql.northwind.create.sql">
+      <LogicalName>SlowTests.Data.npgsql.northwind.create.sql</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\SlowTests\Data\npgsql.northwind.insert.sql">
+      <LogicalName>SlowTests.Data.npgsql.northwind.insert.sql</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\SlowTests\Data\Quill\npgsql.northwind-full.create.zip">
+      <LogicalName>SlowTests.Data.npgsql.northwind-full.create.zip</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\SlowTests\Data\Quill\npgsql.northwind-full.insert.zip">
+      <LogicalName>SlowTests.Data.npgsql.northwind-full.insert.zip</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+</Project>

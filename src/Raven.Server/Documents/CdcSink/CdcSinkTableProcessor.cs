@@ -28,6 +28,8 @@ public class CdcSinkTableProcessor
 
     /// <summary>Source table name.</summary>
     public string Table { get; init; }
+    
+    public string FullName => $"{Schema}.{Table}";
 
     /// <summary>Pre-computed Key + "__on_delete" for the OnDelete dispatch path.</summary>
     public string KeyOnDelete { get; init; }
@@ -176,49 +178,47 @@ public class CdcSinkTableProcessor
 
     public void SetSourceColumnNames(string[] names)
     {
-        if (SourceColumnNames?.Length != names.Length)
-            _valuesPool.Clear();
-
-        SourceColumnNames = names;
-
         // Compute PrimaryKeyIndices
         var pkColumns = IsRoot ? RootConfig.PrimaryKeyColumns : EmbeddedConfig.PrimaryKeyColumns;
-        PrimaryKeyIndices = new int[pkColumns.Count];
+        var primaryKeyIndices = new int[pkColumns.Count];
         for (int i = 0; i < pkColumns.Count; i++)
-            PrimaryKeyIndices[i] = FindColumnIndex(names, pkColumns[i]);
+            primaryKeyIndices[i] = FindColumnIndex(names, pkColumns[i]);
 
         // Compute ColumnMappingIndices (one per non-attachment column)
-        ColumnMappingIndices = new int[Columns.Count - AttachmentColumns.Count];
+        var columnMappingIndices = new int[Columns.Count - AttachmentColumns.Count];
         int mapIdx = 0;
         for (int i = 0; i < Columns.Count; i++)
         {
             if (Columns[i].Type != CdcColumnType.Attachment)
-                ColumnMappingIndices[mapIdx++] = FindColumnIndex(names, Columns[i].Column);
+                columnMappingIndices[mapIdx++] = FindColumnIndex(names, Columns[i].Column);
         }
 
         // Compute AttachmentColumnIndices
-        AttachmentColumnIndices = new int[AttachmentColumns.Count];
+        var attachmentColumnIndices = new int[AttachmentColumns.Count];
         for (int i = 0; i < AttachmentColumns.Count; i++)
-            AttachmentColumnIndices[i] = FindColumnIndex(names, AttachmentColumns[i].Column);
+            attachmentColumnIndices[i] = FindColumnIndex(names, AttachmentColumns[i].Column);
 
         // Compute RootJoinIndices (for embedded tables)
+        int[] rootJoinIndices = null;
         if (RootJoinColumns != null)
         {
-            RootJoinIndices = new int[RootJoinColumns.Count];
+            rootJoinIndices = new int[RootJoinColumns.Count];
             for (int i = 0; i < RootJoinColumns.Count; i++)
-                RootJoinIndices[i] = FindColumnIndex(names, RootJoinColumns[i]);
+                rootJoinIndices[i] = FindColumnIndex(names, RootJoinColumns[i]);
         }
 
         // Compute LinkedTableJoinIndices
+        int[][] linkedTableJoinIndices = null;
         if (LinkedTables is { Count: > 0 })
         {
-            LinkedTableJoinIndices = new int[LinkedTables.Count][];
+            linkedTableJoinIndices = new int[LinkedTables.Count][];
             for (int lt = 0; lt < LinkedTables.Count; lt++)
             {
                 var linked = LinkedTables[lt];
-                LinkedTableJoinIndices[lt] = new int[linked.JoinColumns.Count];
+                var joinIndices = new int[linked.JoinColumns.Count];
                 for (int j = 0; j < linked.JoinColumns.Count; j++)
-                    LinkedTableJoinIndices[lt][j] = FindColumnIndex(names, linked.JoinColumns[j]);
+                    joinIndices[j] = FindColumnIndex(names, linked.JoinColumns[j]);
+                linkedTableJoinIndices[lt] = joinIndices;
             }
         }
 
@@ -226,8 +226,18 @@ public class CdcSinkTableProcessor
         // that must be present in binlog events for all mapped columns to be safely decoded.
         // Used by MySQL CDC for prefix comparison of TableMapEvent column types.
 
-        var maxLinkedIdx = ComputeMaxOrdinal(LinkedTableJoinIndices);
-        var maxColIdx = ComputeMaxOrdinal(PrimaryKeyIndices, ColumnMappingIndices, AttachmentColumnIndices, RootJoinIndices);
+        var maxLinkedIdx = ComputeMaxOrdinal(linkedTableJoinIndices);
+        var maxColIdx = ComputeMaxOrdinal(primaryKeyIndices, columnMappingIndices, attachmentColumnIndices, rootJoinIndices);
+
+        if (SourceColumnNames?.Length != names.Length)
+            _valuesPool.Clear();
+
+        SourceColumnNames = names;
+        PrimaryKeyIndices = primaryKeyIndices;
+        ColumnMappingIndices = columnMappingIndices;
+        AttachmentColumnIndices = attachmentColumnIndices;
+        RootJoinIndices = rootJoinIndices;
+        LinkedTableJoinIndices = linkedTableJoinIndices;
         RequiredPrefixLength = Math.Max(maxLinkedIdx, maxColIdx) + 1;
 
         static int ComputeMaxOrdinal(params ReadOnlySpan<int[]> arrays)

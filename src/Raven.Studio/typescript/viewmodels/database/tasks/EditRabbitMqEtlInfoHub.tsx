@@ -88,5 +88,6 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         community: { value: false },
         professional: { value: false },
         enterprise: { value: true },
+        quill: { value: true },
     },
 ];

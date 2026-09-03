@@ -41,6 +41,10 @@ public class AiConversationMessagesResult : IDynamicJson
     public DateTime LastMessageAt { get; set; }
 
     /// <summary>
+    /// When the conversation was created.
+    /// </summary>
+    public DateTime CreatedAt { get; set; }
+    /// <summary>
     /// Messages in chronological order (oldest first).
     /// </summary>
     public List<AiConversationMessage> Messages { get; set; }
@@ -83,6 +87,7 @@ public class AiConversationMessagesResult : IDynamicJson
             [nameof(Parameters)] = parameters,
             [nameof(TotalUsage)] = TotalUsage?.ToJson(),
             [nameof(LastMessageAt)] = LastMessageAt,
+            [nameof(CreatedAt)] = CreatedAt,
             [nameof(HasMoreMessages)] = HasMoreMessages,
             [nameof(SubConversationIds)] = SubConversationIds != null ? new DynamicJsonArray(SubConversationIds) : null,
             [nameof(Attachments)] = Attachments != null ? new DynamicJsonArray(Attachments) : null,

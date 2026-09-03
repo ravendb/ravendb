@@ -13,6 +13,7 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
+using Raven.Server.Commercial.WriteUsageMetering;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.NotificationCenter;
@@ -97,6 +98,11 @@ namespace Raven.Server.ServerWide.Maintenance
         internal int _clusterTransactionsCleanupBatchSize = PlatformDetails.Is32Bits ? 1 * 1024 : 10 * 1024;
 
         public bool Suspended = false; // don't really care about concurrency here
+
+        // Leader's latest write-usage snapshot, swapped atomically for the sender thread to read.
+        private volatile WriteUsageSnapshot _latestWriteUsageSnapshot;
+        public WriteUsageSnapshot LatestWriteUsageSnapshot => _latestWriteUsageSnapshot;
+
         internal long _iteration;
         private readonly long _term;
         private long _lastIndexCleanupTimeInTicks;
@@ -173,6 +179,8 @@ namespace Raven.Server.ServerWide.Maintenance
             List<DestinationMigrationConfirmCommand> confirmCommands = null;
             List<string> databases;
 
+            var writeUsageSnapshots = new List<WriteUsageApplicationSnapshot>();
+
             using (_contextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
@@ -240,6 +248,22 @@ namespace Raven.Server.ServerWide.Maintenance
                         {
                             var state = new DatabaseObservationState(topology.Name, rawRecord, topology.Topology, clusterTopology, newStats, prevStats, etag, _iteration);
 
+                            // Collect the current write-usage values for this topology (database or shard):
+                            // one entry per topology, carrying the MEMBER change vectors merged into a single
+                            // cluster-wide change vector.
+                            var memberChangeVectors = new List<string>();
+                            foreach (var member in state.DatabaseTopology.Members)
+                            {
+                                var memberReport = state.GetCurrentDatabaseReport(member);
+                                if (memberReport == null)
+                                    continue;
+
+                                memberChangeVectors.Add(ChangeVector.StripMoveTag(memberReport.DatabaseChangeVector, context).AsString());
+                            }
+
+                            var mergedChangeVector = ChangeVectorUtils.MergeVectors(memberChangeVectors);
+                            writeUsageSnapshots.Add(new WriteUsageApplicationSnapshot(state.Name, state.DatabaseTopology.DatabaseTopologyIdBase64, mergedChangeVector));
+
                             try
                             {
                                 mergedState.AddState(state);
@@ -306,6 +330,8 @@ namespace Raven.Server.ServerWide.Maintenance
                     }
                 }
             }
+
+            _latestWriteUsageSnapshot = new WriteUsageSnapshot(writeUsageSnapshots);
 
             if (cleanupIndexes)
             {

@@ -7,9 +7,7 @@ using Raven.Server.Documents.AI;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Json;
 using Raven.Server.Web;
-using Raven.Server.Web.System;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 #pragma warning disable SKEXP0001
 
@@ -26,6 +24,8 @@ internal static class AiIntegrationTestConnectionHelper
         var modelType = requestHandler.GetEnumQueryString<AiModelType>("modelType");
 
         InMemoryLoggerProvider logger = null;
+        var acceptsImageInput = false;
+        var supportsTools = false;
         try
         {
             using (requestHandler.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -95,7 +95,9 @@ internal static class AiIntegrationTestConnectionHelper
                         using (var client = ChatCompletionClient.CreateChatCompletionClient(requestHandler.ServerStore.ContextPool, aiConnectionString))
                         {
                             var schema = ChatCompletionClient.GetSchemaFromSampleObject("{\"answer\":\"the answer to the user's prompt\"}");
-                            await client.TestCompleteAsync("Reply with exact word only: raven", "hi", schema, requestHandler.HttpContext.RequestAborted);
+                            await client.TestCompleteAsync("Reply with exact word only: raven", "hi", schema, cancellationToken);
+                            acceptsImageInput = await client.TestAcceptsImageInputAsync(cancellationToken);
+                            supportsTools = await client.TestSupportsToolsAsync(cancellationToken);
                         }
 
                         break;
@@ -103,32 +105,34 @@ internal static class AiIntegrationTestConnectionHelper
                         throw new ArgumentOutOfRangeException("Invalid model type: " + aiConnectionString.ModelType);
                 }
 
-                var result = new DynamicJsonValue { [nameof(NodeConnectionTestResult.Success)] = true };
+                var result = new AiConnectionTestResult
+                {
+                    Success = true,
+                    AcceptsImageInput = acceptsImageInput,
+                    SupportsTools = supportsTools
+                };
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, requestHandler.ResponseBodyStream()))
                 {
-                    context.Write(writer, result);
+                    context.Write(writer, result.ToJson());
                 }
             }
         }
         catch (Exception e)
         {
-            var result = new DynamicJsonValue
+            var result = new AiConnectionTestResult
             {
-                [nameof(NodeConnectionTestResult.Success)] = false,
-                [nameof(NodeConnectionTestResult.Error)] = e.ToString()
+                Success = false,
+                Error = e.ToString()
             };
 
             if (logger != null)
-            {
-                var logsArray = new DynamicJsonArray(collection: logger.GetLogs());
-                result[nameof(NodeConnectionTestResult.Log)] = logsArray;
-            }
+                result.Log = [..logger.GetLogs()];
 
             using (requestHandler.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, requestHandler.ResponseBodyStream()))
             {
-                context.Write(writer, result);
+                context.Write(writer, result.ToJson());
             }
         }
         finally

@@ -28,7 +28,7 @@ const initialState: LicenseState = {
 const licenseTiers: Record<LicenseType, number> = {
     None: 0,
     Invalid: 0,
-    Reserved: 0,
+    Quill: 0,
     Community: 1,
     Essential: 1,
     Professional: 2,

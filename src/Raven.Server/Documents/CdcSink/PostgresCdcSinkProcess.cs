@@ -1,9 +1,9 @@
 using System;
-using System.Runtime.CompilerServices;
-using System.Data.Common;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Npgsql;
@@ -12,11 +12,11 @@ using Npgsql.Replication.PgOutput;
 using Npgsql.Replication.PgOutput.Messages;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Server.Documents.CdcSink.Schema;
+using Raven.Server.Documents.TasksErrors;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.SqlMigration.NpgSQL;
 using Sparrow.Json;
-using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents.CdcSink;
 
@@ -54,9 +54,12 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     private readonly string _connectionString;
     private readonly string _replicationConnectionString;
     private readonly TimeSpan _replicationTimeout;
-    private readonly NpgsqlDataSource _dataSource;
-    private string _publicationName;
-    private string _slotName;
+    protected readonly NpgsqlDataSource _dataSource;
+    protected string _publicationName;
+    protected string _slotName;
+
+    protected bool _createdPublication;
+    protected bool _createdSlot;
 
     private uint _vectorOid = uint.MaxValue; // pgvector extension OID, resolved at setup time. MaxValue = not installed.
 
@@ -96,25 +99,30 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         _dataSource = dataSourceBuilder.Build();
     }
 
-    public override void Dispose()
+    private async ValueTask DisposeCoreAsync()
     {
-        base.Dispose();
-
-        // Ensure the replication connection is closed even if the async iterator
-        // didn't dispose cleanly (e.g., due to sync-over-async in Stop()).
-        // Without this, the WAL sender may keep the slot active, preventing
-        // database drops in test scenarios.
         try
         {
-            _replicationConn?.DisposeAsync().AsTask().Wait(TimeSpan.FromSeconds(5));
+            await base.DisposeAsync();
         }
         catch
         {
-            // best effort — the connection may already be disposed by the iterator
+            // don't throw yet
         }
 
-        _dataSource.Dispose();
+        if (_replicationConn != null)
+        {
+            await ExceptionAggregator.ExecuteAsync(_replicationConn.DisposeAsync());
+        }
+
+        await ExceptionAggregator.ExecuteAsync(_dataSource.DisposeAsync());
+
+        ExceptionAggregator.ThrowIfNeeded();
     }
+
+    public override ValueTask DisposeAsync() => DisposeCoreAsync();
+
+    public override void Dispose() => DisposeCoreAsync().AsTask().Wait(TimeSpan.FromSeconds(5));
 
     protected override async Task RunInternalAsync(CancellationToken ct)
     {
@@ -173,6 +181,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                 await using var createCmd = new NpgsqlCommand(
                     $"CREATE PUBLICATION {quotedPubName} FOR TABLE {quotedTableList}", conn);
                 await createCmd.ExecuteNonQueryAsync(ct);
+                _createdPublication = true;
             }
             catch (PostgresException ex) when (ex.SqlState == InsufficientPrivilegeSqlState)
             {
@@ -218,6 +227,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                         $"SELECT pg_create_logical_replication_slot(@slotName, 'pgoutput')", conn);
                     createCmd.Parameters.AddWithValue("slotName", _slotName);
                     await createCmd.ExecuteNonQueryAsync(ct);
+                    _createdSlot = true;
                 }
                 catch (PostgresException ex) when (ex.SqlState == "42710")
                 {
@@ -350,7 +360,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     ///   JoinColumns = ["order_id"]  — order_id IS in the PK
     ///   → Default REPLICA IDENTITY is sufficient, no action needed
     /// </summary>
-    private async Task EnsureReplicaIdentityForEmbeddedTables(CancellationToken ct)
+    protected virtual async Task EnsureReplicaIdentityForEmbeddedTables(CancellationToken ct)
     {
         var embeddedTables = CollectEmbeddedTablesNeedingReplicaIdentity(Configuration.Tables);
 
@@ -375,6 +385,10 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
 
             // Replica identity is insufficient — set to FULL so DELETE events include join columns
             var quotedTable = $"{CommandBuilder.QuoteIdentifier(schema)}.{CommandBuilder.QuoteIdentifier(table)}";
+
+            if (Configuration.TestMode)
+                throw new InvalidOperationException(CreateReplicaIdentityFullRequiredMessage(schema, table, embedded, quotedTable));
+
             try
             {
                 await using var alterCmd = new NpgsqlCommand(
@@ -388,20 +402,23 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             catch (PostgresException ex) when (ex.SqlState == InsufficientPrivilegeSqlState)
             {
                 throw new InvalidOperationException(
-                    $"""
-                    Insufficient permissions to set REPLICA IDENTITY FULL on '{schema}.{table}'. 
-                    The embedded table's join column(s) ({string.Join(", ", embedded.JoinColumns)}) are not part of the primary key.
-                    DELETE events need REPLICA IDENTITY FULL to include the join columns for routing to the parent document. 
-                    An administrator can run:
-
-                      ALTER TABLE {quotedTable} REPLICA IDENTITY FULL;
-
-                    Alternatively, set OnDelete.IgnoreDeletes = true on this embedded table to skip delete processing.
-
-                    PostgreSQL error: {ex.MessageText}
-                    """, ex);
+                    CreateReplicaIdentityFullRequiredMessage(schema, table, embedded, quotedTable), ex);
             }
         }
+    }
+
+    private static string CreateReplicaIdentityFullRequiredMessage(string schema, string table, CdcSinkEmbeddedTableConfig embedded, string quotedTable)
+    {
+        return $"""
+                Insufficient permissions to set REPLICA IDENTITY FULL on '{schema}.{table}'. 
+                The embedded table's join column(s) ({string.Join(", ", embedded.JoinColumns)}) are not part of the primary key.
+                DELETE events need REPLICA IDENTITY FULL to include the join columns for routing to the parent document. 
+                An administrator can run:
+
+                  ALTER TABLE {quotedTable} REPLICA IDENTITY FULL;
+
+                Alternatively, set OnDelete.IgnoreDeletes = true on this embedded table to skip delete processing.
+                """;
     }
 
     private static List<CdcSinkEmbeddedTableConfig> CollectEmbeddedTablesNeedingReplicaIdentity(
@@ -907,16 +924,89 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             // pgoutput text protocol sends booleans as "t"/"f" rather than "true"/"false",
             // which Convert.ToBoolean cannot parse. Handle all Postgres boolean forms.
             PostgresTypeCategory.Boolean => value is bool b ? b : ParsePostgresBoolean(value),
-            // Npgsql 10+ returns DateOnly natively for date columns; earlier versions or
-            // pgoutput text decoding may return DateTime or string — handle both.
-            PostgresTypeCategory.DateOnly => value is DateOnly dateOnly ? dateOnly : DateOnly.FromDateTime(Convert.ToDateTime(value)),
-            PostgresTypeCategory.DateTime => value is DateTime dt ? dt : DateTime.Parse(value.ToString(), System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind),
+            // Date/time columns arrive as text literals over pgoutput and as typed CLR values from
+            // the initial-load reader, so each category handles both and settles on the CLR type
+            // the reader produces (DateOnly, TimeOnly, DateTime).
+            PostgresTypeCategory.DateOnly => value is DateOnly dateOnly ? dateOnly : ParsePostgresDate(value),
+            PostgresTypeCategory.TimeOnly => value is TimeOnly timeOnly ? timeOnly : ParsePostgresTime(value),
+            PostgresTypeCategory.DateTime => value is DateTime dt ? dt : ParsePostgresTimestamp(value),
+            PostgresTypeCategory.DateTimeTz => value is DateTime dtz ? ToUtc(dtz) : ParsePostgresTimestampTz(value),
             PostgresTypeCategory.Uuid => value.ToString(),
             PostgresTypeCategory.Bytea => value,
             PostgresTypeCategory.Json => value.ToString(),
             PostgresTypeCategory.TextArray => ParsePostgresArrayLiteral(value.ToString()),
             PostgresTypeCategory.Vector => ParseVectorLiteral(value.ToString(), table, column),
             _ => value,
+        };
+    }
+    
+    private const string PositiveInfinity = "infinity";
+    private const string NegativeInfinity = "-infinity";
+
+    private static bool TryParseInfinity(string text, out DateTime value)
+    {
+        switch (text)
+        {
+            case PositiveInfinity:
+                value = DateTime.MaxValue;
+                return true;
+            case NegativeInfinity:
+                value = DateTime.MinValue;
+                return true;
+            default:
+                value = default;
+                return false;
+        }
+    }
+    
+    private static DateTime ParsePostgresTimestamp(object value)
+    {
+        var text = value.ToString();
+        if (TryParseInfinity(text, out var infinity))
+            return infinity;
+
+        return DateTime.Parse(text, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind);
+    }
+    
+    private static DateTime ParsePostgresTimestampTz(object value)
+    {
+        var text = value.ToString();
+        if (TryParseInfinity(text, out var infinity))
+            return infinity;
+
+        return DateTime.Parse(text, System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal);
+    }
+    
+    private static DateOnly ParsePostgresDate(object value)
+    {
+        if (value is DateTime asDateTime)
+            return DateOnly.FromDateTime(asDateTime);
+
+        var text = value.ToString();
+        return text switch
+        {
+            PositiveInfinity => DateOnly.MaxValue,
+            NegativeInfinity => DateOnly.MinValue,
+            _ => DateOnly.Parse(text, System.Globalization.CultureInfo.InvariantCulture),
+        };
+    }
+    
+    private static object ParsePostgresTime(object value)
+    {
+        var text = value.ToString();
+        return TimeOnly.TryParse(text, System.Globalization.CultureInfo.InvariantCulture, out var parsed)
+            ? parsed
+            : text;
+    }
+    
+    private static DateTime ToUtc(DateTime value)
+    {
+        return value.Kind switch
+        {
+            DateTimeKind.Utc => value,
+            DateTimeKind.Local => value.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc),
         };
     }
 

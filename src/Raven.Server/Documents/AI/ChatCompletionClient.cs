@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.ServerSentEvents;
@@ -472,6 +473,31 @@ public class ChatCompletionClient : IDisposable
         return (r.Result.ToString(), r.Message.ToString());
     }
 
+    public async Task<bool> TestSupportsToolsAsync(CancellationToken token)
+    {
+        try
+        {
+            using var _ = _contextPool.AllocateOperationContext(out JsonOperationContext context);
+
+            var userMessage = context.ReadObject(new DynamicJsonValue
+            {
+                [Constants.RequestFields.Role] = Constants.RequestFields.RoleUserValue,
+                [Constants.RequestFields.Content] = "hi"
+            }, "probe/user");
+
+            var paramsSchema = GetSchemaForTool(schema: null, sampleObject: "{\"reason\":\"why the tool is being called\"}");
+            var tool = GetTool(context, "connection_test_probe", "A probe so the request matches an agent call. Do not call it.", paramsSchema);
+
+            var request = CreateCompletionRequest(context, messages: [userMessage], attachments: null, tools: [context.ReadObject(tool, "probe/tool")], useTools: true, streaming: false, schema: null);
+            await EnsureRequestAcceptedAsync(context, request, token);
+            return true;
+        }
+        catch (UnsuccessfulAiRequestException e) when (e.StatusCode == HttpStatusCode.BadRequest)
+        {
+            return false;
+        }
+    }
+
     private const string AcceptsImageInputProbePngBase64 =
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
 
@@ -489,14 +515,25 @@ public class ChatCompletionClient : IDisposable
                 [Constants.RequestFields.Content] = "describe the image"
             }, "probe/user");
 
-            var request = CreateCompletionRequest(context, messages: [userMessage], attachments: [attachment], tools: null, useTools: false, streaming: false, EmptySchema);
-            await CompleteAsync(context, request, new AiUsage(), schema: null, trace: null, token);
+            var request = CreateCompletionRequest(context, messages: [userMessage], attachments: [attachment], tools: null, useTools: false, streaming: false, schema: null);
+            await EnsureRequestAcceptedAsync(context, request, token);
             return true;
         }
         catch (Exception)
         {
             return false;
         }
+    }
+    
+    private async Task EnsureRequestAcceptedAsync(JsonOperationContext context, HttpRequestMessage request, CancellationToken token)
+    {
+        AddDefaultHeaders(request);
+        using var response = await SendRequestAsync(request, token);
+        if (response.IsSuccessStatusCode)
+            return;
+
+        var responseContent = await GetResponseContentAsync(context, response, token);
+        HandleUnsuccessfulResponse(response, responseContent);
     }
 
     public async Task<AiResponse> CompleteAsync(JsonOperationContext context, HttpRequestMessage request, AiUsage usage, string schema, AiDebugTrace trace, CancellationToken token)

@@ -298,5 +298,6 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         community: { value: 36 },
         professional: { value: Infinity },
         enterprise: { value: Infinity },
+        quill: { value: Infinity },
     },
 ];

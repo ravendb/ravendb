@@ -100,6 +100,7 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         featureIcon: "timeseries-settings",
         community: { value: false },
         professional: { value: true },
-        enterprise: { value: true }
+        enterprise: { value: true },
+        quill: { value: true },
     }
 ];

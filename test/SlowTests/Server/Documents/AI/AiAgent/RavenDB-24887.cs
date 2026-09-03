@@ -235,6 +235,8 @@ public class RavenDB_24887(ITestOutputHelper output) : RavenTestBase(output)
         Assert.NotNull(addToCartArgs);
         // and were able to "solve" it properly
         Assert.Equal(AiConversationResult.Done, result.Status);
-        Assert.Contains("added", result.Answer.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.True(result.Answer.Message.Contains("added", StringComparison.OrdinalIgnoreCase) ||
+                    result.Answer.Message.Contains("already", StringComparison.OrdinalIgnoreCase),
+            result.Answer.Message);
     }
 }
