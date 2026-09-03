@@ -318,7 +318,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
                     var decompressed = tree.DecompressPage(page, DecompressionUsage.Read, true);
 
                     node.DecompressedLeaf = decompressed;
-                    page = decompressed.Page;
+                    page = decompressed;
                 }
 
                 if (page.NumberOfEntries == 0 && page.PageNumber != rootPage.PageNumber)

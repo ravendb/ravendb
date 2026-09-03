@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Text;
 using Voron.Data.Compression;
@@ -10,10 +10,10 @@ using Voron.Impl.Paging;
 
 namespace Voron.Data.BTrees
 {
-    public sealed unsafe class TreePageSplitter
+    public unsafe ref struct TreePageSplitter
     {
         private const DecompressionUsage WriteDecompressionUsage = DecompressionUsage.Write;
-        private readonly TreeCursor _cursor;
+        private readonly ref TreeCursor _cursor;
         private readonly bool _splittingOnDecompressed;
         private readonly int _len;
         private readonly Slice _newKey;
@@ -31,7 +31,7 @@ namespace Voron.Data.BTrees
             int len,
             long pageNumber,
             TreeNodeFlags nodeType,
-            TreeCursor cursor,
+            ref TreeCursor cursor,
             bool splittingOnDecompressed = false)
         {
             _tx = tx;
@@ -40,15 +40,14 @@ namespace Voron.Data.BTrees
             _len = len;
             _pageNumber = pageNumber;
             _nodeType = nodeType;
-            _cursor = cursor;
+            _cursor = ref cursor;
             _splittingOnDecompressed = splittingOnDecompressed;
-            TreePage page = _cursor.Pages.Peek();
+            TreePage page = _cursor.CurrentPage;
 
             if (_splittingOnDecompressed == false)
                 _page = _tree.ModifyPage(page);
             else
             {
-                Debug.Assert(page is DecompressedLeafPage);
                 _page = page;
             }
 
@@ -76,16 +75,16 @@ namespace Voron.Data.BTrees
                 if (_page.IsCompressed)
                 {
                     _pageDecompressed = _tree.DecompressPage(_page, WriteDecompressionUsage, skipCache: false);
-                    _pageDecompressed.Page.Search(_tx, _newKey);
+                    _pageDecompressed.Search(_tx, _newKey);
 
-                    if (_pageDecompressed.Page.LastMatch == 0)
+                    if (_pageDecompressed.LastMatch == 0)
                     {
                         // we are going to insert the value in a bit, but it might have 
                         // been in the compressed portion and not removed by the calling
                         // code
-                        _tree.RemoveLeafNode(_pageDecompressed.Page);
+                        _tree.RemoveLeafNode(_pageDecompressed);
 
-                        if (_pageDecompressed.Page.NumberOfEntries == 0)
+                        if (_pageDecompressed.NumberOfEntries == 0)
                         {
                             // we have just removed the last node that we wanted to update
                             // there is no need to do any split - copy the value to the current (empty) page
@@ -99,7 +98,7 @@ namespace Voron.Data.BTrees
                             }
                         }
                     }
-                    _page = _pageDecompressed.Page;
+                    _page = _pageDecompressed;
                 }
                 
                 TreePage rightPage = _tree.NewPage(_page.TreeFlags, _page.PageNumber);
@@ -107,7 +106,6 @@ namespace Voron.Data.BTrees
                 if (_cursor.PageCount == 0) // we need to do a root split
                 {
                     TreePage newRootPage = _tree.NewPage(TreePageFlags.Branch, _page.PageNumber);
-                    _cursor.Push(newRootPage);
 
                     ref var header = ref _tree.ModifyHeader();
                     header.RootPageNumber = newRootPage.PageNumber;
@@ -115,9 +113,9 @@ namespace Voron.Data.BTrees
 
                     // now add implicit left page
                     newRootPage.AddPageRefNode(0, Slices.BeforeAllKeys, _page.PageNumber);
+                    newRootPage.LastSearchPosition++;
                     _parentPage = newRootPage;
-                    _parentPage.LastSearchPosition++;
-                    _cursor.SyncTopPage(_parentPage);
+                    _cursor.Push(newRootPage); // pushing last, so the cursor sees the final search position
                 }
                 else
                 {
@@ -148,7 +146,7 @@ namespace Voron.Data.BTrees
             if (_pageDecompressed == null)
                 return;
             _pageDecompressed.CopyToOriginal(_tx, defragRequired: false, wasModified: wasModified, _tree);
-            _tree.DecompressionsCache.Invalidate(_pageDecompressed.Page.PageNumber, WriteDecompressionUsage);
+            _tree.DecompressionsCache.Invalidate(_pageDecompressed.PageNumber, WriteDecompressionUsage);
             _page = _pageDecompressed.Original;
         }
 
@@ -266,7 +264,7 @@ namespace Voron.Data.BTrees
             int? decompressedPageSize = null;
 
             if (_pageDecompressed != null)
-                decompressedPageSize = _pageDecompressed.Page.PageSize;
+                decompressedPageSize = _pageDecompressed.PageSize;
             else if (_splittingOnDecompressed)
                 decompressedPageSize = _page.PageSize;
 
@@ -274,7 +272,7 @@ namespace Voron.Data.BTrees
             {
                 // splitting the decompressed page, let's allocate the page of the same size to ensure enough space
                 rightDecompressed = _tree.GetDecompressedPage(decompressedPageSize.Value, DecompressionUsage.Write, rightPage);
-                rightPage = rightDecompressed.Page;
+                rightPage = rightDecompressed;
             }
 
             if (_page.IsLeaf)
@@ -430,7 +428,7 @@ namespace Voron.Data.BTrees
             {
                 _cursor.Push(p);
 
-                var pageSplitter = new TreePageSplitter(_tx, _tree, _newKey, _len, _pageNumber, _nodeType, _cursor);
+                var pageSplitter = new TreePageSplitter(_tx, _tree, _newKey, _len, _pageNumber, _nodeType, ref _cursor);
 
                 return pageSplitter.Execute();
             }
@@ -442,7 +440,7 @@ namespace Voron.Data.BTrees
 
         private byte* AddSeparatorToParentPage(long pageRefNumber, Slice separatorKey, out TreePage parentOfPageRef)
         {
-            var parent = new ParentPageAction(_parentPage, _page, _tree, _cursor, _tx);
+            var parent = new ParentPageAction(ref _parentPage, _page, _tree, ref _cursor, _tx);
 
             var pos = parent.AddSeparator(separatorKey, pageRefNumber);
 
