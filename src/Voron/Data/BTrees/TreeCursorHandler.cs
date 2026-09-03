@@ -18,7 +18,7 @@ namespace Voron.Data.BTrees
 
             this._llt = null;
             this._tree = null;
-            this._pageCopy = null;
+            this._pageCopy = default;
             this._cursorPath = null;
             this._lastFoundPageNumber = 0;
 
@@ -40,7 +40,7 @@ namespace Voron.Data.BTrees
             if (_current != null)
                 return _current;
 
-            var c = new TreeCursor();
+            var c = new TreeCursor(_llt);
             foreach (var p in _cursorPath)
             {
                 if (p == _lastFoundPageNumber)
@@ -62,7 +62,7 @@ namespace Voron.Data.BTrees
                     }
                     else if (key.Options == SliceOptions.AfterAllKeys)
                     {
-                        cursorPage.LastSearchPosition = (ushort)(cursorPage.NumberOfEntries - 1);
+                        cursorPage.LastSearchPosition = (short)(cursorPage.NumberOfEntries - 1);
                     }
                     else throw new ArgumentException();
 

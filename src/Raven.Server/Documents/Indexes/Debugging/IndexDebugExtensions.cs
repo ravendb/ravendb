@@ -318,10 +318,10 @@ namespace Raven.Server.Documents.Indexes.Debugging
                     var decompressed = tree.DecompressPage(page, DecompressionUsage.Read, true);
 
                     node.DecompressedLeaf = decompressed;
-                    page = decompressed;
+                    page = decompressed.Page;
                 }
 
-                if (page.NumberOfEntries == 0 && page != rootPage)
+                if (page.NumberOfEntries == 0 && page.PageNumber != rootPage.PageNumber)
                     throw new InvalidOperationException($"The page {page.PageNumber} is empty");
 
                 for (var i = 0; i < page.NumberOfEntries; i++)
