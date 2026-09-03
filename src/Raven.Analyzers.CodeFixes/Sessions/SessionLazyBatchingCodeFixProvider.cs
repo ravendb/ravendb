@@ -1,0 +1,749 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Composition;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CodeActions;
+using Microsoft.CodeAnalysis.CodeFixes;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Raven.Analyzers.Shared;
+
+namespace Raven.Analyzers.CodeFixes.Sessions
+{
+    [ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(SessionLazyBatchingCodeFixProvider))]
+    [Shared]
+    public sealed class SessionLazyBatchingCodeFixProvider : CodeFixProvider
+    {
+        public override ImmutableArray<string> FixableDiagnosticIds =>
+            [DiagnosticIds.SessionLazyBatching];
+
+        public override FixAllProvider? GetFixAllProvider() =>
+            WellKnownFixAllProviders.BatchFixer;
+
+        public override async Task RegisterCodeFixesAsync(CodeFixContext context)
+        {
+            SyntaxNode? root = await context.Document.GetSyntaxRootAsync(context.CancellationToken);
+            SemanticModel? semanticModel = await context.Document.GetSemanticModelAsync(context.CancellationToken);
+
+            if (root == null || semanticModel == null)
+                return;
+
+            // Find the token at the diagnostic location
+            SyntaxToken token = root.FindToken(context.Span.Start);
+            SyntaxNode? node = token.Parent;
+
+            // Walk up to find the InvocationExpressionSyntax
+            InvocationExpressionSyntax? invocation = node?.FirstAncestorOrSelf<InvocationExpressionSyntax>();
+
+            // Find the containing block (method body)
+            BlockSyntax? block = invocation?.Parent?.FirstAncestorOrSelf<BlockSyntax>();
+
+            if (block == null)
+                return;
+
+            // Collect all batchable calls in this block
+            var collector = new BatchableCallCollector(semanticModel);
+            collector.Visit(block);
+
+            if (collector.BatchableCalls.Count < 2)
+                return;
+
+            // Find indices of batchable statements that are direct children of this block.
+            // The collector may include calls from nested blocks; we only fix direct statements.
+            List<int> batchableIndices = [];
+            List<(LocalDeclarationStatementSyntax statement, string methodName, ExpressionSyntax receiver, bool isLoad, ISymbol? sessionSymbol)> directBatchableCalls = [];
+
+            for (int i = 0; i < block.Statements.Count; i++)
+            {
+                if (block.Statements[i] is not LocalDeclarationStatementSyntax localDecl)
+                    continue;
+
+                foreach (var call in collector.BatchableCalls)
+                {
+                    if (call.statement == localDecl)
+                    {
+                        batchableIndices.Add(i);
+                        directBatchableCalls.Add(call);
+                        break;
+                    }
+                }
+            }
+
+            // Check if indices form a consecutive range
+            if (batchableIndices.Count < 2)
+                return;
+
+            // The auto-fix only rewrites a contiguous run of batchable statements: a non-batchable
+            // statement between them may read one load's result or have side effects, so folding them
+            // into a single lazy batch could reorder observable behavior. The RVN012 diagnostic is still
+            // reported by the analyzer in this case (batching is valid advice a developer can apply by
+            // reordering); the fix deliberately declines rather than emit a risky rewrite.
+            for (int i = 1; i < batchableIndices.Count; i++)
+            {
+                if (batchableIndices[i] != batchableIndices[i - 1] + 1)
+                    return; // Non-consecutive
+            }
+
+            // Bail unless every batchable call resolves to the same session symbol —
+            // routing different sessions through one shared receiver would silently
+            // change semantics.
+            ISymbol? firstSessionSymbol = directBatchableCalls[0].sessionSymbol;
+            if (firstSessionSymbol == null)
+                return;
+
+            for (int i = 1; i < directBatchableCalls.Count; i++)
+            {
+                if (!SymbolEqualityComparer.Default.Equals(firstSessionSymbol, directBatchableCalls[i].sessionSymbol))
+                    return;
+            }
+
+            // Bail if any batched statement depends on another batched statement's variable. Each
+            // batchable statement is rewritten to a lazy local whose real value is only materialized
+            // AFTER the batch, so a cross-reference (e.g. var b = session.Load<Order>(a.Id) where a is
+            // also batched) would move a use ahead of its declaration and produce uncompilable code.
+            if (HasInterStatementDependency(semanticModel, directBatchableCalls))
+                return;
+
+            // Bail on a mixed sync/async batch. The extraction reads a sync .Value for a sync
+            // operation and awaits the .Value for an async one; reading a sync .Value first forces
+            // the WHOLE pending batch — including any async-registered op — to dispatch through the
+            // blocking path, turning an awaited call into sync-over-async (a deadlock risk). Only
+            // rewrite when every batched operation shares the same modality.
+            bool anyAsync = false, anySync = false;
+            foreach (var (_, methodName, _, _, _) in directBatchableCalls)
+            {
+                if (methodName.EndsWith("Async", StringComparison.Ordinal))
+                    anyAsync = true;
+                else
+                    anySync = true;
+            }
+            if (anyAsync && anySync)
+                return;
+
+            // Bail if any async batchable call was not awaited (e.g. 'Task<User> a = session.LoadAsync<User>(id);').
+            // The extraction awaits the lazy .Value (materializing User) but the original declared type is
+            // still 'Task<User>', so reusing it would emit 'Task<User> a = await lazyA.Value;' (CS0029).
+            // Batching an un-awaited fire-and-forget Task local would also change semantics, so decline.
+            foreach (var (statement, methodName, _, _, _) in directBatchableCalls)
+            {
+                if (!methodName.EndsWith("Async", StringComparison.Ordinal))
+                    continue;
+
+                if (statement.Declaration.Variables.Count != 1
+                    || statement.Declaration.Variables[0].Initializer?.Value is not AwaitExpressionSyntax)
+                    return;
+            }
+
+            // Bail if any batched declaration has a missing/empty variable name (incomplete code while
+            // typing). The rewrite derives the lazy name from the original identifier's first char, so
+            // an empty identifier would otherwise crash the fix.
+            foreach (var (statement, _, _, _, _) in directBatchableCalls)
+            {
+                if (statement.Declaration.Variables.Count != 1
+                    || statement.Declaration.Variables[0].Identifier.ValueText.Length == 0)
+                    return;
+            }
+
+            // Register the code fix
+            context.RegisterCodeFix(
+                CodeAction.Create(
+                    "Batch with lazy API (reduces server round-trips)",
+                    ct => ApplyLazyBatchFixAsync(
+                        context.Document,
+                        semanticModel,
+                        block,
+                        directBatchableCalls,
+                        batchableIndices,
+                        ct),
+                    equivalenceKey: DiagnosticIds.SessionLazyBatching),
+                context.Diagnostics);
+        }
+
+        private static async Task<Document> ApplyLazyBatchFixAsync(
+            Document document,
+            SemanticModel semanticModel,
+            BlockSyntax block,
+            List<(LocalDeclarationStatementSyntax statement, string methodName, ExpressionSyntax receiver, bool isLoad, ISymbol? sessionSymbol)> batchableCalls,
+            List<int> batchableIndices,
+            CancellationToken cancellationToken)
+        {
+            SyntaxNode? root = await document.GetSyntaxRootAsync(cancellationToken);
+            if (root == null)
+                return document;
+
+            // Extract session receiver from the first Load call, or from query chain root.
+            // RegisterCodeFixesAsync has already verified all calls share the same session
+            // symbol, so any batchable call's receiver yields a correct session expression.
+            ExpressionSyntax? sessionReceiver = null;
+            foreach (var (_, _, receiver, isLoad, _) in batchableCalls)
+            {
+                if (isLoad)
+                {
+                    sessionReceiver = receiver;
+                    break;
+                }
+            }
+
+            // If no Load found, try to extract from query chain
+            if (sessionReceiver == null && batchableCalls.Count > 0)
+            {
+                var (stmt, _, receiver, _, _) = batchableCalls[0];
+                sessionReceiver = ExtractSessionReceiverFromQueryChain(receiver);
+            }
+
+            if (sessionReceiver == null)
+                return document;
+
+            // Collect identifiers already in scope so generated lazy names don't collide.
+            HashSet<string> reservedNames = CollectReservedNames(semanticModel, block);
+
+            // Build a map of statement index to new statement
+            Dictionary<int, LocalDeclarationStatementSyntax> replacements = [];
+            List<(string lazyName, string originalName, string methodName, TypeSyntax originalType, SyntaxTriviaList originalTrivia)> renamings = [];
+
+            // The query rewrite renames the materializer to Lazily/LazilyAsync, which are extension
+            // methods in the Raven.Client.Documents namespace; track whether any is emitted so the
+            // missing using directive can be added below.
+            bool anyQueryRewrite = false;
+
+            // Transform each batchable statement
+            for (int i = 0; i < batchableCalls.Count; i++)
+            {
+                var (stmt, methodName, receiver, isLoad, _) = batchableCalls[i];
+
+                if (stmt.Declaration.Variables.Count != 1)
+                    return document; // bail rather than apply a partial fix
+
+                VariableDeclaratorSyntax declarator = stmt.Declaration.Variables[0];
+
+                // Text preserves the verbatim '@' so the extraction below re-declares the exact original
+                // identifier (e.g. '@int'). The lazy name, however, is derived from ValueText (the '@'-less
+                // semantic name) so a verbatim identifier like '@int' yields the valid 'lazyInt' rather
+                // than the uncompilable 'lazy@int'.
+                string originalName = declarator.Identifier.Text;
+                string lazyName = GenerateLazyName(declarator.Identifier.ValueText, reservedNames);
+
+                ExpressionSyntax? newInitializer;
+                if (isLoad)
+                {
+                    newInitializer = BuildLazyLoadInitializer(stmt, sessionReceiver, methodName);
+                }
+                else
+                {
+                    newInitializer = BuildLazyQueryInitializer(stmt, methodName);
+                    anyQueryRewrite = true;
+                }
+
+                if (newInitializer == null)
+                    return document; // bail rather than apply a partial fix
+
+                // Create new local declaration with lazy name
+                VariableDeclaratorSyntax newDeclarator = declarator
+                    .WithIdentifier(SyntaxFactory.Identifier(lazyName))
+                    .WithInitializer(SyntaxFactory.EqualsValueClause(newInitializer));
+
+                // Force 'var': the initializer is now a Lazy<T> (or Lazy<Task<T>>), so the original
+                // explicit declared type (e.g. 'User') would no longer match and would fail to compile.
+                // The .Value extraction statement below restores the original type via 'var'.
+                TypeSyntax varType = SyntaxFactory.IdentifierName("var").WithTriviaFrom(stmt.Declaration.Type);
+
+                LocalDeclarationStatementSyntax newStmt = stmt
+                    .WithDeclaration(stmt.Declaration
+                        .WithType(varType)
+                        .WithVariables(SyntaxFactory.SingletonSeparatedList(newDeclarator)));
+
+                renamings.Add((lazyName, originalName, methodName, stmt.Declaration.Type.WithoutTrivia(), stmt.GetLeadingTrivia()));
+                replacements[batchableIndices[i]] = newStmt;
+            }
+
+            // Build Value extraction statements; each extraction inherits the trivia of its source
+            // statement. No explicit ExecuteAllPendingLazyOperations call is needed: realizing the
+            // first lazy value (sync .Value, or awaiting the .Value of an async lazy) dispatches the
+            // entire pending batch in one multi-get round-trip.
+            List<StatementSyntax> extractionStatements = [];
+            foreach (var (lazyName, originalName, methodName, originalType, originalTrivia) in renamings)
+            {
+                // Determine the materializer to call on .Value (Load has none; query methods keep theirs)
+                string valueMethod = methodName.StartsWith("ToList", StringComparison.Ordinal) ? "ToList"
+                    : methodName.StartsWith("ToArray", StringComparison.Ordinal) ? "ToArray"
+                    : "";
+
+                // Build: var x = lazyX.Value [.Method()];
+                // Async operations (LoadAsync, ToListAsync, ...) register a Lazy<Task<T>>, so the
+                // .Value (a Task) must be awaited to materialize and to dispatch the batch async.
+                bool isAsync = methodName.EndsWith("Async", StringComparison.Ordinal);
+
+                ExpressionSyntax valueExpr = SyntaxFactory.MemberAccessExpression(
+                    SyntaxKind.SimpleMemberAccessExpression,
+                    SyntaxFactory.IdentifierName(lazyName),
+                    SyntaxFactory.IdentifierName("Value"));
+
+                if (isAsync)
+                {
+                    valueExpr = SyntaxFactory.AwaitExpression(valueExpr);
+                }
+
+                if (!string.IsNullOrEmpty(valueMethod))
+                {
+                    // For async queries the await must be parenthesized before the materializer:
+                    // (await lazyX.Value).ToList(). Without parens Roslyn renders
+                    // 'await lazyX.Value.ToList()', which reparses as 'await (lazyX.Value.ToList())'.
+                    ExpressionSyntax target = isAsync
+                        ? SyntaxFactory.ParenthesizedExpression(valueExpr)
+                        : valueExpr;
+
+                    valueExpr = SyntaxFactory.InvocationExpression(
+                        SyntaxFactory.MemberAccessExpression(
+                            SyntaxKind.SimpleMemberAccessExpression,
+                            target,
+                            SyntaxFactory.IdentifierName(valueMethod)),
+                        SyntaxFactory.ArgumentList());
+                }
+
+                VariableDeclaratorSyntax extractVarDecl = SyntaxFactory.VariableDeclarator(
+                    SyntaxFactory.Identifier(originalName))
+                    .WithInitializer(SyntaxFactory.EqualsValueClause(valueExpr));
+
+                // Restore the original declared type on the extraction. The extraction re-applies the
+                // same materializer the user wrote (Load → .Value, ToList → .Value.ToList(), ToArray →
+                // .Value.ToArray()), so it reproduces the exact original result type. Reusing the
+                // declared type preserves an explicit widening declaration (e.g. IEnumerable<T> users =
+                // ….ToList()); forcing 'var' there would infer List<T> and break a later reassignment.
+                LocalDeclarationStatementSyntax extractStmt = SyntaxFactory.LocalDeclarationStatement(
+                    SyntaxFactory.VariableDeclaration(
+                        originalType,
+                        SyntaxFactory.SingletonSeparatedList(extractVarDecl)));
+
+                // Strip comments; they stay with the renamed lazy declaration, not the extraction.
+                extractStmt = extractStmt.WithLeadingTrivia(GetIndentationTrivia(originalTrivia));
+
+                extractionStatements.Add(extractStmt);
+            }
+
+            // Build the new block by replacing statements and inserting new ones
+            SyntaxList<StatementSyntax> newStatements = block.Statements;
+
+            // Apply replacements from highest to lowest index to preserve indices
+            for (int i = batchableIndices.Count - 1; i >= 0; i--)
+            {
+                int index = batchableIndices[i];
+                if (replacements.TryGetValue(index, out var newStmt))
+                {
+                    newStatements = newStatements.RemoveAt(index).Insert(index, newStmt);
+                }
+            }
+
+            // Insert extraction statements after the last batchable statement
+            int lastBatchableIndex = batchableIndices[batchableIndices.Count - 1];
+            newStatements = newStatements.InsertRange(lastBatchableIndex + 1, extractionStatements);
+
+            // Replace the block
+            BlockSyntax newBlock = block.WithStatements(newStatements);
+            SyntaxNode newRoot = root.ReplaceNode(block, newBlock);
+
+            // Lazily()/LazilyAsync() live in Raven.Client.Documents. A file that only imports
+            // Raven.Client.Documents.Session/.Linq (enough to write session.Query<T>().Where(...).ToList())
+            // would fail with CS1061 after the rename, so add the using when a query was rewritten and it
+            // is not already in scope. Scope is resolved from the semantic model at the rewritten block, so
+            // a global using in another file (or an implicit using) counts too.
+            if (anyQueryRewrite)
+                newRoot = EnsureRavenClientDocumentsUsing(newRoot, semanticModel, block.SpanStart);
+
+            return document.WithSyntaxRoot(newRoot);
+        }
+
+        // Adds 'using Raven.Client.Documents;' to the compilation unit when the query lazy rewrite is used
+        // and that namespace is not already in scope. Idempotent. The in-scope check queries the semantic
+        // model's import scopes at the rewritten block rather than scanning this file's using directives,
+        // so it also honors a 'global using Raven.Client.Documents;' declared in another file and implicit
+        // usings — a purely syntactic file-local scan would miss those and append a redundant using
+        // (an IDE0005 'unnecessary using' that a TreatWarningsAsErrors build would reject). The edit itself
+        // uses only SyntaxFactory / Microsoft.CodeAnalysis.CSharp.Syntax types, keeping it RS1038-safe.
+        private static SyntaxNode EnsureRavenClientDocumentsUsing(SyntaxNode root, SemanticModel semanticModel, int position)
+        {
+            const string targetNamespace = "Raven.Client.Documents";
+
+            if (root is not CompilationUnitSyntax compilationUnit)
+                return root;
+
+            if (IsNamespaceInScope(semanticModel, position, targetNamespace))
+                return root;
+
+            UsingDirectiveSyntax directive = SyntaxFactory.UsingDirective(SyntaxFactory.ParseName(targetNamespace))
+                .WithTrailingTrivia(SyntaxFactory.ElasticCarriageReturnLineFeed);
+
+            return compilationUnit.AddUsings(directive);
+        }
+
+        // True when <paramref name="targetNamespace"/> is imported at <paramref name="position"/> — via a
+        // using in this file, a global using anywhere in the compilation, or an implicit using. Reading the
+        // semantic model's import scopes (rather than scanning this file's using directives) is what catches
+        // the global / implicit cases the syntactic scan used to miss.
+        private static bool IsNamespaceInScope(SemanticModel semanticModel, int position, string targetNamespace)
+        {
+            foreach (IImportScope scope in semanticModel.GetImportScopes(position))
+            {
+                foreach (ImportedNamespaceOrType import in scope.Imports)
+                {
+                    if (import.NamespaceOrType is INamespaceSymbol ns
+                        && ns.ToDisplayString() == targetNamespace)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        // Returns only the newline-and-indentation tail of the trivia list, dropping comments.
+        // Used when applying trivia to synthesised statements so that user-written comments
+        // stay anchored to the statement they annotated (the renamed lazy declaration),
+        // and do not appear on the Execute call or the .Value extraction lines.
+        private static SyntaxTriviaList GetIndentationTrivia(SyntaxTriviaList trivia)
+        {
+            int lastEol = -1;
+            for (int i = trivia.Count - 1; i >= 0; i--)
+            {
+                if (trivia[i].IsKind(SyntaxKind.EndOfLineTrivia))
+                {
+                    lastEol = i;
+                    break;
+                }
+            }
+
+            if (lastEol < 0)
+            {
+                // No newline in the leading trivia (the statement sits on the same line as the opening
+                // brace). Keep only whitespace so a preceding inline comment is not duplicated onto the
+                // extraction; the comment stays with the renamed lazy declaration.
+                List<SyntaxTrivia> whitespaceOnly = [];
+                foreach (SyntaxTrivia t in trivia)
+                {
+                    if (t.IsKind(SyntaxKind.WhitespaceTrivia))
+                        whitespaceOnly.Add(t);
+                }
+                return SyntaxFactory.TriviaList(whitespaceOnly);
+            }
+
+            List<SyntaxTrivia> result = [trivia[lastEol]];
+            for (int i = lastEol + 1; i < trivia.Count; i++)
+            {
+                if (trivia[i].IsKind(SyntaxKind.WhitespaceTrivia))
+                    result.Add(trivia[i]);
+            }
+            return SyntaxFactory.TriviaList(result);
+        }
+
+        // Preserve any type arguments from the original Load[Async] call when constructing
+        // the lazy load method name (Load or LoadAsync depending on the original).
+        private static SimpleNameSyntax BuildLoadMethodName(SimpleNameSyntax originalName, string lazyLoadMethodName)
+        {
+            if (originalName is GenericNameSyntax genName)
+            {
+                return SyntaxFactory.GenericName(
+                    SyntaxFactory.Identifier(lazyLoadMethodName),
+                    genName.TypeArgumentList);
+            }
+            return SyntaxFactory.IdentifierName(lazyLoadMethodName);
+        }
+
+        private static ExpressionSyntax? BuildLazyLoadInitializer(
+            LocalDeclarationStatementSyntax stmt,
+            ExpressionSyntax sessionReceiver,
+            string methodName)
+        {
+            ExpressionSyntax lazilyExpr = SyntaxFactory.MemberAccessExpression(
+                SyntaxKind.SimpleMemberAccessExpression,
+                SyntaxFactory.MemberAccessExpression(
+                    SyntaxKind.SimpleMemberAccessExpression,
+                    sessionReceiver,
+                    SyntaxFactory.IdentifierName("Advanced")),
+                SyntaxFactory.IdentifierName("Lazily"));
+
+            string lazyLoadMethodName = methodName == KnownTypes.LoadAsyncMethodName
+                ? KnownTypes.LoadAsyncMethodName
+                : KnownTypes.LoadMethodName;
+
+            ExpressionSyntax? initValue = stmt.Declaration.Variables[0].Initializer?.Value;
+
+            if (initValue is AwaitExpressionSyntax awaitExpr)
+            {
+                if (awaitExpr.Expression is not InvocationExpressionSyntax origInv ||
+                    origInv.Expression is not MemberAccessExpressionSyntax origMem)
+                    return null;
+
+                return SyntaxFactory.InvocationExpression(
+                    SyntaxFactory.MemberAccessExpression(
+                        SyntaxKind.SimpleMemberAccessExpression,
+                        lazilyExpr,
+                        BuildLoadMethodName(origMem.Name, lazyLoadMethodName)),
+                    origInv.ArgumentList);
+            }
+
+            if (initValue is InvocationExpressionSyntax origInv2 &&
+                origInv2.Expression is MemberAccessExpressionSyntax origMem2)
+            {
+                return SyntaxFactory.InvocationExpression(
+                    SyntaxFactory.MemberAccessExpression(
+                        SyntaxKind.SimpleMemberAccessExpression,
+                        lazilyExpr,
+                        BuildLoadMethodName(origMem2.Name, lazyLoadMethodName)),
+                    origInv2.ArgumentList);
+            }
+
+            return null;
+        }
+
+        private static ExpressionSyntax? BuildLazyQueryInitializer(LocalDeclarationStatementSyntax stmt, string methodName)
+        {
+            // An async materializer (ToListAsync/ToArrayAsync) must register via LazilyAsync so that
+            // awaiting the .Value dispatches the batch asynchronously; a sync one uses Lazily.
+            string lazyMethodName = methodName.EndsWith("Async", StringComparison.Ordinal)
+                ? "LazilyAsync"
+                : "Lazily";
+
+            ExpressionSyntax? initValue = stmt.Declaration.Variables[0].Initializer?.Value;
+
+            if (initValue is AwaitExpressionSyntax awaitExpr)
+            {
+                if (awaitExpr.Expression is not InvocationExpressionSyntax origInv ||
+                    origInv.Expression is not MemberAccessExpressionSyntax origMem)
+                    return null;
+
+                return SyntaxFactory.InvocationExpression(
+                    origMem.WithName(SyntaxFactory.IdentifierName(lazyMethodName)),
+                    SyntaxFactory.ArgumentList());
+            }
+
+            if (initValue is InvocationExpressionSyntax origInv2 &&
+                origInv2.Expression is MemberAccessExpressionSyntax origMem2)
+            {
+                return SyntaxFactory.InvocationExpression(
+                    origMem2.WithName(SyntaxFactory.IdentifierName(lazyMethodName)),
+                    SyntaxFactory.ArgumentList());
+            }
+
+            return null;
+        }
+
+        private static ExpressionSyntax? ExtractSessionReceiverFromQueryChain(ExpressionSyntax expression)
+        {
+            // For a query call like session.Query<T>().Where(...).ToList(), the session receiver is the
+            // chain root that precedes the materializer (the receiver of the outermost .Query/.Where/...
+            // call). RegisterCodeFixesAsync has already constrained that root's symbol to a stable
+            // instance (local/parameter/field), so the root node is an identifier or member access;
+            // anything else is not a receiver we can route the lazy batch through.
+            ExpressionSyntax root = SyntaxHelpers.WalkInvocationChainToRoot(expression);
+            return root is IdentifierNameSyntax or MemberAccessExpressionSyntax ? root : null;
+        }
+
+        // True when any batched statement's initializer references a local declared by another
+        // batched statement. Those locals are materialized only after the batch, so reordering them
+        // ahead of their use would not compile (CS0841) — bail instead of emitting broken code.
+        // Symbols are compared (not identifier text) so an unrelated lambda parameter or generic
+        // type argument that merely shares a batched variable's name does not trigger a false bail.
+        private static bool HasInterStatementDependency(
+            SemanticModel semanticModel,
+            List<(LocalDeclarationStatementSyntax statement, string methodName, ExpressionSyntax receiver, bool isLoad, ISymbol? sessionSymbol)> calls)
+        {
+            var batchedLocals = new HashSet<ISymbol>(SymbolEqualityComparer.Default);
+            foreach (var (statement, _, _, _, _) in calls)
+            {
+                foreach (VariableDeclaratorSyntax v in statement.Declaration.Variables)
+                {
+                    ISymbol? declared = semanticModel.GetDeclaredSymbol(v);
+                    if (declared != null)
+                        batchedLocals.Add(declared);
+                }
+            }
+
+            foreach (var (statement, _, _, _, _) in calls)
+            {
+                if (statement.Declaration.Variables.Count != 1)
+                    continue;
+
+                ExpressionSyntax? initializer = statement.Declaration.Variables[0].Initializer?.Value;
+                if (initializer == null)
+                    continue;
+
+                foreach (SyntaxNode node in initializer.DescendantNodesAndSelf())
+                {
+                    if (node is IdentifierNameSyntax id)
+                    {
+                        ISymbol? symbol = semanticModel.GetSymbolInfo(id).Symbol;
+                        if (symbol != null && batchedLocals.Contains(symbol))
+                            return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        // Collects identifiers that a generated lazy local must not collide with. Walks the entire
+        // enclosing method/lambda body so locals declared in any sibling or enclosing scope are
+        // covered (a collision there is CS0128/CS0136), and adds fields, parameters, usings, and
+        // any other symbol in scope at the batch location via the semantic model — these are not
+        // descendants of the body block.
+        private static HashSet<string> CollectReservedNames(SemanticModel semanticModel, BlockSyntax block)
+        {
+            var names = new HashSet<string>(StringComparer.Ordinal);
+
+            BlockSyntax outermost = block;
+            foreach (SyntaxNode ancestor in block.Ancestors())
+            {
+                if (ancestor is BlockSyntax ancestorBlock)
+                    outermost = ancestorBlock;
+            }
+
+            foreach (SyntaxNode node in outermost.DescendantNodes())
+            {
+                switch (node)
+                {
+                    case VariableDeclaratorSyntax v:
+                        names.Add(v.Identifier.ValueText);
+                        break;
+                    case ParameterSyntax p:
+                        names.Add(p.Identifier.ValueText);
+                        break;
+                    case ForEachStatementSyntax fe:
+                        names.Add(fe.Identifier.ValueText);
+                        break;
+                    case SingleVariableDesignationSyntax svd:
+                        names.Add(svd.Identifier.ValueText);
+                        break;
+                    case LocalFunctionStatementSyntax lf:
+                        names.Add(lf.Identifier.ValueText);
+                        break;
+                    // Catch variables and LINQ query range variables live in nested scopes that
+                    // LookupSymbols(block.SpanStart) cannot see, yet a body-level local sharing
+                    // their name is a CS0136 collision. Reserve them from the syntactic walk.
+                    case CatchDeclarationSyntax cd when cd.Identifier.ValueText.Length > 0:
+                        names.Add(cd.Identifier.ValueText);
+                        break;
+                    case FromClauseSyntax fc:
+                        names.Add(fc.Identifier.ValueText);
+                        break;
+                    case LetClauseSyntax lc:
+                        names.Add(lc.Identifier.ValueText);
+                        break;
+                    case JoinClauseSyntax jc:
+                        names.Add(jc.Identifier.ValueText);
+                        break;
+                    case JoinIntoClauseSyntax jic:
+                        names.Add(jic.Identifier.ValueText);
+                        break;
+                    case QueryContinuationSyntax qc:
+                        names.Add(qc.Identifier.ValueText);
+                        break;
+                }
+            }
+
+            foreach (ISymbol symbol in semanticModel.LookupSymbols(block.SpanStart))
+                names.Add(symbol.Name);
+
+            return names;
+        }
+
+        private static string GenerateLazyName(string originalName, HashSet<string> reservedNames)
+        {
+            // Defensive: an empty identifier (incomplete code) is already filtered in
+            // RegisterCodeFixesAsync, but guard here too so indexing originalName[0] can never throw.
+            if (string.IsNullOrEmpty(originalName))
+                originalName = "value";
+
+            string baseName = "lazy" + char.ToUpperInvariant(originalName[0]) + originalName.Substring(1);
+            string candidate = baseName;
+            int suffix = 2;
+            while (reservedNames.Contains(candidate))
+                candidate = baseName + suffix++;
+            reservedNames.Add(candidate);
+            return candidate;
+        }
+
+        private sealed class BatchableCallCollector : CSharpSyntaxWalker
+        {
+            // Only ToList/ToArray have direct Lazily() equivalents via IRavenQueryable.Lazily().
+            // Count/First/Single/Any etc. would need dedicated CountLazily() APIs and are excluded.
+            // Shared with the analyzer's detection pass via KnownTypes so the diagnostic and the fix
+            // agree exactly on which materializers are batchable.
+            private static readonly HashSet<string> QueryMaterializingMethods = KnownTypes.LazyBatchableQueryMaterializers;
+
+            private readonly SemanticModel _model;
+            public readonly List<(LocalDeclarationStatementSyntax statement, string methodName, ExpressionSyntax receiver, bool isLoad, ISymbol? sessionSymbol)> BatchableCalls;
+
+            public BatchableCallCollector(SemanticModel model)
+            {
+                _model = model;
+                BatchableCalls = [];
+            }
+
+            public override void VisitLocalDeclarationStatement(LocalDeclarationStatementSyntax node)
+            {
+                foreach (VariableDeclaratorSyntax declarator in node.Declaration.Variables)
+                {
+                    if (declarator.Initializer?.Value is InvocationExpressionSyntax invocation)
+                    {
+                        CheckInvocation(invocation, node);
+                    }
+                    else if (declarator.Initializer?.Value is AwaitExpressionSyntax awaitExpr &&
+                             awaitExpr.Expression is InvocationExpressionSyntax awaitedInv)
+                    {
+                        CheckInvocation(awaitedInv, node);
+                    }
+                }
+
+                base.VisitLocalDeclarationStatement(node);
+            }
+
+            private void CheckInvocation(InvocationExpressionSyntax invocation, LocalDeclarationStatementSyntax statement)
+            {
+                string? methodName = SyntaxHelpers.GetMethodName(invocation);
+                if (methodName == null || invocation.Expression is not MemberAccessExpressionSyntax memberAccess)
+                    return;
+
+                ITypeSymbol? receiverType = _model.GetTypeInfo(memberAccess.Expression).Type;
+
+                // Check for query materializations on IRavenQueryable only.
+                // The lazy rewrite replaces the materializer (ToList/ToListAsync/...) with a
+                // bare Lazily()/LazilyAsync() and cannot carry the materializer's arguments
+                // (e.g. a CancellationToken passed to ToListAsync). Skip any materializer that
+                // has arguments rather than silently dropping them.
+                if (QueryMaterializingMethods.Contains(methodName)
+                    && invocation.ArgumentList.Arguments.Count == 0
+                    && SyntaxHelpers.IsRavenQueryable(receiverType)
+                    && !SyntaxHelpers.IsUserDefinedInSource(_model.GetSymbolInfo(invocation).Symbol))
+                {
+                    // Only the genuine framework materializer (Enumerable.ToList, Raven async query
+                    // extensions) can be rewritten to Lazily()/LazilyAsync(); a same-named user-defined
+                    // extension would be silently replaced with different semantics, so it is excluded.
+                    ISymbol? sessionSymbol = _model.GetSymbolInfo(SyntaxHelpers.WalkInvocationChainToRoot(memberAccess.Expression)).Symbol;
+                    BatchableCalls.Add((statement, methodName, memberAccess.Expression, false, SyntaxHelpers.AsStableSessionInstance(sessionSymbol)));
+                    return;
+                }
+
+                // Check for session loads. Only the single-argument Load(id) form is batchable: it maps
+                // to Lazily.Load<T>(id). The two-argument include overload Load<T>(id,
+                // Action<IIncludeBuilder<T>>) has no lazy equivalent — copying its include lambda onto
+                // Lazily.Load (which only takes an Action<T> onEval) would not compile — so it is
+                // excluded here in lockstep with the analyzer.
+                if ((methodName == KnownTypes.LoadMethodName || methodName == KnownTypes.LoadAsyncMethodName) &&
+                    invocation.ArgumentList.Arguments.Count == 1 &&
+                    SyntaxHelpers.IsSessionType(receiverType))
+                {
+                    ISymbol? sessionSymbol = _model.GetSymbolInfo(memberAccess.Expression).Symbol;
+                    BatchableCalls.Add((statement, methodName, memberAccess.Expression, true, SyntaxHelpers.AsStableSessionInstance(sessionSymbol)));
+                }
+            }
+
+            public override void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node) { }
+            public override void VisitParenthesizedLambdaExpression(ParenthesizedLambdaExpressionSyntax node) { }
+            public override void VisitAnonymousMethodExpression(AnonymousMethodExpressionSyntax node) { }
+            public override void VisitLocalFunctionStatement(LocalFunctionStatementSyntax node) { }
+        }
+    }
+}

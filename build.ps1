@@ -84,6 +84,8 @@ $EMBEDDED_LIB_OUT_DIR = [io.path]::combine($OUT_DIR, "Raven.Embedded", "lib")
 $SERVER_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Server")
 
 $SPARROW_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Sparrow")
+$ANALYZER_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Analyzers")
+$CODEFIXES_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Analyzers.CodeFixes")
 $SPARROW_OUT_DIR = [io.path]::combine($PROJECT_DIR, "src", "Sparrow", "bin", "Release")
 
 $TYPINGS_GENERATOR_SRC_DIR = [io.path]::combine($PROJECT_DIR, "tools", "TypingsGenerator")
@@ -148,7 +150,7 @@ if (Test-Path $embeddedDir) {
     CleanDir $embeddedDir 
 }
 
-CleanSrcDirs $TYPINGS_GENERATOR_SRC_DIR, $RVN_SRC_DIR, $DRTOOL_SRC_DIR, $SERVER_SRC_DIR, $CLIENT_SRC_DIR, $SPARROW_SRC_DIR, $TESTDRIVER_SRC_DIR
+CleanSrcDirs $TYPINGS_GENERATOR_SRC_DIR, $RVN_SRC_DIR, $DRTOOL_SRC_DIR, $SERVER_SRC_DIR, $CLIENT_SRC_DIR, $SPARROW_SRC_DIR, $TESTDRIVER_SRC_DIR, $ANALYZER_SRC_DIR, $CODEFIXES_SRC_DIR
 
 LayoutDockerPrerequisites $PROJECT_DIR $RELEASE_DIR
 
@@ -169,6 +171,7 @@ DownloadDependencies
 
 if ($JustStudio -eq $False) {
     BuildSparrow $SPARROW_SRC_DIR
+    BuildAnalyzers $ANALYZER_SRC_DIR $CODEFIXES_SRC_DIR
     BuildClient $CLIENT_SRC_DIR
     BuildTestDriver $TESTDRIVER_SRC_DIR
 

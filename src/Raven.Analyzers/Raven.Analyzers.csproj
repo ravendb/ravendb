@@ -1,0 +1,67 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>Raven.Analyzers</AssemblyName>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <DevelopmentDependency>true</DevelopmentDependency>
+    <IsPackable>false</IsPackable>
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <!--
+      This project is not packaged on its own. Raven.Analyzers.dll and
+      Raven.Analyzers.CodeFixes.dll are embedded inside RavenDB.Client.nupkg
+      under analyzers/dotnet/cs/. See src/Raven.Client/Raven.Client.csproj.
+    -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
+    <!--
+      Microsoft.CodeAnalysis.CSharp.Workspaces is intentionally NOT referenced here.
+      Per RS1038 (https://github.com/dotnet/roslyn-analyzers/issues/7438) analyzer
+      assemblies must only depend on compiler-provided references. Code-fix providers
+      that need Workspaces live in the sibling Raven.Analyzers.CodeFixes project.
+    -->
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Enables RS2008 release tracking: every rule ID must appear in Shipped or Unshipped. -->
+    <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
+    <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
+  </ItemGroup>
+
+  <!--
+    Bakes the product version into the analyzer assembly so SeverityPolicy can compute each
+    diagnostic's effective severity (Info in the introducing release, destination severity after).
+    The version is read from the single source of truth, src/CommonAssemblyInfo.cs, the same
+    AssemblyVersion line that scripts/version.ps1 parses during a release build. A plain
+    'dotnet build' reads the committed value, so the behaviour is deterministic locally too.
+  -->
+  <Target Name="GenerateRavenProductVersion" BeforeTargets="CoreCompile">
+    <PropertyGroup>
+      <_RavenCommonAssemblyInfo>$(MSBuildProjectDirectory)\..\CommonAssemblyInfo.cs</_RavenCommonAssemblyInfo>
+      <!--
+        Extract via Match, not Replace: Regex.Replace returns the WHOLE input unchanged when the
+        pattern does not match, which would bake the entire file (embedded quotes and newlines) into
+        the generated const and fail to compile. Match captures only the version; if the
+        AssemblyVersion line is ever renamed or removed the captured group is empty and the Error
+        below fails the build with a clear message instead of emitting broken source.
+      -->
+      <RavenProductVersion>$([System.Text.RegularExpressions.Regex]::Match($([System.IO.File]::ReadAllText('$(_RavenCommonAssemblyInfo)')), 'AssemblyVersion\("([^"]*)"\)').Groups.get_Item(1).Value)</RavenProductVersion>
+      <_RavenProductVersionFile>$(IntermediateOutputPath)RavenProductVersion.g.cs</_RavenProductVersionFile>
+    </PropertyGroup>
+    <Error Condition="'$(RavenProductVersion)' == ''"
+           Text="GenerateRavenProductVersion: could not read AssemblyVersion from $(_RavenCommonAssemblyInfo). SeverityPolicy.ProductVersion depends on it." />
+    <WriteLinesToFile
+        File="$(_RavenProductVersionFile)"
+        Lines="namespace Raven.Analyzers.Shared { public static partial class SeverityPolicy { internal const string ProductVersion = &quot;$(RavenProductVersion)&quot;%3B } }"
+        Overwrite="true"
+        WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <Compile Include="$(_RavenProductVersionFile)" />
+      <FileWrites Include="$(_RavenProductVersionFile)" />
+    </ItemGroup>
+  </Target>
+</Project>

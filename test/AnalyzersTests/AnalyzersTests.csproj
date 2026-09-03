@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RuntimeFrameworkVersion>10.0.9</RuntimeFrameworkVersion>
+    <AssemblyName>AnalyzersTests</AssemblyName>
+    <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
+    <LangVersion>preview</LangVersion>
+    <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
+    <!-- The test harness (RavenAnalyzerTest / RavenCodeFixTest) scans Raven.Client's output
+         directory for co-located dependencies to add as MetadataReferences, so every referenced
+         DLL must be copied into the test output. -->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <!-- Analyzer tests use the shared [RavenFact]/[RavenTheory] attributes (via
+         Tests.Infrastructure) but do not inherit the usual RavenTestBase base classes
+         because they need no running server. They are not referenced from SlowTests
+         and therefore are not scanned by TestsInheritanceTests. -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Use the same xUnit settings as the rest of the test suite. -->
+    <Content Include="..\xunit.runner.json" Link="xunit.runner.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Raven.Analyzers\Raven.Analyzers.csproj" />
+    <ProjectReference Include="..\..\src\Raven.Analyzers.CodeFixes\Raven.Analyzers.CodeFixes.csproj" />
+    <!-- Reference Raven.Client so the test harness can add it as a MetadataReference
+         to in-memory compilations, keeping KnownTypes FQN strings honest. -->
+    <ProjectReference Include="..\..\src\Raven.Client\Raven.Client.csproj" />
+    <!-- Reference Tests.Infrastructure so these tests can use the shared
+         [RavenFact]/[RavenTheory] attributes and RavenTestCategory, consistent
+         with the rest of the suite. -->
+    <ProjectReference Include="..\..\test\Tests.Infrastructure\Tests.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Direct reference so the harness can use CSharpCompilation, etc. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <!-- For code fix provider testing -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+</Project>
