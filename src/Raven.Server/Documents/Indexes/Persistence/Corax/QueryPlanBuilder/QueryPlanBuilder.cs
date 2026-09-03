@@ -1008,13 +1008,8 @@ internal static partial class QueryPlanBuilder
             default:
             {
                 string str = value.ToString();
-                if (str is { Length: > 18 and < 35 } && str.Contains('T')
-                                                     && DateTime.TryParse(str, CultureInfo.InvariantCulture,
-                                                         DateTimeStyles.RoundtripKind, out DateTime parsed))
-                {
-                    return (parsed.Ticks, ValueTokenType.Long);
-                }
-
+                // A date-shaped string stays a string here: whether it becomes ticks depends on the field, which is
+                // only known when the clause value is resolved - see ToTicksIfFieldHasTimeValues.
                 return (str, ValueTokenType.String);
             }
         }

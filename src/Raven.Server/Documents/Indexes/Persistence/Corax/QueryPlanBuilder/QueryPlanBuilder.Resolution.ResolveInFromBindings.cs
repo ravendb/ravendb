@@ -48,6 +48,8 @@ internal static partial class QueryPlanBuilder
                 return;
             }
 
+            (val, type) = ToTicksIfFieldHasTimeValues(exec, val, type, builderParameters);
+
             resolvedValues.Add(val);
             termTypes.Add(type);
         }
