@@ -62,11 +62,14 @@ namespace Raven.Server.ServerWide.Maintenance
         public string Name;
         public string NodeName;
 
+        public string DatabaseId;
         public string DatabaseChangeVector;
 
         public Dictionary<string, ObservedIndexStatus> LastIndexStats = new();
         public Dictionary<string, long> LastSentEtag = new();
         public Dictionary<int, BucketReport> ReportPerBucket = new();
+
+        public Dictionary<string, long> SystemCollections = new();
         public Dictionary<long, PeriodicBackupStatusReport> BackupStatuses;
 
         public long LastCompareExchangeIndex { get; set; }
@@ -86,12 +89,14 @@ namespace Raven.Server.ServerWide.Maintenance
 
             Name = other.Name;
             NodeName = other.NodeName;
+            DatabaseId = other.DatabaseId;
             DatabaseChangeVector = other.DatabaseChangeVector;
 
             // shallow
             LastIndexStats = other.LastIndexStats;
             LastSentEtag = other.LastSentEtag;
             ReportPerBucket = other.ReportPerBucket;
+            SystemCollections = other.SystemCollections;
             BackupStatuses = other.BackupStatuses;
 
             LastCompareExchangeIndex = other.LastCompareExchangeIndex;
@@ -157,6 +162,7 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 [nameof(Name)] = Name,
                 [nameof(NodeName)] = NodeName,
+                [nameof(DatabaseId)] = DatabaseId,
                 [nameof(Status)] = Status,
                 [nameof(LastEtag)] = LastEtag,
                 [nameof(LastTombstoneEtag)] = LastTombstoneEtag,
@@ -166,6 +172,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 [nameof(LastCompletedClusterTransaction)] = LastCompletedClusterTransaction,
                 [nameof(LastSentEtag)] = DynamicJsonValue.Convert(LastSentEtag),
                 [nameof(ReportPerBucket)] = DynamicJsonValue.Convert(ReportPerBucket),
+                [nameof(SystemCollections)] = DynamicJsonValue.Convert(SystemCollections),
                 [nameof(Error)] = Error,
                 [nameof(UpTime)] = UpTime,
                 [nameof(LastCompareExchangeIndex)] = LastCompareExchangeIndex,

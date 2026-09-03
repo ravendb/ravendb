@@ -257,6 +257,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         }
 
                         report.Status = DatabaseStatus.Loaded;
+                        report.DatabaseId = dbInstance.DbBase64Id;
                         var now = dbInstance.Time.GetUtcNow();
                         try
                         {
@@ -394,6 +395,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 report.NumberOfConflicts = prevDatabaseReport.NumberOfConflicts;
                 report.NumberOfDocuments = prevDatabaseReport.NumberOfDocuments;
                 report.DatabaseChangeVector = prevDatabaseReport.DatabaseChangeVector;
+                report.SystemCollections = prevDatabaseReport.SystemCollections;
             }
             else
             {
@@ -404,8 +406,26 @@ namespace Raven.Server.ServerWide.Maintenance
                     report.NumberOfConflicts = documentsStorage.ConflictsStorage.ConflictsCount;
                     report.NumberOfDocuments = documentsStorage.GetNumberOfDocuments(context);
                     report.DatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
+                    report.SystemCollections = GetSystemCollectionsStats(context, documentsStorage);
                 }
             }
+        }
+
+        private static Dictionary<string, long> GetSystemCollectionsStats(DocumentsOperationContext context, DocumentsStorage documentsStorage)
+        {
+            var stats = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var collection in documentsStorage.GetCollectionsNames(context))
+            {
+                if (collection.StartsWith('@') == false ||
+                    CollectionName.IsHiLoCollection(collection) ||
+                    CollectionName.IsEmptyCollection(collection))
+                    continue;
+
+                stats[collection] = documentsStorage.GetNumberOfDocumentsFor(collection, context);
+            }
+
+            return stats;
         }
 
         private static void FillReplicationInfo(DocumentDatabase dbInstance, DatabaseStatusReport report)
