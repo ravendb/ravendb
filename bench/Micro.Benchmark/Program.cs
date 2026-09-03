@@ -25,6 +25,12 @@ namespace Micro.Benchmark
             Console.WriteLine($"{nameof(AvxVnni)} support: {AvxVnni.IsSupported}");
             Console.WriteLine($"{nameof(Vector512)} support: {Vector512.IsHardwareAccelerated}");
 
+            if (args.Length > 0 && args[0] == "--profile-json")
+            {
+                Benchmarks.JsonSerializationProfile.Run();
+                return;
+            }
+
             BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args);
         }
     }
