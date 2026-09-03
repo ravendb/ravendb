@@ -52,6 +52,13 @@ export function DashboardStatCards({ cards }: { cards: DashboardStatCard[] }) {
 function StatCard({ card }: { card: DashboardStatCard }) {
     const valueLabel = card.valueLabel ?? (card.value === undefined ? "—" : formatCompact(card.value));
 
+    // A -100% delta only appears when the current period's value is 0, so hide the trend
+    // when either the value or the delta is 0 (nothing meaningful happened this period).
+    const deltaToShow =
+        !card.isLoading && card.value != null && card.value !== 0 && card.delta != null && card.delta !== 0
+            ? card.delta
+            : undefined;
+
     return (
         <Card className="gap-3">
             <CardContent className="space-y-1">
@@ -60,7 +67,7 @@ function StatCard({ card }: { card: DashboardStatCard }) {
                         {card.label}
                         {card.labelInfo && <InfoHint content={card.labelInfo} />}
                     </Text>
-                    {card.delta !== undefined && card.delta > 0 && !card.isLoading && <DeltaBadge delta={card.delta} />}
+                    {deltaToShow !== undefined && <DeltaBadge delta={deltaToShow} />}
                 </div>
                 {card.isLoading ? (
                     <Skeleton className="h-9 w-20" />

@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { type ReactNode, type Ref, useRef } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import type { SeriesData } from "@/api/generated/server-api";
 import {
@@ -36,6 +36,49 @@ function useZoomOnClick() {
     return { ref, zoomFrom };
 }
 
+// Shared bar-chart scaffolding for WritesBarChart and SeriesBarChart: the zoom-on-click
+// wrapper, chart container, grid, and both axes. Children supply the tooltip, legend, and
+// bars, which differ between the two charts.
+function BarChartFrame({
+    config,
+    data,
+    xKey,
+    chartRef,
+    children,
+}: {
+    config: ChartConfig;
+    data: Array<Record<string, unknown>>;
+    xKey: string;
+    chartRef: Ref<HTMLDivElement>;
+    children: ReactNode;
+}) {
+    return (
+        <div ref={chartRef}>
+            <ChartContainer config={config} className="aspect-auto h-56 w-full">
+                <BarChart
+                    accessibilityLayer
+                    data={data}
+                    // right margin leaves room for the last x-axis label, which recharts centers on the
+                    // final bucket and would otherwise clip against the chart's right edge.
+                    margin={{ top: 8, right: 32, bottom: 0, left: 0 }}
+                >
+                    <CartesianGrid vertical={false} />
+                    <XAxis dataKey={xKey} tickLine={false} axisLine={false} tickMargin={8} interval={2} />
+                    <YAxis
+                        domain={ZERO_SAFE_Y_DOMAIN}
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                        width={44}
+                        tickFormatter={(value) => formatCompact(value as number)}
+                    />
+                    {children}
+                </BarChart>
+            </ChartContainer>
+        </div>
+    );
+}
+
 // Single-series writes bar chart shared by the Usage page ("WRU" card) and the
 // per-app CDC writes section, which differ only in their x-axis key. Passing `onBarClick`
 // makes the bars clickable and receives the clicked bucket, used to drill a period from
@@ -52,45 +95,26 @@ export function WritesBarChart({
     const { ref, zoomFrom } = useZoomOnClick();
 
     return (
-        <div ref={ref}>
-            <ChartContainer config={writesChartConfig} className="aspect-auto h-56 w-full">
-                <BarChart
-                    accessibilityLayer
-                    data={data} // right margin leaves room for the last x-axis label, which recharts centers on the
-                    // final bucket and would otherwise clip against the chart's right edge.
-                    margin={{ top: 8, right: 32, bottom: 0, left: 0 }}
-                >
-                    <CartesianGrid vertical={false} />
-                    <XAxis dataKey={xKey} tickLine={false} axisLine={false} tickMargin={8} interval={2} />
-                    <YAxis
-                        domain={ZERO_SAFE_Y_DOMAIN}
-                        tickLine={false}
-                        axisLine={false}
-                        tickMargin={8}
-                        width={44}
-                        tickFormatter={(value) => formatCompact(value as number)}
-                    />
-                    <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
-                    <Bar
-                        dataKey="writes"
-                        fill="var(--color-writes)"
-                        radius={[4, 4, 0, 0]}
-                        className={onBarClick ? "cursor-pointer" : undefined}
-                        onClick={
-                            onBarClick
-                                ? (bar, index) => {
-                                      zoomFrom(index, data.length);
-                                      onBarClick(bar.payload);
-                                  }
-                                : undefined
-                        }
-                        // The drill-down chart zooms on click, so bars update in place rather
-                        // than replaying the grow-in that would read as a blank-and-redraw.
-                        isAnimationActive={!onBarClick}
-                    />
-                </BarChart>
-            </ChartContainer>
-        </div>
+        <BarChartFrame config={writesChartConfig} data={data} xKey={xKey} chartRef={ref}>
+            <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+            <Bar
+                dataKey="writes"
+                fill="var(--color-writes)"
+                radius={[4, 4, 0, 0]}
+                className={onBarClick ? "cursor-pointer" : undefined}
+                onClick={
+                    onBarClick
+                        ? (bar, index) => {
+                              zoomFrom(index, data.length);
+                              onBarClick(bar.payload);
+                          }
+                        : undefined
+                }
+                // The drill-down chart zooms on click, so bars update in place rather
+                // than replaying the grow-in that would read as a blank-and-redraw.
+                isAnimationActive={!onBarClick}
+            />
+        </BarChartFrame>
     );
 }
 
@@ -123,46 +147,27 @@ export function SeriesBarChart({
     );
 
     return (
-        <div ref={ref}>
-            <ChartContainer config={config} className="aspect-auto h-56 w-full">
-                <BarChart
-                    accessibilityLayer
-                    data={data.points} // right margin leaves room for the last x-axis label, which recharts centers on the
-                    // final bucket and would otherwise clip against the chart's right edge.
-                    margin={{ top: 8, right: 32, bottom: 0, left: 0 }}
-                >
-                    <CartesianGrid vertical={false} />
-                    <XAxis dataKey="t" tickLine={false} axisLine={false} tickMargin={8} interval={2} />
-                    <YAxis
-                        domain={ZERO_SAFE_Y_DOMAIN}
-                        tickLine={false}
-                        axisLine={false}
-                        tickMargin={8}
-                        width={44}
-                        tickFormatter={(value) => formatCompact(value as number)}
-                    />
-                    <ChartTooltip content={<ChartTooltipContent hideZero />} />
-                    <ChartLegend content={<ChartLegendContent />} />
-                    {visibleSeries.map((series) => (
-                        <Bar
-                            key={series.key}
-                            dataKey={series.key}
-                            stackId="series"
-                            fill={series.color}
-                            className={onBarClick ? "cursor-pointer" : undefined}
-                            onClick={
-                                onBarClick
-                                    ? (bar, barIndex) => {
-                                          zoomFrom(barIndex, data.points.length);
-                                          onBarClick(bar.payload);
-                                      }
-                                    : undefined
-                            }
-                            isAnimationActive={!onBarClick}
-                        />
-                    ))}
-                </BarChart>
-            </ChartContainer>
-        </div>
+        <BarChartFrame config={config} data={data.points} xKey="t" chartRef={ref}>
+            <ChartTooltip content={<ChartTooltipContent hideZero />} />
+            <ChartLegend content={<ChartLegendContent />} />
+            {visibleSeries.map((series) => (
+                <Bar
+                    key={series.key}
+                    dataKey={series.key}
+                    stackId="series"
+                    fill={series.color}
+                    className={onBarClick ? "cursor-pointer" : undefined}
+                    onClick={
+                        onBarClick
+                            ? (bar, barIndex) => {
+                                  zoomFrom(barIndex, data.points.length);
+                                  onBarClick(bar.payload);
+                              }
+                            : undefined
+                    }
+                    isAnimationActive={!onBarClick}
+                />
+            ))}
+        </BarChartFrame>
     );
 }
