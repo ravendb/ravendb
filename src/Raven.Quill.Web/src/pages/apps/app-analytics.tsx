@@ -87,7 +87,7 @@ export function AppAnalytics() {
 }
 
 function AnalyticsMetricCards({ usage }: { usage: AppUsageResponse }) {
-    const { conversations, tokens } = usage.metrics;
+    const { conversations, tokens, buckets } = usage.metrics;
     const cards: DashboardStatCard[] = [
         {
             label: "Conversations",
@@ -95,8 +95,16 @@ function AnalyticsMetricCards({ usage }: { usage: AppUsageResponse }) {
             isLoading: false,
             delta: conversations.delta,
             series: conversations.sparkline,
+            seriesDates: buckets,
         },
-        { label: "Tokens", value: tokens.value, isLoading: false, delta: tokens.delta, series: tokens.sparkline },
+        {
+            label: "Tokens",
+            value: tokens.value,
+            isLoading: false,
+            delta: tokens.delta,
+            series: tokens.sparkline,
+            seriesDates: buckets,
+        },
     ];
 
     return <StatCardsSection cards={cards} />;

@@ -160,7 +160,8 @@ internal static class MetricsReadService
 
         var metrics = new AppUsageMetrics(
             Conversations: new MetricCard(convNow, Delta(convNow, convPrev), ToDoubles(convByBucket)),
-            Tokens: new MetricCard(tokNow, Delta(tokNow, tokPrev), ToDoubles(tokByBucket)));
+            Tokens: new MetricCard(tokNow, Delta(tokNow, tokPrev), ToDoubles(tokByBucket)),
+            Buckets: buckets.ToArray());
 
         var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database), ct);
         
