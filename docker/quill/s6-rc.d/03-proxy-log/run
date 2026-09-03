@@ -1,2 +1,4 @@
 #!/command/with-contenv sh
-exec svc-log proxy
+# run as quill (see 01-ravendb-log). pipe nginx's stream through the token masker first: its
+# error_log carries raw path tokens that nginx can't mask in config (unlike the access log).
+exec s6-setuidgid quill sh -c 'mask-tokens | svc-log proxy'

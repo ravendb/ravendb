@@ -1,2 +1,2 @@
 #!/command/with-contenv sh
-exec svc-log certwatch
+exec s6-setuidgid quill svc-log certwatch

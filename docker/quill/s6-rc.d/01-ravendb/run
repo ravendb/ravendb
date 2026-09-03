@@ -3,8 +3,9 @@ set -e
 
 exec 2>&1
 
-mkdir -p /var/lib/quill/ravendb
-
+# The volume layout (ravendb/, certs/, setup/, ...) is created and owned by 00-prepare, a dependency
+# of this service, so we don't mkdir it here (root mkdir into a quill-owned tree is what 00-prepare
+# centralizes to avoid).
 SETUP_DIR="${RAVEN_QUILL_SETUP_PACKAGE_PATH:-/var/lib/quill/setup}"
 SETUP_SETTINGS="$SETUP_DIR/A/settings.json"
 
@@ -43,7 +44,6 @@ if [ -n "$NODE_HOST" ]; then
 fi
 
 CERT_DIR=/var/lib/quill/certs
-mkdir -p "$CERT_DIR"
 
 PFX="$(basename "$(ls "$SETUP_DIR"/A/cluster.server.certificate.*.pfx | head -n1)")"
 

@@ -164,7 +164,7 @@ COPY --from=ravendb-server-build /publish/raven /app/ravendb
 COPY --from=ravendb-studio-build /src/src/Raven.Studio/wwwroot/dist/Raven.Studio.zip /app/ravendb/
 COPY --from=web-build            /publish/web   /app/web
 
-RUN chown -R quill:quill /app
+RUN chown -R quill:quill /app/ravendb
 COPY docker/quill/nginx.conf /etc/nginx/nginx.conf
 
 COPY docker/quill/s6-rc.d/ /etc/s6-overlay/s6-rc.d/
@@ -172,12 +172,14 @@ COPY docker/quill/scripts/update-dns.sh /usr/local/bin/update-dns
 COPY docker/quill/scripts/proxy-certs.sh /usr/local/bin/proxy-certs
 COPY docker/quill/scripts/cert-chain.sh /usr/local/bin/cert-chain
 COPY docker/quill/scripts/svc-log.sh /usr/local/bin/svc-log
+COPY docker/quill/scripts/mask-tokens.sh /usr/local/bin/mask-tokens
 COPY docker/quill/scripts/prepare-volume.sh /usr/local/bin/prepare-volume
 RUN chmod +x /etc/s6-overlay/s6-rc.d/*/run \
              /usr/local/bin/update-dns \
              /usr/local/bin/proxy-certs \
              /usr/local/bin/cert-chain \
              /usr/local/bin/svc-log \
+             /usr/local/bin/mask-tokens \
              /usr/local/bin/prepare-volume
 
 EXPOSE 443
