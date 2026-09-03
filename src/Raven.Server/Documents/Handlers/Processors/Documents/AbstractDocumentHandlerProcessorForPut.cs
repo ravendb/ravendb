@@ -2,6 +2,7 @@
 using JetBrains.Annotations;
 using Raven.Client;
 using Sparrow.Json;
+using System.Runtime.CompilerServices;
 
 namespace Raven.Server.Documents.Handlers.Processors.Documents;
 
@@ -14,6 +15,7 @@ internal abstract class AbstractDocumentHandlerProcessorForPut
     {
     }
 
+    [AsyncMethodBuilder(typeof(PoolingAsyncValueTaskMethodBuilder))]
     public override async ValueTask ExecuteAsync()
     {
         using (ContextPool.AllocateOperationContext(out TOperationContext context))
