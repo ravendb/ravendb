@@ -1,4 +1,5 @@
-import { useController, useFormContext, useFormState } from "react-hook-form";
+import { useState } from "react";
+import { useController, useFormContext } from "react-hook-form";
 import { CARD_LABEL_CLASSES, SELECTED_CARD_CLASSES } from "@/components/form/form-radio-cards";
 import { FormInput } from "@/components/form/form-input";
 import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
@@ -17,12 +18,12 @@ import { RefreshCw } from "lucide-react";
 
 export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
     const { control, setValue, getValues } = useFormContext<AppFormData>();
-    const { touchedFields } = useFormState({ control });
     const isEditingApp = useSetupWizardStore((state) => state.editedAppSlug !== null);
+    const [hasEditedSlug, setHasEditedSlug] = useState(false);
 
-    // The slug follows the app name until the operator touches it, and never on an existing app,
+    // The slug follows the app name until the operator types their own, and never on an existing app,
     // where it is already the app's database name.
-    const isSlugFollowingName = !touchedFields.externalConnection?.slug && !isEditingApp;
+    const isSlugFollowingName = !hasEditedSlug && !isEditingApp;
 
     const {
         field: { value },
@@ -51,6 +52,7 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
                 label="Public URL slug"
                 placeholder="e.g. acme-shop"
                 disabled={isBusy || isEditingApp}
+                afterChange={() => setHasEditedSlug(true)}
                 description={
                     isEditingApp
                         ? "Appears in every public embed URL and is the app's database name, so it cannot be changed."
@@ -60,14 +62,16 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
                     !isEditingApp && (
                         <InputGroupAddon align="inline-end">
                             <Button
+                                type="button"
                                 variant="ghost"
-                                onClick={() =>
+                                onClick={() => {
                                     setValue(
                                         "externalConnection.slug",
                                         toSlug(getValues("externalConnection.appName")),
                                         { shouldValidate: true },
-                                    )
-                                }
+                                    );
+                                    setHasEditedSlug(false);
+                                }}
                             >
                                 <RefreshCw />
                                 Regenerate

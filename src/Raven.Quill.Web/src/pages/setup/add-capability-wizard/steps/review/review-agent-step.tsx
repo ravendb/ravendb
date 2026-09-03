@@ -13,10 +13,19 @@ export function ReviewAgentStep() {
     const mode = useWatch({ control, name: "create.mode" });
     const { errors } = useFormState({ control, name: "review" });
     const [activeTab, setActiveTab] = useState<ReviewTabId>("suggestion");
+    // Owned here rather than in the configuration tab, which the tabs unmount while it is inactive.
+    const [hasEditedIdentifier, setHasEditedIdentifier] = useState(false);
+
+    const configurationTab = (
+        <AgentConfigurationTab
+            hasEditedIdentifier={hasEditedIdentifier}
+            setHasEditedIdentifier={setHasEditedIdentifier}
+        />
+    );
 
     // Manual setup skips the AI suggestion overview — there is no suggestion to show.
     if (mode === "manual") {
-        return <AgentConfigurationTab />;
+        return configurationTab;
     }
 
     return (
@@ -34,7 +43,7 @@ export function ReviewAgentStep() {
                 <AgentSuggestionTab />
             </TabsContent>
             <TabsContent value="configuration" className="mt-3">
-                <AgentConfigurationTab />
+                {configurationTab}
             </TabsContent>
         </Tabs>
     );

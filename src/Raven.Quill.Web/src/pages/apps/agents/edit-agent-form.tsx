@@ -30,14 +30,13 @@ import {
     buildAgentConfigurationPayload,
     suggestionToAgentConfiguration,
 } from "@/pages/setup/add-capability-wizard/agent-config-form";
-import { agentSchema } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
+import { editAgentSchema } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
 import { AgentActionsSection } from "@/pages/setup/add-capability-wizard/steps/review/agent-actions-section";
 import { SYSTEM_PROMPT_PLACEHOLDER } from "@/pages/setup/add-capability-wizard/steps/review/agent-configuration-tab";
 import { AgentParametersSection } from "@/pages/setup/add-capability-wizard/steps/review/agent-parameters-section";
 import { AgentQueryToolsSection } from "@/pages/setup/add-capability-wizard/steps/review/agent-query-tools-section";
 import { ReviewTestAgentButton } from "@/pages/setup/add-capability-wizard/steps/review/test-agent-sheet";
 
-const editAgentSchema = agentSchema.pick({ connection: true, review: true });
 type EditAgentFormData = z.infer<typeof editAgentSchema>;
 type SectionId = "basic" | "parameters" | "tools" | "actions";
 

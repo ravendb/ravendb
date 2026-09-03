@@ -1,4 +1,8 @@
-import type { AiAgentParameterPolicy, AiAgentParameterValueType } from "@/api/generated/server-api";
+import type {
+    AgentSummaryResponse,
+    AiAgentParameterPolicy,
+    AiAgentParameterValueType,
+} from "@/api/generated/server-api";
 import { z } from "zod";
 
 export const AGENT_PARAMETER_TYPES: AiAgentParameterValueType[] = [
@@ -97,33 +101,126 @@ function isHttpUrl(value: string) {
     }
 }
 
-// The working copy of the agent configuration edited in the review step. Seeded from an
-// AI suggestion (mode "ai") or left empty (mode "manual"); always the source the wizard
-// provisions from.
-const agentConfigurationSchema = z
-    .object({
-        name: z.string().trim().min(1, "Agent name is required"),
-        identifier: z.string(),
-        systemPrompt: z.string().trim().min(1, "System prompt is required"),
-        sampleObject: z.string(),
-        outputSchema: z.string(),
-        parameters: z.array(agentParameterSchema),
-        queries: z.array(agentQueryToolSchema),
-        actions: z.array(agentActionSchema),
-    })
-    .superRefine((config, ctx) => {
-        addDuplicateNameIssues(ctx, config.parameters, "parameters", "Parameter name must be unique");
-        addDuplicateNameIssues(ctx, config.queries, "queries", "Tool name must be unique");
-        addDuplicateNameIssues(ctx, config.actions, "actions", "Action name must be unique");
-        addToolNameCollisionIssues(ctx, config.queries, config.actions);
-        if (config.sampleObject.trim().length === 0 && config.outputSchema.trim().length === 0) {
-            ctx.addIssue({
-                code: "custom",
-                message: "Either 'Sample response object' or 'Response JSON schema' must be provided",
-                path: ["outputSchema"],
-            });
-        }
-    });
+export type ExistingAgent = Pick<AgentSummaryResponse, "agentId" | "name">;
+
+// Mirrors AiTaskIdentifierHelper.ValidateIdentifier, minus its blind spot: the server accepts a
+// leading hyphen, which reads as a typo everywhere the identifier is shown.
+const AGENT_IDENTIFIER_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+
+const FALLBACK_AGENT_IDENTIFIER = "agent";
+
+const agentConfigurationFields = {
+    name: z.string().trim().min(1, "Agent name is required"),
+    systemPrompt: z.string().trim().min(1, "System prompt is required"),
+    sampleObject: z.string(),
+    outputSchema: z.string(),
+    parameters: z.array(agentParameterSchema),
+    queries: z.array(agentQueryToolSchema),
+    actions: z.array(agentActionSchema),
+};
+
+/**
+ * The working copy of the agent configuration edited in the review step. Seeded from an
+ * AI suggestion (mode "ai") or left empty (mode "manual"); always the source the wizard
+ * provisions from.
+ *
+ * `existingAgents` are the agents the app already has. The server updates an agent in place when
+ * both its identifier and name match, and rejects an identifier clash with a 400. A duplicate name
+ * alone it would accept, but two agents with one name are indistinguishable everywhere the app
+ * lists them, so it is rejected here as well.
+ */
+export const createAgentConfigurationSchema = (existingAgents: ExistingAgent[] = []) =>
+    z
+        .object({
+            ...agentConfigurationFields,
+            identifier: z
+                .string()
+                .trim()
+                .min(1, { error: "Identifier is required", abort: true })
+                .regex(AGENT_IDENTIFIER_PATTERN, "Use lowercase letters (a-z), digits (0-9) and single hyphens"),
+        })
+        .superRefine((config, ctx) => {
+            for (const conflict of findExistingAgentConflicts(config, existingAgents)) {
+                ctx.addIssue({ code: "custom", message: conflict.message, path: [conflict.field] });
+            }
+
+            addAgentConfigurationIssues(config, ctx);
+        });
+
+// An agent's identifier is permanent
+export const editAgentConfigurationSchema = z
+    .object({ ...agentConfigurationFields, identifier: z.string() })
+    .superRefine(addAgentConfigurationIssues);
+
+// Mirrors AiTaskIdentifierHelper.GenerateIdentifier
+export function toAgentIdentifier(name: string) {
+    const identifier = name
+        .normalize("NFD")
+        .replace(/[^A-Za-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .toLowerCase();
+
+    return identifier || FALLBACK_AGENT_IDENTIFIER;
+}
+
+type AgentConfigurationIssueInput = {
+    sampleObject: string;
+    outputSchema: string;
+    parameters: { name: string }[];
+    queries: { name: string }[];
+    actions: { name: string }[];
+};
+
+function addAgentConfigurationIssues(config: AgentConfigurationIssueInput, ctx: z.RefinementCtx) {
+    addDuplicateNameIssues(ctx, config.parameters, "parameters", "Parameter name must be unique");
+    addDuplicateNameIssues(ctx, config.queries, "queries", "Tool name must be unique");
+    addDuplicateNameIssues(ctx, config.actions, "actions", "Action name must be unique");
+    addToolNameCollisionIssues(ctx, config.queries, config.actions);
+
+    if (config.sampleObject.trim().length === 0 && config.outputSchema.trim().length === 0) {
+        ctx.addIssue({
+            code: "custom",
+            message: "Either 'Sample response object' or 'Response JSON schema' must be provided",
+            path: ["outputSchema"],
+        });
+    }
+}
+
+export type ExistingAgentConflict = { field: "name" | "identifier"; message: string };
+
+export function findExistingAgentConflicts(
+    config: { name: string; identifier: string },
+    existingAgents: ExistingAgent[],
+): ExistingAgentConflict[] {
+    const conflicts: ExistingAgentConflict[] = [];
+    const takenName = findExisting(existingAgents, (agent) => agent.name, config.name);
+
+    if (takenName) {
+        conflicts.push({ field: "name", message: `This app already has an agent named "${takenName}"` });
+    }
+
+    const takenIdentifier = findExisting(existingAgents, (agent) => agent.agentId, config.identifier);
+
+    if (takenIdentifier) {
+        conflicts.push({
+            field: "identifier",
+            message: `Another agent in this app already uses the identifier "${takenIdentifier}"`,
+        });
+    }
+
+    return conflicts;
+}
+
+function findExisting(agents: ExistingAgent[], select: (agent: ExistingAgent) => string, candidate: string) {
+    const key = candidate.trim().toLowerCase();
+
+    return key
+        ? agents
+              .map(select)
+              .find((value) => value.trim().toLowerCase() === key)
+              ?.trim()
+        : undefined;
+}
 
 // Queries and actions share one tool-name namespace on the server, so a name used by both
 // is rejected there; flag it on the action instead of shipping the operator a 400.
@@ -155,39 +252,49 @@ function addDuplicateNameIssues(ctx: z.RefinementCtx, items: { name: string }[],
     });
 }
 
-// The wizard currently supports a single capability (AI Agent). The literal keeps the
-// "Choose an AI Capability" step honest while leaving room for more capabilities later.
-export const agentSchema = z.object({
-    capability: z.object({
-        type: z.literal("agent"),
-    }),
-    connection: z.object({
-        connectionStringName: z.string().min(1, "Select an AI provider connection string"),
-    }),
-    create: z
-        .object({
-            // "ai": start from an AI-suggested data candidate; "prompt": generate one from a
-            // free-text description; "manual": build the configuration from scratch.
-            mode: z.enum(["ai", "prompt", "manual"]),
-            // Index into the AI-suggested candidates held in the wizard store.
-            selectedIndex: z.number().int().min(0),
-            // Free-text intent that drives the "from-prompt" suggest mode. UI-only: it is the
-            // input to generation, not part of the provisioned configuration.
-            promptInput: z.string(),
-        })
-        .superRefine((value, ctx) => {
-            if (value.mode === "prompt" && value.promptInput.trim().length === 0) {
-                ctx.addIssue({
-                    code: "custom",
-                    message: "Describe what you'd like your agent to do",
-                    path: ["promptInput"],
-                });
-            }
-        }),
-    review: agentConfigurationSchema,
+const connectionSchema = z.object({
+    connectionStringName: z.string().min(1, "Select an AI provider connection string"),
 });
 
-export type AgentFormData = z.infer<typeof agentSchema>;
+// The wizard currently supports a single capability (AI Agent). The literal keeps the
+// "Choose an AI Capability" step honest while leaving room for more capabilities later.
+export const createAgentSchema = (existingAgents: ExistingAgent[] = []) =>
+    z.object({
+        capability: z.object({
+            type: z.literal("agent"),
+        }),
+        connection: connectionSchema,
+        create: z
+            .object({
+                // "ai": start from an AI-suggested data candidate; "prompt": generate one from a
+                // free-text description; "manual": build the configuration from scratch.
+                mode: z.enum(["ai", "prompt", "manual"]),
+                // Index into the AI-suggested candidates held in the wizard store.
+                selectedIndex: z.number().int().min(0),
+                // Free-text intent that drives the "from-prompt" suggest mode. UI-only: it is the
+                // input to generation, not part of the provisioned configuration.
+                promptInput: z.string(),
+            })
+            .superRefine((value, ctx) => {
+                if (value.mode === "prompt" && value.promptInput.trim().length === 0) {
+                    ctx.addIssue({
+                        code: "custom",
+                        message: "Describe what you'd like your agent to do",
+                        path: ["promptInput"],
+                    });
+                }
+            }),
+        review: createAgentConfigurationSchema(existingAgents),
+    });
+
+// The name of an existing agent is permanent and the edit form keeps it disabled, so editing needs
+// no uniqueness check and no agent list to check against.
+export const editAgentSchema = z.object({
+    connection: connectionSchema,
+    review: editAgentConfigurationSchema,
+});
+
+export type AgentFormData = z.infer<ReturnType<typeof createAgentSchema>>;
 export type AgentConfigurationFormData = AgentFormData["review"];
 export type AgentParameterFormData = AgentConfigurationFormData["parameters"][number];
 export type AgentQueryToolFormData = AgentConfigurationFormData["queries"][number];
