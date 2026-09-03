@@ -1,2 +1,2 @@
 #!/command/with-contenv sh
-exec svc-log ravendb
+exec s6-setuidgid quill svc-log ravendb

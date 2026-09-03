@@ -143,7 +143,12 @@ jobs:
           # 443 == 0x01BB in /proc/net/tcp's local_address column
           docker exec "$c" sh -c 'awk "{print \$2}" /proc/net/tcp | grep -qi ":01BB$"' || fail "nginx did not bind :443"
           [ "$(docker exec "$c" stat -c '%U' /var/lib/quill/proxy/privkey.pem)" = quill ] || fail "proxy key not owned by quill"
-          echo "ok: 3 daemons uid=999, :443 bound, proxy key owned by quill"
+
+          for d in certs proxy; do
+            m=$(docker exec "$c" stat -c '%a' "/var/lib/quill/$d")
+            [ "$m" = 700 ] || fail "/var/lib/quill/$d is mode $m, expected 700"
+          done
+          echo "ok: 3 daemons uid=999, :443 bound, proxy key owned by quill, key dirs 0700"
 
       - name: Probe /healthz through nginx :443
         run: |
@@ -159,6 +164,20 @@ jobs:
           echo "::error::healthz never responded via :443"
           docker logs --tail 50 quill-pr-check
           exit 1
+
+      - name: Verify access-log token masking
+        run: |
+          set -eu
+          c=quill-pr-check
+          T=aabbccddeeff00112233445566778899
+          docker exec "$c" curl -sk -o /dev/null "https://127.0.0.1/apps/acme/embed/$T" || true
+          docker exec "$c" curl -sk -o /dev/null "https://127.0.0.1/APPS/acme/EMBED/$T" || true
+          sleep 1
+          log=$(docker exec "$c" cat /var/lib/quill/proxy/access.log 2>/dev/null || true)
+          echo "$log" | grep -i embed || true
+          echo "$log" | grep -q "aabbcc\*\*\*" || { echo "::error::masked token not found in access log"; exit 1; }
+          if echo "$log" | grep -q "$T"; then echo "::error::raw token leaked into the access log"; exit 1; fi
+          echo "ok: access-log tokens masked (normal + mixed case)"
 
       - name: Cleanup
         if: always()

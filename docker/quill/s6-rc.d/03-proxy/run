@@ -5,11 +5,12 @@ exec 2>&1
 
 # nginx :443 SNI front (Phase 1). It terminates TLS for the web subdomains with the wildcard cert
 # 01-ravendb/run places on the volume, which only exists post-activation. Wait for it; pre-activation
-# the operator reaches the dashboard on the published :5000 (first-run). db.*/a.* are TLS-passthrough.
+# there is no cert yet, and the web app binds loopback only (127.0.0.1:5000), so nothing is exposed
+# until activation completes. db.*/a.* are TLS-passthrough.
 
 CERT_DIR=/var/lib/quill/certs
 PROXY_DIR=/var/lib/quill/proxy
-mkdir -p "$PROXY_DIR"
+# proxy/ (and /run/quill for the pid) are created by 00-prepare, a dependency of this service.
 
 RAVENDB_PORT="${RAVEN_QUILL_RAVENDB_INTERNAL_PORT:-8443}"
 RAVENDB_PROXY_PORT="${RAVEN_QUILL_RAVENDB_PROXY_PORT:-8447}"
