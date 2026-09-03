@@ -533,7 +533,7 @@ namespace Voron.Debugging
             {
                 decompressedPage = tree.DecompressPage(page.TreePage, DecompressionUsage.Read, skipCache: true);
 
-                page = new TreePageSafe(page.Tree, decompressedPage.Page);
+                page = new TreePageSafe(page.Tree, decompressedPage);
             }
 
             try

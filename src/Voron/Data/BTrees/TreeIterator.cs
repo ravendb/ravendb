@@ -61,7 +61,7 @@ namespace Voron.Data.BTrees
             ThrowIfDisposedOnDebug(this, "TreeIterator " + _tree.Name);
 
             _currentPage = _tree.FindPageFor(key, node: out TreeNodeHeader* node, 
-                cursor: out TreeCursorConstructor constructor,
+                cursor: out TreeCursor constructor,
                 allowCompressed: _tree.IsLeafCompressionSupported, backward: backward);
             
             if (_currentPage.IsCompressed)
@@ -70,7 +70,7 @@ namespace Voron.Data.BTrees
                 node = _currentPage.Search(_tx, key, backward: backward);
             }
 
-            _cursor = constructor.Build(key);
+            _cursor = constructor;
             _cursor.Pop();
 
             if (node != null)
@@ -271,7 +271,6 @@ namespace Voron.Data.BTrees
             if (MaxKey.HasValue)
                 MaxKey.Release(_tx.Allocator);
             _prevKeyScope.Dispose();
-            _cursor?.Dispose();
             _decompressedPage?.Dispose();
             OnDisposal?.Invoke(this);
 
@@ -316,7 +315,7 @@ namespace Voron.Data.BTrees
 
             _decompressedPage?.Dispose();
 
-            _currentPage = (_decompressedPage = _tree.DecompressPage(_currentPage, DecompressionUsage.Read, skipCache: false)).Page;
+            _currentPage = _decompressedPage = _tree.DecompressPage(_currentPage, DecompressionUsage.Read, skipCache: false);
         }
     }
 

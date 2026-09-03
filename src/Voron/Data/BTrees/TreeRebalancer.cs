@@ -13,19 +13,19 @@ using Constants = Voron.Global.Constants;
 
 namespace Voron.Data.BTrees
 {
-    public sealed unsafe class TreeRebalancer
+    public unsafe ref struct TreeRebalancer
     {
         private readonly LowLevelTransaction _tx;
         private readonly Tree _tree;
-        private readonly TreeCursor _cursor;
+        private readonly ref TreeCursor _cursor;
 
         private bool _ancestorsChanged;
 
-        public TreeRebalancer(LowLevelTransaction tx, Tree tree, TreeCursor cursor)
+        public TreeRebalancer(LowLevelTransaction tx, Tree tree, ref TreeCursor cursor)
         {
             _tx = tx;
             _tree = tree;
-            _cursor = cursor;
+            _cursor = ref cursor;
         }
 
         private FreeSpaceHandlingDisabler DisableFreeSpaceUsageIfSplittingRootTree()
@@ -237,9 +237,8 @@ namespace Voron.Data.BTrees
         {
             using (GetActualKey(page, 0, out Slice key))
             {
-                _tree.FindPageFor(key, node: out TreeNodeHeader* _, cursor: out TreeCursorConstructor cursorConstructor, allowCompressed: true);
+                _tree.FindPageFor(key, node: out TreeNodeHeader* _, cursor: out TreeCursor fresh, allowCompressed: true);
 
-                using (TreeCursor fresh = cursorConstructor.Build(key))
                 {
                     var path = new List<TreePage>();
                     while (fresh.PageCount > 0)
@@ -353,7 +352,7 @@ namespace Voron.Data.BTrees
 
         private void AddSeparatorToParentPage(TreePage childPage, ref TreePage parentPage, long pageNumber, Slice seperatorKey, int separatorKeyPosition)
         {
-            var parent = new ParentPageAction(parentPage, childPage, _tree, _cursor, _tx);
+            var parent = new ParentPageAction(ref parentPage, childPage, _tree, ref _cursor, _tx);
 
             parent.AddSeparator(seperatorKey, pageNumber, separatorKeyPosition);
 
@@ -476,10 +475,10 @@ namespace Voron.Data.BTrees
                     decompressedLeafPage?.Dispose();
                     decompressedLeafPage = _tree.DecompressPage(page, DecompressionUsage.Read, skipCache: true);
 
-                    if (decompressedLeafPage.Page.NumberOfEntries > 0)
+                    if (decompressedLeafPage.NumberOfEntries > 0)
                     {
                         if (page.NumberOfEntries == 0)
-                            node = decompressedLeafPage.Page.GetNode(0);
+                            node = decompressedLeafPage.GetNode(0);
                         else
                         {
                             // we want to find the smallest key in compressed page
@@ -487,7 +486,7 @@ namespace Voron.Data.BTrees
                             // in particular, it can be the key of compression tombstone node that we don't see after decompression
                             // so we need to take first keys from decompressed and compressed page and compare them
 
-                            var decompressedNode = decompressedLeafPage.Page.GetNode(0);
+                            var decompressedNode = decompressedLeafPage.GetNode(0);
                             var compressedNode = page.GetNode(0);
 
                             using (TreeNodeHeader.ToSlicePtr(_tx.Allocator, decompressedNode, out var firstDecompressedKey))

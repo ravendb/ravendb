@@ -1,8 +1,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using Sparrow.Collections;
-using Voron.Data.BTrees;
 using Voron.Impl;
 
 namespace Voron
@@ -12,8 +10,6 @@ namespace Voron
         public bool LongLivedTransactions { get; set; } = longLivedTransactions;
         
 
-         // async commit keeps multuple transactions alive at once over the same context, so we use a stack for those
-        private readonly Stack<FastStack<TreePage>> _cursorPages = new();
         private readonly Stack<PageLocator> _pageLocators = new();
         
 
@@ -38,19 +34,6 @@ namespace Voron
             Debug.Assert(locator != null);
             if (_pageLocators.Count < 1024)
                 _pageLocators.Push(locator);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal FastStack<TreePage> AllocateCursorPages()
-        {
-            return _cursorPages.Count != 0 ? _cursorPages.Pop() : new FastStack<TreePage>(16);
-        }
-
-        internal void FreeCursorPages(FastStack<TreePage> pages)
-        {
-            Debug.Assert(pages != null);
-            if (_cursorPages.Count < 64)
-                _cursorPages.Push(pages);
         }
     }
 }
