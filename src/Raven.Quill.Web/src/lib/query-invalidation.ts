@@ -3,6 +3,7 @@ import { api } from "@/api/api";
 import { AI_CONSENT_REQUIRED_MESSAGE } from "@/api/custom-services/assistant-service";
 import type { ChannelType } from "@/api/generated/server-api";
 import { APP_AI_CONNECTION_STRINGS_KEY } from "@/api/queries/apps-queries";
+import { dropQueries } from "@/lib/query-fetch-start";
 
 // The dashboard "My apps" table (stats.dashboardApps) summarizes each app's agent and
 // channel counts, so creating or removing an app, agent, or channel makes it stale too —
@@ -24,6 +25,10 @@ export function invalidateAppQueries(queryClient: QueryClient, slug?: string) {
 }
 
 export function invalidateAgentQueries(queryClient: QueryClient, slug: string) {
+    // Suggestions are dropped rather than invalidated: the entry is cached with an infinite stale
+    // time, and the connect step's prefetch is skipped while a cache entry exists.
+    dropQueries(queryClient, { queryKey: api.queries.apps.suggestAgentFromData(slug).queryKey });
+
     return Promise.all([
         queryClient.invalidateQueries({ queryKey: api.queries.agents.list(slug).queryKey }),
         queryClient.invalidateQueries({ queryKey: api.queries.stats.dashboardApps().queryKey }),
