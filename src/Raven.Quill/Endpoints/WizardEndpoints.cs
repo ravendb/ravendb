@@ -420,7 +420,7 @@ public static class WizardEndpoints
         var result = await aiClient.SuggestCdcAsync(selectedSchema, samples: null, intentPrompt, ct);
 
         if (result.Status != AiHelperStatus.Success)
-            return Results.Ok(new SuggestCdcResponse(Configuration: null, result.Rationale, result.Status.ToString()));
+            return Results.Ok(new SuggestCdcResponse(Configuration: null, result.Rationale, result.Status.ToString(), UnmappedTables: []));
 
         if (result.Configuration is null)
             return Results.UnprocessableEntity(new ApiErrorResponse("AI service returned a success status but no configuration"));
@@ -442,8 +442,47 @@ public static class WizardEndpoints
             return Results.UnprocessableEntity(new ApiErrorResponse(Errors: errors.ToArray()));
         }
 
-        return Results.Ok(new SuggestCdcResponse(result.Configuration, result.Rationale, result.Status.ToString()));
+        var unmappedTables = CollectUnmappedTables(selectedSchema, result.Configuration);
+        if (unmappedTables.Count > 0 && logger.IsInfoEnabled)
+            logger.Info(
+                $"SuggestCdc: configuration leaves {unmappedTables.Count} of {selectedSchema.Tables.Count} " +
+                "selected table(s) unmapped");
+
+        return Results.Ok(new SuggestCdcResponse(result.Configuration, result.Rationale, result.Status.ToString(), unmappedTables));
     }
+
+    private static List<string> CollectUnmappedTables(CdcSinkSourceSchema selectedSchema, CdcSinkConfiguration configuration)
+    {
+        var covered = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var table in configuration.Tables)
+        {
+            if (table.Disabled)
+                continue;
+
+            Visit(table.SourceTableSchema, table.SourceTableName, fallbackSchemaName: null, table.EmbeddedTables);
+        }
+
+        return selectedSchema.Tables
+            .Where(table => covered.Contains(CoverageKey(table.SourceTableSchema, table.SourceTableName)) == false)
+            .Select(table => string.IsNullOrWhiteSpace(table.SourceTableSchema)
+                ? table.SourceTableName
+                : $"{table.SourceTableSchema}.{table.SourceTableName}")
+            .ToList();
+
+        void Visit(string? schemaName, string? tableName, string? fallbackSchemaName, List<CdcSinkEmbeddedTableConfig> embeddedTables)
+        {
+            var schema = string.IsNullOrWhiteSpace(schemaName) ? fallbackSchemaName : schemaName;
+            if (string.IsNullOrWhiteSpace(tableName) == false)
+                covered.Add(CoverageKey(schema, tableName));
+
+            foreach (var embedded in embeddedTables)
+                Visit(embedded.SourceTableSchema, embedded.SourceTableName, schema, embedded.EmbeddedTables);
+        }
+    }
+
+    private static string CoverageKey(string? schemaName, string tableName) =>
+        $"{schemaName?.Trim()}\0{tableName.Trim()}";
 
     private static async Task<IResult> TestMappingAsync(
         TestMappingRequest body,
