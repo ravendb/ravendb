@@ -89,6 +89,47 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHe
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Reports_selected_tables_the_configuration_does_not_capture()
+    {
+        Mock.CdcResponse = (200, AiHelperSamples.CdcEnvelope(AiHelperSamples.BuildCdcConfig()));
+        await SeedDiscoveredSchemaAsync(Host);
+
+        var resp = await Host.SuggestCdcAsync(Request("x", "orders", "customers", "audit_log"));
+
+        Assert.Equal("Success", resp.Status);
+        Assert.Equal(new[] { "public.customers", "public.audit_log" }, resp.UnmappedTables);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Embedded_tables_count_as_mapped_even_without_their_own_schema()
+    {
+        Mock.CdcResponse = (200, AiHelperSamples.CdcEnvelope(AiHelperSamples.BuildCdcConfig()));
+        await SeedDiscoveredSchemaAsync(
+            Host,
+            SourceTable("orders", foreignKeysTo: ["order_lines"]),
+            SourceTable("order_lines"));
+
+        var resp = await Host.SuggestCdcAsync(Request("x", "orders", "order_lines"));
+
+        Assert.Equal("Success", resp.Status);
+        Assert.Empty(resp.UnmappedTables);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Disabled_roots_do_not_count_as_mapped()
+    {
+        var config = AiHelperSamples.BuildCdcConfig();
+        config.Tables[0].Disabled = true;
+        Mock.CdcResponse = (200, AiHelperSamples.CdcEnvelope(config));
+        await SeedDiscoveredSchemaAsync(Host);
+
+        var resp = await Host.SuggestCdcAsync(Request("x", "orders"));
+
+        Assert.Equal("Success", resp.Status);
+        Assert.Equal(new[] { "public.orders" }, resp.UnmappedTables);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Requires_at_least_one_selected_table()
     {
         await SeedDiscoveredSchemaAsync(Host);
