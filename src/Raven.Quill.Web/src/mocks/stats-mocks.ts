@@ -537,6 +537,13 @@ const sampleTranscript: ConversationDto["transcript"] = [
 const usageSparkline = (base: number) =>
     Array.from({ length: 14 }, (_, index) => Math.round(base * (0.7 + 0.3 * Math.sin((index / 13) * Math.PI * 2))));
 
+// Bucket timestamps aligned 1:1 with the 14-point usageSparkline, matching the daily buckets
+// buildSeries lays out (2026-06-12 .. 2026-06-25) so the stat-card sparkline tooltips show dates.
+const usageBuckets = Array.from(
+    { length: 14 },
+    (_, index) => `2026-06-${String(index + 12).padStart(2, "0")}T00:00:00Z`,
+);
+
 // Builds a multi-series breakdown shaped like the backend's SeriesData — one
 // { t, <key>: number } row per bucket. The generated `points` type is Record<string, never>,
 // so assemble the rows loosely and cast to the contract shape.
@@ -556,6 +563,7 @@ export const sampleAppUsage: AppUsageResponse = {
     metrics: {
         conversations: { value: 7400, delta: 12.5, sparkline: usageSparkline(520) },
         tokens: { value: 6100000, delta: 15, sparkline: usageSparkline(430000) },
+        buckets: usageBuckets,
     },
     tokensByCapability: buildSeries(
         [
