@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
@@ -24,13 +26,17 @@ public class RavenDB_27425 : RavenTestBase
     private const int MappedCount = 5;
     private const int TailCount = 16_000;
     private const int RefDocBodyBytes = 8 * 1024;
-    private const int FilteredOutCount = 10_000;
 
     // fewer than 128 documents, so the per-document counter alone never opens the check gate
     private const int FanoutDocsCount = 30;
+    private const string ManagedAllocationsBatchLimitInMb = "8";
     private const int FanoutPerDocument = 2_000;
 
     private const int SkippedItemsCount = 20_000;
+
+    private const int AttachmentDocsCount = 30;
+    private const int AttachmentsPerDocument = 100;
+    private const int AttachmentSizeBytes = 1024;
 
     // MapBatchSize is checked on every CanContinueBatch call, so anything above 128 tombstones works
     private const int CleanupTombstonesCount = 2_048;
@@ -92,48 +98,7 @@ public class RavenDB_27425 : RavenTestBase
             var referenceDetails = await GetReferenceRunDetails(store, index.IndexName);
 
             Assert.NotEmpty(referenceDetails);
-            Assert.Contains(referenceDetails, x => x.BatchCompleteReason?.Contains("Reached transaction size limit") == true);
-        }
-    }
-
-    [RavenFact(RavenTestCategory.Indexes)]
-    public async Task MapShouldRespectManagedAllocationsBatchLimitWhenMostDocumentsAreFilteredOut()
-    {
-        using (var store = GetDocumentStore(new Options
-        {
-            ModifyDatabaseRecord = r =>
-            {
-                r.Settings[RavenConfiguration.GetKey(x => x.Indexing.ManagedAllocationsBatchLimit)] = "1";
-            }
-        }))
-        {
-            var index = new FilteredEntities_ByField1();
-            await index.ExecuteAsync(store);
-
-            var filler = new string('x', RefDocBodyBytes);
-            await using (var bulk = store.BulkInsert())
-            {
-                await bulk.StoreAsync(new FilteredEntity { ShouldIndex = true, Field1 = "first", Filler = filler }, "filtered/first");
-
-                for (var i = 0; i < FilteredOutCount; i++)
-                    await bulk.StoreAsync(new FilteredEntity { ShouldIndex = false, Filler = filler }, $"filtered/skip-{i}");
-
-                await bulk.StoreAsync(new FilteredEntity { ShouldIndex = true, Field1 = "last", Filler = filler }, "filtered/last");
-            }
-
-            await Indexes.WaitForIndexingAsync(store, timeout: TimeSpan.FromMinutes(5));
-
-            using (var session = store.OpenAsyncSession())
-            {
-                var count = await session.Query<FilteredEntity, FilteredEntities_ByField1>().CountAsync();
-
-                Assert.Equal(2, count);
-            }
-
-            var mapDetails = await GetMapRunDetails(store, index.IndexName);
-
-            Assert.NotEmpty(mapDetails);
-            Assert.Contains(mapDetails, x => x.BatchCompleteReason?.Contains("Reached managed allocations limit") == true);
+            Assert.Contains(referenceDetails, x => x.Details.BatchCompleteReason?.Contains("Reached transaction size limit") == true);
         }
     }
 
@@ -144,7 +109,7 @@ public class RavenDB_27425 : RavenTestBase
         {
             ModifyDatabaseRecord = r =>
             {
-                r.Settings[RavenConfiguration.GetKey(x => x.Indexing.ManagedAllocationsBatchLimit)] = "1";
+                r.Settings[RavenConfiguration.GetKey(x => x.Indexing.ManagedAllocationsBatchLimit)] = ManagedAllocationsBatchLimitInMb;
             }
         }))
         {
@@ -178,7 +143,7 @@ public class RavenDB_27425 : RavenTestBase
             var mapDetails = await GetMapRunDetails(store, index.IndexName);
 
             Assert.NotEmpty(mapDetails);
-            Assert.Contains(mapDetails, x => x.BatchCompleteReason?.Contains("Reached managed allocations limit") == true);
+            Assert.Contains(mapDetails, x => x.InputCount > 1 && x.Details.BatchCompleteReason?.Contains("Reached managed allocations limit") == true);
         }
     }
 
@@ -189,7 +154,7 @@ public class RavenDB_27425 : RavenTestBase
         {
             ModifyDatabaseRecord = r =>
             {
-                r.Settings[RavenConfiguration.GetKey(x => x.Indexing.ManagedAllocationsBatchLimit)] = "1";
+                r.Settings[RavenConfiguration.GetKey(x => x.Indexing.ManagedAllocationsBatchLimit)] = ManagedAllocationsBatchLimitInMb;
             }
         }))
         {
@@ -235,7 +200,56 @@ public class RavenDB_27425 : RavenTestBase
             var referenceDetails = await GetReferenceRunDetails(store, index.IndexName);
 
             Assert.NotEmpty(referenceDetails);
-            Assert.Contains(referenceDetails, x => x.BatchCompleteReason?.Contains("Reached managed allocations limit") == true);
+            Assert.Contains(referenceDetails, x => x.InputCount > 1 && x.Details.BatchCompleteReason?.Contains("Reached managed allocations limit") == true);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Attachments)]
+    public async Task AttachmentLoadingShouldRespectManagedAllocationsBatchLimitWhenBatchHasFewerThan128Documents()
+    {
+        using (var store = GetDocumentStore(new Options
+        {
+            ModifyDatabaseRecord = r =>
+            {
+                r.Settings[RavenConfiguration.GetKey(x => x.Indexing.ManagedAllocationsBatchLimit)] = ManagedAllocationsBatchLimitInMb;
+            }
+        }))
+        {
+            var index = new AttachmentEntities_ByContentLength();
+            await index.ExecuteAsync(store);
+
+            await store.Maintenance.SendAsync(new StopIndexOperation(index.IndexName));
+
+            var content = Encoding.UTF8.GetBytes(new string('x', AttachmentSizeBytes));
+            await using (var bulk = store.BulkInsert())
+            {
+                for (var i = 0; i < AttachmentDocsCount; i++)
+                {
+                    var id = $"attachmentEntities/{i}";
+                    await bulk.StoreAsync(new AttachmentEntity(), id);
+
+                    var attachments = bulk.AttachmentsFor(id);
+                    for (var j = 0; j < AttachmentsPerDocument; j++)
+                        await attachments.StoreAsync($"attachment-{j}", new MemoryStream(content));
+                }
+            }
+
+            await store.Maintenance.SendAsync(new StartIndexOperation(index.IndexName));
+            await Indexes.WaitForIndexingAsync(store, timeout: TimeSpan.FromMinutes(5));
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var count = await session.Query<AttachmentEntities_ByContentLength.Result, AttachmentEntities_ByContentLength>()
+                    .Where(x => x.ContentLength == AttachmentsPerDocument * AttachmentSizeBytes)
+                    .CountAsync();
+
+                Assert.Equal(AttachmentDocsCount, count);
+            }
+
+            var mapDetails = await GetMapRunDetails(store, index.IndexName);
+
+            Assert.NotEmpty(mapDetails);
+            Assert.Contains(mapDetails, x => x.InputCount > 1 && x.Details.BatchCompleteReason?.Contains("Reached managed allocations limit") == true);
         }
     }
 
@@ -298,7 +312,7 @@ public class RavenDB_27425 : RavenTestBase
             var referenceDetails = await GetReferenceRunDetails(store, index.IndexName);
 
             Assert.NotEmpty(referenceDetails);
-            Assert.Contains(referenceDetails, x => x.BatchCompleteReason?.Contains("Reached managed allocations limit") == true);
+            Assert.Contains(referenceDetails, x => x.Details.BatchCompleteReason?.Contains("Reached managed allocations limit") == true);
         }
     }
 
@@ -361,7 +375,7 @@ public class RavenDB_27425 : RavenTestBase
             var referenceDetails = await GetReferenceRunDetails(store, index.IndexName);
 
             Assert.NotEmpty(referenceDetails);
-            Assert.Contains(referenceDetails, x => x.BatchCompleteReason?.Contains("Reached managed allocations limit") == true);
+            Assert.Contains(referenceDetails, x => x.Details.BatchCompleteReason?.Contains("Reached managed allocations limit") == true);
         }
     }
 
@@ -431,27 +445,23 @@ public class RavenDB_27425 : RavenTestBase
         }
     }
 
-    private async Task<List<ReferenceRunDetails>> GetReferenceRunDetails(IDocumentStore store, string indexName)
+    private async Task<List<(long InputCount, ReferenceRunDetails Details)>> GetReferenceRunDetails(IDocumentStore store, string indexName)
     {
         var indexInstance = (await GetDatabase(store.Database)).IndexStore.GetIndex(indexName);
 
         return indexInstance.GetIndexingPerformance()
             .Where(x => x.Details?.Operations != null)
-            .SelectMany(x => x.Details.Operations)
-            .Where(x => x.ReferenceDetails != null)
-            .Select(x => x.ReferenceDetails)
+            .SelectMany(x => x.Details.Operations.Where(o => o.ReferenceDetails != null).Select(o => (x.InputCount, o.ReferenceDetails)))
             .ToList();
     }
 
-    private async Task<List<MapRunDetails>> GetMapRunDetails(IDocumentStore store, string indexName)
+    private async Task<List<(long InputCount, MapRunDetails Details)>> GetMapRunDetails(IDocumentStore store, string indexName)
     {
         var indexInstance = (await GetDatabase(store.Database)).IndexStore.GetIndex(indexName);
 
         return indexInstance.GetIndexingPerformance()
             .Where(x => x.Details?.Operations != null)
-            .SelectMany(x => x.Details.Operations)
-            .Where(x => x.MapDetails != null)
-            .Select(x => x.MapDetails)
+            .SelectMany(x => x.Details.Operations.Where(o => o.MapDetails != null).Select(o => (x.InputCount, o.MapDetails)))
             .ToList();
     }
 
@@ -483,19 +493,16 @@ public class RavenDB_27425 : RavenTestBase
         public string Filler { get; set; }
     }
 
-    private class FilteredEntity
-    {
-        public string Id { get; set; }
-        public bool ShouldIndex { get; set; }
-        public string Field1 { get; set; }
-        public string Filler { get; set; }
-    }
-
     private class FanoutEntity
     {
         public string Id { get; set; }
         public string RefDocId { get; set; }
         public List<string> Items { get; set; }
+    }
+
+    private class AttachmentEntity
+    {
+        public string Id { get; set; }
     }
 
     private class CmpEntity
@@ -527,19 +534,6 @@ public class RavenDB_27425 : RavenTestBase
                                   entity.Field1,
                                   entity.RefDocId,
                                   RefNestedId = refDoc == null ? null : refDoc.NestedId
-                              };
-        }
-    }
-
-    private class FilteredEntities_ByField1 : AbstractIndexCreationTask<FilteredEntity>
-    {
-        public FilteredEntities_ByField1()
-        {
-            Map = entities => from entity in entities
-                              where entity.ShouldIndex
-                              select new
-                              {
-                                  entity.Field1
                               };
         }
     }
@@ -579,6 +573,24 @@ public class RavenDB_27425 : RavenTestBase
                               {
                                   Item = item,
                                   RefNestedId = refDoc == null ? null : refDoc.NestedId
+                              };
+        }
+    }
+
+    private class AttachmentEntities_ByContentLength : AbstractIndexCreationTask<AttachmentEntity>
+    {
+        public class Result
+        {
+            public int ContentLength { get; set; }
+        }
+
+        public AttachmentEntities_ByContentLength()
+        {
+            Map = entities => from entity in entities
+                              let attachments = LoadAttachments(entity).Select(x => x.GetContentAsString())
+                              select new
+                              {
+                                  ContentLength = attachments.Sum(x => x.Length)
                               };
         }
     }

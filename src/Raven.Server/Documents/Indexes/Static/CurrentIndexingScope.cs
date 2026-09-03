@@ -124,6 +124,8 @@ namespace Raven.Server.Documents.Indexes.Static
                 var results = new List<DynamicAttachment>();
                 foreach (var attachmentName in attachmentNames)
                 {
+                    LoadedItemsCount++;
+
                     var attachment = _documentsStorage.AttachmentsStorage.GetAttachment(QueryContext.Documents, documentId, attachmentName, AttachmentType.Document, null);
                     if (attachment == null)
                         continue;
@@ -201,6 +203,8 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 if (attachmentName == null)
                     return DynamicNullObject.Null;
+
+                LoadedItemsCount++;
 
                 var attachment = _documentsStorage.AttachmentsStorage.GetAttachment(QueryContext.Documents, documentId, attachmentName, AttachmentType.Document, null);
                 if (attachment == null)
