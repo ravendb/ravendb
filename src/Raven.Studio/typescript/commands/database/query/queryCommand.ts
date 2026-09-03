@@ -122,9 +122,14 @@ var f = function() {
 }
 f();
 `;
-        const parameters = eval(parametersJs);
-        const rql = queryText.substring(match.index);
-        return [JSON.parse(parameters), rql];
+        try {
+            const parameters = eval(parametersJs);
+            const rql = queryText.substring(match.index);
+            return [JSON.parse(parameters), rql];
+        } catch (e) {
+            // the text before the query isn't a valid parameters section - send the raw text so the server reports the syntax error
+            return [undefined, queryText];
+        }
     }
 
     getPayload() {

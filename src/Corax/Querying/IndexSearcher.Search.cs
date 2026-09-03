@@ -11,9 +11,9 @@ using Corax.Pipeline;
 using Corax.Querying.Matches;
 using Corax.Querying.Matches.Meta;
 using Corax.Utils;
+using Sparrow;
 using Sparrow.Server;
 using Voron;
-using Voron.Data.PostingLists;
 using Voron.Util;
 
 namespace Corax.Querying;
@@ -404,11 +404,12 @@ public partial class IndexSearcher
                     Constants.Search.SearchMatchOptions.Contains => (1, -1),
                     Constants.Search.SearchMatchOptions.TermMatch => (0, 0),
                     Constants.Search.SearchMatchOptions.Exists => (0, 0),
+                    Constants.Search.SearchMatchOptions.PatternMatch => (0, 0),
                     _ => throw new InvalidExpressionException("Unknown flag inside Search match.")
                 };
-                
+
                 //Rewrite term without asterisks.
-                if (termType is not (Constants.Search.SearchMatchOptions.Exists or Constants.Search.SearchMatchOptions.TermMatch))
+                if (termType is not (Constants.Search.SearchMatchOptions.Exists or Constants.Search.SearchMatchOptions.TermMatch or Constants.Search.SearchMatchOptions.PatternMatch))
                 {
                     Slice.From(Allocator, valueAsSpan.Slice(startIncrement, valueAsSpan.Length - startIncrement + lengthIncrement), ByteStringType.Immutable, out value);
                 }
@@ -426,6 +427,7 @@ public partial class IndexSearcher
                         $"{nameof(TermMatch)} is handled in different part of evaluator. This is a bug."),
                     Constants.Search.SearchMatchOptions.Exists => ExistsQuery(field, token: cancellationToken),
                     Constants.Search.SearchMatchOptions.StartsWith => StartWithQuery(field, value, token: cancellationToken),
+                    Constants.Search.SearchMatchOptions.PatternMatch => PatternQuery(field, value, token: cancellationToken),
                     Constants.Search.SearchMatchOptions.EndsWith => EndsWithQuery(field, value, token: cancellationToken),
                     Constants.Search.SearchMatchOptions.Contains => ContainsQuery(field, value, token: cancellationToken),
                     _ => throw new ArgumentOutOfRangeException(nameof(termType), termType.ToString())
@@ -438,10 +440,10 @@ public partial class IndexSearcher
                     (_, Constants.Search.Operator.Or) => Or(searchQuery, query),
                     _ => throw new ArgumentOutOfRangeException(nameof(@operator), @operator, null)
                 };
-                
+
                 continue;
             }
-            
+
             // Phrase query part (wildcards are not supported in phrase queries).
             var hs = new HashSet<Slice>(SliceComparer.Instance);
             for (var i = 0; i < terms.Count; ++i)
@@ -512,24 +514,31 @@ public partial class IndexSearcher
     
     private Constants.Search.SearchMatchOptions GetTermType(ReadOnlySpan<byte> termValue)
     {
-        if (termValue.IsEmpty)
+        if (termValue.IsEmpty || termValue.ContainsAny(Constants.Search.PatternSymbols) == false)
             return Constants.Search.SearchMatchOptions.TermMatch;
-            
-        Constants.Search.SearchMatchOptions mode = default;
-            
-        if (termValue[0] == '*')
-            mode |= Constants.Search.SearchMatchOptions.EndsWith;
 
-        if (termValue[^1] == '*')
-        {
-            if (termValue.Length <= 2 || termValue[^2] != '\\')
-                mode |= Constants.Search.SearchMatchOptions.StartsWith;
-        }
-            
-        if (mode == Constants.Search.SearchMatchOptions.Contains && termValue.Count((byte)'*') == termValue.Length)
+        bool hasPrefixAsterisk = termValue[0] == '*';
+        bool hasSuffixAsterisk = termValue[^1] == '*' && (termValue.Length <= 2 || termValue[^2] != '\\');
+        
+        if (hasPrefixAsterisk & hasSuffixAsterisk && termValue.Count((byte)'*') == termValue.Length)
             return Constants.Search.SearchMatchOptions.Exists;
+        
+        var len = termValue.Length - hasSuffixAsterisk.ToInt32();
+        var leftTerm = termValue[hasPrefixAsterisk.ToInt32()..len];
+        var hasLeftTermAnyPatterns = leftTerm.ContainsAny(Constants.Search.PatternSymbols);
+        
+        if (hasPrefixAsterisk && hasLeftTermAnyPatterns)
+            return Constants.Search.SearchMatchOptions.PatternMatch;
 
-        return mode;
+        if (hasSuffixAsterisk && hasPrefixAsterisk)
+            return Constants.Search.SearchMatchOptions.Contains;
+
+        if (hasPrefixAsterisk)
+            return Constants.Search.SearchMatchOptions.EndsWith;
+
+        return hasSuffixAsterisk
+            ? Constants.Search.SearchMatchOptions.StartsWith
+            : Constants.Search.SearchMatchOptions.TermMatch;
     }
     
     private Analyzer CreateWildcardAnalyzer(in FieldMetadata field, ref Analyzer analyzer)
