@@ -4494,6 +4494,8 @@ namespace Raven.Server.Documents.Indexes
         private int? _minBatchSize;
 
         private const int MinMapBatchSize = 128;
+
+        public const int CanContinueBatchCheckInterval = 128;
         internal const int MinMapReduceBatchSize = 64;
 
         private int MinBatchSize
@@ -4611,9 +4613,9 @@ namespace Raven.Server.Documents.Indexes
                 return CanContinueBatchResult.False;
             }
 
-            if (parameters.SeenCount - lastCheckedSeenItemsCount < 128)
+            if (lastCheckedSeenItemsCount > 0 && parameters.SeenCount - lastCheckedSeenItemsCount < CanContinueBatchCheckInterval)
             {
-                // the counter advances in jumps (fanout results, loaded items) - do the actual check once per at least 128 seen items
+                // the counter advances in jumps (fanout results, loaded items) - do the actual check on the first call and then once per at least CanContinueBatchCheckInterval seen items
                 return CanContinueBatchResult.True;
             }
 
