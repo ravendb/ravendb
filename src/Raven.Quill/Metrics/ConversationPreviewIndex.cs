@@ -16,10 +16,11 @@ internal sealed class ConversationPreviewIndex : AbstractIndexCreationTask
             Maps =
             {
                 """
-                from p in docs.@ConversationPreviews 
-                select new { 
+                from p in docs.@ConversationPreviews
+                select new {
                     p.LastMessageAt,
                     p.Agent,
+                    p.CreatedAt,
                 }
                 """
             }

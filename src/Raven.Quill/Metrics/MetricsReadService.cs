@@ -5,6 +5,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide.Operations;
 using Raven.Quill.Agents;
@@ -271,14 +272,14 @@ internal static class MetricsReadService
         for (var b = 0; b < buckets.Count; b++)
             points[b] = NewBucketPoint(keys, period.Label(buckets[b]));
 
-        var previews = await session.LoadAllStartingWithAsync<ConversationPreview>(ConversationPreview.IdPrefix, ct);
-        foreach (var preview in previews)
+        var rows = await QueryConversationChannelRowsAsync(session, period.Start, period.End, ct);
+        foreach (var row in rows)
         {
-            if (preview.ChannelId.StartsWith(Channel.IdPrefix, StringComparison.Ordinal) == false) continue;
-            var channelId = preview.ChannelId[Channel.IdPrefix.Length..];
+            if (row.ChannelId.StartsWith(Channel.IdPrefix, StringComparison.Ordinal) == false) continue;
+            var channelId = row.ChannelId[Channel.IdPrefix.Length..];
             if (nameByChannel.ContainsKey(channelId) == false) continue;
             if (channelId == TimeAxisKey) continue;   // dropped from keys above
-            var i = period.IndexOf(preview.CreatedAt);
+            var i = period.IndexOf(row.CreatedAt);
             if (i < 0) continue;
             points[i][channelId] = (long)points[i][channelId] + 1L;
         }
@@ -685,6 +686,28 @@ internal static class MetricsReadService
                 .ToListAsync(ct);
         }
         catch (IndexDoesNotExistException) { return []; }
+    }
+
+    private sealed class ConversationChannelRow
+    {
+        public string ChannelId { get; set; } = "";
+        public DateTime CreatedAt { get; set; }
+    }
+
+    private static async Task<List<ConversationChannelRow>> QueryConversationChannelRowsAsync(
+        IAsyncDocumentSession session, DateTime start, DateTime end, CancellationToken ct)
+    {
+        try
+        {
+            return await session.Advanced
+                .AsyncDocumentQuery<ConversationPreview, ConversationPreviewIndex>()
+                .WhereGreaterThanOrEqual(p => p.CreatedAt, start)
+                .AndAlso()
+                .WhereLessThan(p => p.CreatedAt, end)
+                .SelectFields<ConversationChannelRow>()
+                .ToListAsync(ct);
+        }
+        catch (Exception e) when (e is IndexDoesNotExistException or InvalidQueryException) { return []; }
     }
 
 }
