@@ -95,8 +95,10 @@ function DeltaBadge({ delta }: { delta: number }) {
     return <Badge variant="success">+{fixedDelta}%</Badge>;
 }
 
-const SPARKLINE_DATE_FORMAT = new Intl.DateTimeFormat("en", { month: "short", day: "numeric" });
+// Buckets are UTC calendar periods (usage is billed per UTC month), so they are shown in UTC.
+const SPARKLINE_DATE_FORMAT = new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" });
 const SPARKLINE_DATE_TIME_FORMAT = new Intl.DateTimeFormat("en", {
+    timeZone: "UTC",
     month: "short",
     day: "numeric",
     hour: "numeric",
@@ -105,7 +107,7 @@ const SPARKLINE_DATE_TIME_FORMAT = new Intl.DateTimeFormat("en", {
 
 function hasTimeOfDay(iso: string): boolean {
     const date = new Date(iso);
-    return !Number.isNaN(date.getTime()) && (date.getHours() !== 0 || date.getMinutes() !== 0);
+    return !Number.isNaN(date.getTime()) && (date.getUTCHours() !== 0 || date.getUTCMinutes() !== 0);
 }
 
 function formatSparklineDate(iso: string, showTime: boolean): string {
