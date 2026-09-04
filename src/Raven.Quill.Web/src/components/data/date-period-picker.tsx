@@ -5,6 +5,7 @@ import { Button } from "@/components/shadcn/ui/button";
 import { Calendar } from "@/components/shadcn/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/shadcn/ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "@/components/shadcn/ui/toggle-group";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
 import {
     canStepDayUp,
     canStepMonthUp,
@@ -251,6 +252,26 @@ export function DatePeriodPicker({
                     <ChevronRight aria-hidden="true" />
                 </Button>
             </div>
+            <UtcHint />
         </div>
+    );
+}
+
+function UtcHint() {
+    return (
+        <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Text
+                        as="span"
+                        variant="caption"
+                        className="cursor-help underline decoration-dotted underline-offset-4"
+                    >
+                        UTC
+                    </Text>
+                </TooltipTrigger>
+                <TooltipContent>Periods and chart dates are in UTC, matching how usage is billed.</TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
     );
 }
