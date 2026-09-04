@@ -70,7 +70,8 @@ function BarChartFrame({
                         tickLine={false}
                         axisLine={false}
                         tickMargin={8}
-                        interval={2}
+                        interval="equidistantPreserveStart"
+                        minTickGap={16}
                         tickFormatter={xTickFormatter && ((value) => xTickFormatter(value as string))}
                     />
                     <YAxis
@@ -96,17 +97,36 @@ function BarChartFrame({
 export function WritesBarChart({
     data,
     xKey,
+    xTickFormatter,
+    tooltipLabelFormatter,
     onBarClick,
 }: {
     data: Array<Record<string, unknown>>;
     xKey: string;
+    xTickFormatter?: (value: string) => string;
+    tooltipLabelFormatter?: (value: string) => string;
     onBarClick?: (entry: Record<string, unknown>) => void;
 }) {
     const { ref, zoomFrom } = useZoomOnClick();
 
     return (
-        <BarChartFrame config={writesChartConfig} data={data} xKey={xKey} chartRef={ref}>
-            <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+        <BarChartFrame
+            config={writesChartConfig}
+            data={data}
+            xKey={xKey}
+            xTickFormatter={xTickFormatter}
+            chartRef={ref}
+        >
+            <ChartTooltip
+                cursor={false}
+                content={
+                    <ChartTooltipContent
+                        labelFormatter={
+                            tooltipLabelFormatter ? (value) => tooltipLabelFormatter(value as string) : undefined
+                        }
+                    />
+                }
+            />
             <Bar
                 dataKey="writes"
                 fill="var(--color-writes)"

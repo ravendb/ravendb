@@ -25,6 +25,3 @@ dist-ssr
 
 *storybook.log
 storybook-static
-
-# Dev-server / preview scratch output (not source)
-public/_preview-quill-*.html
