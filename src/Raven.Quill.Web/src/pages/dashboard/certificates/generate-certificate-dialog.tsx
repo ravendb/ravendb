@@ -129,7 +129,7 @@ function GenerateCertificateForm({ apps, onGenerated }: { apps: AppResponse[]; o
 
     return (
         <form className="grid gap-4" onSubmit={submit}>
-            <FormInput control={form.control} name="name" label="Certificate name" placeholder="e.g. backups" />
+            <FormInput control={form.control} name="name" label="Certificate name" placeholder="e.g. acme-shop-api" />
             <FormInput control={form.control} name="password" type="password" label="Certificate password (optional)" />
             <FormSelect
                 control={form.control}
