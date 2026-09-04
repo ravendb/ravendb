@@ -18,7 +18,8 @@ public class AgentRouterPreviewTests(ITestOutputHelper output) : QuillTestBase(o
         var now = new DateTime(2026, 8, 17, 12, 0, 0, DateTimeKind.Utc);
         var retention = TimeSpan.FromDays(30);
         var request = new AgentRequest(app.Slug, "support", "chats/x", "hello", "",
-            new Dictionary<string, JsonElement>(), retention);
+            new Dictionary<string, JsonElement>(),
+            new ConversationLifetime(TimeSpan.FromHours(24), retention));
 
         await AgentRouter.UpsertPreviewAsync(
             app.Store, request, "support", "chats/x", "hi", now, CancellationToken.None);
@@ -44,6 +45,25 @@ public class AgentRouterPreviewTests(ITestOutputHelper output) : QuillTestBase(o
 
         using var session = app.Store.OpenAsyncSession(app.Slug);
         var preview = await session.LoadAsync<ConversationPreview>(ConversationPreview.IdFor("chats/y"));
+
+        Assert.False(session.Advanced.GetMetadataFor(preview)
+            .ContainsKey(Raven.Client.Constants.Documents.Metadata.Expires));
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Preview_with_only_an_idle_window_gets_no_expiration()
+    {
+        await using var app = await NewAppAsync();
+
+        var request = new AgentRequest(app.Slug, "support", "chats/z", "hello", "",
+            new Dictionary<string, JsonElement>(),
+            new ConversationLifetime(TimeSpan.FromHours(24), PreviewRetention: null));
+
+        await AgentRouter.UpsertPreviewAsync(
+            app.Store, request, "support", "chats/z", "hi", DateTime.UtcNow, CancellationToken.None);
+
+        using var session = app.Store.OpenAsyncSession(app.Slug);
+        var preview = await session.LoadAsync<ConversationPreview>(ConversationPreview.IdFor("chats/z"));
 
         Assert.False(session.Advanced.GetMetadataFor(preview)
             .ContainsKey(Raven.Client.Constants.Documents.Metadata.Expires));

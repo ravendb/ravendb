@@ -15,7 +15,7 @@ public sealed record AgentRequest(
     string Prompt,
     string ChannelId,
     IReadOnlyDictionary<string, JsonElement> Parameters,
-    TimeSpan? ConversationTtl = null);
+    ConversationLifetime? Lifetime = null);
 
 public sealed record AgentRunResult(object Answer, string ConversationId);
 
@@ -47,8 +47,8 @@ internal sealed class AgentRouter(
         var conversationId = NormalizeConversationId(request.ConversationId);
 
         var creationOptions = new AiConversationCreationOptions();
-        if (request.ConversationTtl is { } ttl)
-            creationOptions.ExpirationInSec = (int)ttl.TotalSeconds;
+        if (request.Lifetime?.TranscriptIdleWindow is { } idleWindow)
+            creationOptions.ExpirationInSec = (int)idleWindow.TotalSeconds;
 
         foreach (var (key, value) in ConvertParameters(request, config))
             creationOptions.AddParameter(key, value);
@@ -161,9 +161,9 @@ internal sealed class AgentRouter(
         preview.LastAgentReply = reply;
 
         await session.StoreAsync(preview, id, ct);
-        if (request.ConversationTtl is { } ttl)
+        if (request.Lifetime?.PreviewRetention is { } retention)
             session.Advanced.GetMetadataFor(preview)[Client.Constants.Documents.Metadata.Expires] =
-                nowUtc.Add(ttl);
+                nowUtc.Add(retention);
         await session.SaveChangesAsync(ct);
         return;
     }

@@ -273,7 +273,9 @@ internal sealed class TelegramChat
                     parameters.ToDictionary(
                         parameter => parameter.Key,
                         parameter => AgentParameterValue.FromString(parameter.Value)),
-                    _context.Options.ChannelConversationRetention),
+                    new ConversationLifetime(
+                        _context.Options.ChannelConversationIdleWindow,
+                        _context.Options.ChannelConversationRetention)),
                 reply.OnChunkAsync, config, _ct);
 
             await reply.FinalizeAsync();
