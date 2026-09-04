@@ -18,6 +18,8 @@ export type SetupWizardState = {
     setDiscoverResult: (result: DiscoverResponse, discoverSchemas: string[]) => void;
     /** Slug of the app being edited; null while a new app is being created. */
     editedAppSlug: string | null;
+    hasEditedSlug: boolean;
+    setHasEditedSlug: (hasEdited: boolean) => void;
     startEditingApp: (slug: string, discoverSchemas: string[], initialSelectedTables: SelectedSourceTable[]) => void;
     /**
      * Table selection the wizard started from - the edited app's own configuration, or an imported
@@ -73,6 +75,7 @@ const initialState: Pick<
     | "discoverResult"
     | "discoverSchemas"
     | "editedAppSlug"
+    | "hasEditedSlug"
     | "initialSelectedTables"
     | "connectKey"
     | "connectionAttempt"
@@ -89,6 +92,7 @@ const initialState: Pick<
     discoverResult: null,
     discoverSchemas: [],
     editedAppSlug: null,
+    hasEditedSlug: false,
     initialSelectedTables: null,
     connectKey: null,
     connectionAttempt: null,
@@ -115,6 +119,7 @@ export const useSetupWizardStore = create<SetupWizardState>((set) => ({
     // tables it misses cannot be verified.
     startEditingApp: (slug, discoverSchemas, initialSelectedTables) =>
         set({ editedAppSlug: slug, discoverSchemas, initialSelectedTables }),
+    setHasEditedSlug: (hasEditedSlug) => set({ hasEditedSlug }),
     setInitialSelectedTables: (tables) => set({ initialSelectedTables: tables }),
     setConnectKey: (key) => set({ connectKey: key }),
     setConnectionAttempt: (attempt) => set({ connectionAttempt: attempt }),

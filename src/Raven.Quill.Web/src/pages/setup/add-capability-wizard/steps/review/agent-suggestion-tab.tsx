@@ -78,11 +78,14 @@ function ExistingAgentConflictAlert() {
         return null;
     }
 
+    const clashingFields = conflicts.map((conflict) => conflict.field).join(" and ");
+
     return (
         <Alert variant="destructive">
             <CircleAlert />
             <AlertTitle>
-                This agent already exists. Rename it in the &quot;Agent configuration&quot; tab before saving.
+                An agent with this {clashingFields} already exists. Change the {clashingFields} in the &quot;Agent
+                configuration&quot; tab before saving.
             </AlertTitle>
             <AlertDescription>
                 <ul className="grid gap-1">

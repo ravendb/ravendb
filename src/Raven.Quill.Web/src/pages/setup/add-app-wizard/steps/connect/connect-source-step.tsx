@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useController, useFormContext } from "react-hook-form";
 import { CARD_LABEL_CLASSES, SELECTED_CARD_CLASSES } from "@/components/form/form-radio-cards";
 import { FormInput } from "@/components/form/form-input";
@@ -21,7 +20,8 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
     const { control, setValue, getValues } = useFormContext<AppFormData>();
     const isEditingApp = useSetupWizardStore((state) => state.editedAppSlug !== null);
     const { changeProvider } = useConnectionSync();
-    const [hasEditedSlug, setHasEditedSlug] = useState(false);
+    const hasEditedSlug = useSetupWizardStore((state) => state.hasEditedSlug);
+    const setHasEditedSlug = useSetupWizardStore((state) => state.setHasEditedSlug);
 
     // The slug follows the app name until the operator types their own, and never on an existing app,
     // where it is already the app's database name.
