@@ -69,6 +69,22 @@ public class SlackWebhookTests(ITestOutputHelper output, QuillSlackFixture fixtu
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task An_idle_rolled_turn_sends_a_fresh_conversation_notice_after_the_reply()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+        Router.StartedFresh = true;
+
+        var raw = EventBytes(channel.TeamId, "EvFresh1", DmMessage(Sender, "hello again"));
+        var response = await Host.Client.SendAsync(SignedPost(channel.WebhookToken, raw, channel.SigningSecret));
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        await Slack.WaitUntilAsync(
+            () => Slack.SentMessages.Any(m => m.Channel == DmChannel && m.Text.Contains("fresh conversation")),
+            "the fresh-conversation notice");
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Updating_a_constant_binding_starts_a_fresh_conversation_with_the_new_value()
     {
         await using var app = await NewAppAsync();

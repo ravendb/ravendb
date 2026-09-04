@@ -16,7 +16,7 @@ public class UsageRollupTests(ITestOutputHelper output) : QuillTestBase(output)
         new(database, "support", conversationId, "hello", "channels/abc123",
             new Dictionary<string, JsonElement>(), lifetime);
 
-    private static Task TurnAsync(QuillApp app, string conversationId, DateTime at,
+    private static Task<bool> TurnAsync(QuillApp app, string conversationId, DateTime at,
         long tokens = 0, ConversationLifetime? lifetime = null) =>
         AgentRouter.RecordTurnAsync(app.Store, Request(app.Slug, conversationId, lifetime ?? ChannelLifetime),
             "support", conversationId, "hi", tokens, at, CancellationToken.None);
@@ -71,8 +71,9 @@ public class UsageRollupTests(ITestOutputHelper output) : QuillTestBase(output)
         var first = new DateTime(2026, 8, 17, 12, 0, 0, DateTimeKind.Utc);
         var later = first.AddHours(30);
 
-        await TurnAsync(app, "chats/one", first);
-        await TurnAsync(app, "chats/one", later);
+        // rolled is false on first contact and true only when a returning chat idle-expired
+        Assert.False(await TurnAsync(app, "chats/one", first));
+        Assert.True(await TurnAsync(app, "chats/one", later));
 
         var entries = await EntriesAsync(app);
         Assert.Equal(2, entries.Sum(e => e.Value.Conversations));
@@ -88,8 +89,8 @@ public class UsageRollupTests(ITestOutputHelper output) : QuillTestBase(output)
         await using var app = await NewAppAsync();
         var first = new DateTime(2026, 8, 17, 12, 0, 0, DateTimeKind.Utc);
 
-        await TurnAsync(app, "chats/one", first, lifetime: new ConversationLifetime(null, null));
-        await TurnAsync(app, "chats/one", first.AddDays(90), lifetime: new ConversationLifetime(null, null));
+        Assert.False(await TurnAsync(app, "chats/one", first, lifetime: new ConversationLifetime(null, null)));
+        Assert.False(await TurnAsync(app, "chats/one", first.AddDays(90), lifetime: new ConversationLifetime(null, null)));
 
         var entries = await EntriesAsync(app);
         Assert.Equal(1, entries.Sum(e => e.Value.Conversations));

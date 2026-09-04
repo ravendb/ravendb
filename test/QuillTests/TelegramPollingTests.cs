@@ -638,6 +638,23 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task An_idle_rolled_turn_sends_a_fresh_conversation_notice_after_the_reply()
+    {
+        var (app, channelId, token) = await ProvisionAsync();
+        await using var appGuard = app;
+        Router.StartedFresh = true;
+
+        const long chatId = 330;
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 330, "hello again");
+
+        await Mock.WaitUntilAsync(
+            () => Mock.SentMessages.Any(m => m.ChatId == chatId && m.Text.Contains("fresh conversation")),
+            "the fresh-conversation notice");
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Clear_command_works_even_when_a_binding_cannot_be_satisfied()
     {
         var (app, channelId, token) = await ProvisionAsync(

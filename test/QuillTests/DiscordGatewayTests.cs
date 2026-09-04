@@ -56,6 +56,20 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task An_idle_rolled_turn_sends_a_fresh_conversation_notice_after_the_reply()
+    {
+        await using var app = await NewAppAsync();
+        await NewChannelAsync(app);
+        Router.StartedFresh = true;
+
+        await Discord.DispatchDmAsync("msg-fresh-1", DmChannel, Sender, "hello again");
+
+        await Discord.WaitUntilAsync(
+            () => Discord.SentMessages.Any(m => m.ChannelId == DmChannel && m.Content.Contains("fresh conversation")),
+            "the fresh-conversation notice");
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Streaming_chunks_edit_the_same_message_in_place()
     {
         await using var app = await NewAppAsync();
