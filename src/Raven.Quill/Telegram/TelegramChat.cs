@@ -267,7 +267,7 @@ internal sealed class TelegramChat
 
         try
         {
-            await _context.Router.RunAsync(
+            var result = await _context.Router.RunAsync(
                 new AgentRequest(
                     _context.Database, config.Identifier, conversationId, prompt, _context.ChannelDoc.Id!,
                     parameters.ToDictionary(
@@ -279,6 +279,9 @@ internal sealed class TelegramChat
                 reply.OnChunkAsync, config, _ct);
 
             await reply.FinalizeAsync();
+
+            if (result.StartedFresh)
+                await SendPlainAsync(_context.Messages.ConversationExpired);
         }
         catch (OperationCanceledException)
         {
