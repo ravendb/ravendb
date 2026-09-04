@@ -179,6 +179,84 @@ namespace SlowTests.Voron.LeafsCompression
             }
         }
 
+        [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Compression)]
+        public void DecompressedPageThatConsumedTombstonesMustBeWrittenBackEvenIfItCannotBeCompressed()
+        {
+            // RecompressPageIfNeeded(wasModified: false) used to leave the original page untouched when the copy could not be compressed
+            // back. If the decompression consumed tombstones (work already applied to the tree state), they survive in the page and the
+            // next Write decompression applies them again (double free of the overflow page).
+            var random = new Random(27347);
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var tree = tx.CreateTree("tree", flags: TreeFlags.LeafsCompressed);
+
+                Add(tx, tree, "00000", new byte[OverflowValueSize]);
+                Add(tx, tree, "00001", new byte[OverflowValueSize]);
+
+                for (int i = 2; i <= 8; i++)
+                    Add(tx, tree, Key(i), new byte[InlineValueSize]);
+
+                for (int i = 9; i <= 15; i++)
+                    Add(tx, tree, Key(i), RandomBytes(random, InlineValueSize));
+
+                Assert.True(GetPage(tx, tree.State.Header.RootPageNumber).IsCompressed);
+                Assert.Equal(16, tree.State.Header.NumberOfEntries);
+                Assert.Equal(2, tree.State.Header.OverflowPages);
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var tree = tx.ReadTree("tree");
+
+                Delete(tx, tree, "00000"); // compression tombstone, the overflow page is still allocated
+
+                var page = tree.ModifyPage(tree.State.Header.RootPageNumber);
+
+                Assert.True(HasCompressionTombstone(page));
+
+                using (var decompressed = tree.DecompressPage(page, DecompressionUsage.Write, skipCache: true))
+                {
+                    // the tombstone got consumed: the entry is gone from the tree state and its overflow page is freed
+                    Assert.Equal(15, decompressed.NumberOfEntries);
+                    Assert.Equal(15, tree.State.Header.NumberOfEntries);
+                    Assert.Equal(1, tree.State.Header.OverflowPages);
+
+                    MakeValuesIncompressible(decompressed, random);
+
+                    decompressed.CopyToOriginal(tx.LowLevelTransaction, defragRequired: false, wasModified: false, tree);
+                }
+
+                // the page must have been rewritten (split): no compression tombstone may survive in the tree and decompressing the
+                // leaves for writing once more must not apply anything
+                foreach (var pageNumber in tree.AllPages())
+                {
+                    var leaf = GetPage(tx, pageNumber);
+
+                    if (leaf.IsLeaf == false)
+                        continue;
+
+                    Assert.False(HasCompressionTombstone(leaf), $"page {pageNumber} still holds a compression tombstone");
+
+                    if (leaf.IsCompressed)
+                        tree.DecompressPage(tree.ModifyPage(pageNumber), DecompressionUsage.Write, skipCache: true).Dispose();
+                }
+
+                Assert.Equal(15, tree.State.Header.NumberOfEntries);
+                Assert.Equal(1, tree.State.Header.OverflowPages);
+
+                tree.ValidateTree_Forced(tree.State.Header.RootPageNumber);
+
+                Assert.Null(ReadLength(tx, tree, "00000"));
+                Assert.Equal(OverflowValueSize, ReadLength(tx, tree, "00001"));
+                Assert.Equal(15, CountEntries(tree));
+
+                tx.Commit();
+            }
+        }
+
         private static string Key(int i)
         {
             return i.ToString("D5");

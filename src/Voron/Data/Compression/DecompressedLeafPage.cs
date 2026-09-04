@@ -29,6 +29,9 @@ namespace Voron.Data.Compression
 
         public DecompressionUsage Usage;
 
+        // the Write decompression applied deferred work (tombstones, updates) to the tree state, the original page must be rewritten from this one
+        public bool MustBeWrittenBack;
+
         public void Dispose()
         {
             // RavenDB-22090: We must not dispose leaf pages more than once.
@@ -67,8 +70,8 @@ namespace Voron.Data.Compression
                 {
                     if (compressed == null)
                     {
-                        if (wasModified == false)
-                            return;
+                        if (wasModified == false && MustBeWrittenBack == false)
+                            return; // the original page is still a valid representation of this one
 
                         if (NumberOfEntries > 0)
                         {
