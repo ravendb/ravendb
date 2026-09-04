@@ -5,10 +5,14 @@ import { ApiState } from "@/components/data/api-state";
 import { DatePeriodPicker } from "@/components/data/date-period-picker";
 import { getDefaultDatePeriod } from "@/lib/date-period";
 import { useSetupStartDate } from "@/lib/use-start-date";
+import { WRU_DESCRIPTION } from "@/components/data/wru-label";
+import { SYSTEM_GROUP_LABEL } from "@/pages/dashboard/usage-groups";
 import { DashboardAppsTable, DashboardAppsTableSkeleton } from "@/pages/dashboard/dashboard-apps-table";
 import { StatCardsSection } from "@/pages/dashboard/dashboard-stat-cards";
 import { buildUsageStatCards } from "@/pages/dashboard/usage-stat-cards";
 import { Heading } from "@/components/typography";
+
+const MY_APPS_WRU_DESCRIPTION = `${WRU_DESCRIPTION} This total covers your apps only. ${SYSTEM_GROUP_LABEL} writes are not included.`;
 
 export function DashboardHome() {
     const [period, setPeriod] = useState(getDefaultDatePeriod);
@@ -17,7 +21,7 @@ export function DashboardHome() {
     const usageQuery = useQuery(api.queries.stats.usage(period));
     const appsQuery = useQuery(api.queries.stats.dashboardApps());
 
-    const cards = buildUsageStatCards(usageQuery.data, usageQuery.isPending);
+    const cards = buildUsageStatCards(usageQuery.data, usageQuery.isPending, MY_APPS_WRU_DESCRIPTION);
     const hasApps = Boolean(appsQuery.data && appsQuery.data.length > 0);
 
     return (
