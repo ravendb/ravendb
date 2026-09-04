@@ -1,5 +1,6 @@
 import React from "react";
 import { MethodEntry, MethodGroup } from "components/common/samples/partials/samplesTypes";
+import { dedent } from "components/utils/dedent";
 
 type GenAiScriptScope = "context" | "update";
 
@@ -51,14 +52,16 @@ const genAiMethodGroups: GenAiMethodGroup[] = [
                         <strong>Context generation script only.</strong>
                     </>
                 ),
-                sampleScript: `// Emit one context object per comment on the source document.
-for (const comment of this.Comments) {
-    ai.genContext({
-        Text: \`Blog post topic: \${this.Topic}. Comment: \${comment.Text}\`,
-        AuthorName: comment.Author,
-        CommentId: comment.Id
-    });
-}`,
+                sampleScript: dedent`
+                    // Emit one context object per comment on the source document.
+                    for (const comment of this.Comments) {
+                        ai.genContext({
+                            Text: \`Blog post topic: \${this.Topic}. Comment: \${comment.Text}\`,
+                            AuthorName: comment.Author,
+                            CommentId: comment.Id
+                        });
+                    }
+                `,
             },
             {
                 signature: "AIContextItem.withText(data)",
@@ -71,11 +74,13 @@ for (const comment of this.Comments) {
                         <strong>Context generation script only.</strong>
                     </>
                 ),
-                sampleScript: `// Send the comment together with a text attachment from the source document.
-for (const comment of this.Comments) {
-    ai.genContext({ CommentId: comment.Id, Text: comment.Text })
-        .withText(loadAttachment("transcript.txt"));
-}`,
+                sampleScript: dedent`
+                    // Send the comment together with a text attachment from the source document.
+                    for (const comment of this.Comments) {
+                        ai.genContext({ CommentId: comment.Id, Text: comment.Text })
+                            .withText(loadAttachment("transcript.txt"));
+                    }
+                `,
             },
             {
                 signature: "AIContextItem.withPng(data)",
@@ -88,9 +93,11 @@ for (const comment of this.Comments) {
                         image to a vision-capable model. <strong>Context generation script only.</strong>
                     </>
                 ),
-                sampleScript: `// Ask the model to look at an image attached to the source document.
-ai.genContext({ Topic: this.Topic })
-    .withPng(loadAttachment("screenshot.png"));`,
+                sampleScript: dedent`
+                    // Ask the model to look at an image attached to the source document.
+                    ai.genContext({ Topic: this.Topic })
+                        .withPng(loadAttachment("screenshot.png"));
+                `,
             },
             {
                 signature: "AIContextItem.withJpeg(data)",
@@ -102,8 +109,10 @@ ai.genContext({ Topic: this.Topic })
                         Base64-encoded. <strong>Context generation script only.</strong>
                     </>
                 ),
-                sampleScript: `ai.genContext({ ProductId: id(this) })
-    .withJpeg(loadAttachment("product-photo.jpg"));`,
+                sampleScript: dedent`
+                    ai.genContext({ ProductId: id(this) })
+                        .withJpeg(loadAttachment("product-photo.jpg"));
+                `,
             },
             {
                 signature: "AIContextItem.withWebp(data)",
@@ -115,8 +124,10 @@ ai.genContext({ Topic: this.Topic })
                         Base64-encoded. <strong>Context generation script only.</strong>
                     </>
                 ),
-                sampleScript: `ai.genContext({ ProductId: id(this) })
-    .withWebp(loadAttachment("product-photo.webp"));`,
+                sampleScript: dedent`
+                    ai.genContext({ ProductId: id(this) })
+                        .withWebp(loadAttachment("product-photo.webp"));
+                `,
             },
             {
                 signature: "AIContextItem.withGif(data)",
@@ -128,8 +139,10 @@ ai.genContext({ Topic: this.Topic })
                         Base64-encoded. <strong>Context generation script only.</strong>
                     </>
                 ),
-                sampleScript: `ai.genContext({ ProductId: id(this) })
-    .withGif(loadAttachment("animation.gif"));`,
+                sampleScript: dedent`
+                    ai.genContext({ ProductId: id(this) })
+                        .withGif(loadAttachment("animation.gif"));
+                `,
             },
             {
                 signature: "AIContextItem.withPdf(data)",
@@ -142,9 +155,11 @@ ai.genContext({ Topic: this.Topic })
                         first. <strong>Context generation script only.</strong>
                     </>
                 ),
-                sampleScript: `// Send an invoice PDF stored as a document attachment.
-ai.genContext({ OrderId: id(this) })
-    .withPdf(loadAttachment("invoice.pdf"));`,
+                sampleScript: dedent`
+                    // Send an invoice PDF stored as a document attachment.
+                    ai.genContext({ OrderId: id(this) })
+                        .withPdf(loadAttachment("invoice.pdf"));
+                `,
             },
         ],
     },
@@ -161,8 +176,10 @@ ai.genContext({ OrderId: id(this) })
                         it is persisted.
                     </>
                 ),
-                sampleScript: `// Read fields straight off the source document.
-output("Topic: " + this.Topic + ", comments: " + this.Comments.length);`,
+                sampleScript: dedent`
+                    // Read fields straight off the source document.
+                    output("Topic: " + this.Topic + ", comments: " + this.Comments.length);
+                `,
             },
             {
                 signature: "$input",
@@ -175,8 +192,10 @@ output("Topic: " + this.Topic + ", comments: " + this.Comments.length);`,
                         it came from. <strong>Update script only.</strong>
                     </>
                 ),
-                sampleScript: `// Find the comment this response is about, using the id we put on the context object.
-const idx = this.Comments.findIndex(comment => comment.Id == $input.CommentId);`,
+                sampleScript: dedent`
+                    // Find the comment this response is about, using the id we put on the context object.
+                    const idx = this.Comments.findIndex(comment => comment.Id == $input.CommentId);
+                `,
             },
             {
                 signature: "$output",
@@ -188,10 +207,12 @@ const idx = this.Comments.findIndex(comment => comment.Id == $input.CommentId);`
                         previous step. <strong>Update script only.</strong>
                     </>
                 ),
-                sampleScript: `// Act on the model's verdict.
-if ($output.IsCommentSpam) {
-    this.SpamReason = $output.Reason;
-}`,
+                sampleScript: dedent`
+                    // Act on the model's verdict.
+                    if ($output.IsCommentSpam) {
+                        this.SpamReason = $output.Reason;
+                    }
+                `,
             },
         ],
     },
@@ -210,11 +231,13 @@ if ($output.IsCommentSpam) {
                         attachment is optional. <strong>Context generation script only.</strong>
                     </>
                 ),
-                sampleScript: `// Only attach the image when the document actually has one.
-if (hasAttachment("heart.png")) {
-    ai.genContext({ Id: id(this) })
-        .withPng(loadAttachment("heart.png"));
-}`,
+                sampleScript: dedent`
+                    // Only attach the image when the document actually has one.
+                    if (hasAttachment("heart.png")) {
+                        ai.genContext({ Id: id(this) })
+                            .withPng(loadAttachment("heart.png"));
+                    }
+                `,
             },
             {
                 signature: "hasAttachment(name)",
@@ -226,10 +249,12 @@ if (hasAttachment("heart.png")) {
                         case-insensitive. <strong>Context generation script only.</strong>
                     </>
                 ),
-                sampleScript: `ai.genContext({
-    Topic: this.Topic,
-    HasScreenshot: hasAttachment("screenshot.png")
-});`,
+                sampleScript: dedent`
+                    ai.genContext({
+                        Topic: this.Topic,
+                        HasScreenshot: hasAttachment("screenshot.png")
+                    });
+                `,
             },
             {
                 signature: "getAttachments()",
@@ -242,13 +267,15 @@ if (hasAttachment("heart.png")) {
                         there are none. Takes no arguments. <strong>Context generation script only.</strong>
                     </>
                 ),
-                sampleScript: `// Send every PNG attached to the document as its own context object.
-for (const attachment of getAttachments()) {
-    if (attachment.ContentType == "image/png") {
-        ai.genContext({ Name: attachment.Name })
-            .withPng(loadAttachment(attachment.Name));
-    }
-}`,
+                sampleScript: dedent`
+                    // Send every PNG attached to the document as its own context object.
+                    for (const attachment of getAttachments()) {
+                        if (attachment.ContentType == "image/png") {
+                            ai.genContext({ Name: attachment.Name })
+                                .withPng(loadAttachment(attachment.Name));
+                        }
+                    }
+                `,
             },
             {
                 signature: "getRevisionsCount()",
@@ -260,10 +287,12 @@ for (const attachment of getAttachments()) {
                         <strong>Context generation script only.</strong>
                     </>
                 ),
-                sampleScript: `ai.genContext({
-    Topic: this.Topic,
-    TimesEdited: getRevisionsCount()
-});`,
+                sampleScript: dedent`
+                    ai.genContext({
+                        Topic: this.Topic,
+                        TimesEdited: getRevisionsCount()
+                    });
+                `,
             },
         ],
     },
@@ -313,9 +342,11 @@ for (const attachment of getAttachments()) {
                         several at once. Returns <code>undefined</code> when the document does not exist.
                     </>
                 ),
-                sampleScript: `// Load a related document and inspect one of its fields.
-const author = load(this.AuthorId);
-output("Author: " + (author ? author.Name : "unknown"));`,
+                sampleScript: dedent`
+                    // Load a related document and inspect one of its fields.
+                    const author = load(this.AuthorId);
+                    output("Author: " + (author ? author.Name : "unknown"));
+                `,
             },
             {
                 signature: "loadPath(document, pathString)",
@@ -326,9 +357,11 @@ output("Author: " + (author ? author.Name : "unknown"));`,
                         <code>&quot;Comments[].AuthorId&quot;</code>.
                     </>
                 ),
-                sampleScript: `// Load every author referenced by the comments in one call.
-const authors = loadPath(this, "Comments[].AuthorId") || [];
-output("Authors: " + authors.length);`,
+                sampleScript: dedent`
+                    // Load every author referenced by the comments in one call.
+                    const authors = loadPath(this, "Comments[].AuthorId") || [];
+                    output("Authors: " + authors.length);
+                `,
             },
             {
                 signature: "cmpxchg(compareExchangeKey)",
@@ -338,8 +371,10 @@ output("Authors: " + authors.length);`,
                         Returns the value stored under a compare-exchange key, or <code>null</code>.
                     </>
                 ),
-                sampleScript: `const policy = cmpxchg("policies/moderation");
-output("Moderation policy: " + JSON.stringify(policy));`,
+                sampleScript: dedent`
+                    const policy = cmpxchg("policies/moderation");
+                    output("Moderation policy: " + JSON.stringify(policy));
+                `,
             },
             {
                 signature: "put(id, document[, changeVector])",
@@ -353,14 +388,16 @@ output("Moderation policy: " + JSON.stringify(policy));`,
                         <em>&quot;Cannot make modifications in readonly context&quot;</em>.
                     </>
                 ),
-                sampleScript: `// Archive the spam comment as its own document.
-if ($output.IsCommentSpam) {
-    put(id(this) + "/spam/", {
-        Comment: $input.Text,
-        Reason: $output.Reason,
-        "@metadata": { "@collection": "SpamComments" }
-    });
-}`,
+                sampleScript: dedent`
+                    // Archive the spam comment as its own document.
+                    if ($output.IsCommentSpam) {
+                        put(id(this) + "/spam/", {
+                            Comment: $input.Text,
+                            Reason: $output.Reason,
+                            "@metadata": { "@collection": "SpamComments" }
+                        });
+                    }
+                `,
             },
             {
                 signature: "del(documentId[, changeVector])",
@@ -373,9 +410,11 @@ if ($output.IsCommentSpam) {
                         <em>&quot;Cannot make modifications in readonly context&quot;</em>.
                     </>
                 ),
-                sampleScript: `if ($output.IsCommentSpam) {
-    del("drafts/" + $input.CommentId);
-}`,
+                sampleScript: dedent`
+                    if ($output.IsCommentSpam) {
+                        del("drafts/" + $input.CommentId);
+                    }
+                `,
             },
             {
                 signature: "archived.archiveAt(document, utcDateString)",
@@ -387,9 +426,11 @@ if ($output.IsCommentSpam) {
                         <strong>Update script only.</strong>
                     </>
                 ),
-                sampleScript: `if ($output.IsCommentSpam) {
-    archived.archiveAt(this, "2026-12-31T00:00:00.000Z");
-}`,
+                sampleScript: dedent`
+                    if ($output.IsCommentSpam) {
+                        archived.archiveAt(this, "2026-12-31T00:00:00.000Z");
+                    }
+                `,
             },
         ],
     },
@@ -406,10 +447,12 @@ if ($output.IsCommentSpam) {
                         array when there are none. Takes no arguments. <strong>Context generation script only.</strong>
                     </>
                 ),
-                sampleScript: `ai.genContext({
-    Topic: this.Topic,
-    Counters: getCounters().join(", ")
-});`,
+                sampleScript: dedent`
+                    ai.genContext({
+                        Topic: this.Topic,
+                        Counters: getCounters().join(", ")
+                    });
+                `,
             },
             {
                 signature: "hasCounter(name)",
@@ -421,10 +464,12 @@ if ($output.IsCommentSpam) {
                         <strong>Context generation script only.</strong>
                     </>
                 ),
-                sampleScript: `ai.genContext({
-    Topic: this.Topic,
-    WasReported: hasCounter("Reports")
-});`,
+                sampleScript: dedent`
+                    ai.genContext({
+                        Topic: this.Topic,
+                        WasReported: hasCounter("Reports")
+                    });
+                `,
             },
             {
                 signature: "counter(document/documentId, name)",
@@ -435,8 +480,10 @@ if ($output.IsCommentSpam) {
                         scripts.
                     </>
                 ),
-                sampleScript: `const reportedCount = counter(this, "Reports");
-output("Reports: " + reportedCount);`,
+                sampleScript: dedent`
+                    const reportedCount = counter(this, "Reports");
+                    output("Reports: " + reportedCount);
+                `,
             },
             {
                 signature: "counterRaw(document/documentId, name)",
@@ -447,8 +494,10 @@ output("Reports: " + reportedCount);`,
                         scripts.
                     </>
                 ),
-                sampleScript: `const reportsPerNode = counterRaw(this, "Reports");
-output(reportsPerNode);`,
+                sampleScript: dedent`
+                    const reportsPerNode = counterRaw(this, "Reports");
+                    output(reportsPerNode);
+                `,
             },
         ],
     },
@@ -466,11 +515,13 @@ output(reportsPerNode);`,
                         <strong>Context generation script only.</strong>
                     </>
                 ),
-                sampleScript: `const series = getTimeSeries() || [];
-ai.genContext({
-    Topic: this.Topic,
-    Series: series.join(", ")
-});`,
+                sampleScript: dedent`
+                    const series = getTimeSeries() || [];
+                    ai.genContext({
+                        Topic: this.Topic,
+                        Series: series.join(", ")
+                    });
+                `,
             },
             {
                 signature: "hasTimeSeries(timeSeriesName)",
@@ -482,10 +533,12 @@ ai.genContext({
                         <strong>Context generation script only.</strong>
                     </>
                 ),
-                sampleScript: `ai.genContext({
-    Topic: this.Topic,
-    HasScores: hasTimeSeries("SpamScores")
-});`,
+                sampleScript: dedent`
+                    ai.genContext({
+                        Topic: this.Topic,
+                        HasScores: hasTimeSeries("SpamScores")
+                    });
+                `,
             },
             {
                 signature: "timeseries(document/documentId, name).get() / .get(from, to)",
@@ -493,8 +546,10 @@ ai.genContext({
                 description: (
                     <>Returns time series entries, optionally limited to a range. Available in both scripts.</>
                 ),
-                sampleScript: `const scores = timeseries(this, "SpamScores").get();
-output("Spam score entries: " + scores.length);`,
+                sampleScript: dedent`
+                    const scores = timeseries(this, "SpamScores").get();
+                    output("Spam score entries: " + scores.length);
+                `,
             },
             {
                 signature: "timeseries(document/documentId, name).getStats()",
@@ -505,8 +560,10 @@ output("Spam score entries: " + scores.length);`,
                         Available in both scripts.
                     </>
                 ),
-                sampleScript: `const spamStats = timeseries(this, "SpamScores").getStats();
-output("Spam score entries: " + spamStats.Count);`,
+                sampleScript: dedent`
+                    const spamStats = timeseries(this, "SpamScores").getStats();
+                    output("Spam score entries: " + spamStats.Count);
+                `,
             },
         ],
     },
@@ -517,19 +574,23 @@ output("Spam score entries: " + spamStats.Count);`,
                 signature: "startsWith(inputString, prefix)",
                 returnType: "boolean",
                 description: <>Returns whether the string starts with the given prefix, ignoring case.</>,
-                sampleScript: `for (const comment of this.Comments) {
-    if (startsWith(comment.Text, "http")) {
-        output("Link-like comment: " + comment.Id);
-    }
-}`,
+                sampleScript: dedent`
+                    for (const comment of this.Comments) {
+                        if (startsWith(comment.Text, "http")) {
+                            output("Link-like comment: " + comment.Id);
+                        }
+                    }
+                `,
             },
             {
                 signature: "endsWith(inputString, suffix)",
                 returnType: "boolean",
                 description: <>Returns whether the string ends with the given suffix, ignoring case.</>,
-                sampleScript: `if (endsWith(this.FileName, ".pdf")) {
-    output("The file is a PDF");
-}`,
+                sampleScript: dedent`
+                    if (endsWith(this.FileName, ".pdf")) {
+                        output("The file is a PDF");
+                    }
+                `,
             },
             {
                 signature: "regex(inputString, regex)",
@@ -540,11 +601,13 @@ output("Spam score entries: " + spamStats.Count);`,
                         configurable timeout.
                     </>
                 ),
-                sampleScript: `for (const comment of this.Comments) {
-    if (regex(comment.Text, "(?i)(viagra|casino|crypto)")) {
-        output("Possible spam: " + comment.Id);
-    }
-}`,
+                sampleScript: dedent`
+                    for (const comment of this.Comments) {
+                        if (regex(comment.Text, "(?i)(viagra|casino|crypto)")) {
+                            output("Possible spam: " + comment.Id);
+                        }
+                    }
+                `,
             },
             {
                 signature: "String.prototype.format(arg1, arg2, ...)",
@@ -555,8 +618,10 @@ output("Spam score entries: " + spamStats.Count);`,
                         given arguments.
                     </>
                 ),
-                sampleScript: `const summary = "Topic: {0}, comments: {1}".format(this.Topic, this.Comments.length);
-output(summary);`,
+                sampleScript: dedent`
+                    const summary = "Topic: {0}, comments: {1}".format(this.Topic, this.Comments.length);
+                    output(summary);
+                `,
             },
         ],
     },
@@ -572,8 +637,10 @@ output(summary);`,
                         <code>(value, key)</code>; the optional <code>context</code> becomes its <code>this</code>.
                     </>
                 ),
-                sampleScript: `const texts = Object.map(this.Comments, (comment) => comment.Text);
-output(texts.join("\\n"));`,
+                sampleScript: dedent`
+                    const texts = Object.map(this.Comments, (comment) => comment.Text);
+                    output(texts.join("\\n"));
+                `,
             },
         ],
     },
@@ -584,15 +651,19 @@ output(texts.join("\\n"));`,
                 signature: "Raven_Min(value1, value2)",
                 returnType: "number | string | boolean | null | undefined",
                 description: <>Returns the smaller of the two values, using RavenDB&apos;s comparison rules.</>,
-                sampleScript: `const sampleSize = Raven_Min(this.Comments.length, 10);
-output("Sample size: " + sampleSize);`,
+                sampleScript: dedent`
+                    const sampleSize = Raven_Min(this.Comments.length, 10);
+                    output("Sample size: " + sampleSize);
+                `,
             },
             {
                 signature: "Raven_Max(value1, value2)",
                 returnType: "number | string | boolean | null | undefined",
                 description: <>Returns the larger of the two values, using RavenDB&apos;s comparison rules.</>,
-                sampleScript: `const severity = Raven_Max(this.Severity, 5);
-output("Severity: " + severity);`,
+                sampleScript: dedent`
+                    const severity = Raven_Max(this.Severity, 5);
+                    output("Severity: " + severity);
+                `,
             },
         ],
     },
@@ -610,8 +681,10 @@ output("Severity: " + severity);`,
                         instead.
                     </>
                 ),
-                sampleScript: `const distance = spatial.distance(this.Latitude, this.Longitude, 32.0853, 34.7818, "kilometers");
-output("Distance from office: " + distance + " km");`,
+                sampleScript: dedent`
+                    const distance = spatial.distance(this.Latitude, this.Longitude, 32.0853, 34.7818, "kilometers");
+                    output("Distance from office: " + distance + " km");
+                `,
             },
         ],
     },
@@ -627,8 +700,10 @@ output("Distance from office: " + distance + " km");`,
                         for date strings you want to pass to the model verbatim.
                     </>
                 ),
-                sampleScript: `const postedAt = scalarToRawString(this, x => x.PostedAt);
-output("Posted at: " + postedAt);`,
+                sampleScript: dedent`
+                    const postedAt = scalarToRawString(this, x => x.PostedAt);
+                    output("Posted at: " + postedAt);
+                `,
             },
             {
                 signature: "convertJsTimeToTimeSpanString(milliseconds)",
@@ -639,8 +714,10 @@ output("Posted at: " + postedAt);`,
                         <code>&quot;00:05:00&quot;</code>.
                     </>
                 ),
-                sampleScript: `const elapsed = convertJsTimeToTimeSpanString(Date.now() - lastModified(this));
-output("Elapsed: " + elapsed);`,
+                sampleScript: dedent`
+                    const elapsed = convertJsTimeToTimeSpanString(Date.now() - lastModified(this));
+                    output("Elapsed: " + elapsed);
+                `,
             },
             {
                 signature:
@@ -651,8 +728,10 @@ output("Elapsed: " + elapsed);`,
                         Builds a .NET <code>TimeSpan</code> string from ticks, or from the individual time components.
                     </>
                 ),
-                sampleScript: `const reviewWindow = convertToTimeSpanString(1, 0, 0, 0);
-output("Review window: " + reviewWindow);`,
+                sampleScript: dedent`
+                    const reviewWindow = convertToTimeSpanString(1, 0, 0, 0);
+                    output("Review window: " + reviewWindow);
+                `,
             },
             {
                 signature: 'compareDates(date1, date2, operationType = "Subtract")',
@@ -666,8 +745,10 @@ output("Review window: " + reviewWindow);`,
                         <code>&quot;NotEqual&quot;</code>.
                     </>
                 ),
-                sampleScript: `const age = compareDates(new Date().toISOString(), this.PostedAt, "Subtract");
-output("Age: " + age);`,
+                sampleScript: dedent`
+                    const age = compareDates(new Date().toISOString(), this.PostedAt, "Subtract");
+                    output("Age: " + age);
+                `,
             },
             {
                 signature: "toStringWithFormat(object, format?, culture?)",
@@ -679,8 +760,10 @@ output("Age: " + age);`,
                         a culture.
                     </>
                 ),
-                sampleScript: `const postedOn = toStringWithFormat(new Date(this.PostedAt), "yyyy-MM-dd");
-output("Posted on: " + postedOn);`,
+                sampleScript: dedent`
+                    const postedOn = toStringWithFormat(new Date(this.PostedAt), "yyyy-MM-dd");
+                    output("Posted on: " + postedOn);
+                `,
             },
         ],
     },
@@ -699,8 +782,10 @@ output("Posted on: " + postedOn);`,
                 description: (
                     <>Fills the given typed array with cryptographically strong random values and returns it.</>
                 ),
-                sampleScript: `const bytes = crypto.getRandomValues(new Uint8Array(16));
-output("Nonce: " + Array.from(bytes).join("-"));`,
+                sampleScript: dedent`
+                    const bytes = crypto.getRandomValues(new Uint8Array(16));
+                    output("Nonce: " + Array.from(bytes).join("-"));
+                `,
             },
             {
                 signature: "crypto.getRandomValuesBase64(lenInBytes)",
@@ -718,8 +803,10 @@ output("Nonce: " + Array.from(bytes).join("-"));`,
                         <code>&quot;SHA-512&quot;</code>. The async <code>crypto.subtle.digest</code> is not available.
                     </>
                 ),
-                sampleScript: `const topicHash = crypto.digest("SHA-256", this.Topic);
-output("Topic hash: " + topicHash);`,
+                sampleScript: dedent`
+                    const topicHash = crypto.digest("SHA-256", this.Topic);
+                    output("Topic hash: " + topicHash);
+                `,
             },
             {
                 signature: "crypto.sign(hash, key, data)",
@@ -729,8 +816,10 @@ output("Topic hash: " + topicHash);`,
                         Returns a base64 HMAC signature of <code>data</code> using <code>key</code>.
                     </>
                 ),
-                sampleScript: `const signature = crypto.sign("SHA-256", this.SigningKey, this.Text);
-output("Signature: " + signature);`,
+                sampleScript: dedent`
+                    const signature = crypto.sign("SHA-256", this.SigningKey, this.Text);
+                    output("Signature: " + signature);
+                `,
             },
             {
                 signature: "crypto.verify(hash, key, signature, data)",
@@ -740,8 +829,10 @@ output("Signature: " + signature);`,
                         Verifies a base64 HMAC signature produced by <code>crypto.sign</code>.
                     </>
                 ),
-                sampleScript: `const isValid = crypto.verify("SHA-256", this.SigningKey, this.Signature, this.Text);
-output("Signature valid: " + isValid);`,
+                sampleScript: dedent`
+                    const isValid = crypto.verify("SHA-256", this.SigningKey, this.Signature, this.Text);
+                    output("Signature valid: " + isValid);
+                `,
             },
             {
                 signature: "crypto.encryptAesGcm(iv, key, data)",
@@ -752,8 +843,10 @@ output("Signature valid: " + isValid);`,
                         <code>crypto.subtle.encrypt</code> is not available.
                     </>
                 ),
-                sampleScript: `const encrypted = crypto.encryptAesGcm(this.Iv, this.Key, this.Text);
-output("Encrypted text: " + encrypted);`,
+                sampleScript: dedent`
+                    const encrypted = crypto.encryptAesGcm(this.Iv, this.Key, this.Text);
+                    output("Encrypted text: " + encrypted);
+                `,
             },
             {
                 signature: "crypto.decryptAesGcm(iv, key, data, outputType?)",
@@ -764,8 +857,10 @@ output("Encrypted text: " + encrypted);`,
                         <code>&quot;raw&quot;</code>, or <code>&quot;buffer&quot;</code>.
                     </>
                 ),
-                sampleScript: `const note = crypto.decryptAesGcm(this.Iv, this.Key, this.EncryptedNote, "string");
-output(note);`,
+                sampleScript: dedent`
+                    const note = crypto.decryptAesGcm(this.Iv, this.Key, this.EncryptedNote, "string");
+                    output(note);
+                `,
             },
         ],
     },
@@ -781,9 +876,11 @@ output(note);`,
                         playground to inspect what the script is doing.
                     </>
                 ),
-                sampleScript: `for (const comment of this.Comments) {
-    output("Processing comment " + comment.Id);
-}`,
+                sampleScript: dedent`
+                    for (const comment of this.Comments) {
+                        output("Processing comment " + comment.Id);
+                    }
+                `,
             },
         ],
     },

@@ -71,6 +71,7 @@ export default function SamplesTabs({ tabs, onSelect, onClose }: SamplesTabsProp
                     <div className="methods-search-wrapper position-relative panel-bg-1 px-3">
                         <Icon icon="search" margin="m-0" className="methods-search-icon position-absolute" />
                         <Form.Control
+                            type="search"
                             placeholder={activeTab.searchPlaceholder ?? "Search"}
                             className="rounded-1 methods-search-input"
                             value={activeSearch}
