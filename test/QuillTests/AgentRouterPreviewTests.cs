@@ -21,8 +21,8 @@ public class AgentRouterPreviewTests(ITestOutputHelper output) : QuillTestBase(o
             new Dictionary<string, JsonElement>(),
             new ConversationLifetime(TimeSpan.FromHours(24), retention));
 
-        await AgentRouter.UpsertPreviewAsync(
-            app.Store, request, "support", "chats/x", "hi", now, CancellationToken.None);
+        await AgentRouter.RecordTurnAsync(
+            app.Store, request, "support", "chats/x", "hi", tokens: 0, now, CancellationToken.None);
 
         using var session = app.Store.OpenAsyncSession(app.Slug);
         var preview = await session.LoadAsync<ConversationPreview>(ConversationPreview.IdFor("chats/x"));
@@ -40,8 +40,8 @@ public class AgentRouterPreviewTests(ITestOutputHelper output) : QuillTestBase(o
         var request = new AgentRequest(app.Slug, "support", "chats/y", "hello", "",
             new Dictionary<string, JsonElement>());
 
-        await AgentRouter.UpsertPreviewAsync(
-            app.Store, request, "support", "chats/y", "hi", DateTime.UtcNow, CancellationToken.None);
+        await AgentRouter.RecordTurnAsync(
+            app.Store, request, "support", "chats/y", "hi", tokens: 0, DateTime.UtcNow, CancellationToken.None);
 
         using var session = app.Store.OpenAsyncSession(app.Slug);
         var preview = await session.LoadAsync<ConversationPreview>(ConversationPreview.IdFor("chats/y"));
@@ -59,8 +59,8 @@ public class AgentRouterPreviewTests(ITestOutputHelper output) : QuillTestBase(o
             new Dictionary<string, JsonElement>(),
             new ConversationLifetime(TimeSpan.FromHours(24), PreviewRetention: null));
 
-        await AgentRouter.UpsertPreviewAsync(
-            app.Store, request, "support", "chats/z", "hi", DateTime.UtcNow, CancellationToken.None);
+        await AgentRouter.RecordTurnAsync(
+            app.Store, request, "support", "chats/z", "hi", tokens: 0, DateTime.UtcNow, CancellationToken.None);
 
         using var session = app.Store.OpenAsyncSession(app.Slug);
         var preview = await session.LoadAsync<ConversationPreview>(ConversationPreview.IdFor("chats/z"));
