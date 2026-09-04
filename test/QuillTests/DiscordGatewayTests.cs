@@ -42,7 +42,7 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
         var request = Assert.Single(Router.Requests);
         Assert.Equal("What are your hours?", request.Prompt);
         Assert.Equal(Channel.IdPrefix + channel.ChannelId, request.ChannelId);
-        Assert.Matches($"^chats/discord/{channel.ChannelId}/{Sender}/\\d{{4}}-\\d{{2}}-\\d{{2}}/[0-9a-f]{{16}}$", request.ConversationId);
+        Assert.Matches($"^chats/discord/{channel.ChannelId}/{Sender}/[0-9a-f]{{16}}$", request.ConversationId);
         Assert.Equal(Sender, request.Parameters["discordUser"].GetString());
         Assert.NotNull(request.ConversationTtl);
 

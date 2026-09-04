@@ -15,38 +15,28 @@ public class TelegramConversationIdTests(ITestOutputHelper output) : NoDisposalN
     private static readonly Dictionary<string, string> NoParameters = new();
 
     [RavenFact(RavenTestCategory.Quill)]
-    public void Derives_chats_prefixed_id_with_channel_chat_utc_date_and_parameters()
+    public void Derives_chats_prefixed_id_with_channel_chat_and_parameters()
     {
-        var id = TelegramConversationId.ForUtcDay(ChannelId, 42, new DateTime(2026, 8, 4, 13, 30, 0, DateTimeKind.Utc), NoParameters);
+        var id = TelegramConversationId.For(ChannelId, 42, NoParameters);
 
-        Assert.Matches($"^chats/tg/{ChannelId}/42/2026-08-04/[0-9a-f]{{16}}$", id);
+        Assert.Matches($"^chats/tg/{ChannelId}/42/[0-9a-f]{{16}}$", id);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public void Same_chat_day_and_parameters_derive_the_same_id()
+    public void Same_chat_and_parameters_derive_the_same_id_across_days()
     {
-        var morning = TelegramConversationId.ForUtcDay(ChannelId, 42, new DateTime(2026, 8, 4, 0, 0, 1, DateTimeKind.Utc), NoParameters);
-        var evening = TelegramConversationId.ForUtcDay(ChannelId, 42, new DateTime(2026, 8, 4, 23, 59, 59, DateTimeKind.Utc), NoParameters);
+        var first = TelegramConversationId.For(ChannelId, 42, NoParameters);
+        var second = TelegramConversationId.For(ChannelId, 42, NoParameters);
 
-        Assert.Equal(morning, evening);
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
-    public void Day_rollover_derives_a_new_id()
-    {
-        var beforeMidnight = TelegramConversationId.ForUtcDay(ChannelId, 42, new DateTime(2026, 8, 4, 23, 59, 59, DateTimeKind.Utc), NoParameters);
-        var afterMidnight = TelegramConversationId.ForUtcDay(ChannelId, 42, new DateTime(2026, 8, 5, 0, 0, 0, DateTimeKind.Utc), NoParameters);
-
-        Assert.NotEqual(beforeMidnight, afterMidnight);
+        Assert.Equal(first, second);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public void Changing_a_parameter_value_derives_a_new_id()
     {
-        var noon = new DateTime(2026, 8, 4, 12, 0, 0, DateTimeKind.Utc);
-        var before = TelegramConversationId.ForUtcDay(ChannelId, 42, noon,
+        var before = TelegramConversationId.For(ChannelId, 42,
             new Dictionary<string, string> { ["userId"] = "users/1" });
-        var after = TelegramConversationId.ForUtcDay(ChannelId, 42, noon,
+        var after = TelegramConversationId.For(ChannelId, 42,
             new Dictionary<string, string> { ["userId"] = "users/2" });
 
         Assert.NotEqual(before, after);
@@ -55,15 +45,15 @@ public class TelegramConversationIdTests(ITestOutputHelper output) : NoDisposalN
     [RavenFact(RavenTestCategory.Quill)]
     public void Negative_group_chat_ids_are_preserved()
     {
-        var id = TelegramConversationId.ForUtcDay(ChannelId, -1001234567890, new DateTime(2026, 8, 4, 12, 0, 0, DateTimeKind.Utc), NoParameters);
+        var id = TelegramConversationId.For(ChannelId, -1001234567890, NoParameters);
 
-        Assert.Matches($"^chats/tg/{ChannelId}/-1001234567890/2026-08-04/[0-9a-f]{{16}}$", id);
+        Assert.Matches($"^chats/tg/{ChannelId}/-1001234567890/[0-9a-f]{{16}}$", id);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public void Derived_id_passes_the_router_normalizer_and_never_ends_with_a_separator()
     {
-        var id = TelegramConversationId.ForUtcDay(ChannelId, 42, DateTime.UtcNow, NoParameters);
+        var id = TelegramConversationId.For(ChannelId, 42, NoParameters);
 
         Assert.True(AgentRouter.TryNormalizeConversationId(id, out var normalized, out var error));
         Assert.Null(error);

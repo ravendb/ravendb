@@ -186,7 +186,7 @@ internal sealed class SlackInboundProcessor(
             throw new InvalidOperationException(bindError);
         }
 
-        var conversationId = SlackConversationId.ForUtcDay(shortChannelId, sender, DateTime.UtcNow, parameters);
+        var conversationId = SlackConversationId.For(shortChannelId, sender, parameters);
 
         var reply = new SlackStreamingReply(slack, settings.BotToken, dmChannel, options.Value.Slack, logger, ct);
 

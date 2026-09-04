@@ -6,17 +6,17 @@ namespace Raven.Quill.Channels;
 
 internal static class ChannelConversationId
 {
-    // chats/ prefix satisfies AgentRouter.TryNormalizeConversationId; the UTC date segment
-    // rolls the same chat to a fresh conversation at midnight, and the fingerprint whenever
-    // any resolved parameter value changes, since the server binds parameters only at creation
-    internal static string ForUtcDay(
-        string kind, string channelId, string userId, DateTime utcNow,
+    // chats/ prefix satisfies AgentRouter.TryNormalizeConversationId; the id is stable per chat,
+    // rolling only via the fingerprint when a resolved parameter value changes, since the server
+    // binds parameters only at creation; lifetime is governed by the conversation's idle TTL
+    internal static string For(
+        string kind, string channelId, string userId,
         Dictionary<string, string> parameters) =>
-        UtcDayPrefix(kind, channelId, userId, utcNow) + Fingerprint(parameters);
+        ChatPrefix(kind, channelId, userId) + Fingerprint(parameters);
 
-    internal static string UtcDayPrefix(string kind, string channelId, string userId, DateTime utcNow) =>
+    internal static string ChatPrefix(string kind, string channelId, string userId) =>
         string.Create(CultureInfo.InvariantCulture,
-            $"chats/{kind}/{channelId}/{userId}/{utcNow:yyyy-MM-dd}/");
+            $"chats/{kind}/{channelId}/{userId}/");
 
     internal static string Fingerprint(Dictionary<string, string> parameters)
     {

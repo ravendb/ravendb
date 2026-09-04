@@ -5,12 +5,12 @@ namespace Raven.Quill.Telegram;
 
 internal static class TelegramConversationId
 {
-    internal static string ForUtcDay(
-        string channelId, long telegramChatId, DateTime utcNow, Dictionary<string, string> parameters) =>
-        ChannelConversationId.ForUtcDay(
-            "tg", channelId, telegramChatId.ToString(CultureInfo.InvariantCulture), utcNow, parameters);
+    internal static string For(
+        string channelId, long telegramChatId, Dictionary<string, string> parameters) =>
+        ChannelConversationId.For(
+            "tg", channelId, telegramChatId.ToString(CultureInfo.InvariantCulture), parameters);
 
-    internal static string UtcDayPrefix(string channelId, long telegramChatId, DateTime utcNow) =>
-        ChannelConversationId.UtcDayPrefix(
-            "tg", channelId, telegramChatId.ToString(CultureInfo.InvariantCulture), utcNow);
+    internal static string ChatPrefix(string channelId, long telegramChatId) =>
+        ChannelConversationId.ChatPrefix(
+            "tg", channelId, telegramChatId.ToString(CultureInfo.InvariantCulture));
 }

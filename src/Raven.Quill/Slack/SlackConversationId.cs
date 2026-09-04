@@ -4,7 +4,7 @@ namespace Raven.Quill.Slack;
 
 internal static class SlackConversationId
 {
-    internal static string ForUtcDay(
-        string channelId, string slackUserId, DateTime utcNow, Dictionary<string, string> parameters) =>
-        ChannelConversationId.ForUtcDay("slack", channelId, slackUserId, utcNow, parameters);
+    internal static string For(
+        string channelId, string slackUserId, Dictionary<string, string> parameters) =>
+        ChannelConversationId.For("slack", channelId, slackUserId, parameters);
 }

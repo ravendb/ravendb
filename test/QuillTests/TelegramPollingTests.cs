@@ -603,12 +603,13 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         await using var appGuard = app;
 
         const long chatId = 300;
-        var dayPrefix = TelegramConversationId.UtcDayPrefix(channelId, chatId, DateTime.UtcNow);
-        var currentId = TelegramConversationId.ForUtcDay(channelId, chatId, DateTime.UtcNow, new());
-        var supersededId = dayPrefix + "aaaaaaaaaaaaaaaa";
+        var chatPrefix = TelegramConversationId.ChatPrefix(channelId, chatId);
+        var currentId = TelegramConversationId.For(channelId, chatId, new());
+        var supersededId = chatPrefix + "aaaaaaaaaaaaaaaa";
+        var legacyDatedId = chatPrefix + "2026-08-17/bbbbbbbbbbbbbbbb";
         using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
-            foreach (var conversationId in new[] { currentId, supersededId })
+            foreach (var conversationId in new[] { currentId, supersededId, legacyDatedId })
             {
                 await session.StoreAsync(new ConversationPreview { ConversationId = conversationId },
                     ConversationPreview.IdFor(conversationId));
@@ -625,7 +626,7 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         Assert.Empty(Router.Requests);
         using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
-            foreach (var conversationId in new[] { currentId, supersededId })
+            foreach (var conversationId in new[] { currentId, supersededId, legacyDatedId })
             {
                 Assert.Null(await session.LoadAsync<object>(conversationId));
                 Assert.Null(await session.LoadAsync<object>(ConversationPreview.IdFor(conversationId)));
@@ -732,7 +733,7 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         const long groupChatId = -520;
         const long supergroupChatId = -521;
         const long channelChatId = -522;
-        var conversationId = TelegramConversationId.ForUtcDay(channelId, supergroupChatId, DateTime.UtcNow, new());
+        var conversationId = TelegramConversationId.For(channelId, supergroupChatId, new());
         using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
             await session.StoreAsync(new ConversationPreview { ConversationId = conversationId },
