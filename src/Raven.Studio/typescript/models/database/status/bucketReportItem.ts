@@ -21,7 +21,11 @@ class bucketReportItem {
     lazyLoadChildren = false;
     
     shards: number[] = [];
-    
+
+    // shard which owns the bucket according to the sharding configuration - set only when the bucket
+    // temporarily resides on more than one shard (resharding in progress)
+    ownerShard: number = null;
+
     constructor(name: string, size: number, numberOfBuckets: number, documentsCount: number, shards: number[], internalChildren: bucketReportItem[] = null) {
         this.name = name;
         this.size = size;
@@ -29,6 +33,14 @@ class bucketReportItem {
         this.documentsCount = documentsCount;
         this.shards = shards;
         this.internalChildren = internalChildren;
+    }
+
+    isShardPendingRemoval(shard: number): boolean {
+        return this.ownerShard != null && this.shards.length > 1 && shard !== this.ownerShard;
+    }
+
+    pendingRemovalTooltip(): string {
+        return "This bucket is being moved to shard #" + this.ownerShard + ". The copy on this shard will be removed once resharding completes.";
     }
 
     formatSize() {

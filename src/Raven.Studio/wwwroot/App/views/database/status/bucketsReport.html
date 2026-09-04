@@ -37,8 +37,15 @@
                     <td data-bind="text: documentsCount.toLocaleString()"></td>
                     <td>
                         <!-- ko foreach: shards -->
-                            <span class="label label-primary" data-bind="text: '#' + $data">
-                            </span>
+                            <!-- ko if: $parent.isShardPendingRemoval($data) -->
+                                <span class="label label-default shard-pending-removal" data-bind="attr: { title: $parent.pendingRemovalTooltip() }">
+                                    <i class="icon-trash"></i><span data-bind="text: '#' + $data"></span>
+                                </span>
+                            <!-- /ko -->
+                            <!-- ko ifnot: $parent.isShardPendingRemoval($data) -->
+                                <span class="label label-primary" data-bind="text: '#' + $data">
+                                </span>
+                            <!-- /ko -->
                         <!-- /ko -->
                     </td>
                     <td data-bind="html: formatSize(false)"></td>
