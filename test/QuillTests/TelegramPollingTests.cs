@@ -104,7 +104,7 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         Assert.Equal(app.Slug, request.Database);
         Assert.Equal(Channel.IdPrefix + channelId, request.ChannelId);
         Assert.Equal("hello there", request.Prompt);
-        Assert.StartsWith($"chats/tg/{channelId}/555/", request.ConversationId);
+        Assert.StartsWith($"chats/telegram/{channelId}/555/", request.ConversationId);
         Assert.True(AgentRouter.TryNormalizeConversationId(request.ConversationId, out _, out _));
         Assert.NotNull(request.Lifetime?.TranscriptIdleWindow);
         Assert.NotNull(request.Lifetime?.PreviewRetention);
