@@ -7,33 +7,54 @@ using Voron.Global;
 
 namespace Voron.Data.Fixed
 {
-    public sealed unsafe class FixedSizeTreePage<TVal>
+    // laid out to fit in 16 bytes, so a page can be passed and returned in registers.
+    //   _ptr 8 + _entrySize 2 + LastSearchPosition 2 + _tombstoneBitmapSize 1
+    //   + LastMatch 1 + Dirty 1 = 15, padded to 16.
+    // The widths are chosen from the actual ranges, not from habit:
+    //   _entrySize            <= a page, and a branch entry is 16 bytes
+    //   LastSearchPosition    <= entries per page (~1000 at the smallest entry size)
+    //   _tombstoneBitmapSize  <= 126 bytes at the smallest entry size (see the assert)
+    //   LastMatch             is only ever tested for its SIGN
+    // PageSize is not stored at all: every construction site passes
+    // Constants.Storage.PageSize, so it is a constant rather than a per-page field.
+    public unsafe struct FixedSizeTreePage<TVal>
         where TVal : unmanaged, IBinaryNumber<TVal>, IMinMaxValue<TVal>
     {
         private readonly byte* _ptr;
-        private int _entrySize;
-        private readonly int _pageSize;
+        private ushort _entrySize;
 
-        private int _tombstoneBitmapSize;
+        private byte _tombstoneBitmapSize; // cached, 0 means uncomputed
 
-        public int LastMatch;
-        public int LastSearchPosition;
+        public sbyte LastMatch; // sign only
+        public short LastSearchPosition;
         public bool Dirty;
+
+        public readonly bool IsValid
+        {
+             [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => _ptr != null;
+        }
 
         public FixedSizeTreePage(byte* b, int entrySize, int pageSize)
         {
+            Debug.Assert(pageSize == Constants.Storage.PageSize,
+                $"FixedSizeTreePage assumes {Constants.Storage.PageSize} byte pages, got {pageSize}");
+
             _ptr = b;
-            _pageSize = pageSize;
+            _tombstoneBitmapSize = 0;
+            LastMatch = 0;
+            LastSearchPosition = 0;
+            Dirty = false;
 
             if (IsBranch)
                 _entrySize = FixedSizeTree<TVal>.BranchEntrySize;
             else
-                _entrySize = entrySize;
+                _entrySize = checked((ushort)entrySize);
         }
 
         public void RefreshEntrySize()
         {
-            _entrySize = IsBranch ? FixedSizeTree<TVal>.BranchEntrySize : LeafEntrySize;
+            _entrySize = checked((ushort)(IsBranch ? FixedSizeTree<TVal>.BranchEntrySize : LeafEntrySize));
             _tombstoneBitmapSize = 0;
         }
 
@@ -68,7 +89,7 @@ namespace Voron.Data.Fixed
         public int PageSize
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _pageSize; }
+            get { return Constants.Storage.PageSize; }
         }
 
         public bool IsLeaf
@@ -92,7 +113,7 @@ namespace Voron.Data.Fixed
         public int PageMaxSpace
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _pageSize - Constants.FixedSizeTree.PageHeaderSize; }
+            get { return Constants.Storage.PageSize - Constants.FixedSizeTree.PageHeaderSize; }
         }
 
 
@@ -175,7 +196,7 @@ namespace Voron.Data.Fixed
         [Conditional("DEBUG")]
         private void AssertFitsNextToTombstonesBitmap()
         {
-            int capacity = GetTombstonesLayout(_pageSize, LeafEntrySize).Capacity;
+            int capacity = GetTombstonesLayout(Constants.Storage.PageSize, LeafEntrySize).Capacity;
 
             Debug.Assert(NumberOfEntries <= capacity,
                 $"FixedSizeTreePage: page {PageNumber} holds {NumberOfEntries} entries, more than the {capacity} that fit next to a tombstone bitmap");
@@ -256,7 +277,12 @@ namespace Voron.Data.Fixed
             get
             {
                 if (_tombstoneBitmapSize == 0)
-                    _tombstoneBitmapSize = GetTombstonesLayout(_pageSize, LeafEntrySize).BitmapSize;
+                {
+                    var size = GetTombstonesLayout(Constants.Storage.PageSize, LeafEntrySize).BitmapSize;
+                    Debug.Assert(size > 0 && size <= byte.MaxValue,
+                        $"tombstone bitmap of {size} bytes does not fit the byte-wide cache");
+                    _tombstoneBitmapSize = (byte)size;
+                }
 
                 return _tombstoneBitmapSize;
             }
@@ -265,7 +291,7 @@ namespace Voron.Data.Fixed
         private byte* TombstonesBitmap
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _ptr + _pageSize - TombstonesBitmapSize; }
+            get { return _ptr + Constants.Storage.PageSize - TombstonesBitmapSize; }
         }
 
         public void InitializeTombstones()
@@ -284,7 +310,7 @@ namespace Voron.Data.Fixed
 
         public void ClearTombstones()
         {
-            Memory.Set(_ptr + _pageSize - TombstonesBitmapSize, 0, TombstonesBitmapSize);
+            Memory.Set(_ptr + Constants.Storage.PageSize - TombstonesBitmapSize, 0, TombstonesBitmapSize);
             Header->NumberOfTombstones = 0;
         }
 
