@@ -4,7 +4,11 @@ import type { DashboardStatCard } from "@/pages/dashboard/dashboard-stat-cards";
 
 // The "My apps" / app-overview stat cards, derived from the usage series: each card totals
 // one metric across the window and sparklines its per-bucket shape.
-export function buildUsageStatCards(usage: UsageResponse | undefined, isPending: boolean): DashboardStatCard[] {
+export function buildUsageStatCards(
+    usage: UsageResponse | undefined,
+    isPending: boolean,
+    wruDescription: string = WRU_DESCRIPTION,
+): DashboardStatCard[] {
     const points = usage?.points;
     const toCard = (label: string, select: (point: UsagePoint) => number): DashboardStatCard => ({
         label,
@@ -18,6 +22,6 @@ export function buildUsageStatCards(usage: UsageResponse | undefined, isPending:
         toCard("Conversations", (point) => point.conversations),
         toCard("Prompts", (point) => point.messages),
         toCard("Tokens", (point) => point.tokens),
-        { ...toCard("WRU", (point) => point.writes), labelInfo: WRU_DESCRIPTION },
+        { ...toCard("WRU", (point) => point.writes), labelInfo: wruDescription },
     ];
 }
