@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using Sparrow;
 using Voron.Global;
 using Sparrow.Binary;
@@ -17,16 +18,19 @@ namespace Voron.Data.BTrees
             _llt.RegisterDisposable(DecompressionsCache);
         }
 
-        private bool TryCompressPageNodes(Slice key, int len, TreePage page)
+        private bool TryCompressPageNodes(Slice key, int len, TreePage page, out DecompressedLeafPage decompressedPageToSplit)
         {
+            decompressedPageToSplit = null;
+
             var alreadyCompressed = page.IsCompressed;
             if (alreadyCompressed && page.NumberOfEntries == 0) // there isn't any entry what we could compress
                 return false;
 
             var pageToCompress = page;
+            DecompressedLeafPage decompressedPage = null;
 
-            if (alreadyCompressed) 
-                pageToCompress = DecompressPage(page, usage: DecompressionUsage.Write, skipCache: false); // no need to dispose, it's going to be cached anyway
+            if (alreadyCompressed)
+                pageToCompress = decompressedPage = DecompressPage(page, usage: DecompressionUsage.Write, skipCache: false); // no need to dispose, it's going to be cached anyway
 
             using (LeafPageCompressor.TryGetCompressedTempPage(_llt, pageToCompress, out CompressionResult result, defrag: alreadyCompressed == false))
             {
@@ -38,17 +42,16 @@ namespace Voron.Data.BTrees
                     // return incorrect values and AccessViolationException could be thrown
                     // instead we can explicitly check SizeLeft because the page isn't fragmented
 
-                    if (alreadyCompressed)
-                    {
-                        // we've just put a decompressed page to the cache however we aren't going to compress it
-                        // need to invalidate it from the cache
-                        DecompressionsCache.Invalidate(page.PageNumber, DecompressionUsage.Write);
-                    }
+                    // the caller must split the page using this decompressed version, see DecompressPage (RavenDB-27347)
+                    decompressedPageToSplit = decompressedPage;
 
                     return false;
                 }
 
                 LeafPageCompressor.CopyToPage(result, page);
+
+                if (decompressedPage != null)
+                    decompressedPage.MustBeWrittenBack = false; // the original page has just been rewritten from it
 
                 if (result.InvalidateFromCache)
                     DecompressionsCache.Invalidate(page.PageNumber, DecompressionUsage.Write);
@@ -57,6 +60,10 @@ namespace Voron.Data.BTrees
             }
         }
 
+        // Write usage applies the compression tombstones and updates to the tree state (NumberOfEntries, freed overflow pages). The caller
+        // must rewrite the original page from the result, otherwise the next Write decompression applies them again (RavenDB-27347).
+        // The same rule keeps a cached Write decompression valid: after the rewrite it equals the compressed section of the original page,
+        // so the uncompressed nodes found on a cache hit were all added after it and HandleUncompressedNodes applies them for the first time.
         public DecompressedLeafPage DecompressPage(TreePage p, DecompressionUsage usage, bool skipCache)
         {
             var input = new DecompressionInput(p.CompressionHeader, p);
@@ -66,6 +73,8 @@ namespace Voron.Data.BTrees
 
             if (skipCache == false && DecompressionsCache.TryGet(p.PageNumber, usage, out cached))
             {
+                Debug.Assert(cached.MustBeWrittenBack == false, $"The original page #{p.PageNumber} was not rewritten from its cached decompressed version");
+
                 decompressedPage = ReuseCachedPage(cached, usage, ref input);
 
                 if (usage == DecompressionUsage.Read)
@@ -201,6 +210,8 @@ namespace Voron.Data.BTrees
                                         {
                                             ref var state = ref State.Modify();
                                             state.NumberOfEntries--;
+
+                                            decompressedPage.MustBeWrittenBack = true;
                                         }
                                     }
 
@@ -248,6 +259,8 @@ namespace Voron.Data.BTrees
             {
                 ref var state = ref State.Modify();
                 state.NumberOfEntries--;
+
+                decompressedPage.MustBeWrittenBack = true;
 
                 if (node->Flags == TreeNodeFlags.PageRef)
                 {

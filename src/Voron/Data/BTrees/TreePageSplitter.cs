@@ -32,7 +32,8 @@ namespace Voron.Data.BTrees
             long pageNumber,
             TreeNodeFlags nodeType,
             TreeCursor cursor,
-            bool splittingOnDecompressed = false)
+            bool splittingOnDecompressed = false,
+            DecompressedLeafPage pageDecompressed = null)
         {
             _tx = tx;
             _tree = tree;
@@ -53,6 +54,13 @@ namespace Voron.Data.BTrees
             }
 
             _cursor.Pop();
+
+            // pageDecompressed: the page on top of the cursor decompressed with Write usage by Tree.TryCompressPageNodes. It has
+            // already applied the compression tombstones to the tree state, so it must be reused, not decompressed again (RavenDB-27347)
+            Debug.Assert(splittingOnDecompressed == false || pageDecompressed == null);
+            Debug.Assert(pageDecompressed == null || (_page.IsCompressed && pageDecompressed.PageNumber == _page.PageNumber && pageDecompressed.Usage == WriteDecompressionUsage));
+
+            _pageDecompressed = pageDecompressed;
         }
 
         private FreeSpaceHandlingDisabler DisableFreeSpaceUsageIfSplittingRootTree()
@@ -75,7 +83,7 @@ namespace Voron.Data.BTrees
 
                 if (_page.IsCompressed)
                 {
-                    _pageDecompressed = _tree.DecompressPage(_page, WriteDecompressionUsage, skipCache: false);
+                    _pageDecompressed ??= _tree.DecompressPage(_page, WriteDecompressionUsage, skipCache: false);
                     _pageDecompressed.Search(_tx, _newKey);
 
                     if (_pageDecompressed.LastMatch == 0)
