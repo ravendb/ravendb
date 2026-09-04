@@ -651,12 +651,7 @@ internal static class MetricsReadService
         return await configSession.LoadAllStartingWithAsync<App>(AppIdPrefix, ct);
     }
 
-    private static DateTime Utc(DateTime d) => d.Kind switch
-    {
-        DateTimeKind.Utc => d,
-        DateTimeKind.Local => d.ToUniversalTime(),
-        _ => DateTime.SpecifyKind(d, DateTimeKind.Utc),
-    };
+    private static DateTime Utc(DateTime d) => UsagePeriod.ToUtc(d);
 
     // isolate per-app failures: one bad tenant DB can't 500 a global fan-out
 
