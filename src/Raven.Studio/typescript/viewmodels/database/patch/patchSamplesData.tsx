@@ -1,5 +1,5 @@
 import React from "react";
-import { MethodGroup, SampleScript } from "components/common/sampleQueries/partials/sampleQueriesTypes";
+import { MethodGroup, SampleScript } from "components/common/samples/partials/samplesTypes";
 
 export const scripts: SampleScript[] = [
     {

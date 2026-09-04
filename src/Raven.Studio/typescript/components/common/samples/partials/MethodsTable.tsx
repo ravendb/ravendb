@@ -5,18 +5,20 @@ import Collapse from "react-bootstrap/Collapse";
 import Row from "react-bootstrap/Row";
 import classNames from "classnames";
 import { motion } from "motion/react";
-import Code from "components/common/Code";
+import Code, { CodeLanguage } from "components/common/Code";
+import { EmptySet } from "components/common/EmptySet";
 import { Icon } from "components/common/Icon";
-import { MethodEntry, MethodGroup } from "./sampleQueriesTypes";
+import { MethodEntry, MethodGroup } from "./samplesTypes";
 import LoadButton from "./LoadButton";
 
 interface MethodsTableProps {
     methodGroups: MethodGroup[];
     search: string;
     onSelect: (script: string) => void;
+    language?: CodeLanguage;
 }
 
-export default function MethodsTable({ methodGroups, search, onSelect }: MethodsTableProps) {
+export default function MethodsTable({ methodGroups, search, onSelect, language = "rql" }: MethodsTableProps) {
     const filteredGroups = methodGroups
         .map((group) => ({
             ...group,
@@ -26,8 +28,13 @@ export default function MethodsTable({ methodGroups, search, onSelect }: Methods
 
     return (
         <div className="methods-table vstack gap-3 px-3 py-2">
+            {filteredGroups.length === 0 && (
+                <EmptySet compact>
+                    {search ? "No available methods match your search." : "No methods are available."}
+                </EmptySet>
+            )}
             {filteredGroups.map((group) => (
-                <MethodGroupCard key={group.category} group={group} onSelect={onSelect} />
+                <MethodGroupCard key={group.category} group={group} onSelect={onSelect} language={language} />
             ))}
         </div>
     );
@@ -36,9 +43,10 @@ export default function MethodsTable({ methodGroups, search, onSelect }: Methods
 interface MethodGroupCardProps {
     group: MethodGroup;
     onSelect: (script: string) => void;
+    language: CodeLanguage;
 }
 
-function MethodGroupCard({ group, onSelect }: MethodGroupCardProps) {
+function MethodGroupCard({ group, onSelect, language }: MethodGroupCardProps) {
     return (
         <div>
             <h4 className="mb-2 mt-0">{group.category}</h4>
@@ -55,7 +63,7 @@ function MethodGroupCard({ group, onSelect }: MethodGroupCardProps) {
                     </Col>
                 </Row>
                 {group.methods.map((method) => (
-                    <MethodRow key={method.signature} method={method} onSelect={onSelect} />
+                    <MethodRow key={method.signature} method={method} onSelect={onSelect} language={language} />
                 ))}
             </Card>
         </div>
@@ -65,9 +73,10 @@ function MethodGroupCard({ group, onSelect }: MethodGroupCardProps) {
 interface MethodRowProps {
     method: MethodEntry;
     onSelect: (script: string) => void;
+    language: CodeLanguage;
 }
 
-function MethodRow({ method, onSelect }: MethodRowProps) {
+function MethodRow({ method, onSelect, language }: MethodRowProps) {
     const [open, setOpen] = useState(false);
     const hasExample = !!method.sampleScript;
 
@@ -111,7 +120,7 @@ function MethodRow({ method, onSelect }: MethodRowProps) {
                             <div className="fw-semibold text-muted small mb-1">Example usage</div>
                             <Code
                                 code={method.sampleScript}
-                                language="rql"
+                                language={language}
                                 isRunQueryHidden
                                 isTitleHidden
                                 extraActions={<LoadButton onSelect={() => onSelect(method.sampleScript)} />}
