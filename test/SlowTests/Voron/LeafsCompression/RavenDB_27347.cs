@@ -223,10 +223,13 @@ namespace SlowTests.Voron.LeafsCompression
                     Assert.Equal(15, decompressed.NumberOfEntries);
                     Assert.Equal(15, tree.State.Header.NumberOfEntries);
                     Assert.Equal(1, tree.State.Header.OverflowPages);
+                    Assert.True(decompressed.MustBeWrittenBack);
 
                     MakeValuesIncompressible(decompressed, random);
 
                     decompressed.CopyToOriginal(tx.LowLevelTransaction, defragRequired: false, wasModified: false, tree);
+
+                    Assert.False(decompressed.MustBeWrittenBack); // the original page got rewritten
                 }
 
                 // the page must have been rewritten (split): no compression tombstone may survive in the tree and decompressing the
@@ -252,6 +255,60 @@ namespace SlowTests.Voron.LeafsCompression
                 Assert.Null(ReadLength(tx, tree, "00000"));
                 Assert.Equal(OverflowValueSize, ReadLength(tx, tree, "00001"));
                 Assert.Equal(15, CountEntries(tree));
+
+                tx.Commit();
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Compression)]
+        public void SuccessfulRecompressionMustResetMustBeWrittenBackOfTheCachedDecompressedPage()
+        {
+            // TryCompressPageNodes rewrites the original page from the Write-decompressed copy and leaves the copy in the decompressions
+            // cache. If the copy kept claiming it must be written back, a later CopyToOriginal(wasModified: false) on a cache hit would
+            // split the page instead of leaving the still valid original alone
+            using (var tx = Env.WriteTransaction())
+            {
+                var tree = tx.CreateTree("tree", flags: TreeFlags.LeafsCompressed);
+
+                Add(tx, tree, "00000", new byte[OverflowValueSize]);
+                Add(tx, tree, "00001", new byte[OverflowValueSize]);
+
+                // compressible values only, so every recompression succeeds. "00009" compresses the page for the first time, the values
+                // added afterwards fill the uncompressed section
+                for (int i = 2; i <= 15; i++)
+                    Add(tx, tree, Key(i), new byte[InlineValueSize]);
+
+                Assert.True(GetPage(tx, tree.State.Header.RootPageNumber).IsCompressed);
+                Assert.Equal(1, tree.State.Header.Depth);
+                Assert.Equal(16, tree.State.Header.NumberOfEntries);
+                Assert.Equal(2, tree.State.Header.OverflowPages);
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var tree = tx.ReadTree("tree");
+                var rootPageNumber = tree.State.Header.RootPageNumber;
+
+                Delete(tx, tree, "00000"); // compression tombstone
+
+                Assert.True(HasCompressionTombstone(GetPage(tx, rootPageNumber)));
+
+                // does not fit into the uncompressed section: TryCompressPageNodes decompresses the page for writing (the tombstone gets
+                // consumed, the copy is marked to be written back) and recompresses it, which rewrites the page from the copy
+                Add(tx, tree, Key(16), new byte[InlineValueSize]);
+
+                var root = GetPage(tx, rootPageNumber);
+
+                Assert.Equal(1, tree.State.Header.Depth);
+                Assert.True(root.IsCompressed);
+                Assert.False(HasCompressionTombstone(root));
+                Assert.Equal(16, tree.State.Header.NumberOfEntries);
+                Assert.Equal(1, tree.State.Header.OverflowPages);
+
+                Assert.True(tree.DecompressionsCache.TryGet(rootPageNumber, DecompressionUsage.Write, out var cached));
+                Assert.False(cached.MustBeWrittenBack);
 
                 tx.Commit();
             }
