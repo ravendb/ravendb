@@ -168,6 +168,10 @@ builder.Services.AddOptions<ApplianceOptions>()
                    (retention > TimeSpan.Zero && retention.TotalSeconds <= int.MaxValue),
         "ChannelConversationRetention must be positive and at most int.MaxValue seconds; " +
         "leave it unset to keep channel conversations forever")
+    .Validate(o => o.ChannelConversationIdleWindow is not { } idleWindow ||
+                   (idleWindow > TimeSpan.Zero && idleWindow.TotalSeconds <= int.MaxValue),
+        "ChannelConversationIdleWindow must be positive and at most int.MaxValue seconds; " +
+        "leave it unset to keep channel conversation transcripts forever")
     .ValidateOnStart();
 
 builder.Services.AddSingleton<IDocumentStore>(sp =>

@@ -201,7 +201,9 @@ internal sealed class DiscordInboundProcessor(
                     parameters.ToDictionary(
                         parameter => parameter.Key,
                         parameter => AgentParameterValue.FromString(parameter.Value)),
-                    options.Value.ChannelConversationRetention),
+                    new ConversationLifetime(
+                        options.Value.ChannelConversationIdleWindow,
+                        options.Value.ChannelConversationRetention)),
                 reply.OnChunkAsync, config, ct);
 
             await reply.FinalizeAsync();
