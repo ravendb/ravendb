@@ -9,6 +9,7 @@ import { type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-valida
 import { PROVIDER_OPTIONS } from "@/pages/setup/add-app-wizard/steps/connect/connect-source-options";
 import { ConnectionEditor } from "@/pages/setup/add-app-wizard/steps/connect/connection-editor";
 import { TestConnectionButton } from "@/pages/setup/add-app-wizard/steps/connect/test-connection-button";
+import { useConnectionSync } from "@/pages/setup/add-app-wizard/steps/connect/use-connection-sync";
 import { toSlug } from "@/pages/setup/add-app-wizard/slugify";
 import { InputGroupAddon } from "@/components/shadcn/ui/input-group";
 import { Button } from "@/components/shadcn/ui/button";
@@ -19,6 +20,7 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
     const { control, setValue, getValues } = useFormContext<AppFormData>();
     const { touchedFields } = useFormState({ control });
     const isEditingApp = useSetupWizardStore((state) => state.editedAppSlug !== null);
+    const { changeProvider } = useConnectionSync();
 
     // The slug follows the app name until the operator touches it, and never on an existing app,
     // where it is already the app's database name.
@@ -87,12 +89,7 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
                                 key={option.value}
                                 type="button"
                                 aria-pressed={isSelected}
-                                onClick={() =>
-                                    setValue("externalConnection.provider", option.value, {
-                                        shouldDirty: true,
-                                        shouldValidate: true,
-                                    })
-                                }
+                                onClick={() => changeProvider(option.value)}
                                 disabled={isBusy}
                                 className={cn(
                                     "flex items-center gap-3 rounded-lg border bg-background px-4 py-3 transition-colors",

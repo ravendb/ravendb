@@ -1,12 +1,25 @@
 import { useFormContext } from "react-hook-form";
 import { toast } from "sonner";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
-import { buildConnectionString, parseConnectionString } from "@/pages/setup/add-app-wizard/connection-string";
+import {
+    buildConnectionString,
+    DEFAULT_PORT_BY_PROVIDER,
+    parseConnectionString,
+    type Provider,
+} from "@/pages/setup/add-app-wizard/connection-string";
 
 type ExternalConnection = AppFormData["externalConnection"];
 
 export function useConnectionSync() {
     const { getValues, setValue } = useFormContext<AppFormData>();
+
+    const changeProvider = (provider: Provider) => {
+        setValue("externalConnection.provider", provider, { shouldDirty: true, shouldValidate: true });
+        setValue("externalConnection.fields.port", DEFAULT_PORT_BY_PROVIDER[provider], {
+            shouldDirty: true,
+            shouldValidate: true,
+        });
+    };
 
     const changeMode = (mode: ExternalConnection["mode"]) => {
         const connection = getValues("externalConnection");
@@ -18,6 +31,7 @@ export function useConnectionSync() {
                 setValue(
                     "externalConnection.connectionString",
                     buildConnectionString(connection.provider, connection.fields),
+                    { shouldDirty: true, shouldValidate: true },
                 );
             }
         } else if (connection.connectionString.trim() !== "") {
@@ -30,15 +44,15 @@ export function useConnectionSync() {
             // Same protection when nothing in the string maps to a detail field: the details
             // keep what was typed, and the warning names what could not be carried over.
             if (hasRecognizedKeywords) {
-                setValue("externalConnection.fields", values);
+                setValue("externalConnection.fields", values, { shouldDirty: true, shouldValidate: true });
             }
             warnAboutDroppedKeywords(droppedKeywords);
         }
 
-        setValue("externalConnection.mode", mode, { shouldValidate: true });
+        setValue("externalConnection.mode", mode, { shouldDirty: true, shouldValidate: true });
     };
 
-    return { changeMode };
+    return { changeProvider, changeMode };
 }
 
 function hasCompleteFields(fields: ExternalConnection["fields"]): boolean {
