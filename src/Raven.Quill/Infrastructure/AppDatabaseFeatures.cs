@@ -15,7 +15,6 @@ internal static class AppDatabaseFeatures
     {
         await EnableExpirationAsync(store, database, ct);
 
-        await new ConversationMetricsIndex().ExecuteAsync(store, database: database, token: ct);
         await new ConversationPreviewIndex().ExecuteAsync(store, database: database, token: ct);
 
         var embedLinks = store.Conventions.GetCollectionName(typeof(EmbedLink));

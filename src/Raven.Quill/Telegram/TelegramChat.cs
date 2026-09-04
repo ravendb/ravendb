@@ -162,11 +162,9 @@ internal sealed class TelegramChat
         if (prompt.Length == 0)
             return;
 
-        var conversationId = TelegramConversationId.ForUtcDay(_context.ChannelDoc.ShortId, _chatId, DateTime.UtcNow);
-
         if (IsCommand(prompt, "clear"))
         {
-            await ClearConversationAsync(conversationId);
+            await ClearConversationsAsync(TelegramConversationId.ChatPrefix(channel.ShortId, _chatId));
             await SendPlainAsync(_context.Messages.ConversationCleared);
             return;
         }
@@ -186,6 +184,8 @@ internal sealed class TelegramChat
         var parameters = await BindParametersAsync(config, message);
         if (parameters is null)
             return;
+
+        var conversationId = TelegramConversationId.For(channel.ShortId, _chatId, parameters);
 
         try
         {
@@ -207,6 +207,9 @@ internal sealed class TelegramChat
 
         foreach (var (name, binding) in _context.ChannelDoc.Telegram!.ParameterBindings)
         {
+            if (binding is null)
+                continue;
+
             switch (binding.Source)
             {
                 case ChannelParameterSource.Constant:
@@ -264,15 +267,21 @@ internal sealed class TelegramChat
 
         try
         {
-            await _context.Router.RunAsync(
+            var result = await _context.Router.RunAsync(
                 new AgentRequest(
                     _context.Database, config.Identifier, conversationId, prompt, _context.ChannelDoc.Id!,
                     parameters.ToDictionary(
                         parameter => parameter.Key,
-                        parameter => AgentParameterValue.FromString(parameter.Value))),
+                        parameter => AgentParameterValue.FromString(parameter.Value)),
+                    new ConversationLifetime(
+                        _context.Options.ChannelConversationIdleWindow,
+                        _context.Options.ChannelConversationRetention)),
                 reply.OnChunkAsync, config, _ct);
 
             await reply.FinalizeAsync();
+
+            if (result.StartedFresh)
+                await SendPlainAsync(_context.Messages.ConversationExpired);
         }
         catch (OperationCanceledException)
         {
@@ -344,11 +353,17 @@ internal sealed class TelegramChat
             },
             cancellationToken: _ct);
 
-    private async Task ClearConversationAsync(string conversationId)
+    private async Task ClearConversationsAsync(string conversationIdPrefix)
     {
         using var session = _context.Store.OpenAsyncSession(_context.Database);
-        session.Delete(conversationId);
-        session.Delete(ConversationPreview.IdFor(conversationId));
+        var conversations = await session.Advanced.LoadStartingWithAsync<object>(
+            conversationIdPrefix, pageSize: 1024, token: _ct);
+        var previews = await session.Advanced.LoadStartingWithAsync<object>(
+            ConversationPreview.IdPrefix + conversationIdPrefix, pageSize: 1024, token: _ct);
+
+        foreach (var doc in conversations.Concat(previews))
+            session.Delete(doc);
+
         await session.SaveChangesAsync(_ct);
     }
 

@@ -5,7 +5,6 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Session;
-using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide.Operations;
 using Raven.Quill.Agents;
 using Raven.Quill.Cdc;
@@ -186,7 +185,7 @@ internal static class MetricsReadService
             agent => modelByAgent.GetValueOrDefault(agent, UnknownModel));
 
         var topCapabilities = rows
-            .GroupBy(r => r.Agent ?? "")
+            .GroupBy(r => r.Agent)
             .Select(g =>
             {
                 var invocations = g.Sum(r => r.Conversations);
@@ -199,7 +198,7 @@ internal static class MetricsReadService
             .ToArray();
 
         var conversationsByChannel = await BuildConversationsByChannelAsync(
-            session, buckets, period, ct);
+            session, rows, buckets, period, ct);
 
         return new AppUsageResponse(
             metrics,
@@ -226,11 +225,11 @@ internal static class MetricsReadService
     }
 
     private static SeriesData BuildTokenSeries(
-        IReadOnlyList<ConversationMetricsIndex.Result> rows, List<DateTime> buckets,
+        IReadOnlyList<UsageMetricRow> rows, List<DateTime> buckets,
         UsagePeriod period, Func<string, string> keyOf, Func<string, string>? labelOf = null)
     {
         var label = labelOf ?? (k => k);
-        var keys = rows.Select(r => keyOf(r.Agent ?? "")).Distinct()
+        var keys = rows.Select(r => keyOf(r.Agent)).Distinct()
             .Where(k => k != TimeAxisKey)   // a key colliding with the reserved time axis can't be represented — drop it
             .OrderBy(k => k, StringComparer.OrdinalIgnoreCase).ToArray();
         var seriesKeys = keys.Select(k => new SeriesKey(k, label(k))).ToArray();
@@ -242,7 +241,7 @@ internal static class MetricsReadService
         {
             var i = period.IndexOf(row.Bucket);
             if (i < 0) continue;
-            var key = keyOf(row.Agent ?? "");
+            var key = keyOf(row.Agent);
             if (key == TimeAxisKey) continue;   // dropped from keys above
             points[i][key] = (long)points[i][key] + row.Tokens;
         }
@@ -251,7 +250,8 @@ internal static class MetricsReadService
     }
 
     private static async Task<SeriesData> BuildConversationsByChannelAsync(
-        IAsyncDocumentSession session, List<DateTime> buckets, UsagePeriod period, CancellationToken ct)
+        IAsyncDocumentSession session, IReadOnlyList<UsageMetricRow> rows,
+        List<DateTime> buckets, UsagePeriod period, CancellationToken ct)
     {
         var channels = await session.LoadAllStartingWithAsync<Channel>(Channel.IdPrefix, ct);
         var nameByChannel = channels
@@ -271,16 +271,15 @@ internal static class MetricsReadService
         for (var b = 0; b < buckets.Count; b++)
             points[b] = NewBucketPoint(keys, period.Label(buckets[b]));
 
-        var previews = await session.LoadAllStartingWithAsync<ConversationPreview>(ConversationPreview.IdPrefix, ct);
-        foreach (var preview in previews)
+        foreach (var row in rows)
         {
-            if (preview.ChannelId.StartsWith(Channel.IdPrefix, StringComparison.Ordinal) == false) continue;
-            var channelId = preview.ChannelId[Channel.IdPrefix.Length..];
+            if (row.ChannelId.StartsWith(Channel.IdPrefix, StringComparison.Ordinal) == false) continue;
+            var channelId = row.ChannelId[Channel.IdPrefix.Length..];
             if (nameByChannel.ContainsKey(channelId) == false) continue;
             if (channelId == TimeAxisKey) continue;   // dropped from keys above
-            var i = period.IndexOf(preview.CreatedAt);
+            var i = period.IndexOf(row.Bucket);
             if (i < 0) continue;
-            points[i][channelId] = (long)points[i][channelId] + 1L;
+            points[i][channelId] = (long)points[i][channelId] + row.Conversations;
         }
 
         return new SeriesData(points, seriesKeys);
@@ -470,16 +469,20 @@ internal static class MetricsReadService
     public static async Task<Dictionary<string, AgentActivity>> GetAgentActivityAsync(
         IDocumentStore store, string database, CancellationToken ct)
     {
-            using var session = store.OpenAsyncSession(database);
-            var rows = await QueryAllMetricRowsAsync(session, ct);
-            return rows
-                .GroupBy(r => r.Agent)
-                .ToDictionary(
-                    g => g.Key,
-                    g => new AgentActivity(
-                        g.Sum(r => r.Conversations), g.Sum(r => r.Messages), g.Sum(r => r.Tokens),
-                        Utc(g.Max(r => r.Bucket))),
-                    StringComparer.OrdinalIgnoreCase);
+        using var session = store.OpenAsyncSession(database);
+        var docs = await session.LoadAllStartingWithAsync<UsageMetrics>(UsageMetrics.IdPrefix, ct);
+        var rows = await QueryAllMetricRowsAsync(session, ct);
+        var lastTurnByAgent = docs
+            .GroupBy(d => d.Agent, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.Max(d => d.LastTurnAt), StringComparer.OrdinalIgnoreCase);
+        return rows
+            .GroupBy(r => r.Agent)
+            .ToDictionary(
+                g => g.Key,
+                g => new AgentActivity(
+                    g.Sum(r => r.Conversations), g.Sum(r => r.Messages), g.Sum(r => r.Tokens),
+                    Utc(lastTurnByAgent[g.Key])),
+                StringComparer.OrdinalIgnoreCase);
     }
 
     public static async Task<ConversationListResult> GetConversationsAsync(IDocumentStore store, string slug, string database, UsagePeriod period, int start, int pageSize, DateTime nowUtc, CancellationToken ct)
@@ -512,6 +515,10 @@ internal static class MetricsReadService
         if (conversationId.StartsWith(ConversationIdPrefix, StringComparison.Ordinal) == false)
             return null;
 
+        using var session = store.OpenAsyncSession(database);
+        var preview = await session.LoadAsync<ConversationPreview>(ConversationPreview.IdFor(conversationId),
+            include => include.IncludeDocuments<Channel>(p => p.ChannelId), ct);
+
         var result = await store.AI.ForDatabase(database).GetConversationMessagesAsync(new GetConversationMessagesOptions
         {
             ConversationId = conversationId,
@@ -519,12 +526,14 @@ internal static class MetricsReadService
         }, ct);
 
         if (result is null)
-            return null;
+        {
+            if (preview is null)
+                return null;
 
-        using var session = store.OpenAsyncSession(database);
-        var preview = await session.LoadAsync<ConversationPreview>(ConversationPreview.IdFor(conversationId),
-            include => include.IncludeDocuments<Channel>(p => p.ChannelId), ct)
-            ?? new ConversationPreview { ConversationId = conversationId, CreatedAt = result.CreatedAt, LastMessageAt = result.LastMessageAt };
+            return BuildExpiredDto(preview, slug, await ChannelNameAsync(session, preview.ChannelId, ct), nowUtc);
+        }
+
+        preview ??= new ConversationPreview { ConversationId = conversationId, CreatedAt = result.CreatedAt, LastMessageAt = result.LastMessageAt };
         var channelName = await ChannelNameAsync(session, preview.ChannelId, ct);
 
         var config = await AgentLookup.FindAsync(store, database, result.Agent, ct);
@@ -567,6 +576,13 @@ internal static class MetricsReadService
         ];
         return MakeDto(p.ConversationId, slug, channelName, p.Agent, prms, lastExchange, transcript: null,
             p.LastMessageAt, p.CreatedAt, nowUtc);
+    }
+
+    private static ConversationDto BuildExpiredDto(ConversationPreview p, string slug, string channelName, DateTime nowUtc)
+    {
+        var previewDto = BuildPreviewDto(p, slug, channelName, nowUtc);
+        AiConversationMessage[] transcript = [previewDto.LastExchange[1], previewDto.LastExchange[0]];
+        return previewDto with { Transcript = transcript };
     }
 
     private static ConversationDto BuildDto(AiConversationMessagesResult result, string slug, ConversationPreview preview, string channelName, string replyField, DateTime nowUtc)
@@ -660,33 +676,39 @@ internal static class MetricsReadService
     // isolate per-app failures: one bad tenant DB can't 500 a global fan-out
 
 
-    private static async Task<List<ConversationMetricsIndex.Result>> QueryAllMetricRowsAsync(
-        IAsyncDocumentSession session, CancellationToken ct)
-    {
-        try
-        {
-            return await session.Advanced
-                .AsyncDocumentQuery<ConversationMetricsIndex.Result, ConversationMetricsIndex>()
-                .ToListAsync(ct);
-        }
-        catch (IndexDoesNotExistException) { return []; }  // fresh app DB / index not built yet ⇒ no activity
-    }
+    private sealed record UsageMetricRow(
+        string Agent, string ChannelId, DateTime Bucket, long Conversations, long Messages, long Tokens);
 
-    private static async Task<List<ConversationMetricsIndex.Result>> QueryMetricRowsInRangeAsync(
-        IAsyncDocumentSession session, DateTime start, DateTime end, CancellationToken ct)
-    {
-        try
-        {
-            return await session.Advanced
-                .AsyncDocumentQuery<ConversationMetricsIndex.Result, ConversationMetricsIndex>()
-                .WhereGreaterThanOrEqual(r => r.Bucket, start)
-                .AndAlso()
-                .WhereLessThan(r => r.Bucket, end)
-                .ToListAsync(ct);
-        }
-        catch (IndexDoesNotExistException) { return []; }
-    }
+    private static Task<List<UsageMetricRow>> QueryAllMetricRowsAsync(
+        IAsyncDocumentSession session, CancellationToken ct) =>
+        QueryMetricRowsAsync(session, from: null, to: null, ct);
 
+    private static Task<List<UsageMetricRow>> QueryMetricRowsInRangeAsync(
+        IAsyncDocumentSession session, DateTime start, DateTime end, CancellationToken ct) =>
+        QueryMetricRowsAsync(session, start, end, ct);
+
+    private static async Task<List<UsageMetricRow>> QueryMetricRowsAsync(
+        IAsyncDocumentSession session, DateTime? from, DateTime? to, CancellationToken ct)
+    {
+        var docs = await session.LoadAllStartingWithAsync<UsageMetrics>(UsageMetrics.IdPrefix, ct);
+
+        var rows = new List<UsageMetricRow>();
+        foreach (var doc in docs)
+        {
+            var entries = await session
+                .IncrementalTimeSeriesFor<UsageIncrement>(doc.Id!, UsageMetrics.SeriesName)
+                .GetAsync(from, to, token: ct) ?? [];
+            foreach (var entry in entries)
+            {
+                if (to is { } end && entry.Timestamp >= end)
+                    continue;
+                rows.Add(new UsageMetricRow(doc.Agent, doc.ChannelId, entry.Timestamp,
+                    (long)entry.Value.Conversations, (long)entry.Value.Messages, (long)entry.Value.Tokens));
+            }
+        }
+
+        return rows;
+    }
 }
 
 
