@@ -1,11 +1,12 @@
 using System.Linq;
+using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace FastTests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_27458 : RavenTestBase
     {
