@@ -9,7 +9,14 @@ import { ChartSkeleton } from "@/components/data/loading-skeletons";
 import { DatePeriodPicker } from "@/components/data/date-period-picker";
 import { WruLabel } from "@/components/data/wru-label";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/shadcn/ui/card";
-import { canDrillInto, drillInto, formatPeriodLabel, getDefaultDatePeriod, type DatePeriod } from "@/lib/date-period";
+import {
+    bucketLabelFormat,
+    canDrillInto,
+    drillInto,
+    formatPeriodLabel,
+    getDefaultDatePeriod,
+    type DatePeriod,
+} from "@/lib/date-period";
 import { useSetupStartDate } from "@/lib/use-start-date";
 import { formatCompact } from "@/lib/format";
 import { PerAppUsageTable, PerAppUsageTableSkeleton } from "@/pages/dashboard/per-app-usage-table";
@@ -103,14 +110,6 @@ export function DashboardUsage() {
             </Card>
         </div>
     );
-}
-
-// Bucket labels match the selected granularity: months of a year, days of a
-// month, or hours of a day.
-function bucketLabelFormat(period: DatePeriod): string {
-    if (period.month === null) return "MMM";
-    if (period.day === null) return "MMM d";
-    return "h a";
 }
 
 function toChartData(byPeriod: QuillPeriodUsage[], period: DatePeriod) {
