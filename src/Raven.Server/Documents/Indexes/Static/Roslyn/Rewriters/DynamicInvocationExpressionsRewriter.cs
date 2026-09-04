@@ -23,9 +23,29 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                     return HandleEnumerableDistinct(node);
                 case "Enumerable.Count":
                     return HandleEnumerableCount(node);
+                case "Enumerable.Contains":
+                    return HandleDynamicEnumerableMethod(node, minimumArgumentCount: 2, maximumArgumentCount: 3);
+                case "Enumerable.Concat":
+                case "Enumerable.SequenceEqual":
+                    return HandleDynamicEnumerableMethod(node, minimumArgumentCount: 2);
             }
 
             return base.VisitInvocationExpression(node);
+        }
+
+        private SyntaxNode HandleDynamicEnumerableMethod(InvocationExpressionSyntax node, int minimumArgumentCount, int maximumArgumentCount = -1)
+        {
+            if (maximumArgumentCount == -1)
+                maximumArgumentCount = minimumArgumentCount;
+
+            var argumentCount = node.ArgumentList.Arguments.Count;
+            if (argumentCount < minimumArgumentCount ||
+                argumentCount > maximumArgumentCount ||
+                node.Expression is not MemberAccessExpressionSyntax memberAccess)
+                return base.VisitInvocationExpression(node);
+
+            var dynamicEnumerable = memberAccess.WithExpression(SyntaxFactory.IdentifierName("DynamicEnumerable"));
+            return base.VisitInvocationExpression(node.WithExpression(dynamicEnumerable));
         }
 
         private SyntaxNode HandleEnumerableCount(InvocationExpressionSyntax node)
@@ -33,7 +53,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             if (node.ArgumentList.Arguments.Count != 1)
                 return node;
             var n = node.WithArgumentList(SyntaxFactory.ParseArgumentList($"((IEnumerable<dynamic>){node.ArgumentList})"));
-            return n;
+            return base.VisitInvocationExpression(n);
         }
 
         private SyntaxNode HandleEnumerableDistinct(InvocationExpressionSyntax node)
