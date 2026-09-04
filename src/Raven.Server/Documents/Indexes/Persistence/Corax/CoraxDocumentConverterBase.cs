@@ -79,6 +79,10 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         using var _ = Scope; // ensure that we release all the resources generated in SetDocumentFields
         var currentIndexingScope = CurrentIndexingScope.Current;
 
+        // The previous document may have bailed out before its 'non existing' markers were written (no indexed field
+        // at all, or an exception) - the fields it registered as missing must not leak into this one.
+        _nonExistingFieldsOfDocument.Clear();
+
         return SetDocumentFields(key, sourceDocumentId, doc, indexContext, builder, currentIndexingScope?.Source);
     }
     
