@@ -9,7 +9,14 @@ import { SeriesBarChart } from "@/components/data/charts";
 import { DatePeriodPicker } from "@/components/data/date-period-picker";
 import { ChartSkeleton, DetailGridSkeleton } from "@/components/data/loading-skeletons";
 import { PagePanel } from "@/components/data/page-panel";
-import { canDrillInto, drillInto, getDefaultDatePeriod } from "@/lib/date-period";
+import {
+    bucketLabelFormat,
+    bucketTooltipFormat,
+    canDrillInto,
+    drillInto,
+    getDefaultDatePeriod,
+} from "@/lib/date-period";
+import { format } from "date-fns";
 import { useAppStartDate } from "@/lib/use-start-date";
 import { TableCell, TableRow } from "@/components/shadcn/ui/table";
 import { SectionTable } from "@/components/table/section-table";
@@ -36,6 +43,12 @@ export function AppAnalytics() {
               if (next) setPeriod(next);
           }
         : undefined;
+
+    // The `t` bucket keys are ISO strings; show them as short dates matching the
+    // selected granularity (e.g. "Sep 3", "7 AM") instead of the raw value. Tooltips
+    // carry the fuller date so a terse axis label like "8 AM" stays unambiguous.
+    const formatBucketLabel = (t: string) => format(new Date(t), bucketLabelFormat(period));
+    const formatBucketTooltip = (t: string) => format(new Date(t), bucketTooltipFormat(period));
 
     return (
         <PagePanel>
@@ -65,16 +78,22 @@ export function AppAnalytics() {
                             <AnalyticsSeriesSection
                                 title="Tokens by capability"
                                 series={appUsageQuery.data.tokensByCapability}
+                                xTickFormatter={formatBucketLabel}
+                                tooltipLabelFormatter={formatBucketTooltip}
                                 onBarClick={drillFromBar}
                             />
                             <AnalyticsSeriesSection
                                 title="Tokens by model"
                                 series={appUsageQuery.data.tokensByModel}
+                                xTickFormatter={formatBucketLabel}
+                                tooltipLabelFormatter={formatBucketTooltip}
                                 onBarClick={drillFromBar}
                             />
                             <AnalyticsSeriesSection
                                 title="Conversations by channel"
                                 series={appUsageQuery.data.conversationsByChannel}
+                                xTickFormatter={formatBucketLabel}
+                                tooltipLabelFormatter={formatBucketTooltip}
                                 onBarClick={drillFromBar}
                             />
                             <TopCapabilitiesSection capabilities={appUsageQuery.data.topCapabilities} />
@@ -87,7 +106,7 @@ export function AppAnalytics() {
 }
 
 function AnalyticsMetricCards({ usage }: { usage: AppUsageResponse }) {
-    const { conversations, tokens } = usage.metrics;
+    const { conversations, tokens, buckets } = usage.metrics;
     const cards: DashboardStatCard[] = [
         {
             label: "Conversations",
@@ -95,8 +114,16 @@ function AnalyticsMetricCards({ usage }: { usage: AppUsageResponse }) {
             isLoading: false,
             delta: conversations.delta,
             series: conversations.sparkline,
+            seriesDates: buckets,
         },
-        { label: "Tokens", value: tokens.value, isLoading: false, delta: tokens.delta, series: tokens.sparkline },
+        {
+            label: "Tokens",
+            value: tokens.value,
+            isLoading: false,
+            delta: tokens.delta,
+            series: tokens.sparkline,
+            seriesDates: buckets,
+        },
     ];
 
     return <StatCardsSection cards={cards} />;
@@ -105,10 +132,14 @@ function AnalyticsMetricCards({ usage }: { usage: AppUsageResponse }) {
 function AnalyticsSeriesSection({
     title,
     series,
+    xTickFormatter,
+    tooltipLabelFormatter,
     onBarClick,
 }: {
     title: string;
     series: SeriesData;
+    xTickFormatter?: (value: string) => string;
+    tooltipLabelFormatter?: (value: string) => string;
     onBarClick?: BarClickHandler;
 }) {
     return (
@@ -119,7 +150,12 @@ function AnalyticsSeriesSection({
                         No data for this period.
                     </Text>
                 ) : (
-                    <SeriesBarChart data={series} onBarClick={onBarClick} />
+                    <SeriesBarChart
+                        data={series}
+                        xTickFormatter={xTickFormatter}
+                        tooltipLabelFormatter={tooltipLabelFormatter}
+                        onBarClick={onBarClick}
+                    />
                 )}
             </div>
         </SectionCard>

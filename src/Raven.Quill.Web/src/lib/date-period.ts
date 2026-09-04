@@ -104,6 +104,22 @@ export function datePeriodUnit(period: DatePeriod): "day" | "month" | "year" {
     return "year";
 }
 
+// The date-fns format for a chart bucket label at the period's granularity:
+// months of a year, days of a month, or hours of a day.
+export function bucketLabelFormat(period: DatePeriod): string {
+    if (period.month === null) return "MMM";
+    if (period.day === null) return "MMM d";
+    return "h a";
+}
+
+// A fuller bucket format for chart tooltips, where the terse axis label would be
+// ambiguous (e.g. "8 AM" of which day) — so it always carries the date.
+export function bucketTooltipFormat(period: DatePeriod): string {
+    if (period.month === null) return "MMMM yyyy";
+    if (period.day === null) return "MMM d, yyyy";
+    return "MMM d, h a";
+}
+
 export function formatPeriodLabel(period: DatePeriod): string {
     if (period.month === null) return String(period.year);
     return format(toDate(period), period.day === null ? "MMMM yyyy" : "MMMM d, yyyy");

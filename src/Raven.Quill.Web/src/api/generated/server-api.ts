@@ -1216,6 +1216,7 @@ export interface components {
         AppUsageMetrics: {
             conversations: components["schemas"]["MetricCard"];
             tokens: components["schemas"]["MetricCard"];
+            buckets: string[];
         };
         AppUsageResponse: {
             metrics: components["schemas"]["AppUsageMetrics"];
