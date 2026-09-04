@@ -590,8 +590,6 @@ internal static class MetricsReadService
             p.LastMessageAt, p.CreatedAt, nowUtc);
     }
 
-    // transcript for a conversation whose AI document already expired: the preview's last exchange,
-    // in chronological order
     private static ConversationDto BuildExpiredDto(ConversationPreview p, string slug, string channelName, DateTime nowUtc)
     {
         var previewDto = BuildPreviewDto(p, slug, channelName, nowUtc);
@@ -732,7 +730,6 @@ internal static class MetricsReadService
                 .GetAsync(from, to, token: ct) ?? [];
             foreach (var entry in entries)
             {
-                // the time-series 'to' bound is inclusive while the period end is exclusive
                 if (to is { } end && entry.Timestamp >= end)
                     continue;
                 rows.Add(new UsageMetricRow(doc.Agent, doc.ChannelId, entry.Timestamp,

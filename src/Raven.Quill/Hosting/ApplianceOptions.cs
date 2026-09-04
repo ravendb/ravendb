@@ -47,8 +47,6 @@ public sealed class ApplianceOptions
 
     public TimeSpan? ChannelConversationRetention { get; set; } = TimeSpan.FromDays(30);
 
-    // sliding: the server re-anchors @expires on every save, so this is an inactivity window,
-    // approximate by the expiration cleaner's sweep cadence; null keeps transcripts forever
     public TimeSpan? ChannelConversationIdleWindow { get; set; } = TimeSpan.FromHours(24);
 
     public TimeSpan ReadinessInitialDelay { get; set; } = TimeSpan.FromSeconds(15);

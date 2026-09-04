@@ -206,7 +206,6 @@ public class UsageEndpointTests(ITestOutputHelper output, QuillCollectionHost co
         var now = DateTime.UtcNow;
         var earlierToday = EarlierToday(now);
         await SeedConversationAsync(app.Store, app.Slug, "chats/a", "support", earlierToday, messages: 2, tokens: 100);
-        // a raw conversation doc with no recorded turn feeds no rollup and must not break the endpoint
         await PutConversationDocAsync(app.Store, app.Slug, "chats/min",
             new { Agent = "support", CreatedAt = earlierToday, LastMessageAt = earlierToday });
 
