@@ -19,7 +19,7 @@ public class TelegramConversationIdTests(ITestOutputHelper output) : NoDisposalN
     {
         var id = TelegramConversationId.For(ChannelId, 42, NoParameters);
 
-        Assert.Matches($"^chats/tg/{ChannelId}/42/[0-9a-f]{{16}}$", id);
+        Assert.Matches($"^chats/telegram/{ChannelId}/42/[0-9a-f]{{16}}$", id);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -47,7 +47,7 @@ public class TelegramConversationIdTests(ITestOutputHelper output) : NoDisposalN
     {
         var id = TelegramConversationId.For(ChannelId, -1001234567890, NoParameters);
 
-        Assert.Matches($"^chats/tg/{ChannelId}/-1001234567890/[0-9a-f]{{16}}$", id);
+        Assert.Matches($"^chats/telegram/{ChannelId}/-1001234567890/[0-9a-f]{{16}}$", id);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
