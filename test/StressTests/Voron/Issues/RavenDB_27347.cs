@@ -8,6 +8,7 @@ using Voron.Data.BTrees;
 using Voron.Data.Compression;
 using Voron.Global;
 using Voron.Impl;
+using Voron.Impl.Paging;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -94,33 +95,84 @@ namespace StressTests.Voron.Issues
                 }
             }
 
-            using (var tx = Env.ReadTransaction())
+            // the tree can be validated and its header compared with a structure walk only once every compressed leaf has consumed its
+            // deferred work: decompress each of them for writing and write it back, or take it out of the tree if all of its entries got
+            // deleted (what the map-reduce code does with such leaves)
+            using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.ReadTree("tree");
 
-                // ValidateTree_Forced is not used on purpose: a compressed leaf whose entries all got deleted stays in the tree with
-                // its tombstones until something decompresses it for writing, and the validator reports it as an empty page
-                long entries = 0;
+                var compressedLeaves = new List<long>();
 
                 foreach (var pageNumber in tree.AllPages())
                 {
                     var page = GetPage(tx, pageNumber);
 
-                    if (page.IsLeaf == false)
+                    if (page.IsOverflow == false && page.IsLeaf && page.IsCompressed)
+                        compressedLeaves.Add(pageNumber);
+                }
+
+                foreach (var pageNumber in compressedLeaves)
+                {
+                    using (var decompressed = tree.DecompressPage(tree.ModifyPage(pageNumber), DecompressionUsage.Write, skipCache: true))
+                    {
+                        if (decompressed.NumberOfEntries == 0)
+                            tree.RemoveEmptyDecompressedPage(decompressed);
+                        else
+                            decompressed.CopyToOriginal(tx.LowLevelTransaction, defragRequired: true, wasModified: true, tree);
+                    }
+                }
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var tree = tx.ReadTree("tree");
+
+                tree.ValidateTree_Forced(tree.State.Header.RootPageNumber);
+
+                // AllPages does not see the overflow pages referenced from the compressed sections, the overflow pages are counted here
+                long entries = 0;
+                long branchPages = 0;
+                long leafPages = 0;
+                long overflowPages = 0;
+
+                foreach (var pageNumber in tree.AllPages())
+                {
+                    var page = GetPage(tx, pageNumber);
+
+                    if (page.IsOverflow)
                         continue;
 
-                    if (page.IsCompressed)
+                    if (page.IsBranch)
                     {
-                        using (var decompressed = tree.DecompressPage(page, DecompressionUsage.Read, skipCache: true))
-                            entries += decompressed.NumberOfEntries;
+                        branchPages++;
+                        continue;
                     }
-                    else
+
+                    leafPages++;
+
+                    if (page.IsCompressed)
+                        Assert.Equal(0, page.NumberOfEntries); // written back: nothing left in the uncompressed section, in particular no tombstone
+
+                    using (page.IsCompressed ? (DecompressedLeafPage)(page = tree.DecompressPage(page, DecompressionUsage.Read, skipCache: true)) : null)
                     {
                         entries += page.NumberOfEntries;
+                        overflowPages += CountOverflowPages(tx, page);
                     }
                 }
 
                 Assert.Equal(expected.Count, entries);
+                Assert.Equal(branchPages, tree.State.Header.BranchPages);
+                Assert.Equal(leafPages, tree.State.Header.LeafPages);
+
+                // not asserted yet: NumberOfEntries, OverflowPages and PageCount in the header drift because of pre-existing accounting gaps
+                // (a delete of an uncompressed key skips the decrement, an update of a compressed key leaks its old overflow page), to be
+                // fixed and asserted separately
+                // Assert.Equal(expected.Count, tree.State.Header.NumberOfEntries);
+                // Assert.Equal(overflowPages, tree.State.Header.OverflowPages);
+                // Assert.Equal(branchPages + leafPages + overflowPages, tree.State.Header.PageCount);
 
                 foreach (var (id, value) in expected)
                     Assert.Equal(value, Read(tx, tree, id));
@@ -128,6 +180,21 @@ namespace StressTests.Voron.Issues
                 foreach (var id in recentlyDeleted)
                     Assert.Null(Read(tx, tree, id));
             }
+        }
+
+        private static unsafe long CountOverflowPages(Transaction tx, TreePage page)
+        {
+            long count = 0;
+
+            for (int i = 0; i < page.NumberOfEntries; i++)
+            {
+                var node = page.GetNode(i);
+
+                if (node->Flags == TreeNodeFlags.PageRef)
+                    count += VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(GetPage(tx, node->PageNumber).OverflowSize);
+            }
+
+            return count;
         }
 
         private static byte[] RandomValue(Random random)

@@ -29,7 +29,8 @@ namespace Voron.Data.Compression
 
         public DecompressionUsage Usage;
 
-        // the Write decompression applied deferred work (tombstones, updates) to the tree state, the original page must be rewritten from this one
+        // the Write decompression applied deferred work (tombstones, updates) to the tree state, the original page must be rewritten from this one.
+        // Reset once that happened, a cached copy must not force another write-back later
         public bool MustBeWrittenBack;
 
         public void Dispose()
@@ -93,6 +94,8 @@ namespace Voron.Data.Compression
                     LeafPageCompressor.CopyToPage(compressed, Original);
                 }
             }
+
+            MustBeWrittenBack = false; // the original page has just been rewritten from this one
         }
 
         private void SplitPage(LowLevelTransaction tx, Tree tree)
