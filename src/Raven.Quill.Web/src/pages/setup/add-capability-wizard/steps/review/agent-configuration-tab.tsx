@@ -10,6 +10,7 @@ import {
     toAgentIdentifier,
     type AgentFormData,
 } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
+import { useCapabilityWizardStore } from "@/pages/setup/add-capability-wizard/capability-wizard-store";
 import { AgentActionsSection } from "@/pages/setup/add-capability-wizard/steps/review/agent-actions-section";
 import { AgentParametersSection } from "@/pages/setup/add-capability-wizard/steps/review/agent-parameters-section";
 import { AgentQueryToolsSection } from "@/pages/setup/add-capability-wizard/steps/review/agent-query-tools-section";
@@ -20,14 +21,11 @@ export const SYSTEM_PROMPT_PLACEHOLDER =
     "E.g.: You are a customer support assistant for an e-commerce platform, " +
     "capable of answering questions about products and orders.";
 
-type AgentConfigurationTabProps = {
-    hasEditedIdentifier: boolean;
-    setHasEditedIdentifier: (hasEdited: boolean) => void;
-};
-
-export function AgentConfigurationTab({ hasEditedIdentifier, setHasEditedIdentifier }: AgentConfigurationTabProps) {
+export function AgentConfigurationTab() {
     const { control, getValues, setValue } = useFormContext<AgentFormData>();
     const mode = useWatch({ control, name: "create.mode" });
+    const hasEditedIdentifier = useCapabilityWizardStore((state) => state.hasEditedIdentifier);
+    const setHasEditedIdentifier = useCapabilityWizardStore((state) => state.setHasEditedIdentifier);
     // The AI-made configuration is seeded into the same editable fields as a manual one, so this
     // notice is the only cue that edits diverge from what the AI produced.
     const isAiMade = mode === "ai" || mode === "prompt";

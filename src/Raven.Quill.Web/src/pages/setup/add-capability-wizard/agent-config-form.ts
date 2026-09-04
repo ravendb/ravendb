@@ -14,6 +14,7 @@ import {
     type AgentParameterFormData,
     type AgentQueryToolFormData,
 } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
+import { useCapabilityWizardStore } from "@/pages/setup/add-capability-wizard/capability-wizard-store";
 
 // Mapping between the wizard's editable agent configuration (form values) and the
 // AiAgentConfiguration the server API speaks. Mirrors Studio's editAiAgentUtils.
@@ -169,9 +170,14 @@ export function applySuggestionToForm(
 ) {
     setValue("create.mode", "ai");
     setValue("create.selectedIndex", index);
+    seedAgentConfiguration(setValue, suggestion);
+}
+
+export function seedAgentConfiguration(setValue: UseFormSetValue<AgentFormData>, suggestion: AiAgentConfiguration) {
     // Seeded configurations are expected to be valid, so validating here clears any
     // stale errors left over from an abandoned manual setup.
     setValue("review", suggestionToAgentConfiguration(suggestion), { shouldValidate: true });
+    useCapabilityWizardStore.getState().setHasEditedIdentifier(false);
 }
 
 // Builds the editable part of the provision payload from form values. Sub-agents stay
