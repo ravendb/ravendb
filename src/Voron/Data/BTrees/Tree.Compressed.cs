@@ -205,6 +205,8 @@ namespace Voron.Data.BTrees
                                         {
                                             ref var state = ref State.Modify();
                                             state.NumberOfEntries--;
+
+                                            decompressedPage.MustBeWrittenBack = true;
                                         }
                                     }
 
@@ -252,6 +254,8 @@ namespace Voron.Data.BTrees
             {
                 ref var state = ref State.Modify();
                 state.NumberOfEntries--;
+
+                decompressedPage.MustBeWrittenBack = true;
 
                 if (node->Flags == TreeNodeFlags.PageRef)
                 {
