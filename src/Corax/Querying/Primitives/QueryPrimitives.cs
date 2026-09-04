@@ -381,7 +381,9 @@ public static class QueryPrimitives
             bitmap.OrWith(ref srcData);
             return;
         }
-        if (match is Matches.TermMatch tm && tm.TryGetPostingListIterator(out var iter))
+        // A term whose relevance is stored must go through Fill: that is where TermMatch hands ids and frequencies
+        // to Bm25Relevance. Bigger posting lists are re-read at score time, so they keep the fast path.
+        if (match is Matches.TermMatch tm && tm.ScoringNeedsFill == false && tm.TryGetPostingListIterator(out var iter))
         {
             FillFromPostings(ref iter, ref bitmap, token, limit);
             return;
@@ -426,7 +428,7 @@ public static class QueryPrimitives
             bitmap.AndWith(ref srcData);
             return;
         }
-        if (match is Matches.TermMatch tm && tm.TryGetPostingListIterator(out var iter))
+        if (match is Matches.TermMatch tm && tm.ScoringNeedsFill == false && tm.TryGetPostingListIterator(out var iter))
         {
             AndWithPostings(ref iter, ref bitmap, ref tempBitmap, token);
             return;
@@ -458,6 +460,7 @@ public static class QueryPrimitives
             bitmap.AndNotWith(ref srcData);
             return;
         }
+        // A negated leaf is resolved without boost (see QueryPlanBuilder.ResolveFieldMetadata), so it never feeds BM25 and never needs Fill.
         if (match is Matches.TermMatch tm && tm.TryGetPostingListIterator(out var iter))
         {
             AndNotWithPostings(ref iter, ref bitmap, ref tempBitmap, token);

@@ -831,8 +831,9 @@ internal static partial class QueryPlanBuilder
                                    && clause.ClauseType != ClauseType.Search
                                    && builderParams.Index.Configuration.UseSearchAnalyzerForDynamicFieldsIfNotSetExplicitlyInSearchQuery;
         
+        // A negated clause only subtracts from the result, it never adds relevance - same as Lucene's MUST_NOT.
         return QueryBuilderHelper.GetFieldMetadata(in builderParams, resolvedFieldName, exact: clause.IsExact,
-            hasBoost: builderParams.HasBoost, forceDefaultSearchAnalyzer: forceSearchAnalyzer);
+            hasBoost: builderParams.HasBoost && clause.IsNegated == false, forceDefaultSearchAnalyzer: forceSearchAnalyzer);
     }
 
     private static bool IsClauseBoosted(ClauseExecution exec) => exec.Clause.HasBoost || exec.BoostFactor > 0;
