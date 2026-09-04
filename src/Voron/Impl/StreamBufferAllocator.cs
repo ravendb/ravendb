@@ -1,4 +1,6 @@
 using System;
+using System.Threading;
+using Sparrow;
 using Sparrow.Global;
 using Sparrow.Json;
 using Sparrow.LowMemory;
@@ -12,7 +14,8 @@ public unsafe class StreamBufferAllocator : ILowMemoryHandler
 {
     public static readonly StreamBufferAllocator Instance = new StreamBufferAllocator();
 
-    private readonly PerCoreContainer<Buffer> _buffers = new PerCoreContainer<Buffer>(8);
+    private readonly BufferStats _stats = new BufferStats();
+    private readonly PerCoreContainer<Buffer, BufferTrackingPolicy> _buffers;
     private readonly MultipleUseFlag _isExtremelyLowMemory = new MultipleUseFlag();
 
     private static readonly int BufferSize = PlatformDetails.Is32Bits == false
@@ -21,6 +24,11 @@ public unsafe class StreamBufferAllocator : ILowMemoryHandler
 
     private StreamBufferAllocator()
     {
+        var policy = new BufferTrackingPolicy(_stats, BufferSize);
+        _buffers = new PerCoreContainer<Buffer, BufferTrackingPolicy>(
+            numberOfGlobalSlots: 8,
+            numberOfSlotsPerCore: 8,
+            policy: policy);
         LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
     }
 
@@ -41,15 +49,56 @@ public unsafe class StreamBufferAllocator : ILowMemoryHandler
         if (_isExtremelyLowMemory.Raise() == false)
             return;
 
-        foreach (var buffer in _buffers.EnumerateAndClear())
-        {
-            buffer.Free();
-        }
+        _buffers.Cleanup(new RemoveAllPolicy<Buffer>(), x => x.Free());
     }
 
     public void LowMemoryOver()
     {
         _isExtremelyLowMemory.Lower();
+    }
+
+    public StreamBufferStats GetStats()
+    {
+        return new StreamBufferStats
+        {
+            BufferSize = BufferSize,
+            TotalPoolSize = Volatile.Read(ref _stats.Bytes),
+            TotalNumberOfItems = (int)Volatile.Read(ref _stats.Count)
+        };
+    }
+
+    private sealed class BufferStats
+    {
+        public long Count;
+        public long Bytes;
+    }
+
+    private readonly struct BufferTrackingPolicy : IPerCoreContainerPolicy<Buffer>
+    {
+        private readonly BufferStats _stats;
+        private readonly long _bufferSize;
+
+        public BufferTrackingPolicy(BufferStats stats, long bufferSize)
+        {
+            _stats = stats;
+            _bufferSize = bufferSize;
+        }
+
+        public bool CanRemove => false;
+
+        public bool ShouldRemove(Buffer item, int coreIndex) => false;
+
+        public void OnAdded(Buffer item, int coreIndex)
+        {
+            Interlocked.Increment(ref _stats.Count);
+            Interlocked.Add(ref _stats.Bytes, _bufferSize);
+        }
+
+        public void OnRemoved(Buffer item, int coreIndex)
+        {
+            Interlocked.Decrement(ref _stats.Count);
+            Interlocked.Add(ref _stats.Bytes, -_bufferSize);
+        }
     }
 
     public class Buffer : IDisposable
@@ -80,4 +129,14 @@ public unsafe class StreamBufferAllocator : ILowMemoryHandler
                 Free();
         }
     }
+}
+
+public sealed class StreamBufferStats
+{
+    public long BufferSize { get; set; }
+    public long TotalPoolSize { get; set; }
+    public int TotalNumberOfItems { get; set; }
+
+    public Size BufferSizeHumane => new Size(BufferSize, SizeUnit.Bytes);
+    public Size TotalPoolSizeHumane => new Size(TotalPoolSize, SizeUnit.Bytes);
 }
