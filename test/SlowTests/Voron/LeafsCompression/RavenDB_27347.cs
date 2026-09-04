@@ -3,6 +3,7 @@ using FastTests.Voron;
 using Tests.Infrastructure;
 using Voron;
 using Voron.Data.BTrees;
+using Voron.Data.Compression;
 using Voron.Global;
 using Voron.Impl;
 using Xunit;
@@ -32,8 +33,8 @@ namespace SlowTests.Voron.LeafsCompression
             {
                 var tree = tx.CreateTree("tree", flags: TreeFlags.LeafsCompressed);
 
-                // two overflow entries, so the double free of the buggy path lands on OverflowPages == 0 instead of tripping
-                // Debug.Assert(OverflowPages >= 0) in Tree.RecordFreedPage (which would fail-fast the test host)
+                // two overflow entries, so the double free of the buggy path lands on OverflowPages == 0 and is caught by the
+                // assertions below instead of tripping Debug.Assert(OverflowPages >= 0) in Tree.RecordFreedPage
                 Add(tx, tree, "00000", new byte[OverflowValueSize]);
                 Add(tx, tree, "00001", new byte[OverflowValueSize]);
 
@@ -97,9 +98,119 @@ namespace SlowTests.Voron.LeafsCompression
             }
         }
 
+        [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Compression)]
+        public void SplittingDecompressedPageMustKeepOverflowEntryInTheMiddle()
+        {
+            // DecompressedLeafPage.SplitPage runs when a decompressed page can neither fit into 8 KB nor be compressed back into
+            // it (CopyToOriginal with wasModified: true, reached from the slow path of Tree.Delete on a compressed page and from
+            // TreePageSplitter). The content that gets there is decided by LZ4 on the byte level, so the failing recompression is
+            // forced here directly on the decompressed page.
+            var random = new Random(27347);
+
+            var overflowValue = new byte[OverflowValueSize];
+            Array.Fill(overflowValue, (byte)0x2A);
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var tree = tx.CreateTree("tree", flags: TreeFlags.LeafsCompressed);
+
+                // 15 entries, the overflow entry is the 8th one, so it is the middle node (NumberOfEntries / 2) that
+                // SplitPage takes out and adds back when it needs to split the decompressed page
+                for (int i = 0; i <= 6; i++)
+                    Add(tx, tree, Key(i), new byte[InlineValueSize]);
+
+                Add(tx, tree, Key(7), overflowValue);
+
+                // 7 x 1018 + 18 + 1018 > 8128, "00008" compresses the page, the rest fills the uncompressed section
+                for (int i = 8; i <= 14; i++)
+                    Add(tx, tree, Key(i), new byte[InlineValueSize]);
+
+                var root = GetPage(tx, tree.State.Header.RootPageNumber);
+
+                Assert.True(root.IsCompressed);
+                Assert.Equal(1, tree.State.Header.Depth);
+                Assert.Equal(15, tree.State.Header.NumberOfEntries);
+                Assert.Equal(1, tree.State.Header.OverflowPages);
+                Assert.Equal(2, tree.State.Header.PageCount);
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var tree = tx.ReadTree("tree");
+
+                var page = tree.ModifyPage(tree.State.Header.RootPageNumber);
+
+                Assert.True(page.IsCompressed);
+
+                using (var decompressed = tree.DecompressPage(page, DecompressionUsage.Write, skipCache: true))
+                {
+                    Assert.Equal(15, decompressed.NumberOfEntries);
+                    Assert.Equal(TreeNodeFlags.PageRef, NodeFlags(decompressed, decompressed.NumberOfEntries / 2));
+
+                    // the decompressed page does not fit into 8 KB and after this it does not compress either, so writing it back
+                    // to the original page has to split it
+                    MakeValuesIncompressible(decompressed, random);
+
+                    decompressed.CopyToOriginal(tx.LowLevelTransaction, defragRequired: false, wasModified: true, tree);
+                }
+
+                Assert.Equal(2, tree.State.Header.Depth);
+                Assert.Equal(15, tree.State.Header.NumberOfEntries);
+                Assert.Equal(1, tree.State.Header.OverflowPages);
+
+                tree.ValidateTree_Forced(tree.State.Header.RootPageNumber);
+
+                Assert.Equal(overflowValue, ReadValue(tx, tree, Key(7)));
+                Assert.Equal(15, CountEntries(tree));
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var tree = tx.ReadTree("tree");
+
+                tree.ValidateTree_Forced(tree.State.Header.RootPageNumber);
+
+                Assert.Equal(overflowValue, ReadValue(tx, tree, Key(7)));
+                Assert.Equal(15, CountEntries(tree));
+            }
+        }
+
         private static string Key(int i)
         {
             return i.ToString("D5");
+        }
+
+        private static unsafe TreeNodeFlags NodeFlags(TreePage page, int index)
+        {
+            return page.GetNode(index)->Flags;
+        }
+
+        private static unsafe void MakeValuesIncompressible(TreePage page, Random random)
+        {
+            for (int i = 0; i < page.NumberOfEntries; i++)
+            {
+                var node = page.GetNode(i);
+
+                if (node->Flags != TreeNodeFlags.Data)
+                    continue;
+
+                random.NextBytes(new Span<byte>((byte*)node + Constants.Tree.NodeHeaderSize + node->KeySize, node->DataSize));
+            }
+        }
+
+        private static unsafe byte[] ReadValue(Transaction tx, Tree tree, string key)
+        {
+            using (Slice.From(tx.Allocator, key, out Slice keySlice))
+            using (var result = tree.ReadDecompressed(keySlice))
+            {
+                Assert.NotNull(result);
+
+                return new ReadOnlySpan<byte>(result.Reader.Base, result.Reader.Length).ToArray();
+            }
         }
 
         private static byte[] RandomBytes(Random random, int size)

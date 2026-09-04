@@ -110,11 +110,17 @@ namespace Voron.Data.Compression
                 var node = GetNode(middleNodeIndex);
 
                 var flags = node->Flags;
-                var valueReader = tree.GetValueReaderFromHeader(node);
 
-                using (tx.Allocator.Allocate(valueReader.Length, out var tempValueOutput))
+                // the value of an overflow entry stays on its overflow page, only the reference moves
+                var isPageRef = flags == TreeNodeFlags.PageRef;
+                var valueReader = isPageRef ? default : tree.GetValueReaderFromHeader(node);
+                var len = isPageRef ? -1 : valueReader.Length;
+                var pageNumber = isPageRef ? node->PageNumber : PageNumber;
+
+                using (tx.Allocator.Allocate(isPageRef ? 0 : len, out var tempValueOutput))
                 {
-                    Memory.Copy(tempValueOutput.Ptr, valueReader.Base, valueReader.Length);
+                    if (isPageRef == false)
+                        Memory.Copy(tempValueOutput.Ptr, valueReader.Base, len);
 
                     RemoveNode(middleNodeIndex);
 
@@ -124,12 +130,13 @@ namespace Voron.Data.Compression
                     {
                         cursor.Update(cursor.Pages, this); // we need to use uncompressed page here because it might have some modifications (e.g. deleted node)
 
-                        var pageSplitter = new TreePageSplitter(tx, tree, key, valueReader.Length, PageNumber, flags, cursor,
+                        var pageSplitter = new TreePageSplitter(tx, tree, key, len, pageNumber, flags, cursor,
                             splittingOnDecompressed: true);
 
                         var pos = pageSplitter.Execute();
 
-                        tempValueOutput.CopyTo(pos);
+                        if (isPageRef == false)
+                            tempValueOutput.CopyTo(pos);
                     }
                 }
             }
