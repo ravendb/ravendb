@@ -512,6 +512,10 @@ internal static class MetricsReadService
         if (conversationId.StartsWith(ConversationIdPrefix, StringComparison.Ordinal) == false)
             return null;
 
+        using var session = store.OpenAsyncSession(database);
+        var preview = await session.LoadAsync<ConversationPreview>(ConversationPreview.IdFor(conversationId),
+            include => include.IncludeDocuments<Channel>(p => p.ChannelId), ct);
+
         var result = await store.AI.ForDatabase(database).GetConversationMessagesAsync(new GetConversationMessagesOptions
         {
             ConversationId = conversationId,
@@ -519,12 +523,14 @@ internal static class MetricsReadService
         }, ct);
 
         if (result is null)
-            return null;
+        {
+            if (preview is null)
+                return null;
 
-        using var session = store.OpenAsyncSession(database);
-        var preview = await session.LoadAsync<ConversationPreview>(ConversationPreview.IdFor(conversationId),
-            include => include.IncludeDocuments<Channel>(p => p.ChannelId), ct)
-            ?? new ConversationPreview { ConversationId = conversationId, CreatedAt = result.CreatedAt, LastMessageAt = result.LastMessageAt };
+            return BuildExpiredDto(preview, slug, await ChannelNameAsync(session, preview.ChannelId, ct), nowUtc);
+        }
+
+        preview ??= new ConversationPreview { ConversationId = conversationId, CreatedAt = result.CreatedAt, LastMessageAt = result.LastMessageAt };
         var channelName = await ChannelNameAsync(session, preview.ChannelId, ct);
 
         var config = await AgentLookup.FindAsync(store, database, result.Agent, ct);
@@ -567,6 +573,15 @@ internal static class MetricsReadService
         ];
         return MakeDto(p.ConversationId, slug, channelName, p.Agent, prms, lastExchange, transcript: null,
             p.LastMessageAt, p.CreatedAt, nowUtc);
+    }
+
+    // transcript for a conversation whose AI document already expired: the preview's last exchange,
+    // in chronological order
+    private static ConversationDto BuildExpiredDto(ConversationPreview p, string slug, string channelName, DateTime nowUtc)
+    {
+        var previewDto = BuildPreviewDto(p, slug, channelName, nowUtc);
+        AiConversationMessage[] transcript = [previewDto.LastExchange[1], previewDto.LastExchange[0]];
+        return previewDto with { Transcript = transcript };
     }
 
     private static ConversationDto BuildDto(AiConversationMessagesResult result, string slug, ConversationPreview preview, string channelName, string replyField, DateTime nowUtc)

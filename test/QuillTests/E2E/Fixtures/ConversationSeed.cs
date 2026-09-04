@@ -21,7 +21,8 @@ public static class ConversationSeed
     }
 
     /// Writes the <c>ConversationPreview</c> read-model doc; production co-writes it on every turn.
-    private static Task SeedPreviewAsync(
+    /// Called alone it models a conversation whose transcript already expired.
+    public static Task SeedPreviewAsync(
         IDocumentStore store, string database, string conversationId, string agent, DateTime lastMessageAt,
         string? channelId = null, string lastUserPrompt = "", string lastAgentReply = "",
         IReadOnlyDictionary<string, string>? parameters = null) =>
