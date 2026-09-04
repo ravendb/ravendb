@@ -88,8 +88,11 @@ function StatCard({ card }: { card: DashboardStatCard }) {
 }
 
 function DeltaBadge({ delta }: { delta: number }) {
-    // Only positive trends reach here; a flat or negative trend is not rendered.
-    return <Badge variant="success">+{delta.toFixed(1)}%</Badge>;
+    const fixedDelta = delta.toFixed(1);
+    if (delta < 0) {
+        return <Badge variant="destructive">{fixedDelta}%</Badge>;
+    }
+    return <Badge variant="success">+{fixedDelta}%</Badge>;
 }
 
 const SPARKLINE_DATE_FORMAT = new Intl.DateTimeFormat("en", { month: "short", day: "numeric" });
