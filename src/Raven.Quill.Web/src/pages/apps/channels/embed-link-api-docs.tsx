@@ -14,7 +14,13 @@ import {
     MIN_INVOCATIONS,
     MIN_TTL_SECONDS,
 } from "@/pages/apps/channels/embed-link-utils";
-import { buildBackedHostPageSnippet } from "@/pages/apps/channels/embed-host-page-snippets";
+import {
+    buildHtmlHostSnippet,
+    buildKotlinHostSnippet,
+    buildReactHostSnippet,
+    buildSwiftHostSnippet,
+    buildVueHostSnippet,
+} from "@/pages/apps/channels/embed-host-page-snippets";
 import { InlineCode } from "@/components/data/inline-code";
 import { NumberedSteps } from "@/components/data/numbered-steps";
 import { SectionCard } from "@/pages/apps/section-card";
@@ -28,30 +34,44 @@ import {
 } from "@/pages/apps/channels/agent-parameter-values";
 
 const LANGUAGE_STORAGE_KEY = "quill-embed-api-docs-language";
+const HOST_STACK_STORAGE_KEY = "quill-embed-api-docs-host-stack";
 
-// The host page snippet grows to its natural height, but never shrinks below this so the block still
-// reads as a code viewport.
-const HOST_PAGE_MIN_LINES = 16;
+type TabOption = { value: string; label: string; mode: HighlightLanguage };
 
-type Language = "bash" | "powershell" | "csharp" | "python" | "node";
-
-type LanguageOption = {
-    value: Language;
-    label: string;
-    mode: HighlightLanguage;
-};
-
-const LANGUAGE_OPTIONS: LanguageOption[] = [
+const LANGUAGE_OPTIONS = [
     { value: "bash", label: "cURL", mode: "sh" },
     { value: "powershell", label: "PowerShell", mode: "powershell" },
     { value: "csharp", label: "C#", mode: "csharp" },
     { value: "python", label: "Python", mode: "python" },
     { value: "node", label: "Node.js", mode: "javascript" },
-];
+] as const satisfies readonly TabOption[];
 
-function readLanguage(): Language {
-    const stored = readStoredValue(LANGUAGE_STORAGE_KEY);
-    return LANGUAGE_OPTIONS.some((language) => language.value === stored) ? (stored as Language) : "bash";
+type Language = (typeof LANGUAGE_OPTIONS)[number]["value"];
+
+const HOST_STACK_OPTIONS = [
+    { value: "html", label: "HTML", mode: "html", build: buildHtmlHostSnippet },
+    { value: "react", label: "React", mode: "jsx", build: buildReactHostSnippet },
+    { value: "vue", label: "Vue", mode: "vue", build: buildVueHostSnippet },
+    { value: "kotlin", label: "Kotlin", mode: "kotlin", build: buildKotlinHostSnippet },
+    { value: "swift", label: "Swift", mode: "swift", build: buildSwiftHostSnippet },
+] as const satisfies readonly (TabOption & { build: (embedOrigin: string) => string })[];
+
+function useStoredTabValue<T extends string>(storageKey: string, options: readonly { value: T }[]) {
+    const [value, setValue] = useState(() => {
+        const stored = readStoredValue(storageKey);
+        return options.find((option) => option.value === stored)?.value ?? options[0].value;
+    });
+
+    const onValueChange = (next: string) => {
+        const match = options.find((option) => option.value === next);
+        if (!match) {
+            return;
+        }
+        writeStoredValue(storageKey, match.value);
+        setValue(match.value);
+    };
+
+    return [value, onValueChange] as const;
 }
 
 type EmbedLinkApiDocsProps = {
@@ -65,13 +85,8 @@ export function EmbedLinkApiDocs({ slug, channelId, parameters }: EmbedLinkApiDo
     const requests = buildRequestSnippets(slug, channelId, parameters);
     const embedOrigin = originForSubdomain("public");
 
-    const [language, setLanguage] = useState<Language>(readLanguage);
-
-    const onLanguageChange = (value: string) => {
-        const next = value as Language;
-        writeStoredValue(LANGUAGE_STORAGE_KEY, next);
-        setLanguage(next);
-    };
+    const [language, onLanguageChange] = useStoredTabValue(LANGUAGE_STORAGE_KEY, LANGUAGE_OPTIONS);
+    const [hostStack, onHostStackChange] = useStoredTabValue(HOST_STACK_STORAGE_KEY, HOST_STACK_OPTIONS);
 
     const fields = [
         { name: "channelId", description: "The web widget channel the link is minted for (already filled in)." },
@@ -143,22 +158,21 @@ export function EmbedLinkApiDocs({ slug, channelId, parameters }: EmbedLinkApiDo
                             content: (
                                 <>
                                     <Text variant="muted" className="max-w-prose">
-                                        Then in the page, point an iframe at the <InlineCode>url</InlineCode> your
-                                        endpoint returned:
+                                        Then point an iframe — or a mobile WebView — at the <InlineCode>url</InlineCode>{" "}
+                                        your endpoint returned, and re-mint when it expires:
                                     </Text>
                                     <CodeBlockTabs
-                                        value="html"
-                                        copyLabel="Copy host page"
-                                        minLines={HOST_PAGE_MIN_LINES}
+                                        value={hostStack}
+                                        onValueChange={onHostStackChange}
+                                        copyLabel="Copy embed snippet"
+                                        maxLines={20}
                                         className="mt-3"
-                                        tabs={[
-                                            {
-                                                value: "html",
-                                                label: "Host page",
-                                                language: "html",
-                                                code: buildBackedHostPageSnippet(embedOrigin),
-                                            },
-                                        ]}
+                                        tabs={HOST_STACK_OPTIONS.map(({ value, label, mode, build }) => ({
+                                            value,
+                                            label,
+                                            language: mode,
+                                            code: build(embedOrigin),
+                                        }))}
                                     />
                                 </>
                             ),
