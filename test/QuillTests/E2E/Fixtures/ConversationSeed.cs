@@ -4,6 +4,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Quill.Agents;
 using Raven.Quill.Channels;
+using Raven.Quill.Metrics;
 
 namespace QuillTests.E2E.Fixtures;
 
@@ -22,17 +23,21 @@ public static class ConversationSeed
 
     /// Writes the <c>ConversationPreview</c> read-model doc; production co-writes it on every turn.
     /// Called alone it models a conversation whose transcript already expired.
-    public static Task SeedPreviewAsync(
+    public static async Task SeedPreviewAsync(
         IDocumentStore store, string database, string conversationId, string agent, DateTime lastMessageAt,
         string? channelId = null, string lastUserPrompt = "", string lastAgentReply = "",
-        IReadOnlyDictionary<string, string>? parameters = null) =>
-        AgentRouter.UpsertPreviewAsync(store,
+        IReadOnlyDictionary<string, string>? parameters = null)
+    {
+        using var session = store.OpenAsyncSession(database);
+        await AgentRouter.UpsertPreviewAsync(session,
             new AgentRequest(database, AgentId: agent, ConversationId: conversationId, Prompt: lastUserPrompt,
                 ChannelId: channelId is null ? "" : Channel.IdPrefix + channelId,
                 Parameters: (parameters ?? new Dictionary<string, string>()).ToDictionary(
                     parameter => parameter.Key,
                     parameter => AgentParameterValue.FromString(parameter.Value))),
             agent, conversationId, reply: lastAgentReply, nowUtc: lastMessageAt, CancellationToken.None);
+        await session.SaveChangesAsync();
+    }
 
     /// Seeds a <c>@conversations</c> doc so the metric index can aggregate it without running a live turn.
     public static async Task SeedConversationAsync(
@@ -69,6 +74,16 @@ public static class ConversationSeed
         await SeedPreviewAsync(store, database, id, agent, createdAt, channelId,
             lastUserPrompt: lastUser, lastAgentReply: lastAgent,
             parameters: parameters?.ToDictionary(kv => kv.Key, kv => kv.Value?.ToString() ?? ""));
+
+        // production also folds every turn into the usage rollup: one conversation, the user
+        // messages as prompts, the token total
+        var userMessages = conversation.Messages.Count(m =>
+            m.role == "user" && (m.content is not string text || text.StartsWith("AI Agent Parameters:") == false));
+        using var session = store.OpenAsyncSession(database);
+        await UsageMetrics.IncrementAsync(session, agent,
+            channelId is null ? "" : Channel.IdPrefix + channelId, createdAt,
+            conversations: 1, messages: userMessages, tokens, CancellationToken.None);
+        await session.SaveChangesAsync();
     }
 
     /// Seeds a <c>@conversations</c> doc shaped like real AI-runtime output, to exercise transcript role-filtering + array extraction.
