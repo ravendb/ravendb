@@ -8,3 +8,5 @@ public interface ILicenseStatsProvider
 
     Task<QuillUsageResponse> GetUsageAsync(int year, int? month, int? day, CancellationToken token);
 }
+
+public sealed class LicenseUsageUnavailableException(string message) : Exception(message);
