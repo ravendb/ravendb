@@ -114,8 +114,5 @@ export function DashboardUsage() {
 }
 
 function toChartData(byPeriod: QuillPeriodUsage[]) {
-    const now = new Date();
-    return byPeriod
-        .filter((bucket) => new Date(bucket.from) <= now)
-        .map((bucket) => ({ writes: bucket.usage, from: bucket.from }));
+    return byPeriod.map((bucket) => ({ writes: bucket.usage, from: bucket.from }));
 }
