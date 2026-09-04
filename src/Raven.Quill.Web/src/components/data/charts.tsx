@@ -76,6 +76,7 @@ function BarChartFrame({
                     />
                     <YAxis
                         domain={ZERO_SAFE_Y_DOMAIN}
+                        allowDecimals={false}
                         tickLine={false}
                         axisLine={false}
                         tickMargin={8}
