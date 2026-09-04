@@ -1387,7 +1387,7 @@ namespace Raven.Server.Documents.Revisions
 
             Debug.Assert(changeVector != null, "Change vector must be set");
             var hadRevisions = flags.Contain(DocumentFlags.HasRevisions);
-            flags = flags.Strip(DocumentFlags.HasAttachments);
+            flags = flags.Strip(DocumentFlags.HasAttachments | DocumentFlags.Revision);
             flags |= DocumentFlags.HasRevisions;
 
             var fromReplication = nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication);
@@ -2126,7 +2126,7 @@ namespace Raven.Server.Documents.Revisions
             var changeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
 
             Debug.Assert(changeVector != null, "Change vector must be set");
-            flags = flags.Strip(DocumentFlags.HasAttachments);
+            flags = flags.Strip(DocumentFlags.HasAttachments | DocumentFlags.Revision);
             flags |= DocumentFlags.HasRevisions;
 
             using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idSlice))
