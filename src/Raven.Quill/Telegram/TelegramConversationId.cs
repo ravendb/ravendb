@@ -8,9 +8,9 @@ internal static class TelegramConversationId
     internal static string For(
         string channelId, long telegramChatId, Dictionary<string, string> parameters) =>
         ChannelConversationId.For(
-            "telegram", channelId, telegramChatId.ToString(CultureInfo.InvariantCulture), parameters);
+            ChannelType.Telegram, channelId, telegramChatId.ToString(CultureInfo.InvariantCulture), parameters);
 
     internal static string ChatPrefix(string channelId, long telegramChatId) =>
         ChannelConversationId.ChatPrefix(
-            "telegram", channelId, telegramChatId.ToString(CultureInfo.InvariantCulture));
+            ChannelType.Telegram, channelId, telegramChatId.ToString(CultureInfo.InvariantCulture));
 }
