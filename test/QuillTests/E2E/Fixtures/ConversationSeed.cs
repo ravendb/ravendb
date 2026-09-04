@@ -22,7 +22,6 @@ public static class ConversationSeed
     }
 
     /// Writes the <c>ConversationPreview</c> read-model doc; production co-writes it on every turn.
-    /// Called alone it models a conversation whose transcript already expired.
     public static async Task SeedPreviewAsync(
         IDocumentStore store, string database, string conversationId, string agent, DateTime lastMessageAt,
         string? channelId = null, string lastUserPrompt = "", string lastAgentReply = "",
@@ -75,8 +74,6 @@ public static class ConversationSeed
             lastUserPrompt: lastUser, lastAgentReply: lastAgent,
             parameters: parameters?.ToDictionary(kv => kv.Key, kv => kv.Value?.ToString() ?? ""));
 
-        // production also folds every turn into the usage rollup: one conversation, the user
-        // messages as prompts, the token total
         var userMessages = conversation.Messages.Count(m =>
             m.role == "user" && (m.content is not string text || text.StartsWith("AI Agent Parameters:") == false));
         using var session = store.OpenAsyncSession(database);

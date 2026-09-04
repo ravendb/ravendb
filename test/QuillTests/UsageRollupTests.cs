@@ -71,7 +71,6 @@ public class UsageRollupTests(ITestOutputHelper output) : QuillTestBase(output)
         var first = new DateTime(2026, 8, 17, 12, 0, 0, DateTimeKind.Utc);
         var later = first.AddHours(30);
 
-        // rolled is false on first contact and true only when a returning chat idle-expired
         Assert.False(await TurnAsync(app, "chats/one", first));
         Assert.True(await TurnAsync(app, "chats/one", later));
 

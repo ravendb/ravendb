@@ -4,13 +4,10 @@ using Raven.Quill.Channels;
 
 namespace Raven.Quill.Metrics;
 
-// Durable per-(agent x channel) usage rollup: charts read these instead of the live conversation
-// docs, so history survives transcript expiration. One incremental time series per doc, hour buckets.
 internal sealed class UsageMetrics
 {
     internal const string IdPrefix = "metrics/usage/";
 
-    // System (@) collection, same treatment as @ConversationPreviews; mapped via QuillConventions.
     internal const string Collection = "@UsageMetrics";
 
     internal const string SeriesName = "INC:Usage";
@@ -21,7 +18,6 @@ internal sealed class UsageMetrics
 
     public string Agent { get; set; } = "";
 
-    // full channel document id (channels/<guid>); empty for a direct (studio/API) chat
     public string ChannelId { get; set; } = "";
 
     public DateTime LastTurnAt { get; set; }

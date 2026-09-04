@@ -18,8 +18,6 @@ internal static class ChannelConversationId
         string.Create(CultureInfo.InvariantCulture,
             $"chats/{Segment(type)}/{channelId}/{userId}/");
 
-    // persisted id segments: pinned literals, never derived from member names, so an enum
-    // rename can't silently change ids already stored
     private static string Segment(ChannelType type) => type switch
     {
         ChannelType.Telegram => "telegram",
