@@ -206,7 +206,7 @@ namespace Voron.Data.Fixed
 
         public static long[] Debug(FixedSizeTreePage<TVal> p, int entrySize)
         {
-            if (p == null)
+            if (p.IsValid == false)
                 return null;
             return Debug(p.Pointer + p.StartPosition, p.NumberOfEntries,
                 p.IsLeaf ? entrySize : BranchEntrySize);
@@ -333,7 +333,7 @@ namespace Voron.Data.Fixed
             {
                 page.RemoveTombstone(reusedSlot);
                 page.SetKey(key, reusedSlot);
-                page.LastSearchPosition = reusedSlot;
+                page.LastSearchPosition = (short)reusedSlot;
 
                 using (ModifyLargeHeader(out FixedSizeTreeHeader.Large* reused))
                 {
@@ -500,15 +500,15 @@ namespace Voron.Data.Fixed
 
             while (page.IsLeaf == false)
             {
-                _cursor.Push(page);
-                BinarySearch(page, key);
+                BinarySearch(ref page, key);
                 if (page.LastMatch < 0 && page.LastSearchPosition > 0)
                     page.LastSearchPosition--;
+                _cursor.Push(page);
                 var childPageNumber = page.GetEntry(page.LastSearchPosition)->PageNumber;
                 page = GetReadOnlyPage(childPageNumber);
             }
 
-            BinarySearch(page, key);
+            BinarySearch(ref page, key);
             return page;
         }
 
@@ -591,8 +591,8 @@ namespace Voron.Data.Fixed
 
         private FixedSizeTreePage<TVal> PageSplit(FixedSizeTreePage<TVal>page, TVal key)
         {
-            FixedSizeTreePage<TVal> parentPage = _cursor.Count > 0 ? _cursor.Pop() : null;
-            if (parentPage == null) // root split
+            FixedSizeTreePage<TVal> parentPage = _cursor.Count > 0 ? _cursor.Pop() : default;
+            if (parentPage.IsValid == false) // root split
             {
                 parentPage = NewPage(FixedSizeTreePageFlags.Branch, page.PageNumber);
                 parentPage.NumberOfEntries = 1;
@@ -645,7 +645,7 @@ namespace Voron.Data.Fixed
                 }
 
                 AddSeparatorToParentPage(parentPage, parentPage.LastSearchPosition + 1, separatorKey, newPage.PageNumber);
-                return null; // we don't care about it for leaf pages
+                return default; // we don't care about it for leaf pages
             }
             else // branch page
             {
@@ -703,8 +703,8 @@ namespace Voron.Data.Fixed
             if ((parentPage.NumberOfEntries + 1) * BranchEntrySize > parentPage.PageMaxSpace)
             {
                 parentPage = PageSplit(parentPage, key);
-                System.Diagnostics.Debug.Assert(parentPage != null);
-                BinarySearch(parentPage, key);
+                System.Diagnostics.Debug.Assert(parentPage.IsValid);
+                BinarySearch(ref parentPage, key);
                 position = parentPage.LastSearchPosition;
                 if (parentPage.LastMatch > 0)
                     position++;
@@ -841,10 +841,10 @@ namespace Voron.Data.Fixed
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void BinarySearch(FixedSizeTreePage<TVal> page, TVal val)
+        private void BinarySearch(ref FixedSizeTreePage<TVal> page, TVal val)
         {
-            page.LastSearchPosition = BinarySearch(page.Pointer + page.StartPosition, page.NumberOfEntries, val, page.IsLeaf ? _entrySize : BranchEntrySize);
-            page.LastMatch = _lastMatch;
+            page.LastSearchPosition = (short)BinarySearch(page.Pointer + page.StartPosition, page.NumberOfEntries, val, page.IsLeaf ? _entrySize : BranchEntrySize);
+            page.LastMatch = (sbyte)Math.Sign(_lastMatch);
         }
 
         private int _lastMatch;
@@ -933,7 +933,7 @@ namespace Voron.Data.Fixed
 
                     while (page.IsLeaf == false)
                     {
-                        BinarySearch(page, key);
+                        BinarySearch(ref page, key);
                         if (page.LastMatch < 0 && page.LastSearchPosition > 0)
                             page.LastSearchPosition--;
                         
@@ -1010,7 +1010,7 @@ namespace Voron.Data.Fixed
 
             page.AddTombstone(page.LastSearchPosition);
 
-            while (page != null)
+            while (page.IsValid)
             {
                 page = RebalancePage(page);
             }
@@ -1033,7 +1033,7 @@ namespace Voron.Data.Fixed
             {
                 // if we have more than 25% of the entries that would fit in the page, there is nothing that needs to be done
                 // so we are done
-                return null;
+                return default;
             }
 
             // we determined that we require rebalancing...
@@ -1089,7 +1089,7 @@ namespace Voron.Data.Fixed
                 // we want to make this efficient, so we will not try to merge leaf pages
                 // where all the deletions happen on the start. That way, they can be removed
                 // without a lot of overhead.
-                return null;
+                return default;
             }
 
             int oldNumberOfPages;
@@ -1105,7 +1105,7 @@ namespace Voron.Data.Fixed
                 var siblingNum = parentPage.GetEntry(1)->PageNumber;
                 var siblingPage = GetReadOnlyPage(siblingNum);
                 if (siblingPage.IsLeaf != page.IsLeaf)
-                    return null; // we cannot steal from a leaf sibling if we are branch, or vice versa
+                    return default; // we cannot steal from a leaf sibling if we are branch, or vice versa
 
                 siblingPage = ModifyPage(siblingPage);
 
@@ -1183,7 +1183,7 @@ namespace Voron.Data.Fixed
                 var siblingPage = GetReadOnlyPage(siblingNum);
                 siblingPage = ModifyPage(siblingPage);
                 if (siblingPage.IsLeaf != page.IsLeaf)
-                    return null; // we cannot steal from a leaf sibling if we are branch, or vice versa
+                    return default; // we cannot steal from a leaf sibling if we are branch, or vice versa
 
                 if (siblingPage.NumberOfTombstones > 0)
                     siblingPage.CompactTombstones();
@@ -1268,7 +1268,7 @@ namespace Voron.Data.Fixed
             {
                 // can't proceed here
                 if (page.NumberOfEntries != 1)
-                    return null;
+                    return default;
                 // can just replace the child and use my own page
                 var childPage = page.GetEntry(0)->PageNumber;
                 var rootPageNum = page.PageNumber;
@@ -1321,7 +1321,7 @@ namespace Voron.Data.Fixed
                 // reverting to a large (and empty) fixed size tree
                 FreePage(page.PageNumber, modifyPageCount: false);
             }
-            return null;
+            return default;
         }
 
         private DeletionResult RemoveEmbeddedEntry(TVal key)
@@ -1390,7 +1390,7 @@ namespace Voron.Data.Fixed
                     var page = GetReadOnlyPage(largePtr->RootPageNumber);
                     while (page.IsLeaf == false)
                     {
-                        BinarySearch(page, key);
+                        BinarySearch(ref page, key);
                         if (page.LastMatch < 0 && page.LastSearchPosition > 0)
                             page.LastSearchPosition--;
                         var childPageNumber = page.GetEntry(page.LastSearchPosition)->PageNumber;
@@ -1398,7 +1398,7 @@ namespace Voron.Data.Fixed
                     }
                     dataStart = page.Pointer + page.StartPosition;
 
-                    BinarySearch(page, key);
+                    BinarySearch(ref page, key);
                     if (_lastMatch != 0 || page.IsTombstoned(page.LastSearchPosition))
                         goto case null;
 
