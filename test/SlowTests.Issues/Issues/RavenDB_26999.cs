@@ -138,6 +138,10 @@ public class RavenDB_26999(ITestOutputHelper output) : RavenTestBase(output)
         // Every 'Released' document holds the term exactly once, so BM25 gives all of them the same score. The lowest
         // one is where a partially read posting list shows up: whatever the score pass never reached stays at 1e-6.
         Assert.Equal(TopScore(store, "m.Status = 'Released'"), LowestScore(store, "m.Status = 'Released'"), 6);
+
+        // A negated term is subtracted, never scored (Lucene's MUST_NOT does the same): documents that reach the result
+        // through 'Drama' score exactly as they do without the negated branch, whatever the size of 'Planned'.
+        Assert.Equal(TopScore(store, "m.Genre = 'Drama'"), TopScore(store, "m.Genre = 'Drama' or m.Status != 'Planned'"), 6);
     }
 
     // Shared body, no attribute on purpose: two 1M-document stores belong in StressTests - see StressTests.Issues.RavenDB_26999.

@@ -457,7 +457,7 @@ public static class QueryPrimitives
             bitmap.AndNotWith(ref srcData);
             return;
         }
-        // A negated term is subtracted from the result and must not contribute to the score, so it never needs Fill.
+        // A negated leaf is resolved without boost (see QueryPlanBuilder.ResolveFieldMetadata), so it never feeds BM25 and never needs Fill.
         if (match is Matches.TermMatch tm && tm.TryGetPostingListIterator(out var iter))
         {
             AndNotWithPostings(ref iter, ref bitmap, ref tempBitmap, token);
