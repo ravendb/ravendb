@@ -10,13 +10,13 @@ import { DatePeriodPicker } from "@/components/data/date-period-picker";
 import { ChartSkeleton, DetailGridSkeleton } from "@/components/data/loading-skeletons";
 import { PagePanel } from "@/components/data/page-panel";
 import {
-    bucketLabelFormat,
-    bucketTooltipFormat,
     canDrillInto,
     drillInto,
+    formatBucketLabel,
+    formatBucketTooltip,
     getDefaultDatePeriod,
+    type DatePeriod,
 } from "@/lib/date-period";
-import { format } from "date-fns";
 import { useAppStartDate } from "@/lib/use-start-date";
 import { TableCell, TableRow } from "@/components/shadcn/ui/table";
 import { SectionTable } from "@/components/table/section-table";
@@ -43,12 +43,6 @@ export function AppAnalytics() {
               if (next) setPeriod(next);
           }
         : undefined;
-
-    // The `t` bucket keys are ISO strings; show them as short dates matching the
-    // selected granularity (e.g. "Sep 3", "7 AM") instead of the raw value. Tooltips
-    // carry the fuller date so a terse axis label like "8 AM" stays unambiguous.
-    const formatBucketLabel = (t: string) => format(new Date(t), bucketLabelFormat(period));
-    const formatBucketTooltip = (t: string) => format(new Date(t), bucketTooltipFormat(period));
 
     return (
         <PagePanel>
@@ -78,22 +72,19 @@ export function AppAnalytics() {
                             <AnalyticsSeriesSection
                                 title="Tokens by capability"
                                 series={appUsageQuery.data.tokensByCapability}
-                                xTickFormatter={formatBucketLabel}
-                                tooltipLabelFormatter={formatBucketTooltip}
+                                period={period}
                                 onBarClick={drillFromBar}
                             />
                             <AnalyticsSeriesSection
                                 title="Tokens by model"
                                 series={appUsageQuery.data.tokensByModel}
-                                xTickFormatter={formatBucketLabel}
-                                tooltipLabelFormatter={formatBucketTooltip}
+                                period={period}
                                 onBarClick={drillFromBar}
                             />
                             <AnalyticsSeriesSection
                                 title="Conversations by channel"
                                 series={appUsageQuery.data.conversationsByChannel}
-                                xTickFormatter={formatBucketLabel}
-                                tooltipLabelFormatter={formatBucketTooltip}
+                                period={period}
                                 onBarClick={drillFromBar}
                             />
                             <TopCapabilitiesSection capabilities={appUsageQuery.data.topCapabilities} />
@@ -132,14 +123,12 @@ function AnalyticsMetricCards({ usage }: { usage: AppUsageResponse }) {
 function AnalyticsSeriesSection({
     title,
     series,
-    xTickFormatter,
-    tooltipLabelFormatter,
+    period,
     onBarClick,
 }: {
     title: string;
     series: SeriesData;
-    xTickFormatter?: (value: string) => string;
-    tooltipLabelFormatter?: (value: string) => string;
+    period: DatePeriod;
     onBarClick?: BarClickHandler;
 }) {
     return (
@@ -152,8 +141,8 @@ function AnalyticsSeriesSection({
                 ) : (
                     <SeriesBarChart
                         data={series}
-                        xTickFormatter={xTickFormatter}
-                        tooltipLabelFormatter={tooltipLabelFormatter}
+                        xTickFormatter={(t) => formatBucketLabel(t, period)}
+                        tooltipLabelFormatter={(t) => formatBucketTooltip(t, period)}
                         onBarClick={onBarClick}
                     />
                 )}

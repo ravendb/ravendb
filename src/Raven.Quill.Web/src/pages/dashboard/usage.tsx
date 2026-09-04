@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { format } from "date-fns";
 import { api } from "@/api/api";
 import type { QuillPeriodUsage } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
@@ -10,12 +9,12 @@ import { DatePeriodPicker } from "@/components/data/date-period-picker";
 import { WruLabel } from "@/components/data/wru-label";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/shadcn/ui/card";
 import {
-    bucketLabelFormat,
     canDrillInto,
     drillInto,
+    formatBucketLabel,
+    formatBucketTooltip,
     formatPeriodLabel,
     getDefaultDatePeriod,
-    type DatePeriod,
 } from "@/lib/date-period";
 import { useSetupStartDate } from "@/lib/use-start-date";
 import { formatCompact } from "@/lib/format";
@@ -33,7 +32,7 @@ export function DashboardUsage() {
     const totalUsage = usageQuery.data?.byPeriod?.reduce((sum, bucket) => sum + bucket.usage, 0);
 
     const periodLabel = formatPeriodLabel(period);
-    const chartData = toChartData(usageQuery.data?.byPeriod ?? [], period);
+    const chartData = toChartData(usageQuery.data?.byPeriod ?? []);
 
     const drillFromBar = (entry: Record<string, unknown>) => {
         const next = drillInto(period, entry.from as string, setupStartDate);
@@ -80,7 +79,9 @@ export function DashboardUsage() {
                         {usageQuery.data && (
                             <WritesBarChart
                                 data={chartData}
-                                xKey="label"
+                                xKey="from"
+                                xTickFormatter={(from) => formatBucketLabel(from, period)}
+                                tooltipLabelFormatter={(from) => formatBucketTooltip(from, period)}
                                 onBarClick={canDrillInto(period) ? drillFromBar : undefined}
                             />
                         )}
@@ -112,14 +113,9 @@ export function DashboardUsage() {
     );
 }
 
-function toChartData(byPeriod: QuillPeriodUsage[], period: DatePeriod) {
+function toChartData(byPeriod: QuillPeriodUsage[]) {
     const now = new Date();
-    const labelFormat = bucketLabelFormat(period);
     return byPeriod
         .filter((bucket) => new Date(bucket.from) <= now)
-        .map((bucket) => ({
-            label: format(new Date(bucket.from), labelFormat),
-            writes: bucket.usage,
-            from: bucket.from,
-        }));
+        .map((bucket) => ({ writes: bucket.usage, from: bucket.from }));
 }
