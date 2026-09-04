@@ -191,7 +191,7 @@ internal sealed class DiscordInboundProcessor(
             throw new InvalidOperationException(bindError);
         }
 
-        var conversationId = DiscordConversationId.For(shortChannelId, sender, parameters);
+        var conversationId = ChannelConversationId.For(ChannelType.Discord, shortChannelId, sender, parameters);
 
         var reply = new DiscordStreamingReply(
             discord, settings.BotToken, dmChannel, options.Value.Discord, logger, ct);
