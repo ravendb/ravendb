@@ -1,11 +1,11 @@
 using System.Globalization;
 using System.Text.Json;
-using Microsoft.Extensions.Logging.Abstractions;
 using QuillTests.E2E.Fixtures;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Quill.Agents;
+using Raven.Quill.Logging;
 using Raven.Quill.Metrics;
 using Tests.Infrastructure;
 using Xunit;
@@ -54,8 +54,8 @@ public class ConversationLifetimeE2ETests(ITestOutputHelper output, QuillCollect
 
     private static AgentRouter Router(QuillApp app) =>
         new(app.Store,
-            new WebhookActionExecutor(new SingleClientFactory(), NullLogger<WebhookActionExecutor>.Instance),
-            NullLogger<AgentRouter>.Instance);
+            new WebhookActionExecutor(new SingleClientFactory(), new QuillLogger<WebhookActionExecutor>()),
+            new QuillLogger<AgentRouter>());
 
     private sealed class SingleClientFactory : IHttpClientFactory
     {
