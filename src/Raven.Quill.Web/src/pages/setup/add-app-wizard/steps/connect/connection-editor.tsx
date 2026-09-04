@@ -73,13 +73,6 @@ function ConnectionFieldsEditor({ isDisabled }: { isDisabled: boolean }) {
                     disabled={isDisabled}
                 />
             </div>
-            <FormInput
-                control={control}
-                name="externalConnection.fields.database"
-                label="Database"
-                placeholder="e.g. acme_shop"
-                disabled={isDisabled}
-            />
             <div className="grid gap-5 sm:grid-cols-2">
                 <FormInput
                     control={control}
@@ -96,6 +89,13 @@ function ConnectionFieldsEditor({ isDisabled }: { isDisabled: boolean }) {
                     disabled={isDisabled}
                 />
             </div>
+            <FormInput
+                control={control}
+                name="externalConnection.fields.database"
+                label="Database"
+                placeholder="e.g. acme_shop"
+                disabled={isDisabled}
+            />
             <FormToggleGroup
                 control={control}
                 name="externalConnection.fields.ssl"
