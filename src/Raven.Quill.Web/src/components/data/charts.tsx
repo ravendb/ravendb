@@ -43,12 +43,14 @@ function BarChartFrame({
     config,
     data,
     xKey,
+    xTickFormatter,
     chartRef,
     children,
 }: {
     config: ChartConfig;
     data: Array<Record<string, unknown>>;
     xKey: string;
+    xTickFormatter?: (value: string) => string;
     chartRef: Ref<HTMLDivElement>;
     children: ReactNode;
 }) {
@@ -63,7 +65,14 @@ function BarChartFrame({
                     margin={{ top: 8, right: 32, bottom: 0, left: 0 }}
                 >
                     <CartesianGrid vertical={false} />
-                    <XAxis dataKey={xKey} tickLine={false} axisLine={false} tickMargin={8} interval={2} />
+                    <XAxis
+                        dataKey={xKey}
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                        interval={2}
+                        tickFormatter={xTickFormatter && ((value) => xTickFormatter(value as string))}
+                    />
                     <YAxis
                         domain={ZERO_SAFE_Y_DOMAIN}
                         tickLine={false}
@@ -126,9 +135,13 @@ export function WritesBarChart({
 // period from the clicked bucket, zooming in from that column (see WritesBarChart).
 export function SeriesBarChart({
     data,
+    xTickFormatter,
+    tooltipLabelFormatter,
     onBarClick,
 }: {
     data: SeriesData;
+    xTickFormatter?: (value: string) => string;
+    tooltipLabelFormatter?: (value: string) => string;
     onBarClick?: (entry: Record<string, unknown>) => void;
 }) {
     const { ref, zoomFrom } = useZoomOnClick();
@@ -148,8 +161,17 @@ export function SeriesBarChart({
     );
 
     return (
-        <BarChartFrame config={config} data={data.points} xKey="t" chartRef={ref}>
-            <ChartTooltip content={<ChartTooltipContent hideZero />} />
+        <BarChartFrame config={config} data={data.points} xKey="t" xTickFormatter={xTickFormatter} chartRef={ref}>
+            <ChartTooltip
+                content={
+                    <ChartTooltipContent
+                        hideZero
+                        labelFormatter={
+                            tooltipLabelFormatter ? (value) => tooltipLabelFormatter(value as string) : undefined
+                        }
+                    />
+                }
+            />
             <ChartLegend content={<ChartLegendContent />} />
             {visibleSeries.map((series) => (
                 <Bar
