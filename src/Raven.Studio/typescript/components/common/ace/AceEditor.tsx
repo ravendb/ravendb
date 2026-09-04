@@ -15,6 +15,7 @@ import AceEditorToggleNewLinesAction from "./actions/AceEditorToggleNewLinesActi
 import AceEditorAutoResizeHeightAction, { handleAutoResizeHeight } from "./actions/AceEditorAutoResizeHeightAction";
 import { aceEditorConstants } from "./aceEditorConstants";
 import useResizableHeight from "components/hooks/useResizableHeight";
+import useBoolean from "components/hooks/useBoolean";
 import AceEditorSamplesPanel, {
     AceEditorSamplesPanelConfig,
     AceEditorSamplesToggleAction,
@@ -78,11 +79,7 @@ function AceEditor(props: AceEditorProps) {
         ...setOptions,
     };
 
-    const validActions = actions.filter(Boolean);
-
-    const [isSamplesPanelOpen, setIsSamplesPanelOpen] = useState(false);
-
-    const toggleSamplesPanel = () => setIsSamplesPanelOpen((prev) => !prev);
+    const { value: isSamplesPanelOpen, toggle: toggleSamplesPanel } = useBoolean(false);
 
     const hasSamplesPanel = samplesPanel?.tabs.length > 0;
 
@@ -94,7 +91,7 @@ function AceEditor(props: AceEditorProps) {
               }
             : null;
 
-    const effectiveActions = [...validActions, samplesToggleAction].filter(Boolean);
+    const validActions = [...actions, samplesToggleAction].filter(Boolean);
 
     const [aceErrorMessage, setAceErrorMessage] = useState<string>(null);
 
@@ -250,18 +247,18 @@ function AceEditor(props: AceEditorProps) {
                         readOnly={disabled || readOnly}
                         {...rest}
                     />
-                    {effectiveActions.length > 0 && (
+                    {validActions.length > 0 && (
                         <div className="actions">
                             <div className="d-flex flex-column h-100">
                                 <div className="flex-grow-0 vstack gap-1">
-                                    {effectiveActions
+                                    {validActions
                                         .filter((action) => !action.position || action.position === "top")
                                         .map((action, index) => (
                                             <div key={index}>{action.component}</div>
                                         ))}
                                 </div>
                                 <div className="flex-grow-1 d-flex flex-column justify-content-end vstack gap-1">
-                                    {effectiveActions
+                                    {validActions
                                         .filter((icon) => icon.position === "bottom")
                                         .map((action, index) => (
                                             <div key={index}>{action.component}</div>
