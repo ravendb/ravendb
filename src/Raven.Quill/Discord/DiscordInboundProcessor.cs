@@ -189,7 +189,7 @@ internal sealed class DiscordInboundProcessor(
             throw new InvalidOperationException(bindError);
         }
 
-        var conversationId = DiscordConversationId.ForUtcDay(shortChannelId, sender, DateTime.UtcNow, parameters);
+        var conversationId = DiscordConversationId.For(shortChannelId, sender, parameters);
 
         var reply = new DiscordStreamingReply(
             discord, settings.BotToken, dmChannel, options.Value.Discord, logger, ct);

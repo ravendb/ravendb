@@ -164,7 +164,7 @@ internal sealed class TelegramChat
 
         if (IsCommand(prompt, "clear"))
         {
-            await ClearConversationsAsync(TelegramConversationId.UtcDayPrefix(channel.ShortId, _chatId, DateTime.UtcNow));
+            await ClearConversationsAsync(TelegramConversationId.ChatPrefix(channel.ShortId, _chatId));
             await SendPlainAsync(_context.Messages.ConversationCleared);
             return;
         }
@@ -185,7 +185,7 @@ internal sealed class TelegramChat
         if (parameters is null)
             return;
 
-        var conversationId = TelegramConversationId.ForUtcDay(channel.ShortId, _chatId, DateTime.UtcNow, parameters);
+        var conversationId = TelegramConversationId.For(channel.ShortId, _chatId, parameters);
 
         try
         {

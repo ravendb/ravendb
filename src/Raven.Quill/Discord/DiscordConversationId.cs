@@ -4,7 +4,7 @@ namespace Raven.Quill.Discord;
 
 internal static class DiscordConversationId
 {
-    internal static string ForUtcDay(
-        string channelId, string discordUserId, DateTime utcNow, Dictionary<string, string> parameters) =>
-        ChannelConversationId.ForUtcDay("discord", channelId, discordUserId, utcNow, parameters);
+    internal static string For(
+        string channelId, string discordUserId, Dictionary<string, string> parameters) =>
+        ChannelConversationId.For("discord", channelId, discordUserId, parameters);
 }
