@@ -56,7 +56,6 @@ namespace Raven.Client.Documents.Session
         protected internal readonly SessionInfo _sessionInfo;
 
         private BatchOptions _saveChangesOptions;
-
         internal readonly bool? DisableAtomicDocumentWritesInClusterWideTransaction;
 
         public TransactionMode TransactionMode;
@@ -144,6 +143,16 @@ namespace Raven.Client.Documents.Session
             _timeSeriesByDocId ??= new Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>>(StringComparer.OrdinalIgnoreCase);
 
         private Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> _timeSeriesByDocId;
+
+        private Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> _deletedTimeSeries;
+
+        protected internal Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> DeletedTimeSeries =>
+            _deletedTimeSeries ??= new Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>>(StringComparer.OrdinalIgnoreCase);
+
+        private Dictionary<string, Dictionary<string, SortedList<DateTime, TimeSeriesEntry>>> _localTimeSeries;
+
+        protected internal Dictionary<string, Dictionary<string, SortedList<DateTime, TimeSeriesEntry>>> LocalTimeSeries =>
+            _localTimeSeries ??= new Dictionary<string, Dictionary<string, SortedList<DateTime, TimeSeriesEntry>>>(StringComparer.OrdinalIgnoreCase);
 
         protected readonly DocumentStoreBase _documentStore;
 
@@ -1348,6 +1357,8 @@ more responsive application.
                 DocumentsById.Remove(documentInfo.Id);
                 _countersByDocId?.Remove(documentInfo.Id);
                 _timeSeriesByDocId?.Remove(documentInfo.Id);
+                _localTimeSeries?.Remove(documentInfo.Id);
+                _deletedTimeSeries?.Remove(documentInfo.Id);
 
                 documentInfo.Dispose();
             }
@@ -1964,6 +1975,7 @@ more responsive application.
 
                 ranges[toRangeIndex].From = from;
                 ranges[toRangeIndex].Entries = values;
+                ranges[toRangeIndex].IsDeleted = false;
                 ranges.RemoveRange(0, toRangeIndex);
 
                 return;
@@ -2009,6 +2021,7 @@ more responsive application.
 
                 ranges[fromRangeIndex].To = to;
                 ranges[fromRangeIndex].Entries = values;
+                ranges[fromRangeIndex].IsDeleted = false;
                 ranges.RemoveRange(fromRangeIndex + 1, ranges.Count - fromRangeIndex - 1);
 
                 return;
@@ -2057,6 +2070,7 @@ more responsive application.
                 ranges.RemoveRange(fromRangeIndex + 1, toRangeIndex - fromRangeIndex - 1);
                 ranges[toRangeIndex].From = from;
                 ranges[toRangeIndex].Entries = values;
+                ranges[toRangeIndex].IsDeleted = false;
 
                 return;
             }
@@ -2077,6 +2091,7 @@ more responsive application.
 
                 ranges[fromRangeIndex].To = to;
                 ranges[fromRangeIndex].Entries = values;
+                ranges[fromRangeIndex].IsDeleted = false;
                 ranges.RemoveRange(fromRangeIndex + 1, toRangeIndex - fromRangeIndex - 1);
 
                 return;
@@ -2095,6 +2110,7 @@ more responsive application.
 
             ranges[fromRangeIndex].To = ranges[toRangeIndex].To;
             ranges[fromRangeIndex].Entries = values;
+            ranges[fromRangeIndex].IsDeleted = false;
 
             ranges.RemoveRange(fromRangeIndex + 1, toRangeIndex - fromRangeIndex);
         }
@@ -2131,24 +2147,25 @@ more responsive application.
 
         private static void UpdateExistingRange(TimeSeriesRangeResult localRange, TimeSeriesRangeResult newRange)
         {
+            var localEntries = localRange.Entries;
             var newValues = new List<TimeSeriesEntry>();
             int index;
-            for (index = 0; index < localRange.Entries.Length; index++)
+            for (index = 0; index < localEntries.Length; index++)
             {
-                if (localRange.Entries[index].Timestamp >= newRange.From)
+                if (localEntries[index].Timestamp >= newRange.From)
                     break;
 
-                newValues.Add(localRange.Entries[index]);
+                newValues.Add(localEntries[index]);
             }
 
             newValues.AddRange(newRange.Entries);
 
-            for (int j = index; j < localRange.Entries.Length; j++)
+            for (int j = index; j < localEntries.Length; j++)
             {
-                if (localRange.Entries[j].Timestamp <= newRange.To)
+                if (localEntries[j].Timestamp <= newRange.To)
                     continue;
 
-                newValues.Add(localRange.Entries[j]);
+                newValues.Add(localEntries[j]);
             }
 
             localRange.Entries = newValues.ToArray();
@@ -2493,6 +2510,25 @@ more responsive application.
             var returnedTransactionIndex = result.TransactionIndex;
             _documentStore.SetLastTransactionIndex(DatabaseName, returnedTransactionIndex);
             _sessionInfo.LastClusterTransactionIndex = returnedTransactionIndex;
+            InvalidateMutatedTimeSeriesCache(_localTimeSeries);
+            InvalidateMutatedTimeSeriesCache(_deletedTimeSeries);
+            _localTimeSeries?.Clear();
+            _deletedTimeSeries?.Clear();
+        }
+
+        private void InvalidateMutatedTimeSeriesCache<TOverlay>(Dictionary<string, Dictionary<string, TOverlay>> overlay)
+        {
+            if (overlay == null || _timeSeriesByDocId == null)
+                return;
+
+            foreach (var docEntry in overlay)
+            {
+                if (_timeSeriesByDocId.TryGetValue(docEntry.Key, out var cacheByName) == false)
+                    continue;
+
+                foreach (var name in docEntry.Value.Keys)
+                    cacheByName.Remove(name);
+            }
         }
 
         internal void OnBeforeConversionToDocumentInvoke(string id, object entity)

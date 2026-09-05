@@ -90,6 +90,11 @@ namespace Raven.Client.Documents.Session
             {
                 Session.Defer(new TimeSeriesBatchCommandData(DocId, Name, appends: new List<TimeSeriesOperation.AppendOperation> { op }, deletes: null));
             }
+
+            if (Session.SessionInfo.NoCaching == false)
+            {
+                TrackTimeseriesInCache(timestamp, op.Values, tag);
+            }
         }
 
         /// <inheritdoc cref="ISessionDocumentDeleteTimeSeriesBase.Delete(DateTime)"/>
@@ -126,12 +131,25 @@ namespace Raven.Client.Documents.Session
 
         private void RemoveFromCacheIfNeeded(DateTime? from = null, DateTime? to = null)
         {
-            if (Session.TimeSeriesByDocId.TryGetValue(DocId, out var cache) == false)
-                return;
+            RemoveLocalEntries(from, to);
 
+            if (Session.TimeSeriesByDocId.TryGetValue(DocId, out var cache) == false)
+            {
+                AddRemovedTimeSeriesRange(from, to);
+                return;
+            }
+            
             if (from == null && to == null)
             {
-                cache.Remove(Name);
+                if (cache.TryGetValue(Name, out var allRanges))
+                {
+                    foreach (var range in allRanges)
+                    {
+                        range.IsDeleted = true;
+                        range.Entries = Array.Empty<TimeSeriesEntry>();
+                    }
+                }
+                AddRemovedTimeSeriesRange(from, to);
                 return;
             }
 
@@ -140,8 +158,73 @@ namespace Raven.Client.Documents.Session
                 from ??= DateTime.MinValue;
                 to ??= DateTime.MaxValue;
 
-                ranges.RemoveAll(range => range.From <= from && range.To >= to);
+                for (int i = 0; i < ranges.Count; i++)
+                {
+                    if (ranges[i].From >= from && ranges[i].To <= to)
+                    {
+                        ranges[i].IsDeleted = true;
+                        ranges[i].Entries = Array.Empty<TimeSeriesEntry>();
+                    }
+                }
+            } 
+            
+            AddRemovedTimeSeriesRange(from, to);
+        }
+
+        private void AddRemovedTimeSeriesRange(DateTime? from = null, DateTime? to = null)
+        {
+            var range = new TimeSeriesRangeResult()
+            {
+                From = (from ?? DateTime.MinValue)
+                    .EnsureUtc()
+                    .EnsureMilliseconds(),
+                To = (to ?? DateTime.MaxValue)
+                    .EnsureUtc()
+                    .EnsureMilliseconds()
+            };
+
+            if (Session.DeletedTimeSeries.TryGetValue(DocId, out var cache) == false)
+                Session.DeletedTimeSeries[DocId] = cache = new Dictionary<string, List<TimeSeriesRangeResult>>(StringComparer.OrdinalIgnoreCase);
+
+            if (cache.TryGetValue(Name, out var ranges) == false)
+                cache[Name] = ranges = new List<TimeSeriesRangeResult>();
+
+            ranges.Add(range);
+        }
+
+        protected bool TryGetLocalEntries(out SortedList<DateTime, TimeSeriesEntry> entries)
+        {
+            if (Session.LocalTimeSeries.TryGetValue(DocId, out var byName) &&
+                byName.TryGetValue(Name, out entries) &&
+                entries.Count > 0)
+                return true;
+
+            entries = null;
+            return false;
+        }
+
+        private void RemoveLocalEntries(DateTime? from, DateTime? to)
+        {
+            if (TryGetLocalEntries(out var entries) == false)
+                return;
+
+            var f = (from ?? DateTime.MinValue).EnsureUtc();
+            var t = (to ?? DateTime.MaxValue).EnsureUtc();
+
+            int start = FindStartIndex(entries.Keys, f);
+            int end = start;
+            while (end < entries.Count && entries.Keys[end] <= t)
+                end++;
+
+            //full deletion, faster than for loop
+            if (start == 0 && end == entries.Count)
+            {
+                entries.Clear();
+                return;
             }
+
+            for (int i = end - 1; i >= start; i--)
+                entries.RemoveAt(i);
         }
 
         public void Increment<TValues>(DateTime timestamp, TValues value)
@@ -178,6 +261,9 @@ namespace Raven.Client.Documents.Session
             {
                 Session.Defer(new IncrementalTimeSeriesBatchCommandData(DocId, Name, increments: new List<TimeSeriesOperation.IncrementOperation> { op }));
             }
+
+            if (Session.SessionInfo.NoCaching == false)
+                TrackTimeseriesInCache(timestamp, op.Values, increment: true);
         }
 
         /// <inheritdoc cref="ISessionDocumentIncrementTimeSeriesBase.Increment"/>
@@ -210,5 +296,119 @@ namespace Raven.Client.Documents.Session
                                         "Use documentId instead or track the entity in the session.");
         }
 
+        private void TrackTimeseriesInCache(DateTime timestamp, double[] values, string tag = null, bool increment = false)
+        {
+            var utcTimestamp = timestamp.EnsureUtc().EnsureMilliseconds();
+
+            if (increment)
+                values = AddValues(CurrentLocalDeltaAt(utcTimestamp), values);
+
+            RemoveFromDeletedCacheIfNeeded(utcTimestamp);
+
+            var entry = new TimeSeriesEntry
+            {
+                Timestamp = utcTimestamp,
+                Tag = tag,
+                Values = values
+            };
+
+            if (Session.LocalTimeSeries.TryGetValue(DocId, out var byName) == false)
+                Session.LocalTimeSeries[DocId] = byName = new Dictionary<string, SortedList<DateTime, TimeSeriesEntry>>(StringComparer.OrdinalIgnoreCase);
+
+            if (byName.TryGetValue(Name, out var entries) == false)
+                byName[Name] = entries = new SortedList<DateTime, TimeSeriesEntry>();
+
+            entries[utcTimestamp] = entry;
+        }
+
+        private double[] CurrentLocalDeltaAt(DateTime utcTimestamp)
+        {
+            if (TryGetLocalEntries(out var localEntries) &&
+                localEntries.TryGetValue(utcTimestamp, out var local))
+                return local.Values;
+
+            return Array.Empty<double>();
+        }
+
+        private void RemoveFromDeletedCacheIfNeeded(DateTime timestamp)
+        {
+            if (Session.DeletedTimeSeries.TryGetValue(DocId, out var cache))
+            {
+                if (cache.TryGetValue(Name, out var ranges))
+                {
+                    for (int i = 0; i < ranges.Count; i++)
+                    {
+                        if (timestamp < ranges[i].From || timestamp > ranges[i].To)
+                            continue;
+
+                        if (ranges[i].From == ranges[i].To)
+                        {
+                            // single-point deleted range being re-added: drop it
+                            ranges.RemoveAt(i--);
+                        }
+                        else if (timestamp == ranges[i].From)
+                        {
+                            // re-added the first point of the range: shrink from the left, no leftover fragment
+                            ranges[i].From = timestamp.AddMilliseconds(1);
+                        }
+                        else if (timestamp == ranges[i].To)
+                        {
+                            // re-added the last point of the range: shrink from the right, no leftover fragment
+                            ranges[i].To = timestamp.AddMilliseconds(-1);
+                        }
+                        else
+                        {
+                            // re-added a point in the middle: split the range around it
+                            var newRange = new TimeSeriesRangeResult
+                            {
+                                From = timestamp.AddMilliseconds(1),
+                                To = ranges[i].To
+                            };
+
+                            ranges[i].To = timestamp.AddMilliseconds(-1);
+                            ranges.Insert(++i, newRange);
+                        }
+                    }
+                }
+            }
+        }
+
+        protected static double[] AddValues(double[] existing, double[] delta)
+        {
+            existing ??= Array.Empty<double>();
+            delta ??= Array.Empty<double>();
+
+            var result = new double[Math.Max(existing.Length, delta.Length)];
+            for (int i = 0; i < existing.Length; i++)
+                result[i] = existing[i];
+            for (int i = 0; i < delta.Length; i++)
+                result[i] += delta[i];
+
+            return result;
+        }
+
+        protected static int FindStartIndex(IList<DateTime> keys, DateTime from)
+        {
+            int left = 0;
+            int right = keys.Count - 1;
+            int result = keys.Count;
+
+            while (left <= right)
+            {
+                int mid = left + (right - left) / 2;
+
+                if (keys[mid] >= from)
+                {
+                    result = mid;
+                    right = mid - 1;
+                }
+                else
+                {
+                    left = mid + 1;
+                }
+            }
+
+            return result;
+        }
     }
 }
