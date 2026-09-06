@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
-using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Commercial.WriteUsageMetering;
@@ -47,8 +46,8 @@ namespace SlowTests.Issues
 
         private async Task<DocumentStore> CreateQuillConfigAsync(List<RavenServer> nodes, RavenServer leader, params string[] applications)
         {
-            foreach (var node in nodes)
-                node.ServerStore.ForTestingPurposesOnly().ForceWriteUsageReportingEnabled = true;
+            // reporting is gated on the leader alone, where the observer builds the snapshot
+            leader.ServerStore.ForTestingPurposesOnly().ForceWriteUsageReportingEnabled = true;
 
             await CreateDatabaseInCluster(Constants.Quill.ConfigDatabase, replicationFactor: nodes.Count, leader.WebUrl);
 

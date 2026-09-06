@@ -6,7 +6,6 @@ using Raven.Client;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
-using Raven.Server.Commercial.WriteUsageMetering;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Sharding;
@@ -205,6 +204,13 @@ namespace Raven.Server.ServerWide.Maintenance
                     {
                         var report = new DatabaseStatusReport { Name = dbName, NodeName = _server.NodeTag };
 
+                        prevReport.TryGetValue(dbName, out var prevDatabaseReport);
+
+                        // Applications can't be added or removed while the config database isn't loaded, so the
+                        // paths below that report without reading it keep the last set we saw. Dropping it would
+                        // stop metering every application cluster-wide until the database is loaded again.
+                        report.QuillApplications = prevDatabaseReport?.QuillApplications;
+
                         if (topology == null)
                         {
                             continue;
@@ -294,8 +300,6 @@ namespace Raven.Server.ServerWide.Maintenance
 
                             // Calculate the hash based on all relevant components (db state plus backup statuses).
                             report.EnvironmentsHash = Hashing.Combine(dbInstance.GetEnvironmentsHash(), DatabaseStatusReport.GetPeriodicBackupStatusesHash(periodicBackupStatuses));
-
-                            prevReport.TryGetValue(dbName, out var prevDatabaseReport);
 
                             // Check if anything has changed.
                             if (SupportedFeatures.Heartbeats.SendChangesOnly &&
@@ -408,30 +412,30 @@ namespace Raven.Server.ServerWide.Maintenance
                     report.NumberOfConflicts = documentsStorage.ConflictsStorage.ConflictsCount;
                     report.NumberOfDocuments = documentsStorage.GetNumberOfDocuments(context);
                     report.DatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
-
-                    if (IsQuillConfigDatabase(dbInstance))
-                        report.QuillApplications = ReadQuillApplications(context, documentsStorage);
-
+                    report.QuillApplications = ReadQuillApplications(context, dbInstance);
                     report.SystemCollections = GetSystemCollectionsStats(context, documentsStorage);
                 }
             }
         }
 
-        private static bool IsQuillConfigDatabase(DocumentDatabase dbInstance)
+        private static HashSet<string> ReadQuillApplications(DocumentsOperationContext context, DocumentDatabase documentDatabase)
         {
-            return string.Equals(dbInstance.Name, Constants.Quill.ConfigDatabase, StringComparison.OrdinalIgnoreCase) &&
-                   WriteUsageReporter.IsReportingEnabled(dbInstance.ServerStore);
-        }
+            if (string.Equals(documentDatabase.Name, Constants.Quill.ConfigDatabase, StringComparison.OrdinalIgnoreCase) == false)
+                return null;
 
-        private static HashSet<string> ReadQuillApplications(DocumentsOperationContext context, DocumentsStorage documentsStorage)
-        {
-            var prefix = Constants.Quill.AppIdPrefix;
-            var applications = new HashSet<string>();
+            var applications = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            foreach (var document in documentsStorage.GetDocumentsStartingWith(context, prefix, matches: null, exclude: null, startAfterId: null, start: 0, take: long.MaxValue, fields: DocumentFields.Id))
+            foreach (var document in documentDatabase.DocumentsStorage.GetDocumentsStartingWith(context, Constants.Quill.AppIdPrefix, matches: null,
+                         exclude: null, startAfterId: null, start: 0, take: long.MaxValue,
+                         fields: DocumentFields.Id | DocumentFields.Data))
             {
                 using (document)
-                    applications.Add(document.Id.ToString().Substring(prefix.Length));
+                {
+                    if (document.Data.TryGet(Constants.Quill.ApplicationDatabasePropertyName, out string databaseName) && string.IsNullOrWhiteSpace(databaseName) == false)
+                    {
+                        applications.Add(databaseName);
+                    }
+                }
             }
 
             return applications;
