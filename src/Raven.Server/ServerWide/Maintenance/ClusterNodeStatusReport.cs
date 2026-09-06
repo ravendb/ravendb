@@ -72,6 +72,8 @@ namespace Raven.Server.ServerWide.Maintenance
         public Dictionary<string, long> SystemCollections = new();
         public Dictionary<long, PeriodicBackupStatusReport> BackupStatuses;
 
+        public HashSet<string> QuillApplications;
+
         public long LastCompareExchangeIndex { get; set; }
         public long LastClusterWideTransactionRaftIndex { get; set; }
 
@@ -98,6 +100,7 @@ namespace Raven.Server.ServerWide.Maintenance
             ReportPerBucket = other.ReportPerBucket;
             SystemCollections = other.SystemCollections;
             BackupStatuses = other.BackupStatuses;
+            QuillApplications = other.QuillApplications;
 
             LastCompareExchangeIndex = other.LastCompareExchangeIndex;
             LastClusterWideTransactionRaftIndex = other.LastClusterWideTransactionRaftIndex;
@@ -176,7 +179,8 @@ namespace Raven.Server.ServerWide.Maintenance
                 [nameof(Error)] = Error,
                 [nameof(UpTime)] = UpTime,
                 [nameof(LastCompareExchangeIndex)] = LastCompareExchangeIndex,
-                [nameof(LastClusterWideTransactionRaftIndex)] = LastClusterWideTransactionRaftIndex
+                [nameof(LastClusterWideTransactionRaftIndex)] = LastClusterWideTransactionRaftIndex,
+                [nameof(QuillApplications)] = QuillApplications != null ? new DynamicJsonArray(QuillApplications) : null
             };
             var indexStats = new DynamicJsonValue();
             foreach (var stat in LastIndexStats)
