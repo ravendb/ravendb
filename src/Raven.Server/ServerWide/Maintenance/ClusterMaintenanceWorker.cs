@@ -6,6 +6,7 @@ using Raven.Client;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
+using Raven.Server.Commercial.WriteUsageMetering;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Sharding;
@@ -395,6 +396,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 report.NumberOfConflicts = prevDatabaseReport.NumberOfConflicts;
                 report.NumberOfDocuments = prevDatabaseReport.NumberOfDocuments;
                 report.DatabaseChangeVector = prevDatabaseReport.DatabaseChangeVector;
+                report.QuillApplications = prevDatabaseReport.QuillApplications;
                 report.SystemCollections = prevDatabaseReport.SystemCollections;
             }
             else
@@ -406,9 +408,33 @@ namespace Raven.Server.ServerWide.Maintenance
                     report.NumberOfConflicts = documentsStorage.ConflictsStorage.ConflictsCount;
                     report.NumberOfDocuments = documentsStorage.GetNumberOfDocuments(context);
                     report.DatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
+
+                    if (IsQuillConfigDatabase(dbInstance))
+                        report.QuillApplications = ReadQuillApplications(context, documentsStorage);
+
                     report.SystemCollections = GetSystemCollectionsStats(context, documentsStorage);
                 }
             }
+        }
+
+        private static bool IsQuillConfigDatabase(DocumentDatabase dbInstance)
+        {
+            return string.Equals(dbInstance.Name, Constants.Quill.ConfigDatabase, StringComparison.OrdinalIgnoreCase) &&
+                   WriteUsageReporter.IsReportingEnabled(dbInstance.ServerStore);
+        }
+
+        private static HashSet<string> ReadQuillApplications(DocumentsOperationContext context, DocumentsStorage documentsStorage)
+        {
+            var prefix = Constants.Quill.AppIdPrefix;
+            var applications = new HashSet<string>();
+
+            foreach (var document in documentsStorage.GetDocumentsStartingWith(context, prefix, matches: null, exclude: null, startAfterId: null, start: 0, take: long.MaxValue, fields: DocumentFields.Id))
+            {
+                using (document)
+                    applications.Add(document.Id.ToString().Substring(prefix.Length));
+            }
+
+            return applications;
         }
 
         private static Dictionary<string, long> GetSystemCollectionsStats(DocumentsOperationContext context, DocumentsStorage documentsStorage)

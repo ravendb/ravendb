@@ -12,7 +12,7 @@ public sealed class ApplianceOptions
     public string WebListenUrl { get; set; } = "http://127.0.0.1:5000";
 
     [Required]
-    public string ConfigDatabase { get; set; } = ApplianceDatabases.Config;
+    public string ConfigDatabase { get; set; } = Client.Constants.Quill.ConfigDatabase;
 
     public int RavenInternalPort { get; set; } = 8443;
 

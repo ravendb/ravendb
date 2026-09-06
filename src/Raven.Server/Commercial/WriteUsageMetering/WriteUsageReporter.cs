@@ -68,16 +68,22 @@ namespace Raven.Server.Commercial.WriteUsageMetering
                     : "License is no longer Quill; stopping write-usage reporting to api.ravendb.net.");
         }
 
+        internal static bool IsReportingEnabled(ServerStore serverStore)
+        {
+            return serverStore.LicenseManager.LicenseStatus.Type == LicenseType.Quill ||
+                   serverStore.ForTestingPurposes is { ForceWriteUsageReportingEnabled: true };
+        }
+
         internal async Task ReportOnceAsync()
         {
             try
             {
-                if (_enabled == false && _serverStore.ForTestingPurposes is not { ForceWriteUsageReportingEnabled: true })
-                    return; // only report under a Quill license
+                if (IsReportingEnabled(_serverStore) == false)
+                    return;
 
                 var snapshot = _observer.LatestWriteUsageSnapshot;
-                if (snapshot == null)
-                    return; // no maintenance tick has run yet; try again next interval
+                if (snapshot == null || snapshot.Applications.Count == 0)
+                    return;
 
                 var license = _serverStore.LoadLicense();
                 if (license == null)

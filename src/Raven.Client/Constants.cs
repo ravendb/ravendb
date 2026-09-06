@@ -389,6 +389,17 @@ namespace Raven.Client
             public const string StudioId = "Configuration/Studio";
         }
 
+        public sealed class Quill
+        {
+            private Quill()
+            {
+            }
+
+            public const string ConfigDatabase = "quill-config";
+
+            public const string AppIdPrefix = "apps/";
+        }
+
         /// <summary>
         /// Contains constants related to RavenDB counters.
         /// </summary>
