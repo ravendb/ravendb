@@ -124,4 +124,27 @@ public static class Constants
         /// </summary>
         public const string LogsMinLevel = "RAVEN_QUILL_LOGS_MINLEVEL";
     }
+
+    /// <summary>
+    /// RavenDB configuration keys the appliance stamps onto the database records it creates. These are
+    /// RavenDB's own settings, written into a database record's Settings - not appliance configuration.
+    /// </summary>
+    public sealed class RavenSettings
+    {
+        private RavenSettings()
+        {
+        }
+
+        /// <summary>
+        /// How long a database may sit idle before RavenDB unloads it from memory. The server-wide default
+        /// is 900 seconds; it can be overridden per database.
+        /// </summary>
+        public const string MaxIdleTimeInSec = "Databases.MaxIdleTimeInSec";
+
+        /// <summary>
+        /// Value for <see cref="MaxIdleTimeInSec"/> meaning "never unload" - RavenDB reads -1 on a time
+        /// setting as TimeSpan.MaxValue.
+        /// </summary>
+        public const string NeverIdle = "-1";
+    }
 }
