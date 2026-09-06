@@ -8,7 +8,7 @@ namespace Raven.Quill.Endpoints.Helpers;
 
 internal static class AppLookup
 {
-    internal const string IdPrefix = "apps/";
+    internal const string IdPrefix = Client.Constants.Quill.AppIdPrefix;
 
     internal static string DocumentIdFor(string slug) => IdPrefix + slug;
 

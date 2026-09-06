@@ -20,8 +20,6 @@ namespace Raven.Quill.Metrics;
 
 internal static class MetricsReadService
 {
-    private const string AppIdPrefix = "apps/";
-
     private const string ConversationIdPrefix = "chats/";
 
     private const string UnknownModel = "unknown";
@@ -647,7 +645,7 @@ internal static class MetricsReadService
     internal static async Task<List<App>> LoadAllAppsAsync(IDocumentStore store, CancellationToken ct)
     {
         using var configSession = store.OpenAsyncSession();
-        return await configSession.LoadAllStartingWithAsync<App>(AppIdPrefix, ct);
+        return await configSession.LoadAllStartingWithAsync<App>(AppLookup.IdPrefix, ct);
     }
 
     private static DateTime Utc(DateTime d) => d.Kind switch
