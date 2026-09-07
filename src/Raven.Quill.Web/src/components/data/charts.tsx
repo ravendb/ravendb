@@ -17,28 +17,27 @@ const writesChartConfig = {
     writes: { label: "WRU", color: "var(--chart-1)" },
 } satisfies ChartConfig;
 
-// Zooms the chart in from a clicked bar. Played imperatively (not via a keyed
-// remount) so it replays on every click without the chart blanking out first.
-function useZoomOnClick() {
+// Fades the chart in after a bar click. Played imperatively (not via a keyed remount) so
+// it replays on every click without the chart blanking out first. Deliberately no scale:
+// the y-axis "auto" width is measured from the rendered labels, and a scaled-down chart
+// would be measured too narrow, clipping the top label.
+function useFadeInOnClick() {
     const ref = useRef<HTMLDivElement>(null);
-    const zoomFrom = (index: number, count: number) => {
-        const chart = ref.current;
-        if (!chart) return;
-        chart.style.transformOrigin = `${((index + 0.5) / count) * 100}% bottom`;
-        chart.animate(
+    const fadeIn = () => {
+        ref.current?.animate(
             [
-                { opacity: 0, transform: "scale(0.9)" },
-                { opacity: 1, transform: "scale(1)" },
+                { opacity: 0, transform: "translateY(8px)" },
+                { opacity: 1, transform: "translateY(0)" },
             ],
             { duration: 300, easing: "ease-out" },
         );
     };
-    return { ref, zoomFrom };
+    return { ref, fadeIn };
 }
 
-// Shared bar-chart scaffolding for WritesBarChart and SeriesBarChart: the zoom-on-click
+// Shared bar-chart scaffolding for WritesBarChart and SeriesBarChart: the fade-in-on-click
 // wrapper, chart container, grid, and both axes. Children supply the tooltip, legend, and
-// bars, which differ between the two charts, and receive `zoomFrom(barIndex)` for bar clicks.
+// bars, which differ between the two charts, and receive `fadeIn()` for bar clicks.
 function BarChartFrame({
     config,
     data,
@@ -50,9 +49,9 @@ function BarChartFrame({
     data: Array<Record<string, unknown>>;
     xKey: string;
     xTickFormatter?: (value: string) => string;
-    children: (zoomFrom: (barIndex: number) => void) => ReactNode;
+    children: (fadeIn: () => void) => ReactNode;
 }) {
-    const { ref, zoomFrom } = useZoomOnClick();
+    const { ref, fadeIn } = useFadeInOnClick();
 
     return (
         <div ref={ref}>
@@ -84,7 +83,7 @@ function BarChartFrame({
                         width="auto"
                         tickFormatter={(value) => formatCompact(value as number)}
                     />
-                    {children((barIndex) => zoomFrom(barIndex, data.length))}
+                    {children(fadeIn)}
                 </BarChart>
             </ChartContainer>
         </div>
@@ -94,7 +93,7 @@ function BarChartFrame({
 // Single-series writes bar chart shared by the Usage page ("WRU" card) and the
 // per-app CDC writes section, which differ only in their x-axis key. Passing `onBarClick`
 // makes the bars clickable and receives the clicked bucket, used to drill a period from
-// year into month into day; the chart then zooms in from the clicked bar.
+// year into month into day; the chart then fades in with the new data.
 export function WritesBarChart({
     data,
     xKey,
@@ -110,7 +109,7 @@ export function WritesBarChart({
 }) {
     return (
         <BarChartFrame config={writesChartConfig} data={data} xKey={xKey} xTickFormatter={xTickFormatter}>
-            {(zoomFrom) => (
+            {(fadeIn) => (
                 <>
                     <ChartTooltip
                         cursor={false}
@@ -131,13 +130,13 @@ export function WritesBarChart({
                         className={onBarClick ? "cursor-pointer" : undefined}
                         onClick={
                             onBarClick
-                                ? (bar, index) => {
-                                      zoomFrom(index);
+                                ? (bar) => {
+                                      fadeIn();
                                       onBarClick(bar.payload);
                                   }
                                 : undefined
                         }
-                        // The drill-down chart zooms on click, so bars update in place rather
+                        // The drill-down chart fades in on click, so bars update in place rather
                         // than replaying the grow-in that would read as a blank-and-redraw.
                         isAnimationActive={!onBarClick}
                     />
@@ -151,7 +150,7 @@ export function WritesBarChart({
 // model, conversations by channel). Each point is shaped { t, <key>: number, ... } and
 // `keys` names and labels each series — the chart joins on key, colors by position from
 // the local palette, and renders the label. Passing `onBarClick` makes a column drill the
-// period from the clicked bucket, zooming in from that column (see WritesBarChart).
+// period from the clicked bucket, fading in the new data (see WritesBarChart).
 export function SeriesBarChart({
     data,
     xTickFormatter,
@@ -177,7 +176,7 @@ export function SeriesBarChart({
 
     return (
         <BarChartFrame config={config} data={data.points} xKey="t" xTickFormatter={xTickFormatter}>
-            {(zoomFrom) => (
+            {(fadeIn) => (
                 <>
                     <ChartTooltip
                         content={
@@ -201,8 +200,8 @@ export function SeriesBarChart({
                             className={onBarClick ? "cursor-pointer" : undefined}
                             onClick={
                                 onBarClick
-                                    ? (bar, barIndex) => {
-                                          zoomFrom(barIndex);
+                                    ? (bar) => {
+                                          fadeIn();
                                           onBarClick(bar.payload);
                                       }
                                     : undefined

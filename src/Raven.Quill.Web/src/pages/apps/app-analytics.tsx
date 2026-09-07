@@ -32,7 +32,7 @@ export function AppAnalytics() {
     const appStartDate = useAppStartDate(slug);
 
     // Keep the previous charts on screen while the finer-grained period loads, so
-    // drilling in reads as a zoom rather than the page blanking out and back in.
+    // drilling in reads as a transition rather than the page blanking out and back in.
     const appUsageQuery = useQuery({ ...api.queries.stats.appUsage(slug, period), placeholderData: keepPreviousData });
 
     // Every chart is bucketed on the same shared period, so clicking a bucket in
