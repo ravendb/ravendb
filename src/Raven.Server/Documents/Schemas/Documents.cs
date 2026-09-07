@@ -45,6 +45,9 @@ namespace Raven.Server.Documents.Schemas
             TransactionMarker = 7
         }
 
+        internal static readonly TableSchema.FixedSizeKeyIndexDef CollectionEtagsIndex;
+        internal static readonly TableSchema.FixedSizeKeyIndexDef AllDocsEtagsIndex;
+
         static Documents()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
@@ -54,6 +57,21 @@ namespace Raven.Server.Documents.Schemas
                 Slice.From(ctx, "AllDocsEtags", ByteStringType.Immutable, out AllDocsEtagsSlice);
                 Slice.From(ctx, "AllDocsBucketAndEtag", ByteStringType.Immutable, out AllDocsBucketAndEtagSlice);
             }
+
+            CollectionEtagsIndex = new TableSchema.FixedSizeKeyIndexDef
+            {
+                StartIndex = (int)DocumentsTable.Etag,
+                Name = CollectionEtagsSlice,
+                IsGlobal = false
+            };
+
+            AllDocsEtagsIndex = new TableSchema.FixedSizeKeyIndexDef
+            {
+                StartIndex = (int)DocumentsTable.Etag,
+                Name = AllDocsEtagsSlice,
+                IsGlobal = true
+            };
+
 
             DefineIndexesForDocsSchemaBase(DocsSchemaBase);
             DefineIndexesForDocsSchemaBase(CompressedDocsSchemaBase);
@@ -76,18 +94,8 @@ namespace Raven.Server.Documents.Schemas
                     IsGlobal = true, 
                     Name = DocsSlice
                 });
-                docsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-                {
-                    StartIndex = (int)DocumentsTable.Etag, 
-                    IsGlobal = false, 
-                    Name = CollectionEtagsSlice
-                });
-                docsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-                {
-                    StartIndex = (int)DocumentsTable.Etag, 
-                    IsGlobal = true, 
-                    Name = AllDocsEtagsSlice
-                });
+                docsSchema.DefineFixedSizeIndex(CollectionEtagsIndex);
+                docsSchema.DefineFixedSizeIndex(AllDocsEtagsIndex);
             }
 
             void DefineIndexesForShardingDocsSchemaBase(TableSchema docsSchema)

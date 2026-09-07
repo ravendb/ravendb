@@ -36,6 +36,9 @@ namespace Raven.Server.Documents.Schemas
             TransactionMarker = 5
         }
 
+        internal static readonly TableSchema.FixedSizeKeyIndexDef AllTimeSeriesEtagIndex;
+        internal static readonly TableSchema.FixedSizeKeyIndexDef CollectionTimeSeriesEtagsIndex;
+
         static TimeSeries()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
@@ -45,6 +48,20 @@ namespace Raven.Server.Documents.Schemas
                 Slice.From(ctx, "TimeSeriesKeys", ByteStringType.Immutable, out TimeSeriesKeysSlice);
                 Slice.From(ctx, "TimeSeriesBucketAndEtag", ByteStringType.Immutable, out TimeSeriesBucketAndEtagSlice);
             }
+
+            AllTimeSeriesEtagIndex = new TableSchema.FixedSizeKeyIndexDef
+            {
+                StartIndex = (int)TimeSeriesTable.Etag,
+                Name = AllTimeSeriesEtagSlice,
+                IsGlobal = true
+            };
+
+            CollectionTimeSeriesEtagsIndex = new TableSchema.FixedSizeKeyIndexDef
+            {
+                StartIndex = (int)TimeSeriesTable.Etag,
+                Name = CollectionTimeSeriesEtagsSlice
+            };
+
 
             DefineIndexesForTimeSeriesSchema(TimeSeriesSchemaBase);
             DefineIndexesForShardingTimeSeriesSchemaBase();
@@ -59,18 +76,9 @@ namespace Raven.Server.Documents.Schemas
                     IsGlobal = true
                 });
 
-                schema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-                {
-                    StartIndex = (int)TimeSeriesTable.Etag,
-                    Name = AllTimeSeriesEtagSlice,
-                    IsGlobal = true
-                });
+                schema.DefineFixedSizeIndex(AllTimeSeriesEtagIndex);
 
-                schema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-                {
-                    StartIndex = (int)TimeSeriesTable.Etag,
-                    Name = CollectionTimeSeriesEtagsSlice
-                });
+                schema.DefineFixedSizeIndex(CollectionTimeSeriesEtagsIndex);
             }
 
             void DefineIndexesForShardingTimeSeriesSchemaBase()

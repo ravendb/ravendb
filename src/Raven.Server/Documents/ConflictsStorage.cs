@@ -100,7 +100,7 @@ namespace Raven.Server.Documents
         public IEnumerable<DocumentConflict> GetConflictsFrom(DocumentsOperationContext context, long etag, long skip = 0)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
-            foreach (var tvr in table.SeekForwardFrom(ConflictsSchema.FixedSizeIndexes[AllConflictedDocsEtagsSlice], etag, skip))
+            foreach (var tvr in table.SeekForwardFrom(Schemas.Conflicts.AllConflictedDocsEtagsIndex, etag, skip))
             {
                 yield return TableValueToConflictDocument(context, ref tvr.Reader);
             }
@@ -111,7 +111,7 @@ namespace Raven.Server.Documents
             var table = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
 
             var conflictsDictionary = new Dictionary<string, GetConflictsPreviewResult.ConflictPreview>();
-            foreach (var tvr in table.SeekBackwardFromLast(ConflictsSchema.FixedSizeIndexes[AllConflictedDocsEtagsSlice], skip))
+            foreach (var tvr in table.SeekBackwardFromLast(Schemas.Conflicts.AllConflictedDocsEtagsIndex, skip))
             {
                 if (pageSize <= 0)
                     break;
@@ -694,7 +694,7 @@ namespace Raven.Server.Documents
         public long GetNumberOfConflicts(DocumentsOperationContext context)
         {
             var table = context.ConflictsTable(this);
-            return table.GetNumberOfEntriesFor(ConflictsSchema.FixedSizeIndexes[AllConflictedDocsEtagsSlice]);
+            return table.GetNumberOfEntriesFor(Schemas.Conflicts.AllConflictedDocsEtagsIndex);
         }
         
         public long GetNumberOfConflicts(Transaction tx)

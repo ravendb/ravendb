@@ -28,7 +28,7 @@ public class CoraxDocumentTrainSourceEnumerator
         
         state.InitializeState(table, table.NumberOfEntries);
         
-        foreach (var (key, result) in table.IterateForDictionaryTraining(_documentsStorage.DocsSchema.FixedSizeIndexes[Schemas.Documents.CollectionEtagsSlice], state.DocumentSkip, seek: state.CurrentKey))
+        foreach (var (key, result) in table.IterateForDictionaryTraining(Schemas.Documents.CollectionEtagsIndex, state.DocumentSkip, seek: state.CurrentKey))
         {
             //Update inner key in order to seek after transaction refresh
             state.CurrentKey = key;
@@ -45,10 +45,10 @@ public class CoraxDocumentTrainSourceEnumerator
     {
         var table = context.DocumentsTable(_documentsStorage);
 
-        var numberOfEntries = table.GetNumberOfEntriesFor(_documentsStorage.DocsSchema.FixedSizeIndexes[Schemas.Documents.AllDocsEtagsSlice]);
+        var numberOfEntries = table.GetNumberOfEntriesFor(Schemas.Documents.AllDocsEtagsIndex);
 
         state.InitializeState(table, numberOfEntries);
-        foreach (var (key, result) in table.IterateForDictionaryTraining(_documentsStorage.DocsSchema.FixedSizeIndexes[Schemas.Documents.AllDocsEtagsSlice], state.DocumentSkip, state.CurrentKey))
+        foreach (var (key, result) in table.IterateForDictionaryTraining(Schemas.Documents.AllDocsEtagsIndex, state.DocumentSkip, state.CurrentKey))
         {
             state.CurrentKey = key;
             

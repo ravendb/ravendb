@@ -32,6 +32,10 @@ namespace Raven.Server.Documents.Schemas
             RevisionVersion = 9
         }
 
+        internal static readonly TableSchema.FixedSizeKeyIndexDef CollectionEtagsIndex;
+        internal static readonly TableSchema.FixedSizeKeyIndexDef AllTombstonesEtagsIndex;
+        internal static readonly TableSchema.FixedSizeKeyIndexDef DeletedEtagsIndex;
+
         static Tombstones()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
@@ -43,6 +47,28 @@ namespace Raven.Server.Documents.Schemas
 
                 Slice.From(ctx, "TombstonesBucketAndEtag", ByteStringType.Immutable, out TombstonesBucketAndEtagSlice);
             }
+
+            CollectionEtagsIndex = new TableSchema.FixedSizeKeyIndexDef
+            {
+                StartIndex = (int)TombstoneTable.Etag,
+                Name = Documents.CollectionEtagsSlice,
+                IsGlobal = false
+            };
+
+            AllTombstonesEtagsIndex = new TableSchema.FixedSizeKeyIndexDef
+            {
+                StartIndex = (int)TombstoneTable.Etag,
+                Name = AllTombstonesEtagsSlice,
+                IsGlobal = true
+            };
+
+            DeletedEtagsIndex = new TableSchema.FixedSizeKeyIndexDef
+            {
+                StartIndex = (int)TombstoneTable.DeletedEtag,
+                Name = DeletedEtagsSlice,
+                IsGlobal = false
+            };
+
 
             DefineIndexesForTombstonesSchema(TombstonesSchemaBase);
             DefineIndexesForShardingTombstonesSchemaBase();
@@ -56,24 +82,9 @@ namespace Raven.Server.Documents.Schemas
                     IsGlobal = true,
                     Name = TombstonesSlice
                 });
-                schema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-                {
-                    StartIndex = (int)TombstoneTable.Etag,
-                    IsGlobal = false,
-                    Name = Documents.CollectionEtagsSlice
-                });
-                schema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-                {
-                    StartIndex = (int)TombstoneTable.Etag,
-                    IsGlobal = true,
-                    Name = AllTombstonesEtagsSlice
-                });
-                schema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-                {
-                    StartIndex = (int)TombstoneTable.DeletedEtag,
-                    IsGlobal = false,
-                    Name = DeletedEtagsSlice
-                });
+                schema.DefineFixedSizeIndex(CollectionEtagsIndex);
+                schema.DefineFixedSizeIndex(AllTombstonesEtagsIndex);
+                schema.DefineFixedSizeIndex(DeletedEtagsIndex);
             }
 
             void DefineIndexesForShardingTombstonesSchemaBase()

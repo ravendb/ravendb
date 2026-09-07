@@ -24,9 +24,8 @@ namespace Raven.Server.Documents
                 using (var tx = context.OpenWriteTransaction())
                 {
                     var table = context.DocumentsTable(_storage);
-                    var index = _storage.DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice];
 
-                    if (table.FindByIndex(index, etag, out var reader) == false) 
+                    if (table.FindByIndex(AllDocsEtagsIndex, etag, out var reader) == false) 
                         return false;
                     
                     var doc = _storage.TableValueToDocument(context, ref reader, DocumentFields.LowerId | DocumentFields.Id);

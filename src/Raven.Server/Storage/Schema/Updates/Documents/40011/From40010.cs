@@ -73,7 +73,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     var writeTable = step.WriteTx.OpenTable(TombstonesSchemaBase, tableName);
                     // We seek by an index instead the PK because 
                     // we weed to ensure that we aren't accessing an IsGlobal key
-                    foreach (var read in readTable.SeekForwardFrom(TombstonesSchemaBase.FixedSizeIndexes[CollectionEtagsSlice], 0, 0))
+                    foreach (var read in readTable.SeekForwardFrom(Raven.Server.Documents.Schemas.Tombstones.CollectionEtagsIndex, 0, 0))
                     {
                         // We copy the memory of the read so AssertNoReferenceToOldData won't throw.
                         // This is done instead of moving AssertNoReferenceToOldData to assert later 

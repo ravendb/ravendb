@@ -9,6 +9,8 @@ namespace Raven.Server.Documents.Schemas
         internal static readonly TableSchema AttachmentsSchemaBase = new TableSchema();
         internal static readonly TableSchema ShardingAttachmentsSchemaBase = new TableSchema();
 
+        internal static readonly TableSchema.FixedSizeKeyIndexDef AttachmentsEtagIndex;
+
         internal static readonly Slice AttachmentsSlice;
         internal static readonly Slice AttachmentsMetadataSlice;
         internal static readonly Slice AttachmentsEtagSlice;
@@ -54,6 +56,12 @@ namespace Raven.Server.Documents.Schemas
                 Slice.From(ctx, "AttachmentsFlagAndHash", ByteStringType.Immutable, out AttachmentsFlagAndHashSlice);
             }
 
+            AttachmentsEtagIndex = new TableSchema.FixedSizeKeyIndexDef
+            {
+                StartIndex = (int)AttachmentsTable.Etag,
+                Name = AttachmentsEtagSlice
+            };
+
             DefineIndexesForAttachmentsSchema(AttachmentsSchemaBase);
             DefineIndexesForShardingAttachmentsSchema();
 
@@ -64,11 +72,7 @@ namespace Raven.Server.Documents.Schemas
                     StartIndex = (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType,
                     Count = 1
                 });
-                schema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-                {
-                    StartIndex = (int)AttachmentsTable.Etag,
-                    Name = AttachmentsEtagSlice
-                });
+                schema.DefineFixedSizeIndex(AttachmentsEtagIndex);
                 schema.DefineIndex(new TableSchema.IndexDef
                 {
                     StartIndex = (int)AttachmentsTable.Hash,
