@@ -72,7 +72,7 @@ public sealed class RavenReadinessService(
                         await store.Maintenance.Server.SendAsync(new GetBuildNumberOperation(), ct);
                     }, stoppingToken);
 
-                    var r = await RavenStoreFactory.EnsureDatabaseAsync(store, opts.ConfigDatabase, DatabaseLockMode.PreventDeletesError, stoppingToken);
+                    var r = await RavenStoreFactory.EnsureDatabaseAsync(store, opts.ConfigDatabase, DatabaseLockMode.PreventDeletesError, ct: stoppingToken);
                     if (logger.IsInfoEnabled)
                         logger.Info(
                             $"RavenDB ready at {opts.RavenUrl}; config database {opts.ConfigDatabase} " +

@@ -376,7 +376,7 @@ public static class EmbedEndpoints
     {
         App? app;
         using (var cfg = store.OpenAsyncSession())
-            app = await cfg.LoadAsync<App>($"apps/{slug}", ct);
+            app = await cfg.LoadAsync<App>(AppLookup.DocumentIdFor(slug), ct);
 
         if (app is null)
             return null;
