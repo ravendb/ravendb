@@ -30,6 +30,9 @@ namespace Voron.Data.BTrees
     {
         private int _directAddUsage;
 
+        // Allow detecting if a value moved in the page, in-place same-size update does *not* bump it (no value moved)
+        internal long StructureVersion;
+
         private static readonly ObjectPool<RecentlyFoundTreePages> FoundPagesPool = new(() => new RecentlyFoundTreePages(), 128);
 
         private RecentlyFoundTreePages _recentlyFoundPages;
@@ -414,6 +417,8 @@ namespace Voron.Data.BTrees
                 state.NumberOfEntries++;
             }
 
+            StructureVersion++;
+
             nodeType &= ~TreeNodeFlags.NewOnly;
 
             ThrowIfOnDebug<InvalidOperationException>(nodeType != TreeNodeFlags.Data && nodeType != TreeNodeFlags.MultiValuePageRef,
@@ -583,6 +588,7 @@ namespace Voron.Data.BTrees
 
         internal void RemoveLeafNode(TreePage page)
         {
+            StructureVersion++;
             var node = page.GetNode(page.LastSearchPosition);
             if (node->Flags == (TreeNodeFlags.PageRef)) // this is an overflow pointer
             {

@@ -23,6 +23,7 @@ namespace Voron.Data.BTrees
 
         public TreeRebalancer(LowLevelTransaction tx, Tree tree, ref TreeCursor cursor)
         {
+            tree.StructureVersion++;
             _tx = tx;
             _tree = tree;
             _cursor = ref cursor;
