@@ -2,7 +2,9 @@
 
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Logging;
@@ -73,28 +75,67 @@ public unsafe partial class Pager
             GC.SuppressFinalize(this);
         }
 
+        // Closing a pager is munmap + close. OS takes _global page table lock_ each time. munmap also does TLB flushes, which are expensive. 
+        // Under load, we may grow a file by multiple increments quickly, so when the finalizer runs, we'll have multiple page instances to dispose.
+        // To avoid hammering the system, we run through this one at a time. Anyone waiting on pager disposal should be calling it explicitly anyway.
+        private static readonly ConcurrentQueue<State> PendingDisposal = new();
+        private static int _disposalScheduled;
+
+        private static void ScheduleBackgroundDisposal()
+        {
+            if (Interlocked.CompareExchange(ref _disposalScheduled, 1, 0) != 0)
+                return;
+
+            ThreadPool.UnsafeQueueUserWorkItem(static _ =>
+            {
+                do
+                {
+                    while (PendingDisposal.TryDequeue(out var state))
+                    {
+                        try
+                        {
+                            state.Dispose();
+                        }
+                        catch (Exception e)
+                        {
+                            try
+                            {
+                                // cannot let the drain die, just log it
+                                var logger = RavenLogManager.Instance.GetLoggerForGlobalVoron<State>();
+
+                                if (logger.IsErrorEnabled)
+                                {
+                                    logger.Error("Failed to dispose a pager state from the background disposer", e);
+                                }
+                            }
+                            catch
+                            {
+                                // nothing we can do here
+                            }
+                        }
+                    }
+
+                    Volatile.Write(ref _disposalScheduled, 0);
+                    // a producer may have enqueued between the last TryDequeue and the gate
+                    // release; re-arm and keep draining if we win the gate back
+                } while (PendingDisposal.IsEmpty == false &&
+                         Interlocked.CompareExchange(ref _disposalScheduled, 1, 0) == 0);
+            }, null);
+        }
+
         ~State()
         {
             try
             {
-                Dispose();
+                // resurrecting the instance is fine: the queue holds the only reference
+                // until Dispose completes, and Dispose is idempotent under its lock
+                PendingDisposal.Enqueue(this);
+                ScheduleBackgroundDisposal();
             }
-            catch (Exception e)
+            catch
             {
-                try
-                {
-                    // cannot throw an exception from here, just log it
-                    var logger = RavenLogManager.Instance.GetLoggerForGlobalVoron<State>();
-
-                    if (logger.IsErrorEnabled)
-                    {
-                        logger.Error("Failed to dispose the pager state from the finalizer", e);
-                    }
-                }
-                catch
-                {
-                    // nothing we can do here
-                }
+                // queueing failed (shutdown, OOM) - the native handle leaks rather than
+                // risking a blocking syscall storm on the finalizer thread
             }
         }
     }
