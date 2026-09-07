@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using Corax.Querying.Planning;
 using Corax.Utils.Spatial;
+using Raven.Client.Exceptions.Corax;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow.Json;
@@ -638,6 +639,9 @@ internal static partial class QueryPlanBuilder
         [MethodType.Spatial_Disjoint] = ParseSpatial,
         [MethodType.Spatial_Intersects] = ParseSpatial,
         [MethodType.Vector_Search] = ParseVectorSearch,
+        [MethodType.Proximity] = static (_, _) => throw new NotSupportedInCoraxException($"{nameof(Corax)} doesn't support proximity over search() method"),
+        [MethodType.Fuzzy] = static (_, _) => throw new NotSupportedInCoraxException($"{nameof(Corax)} doesn't support fuzzy() method"),
+        [MethodType.Lucene] = static (_, _) => throw new NotSupportedInCoraxException($"{nameof(Corax)} doesn't support lucene() method"),
         // MoreLikeThis in a WHERE clause acts as "all entries" — the actual MLT logic runs in the
         // separate reader.MoreLikeThis() path, so here it is a no-op that matches everything.
         [MethodType.MoreLikeThis] = static (_, _) => BooleanOp.Leaf,
