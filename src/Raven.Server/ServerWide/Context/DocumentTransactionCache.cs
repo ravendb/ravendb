@@ -1,13 +1,31 @@
 ﻿using System;
-using System.Collections.Immutable;
+using System.Collections.Generic;
+using Raven.Server.Documents;
 
 namespace Raven.Server.ServerWide.Context
 {
     public sealed class DocumentTransactionCache
     {
-        // false on the initial empty instance; set to true by every compute (full or incremental). an
-        // incremental cache built from a fully-computed base stays complete, so the flag propagates.
-        public bool FullyComputed;
+        public Dictionary<string, CollectionName> Collections;
+
+        internal bool Published;
+
+        public static DocumentTransactionCache GetForUpdate(Voron.Impl.LowLevelTransaction tx)
+        {
+            if (tx.TryGetClientState(out DocumentTransactionCache cache) == false)
+            {
+                cache = new DocumentTransactionCache();
+            }   
+            else if (cache.Published is false)
+            {
+                return cache; // already private to this transaction
+            }
+            
+            cache = (DocumentTransactionCache)cache.MemberwiseClone();
+            cache.Published = false;
+            tx.UpdateClientState(cache);
+            return cache;
+        }
 
         public long LastDocumentEtag;
         public long LastTombstoneEtag;
@@ -17,6 +35,7 @@ namespace Raven.Server.ServerWide.Context
         public long LastRevisionsEtag;
         public long LastAttachmentsEtag;
         public long ConflictsCount;
+        public long RevisionsCount;
         public long LastEtag;
 
         public sealed class CollectionCache
@@ -26,6 +45,6 @@ namespace Raven.Server.ServerWide.Context
             public string LastChangeVector;
         }
 
-        public ImmutableDictionary<string, CollectionCache> LastEtagsByCollection = ImmutableDictionary.Create<string, CollectionCache>(StringComparer.OrdinalIgnoreCase);
+        public readonly Dictionary<string, CollectionCache> LastEtagsByCollection = new(StringComparer.OrdinalIgnoreCase);
     }
 }

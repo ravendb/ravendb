@@ -302,7 +302,7 @@ namespace Raven.Server.Documents
             var listCount = changeVectors.Count;
             if (listCount == 0) // there were no conflicts for this document
                 return (changeVectors, nonPersistentFlags);
-            
+
             return (changeVectors, nonPersistentFlags | NonPersistentDocumentFlags.Resolved);
         }
 
@@ -512,7 +512,7 @@ namespace Raven.Server.Documents
                     // conflict instead
                     _documentsStorage.EnsureLastEtagIsPersisted(context, existingTombstone.Etag);
 
-                    collectionName = _documentsStorage.GetCollection(existingTombstone.Collection, throwIfDoesNotExist: true);
+                    collectionName = _documentsStorage.GetCollection(context.Transaction.InnerTransaction, existingTombstone.Collection, throwIfDoesNotExist: true);
 
                     var table = tx.OpenTable(_documentsStorage.TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
                     table.Delete(existingTombstone.StorageId);
@@ -573,13 +573,7 @@ namespace Raven.Server.Documents
                     lastModifiedTicks,
                     (int)flags);
 
-                context.Transaction.AddAfterCommitNotification(new DocumentChange
-                {
-                    ChangeVector = incomingChangeVector,
-                    CollectionName = collectionName.Name,
-                    Id = id,
-                    Type = DocumentChangeTypes.Conflict
-                });
+                context.Transaction.AddAfterCommitNotification(collectionName.Name, id, incomingChangeVector, DocumentChangeTypes.Conflict);
 
                 void AddToConflictsTable(string changeVector, string col, byte* data, int dataSize, long lastModified, int documentFlags)
                 {
@@ -599,10 +593,7 @@ namespace Raven.Server.Documents
                             tvb.Add(documentFlags);
                             if (conflictsTable.Set(tvb))
                             {
-                                if (tx.LowLevelTransaction.TryGetClientState(out DocumentTransactionCache state) is false)
-                                    state = new DocumentTransactionCache();
-                                state.ConflictsCount++;
-                                tx.LowLevelTransaction.UpdateClientState(state);
+                                DocumentTransactionCache.GetForUpdate(tx.LowLevelTransaction).ConflictsCount++;
                             }
                         }
                     }

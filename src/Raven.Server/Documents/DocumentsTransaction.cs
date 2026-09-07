@@ -32,6 +32,72 @@ namespace Raven.Server.Documents
 
         private Dictionary<string, CollectionName> _collectionCache;
 
+        private long _putsCount; 
+        private long _putsBytes;
+
+        // at scale, calling Mark() is expensive (vdso clock read), instead of doing per doc, we'll aggregate and call once
+        public void AccumulatePutMetrics(long documentSize)
+        {
+            _putsCount++;
+            _putsBytes += documentSize;
+        }
+
+        private long _cachedLastModifiedTicks;
+
+        // All documents written by this transaction share one LastModified reading, saves a vdso clock read per doc
+        public long GetOrCreateLastModifiedTicks()
+        {
+            if (_cachedLastModifiedTicks == 0)
+                _cachedLastModifiedTicks = _context.DocumentDatabase.Time.GetUtcNow().Ticks;
+            return _cachedLastModifiedTicks;
+        }
+
+        private CollectionTables[] _collectionTables = Array.Empty<CollectionTables>();
+
+        private struct CollectionTables
+        {
+            public Voron.Data.Tables.Table Documents;
+            public Voron.Data.Tables.Table CompressedDocuments;
+            public Voron.Data.Tables.Table Tombstones;
+        }
+
+        private CollectionTables[] GrowCollectionTables(int index)
+        {
+            InnerTransaction.LowLevelTransaction.TryGetClientState(out DocumentTransactionCache cache);
+            int size = Math.Max(cache?.Collections?.Count ?? 0, index + 1);
+            Array.Resize(ref _collectionTables, size);
+            return _collectionTables;
+        }
+        
+        public Voron.Data.Tables.Table GetOrOpenDocumentsTable(CollectionName collection, Voron.Data.Tables.TableSchema schema)
+        {
+            ref CollectionTables entry = ref GetTableEntry(collection);
+            ref var slot = ref (schema.Compressed ? ref entry.CompressedDocuments : ref entry.Documents);
+            return slot ??= InnerTransaction.OpenTable(schema, collection.GetTableName(CollectionTableType.Documents));
+        }
+
+        public Voron.Data.Tables.Table GetOrOpenTombstonesTable(CollectionName collection, Voron.Data.Tables.TableSchema tombstonesSchema)
+        {
+            ref CollectionTables entry = ref GetTableEntry(collection);
+            return entry.Tombstones ??= InnerTransaction.OpenTable(tombstonesSchema, collection.GetTableName(CollectionTableType.Tombstones));
+        }
+
+        private ref CollectionTables GetTableEntry(CollectionName collection)
+        {
+            int index = collection.Index;
+            if (index < 0)
+            {
+                var tmp = new CollectionTables[1]; // should be rare
+                return ref tmp[0];
+            }
+
+            var tables = _collectionTables;
+            if (tables == null || (uint)index >= (uint)tables.Length)
+                tables = GrowCollectionTables(index);
+
+            return ref tables[index];
+        }
+
         public DocumentsTransaction(DocumentsOperationContext context, Transaction transaction, DocumentsChanges changes)
             : base(transaction)
         {

@@ -1455,9 +1455,16 @@ namespace Raven.Server.Documents.Revisions
         internal static long IncrementCountOfRevisions(DocumentsOperationContext context, Slice prefixedLowerId, long delta)
         {
             var numbers = context.Transaction.InnerTransaction.ReadTree(RevisionsCountSlice);
-            var result = numbers.Increment(prefixedLowerId, delta);;
-            if(result == 0)
+            var result = numbers.Increment(prefixedLowerId, delta);
+            if (result == 0)
+            {
                 numbers.Delete(prefixedLowerId);
+            }
+            else if (result == delta && delta > 0)
+            {
+                DocumentTransactionCache.GetForUpdate(context.Transaction.InnerTransaction.LowLevelTransaction).RevisionsCount++;
+            }
+
             return result;
         }
 
@@ -2343,7 +2350,7 @@ namespace Raven.Server.Documents.Revisions
                 IEnumerable<Table.TableValueHolder> tvrs = null;
                 if (collection != null)
                 {
-                    var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+                    var collectionName = _documentsStorage.GetCollection(readCtx.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
                     if (collectionName == null)
                     {
                         var msg = $"Tried to revert revisions in the collection '{collection}' which does not exist";
@@ -2612,6 +2619,9 @@ namespace Raven.Server.Documents.Revisions
 
         public long GetRevisionsCount(DocumentsOperationContext context, string id)
         {
+            if (context.Transaction.InnerTransaction.LowLevelTransaction.TryGetClientState(out DocumentTransactionCache cache) && cache.RevisionsCount == 0)
+                return 0; // without revisions, we can avoid the overhead of looking up the revisions table
+
             using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out Slice lowerId))
             using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
             {
@@ -2799,7 +2809,7 @@ namespace Raven.Server.Documents.Revisions
 
         public IEnumerable<Document> GetRevisionsFrom(DocumentsOperationContext context, string collection, long etag, long take, DocumentFields fields = DocumentFields.All)
         {
-            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = _documentsStorage.GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
             if (collectionName == null)
                 yield break;
 
@@ -2829,7 +2839,7 @@ namespace Raven.Server.Documents.Revisions
 
         private bool LastRevision(DocumentsOperationContext context, string collection, ref Table.TableValueHolder result)
         {
-            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = _documentsStorage.GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
             if (collectionName == null)
                 return false;
 
