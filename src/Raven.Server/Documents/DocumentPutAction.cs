@@ -55,7 +55,9 @@ namespace Raven.Server.Documents
 
             using (doc.Data)
             {
-                PutDocument(context, docId, expectedChangeVector: null, document: doc.Data, nonPersistentFlags: type.ResolveConflictFlag | NonPersistentDocumentFlags.SkipSchemaValidation);
+                // route through DocumentsStorage.Put, to resolves the collection name & metadata
+                _documentsStorage.Put(context, docId, expectedChangeVector: null, document: doc.Data,
+                    nonPersistentFlags: type.ResolveConflictFlag | NonPersistentDocumentFlags.SkipSchemaValidation);
             }
         }
 
@@ -102,11 +104,13 @@ namespace Raven.Server.Documents
         public PutOperationResults PutDocument(DocumentsOperationContext context, string id,
             string expectedChangeVector,
             BlittableJsonReaderObject document,
-            long? lastModifiedTicks = null,
-            ChangeVector changeVector = null,
-            string oldChangeVectorForClusterTransactionIndexCheck = null,
-            DocumentFlags newFlags = DocumentFlags.None,
-            NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None)
+            long? lastModifiedTicks,
+            ChangeVector changeVector,
+            string oldChangeVectorForClusterTransactionIndexCheck,
+            DocumentFlags newFlags,
+            NonPersistentDocumentFlags nonPersistentFlags,
+            string knownCollectionName,
+            BlittableJsonReaderObject knownMetadata)
         {
             if (context.Transaction == null)
             {
@@ -118,7 +122,7 @@ namespace Raven.Server.Documents
             ValidateDocument(id, document, ref documentDebugHash);
 
             var newEtag = _documentsStorage.GenerateNextEtag();
-            var modifiedTicks = _documentsStorage.GetOrCreateLastModifiedTicks(lastModifiedTicks);
+            var modifiedTicks = _documentsStorage.GetOrCreateLastModifiedTicks(context, lastModifiedTicks);
 
             var compareClusterTransaction = new CompareClusterTransactionId(this);
             if (oldChangeVectorForClusterTransactionIndexCheck != null)
@@ -132,13 +136,13 @@ namespace Raven.Server.Documents
                 if (newFlags.HasFlag(DocumentFlags.FromResharding) == false)
                     _documentsStorage.ValidateId(context, lowerId, type: DocumentChangeTypes.Put, newFlags);
 
-                var collectionName = _documentsStorage.ExtractCollectionName(context, document);
+                var collectionName = _documentsStorage.ExtractCollectionName(context, knownCollectionName);
                 ValidateIdAndCollection(id, collectionName.Name, newFlags, nonPersistentFlags);
                 _documentsStorage._forTestingPurposes?.OnBeforeOpenTableWhenPutDocumentWithSpecificId?.Invoke(id);
 
                 _documentDatabase.SchemaValidatorCache?.Validate(collectionName.Name, document, nonPersistentFlags, context);
 
-                var table = context.Transaction.InnerTransaction.OpenTable(_documentDatabase.GetDocsSchemaForCollection(collectionName, newFlags), collectionName.GetTableName(CollectionTableType.Documents));
+                var table = context.Transaction.GetOrOpenDocumentsTable(collectionName, _documentDatabase.GetDocsSchemaForCollection(collectionName, newFlags));
 
                 var oldValue = default(TableValueReader);
                 ChangeVector oldChangeVector = null;
@@ -214,7 +218,7 @@ namespace Raven.Server.Documents
 
                 if (collectionName.IsHiLo == false && newFlags.Contain(DocumentFlags.Artificial) == false)
                 {
-                    Recreate(context, id, oldDoc, ref document, ref newFlags, nonPersistentFlags, ref documentDebugHash);
+                    Recreate(context, id, oldDoc, ref document, ref knownMetadata, ref newFlags, nonPersistentFlags, ref documentDebugHash);
 
                     var shouldVersion = _documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionDocument(
                         collectionName, nonPersistentFlags, oldDoc, document, context, id, lastModifiedTicks, ref newFlags, out var configuration);
@@ -241,33 +245,34 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                if (document.TryGetMetadata(out BlittableJsonReaderObject docMetadata))
+                if (knownMetadata != null)
                 {
                     if (newFlags.Contain(DocumentFlags.Archived))
                     {
                         // If document has archived flag, but @archived is dropped, rebuild it
                         // If document has archived flag, but @archived is set to false, revert it to true
-                        if (docMetadata.TryGet(Constants.Documents.Metadata.Archived, out bool isArchived) == false || isArchived == false)
+                        if (knownMetadata.TryGet(Constants.Documents.Metadata.Archived, out bool isArchived) == false || isArchived == false)
                         {
-                            docMetadata.Modifications = new DynamicJsonValue(docMetadata);
-                            docMetadata.Modifications[Constants.Documents.Metadata.Archived] = true;
+                            knownMetadata.Modifications = new DynamicJsonValue(knownMetadata);
+                            knownMetadata.Modifications[Constants.Documents.Metadata.Archived] = true;
                         }
                     }
                     else
                     {
                         // If document has no archived flag, but @archived is in metadata, drop the metadata entry
-                        if (docMetadata.TryGet(Constants.Documents.Metadata.Archived, out bool _))
+                        if (knownMetadata.TryGet(Constants.Documents.Metadata.Archived, out bool _))
                         {
-                            docMetadata.Modifications = new DynamicJsonValue(docMetadata);
-                            docMetadata.Modifications.Remove(Constants.Documents.Metadata.Archived);
+                            knownMetadata.Modifications = new DynamicJsonValue(knownMetadata);
+                            knownMetadata.Modifications.Remove(Constants.Documents.Metadata.Archived);
                         }
                     }
 
-                    if (docMetadata.Modifications != null)
+                    if (knownMetadata.Modifications != null)
                     {
                         document.Modifications = new DynamicJsonValue(document);
-                        document.Modifications[Constants.Documents.Metadata.Key] = docMetadata;
+                        document.Modifications[Constants.Documents.Metadata.Key] = knownMetadata;
                         document = context.ReadObject(document, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                        document.TryGetMetadata(out knownMetadata); // the document was rebuilt - its metadata instance changed too
                         ValidateDocument(id, document, ref documentDebugHash);
                     }
                 }
@@ -295,11 +300,11 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                if (collectionName.IsHiLo == false && docMetadata != null)
+                if (collectionName.IsHiLo == false && knownMetadata != null)
                 {
-                    var hasExpirationDate = docMetadata.TryGet(Constants.Documents.Metadata.Expires, out string expirationDate);
-                    var hasRefreshDate = docMetadata.TryGet(Constants.Documents.Metadata.Refresh, out string refreshDate);
-                    var hasArchiveAtDate= docMetadata.TryGet(Constants.Documents.Metadata.ArchiveAt, out string archiveAtDate);
+                    var hasExpirationDate = knownMetadata.TryGet(Constants.Documents.Metadata.Expires, out string expirationDate);
+                    var hasRefreshDate = knownMetadata.TryGet(Constants.Documents.Metadata.Refresh, out string refreshDate);
+                    var hasArchiveAtDate= knownMetadata.TryGet(Constants.Documents.Metadata.ArchiveAt, out string archiveAtDate);
 
                     if (hasExpirationDate)
                         _documentsStorage.ExpirationStorage.Put(context, lowerId, expirationDate);
@@ -311,16 +316,11 @@ namespace Raven.Server.Documents
                         _documentsStorage.DataArchivalStorage.Put(context, lowerId, archiveAtDate);
                 }
 
-                _documentDatabase.Metrics.Docs.PutsPerSec.MarkSingleThreaded(1);
-                _documentDatabase.Metrics.Docs.BytesPutsPerSec.MarkSingleThreaded(document.Size);
+                context.Transaction.AccumulatePutMetrics(document.Size);
 
-                context.Transaction.AddAfterCommitNotification(new DocumentChange
-                {
-                    ChangeVector = changeVector.AsString(),
-                    CollectionName = collectionName.Name,
-                    Id = id,
-                    Type = DocumentChangeTypes.Put,
-                });
+                var changeVectorString = changeVector.AsString();
+
+                context.Transaction.AddAfterCommitNotification(collectionName.Name, id, changeVectorString, DocumentChangeTypes.Put);
 
                 ValidateDocumentHash(id, document, documentDebugHash);
                 ValidateDocument(id, document, ref documentDebugHash);
@@ -330,7 +330,7 @@ namespace Raven.Server.Documents
                     Etag = newEtag,
                     Id = id,
                     Collection = collectionName,
-                    ChangeVector = changeVector.AsString(),
+                    ChangeVector = changeVectorString,
                     Flags = newFlags,
                     LastModified = new DateTime(modifiedTicks, DateTimeKind.Utc)
                 };
@@ -459,7 +459,7 @@ namespace Raven.Server.Documents
         }
 
         private void Recreate(DocumentsOperationContext context, string id, BlittableJsonReaderObject oldDoc,
-            ref BlittableJsonReaderObject document, ref DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags, ref ulong documentDebugHash)
+            ref BlittableJsonReaderObject document, ref BlittableJsonReaderObject knownMetadata, ref DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags, ref ulong documentDebugHash)
         {
             for (int i = 0; i < _recreationTypes.Length; i++)
             {
@@ -469,6 +469,7 @@ namespace Raven.Server.Documents
                     ValidateDocumentHash(id, document, documentDebugHash);
 
                     document = context.ReadObject(document, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                    document.TryGetMetadata(out knownMetadata); // the document was rebuilt - its metadata instance changed too
 
                     ValidateDocument(id, document, ref documentDebugHash);
 #if DEBUG
@@ -734,7 +735,7 @@ namespace Raven.Server.Documents
 
         private ChangeVector DeleteTombstoneAndGetPredecessor(DocumentsOperationContext context, CollectionName collectionName, byte* lowerId, int lowerSize)
         {
-            var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(_documentsStorage.TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
+            var tombstoneTable = context.Transaction.GetOrOpenTombstonesTable(collectionName, _documentsStorage.TombstonesSchema);
             if (tombstoneTable.NumberOfEntries == 0)
                 return null;
 
@@ -750,7 +751,7 @@ namespace Raven.Server.Documents
 
         public void DeleteTombstoneIfNeeded(DocumentsOperationContext context, CollectionName collectionName, Slice id)
         {
-            var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(_documentsStorage.TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
+            var tombstoneTable = context.Transaction.GetOrOpenTombstonesTable(collectionName, _documentsStorage.TombstonesSchema);
             if (tombstoneTable.NumberOfEntries == 0)
                 return;
 
