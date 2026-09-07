@@ -22,8 +22,7 @@ export type DashboardStatCard = {
     seriesDates?: string[];
     // Preformatted value, used when formatCompact isn't enough (e.g. currency).
     valueLabel?: string;
-    // Period-over-period change as a percent (12.5 -> +12.5%). Renders a trend badge only
-    // for a positive change; a flat or negative trend is not shown.
+    // Period-over-period change as a percent (12.5 -> +12.5%)
     delta?: number;
 };
 
