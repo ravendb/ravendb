@@ -18,7 +18,7 @@ public class CoraxDocumentTrainSourceEnumerator
     
     public IEnumerable<Document> GetDocumentsForDictionaryTraining(DocumentsOperationContext context, string collection, CoraxDocumentTrainSourceState state, DocumentFields fields = DocumentFields.All)
     {
-        var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+        var collectionName = _documentsStorage.GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
         if (collectionName == null)
             yield break;
 

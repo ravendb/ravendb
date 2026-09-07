@@ -388,8 +388,8 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
     private void MarkTombstonesAsArtificial(DocumentsOperationContext context, int bucket, ChangeVector upTo)
     {
         long lastProcessedEtag = 0;
-        bool hasMore = true, collectionNamesUpdated = false;
-        var collectionNames = new Dictionary<string, CollectionName>(_collectionsCache, StringComparer.OrdinalIgnoreCase);
+        bool hasMore = true;
+        var collectionNames = GetCollectionsMap(context.Transaction.InnerTransaction.LowLevelTransaction);
         var holder = new Table.TableValueHolder(); // reused across iterations to avoid a per-row allocation
 
         while (hasMore)
@@ -419,10 +419,7 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
                     case Tombstone.TombstoneType.Document:
                         var collection = tombstone.Collection;
                         if (collectionNames.TryGetValue(collection, out var collectionName) == false)
-                        {
-                            collectionNames[collection] = collectionName = new CollectionName(collection);
-                            collectionNamesUpdated = true;
-                        }
+                            collectionName = new CollectionName(collection);
 
                         writeTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
                         break;
@@ -482,18 +479,6 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
                 hasMore = true;
                 break;
             }
-        }
-
-        if (collectionNamesUpdated)
-        {
-            // Add to cache ONLY if the transaction was committed.
-            // this would prevent NREs next time a PUT is run,since if a transaction
-            // is not committed, DocsSchema and TombstonesSchema will not be actually created..
-            // has to happen after the commit, but while we are holding the write tx lock
-            context.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += _ =>
-            {
-                _collectionsCache = collectionNames;
-            };
         }
 
     }
