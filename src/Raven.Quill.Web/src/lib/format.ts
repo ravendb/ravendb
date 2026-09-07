@@ -17,6 +17,20 @@ const dateTimeFormatter = new Intl.DateTimeFormat("en-US", {
     hour: "numeric",
     minute: "2-digit",
 });
+const utcDateFormatter = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+});
+const utcDateTimeFormatter = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "UTC",
+});
 
 // e.g. "Jul 14, 2026". Falls back to the raw value if it doesn't parse.
 export function formatDate(value: string): string {
@@ -28,6 +42,18 @@ export function formatDate(value: string): string {
 export function formatDateTime(value: string): string {
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? value : dateTimeFormatter.format(date);
+}
+
+// e.g. "Jul 14, 2026 UTC". For dates inside a UTC-filtered period.
+export function formatDateUtc(value: string): string {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? value : `${utcDateFormatter.format(date)} UTC`;
+}
+
+// e.g. "Jul 14, 2026, 3:28 PM UTC". For dates inside a UTC-filtered period.
+export function formatDateTimeUtc(value: string): string {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? value : `${utcDateTimeFormatter.format(date)} UTC`;
 }
 
 const currencyFormatter = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
