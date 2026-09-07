@@ -46,6 +46,11 @@ namespace Voron.Data.Fixed
         
         private int _changes;
 
+        // Append fast-path: the etag indexes are written with monotonically increasing keys.
+        // Optimize for that by remembering where to go without scanning the tree.
+        private long _rightmostLeafPageNumber = -1;
+        private TVal _treeMaxKey = TVal.MinValue;
+
         public LowLevelTransaction Llt => _tx;
 
         internal RootObjectType? Type
@@ -297,8 +302,57 @@ namespace Voron.Data.Fixed
             throw new InvalidFixedSizeTree(Type?.ToString());
         }
 
+        private bool CursorIsOnRightmostEdge()
+        {
+            foreach (var branch in _cursor)
+            {
+                if (branch.LastSearchPosition != branch.NumberOfEntries - 1)
+                    return false;
+            }
+
+            return true;
+        }
+
+        // Append fast-path: the etag indexes use monotonically increasing keys, 
+        // take advantage of that by remembering where to go without scanning the tree.
+        private bool TryAppendToRightmostLeaf(TVal key, out bool isNew, out byte* valuePtr)
+        {
+            isNew = false;
+            valuePtr = null;
+
+            var rightmost = GetReadOnlyPage(_rightmostLeafPageNumber);
+            if (rightmost.IsLeaf == false ||
+                rightmost.NumberOfTombstones != 0 ||
+                rightmost.NumberOfEntries + 1 > _tombstonesCapacity || // would split
+                (rightmost.NumberOfEntries != 0 && key <= rightmost.GetKey(rightmost.NumberOfEntries - 1)))
+                return false;
+
+            var appendPage = ModifyPage(rightmost);
+            appendPage.ResetStartPosition();
+            appendPage.LastSearchPosition = (short)appendPage.NumberOfEntries;
+
+            using (ModifyLargeHeader(out FixedSizeTreeHeader.Large* header))
+            {
+                appendPage.NumberOfEntries++;
+                header->NumberOfEntries++;
+            }
+
+            *((TVal*)(appendPage.Pointer + appendPage.StartPosition + (appendPage.LastSearchPosition * _entrySize))) = key;
+
+            _treeMaxKey = key;
+            _rightmostLeafPageNumber = appendPage.PageNumber;
+
+            isNew = true;
+            ValidateTree();
+            valuePtr = appendPage.Pointer + appendPage.StartPosition + (appendPage.LastSearchPosition * _entrySize) + sizeof(long);
+            return true;
+        }
+
         private byte* AddLargeEntry(TVal key, out bool isNew)
         {
+            if (_rightmostLeafPageNumber != -1 && key > _treeMaxKey && TryAppendToRightmostLeaf(key, out isNew, out byte* appended))
+                return appended;
+
             var page = FindPageFor(key);
 
             page = ModifyPage(page);
@@ -388,6 +442,13 @@ namespace Voron.Data.Fixed
 
                 isNew = true;
                 *((TVal*)(page.Pointer + page.StartPosition + (page.LastSearchPosition * _entrySize))) = key;
+
+                // A new global maximum was appended, cache it for the append fast-path
+                if (key > _treeMaxKey && page.LastSearchPosition == page.NumberOfEntries - 1 && CursorIsOnRightmostEdge())
+                {
+                    _treeMaxKey = key;
+                    _rightmostLeafPageNumber = page.PageNumber;
+                }
 
                 ValidateTree();
 
@@ -591,6 +652,8 @@ namespace Voron.Data.Fixed
 
         private FixedSizeTreePage<TVal> PageSplit(FixedSizeTreePage<TVal>page, TVal key)
         {
+            _rightmostLeafPageNumber = -1; // structure is changing; the append fast-path cache is no longer trustworthy
+
             FixedSizeTreePage<TVal> parentPage = _cursor.Count > 0 ? _cursor.Pop() : default;
             if (parentPage.IsValid == false) // root split
             {
@@ -977,6 +1040,8 @@ namespace Voron.Data.Fixed
 
         private DeletionResult RemoveLargeEntry(TVal key)
         {
+            _rightmostLeafPageNumber = -1; // a delete can change the rightmost leaf / max key; drop the append cache
+
             var page = FindPageFor(key);
             if (page.LastMatch != 0)
                 return new DeletionResult();
@@ -1527,11 +1592,24 @@ namespace Voron.Data.Fixed
             DebugStuff.RenderAndShow_FixedSizeTree(_tx, this);
         }
 
+        private FixedSizeTreeHeader.Large* _cachedLargeHeader;
+        private long _cachedLargeHeaderVersion;
+
         private Tree.DirectAddScope ModifyLargeHeader(out FixedSizeTreeHeader.Large* largeHeader)
         {
+            // in a write transaction, the pointer to the FST header is valid as long as the parent tree didn't change
+            // this allows us to safe the cost of a DirectAdd calls on the parent tree each time
+            if (_cachedLargeHeader != null && _cachedLargeHeaderVersion == _parent.StructureVersion)
+            {
+                largeHeader = _cachedLargeHeader;
+                return new Tree.DirectAddScope(_parent);
+            }
+
             var largeHeaderScope = _parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large), out var ptr);
 
             largeHeader = (FixedSizeTreeHeader.Large*)ptr;
+            _cachedLargeHeader = largeHeader;
+            _cachedLargeHeaderVersion = _parent.StructureVersion; 
 
             return largeHeaderScope;
         }
