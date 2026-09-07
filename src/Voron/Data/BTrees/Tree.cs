@@ -352,7 +352,7 @@ namespace Voron.Data.BTrees
             if (key.Size > Constants.Tree.MaxKeySize)
                 ThrowInvalidKeySize(key);
 
-            var foundPage = FindPageFor(key, node: out TreeNodeHeader* node, cursor: out TreeCursor cursorConstructor, allowCompressed: true);
+            var foundPage = FindPageFor(key, node: out TreeNodeHeader* node, allowCompressed: true);
 
             if (populateDataPtr == false && len == 0 && nodeType == TreeNodeFlags.Data && foundPage.LastMatch == 0)
             {
@@ -435,7 +435,8 @@ namespace Voron.Data.BTrees
                 if (IsLeafCompressionSupported == false || TryCompressPageNodes(key, len, page) == false)
                 {
                     {
-                        ref var cursor = ref cursorConstructor;
+                        // rare path: the leaf must split, and we need the cursor, so we search for it again
+                        SearchForPage(key, allowCompressed: true, out TreeCursor cursor, out TreeNodeHeader* _, addToRecentlyFoundPages: false);
                         cursor.SetTopPage(page);
 
                         var pageSplitter = new TreePageSplitter(_llt, this, key, len, pageNumber, nodeType, ref cursor);
@@ -716,6 +717,19 @@ namespace Voron.Data.BTrees
             return SearchForPage(key, allowCompressed, out cursor, out node, backward: backward);
         }
 
+        internal TreePage FindPageFor(Slice key, out TreeNodeHeader* node, bool allowCompressed)
+        {
+            if (TryUseRecentTransactionPage(key, out TreePage p, out node))
+            {
+                if (allowCompressed == false && p.IsCompressed)
+                    ThrowOnCompressedPage(p);
+
+                return p;
+            }
+
+            return DescendToLeaf(key, allowCompressed, addToRecentlyFoundPages: true, backward: false, out node);
+        }
+
         [ThreadStatic]
         private static FastList<long> CursorPathBuffer;
 
@@ -802,6 +816,17 @@ namespace Voron.Data.BTrees
 
         private TreePage SearchForPage(Slice key, bool allowCompressed, out TreeCursor cursorConstructor, out TreeNodeHeader* node, bool addToRecentlyFoundPages = true, bool backward = false)
         {
+            var p = DescendToLeaf(key, allowCompressed, addToRecentlyFoundPages, backward, out node);
+
+            // the leaf copy is taken after the search so it carries the found position.
+            // The descent path is still in CursorPathBuffer (thread static, single operation).
+            cursorConstructor = new TreeCursor(_llt, this, key, p, CursorPathBuffer.AsUnsafeSpan());
+
+            return p;
+        }
+
+        private TreePage DescendToLeaf(Slice key, bool allowCompressed, bool addToRecentlyFoundPages, bool backward, out TreeNodeHeader* node)
+        {
             var p = GetReadOnlyTreePage(_header.RootPageNumber);
 
             CursorPathBuffer ??= new FastList<long>();
@@ -847,10 +872,8 @@ namespace Voron.Data.BTrees
 
             node = p.Search(_llt, key, backward); // will set the LastSearchPosition
 
-            // the leaf copy is taken after the search so it carries the found position
-            cursorConstructor = new TreeCursor(_llt, this, key, p, CursorPathBuffer.AsUnsafeSpan());
-
-            if (p.NumberOfEntries > 0 && addToRecentlyFoundPages) // compressed page can have no ordinary entries
+            // a compressed page must never enter the recently-found cache
+            if (p.NumberOfEntries > 0 && p.IsCompressed == false && addToRecentlyFoundPages)
                 AddToRecentlyFoundPages(CursorPathBuffer, p, leftmostPage, rightmostPage);
 
             return p;
@@ -1154,8 +1177,7 @@ namespace Voron.Data.BTrees
                 Debug.Assert(p.IsLeaf && p.IsCompressed && p.PageNumber == emptyPage.PageNumber);
 
                 {
-                    ref var cursor = ref cursorConstructor;
-                    var treeRebalancer = new TreeRebalancer(_llt, this, ref cursor);
+                    var treeRebalancer = new TreeRebalancer(_llt, this, ref cursorConstructor);
                     TreePage changedPage = emptyPage;
                     while (changedPage.IsValid)
                     {
@@ -1204,17 +1226,16 @@ namespace Voron.Data.BTrees
                 }
 
                 {
-                    ref var cursor = ref cursorConstructor;
-                    while (cursor.PageCount > 0)
+                    while (cursorConstructor.PageCount > 0)
                     {
-                        if (cursor.CurrentPage.PageNumber == page.PageNumber)
+                        if (cursorConstructor.CurrentPage.PageNumber == page.PageNumber)
                         {
-                            if (cursor.PageCount == 1)
+                            if (cursorConstructor.PageCount == 1)
                                 return -1; // root page
 
-                            return cursor.ParentPage.PageNumber;
+                            return cursorConstructor.ParentPage.PageNumber;
                         }
-                        cursor.Pop();
+                        cursorConstructor.Pop();
                     }
                 }
             }

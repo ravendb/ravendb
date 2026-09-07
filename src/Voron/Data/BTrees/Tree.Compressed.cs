@@ -340,7 +340,7 @@ namespace Voron.Data.BTrees
             }
             else
             {
-                var page = SearchForPage(key, true, out _, out node, addToRecentlyFoundPages: false);
+                var page = FindPageFor(key, out node, allowCompressed: true);
 
                 if (page.IsCompressed)
                 {
