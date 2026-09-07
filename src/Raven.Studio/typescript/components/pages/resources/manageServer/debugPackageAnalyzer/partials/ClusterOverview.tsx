@@ -19,6 +19,8 @@ import SizeGetter from "components/common/SizeGetter";
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
 type NodeSummary = DebugPackageAnalysisSummary["SummaryPerNode"][string];
 type ClusterNodeInfo = NodeSummary["ClusterNodeInfo"];
+// unreachable nodes carry only NodeTag and NodeUrl (from the topology), so a missing NodeState marks an offline row
+type ClusterNodeRow = Partial<ClusterNodeInfo> & Pick<ClusterNodeInfo, "NodeTag" | "NodeUrl">;
 
 interface ClusterOverviewProps {
     summary: DebugPackageAnalysisSummary;
@@ -34,7 +36,7 @@ function useClusterOverviewColumns(availableWidth: number) {
     );
     const getSize = useMemo(() => virtualTableUtils.getCellSizeProvider(bodyWidth), [bodyWidth]);
 
-    const clusterColumns: ColumnDef<ClusterNodeInfo>[] = useMemo(
+    const clusterColumns: ColumnDef<ClusterNodeRow>[] = useMemo(
         () => [
             {
                 header: "Node tag",
@@ -97,6 +99,14 @@ export default function ClusterOverview({ summary }: ClusterOverviewProps) {
 function ClusterOverviewWithSize({ summary, width }: ClusterOverviewWithSizeProps) {
     const nodes = useMemo(() => Object.values(summary.SummaryPerNode ?? {}) as NodeSummary[], [summary]);
     const nodeInfos = useMemo(() => nodes.map((n) => n.ClusterNodeInfo).filter(Boolean), [nodes]);
+    const rows = useMemo<ClusterNodeRow[]>(
+        () =>
+            [
+                ...nodeInfos,
+                ...Object.entries(summary.UnreachableNodes ?? {}).map(([NodeTag, NodeUrl]) => ({ NodeTag, NodeUrl })),
+            ].sort((a, b) => a.NodeTag.localeCompare(b.NodeTag)),
+        [nodeInfos, summary]
+    );
 
     const leader = nodeInfos.find((n) => n.NodeState === "Leader");
 
@@ -106,9 +116,7 @@ function ClusterOverviewWithSize({ summary, width }: ClusterOverviewWithSizeProp
         return names.size;
     }, [nodes]);
 
-    // A node only carries ClusterNodeInfo if it was reachable when the package was captured, so the count of
-    // captured infos is our "online" count against the total set of nodes the package knows about.
-    const totalNodes = nodes.length;
+    const totalNodes = rows.length;
     const onlineNodes = nodeInfos.length;
     const allNodesOnline = onlineNodes === totalNodes;
 
@@ -128,10 +136,11 @@ function ClusterOverviewWithSize({ summary, width }: ClusterOverviewWithSizeProp
     const { clusterColumns } = useClusterOverviewColumns(width);
 
     const table = useReactTable({
-        data: nodeInfos,
+        data: rows,
         columns: clusterColumns,
-        enableSorting: nodeInfos.length > analyzerConstants.minRowsForControls,
-        enableColumnFilters: nodeInfos.length > analyzerConstants.minRowsForControls,
+        renderFallbackValue: "-",
+        enableSorting: rows.length > analyzerConstants.minRowsForControls,
+        enableColumnFilters: rows.length > analyzerConstants.minRowsForControls,
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
@@ -141,7 +150,7 @@ function ClusterOverviewWithSize({ summary, width }: ClusterOverviewWithSizeProp
         getRowId: (row) => row.NodeTag,
     });
 
-    const heightInPx = virtualTableUtils.getHeightInPx(nodeInfos.length, 300);
+    const heightInPx = virtualTableUtils.getHeightInPx(rows.length, 300);
 
     return (
         <div className="cluster-overview">
@@ -188,7 +197,11 @@ function ClusterOverviewWithSize({ summary, width }: ClusterOverviewWithSizeProp
 function ClusterRoleCell({ getValue }: { getValue: () => unknown }) {
     const state = getValue() as string;
     if (!state) {
-        return null;
+        return (
+            <span className="hstack gap-1 text-danger">
+                <Icon icon="disconnected" margin="m-0" /> Offline
+            </span>
+        );
     }
     switch (state) {
         case "Leader":
@@ -220,7 +233,10 @@ function ClusterRoleCell({ getValue }: { getValue: () => unknown }) {
     }
 }
 
-function ClusterOsCell({ row }: { row: { original: ClusterNodeInfo } }) {
+function ClusterOsCell({ row }: { row: { original: ClusterNodeRow } }) {
+    if (!row.original.OsName) {
+        return <>-</>;
+    }
     return (
         <>
             <Icon icon={osIcon(row.original.OsType)} /> {row.original.OsName}
@@ -230,6 +246,9 @@ function ClusterOsCell({ row }: { row: { original: ClusterNodeInfo } }) {
 
 function ClusterUrlCell({ getValue }: { getValue: () => unknown }) {
     const url = getValue() as string;
+    if (!url) {
+        return <>-</>;
+    }
     return (
         <a href={url} target="_blank" rel="noreferrer">
             {url}

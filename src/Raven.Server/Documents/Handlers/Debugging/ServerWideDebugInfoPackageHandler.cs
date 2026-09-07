@@ -145,7 +145,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                             }
                             catch (Exception e)
                             {
-                                await DebugInfoPackageUtils.WriteExceptionAsZipEntryAsync(e, archive, $"Node - [{ServerStore.NodeTag}]");
+                                await DebugInfoPackageUtils.WriteExceptionAsZipEntryAsync(e, archive, $"Node - [{tag}]");
                             }
                         }
                     }
