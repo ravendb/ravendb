@@ -109,6 +109,17 @@ namespace Voron.Data.Tables
             if (!index.Name.HasValue || SliceComparer.Equals(Slices.Empty, index.Name))
                 throw new ArgumentException("Fixed size index name must be non-empty", nameof(index));
 
+            if (index.CachePosition == -1)
+            {
+                index.CachePosition = _fixedSizeIndexes.Count;
+            }
+            else if (index.CachePosition != _fixedSizeIndexes.Count)
+            {
+                throw new InvalidOperationException(
+                    "Fixed size index " + index.Name + " was registered at position " + index.CachePosition +
+                    " by another schema, but would be at " + _fixedSizeIndexes.Count + " here. A definition instance " +
+                    "shared between schemas must occupy the same position in all of them (or use a distinct instance).");
+            }
             _fixedSizeIndexes[index.Name] = index;
 
             return this;

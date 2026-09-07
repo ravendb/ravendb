@@ -534,6 +534,8 @@ namespace Voron.Data.Tables
 
             public int StartIndex = -1;
 
+            public int CachePosition = -1;
+
             public long GetValue(ref TableValueReader value)
             {
                 var ptr = value.Read(StartIndex, out int totalSize);

@@ -1278,15 +1278,22 @@ namespace Voron.Data.Tables
             throw new VoronErrorException("Attempt to add duplicate value " + key + " to " + indexDef.Name + " on " + Name);
         }
 
+        private FixedSizeTree[] _resolvedFsiTrees;
+
         public FixedSizeTree GetFixedSizeTree(TableSchema.FixedSizeKeyIndexDef indexDef)
         {
-            if (indexDef.IsGlobal)
+            var trees = _resolvedFsiTrees ??= new FixedSizeTree[_schema.FixedSizeIndexes.Count];
+            ref FixedSizeTree tree = ref trees[indexDef.CachePosition];
+            if (tree != null)
             {
-                return _tx.GetGlobalFixedSizeTree(indexDef.Name, sizeof(long), isIndexTree: true, newPageAllocator: GlobalPageAllocator);
+                Debug.Assert(SliceComparer.Equals(tree.Name, indexDef.Name),
+                    $"fixed size tree cache position {indexDef.CachePosition} holds '{tree.Name}' but was asked for '{indexDef.Name}' on table {Name}");
+                return tree;
             }
 
-            var tableTree = _tx.ReadTree(Name);
-            return GetFixedSizeTree(tableTree, indexDef.Name, sizeof(long), isGlobal: false, isIndexTree: true);
+            return tree = indexDef.IsGlobal
+                ? _tx.GetGlobalFixedSizeTree(indexDef.Name, sizeof(long), isIndexTree: true, newPageAllocator: GlobalPageAllocator)
+                : GetFixedSizeTree(_tx.ReadTree(Name), indexDef.Name, sizeof(long), isGlobal: false, isIndexTree: true);
         }
 
         internal FixedSizeTree GetFixedSizeTree(Tree parent, Slice name, ushort valSize, bool isGlobal, bool isIndexTree = false)
