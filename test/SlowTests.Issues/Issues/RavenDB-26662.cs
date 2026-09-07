@@ -2,8 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents;
-using Raven.Client.ServerWide;
+using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Commercial.WriteUsageMetering;
@@ -34,6 +35,46 @@ namespace SlowTests.Issues
         {
             public string Id { get; set; }
             public string Name { get; set; }
+        }
+
+        private sealed class QuillApp
+        {
+            public string Database { get; set; }
+        }
+
+        private static string AppDocumentId(string database) => Constants.Quill.AppIdPrefix + database;
+
+        private async Task<DocumentStore> CreateQuillConfigAsync(List<RavenServer> nodes, RavenServer leader, params string[] applications)
+        {
+            // reporting is gated on the leader alone, where the observer builds the snapshot
+            leader.ServerStore.ForTestingPurposesOnly().ForceWriteUsageReportingEnabled = true;
+
+            await CreateDatabaseInCluster(Constants.Quill.ConfigDatabase, replicationFactor: nodes.Count, leader.WebUrl);
+
+            var config = new DocumentStore { Database = Constants.Quill.ConfigDatabase, Urls = new[] { leader.WebUrl } };
+            config.Initialize();
+
+            await RegisterApplicationsAsync(config, nodes.Count, applications);
+            return config;
+        }
+
+        private static async Task RegisterApplicationsAsync(DocumentStore config, int nodesCount, params string[] applications)
+        {
+            if (applications.Length == 0)
+                return;
+
+            using var session = OpenConfigSession(config, nodesCount);
+            foreach (var application in applications)
+                await session.StoreAsync(new QuillApp { Database = application }, AppDocumentId(application));
+            await session.SaveChangesAsync();
+        }
+
+        private static IAsyncDocumentSession OpenConfigSession(DocumentStore config, int nodesCount)
+        {
+            var session = config.OpenAsyncSession();
+            if (nodesCount > 1)
+                session.Advanced.WaitForReplicationAfterSaveChanges(replicas: nodesCount - 1);
+            return session;
         }
 
         private static async Task<string> ReadLiveChangeVectorAsync(List<RavenServer> nodes, string nodeTag, string resourceName)
@@ -85,6 +126,12 @@ namespace SlowTests.Issues
             for (var i = 0; i < count; i++)
                 await session.StoreAsync(new Item { Name = $"item-{i}" }, $"items/{i}");
             await session.SaveChangesAsync();
+        }
+
+        private static async Task WaitForObserverIterationsAsync(RavenServer leader, int iterations)
+        {
+            var current = leader.ServerStore.Observer._iteration;
+            await WaitForValueAsync(() => leader.ServerStore.Observer._iteration >= current + iterations, true, timeout: 30_000, interval: 100);
         }
 
         [RavenFact(RavenTestCategory.Licensing | RavenTestCategory.Cluster)]
@@ -149,6 +196,7 @@ namespace SlowTests.Issues
                 ReplicationFactor = 3,
                 Server = leader
             }))
+            using (await CreateQuillConfigAsync(nodes, leader, store.Database))
             {
                 await WriteDocsAsync(store, count: 50);
 
@@ -200,6 +248,8 @@ namespace SlowTests.Issues
                     await WriteDocsAsync(store, count: c);
                 }
 
+                using var config = await CreateQuillConfigAsync(nodes, leader, stores.Select(s => s.Database).ToArray());
+
                 var topologyIds = new List<string>();
                 var expectedCvById = new Dictionary<string, string>();
                 foreach (var store in stores)
@@ -244,6 +294,7 @@ namespace SlowTests.Issues
             await ShardingCluster.CreateShardedDatabaseInCluster(database, replicationFactor: 2, (nodes, leader), shards: shards);
 
             using (var store = new DocumentStore { Database = database, Urls = new[] { leader.WebUrl } })
+            using (await CreateQuillConfigAsync(nodes, leader, database))
             {
                 store.Initialize();
                 await WriteDocsAsync(store, count: 30, replicas: 1);
@@ -293,6 +344,7 @@ namespace SlowTests.Issues
             var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
 
             using (var store = GetDocumentStore(new Options { ReplicationFactor = 3, Server = leader }))
+            using (await CreateQuillConfigAsync(nodes, leader, store.Database))
             {
                 var record = GetDatabaseRecord(store);
                 var topologyId = record.Topology.DatabaseTopologyIdBase64;
@@ -313,6 +365,72 @@ namespace SlowTests.Issues
             }
         }
 
+        [RavenFact(RavenTestCategory.Licensing | RavenTestCategory.Cluster)]
+        public async Task OnlyDatabases_WithAnAppDocument_AreReported()
+        {
+            var (nodes, leader) = await CreateRaftCluster(1, watcherCluster: true);
+
+            using (var application = GetDocumentStore(new Options { ReplicationFactor = 1, Server = leader }))
+            using (var other = GetDocumentStore(new Options { ReplicationFactor = 1, Server = leader }))
+            using (await CreateQuillConfigAsync(nodes, leader, application.Database))
+            {
+                Assert.True(await WaitForValueAsync(() => SnapshotEntryByDatabase(leader, application.Database) != null, true, timeout: 30_000, interval: 100));
+
+                leader.ServerStore.Observer.Suspended = true;
+
+                var reported = leader.ServerStore.Observer.LatestWriteUsageSnapshot.Applications.Select(a => a.ApplicationName).ToList();
+                Assert.Equal(new[] { application.Database }, reported);
+                Assert.DoesNotContain(other.Database, reported);
+                Assert.DoesNotContain(Constants.Quill.ConfigDatabase, reported);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Licensing | RavenTestCategory.Cluster)]
+        public async Task DeletingTheAppDocument_StopsReportingTheDatabase()
+        {
+            var (nodes, leader) = await CreateRaftCluster(1, watcherCluster: true);
+
+            using (var store = GetDocumentStore(new Options { ReplicationFactor = 1, Server = leader }))
+            using (var config = await CreateQuillConfigAsync(nodes, leader, store.Database))
+            {
+                Assert.True(await WaitForValueAsync(() => SnapshotEntryByDatabase(leader, store.Database) != null, true, timeout: 30_000, interval: 100));
+
+                using (var session = OpenConfigSession(config, nodes.Count))
+                {
+                    session.Delete(AppDocumentId(store.Database));
+                    await session.SaveChangesAsync();
+                }
+
+                Assert.True(await WaitForValueAsync(() => SnapshotEntryByDatabase(leader, store.Database) == null, true, timeout: 30_000, interval: 100));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Licensing | RavenTestCategory.Cluster)]
+        public async Task WithoutQuillConfig_NothingIsSnapshottedOrReported()
+        {
+            var (nodes, leader) = await CreateRaftCluster(1, watcherCluster: true);
+
+            var reportReady = false;
+            var testingStuff = leader.ServerStore.ForTestingPurposesOnly();
+            testingStuff.ForceWriteUsageReportingEnabled = true;
+            testingStuff.SkipWriteUsageActualSend = true;
+            testingStuff.OnWriteUsageReportReady = _ => reportReady = true;
+
+            using (GetDocumentStore(new Options { ReplicationFactor = 1, Server = leader }))
+            {
+                await WaitForObserverIterationsAsync(leader, iterations: 3);
+
+                Assert.Empty(leader.ServerStore.Observer.LatestWriteUsageSnapshot.Applications);
+
+                using (var reporter = new WriteUsageReporter(leader.ServerStore, leader.ServerStore.Observer, leader.ServerStore.Engine.CurrentTerm, leader.ServerStore.ServerShutdown))
+                {
+                    await reporter.ReportOnceAsync();
+                }
+
+                Assert.False(reportReady, "No report should be assembled when there are no applications to report.");
+            }
+        }
+
         [RavenFact(RavenTestCategory.Licensing | RavenTestCategory.Cluster, LicenseRequired = true)]
         public async Task WriteUsageReporter_assembles_the_report_from_the_observer_snapshot()
         {
@@ -320,17 +438,17 @@ namespace SlowTests.Issues
 
             DynamicJsonValue captured = null;
             var testingStuff = leader.ServerStore.ForTestingPurposesOnly();
-            testingStuff.ForceWriteUsageReportingEnabled = true;
             testingStuff.SkipWriteUsageActualSend = true;
             testingStuff.OnWriteUsageReportReady = body => captured = body;
 
             var database = GetDatabaseName();
             using (var store = new DocumentStore { Database = database, Urls = new[] { leader.WebUrl } })
+            using (await CreateQuillConfigAsync(nodes, leader, database))
             {
                 store.Initialize();
                 await CreateDatabaseInCluster(database, replicationFactor: 1, leader.WebUrl);
 
-                await WaitForValueAsync(() => SnapshotEntryByDatabase(leader, database) != null, true, timeout: 30_000, interval: 100);
+                Assert.True(await WaitForValueAsync(() => SnapshotEntryByDatabase(leader, database) != null, true, timeout: 30_000, interval: 100));
 
                 using (var reporter = new WriteUsageReporter(leader.ServerStore, leader.ServerStore.Observer, leader.ServerStore.Engine.CurrentTerm, leader.ServerStore.ServerShutdown))
                 {
@@ -346,19 +464,14 @@ namespace SlowTests.Issues
                 Assert.NotNull(license);
 
                 Assert.True(report.TryGet(nameof(WriteUsageReport.Applications), out BlittableJsonReaderArray applications));
-                var found = false;
+                var names = new List<string>();
                 foreach (var item in applications)
                 {
-                    if (item is BlittableJsonReaderObject app &&
-                        app.TryGet(nameof(WriteUsageApplicationSnapshot.ApplicationName), out string name) &&
-                        name == database)
-                    {
-                        found = true;
-                        break;
-                    }
+                    if (item is BlittableJsonReaderObject app && app.TryGet(nameof(WriteUsageApplicationSnapshot.ApplicationName), out string name))
+                        names.Add(name);
                 }
 
-                Assert.True(found, $"Expected the report to contain an entry for '{database}'.");
+                Assert.Equal(new[] { database }, names);
             }
         }
 
@@ -369,6 +482,7 @@ namespace SlowTests.Issues
             var database = GetDatabaseName();
 
             using (var store = new DocumentStore { Database = database, Urls = new[] { leader.WebUrl } })
+            using (await CreateQuillConfigAsync(nodes, leader, database))
             {
                 store.Initialize();
                 await CreateDatabaseInCluster(database, replicationFactor: 3, leader.WebUrl);
@@ -382,8 +496,7 @@ namespace SlowTests.Issues
                 var idTickA = SnapshotEntryByDatabase(leader, database).TopologyId;
                 Assert.Equal(firstId, idTickA);
 
-                var iterationA = leader.ServerStore.Observer._iteration;
-                await WaitForValueAsync(() => leader.ServerStore.Observer._iteration >= iterationA + 2, true, timeout: 30_000, interval: 100);
+                await WaitForObserverIterationsAsync(leader, iterations: 2);
 
                 var entryTickB = SnapshotEntryByDatabase(leader, database);
                 Assert.NotNull(entryTickB);
@@ -409,6 +522,7 @@ namespace SlowTests.Issues
             var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
 
             using (var store = GetDocumentStore(new Options { ReplicationFactor = 3, Server = leader }))
+            using (await CreateQuillConfigAsync(nodes, leader, store.Database))
             {
                 await WriteDocsAsync(store, count: 50);
 

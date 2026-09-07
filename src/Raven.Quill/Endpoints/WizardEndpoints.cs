@@ -572,7 +572,7 @@ public static class WizardEndpoints
         using (var session = store.OpenAsyncSession())
         {
             app.AppName = body.AppName;
-            await session.StoreAsync(app, id: $"apps/{slug}", ct);
+            await session.StoreAsync(app, id: AppLookup.DocumentIdFor(slug), ct);
             await session.SaveChangesAsync(ct);
         }
 

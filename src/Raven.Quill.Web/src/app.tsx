@@ -1,5 +1,5 @@
 import { Link, Outlet, useMatches, useParams } from "react-router";
-import { useState, type CSSProperties } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MessageCircle, Sparkles } from "lucide-react";
 import { isAppRouteHandle } from "@/routes";
@@ -13,8 +13,9 @@ import { COMPACT_LAYOUT_MEDIA_QUERY, useMediaQuery } from "@/lib/use-media-query
 import { cn } from "@/lib/utils";
 import { readStoredValue, writeStoredValue } from "@/lib/safe-storage";
 import QuillMark from "@/components/brand/quill-mark.svg?react";
-import { AssistantPanel } from "@/components/layout/assistant-panel";
-import { ASSISTANT_PANEL_TITLE_ID, useAssistantPinning, useAssistantStore } from "@/components/layout/assistant-store";
+// AI assistant is held back for the release. Restore the commented-out imports and shell code below to bring it back.
+// import { AssistantPanel } from "@/components/layout/assistant-panel";
+// import { ASSISTANT_PANEL_TITLE_ID, useAssistantPinning, useAssistantStore } from "@/components/layout/assistant-store";
 import { FeedbackSheet } from "@/components/layout/feedback-sheet";
 import { Heading } from "@/components/typography";
 import { PageContainer } from "@/components/page-container";
@@ -39,12 +40,12 @@ function App() {
         () => shouldCollapseSidebarForRoute || readStoredSidebarCollapsed(),
     );
     const [wasSidebarCollapsedForRoute, setWasSidebarCollapsedForRoute] = useState(shouldCollapseSidebarForRoute);
-    const { isPinned: isAssistantPinned } = useAssistantPinning();
-    const isAssistantOpen = useAssistantStore((state) => state.isOpen);
-    const isAssistantResizing = useAssistantStore((state) => state.isResizing);
-    const assistantWidthPx = useAssistantStore((state) => state.widthPx);
-    const assistantHeightPx = useAssistantStore((state) => state.heightPx);
-    const setAssistantOpen = useAssistantStore((state) => state.setOpen);
+    // const { isPinned: isAssistantPinned } = useAssistantPinning();
+    // const isAssistantOpen = useAssistantStore((state) => state.isOpen);
+    // const isAssistantResizing = useAssistantStore((state) => state.isResizing);
+    // const assistantWidthPx = useAssistantStore((state) => state.widthPx);
+    // const assistantHeightPx = useAssistantStore((state) => state.heightPx);
+    // const setAssistantOpen = useAssistantStore((state) => state.setOpen);
 
     // Routes like wizards start with a collapsed sidebar, but the user can still
     // expand it. Restore the stored preference when leaving such a route.
@@ -75,15 +76,15 @@ function App() {
             className={cn(
                 "app-shell bg-surface2 text-foreground dark:bg-surface1",
                 isSidebarEffectivelyCollapsed && "app-shell--collapsed",
-                isAssistantOpen && isAssistantPinned && "app-shell--assistant-open",
-                isAssistantResizing && "app-shell--assistant-resizing",
+                // isAssistantOpen && isAssistantPinned && "app-shell--assistant-open",
+                // isAssistantResizing && "app-shell--assistant-resizing",
             )}
-            style={
-                {
-                    "--app-assistant-width": `${assistantWidthPx}px`,
-                    "--app-assistant-height": `${assistantHeightPx}px`,
-                } as CSSProperties
-            }
+            // style={
+            //     {
+            //         "--app-assistant-width": `${assistantWidthPx}px`,
+            //         "--app-assistant-height": `${assistantHeightPx}px`,
+            //     } as CSSProperties
+            // }
         >
             <header className="app-shell__header relative px-3 py-2">
                 <div className="flex min-w-0 items-center gap-2">
@@ -114,7 +115,7 @@ function App() {
                         }
                     />
                     <TooltipProvider>
-                        <Tooltip>
+                        {/* <Tooltip>
                             <TooltipTrigger asChild>
                                 <Button
                                     variant="ghost"
@@ -130,6 +131,22 @@ function App() {
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent>AI assistant</TooltipContent>
+                        </Tooltip> */}
+                        {/* A disabled button swallows pointer events, so the wrapper receives hover and focus for the tooltip. */}
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <span tabIndex={0} className="inline-flex rounded-lg">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon-sm"
+                                        disabled
+                                        aria-label="AI assistant (coming soon)"
+                                    >
+                                        <Sparkles className="text-muted-foreground" aria-hidden="true" />
+                                    </Button>
+                                </span>
+                            </TooltipTrigger>
+                            <TooltipContent>AI assistant (coming soon)</TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
                     <UserMenu />
@@ -191,7 +208,7 @@ function App() {
             </main>
 
             {/* Stays mounted while closed so the conversation and draft survive toggling. */}
-            <aside
+            {/* <aside
                 className={cn(
                     isAssistantPinned
                         ? "app-shell__assistant"
@@ -202,7 +219,7 @@ function App() {
                 inert={!isAssistantOpen}
             >
                 <AssistantPanel />
-            </aside>
+            </aside> */}
         </div>
     );
 }

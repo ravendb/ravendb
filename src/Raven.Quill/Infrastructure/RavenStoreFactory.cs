@@ -38,13 +38,33 @@ public static class RavenStoreFactory
         public string DatabaseTopologyId;
     }
 
-    public static async Task<DatabaseCreationStatus> EnsureDatabaseAsync(IDocumentStore store, string database, DatabaseLockMode lockMode = DatabaseLockMode.Unlock, CancellationToken ct = default)
+    /// <summary>
+    /// Settings the config database - and only the config database - is created with. It must never be
+    /// unloaded: it is the only record of which databases are Quill applications, and the cluster observer
+    /// can only read that list while it is loaded. On RavenDB's default 15 minute idle timeout a quiet
+    /// appliance would unload it and write-usage metering would go dark until something touched it again.
+    /// Application databases keep the server's defaults.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, string> ConfigDatabaseSettings = new Dictionary<string, string>
+    {
+        { Constants.RavenSettings.MaxIdleTimeInSec, Constants.RavenSettings.NeverIdle }
+    };
+
+    public static async Task<DatabaseCreationStatus> EnsureDatabaseAsync(IDocumentStore store, string database, DatabaseLockMode lockMode = DatabaseLockMode.Unlock,
+        IReadOnlyDictionary<string, string>? settings = null, CancellationToken ct = default)
     {
         var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database), ct);
         if (record is not null)
             return new DatabaseCreationStatus { Created = false, DatabaseTopologyId = record.Topology.DatabaseTopologyIdBase64 };
 
-        var r = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(database) { LockMode = lockMode }), ct);
+        var newRecord = new DatabaseRecord(database) { LockMode = lockMode };
+        if (settings is not null)
+        {
+            foreach (var (key, value) in settings)
+                newRecord.Settings[key] = value;
+        }
+
+        var r = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(newRecord), ct);
         return new DatabaseCreationStatus { Created = true, DatabaseTopologyId = r.Topology.DatabaseTopologyIdBase64 };
     }
 

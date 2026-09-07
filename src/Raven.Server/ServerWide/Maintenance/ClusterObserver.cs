@@ -180,6 +180,7 @@ namespace Raven.Server.ServerWide.Maintenance
             List<string> databases;
 
             var writeUsageSnapshots = new List<WriteUsageApplicationSnapshot>();
+            var quillApplications = GetQuillApplicationNames(newStats);
 
             using (_contextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
@@ -195,6 +196,8 @@ namespace Raven.Server.ServerWide.Maintenance
 
             foreach (var database in databases)
             {
+                var reportUsage = quillApplications != null && quillApplications.Contains(database);
+
                 using (_contextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
                 {
@@ -248,21 +251,47 @@ namespace Raven.Server.ServerWide.Maintenance
                         {
                             var state = new DatabaseObservationState(topology.Name, rawRecord, topology.Topology, clusterTopology, newStats, prevStats, etag, _iteration);
 
-                            // Collect the current write-usage values for this topology (database or shard):
-                            // one entry per topology, carrying the MEMBER change vectors merged into a single
-                            // cluster-wide change vector.
-                            var memberChangeVectors = new List<string>();
-                            foreach (var member in state.DatabaseTopology.Members)
+                            if (reportUsage)
                             {
-                                var memberReport = state.GetCurrentDatabaseReport(member);
-                                if (memberReport == null)
-                                    continue;
+                                // Collect the current write-usage values for this topology (database or shard):
+                                // one entry per topology, carrying the MEMBER change vectors merged into a single
+                                // cluster-wide change vector.
+                                var memberChangeVectors = new List<string>();
+                                var complete = true;
+                                var nodeSnapshots = new List<WriteUsageNodeSnapshot>();
 
-                                memberChangeVectors.Add(ChangeVector.StripMoveTag(memberReport.DatabaseChangeVector, context).AsString());
+                                foreach (var member in state.DatabaseTopology.Members)
+                                {
+                                    var memberReport = state.GetCurrentDatabaseReport(member);
+                                    if (memberReport == null)
+                                        continue;
+
+                                    // A member that isn't holding the database open - unloaded after going idle,
+                                    // still loading, faulted - reports no change vector at all, while a loaded
+                                    // database with no writes reports an empty one. Merging that gap in would
+                                    // understate the usage, and if every member is idle it would collapse to
+                                    // empty and read as a reset rather than a pause. Report nothing for this
+                                    // topology instead and pick it up again once the members are back.
+                                    if (memberReport.DatabaseChangeVector == null)
+                                    {
+                                        complete = false;
+                                        break;
+                                    }
+
+                                    memberChangeVectors.Add(ChangeVector.StripMoveTag(memberReport.DatabaseChangeVector, context).AsString());
+
+                                    if (string.IsNullOrEmpty(memberReport.DatabaseId))
+                                        continue;
+
+                                    nodeSnapshots.Add(new WriteUsageNodeSnapshot(memberReport.DatabaseId, memberReport.LastEtag, memberReport.SystemCollections));
+                                }
+
+                                if (complete)
+                                {
+                                    var mergedChangeVector = ChangeVectorUtils.MergeVectors(memberChangeVectors);
+                                    writeUsageSnapshots.Add(new WriteUsageApplicationSnapshot(state.Name, state.DatabaseTopology.DatabaseTopologyIdBase64, mergedChangeVector, nodeSnapshots));
+                                }
                             }
-
-                            var mergedChangeVector = ChangeVectorUtils.MergeVectors(memberChangeVectors);
-                            writeUsageSnapshots.Add(new WriteUsageApplicationSnapshot(state.Name, state.DatabaseTopology.DatabaseTopologyIdBase64, mergedChangeVector));
 
                             try
                             {
@@ -482,6 +511,23 @@ namespace Raven.Server.ServerWide.Maintenance
                     }
                 }
             }
+        }
+
+        private HashSet<string> GetQuillApplicationNames(Dictionary<string, ClusterNodeStatusReport> stats)
+        {
+            if (WriteUsageReporter.IsReportingEnabled(_server) == false)
+                return null;
+
+            var applications = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var nodeReport in stats.Values)
+            {
+                if (nodeReport.Report.TryGetValue(Client.Constants.Quill.ConfigDatabase, out var configReport) == false || configReport.QuillApplications == null)
+                    continue;
+
+                applications.UnionWith(configReport.QuillApplications);
+            }
+
+            return applications;
         }
 
         private bool SkipAnalyzingDatabaseGroup(DatabaseObservationState state, Leader currentLeader, DateTime now)
