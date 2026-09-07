@@ -40,18 +40,21 @@ function rangeSignature(range: TimeSeriesRange): string {
     return `${stamp(range.startDate)}|${stamp(range.endDate)}`;
 }
 
-function describeRange(range: TimeSeriesRange): string {
-    const fmt = (d: moment.Moment) => d.clone().local().format(SUMMARY_FORMAT);
+function describeRange(range: TimeSeriesRange, timezone: FilterTimezone): string {
+    // Format in the same zone the picker is showing, so this destructive summary and the picker
+    // above it never disagree about the wall-clock. The suffix tells the reader which zone it is.
+    const fmt = (d: moment.Moment) => (timezone === "utc" ? d.clone().utc() : d.clone().local()).format(SUMMARY_FORMAT);
+    const zone = timezone === "utc" ? "UTC" : "Local";
     const { startDate, endDate } = range;
 
     if (startDate && endDate) {
-        return `entries from ${fmt(startDate)} to ${fmt(endDate)}, inclusive of both bounds`;
+        return `entries from ${fmt(startDate)} to ${fmt(endDate)} (${zone}), inclusive of both bounds`;
     }
     if (endDate) {
-        return `all entries up to and including ${fmt(endDate)}`;
+        return `all entries up to and including ${fmt(endDate)} (${zone})`;
     }
     if (startDate) {
-        return `all entries from ${fmt(startDate)} onward`;
+        return `all entries from ${fmt(startDate)} (${zone}) onward`;
     }
     return "all entries";
 }
@@ -176,7 +179,7 @@ export default function DeleteTimeSeriesRangeModal(props: DeleteTimeSeriesRangeM
                             )}
                         </div>
                         <div>
-                            You&apos;re deleting {describeRange(range.range)}.{" "}
+                            You&apos;re deleting {describeRange(range.range, range.timezone)}.{" "}
                             {!showExactCount && "Narrow the range to see an exact count. "}
                             This can&apos;t be undone.
                         </div>
