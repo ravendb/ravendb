@@ -26,7 +26,7 @@ export function DashboardUsage() {
     const setupStartDate = useSetupStartDate();
 
     // Keep the previous chart on screen while the finer-grained period loads, so
-    // drilling in reads as a zoom rather than the chart blanking out and back in.
+    // drilling in reads as a transition rather than the chart blanking out and back in.
     const usageQuery = useQuery({ ...api.queries.settings.usage(period), placeholderData: keepPreviousData });
 
     const totalUsage = usageQuery.data?.byPeriod?.reduce((sum, bucket) => sum + bucket.usage, 0);
