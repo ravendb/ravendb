@@ -2935,18 +2935,19 @@ namespace Raven.Server
             try
             {
                 using (var context = JsonOperationContext.ShortTermSingleUse())
-                await using (var errorWriter = new AsyncBlittableJsonTextWriter(context, tcpStream))
                 {
-                    context.Write(errorWriter, new DynamicJsonValue
+                    await using (var errorWriter = new AsyncBlittableJsonTextWriter(context, tcpStream))
                     {
-                        ["Type"] = "Error",
-                        ["Exception"] = e.ToString(),
-                        ["Message"] = e.Message
-                    });
+                        context.Write(errorWriter, new DynamicJsonValue
+                        {
+                            ["Type"] = "Error",
+                            ["Exception"] = e.ToString(),
+                            ["Message"] = e.Message
+                        });
+                    }
 
-                    await errorWriter.FlushAsync();
+                    await tcpStream.FlushAsync();
                 }
-
             }
             catch (Exception inner)
             {

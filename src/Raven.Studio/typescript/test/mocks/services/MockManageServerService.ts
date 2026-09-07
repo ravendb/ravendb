@@ -256,4 +256,8 @@ export default class MockManageServerService extends AutoMockService<ManageServe
             DebugPackageStubs.threadsInfo()
         );
     }
+
+    withServerWideTasks(dto?: MockedValue<Raven.Server.Web.System.AdminStudioServerWideHandler.ServerWideTasksResult>) {
+        return this.mockResolvedValue(this.mocks.getAllServerWideTasks, dto, ManageServerStubs.serverWideTasks());
+    }
 }

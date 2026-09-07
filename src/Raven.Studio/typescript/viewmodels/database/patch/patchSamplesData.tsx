@@ -215,8 +215,8 @@ update {
                 returnType: "string",
                 description: (
                     <>
-                        Creates or updates a document and returns its ID. Use <code>null</code> or <code>undefined</code>{" "}
-                        to generate an ID.
+                        Creates or updates a document and returns its ID. Use <code>null</code> or{" "}
+                        <code>undefined</code> to generate an ID.
                     </>
                 ),
                 sampleScript: `// Create a new audit-log document for each order.
@@ -375,7 +375,8 @@ update {
                 returnType: "object",
                 description: (
                     <>
-                        Returns the time series statistics: <code>Start</code>, <code>End</code>, and <code>Count</code>.
+                        Returns the time series statistics: <code>Start</code>, <code>End</code>, and <code>Count</code>
+                        .
                     </>
                 ),
                 sampleScript: `// Store "HeartRates" time series statistics in a field.
@@ -405,8 +406,8 @@ update {
                 returnType: "boolean",
                 description: (
                     <>
-                        Copies an attachment from a source document to the target document. Returns <code>false</code> if
-                        the source attachment was not found.
+                        Copies an attachment from a source document to the target document. Returns <code>false</code>{" "}
+                        if the source attachment was not found.
                     </>
                 ),
                 sampleScript: `// Copy an attachment from one category to another.
@@ -618,7 +619,11 @@ update {
                 signature:
                     "convertToTimeSpanString(ticks | hours, minutes, seconds | days, hours, minutes, seconds[, milliseconds])",
                 returnType: "string",
-                description: <>Returns a <code>TimeSpan</code> built from the supplied time components.</>,
+                description: (
+                    <>
+                        Returns a <code>TimeSpan</code> built from the supplied time components.
+                    </>
+                ),
                 sampleScript: `// Store a fixed 1h30m processing time as a TimeSpan.
 from Orders as o
 update {
@@ -645,9 +650,7 @@ update {
                 signature: "toStringWithFormat(object, format?, culture?)",
                 returnType: "string",
                 description: (
-                    <>
-                        Formats a date, number, boolean, or date-string using an optional .NET format and culture.
-                    </>
+                    <>Formats a date, number, boolean, or date-string using an optional .NET format and culture.</>
                 ),
                 sampleScript: `// Format Freight as a currency string.
 from Orders as o

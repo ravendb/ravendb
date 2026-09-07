@@ -449,51 +449,39 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
     }
 
     /// <summary>
-    /// Collects the active configured tables (including embedded tables recursively) as a flat list
-    /// of TableInfo instances with schema, name, and primary key columns. Disabled root tables - and
-    /// their embedded tables - are excluded, so they are neither initial-loaded nor change-captured.
+    /// Collects the active configured tables (including embedded tables recursively) as a flat,
+    /// deduplicated list of physical (schema, table) identities. A source table can be mapped several
+    /// times at once (a root collection and/or embedded arrays), but must be read/captured exactly ONCE
+    /// and then fanned out to all its processors. Disabled root tables - and their embedded tables -
+    /// are excluded, so they are neither initial-loaded nor change-captured.
     /// </summary>
     /// <param name="defaultSchema">Default schema when SourceTableSchema is null (e.g., "public" for PostgreSQL, "dbo" for SQL Server).</param>
     public List<TableInfo> CollectAllTablesFlat(string defaultSchema)
     {
         var tables = new List<TableInfo>();
+        var seen = new HashSet<TableInfo>();
+
+        void AddUnique(string schema, string tableName)
+        {
+            var info = new TableInfo
+            {
+                Schema = string.IsNullOrEmpty(schema) ? defaultSchema : schema,
+                TableName = tableName,
+            };
+            if (seen.Add(info))
+                tables.Add(info);
+        }
+
         foreach (var table in Tables)
         {
             if (table.Disabled)
                 continue;
 
-            tables.Add(new TableInfo
-            {
-                Schema = string.IsNullOrEmpty(table.SourceTableSchema) ? defaultSchema : table.SourceTableSchema,
-                TableName = table.SourceTableName,
-                PrimaryKeyColumns = table.PrimaryKeyColumns,
-            });
-
-            if (table.EmbeddedTables != null)
-            {
-                foreach (var embedded in table.EmbeddedTables)
-                    CollectEmbeddedTablesFlat(embedded, defaultSchema, tables);
-            }
+            AddUnique(table.SourceTableSchema, table.SourceTableName);
+            ForEachEmbeddedTable(table.EmbeddedTables, e => AddUnique(e.SourceTableSchema, e.SourceTableName));
         }
+
         return tables;
-    }
-
-    private static void CollectEmbeddedTablesFlat(CdcSinkEmbeddedTableConfig embedded, string defaultSchema, List<TableInfo> tables)
-    {
-        RuntimeHelpers.EnsureSufficientExecutionStack();
-
-        tables.Add(new TableInfo
-        {
-            Schema = string.IsNullOrEmpty(embedded.SourceTableSchema) ? defaultSchema : embedded.SourceTableSchema,
-            TableName = embedded.SourceTableName,
-            PrimaryKeyColumns = embedded.PrimaryKeyColumns,
-        });
-
-        if (embedded.EmbeddedTables != null)
-        {
-            foreach (var child in embedded.EmbeddedTables)
-                CollectEmbeddedTablesFlat(child, defaultSchema, tables);
-        }
     }
 
     /// <summary>
@@ -519,12 +507,16 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
     {
         public string Schema { get; set; }
         public string TableName { get; set; }
-        public List<string> PrimaryKeyColumns { get; set; }
 
         public string FullName => $"{Schema}.{TableName}";
 
-        public override int GetHashCode() => StringComparer.OrdinalIgnoreCase.GetHashCode(FullName);
-        public override bool Equals(object obj) => obj is TableInfo other && string.Equals(FullName, other.FullName, StringComparison.OrdinalIgnoreCase);
+        public override int GetHashCode() => HashCode.Combine(
+            StringComparer.OrdinalIgnoreCase.GetHashCode(Schema ?? string.Empty),
+            StringComparer.OrdinalIgnoreCase.GetHashCode(TableName ?? string.Empty));
+
+        public override bool Equals(object obj) => obj is TableInfo other
+            && string.Equals(Schema, other.Schema, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(TableName, other.TableName, StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool HaveColumnsChanged(List<CdcColumnMapping> local, List<CdcColumnMapping> remote)

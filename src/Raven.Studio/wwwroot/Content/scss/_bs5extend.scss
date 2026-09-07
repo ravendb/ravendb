@@ -655,6 +655,7 @@ $filtering-input-bg: $toggle-bg !default;
     min-width: 20em;
     padding-left: $gutter-sm;
     padding-right: $gutter-sm;
+    box-sizing: border-box;
 }
 
 .hover-filter {

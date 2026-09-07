@@ -8,6 +8,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Util;
@@ -338,6 +339,11 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
                 if (line.StartsWith("{"))
                 {
                     using var final = context.Sync.ReadForMemory(line, "final/result");
+                    // An exception thrown after streaming already started (HTTP 200) is written into the stream as the
+                    // standard error payload - surface it (e.g. RefusedToAnswerException) instead of parsing it as the result.
+                    if (final.TryGet(nameof(ExceptionDispatcher.ExceptionSchema.Type), out string exceptionType) && string.IsNullOrEmpty(exceptionType) == false)
+                        throw ExceptionDispatcher.Get(final, response.StatusCode);
+
                     SetResponse(context, final, fromCache: false);
                     break;
                 }

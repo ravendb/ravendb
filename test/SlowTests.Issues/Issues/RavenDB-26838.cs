@@ -223,7 +223,7 @@ public class RavenDB_26838 : RavenTestBase
             using var process = new TestCdcSinkProcess(config, database);
             var docProcessor = process.TestDocumentProcessor;
             docProcessor.SetSourceColumnNames("public", "orders", new[] { "order_id", "customer_name" });
-            var tableProcessor = docProcessor.GetProcessor("public", "orders");
+            var tableProcessor = docProcessor.GetPrimaryProcessor("public", "orders");
 
             var ops = new List<CdcSinkDocumentOp>();
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))

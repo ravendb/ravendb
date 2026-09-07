@@ -4,10 +4,10 @@ import { useAppSelector } from "components/store";
 import React from "react";
 import { Icon } from "components/common/Icon";
 import { useRavenLink } from "components/hooks/useRavenLink";
-import FeatureAvailabilitySummaryWrapper, {FeatureAvailabilityData} from "components/common/FeatureAvailabilitySummary";
-import {
-    useLimitedFeatureAvailability
-} from "components/utils/licenseLimitsUtils";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
+import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 
 export function EditPeriodicBackupTaskInfoHub() {
     const hasPeriodicBackups = useAppSelector(licenseSelectors.statusValue("HasPeriodicBackup"));
@@ -23,7 +23,7 @@ export function EditPeriodicBackupTaskInfoHub() {
             {
                 featureName: defaultFeatureAvailability[1].featureName,
                 value: hasSnapshotBackups,
-            }
+            },
         ],
     });
 
@@ -31,11 +31,7 @@ export function EditPeriodicBackupTaskInfoHub() {
 
     return (
         <AboutViewFloating defaultOpen={hasPeriodicBackups ? null : "licensing"}>
-            <AccordionItemWrapper
-                targetId="about"
-                icon="about"
-                color="info"
-            >
+            <AccordionItemWrapper targetId="about" icon="about" color="info">
                 <p>
                     Define an ongoing-task that will automatically create periodic backups for this database at the
                     defined <strong>schedule</strong>.
@@ -78,12 +74,13 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         featureIcon: "periodic-backup",
         community: { value: false },
         professional: { value: true },
-        enterprise: { value: true }
-    },{
+        enterprise: { value: true },
+    },
+    {
         featureName: "Snapshot Backups",
         featureIcon: "snapshot-backup",
         community: { value: false },
         professional: { value: false },
-        enterprise: { value: true }
-    }
+        enterprise: { value: true },
+    },
 ];

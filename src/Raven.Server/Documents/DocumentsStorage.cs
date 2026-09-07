@@ -22,7 +22,6 @@ using Raven.Server.Documents.Refresh;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Revisions;
-using Raven.Server.Documents.Schemas;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
@@ -1292,7 +1291,7 @@ namespace Raven.Server.Documents
                 throw new ArgumentException("Argument is null or whitespace", nameof(id));
             return Get(context, id.AsSpan(), fields, throwOnConflict);
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Document Get(DocumentsOperationContext context, ReadOnlyMemory<char> id, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true)
         {
@@ -1300,7 +1299,7 @@ namespace Raven.Server.Documents
                 throw new ArgumentException("Argument is null", nameof(id));
             return Get(context, id.Span, fields, throwOnConflict);
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private Document Get(DocumentsOperationContext context, ReadOnlySpan<char> id, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true)
         {
@@ -1815,7 +1814,7 @@ namespace Raven.Server.Documents
                 throw new ArgumentException("Data size is invalid, possible corruption when parsing BlittableJsonReaderObject", nameof(size));
 
             BlittableJsonReaderObject.BlittableValidation(context, datPtr, size);
-            
+
             var doc = new Document();
             return InitializeDocument(context, doc, ref tvr);
         }
@@ -2757,7 +2756,7 @@ namespace Raven.Server.Documents
             localChangeVector = localChangeVector.StripTrxnTags(context);
 
             var originalStatus = ChangeVectorUtils.GetConflictStatus(remoteChangeVector, localChangeVector, mode: mode);
-            
+
             if (originalStatus == ConflictStatus.Conflict && HasUnusedDatabaseIds())
             {
                 // We need to distinguish between few cases here
@@ -2774,7 +2773,7 @@ namespace Raven.Server.Documents
                 // case 2: incoming change vector A:10, B:11, C:10 -> conflict              (original: conflict, after: conflict)
                 // case 3: incoming change vector A:11, B:10, C:10 -> update                (original: update, after: already merged)
                 // case 4: incoming change vector A:11, B:12, C:10 -> update                (original: conflict, after: update)
-              
+
                 remoteChangeVector.TryRemoveIds(UnusedDatabaseIds, context, out remoteChangeVector);
                 var skipValidation = localChangeVector.TryRemoveIds(UnusedDatabaseIds, context, out localChangeVector);
                 context.SkipChangeVectorValidation |= skipValidation;

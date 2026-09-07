@@ -325,6 +325,8 @@ export function mapAiConnectionStringToDto(connection: AiConnection): AiConnecti
                       Model: connection.openAiSettings.model,
                       OrganizationId: connection.openAiSettings.organizationId,
                       ProjectId: connection.openAiSettings.projectId,
+                      ReasoningEffort:
+                          connection.modelType === "Chat" ? connection.openAiSettings.reasoningEffort : null,
                       Dimensions: mapDimensionsToDto(connection),
                       EmbeddingsMaxConcurrentBatches: mapEmbeddingsMaxConcurrentBatchesToDto(connection),
                       EnablePromptCache: connection.openAiSettings.enablePromptCache,
