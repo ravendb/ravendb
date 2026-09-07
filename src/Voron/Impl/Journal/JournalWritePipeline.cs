@@ -114,11 +114,10 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
 
     public void WriteInline(JournalFile file, long posBy4Kb, Span<Pal.journal_entry> entries, long totalNumberOf4Kbs, List<LowLevelTransaction> transactions)
     {
-        Drain(throwOnFailure: false); // we mustn't have anything else concurrently running with us
         Debug.Assert(_disposed is false, "WriteInline called after the pipeline was disposed");
 
         var failure = Volatile.Read(ref _failure);
-        if (failure != null) // previous error, fail
+        if (failure != null) // previous error, fail without bothering to write
         {
             FailDurableCommits(transactions, failure.SourceException);
             failure.Throw();
@@ -146,6 +145,16 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
         {
             FailDurableCommits(transactions, e);
             throw;
+        }
+
+        Drain(throwOnFailure: false);
+
+        var failure = Volatile.Read(ref _failure);
+        if (failure != null)
+        {
+            // report the failure (*we* wrote properly, but the previous tx failed, so we abort)
+            FailDurableCommits(transactions, failure.SourceException); 
+            failure.Throw();
         }
 
         foreach (var tx in transactions)
