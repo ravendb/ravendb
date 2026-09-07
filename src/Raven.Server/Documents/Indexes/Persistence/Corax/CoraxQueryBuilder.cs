@@ -341,7 +341,7 @@ public static class CoraxQueryBuilder
         IQueryMatch Build<TInner>() where TInner : IQueryMatch => parameters.IndexSearcher.DeduplicationMatch((TInner)match);
     }
 
-    private static IQueryMatch ToCoraxQuery(Parameters builderParameters, QueryExpression expression, ref StreamingOptimization leftOnlyOptimization, bool exact = false, int? proximity = null)
+    private static IQueryMatch ToCoraxQuery(Parameters builderParameters, QueryExpression expression, ref StreamingOptimization leftOnlyOptimization, bool exact = false)
     {
         var indexSearcher = builderParameters.IndexSearcher;
         var metadata = builderParameters.Metadata;
@@ -590,7 +590,13 @@ public static class CoraxQueryBuilder
             switch (methodType)
             {
                 case MethodType.Search:
-                    return HandleSearch(builderParameters, me, proximity);
+                    return HandleSearch(builderParameters, me);
+                case MethodType.Proximity:
+                    throw new NotSupportedInCoraxException($"{nameof(Corax)} doesn't support proximity over search() method");
+                case MethodType.Fuzzy:
+                    throw new NotSupportedInCoraxException($"{nameof(Corax)} doesn't support fuzzy() method");
+                case MethodType.Lucene:
+                    throw new NotSupportedInCoraxException($"{nameof(Corax)} doesn't support lucene() method");
                 case MethodType.Boost:
                     return HandleBoost(builderParameters, me, exact);
                 case MethodType.StartsWith:
@@ -600,7 +606,7 @@ public static class CoraxQueryBuilder
                 case MethodType.Exists:
                     return HandleExists(builderParameters, me, ref leftOnlyOptimization);
                 case MethodType.Exact:
-                    return HandleExact(builderParameters, me, ref leftOnlyOptimization, proximity);
+                    return HandleExact(builderParameters, me, ref leftOnlyOptimization);
                 case MethodType.Spatial_Within:
                 case MethodType.Spatial_Contains:
                 case MethodType.Spatial_Disjoint:
@@ -793,9 +799,9 @@ public static class CoraxQueryBuilder
         }
     }
 
-    private static IQueryMatch HandleExact(Parameters builderParameters, MethodExpression expression, ref StreamingOptimization streamingConfiguration, int? proximity = null)
+    private static IQueryMatch HandleExact(Parameters builderParameters, MethodExpression expression, ref StreamingOptimization streamingConfiguration)
     {
-        return ToCoraxQuery(builderParameters, expression.Arguments[0], ref streamingConfiguration, exact: true, proximity);
+        return ToCoraxQuery(builderParameters, expression.Arguments[0], ref streamingConfiguration, exact: true);
     }
 
     private static IQueryMatch TranslateBetweenQuery(Parameters builderParameters, BetweenExpression be, bool exact)
@@ -993,7 +999,7 @@ public static class CoraxQueryBuilder
     }
     }
 
-    private static IQueryMatch HandleSearch(Parameters builderParameters, MethodExpression expression, int? proximity)
+    private static IQueryMatch HandleSearch(Parameters builderParameters, MethodExpression expression)
     {
         var metadata = builderParameters.Metadata;
         var highlightingTerms = builderParameters.HighlightingTerms;
@@ -1065,12 +1071,6 @@ public static class CoraxQueryBuilder
         // Wildcard queries:
         if (searchQueryOptions is IndexSearcher.SearchQueryOptions.PhraseQueryWithWildcardAdjustments && valueAsString.Length >= 1 && (valueAsString[0] == '*' || (valueAsString.Length >= 2 && valueAsString[^1] == '*')))
             fieldMetadata = ReplaceAnalyzerForWildcardQueries(fieldMetadata);
-        
-        
-        if (proximity.HasValue)
-        {
-            throw new NotSupportedInCoraxException($"{nameof(Corax)} doesn't support proximity over search() method");
-        }
 
         CoraxConstants.Search.Operator @operator = CoraxConstants.Search.Operator.Or;
         if (expression.Arguments.Count == 3)
