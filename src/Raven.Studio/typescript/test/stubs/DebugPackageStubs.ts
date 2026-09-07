@@ -44,6 +44,7 @@ export class DebugPackageStubs {
     static analysisSummary(): DebugPackageAnalysisSummary {
         return {
             PackageId: "story-package",
+            UnreachableNodes: {},
             ClusterWideIssues: {
                 ServerIssues: [],
                 ClusterIssues: [
@@ -349,21 +350,27 @@ export class DebugPackageStubs {
 
     // Builds a comprehensive summary for `nodeTags.length` nodes with every synchronous section filled.
     // The first node is the leader. `omit` flags strip individual sections so the story controls can
-    // empty them one at a time.
-    static storySummary(nodeTags: string[], omit: StorySummaryOmit = {}): DebugPackageAnalysisSummary {
+    // empty them one at a time. `unreachableNodeTags` are reported as unreachable instead of getting a node summary.
+    static storySummary(
+        nodeTags: string[],
+        omit: StorySummaryOmit = {},
+        unreachableNodeTags: string[] = []
+    ): DebugPackageAnalysisSummary {
         const databases = ["Orders", "Products", "Customers"];
         const summaryPerNode: Record<string, any> = {};
+        const unreachableNodes: Record<string, string> = {};
 
         nodeTags.forEach((tag, index) => {
+            const url = `http://127.0.0.1:${8080 + index}`;
+            if (unreachableNodeTags.includes(tag)) {
+                unreachableNodes[tag] = url;
+                return;
+            }
             const isLeader = index === 0;
             summaryPerNode[tag] = {
                 ClusterNodeInfo: omit.clusterOverview
                     ? null
-                    : DebugPackageStubs.nodeInfo(
-                          tag,
-                          isLeader ? "Leader" : "Follower",
-                          `http://127.0.0.1:${8080 + index}`
-                      ),
+                    : DebugPackageStubs.nodeInfo(tag, isLeader ? "Leader" : "Follower", url),
                 CpuUsageInfo: omit.resourceUsage ? null : DebugPackageStubs.cpuInfo(12 - index, 34 - index * 6),
                 MemoryUsageInfo: omit.resourceUsage ? null : DebugPackageStubs.memoryInfo(),
                 GcInfo: omit.resourceUsage ? null : DebugPackageStubs.gcInfo(),
@@ -395,6 +402,7 @@ export class DebugPackageStubs {
 
         return {
             PackageId: "story-package",
+            UnreachableNodes: unreachableNodes,
             ClusterWideIssues: omit.issues
                 ? DebugPackageStubs.emptyIssues()
                 : {
