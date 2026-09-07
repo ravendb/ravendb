@@ -192,7 +192,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<CounterGroupDetail> GetCountersFrom(DocumentsOperationContext context, string collection, long etag, long skip, long take)
         {
-            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = _documentsStorage.GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
             if (collectionName == null)
                 yield break;
 
@@ -213,7 +213,7 @@ namespace Raven.Server.Documents
         public long GetNumberOfCounterGroupsToProcess(DocumentsOperationContext context, string collection, long afterEtag, out long totalCount,
             Stopwatch overallDuration)
         {
-            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = _documentsStorage.GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
             if (collectionName == null)
             {
                 totalCount = 0;
@@ -437,15 +437,8 @@ namespace Raven.Server.Documents
                         UpdateMetrics(countersGroupKey, name, changeVector, collection);
                     }
 
-                    context.Transaction.AddAfterCommitNotification(new CounterChange
-                    {
-                        ChangeVector = changeVector,
-                        DocumentId = documentId,
-                        Name = name,
-                        CollectionName = collectionName.Name,
-                        Type = exists ? CounterChangeTypes.Increment : CounterChangeTypes.Put,
-                        Value = value
-                    });
+                    context.Transaction.AddAfterCommitNotification(collectionName.Name, documentId, name, changeVector,
+                        exists ? CounterChangeTypes.Increment : CounterChangeTypes.Put, value);
 
                     return changeVector;
                 }
@@ -1036,15 +1029,7 @@ namespace Raven.Server.Documents
                                 if (localCounterValues != null)
                                     value = InternalGetCounterValue(localCounterValues, documentId, counterName, capOnOverflow: true);
 
-                                context.Transaction.AddAfterCommitNotification(new CounterChange
-                                {
-                                    ChangeVector = changeVector,
-                                    DocumentId = documentId,
-                                    CollectionName = collectionName.Name,
-                                    Name = counterName,
-                                    Value = value,
-                                    Type = changeType
-                                });
+                                context.Transaction.AddAfterCommitNotification(collectionName.Name, documentId, counterName, changeVector, changeType, value);
 
                                 UpdateMetrics(counterKeySlice, counterName, changeVector, collection);
                             }
@@ -1817,14 +1802,7 @@ namespace Raven.Server.Documents
                     table.Set(tvb);
                 }
 
-                context.Transaction.AddAfterCommitNotification(new CounterChange
-                {
-                    ChangeVector = newChangeVector,
-                    DocumentId = documentId,
-                    CollectionName = collectionName.Name,
-                    Name = counterName,
-                    Type = CounterChangeTypes.Delete
-                });
+                context.Transaction.AddAfterCommitNotification(collectionName.Name, documentId, counterName, newChangeVector, CounterChangeTypes.Delete);
 
                 return newChangeVector;
             }
@@ -1975,7 +1953,7 @@ namespace Raven.Server.Documents
 
         public long PurgeCountersAndCounterTombstones(DocumentsOperationContext context, string collection, long upto, long numberOfEntriesToDelete)
         {
-            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = _documentsStorage.GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
             if (collectionName == null)
                 return 0;
 
@@ -2596,7 +2574,7 @@ namespace Raven.Server.Documents
 
             public IEnumerable<CounterGroupItemMetadata> GetCountersMetadataFrom(DocumentsOperationContext context, string collection, long etag, long skip, long take)
             {
-                var collectionName = _countersStorage._documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+                var collectionName = _countersStorage._documentsStorage.GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
                 if (collectionName == null)
                     yield break;
 
