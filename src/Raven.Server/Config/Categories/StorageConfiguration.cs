@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.ComponentModel;
 using Microsoft.Extensions.Configuration;
 using Raven.Server.Config.Attributes;
@@ -20,13 +21,24 @@ namespace Raven.Server.Config.Categories
         {
             // On Windows, DiscardVirtualMemory can result in high CPU usage due to contention on the
             // PTE entry (in Win Server 2016 and Win Server 2019), we want to avoid it by default.
-            DiscardVirtualMemory = PlatformDetails.RunningOnPosix;
+            // On arm64 Linux kernels [7.0..7.1.9) madvise(MADV_DONTNEED) triggers CVE-2026-74674
+            DiscardVirtualMemory = PlatformDetails.RunningOnPosix && HasStalePagingStructureCacheBug() == false;
 
             // The sequential read-ahead hint relies on posix_fadvise, which exists on Linux but not macOS.
             UseSequentialReadAheadHintForJournalRecovery = PlatformDetails.RunningOnLinux;
         }
 
-        [Description("You can use this setting to specify whether to disable or enable discard virtual memory. By default, on windows, it will be disabled.")]
+        // CVE-2026-74674: on arm64 Linux, kernels [7.0, 7.1.9)
+        private static bool HasStalePagingStructureCacheBug()
+        {
+            if (PlatformDetails.RunningOnLinux == false || RuntimeInformation.ProcessArchitecture != Architecture.Arm64)
+                return false;
+
+            Version kernel = Environment.OSVersion.Version;
+            return kernel >= new Version(7, 0) && kernel < new Version(7, 1, 9);
+        }
+
+        [Description("You can use this setting to specify whether to disable or enable discard virtual memory. Enabled by default on Posix, except on arm64 Linux kernels 7.0 up to 7.1.9 (CVE-2026-74674). Disabled by default on Windows.")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [ConfigurationEntry("Storage.DiscardVirtualMemory", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public bool DiscardVirtualMemory { get; set; }
