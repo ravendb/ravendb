@@ -269,7 +269,7 @@ function UtcHint() {
                         UTC
                     </Text>
                 </TooltipTrigger>
-                <TooltipContent>Periods and chart dates are in UTC, matching how usage is billed.</TooltipContent>
+                <TooltipContent>Periods, chart dates and the dates they filter are in UTC.</TooltipContent>
             </Tooltip>
         </TooltipProvider>
     );
