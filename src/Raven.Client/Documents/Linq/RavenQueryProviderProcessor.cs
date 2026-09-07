@@ -1757,11 +1757,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
             _insideWhereOrSearchCounter++;
             VisitExpression(target);
             _insideWhereOrSearchCounter--;
-
-            if (expressions.Count > 1)
-            {
-                DocumentQuery.OpenSubclause();
-            }
+            
+            var subclauseToOpen = expressions.Count > 1;
 
             foreach (var expression in Enumerable.Reverse(expressions))
             {
@@ -1793,7 +1790,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 {
                     DocumentQuery.AndAlso();
                 }
-                
+
+                if (subclauseToOpen)
+                {
+                    DocumentQuery.OpenSubclause();
+                    subclauseToOpen = false;
+                }
+
                 if (options.HasFlag(SearchOptions.Not))
                 {
                     if (options.HasFlag(SearchOptions.And) && IsPreviousSearchOnSameField(target, expression))
