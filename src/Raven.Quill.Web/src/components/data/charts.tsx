@@ -1,4 +1,4 @@
-import { type ReactNode, type Ref, useRef } from "react";
+import { type ReactNode, useRef } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import type { SeriesData } from "@/api/generated/server-api";
 import {
@@ -38,24 +38,24 @@ function useZoomOnClick() {
 
 // Shared bar-chart scaffolding for WritesBarChart and SeriesBarChart: the zoom-on-click
 // wrapper, chart container, grid, and both axes. Children supply the tooltip, legend, and
-// bars, which differ between the two charts.
+// bars, which differ between the two charts, and receive `zoomFrom(barIndex)` for bar clicks.
 function BarChartFrame({
     config,
     data,
     xKey,
     xTickFormatter,
-    chartRef,
     children,
 }: {
     config: ChartConfig;
     data: Array<Record<string, unknown>>;
     xKey: string;
     xTickFormatter?: (value: string) => string;
-    chartRef: Ref<HTMLDivElement>;
-    children: ReactNode;
+    children: (zoomFrom: (barIndex: number) => void) => ReactNode;
 }) {
+    const { ref, zoomFrom } = useZoomOnClick();
+
     return (
-        <div ref={chartRef}>
+        <div ref={ref}>
             <ChartContainer config={config} className="aspect-auto h-56 w-full">
                 <BarChart
                     accessibilityLayer
@@ -84,7 +84,7 @@ function BarChartFrame({
                         width="auto"
                         tickFormatter={(value) => formatCompact(value as number)}
                     />
-                    {children}
+                    {children((barIndex) => zoomFrom(barIndex, data.length))}
                 </BarChart>
             </ChartContainer>
         </div>
@@ -108,43 +108,41 @@ export function WritesBarChart({
     tooltipLabelFormatter?: (value: string) => string;
     onBarClick?: (entry: Record<string, unknown>) => void;
 }) {
-    const { ref, zoomFrom } = useZoomOnClick();
-
     return (
-        <BarChartFrame
-            config={writesChartConfig}
-            data={data}
-            xKey={xKey}
-            xTickFormatter={xTickFormatter}
-            chartRef={ref}
-        >
-            <ChartTooltip
-                cursor={false}
-                content={
-                    <ChartTooltipContent
-                        labelFormatter={
-                            tooltipLabelFormatter ? (value) => tooltipLabelFormatter(value as string) : undefined
+        <BarChartFrame config={writesChartConfig} data={data} xKey={xKey} xTickFormatter={xTickFormatter}>
+            {(zoomFrom) => (
+                <>
+                    <ChartTooltip
+                        cursor={false}
+                        content={
+                            <ChartTooltipContent
+                                labelFormatter={
+                                    tooltipLabelFormatter
+                                        ? (value) => tooltipLabelFormatter(value as string)
+                                        : undefined
+                                }
+                            />
                         }
                     />
-                }
-            />
-            <Bar
-                dataKey="writes"
-                fill="var(--color-writes)"
-                radius={[4, 4, 0, 0]}
-                className={onBarClick ? "cursor-pointer" : undefined}
-                onClick={
-                    onBarClick
-                        ? (bar, index) => {
-                              zoomFrom(index, data.length);
-                              onBarClick(bar.payload);
-                          }
-                        : undefined
-                }
-                // The drill-down chart zooms on click, so bars update in place rather
-                // than replaying the grow-in that would read as a blank-and-redraw.
-                isAnimationActive={!onBarClick}
-            />
+                    <Bar
+                        dataKey="writes"
+                        fill="var(--color-writes)"
+                        radius={[4, 4, 0, 0]}
+                        className={onBarClick ? "cursor-pointer" : undefined}
+                        onClick={
+                            onBarClick
+                                ? (bar, index) => {
+                                      zoomFrom(index);
+                                      onBarClick(bar.payload);
+                                  }
+                                : undefined
+                        }
+                        // The drill-down chart zooms on click, so bars update in place rather
+                        // than replaying the grow-in that would read as a blank-and-redraw.
+                        isAnimationActive={!onBarClick}
+                    />
+                </>
+            )}
         </BarChartFrame>
     );
 }
@@ -165,11 +163,7 @@ export function SeriesBarChart({
     tooltipLabelFormatter?: (value: string) => string;
     onBarClick?: (entry: Record<string, unknown>) => void;
 }) {
-    const { ref, zoomFrom } = useZoomOnClick();
-
-    // Color by original index so a series keeps its color regardless of which others are
-    // present, then drop any series that is zero across the whole visible period — it adds
-    // nothing to the chart and would only pad the legend.
+    // Color by original index so a series keeps its color regardless of which others are present.
     const visibleSeries = data.keys
         .map((series, index) => ({ ...series, color: seriesColor(index) }))
         .filter((series) => data.points.some((point) => Number(point[series.key]) > 0));
@@ -182,36 +176,42 @@ export function SeriesBarChart({
     );
 
     return (
-        <BarChartFrame config={config} data={data.points} xKey="t" xTickFormatter={xTickFormatter} chartRef={ref}>
-            <ChartTooltip
-                content={
-                    <ChartTooltipContent
-                        hideZero
-                        labelFormatter={
-                            tooltipLabelFormatter ? (value) => tooltipLabelFormatter(value as string) : undefined
+        <BarChartFrame config={config} data={data.points} xKey="t" xTickFormatter={xTickFormatter}>
+            {(zoomFrom) => (
+                <>
+                    <ChartTooltip
+                        content={
+                            <ChartTooltipContent
+                                hideZero
+                                labelFormatter={
+                                    tooltipLabelFormatter
+                                        ? (value) => tooltipLabelFormatter(value as string)
+                                        : undefined
+                                }
+                            />
                         }
                     />
-                }
-            />
-            <ChartLegend content={<ChartLegendContent />} />
-            {visibleSeries.map((series) => (
-                <Bar
-                    key={series.key}
-                    dataKey={series.key}
-                    stackId="series"
-                    fill={series.color}
-                    className={onBarClick ? "cursor-pointer" : undefined}
-                    onClick={
-                        onBarClick
-                            ? (bar, barIndex) => {
-                                  zoomFrom(barIndex, data.points.length);
-                                  onBarClick(bar.payload);
-                              }
-                            : undefined
-                    }
-                    isAnimationActive={!onBarClick}
-                />
-            ))}
+                    <ChartLegend content={<ChartLegendContent />} />
+                    {visibleSeries.map((series) => (
+                        <Bar
+                            key={series.key}
+                            dataKey={series.key}
+                            stackId="series"
+                            fill={series.color}
+                            className={onBarClick ? "cursor-pointer" : undefined}
+                            onClick={
+                                onBarClick
+                                    ? (bar, barIndex) => {
+                                          zoomFrom(barIndex);
+                                          onBarClick(bar.payload);
+                                      }
+                                    : undefined
+                            }
+                            isAnimationActive={!onBarClick}
+                        />
+                    ))}
+                </>
+            )}
         </BarChartFrame>
     );
 }
