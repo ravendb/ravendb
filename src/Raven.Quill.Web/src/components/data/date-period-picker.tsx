@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Globe } from "lucide-react";
 import { Button } from "@/components/shadcn/ui/button";
 import { Calendar } from "@/components/shadcn/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/shadcn/ui/popover";
+import { Separator } from "@/components/shadcn/ui/separator";
 import { ToggleGroup, ToggleGroupItem } from "@/components/shadcn/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
 import {
@@ -216,7 +217,7 @@ export function DatePeriodPicker({
                 <ToggleGroupItem value="month">Month</ToggleGroupItem>
                 <ToggleGroupItem value="day">Day</ToggleGroupItem>
             </ToggleGroup>
-            <div className="flex h-8 items-center gap-1 rounded-lg border px-1">
+            <div className="flex h-8 items-stretch gap-1 rounded-lg border px-1">
                 <Button
                     variant="ghost"
                     size="icon-sm"
@@ -228,7 +229,7 @@ export function DatePeriodPicker({
                 </Button>
                 <Popover open={isPickerOpen} onOpenChange={setIsPickerOpen}>
                     <PopoverTrigger asChild>
-                        <Button variant="ghost" size="sm" className="min-w-32 font-medium">
+                        <Button variant="ghost" size="sm" className="min-w-32 self-center font-medium">
                             {formatPeriodLabel(value)}
                         </Button>
                     </PopoverTrigger>
@@ -251,8 +252,9 @@ export function DatePeriodPicker({
                 >
                     <ChevronRight aria-hidden="true" />
                 </Button>
+                <Separator orientation="vertical" className="mx-0.5" />
+                <UtcHint />
             </div>
-            <UtcHint />
         </div>
     );
 }
@@ -262,11 +264,8 @@ function UtcHint() {
         <TooltipProvider>
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <Text
-                        as="span"
-                        variant="caption"
-                        className="cursor-help underline decoration-dotted underline-offset-4"
-                    >
+                    <Text as="span" variant="caption" className="flex cursor-help items-center gap-1 px-1.5">
+                        <Globe aria-hidden="true" className="size-3.5" />
                         UTC
                     </Text>
                 </TooltipTrigger>
