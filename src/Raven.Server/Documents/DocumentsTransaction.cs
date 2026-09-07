@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Changes;
@@ -117,6 +118,15 @@ namespace Raven.Server.Documents
 
         public override void BeforeCommit()
         {
+            if (_putsCount != 0)
+            {
+                var docsMetrics = _context.DocumentDatabase.Metrics.Docs;
+                docsMetrics.PutsPerSec.MarkSingleThreaded(_putsCount);
+                docsMetrics.BytesPutsPerSec.MarkSingleThreaded(_putsBytes);
+                _putsCount = 0;
+                _putsBytes = 0;
+            }
+
             if (_attachmentHashesToMaybeDelete == null)
                 return;
 
