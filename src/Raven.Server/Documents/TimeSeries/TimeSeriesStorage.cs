@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public long PurgeSegmentsAndDeletedRanges(DocumentsOperationContext context, string collection, long upto, long numberOfEntriesToDelete)
         {
-            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = _documentsStorage.GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
             if (collectionName == null)
                 return 0;
 
@@ -736,16 +736,8 @@ namespace Raven.Server.Documents.TimeSeries
 
                 holder.AppendToNewSegment(segment, baseline);
 
-                context.Transaction.AddAfterCommitNotification(new TimeSeriesChange
-                {
-                    CollectionName = collectionName.Name,
-                    ChangeVector = holder.ChangeVector,
-                    DocumentId = documentId,
-                    Name = name,
-                    Type = TimeSeriesChangeTypes.Put,
-                    From = DateTime.MinValue,
-                    To = DateTime.MaxValue
-                });
+                context.Transaction.AddAfterCommitNotification(collectionName.Name, documentId, name, holder.ChangeVector,
+                    TimeSeriesChangeTypes.Put, DateTime.MinValue, DateTime.MaxValue);
             }
 
             return true;
@@ -770,16 +762,8 @@ namespace Raven.Server.Documents.TimeSeries
                 else
                     holder.AppendExistingSegment(segment);
 
-                context.Transaction.AddAfterCommitNotification(new TimeSeriesChange
-                {
-                    CollectionName = collectionName.Name,
-                    ChangeVector = holder.ChangeVector,
-                    DocumentId = documentId,
-                    Name = name,
-                    Type = TimeSeriesChangeTypes.Put,
-                    From = DateTime.MinValue,
-                    To = DateTime.MaxValue
-                });
+                context.Transaction.AddAfterCommitNotification(collectionName.Name, documentId, name, holder.ChangeVector,
+                    TimeSeriesChangeTypes.Put, DateTime.MinValue, DateTime.MaxValue);
 
                 return true;
             }
@@ -1838,16 +1822,8 @@ namespace Raven.Server.Documents.TimeSeries
 
                 if (appendEnumerator.IteratedValues > 0)
                 {
-                    context.Transaction.AddAfterCommitNotification(new TimeSeriesChange
-                    {
-                        CollectionName = collectionName.Name,
-                        ChangeVector = context.LastDatabaseChangeVector,
-                        DocumentId = documentId,
-                        Name = name,
-                        Type = TimeSeriesChangeTypes.Put,
-                        From = appendEnumerator.First,
-                        To = appendEnumerator.Last
-                    });
+                    context.Transaction.AddAfterCommitNotification(collectionName.Name, documentId, name, context.LastDatabaseChangeVector,
+                        TimeSeriesChangeTypes.Put, appendEnumerator.First, appendEnumerator.Last);
                 }
             }
 
@@ -2511,7 +2487,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public IEnumerable<TimeSeriesDeletedRangeItem> GetDeletedRangesFrom(DocumentsOperationContext context, string collection, long fromEtag)
         {
-            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = _documentsStorage.GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
             if (collectionName == null)
                 yield break;
             var table = GetOrCreateDeleteRangesTable(context.Transaction.InnerTransaction, collectionName);
@@ -2677,7 +2653,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         private IEnumerable<TimeSeriesSegmentEntry> GetTimeSeriesFrom(DocumentsOperationContext context, string collection, long fromEtag, long toEtag, long take, TimeSeriesSegmentEntryFields fields = TimeSeriesSegmentEntryFields.All)
         {
-            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = _documentsStorage.GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
             if (collectionName == null)
                 yield break;
 
@@ -2704,7 +2680,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         private IEnumerable<TombstoneIndexItem> GetTimeSeriesDeletedRangeIndexItems(DocumentsOperationContext context, string collection, long fromEtag, long toEtag, long take)
         {
-            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = _documentsStorage.GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
             if (collectionName == null)
                 yield break;
 
@@ -2952,7 +2928,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public long GetLastTimeSeriesEtag(DocumentsOperationContext context, string collection)
         {
-            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = _documentsStorage.GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
             if (collectionName == null)
                 return 0;
 
@@ -2982,7 +2958,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public long GetLastTimeSeriesDeletedRangesEtag(DocumentsOperationContext context, string collection)
         {
-            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = _documentsStorage.GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
             if (collectionName == null)
                 return 0;
 
@@ -3010,7 +2986,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public long GetNumberOfTimeSeriesSegmentsToProcess(DocumentsOperationContext context, string collection, in long afterEtag, out long totalCount, Stopwatch overallDuration)
         {
-            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = _documentsStorage.GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
             if (collectionName == null)
             {
                 totalCount = 0;
@@ -3147,16 +3123,8 @@ namespace Raven.Server.Documents.TimeSeries
             ChangeVector changeVector,
             CollectionName collectionName)
         {
-            context.Transaction.AddAfterCommitNotification(new TimeSeriesChange
-            {
-                ChangeVector = changeVector,
-                DocumentId = deletionRangeRequest.DocumentId,
-                Name = deletionRangeRequest.Name,
-                Type = TimeSeriesChangeTypes.Delete,
-                From = deletionRangeRequest.From,
-                To = deletionRangeRequest.To,
-                CollectionName = collectionName.Name
-            });
+            context.Transaction.AddAfterCommitNotification(collectionName.Name, deletionRangeRequest.DocumentId, deletionRangeRequest.Name, changeVector,
+                TimeSeriesChangeTypes.Delete, deletionRangeRequest.From, deletionRangeRequest.To);
         }
     }
 
