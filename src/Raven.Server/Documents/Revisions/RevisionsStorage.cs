@@ -1202,7 +1202,7 @@ namespace Raven.Server.Documents.Revisions
             switch (type)
             {
                 case RevisionType.All:
-                    revisions = table.SeekBackwardFromLast(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], skip);
+                    revisions = table.SeekBackwardFromLast(Schemas.Revisions.AllRevisionsEtagsIndex, skip);
                     break;
                 case RevisionType.Regular:
                     revisions = EnumerateSeekResults(table.SeekBackwardFrom(RevisionsSchema.Indexes[DeleteRevisionEtagSlice], prefix: null, last: startSlice, skip));
@@ -1252,7 +1252,7 @@ namespace Raven.Server.Documents.Revisions
                 yield break;
 
             TableValueHolder prevTvh = null;
-            foreach (var tvh in table.SeekBackwardFromLast(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], skip))
+            foreach (var tvh in table.SeekBackwardFromLast(Schemas.Revisions.CollectionRevisionsEtagsIndex, skip))
             {
                 if (prevTvh != null)
                     context.Transaction.InnerTransaction.ForgetAbout(prevTvh.Reader.Id);
@@ -1367,7 +1367,7 @@ namespace Raven.Server.Documents.Revisions
         public string GetLastRevisionChangeVector(DocumentsOperationContext context)
         {
             var table = context.RevisionsTable(this);
-            var tvr = table.ReadLast(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice]);
+            var tvr = table.ReadLast(Schemas.Revisions.AllRevisionsEtagsIndex);
             if (tvr == null)
                 return null;
 
@@ -1379,7 +1379,7 @@ namespace Raven.Server.Documents.Revisions
             var table = GetExistingTable(context.Transaction.InnerTransaction, new CollectionName(collection));
             if (table == null)
                 return null;
-            var tvr = table.ReadLast(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice]);
+            var tvr = table.ReadLast(Schemas.Revisions.CollectionRevisionsEtagsIndex);
             if (tvr == null)
                 return null;
             return ReadChangeVectorFromTvr(context, ref tvr.Reader);
@@ -2017,16 +2017,16 @@ namespace Raven.Server.Documents.Revisions
             if (collection == null)
             {
                 var allRevisionsTable = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
-                revisions = allRevisionsTable.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], lastScannedEtag);
+                revisions = allRevisionsTable.SeekBackwardFrom(Schemas.Revisions.AllRevisionsEtagsIndex, lastScannedEtag);
                 return true;
             }
 
-                    var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false) ?? new CollectionName(collection);
+                    var collectionName = _documentsStorage.GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false) ?? new CollectionName(collection);
                     var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
             var collectionRevisionsTable = context.Transaction.InnerTransaction.OpenTable(RevisionsSchema, tableName);
             if (collectionRevisionsTable != null) // there are existing revisions for that collection
                     {
-                revisions = collectionRevisionsTable.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], lastScannedEtag);
+                revisions = collectionRevisionsTable.SeekBackwardFrom(Schemas.Revisions.CollectionRevisionsEtagsIndex, lastScannedEtag);
                 return true;
                     }
 
@@ -2370,12 +2370,12 @@ namespace Raven.Server.Documents.Revisions
                         return false;
                     }
 
-                    tvrs = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], endEtag);
+                    tvrs = revisions.SeekBackwardFrom(Schemas.Revisions.CollectionRevisionsEtagsIndex, endEtag);
                 }
                 else
                 {
                     var revisions = readCtx.RevisionsTable(this);
-                    tvrs = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], endEtag);
+                    tvrs = revisions.SeekBackwardFrom(Schemas.Revisions.AllRevisionsEtagsIndex, endEtag);
                 }
 
                 foreach (var tvr in tvrs)
@@ -2797,7 +2797,7 @@ namespace Raven.Server.Documents.Revisions
         {
             var table = context.RevisionsTable(this, onCorruptedDataHandler);
 
-            foreach (var tvr in table.SeekForwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], etag, 0))
+            foreach (var tvr in table.SeekForwardFrom(Schemas.Revisions.AllRevisionsEtagsIndex, etag, 0))
             {
                 if (take-- <= 0)
                     yield break;
@@ -2818,7 +2818,7 @@ namespace Raven.Server.Documents.Revisions
             if (table == null)
                 yield break;
 
-            foreach (var tvr in table.SeekForwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], etag, 0))
+            foreach (var tvr in table.SeekForwardFrom(Schemas.Revisions.CollectionRevisionsEtagsIndex, etag, 0))
             {
                 if (take-- <= 0)
                     yield break;
@@ -2849,7 +2849,7 @@ namespace Raven.Server.Documents.Revisions
             if (table == null)
                 return false;
 
-            result = table.ReadLast(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice]);
+            result = table.ReadLast(Schemas.Revisions.CollectionRevisionsEtagsIndex);
             if (result == null)
                 return false;
 
@@ -2864,7 +2864,7 @@ namespace Raven.Server.Documents.Revisions
         {
             var table = context.RevisionsTable(this);
 
-            var iterator = table.SeekForwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], etag, start);
+            var iterator = table.SeekForwardFrom(Schemas.Revisions.AllRevisionsEtagsIndex, etag, start);
 
             return GetCurrentAndPreviousRevisionsFrom(context, iterator, table, take);
         }
@@ -2878,7 +2878,7 @@ namespace Raven.Server.Documents.Revisions
             var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
             var table = context.Transaction.InnerTransaction.OpenTable(RevisionsSchema, tableName);
 
-            var iterator = table?.SeekForwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], etag, 0);
+            var iterator = table?.SeekForwardFrom(Schemas.Revisions.CollectionRevisionsEtagsIndex, etag, 0);
 
             return GetCurrentAndPreviousRevisionsFrom(context, iterator, table, take);
         }
@@ -3000,12 +3000,12 @@ namespace Raven.Server.Documents.Revisions
         public long GetNumberOfRevisionDocuments(DocumentsOperationContext context)
         {
             var table = context.RevisionsTable(this);
-            return table.GetNumberOfEntriesFor(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice]);
+            return table.GetNumberOfEntriesFor(Schemas.Revisions.AllRevisionsEtagsIndex);
         }
 
         public long GetNumberOfRevisionsToProcess(DocumentsOperationContext context, string collection, long afterEtag, out long totalCount, Stopwatch overallDuration)
         {
-            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = _documentsStorage.GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
             if (collectionName == null || collectionName.IsHiLo)
             {
                 totalCount = 0;
@@ -3020,7 +3020,7 @@ namespace Raven.Server.Documents.Revisions
                 return 0;
             }
 
-            var indexDef = RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice];
+            var indexDef = Schemas.Revisions.CollectionRevisionsEtagsIndex;
             return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out totalCount, overallDuration);
         }
 

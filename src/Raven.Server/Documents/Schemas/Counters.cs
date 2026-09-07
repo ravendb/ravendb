@@ -35,6 +35,9 @@ namespace Raven.Server.Documents.Schemas
             TransactionMarker = 5
         }
 
+        internal static readonly TableSchema.FixedSizeKeyIndexDef AllCountersEtagIndex;
+        internal static readonly TableSchema.FixedSizeKeyIndexDef CollectionCountersEtagsIndex;
+
         static Counters()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
@@ -44,6 +47,20 @@ namespace Raven.Server.Documents.Schemas
                 Slice.From(ctx, "CounterGroupKeys", ByteStringType.Immutable, out CounterKeysSlice);
                 Slice.From(ctx, "CountersBucketAndEtag", ByteStringType.Immutable, out CountersBucketAndEtagSlice);
             }
+
+            AllCountersEtagIndex = new TableSchema.FixedSizeKeyIndexDef
+            {
+                StartIndex = (int)CountersTable.Etag,
+                Name = AllCountersEtagSlice,
+                IsGlobal = true
+            };
+
+            CollectionCountersEtagsIndex = new TableSchema.FixedSizeKeyIndexDef
+            {
+                StartIndex = (int)CountersTable.Etag,
+                Name = CollectionCountersEtagsSlice
+            };
+
 
             DefineIndexesForCountersSchema(CountersSchemaBase);
             DefineIndexesForShardingCountersSchemaBase();
@@ -58,18 +75,9 @@ namespace Raven.Server.Documents.Schemas
                     IsGlobal = true,
                 });
 
-                schema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-                {
-                    StartIndex = (int)CountersTable.Etag,
-                    Name = AllCountersEtagSlice,
-                    IsGlobal = true
-                });
+                schema.DefineFixedSizeIndex(AllCountersEtagIndex);
 
-                schema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-                {
-                    StartIndex = (int)CountersTable.Etag,
-                    Name = CollectionCountersEtagsSlice
-                });
+                schema.DefineFixedSizeIndex(CollectionCountersEtagsIndex);
 
             }
 

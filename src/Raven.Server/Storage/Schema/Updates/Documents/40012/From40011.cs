@@ -55,7 +55,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                         continue;
                     
                     var writeTable = step.DocumentsStorage.RevisionsStorage.EnsureRevisionTableCreated(step.WriteTx, collectionName, RevisionsSchemaBase);
-                    foreach (var read in readTable.SeekForwardFrom(RevisionsSchemaBase.FixedSizeIndexes[CollectionRevisionsEtagsSlice], 0, 0))
+                    foreach (var read in readTable.SeekForwardFrom(CollectionRevisionsEtagsIndex, 0, 0))
                     {
                         using (TableValueReaderUtil.CloneTableValueReader(context, read))   
                         using (writeTable.Allocate(out TableValueBuilder write))

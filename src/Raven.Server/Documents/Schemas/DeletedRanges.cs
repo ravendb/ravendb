@@ -30,6 +30,9 @@ namespace Raven.Server.Documents.Schemas
             To = 6
         }
 
+        internal static readonly TableSchema.FixedSizeKeyIndexDef AllDeletedRangesEtagIndex;
+        internal static readonly TableSchema.FixedSizeKeyIndexDef CollectionDeletedRangesEtagsIndex;
+
         static DeletedRanges()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
@@ -40,6 +43,20 @@ namespace Raven.Server.Documents.Schemas
                 Slice.From(ctx, "CollectionDeletedRangesEtags", ByteStringType.Immutable, out CollectionDeletedRangesEtagsSlice);
                 Slice.From(ctx, "DeletedRangesBucketAndEtag", ByteStringType.Immutable, out DeletedRangesBucketAndEtagSlice);
             }
+
+            AllDeletedRangesEtagIndex = new TableSchema.FixedSizeKeyIndexDef
+            {
+                StartIndex = (int)DeletedRangeTable.Etag,
+                Name = AllDeletedRangesEtagSlice,
+                IsGlobal = true
+            };
+
+            CollectionDeletedRangesEtagsIndex = new TableSchema.FixedSizeKeyIndexDef
+            {
+                StartIndex = (int)DeletedRangeTable.Etag,
+                Name = CollectionDeletedRangesEtagsSlice
+            };
+
 
             DefineIndexesForDeletedRangesSchema(DeleteRangesSchemaBase);
             DefineIndexesForShardingDeletedRangesSchemaBase();
@@ -54,18 +71,9 @@ namespace Raven.Server.Documents.Schemas
                     IsGlobal = true
                 });
 
-                schema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-                {
-                    StartIndex = (int)DeletedRangeTable.Etag,
-                    Name = AllDeletedRangesEtagSlice,
-                    IsGlobal = true
-                });
+                schema.DefineFixedSizeIndex(AllDeletedRangesEtagIndex);
 
-                schema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-                {
-                    StartIndex = (int)DeletedRangeTable.Etag,
-                    Name = CollectionDeletedRangesEtagsSlice
-                });
+                schema.DefineFixedSizeIndex(CollectionDeletedRangesEtagsIndex);
 
             }
 

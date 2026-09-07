@@ -89,7 +89,7 @@ namespace Raven.Server.Documents
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
 
-            foreach (var result in table.SeekForwardFrom(AttachmentsSchema.FixedSizeIndexes[AttachmentsEtagSlice], etag, 0))
+            foreach (var result in table.SeekForwardFrom(AttachmentsEtagIndex, etag, 0))
             {
                 var attachment = TableValueToAttachment(context, ref result.Reader);
 
@@ -111,7 +111,7 @@ namespace Raven.Server.Documents
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
 
-            foreach (var result in table.SeekForwardFrom(AttachmentsSchema.FixedSizeIndexes[AttachmentsEtagSlice], 0, 0))
+            foreach (var result in table.SeekForwardFrom(AttachmentsEtagIndex, 0, 0))
             {
                 var attachment = TableValueToAttachment(context, ref result.Reader);
                 if (includeStream)
@@ -1604,8 +1604,7 @@ namespace Raven.Server.Documents
                 return 0;
             }
 
-            var indexDef = AttachmentsSchema.FixedSizeIndexes[AttachmentsEtagSlice];
-            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out totalCount, overallDuration);
+            return table.GetNumberOfEntriesAfter(AttachmentsEtagIndex, afterEtag, out totalCount, overallDuration);
         }
 
         public long GetNumberOfAttachmentTombstones(DocumentsOperationContext context)

@@ -256,7 +256,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             var table = step.WriteTx.OpenTable(CountersSchemaBase, collection.GetTableName(CollectionTableType.CounterGroups));
             foreach (var etag in toDelete)
             {
-                table.DeleteByIndex(CountersSchemaBase.FixedSizeIndexes[CollectionCountersEtagsSlice], etag);
+                table.DeleteByIndex(CollectionCountersEtagsIndex, etag);
             }
 
             toDelete.Clear();

@@ -23,6 +23,9 @@ namespace Raven.Server.Documents.Schemas
             ChangeVector = 2
         }
 
+        internal static readonly TableSchema.FixedSizeKeyIndexDef AllCounterTombstonesEtagIndex;
+        internal static readonly TableSchema.FixedSizeKeyIndexDef CollectionCounterTombstonesEtagsIndex;
+
         static CounterTombstones()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
@@ -32,6 +35,20 @@ namespace Raven.Server.Documents.Schemas
                 Slice.From(ctx, "CollectionCounterTombstonesEtagsSlice", ByteStringType.Immutable, out CollectionCounterTombstonesEtagsSlice);
                 Slice.From(ctx, "CounterTombstonesBucketAndEtagSlice", ByteStringType.Immutable, out CounterTombstonesBucketAndEtagSlice);
             }
+
+            AllCounterTombstonesEtagIndex = new TableSchema.FixedSizeKeyIndexDef
+            {
+                StartIndex = (int)CounterTombstonesTable.Etag,
+                Name = AllCounterTombstonesEtagSlice,
+                IsGlobal = true
+            };
+
+            CollectionCounterTombstonesEtagsIndex = new TableSchema.FixedSizeKeyIndexDef
+            {
+                StartIndex = (int)CounterTombstonesTable.Etag,
+                Name = CollectionCounterTombstonesEtagsSlice
+            };
+
 
             DefineIndexesForCounterTombstonesSchema(CounterTombstonesSchemaBase);
             DefineIndexesForShardingCounterTombstonesSchemaBase();
@@ -46,18 +63,9 @@ namespace Raven.Server.Documents.Schemas
                     IsGlobal = true
                 });
 
-                schema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-                {
-                    StartIndex = (int)CounterTombstonesTable.Etag,
-                    Name = AllCounterTombstonesEtagSlice,
-                    IsGlobal = true
-                });
+                schema.DefineFixedSizeIndex(AllCounterTombstonesEtagIndex);
 
-                schema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-                {
-                    StartIndex = (int)CounterTombstonesTable.Etag,
-                    Name = CollectionCounterTombstonesEtagsSlice
-                });
+                schema.DefineFixedSizeIndex(CollectionCounterTombstonesEtagsIndex);
             }
 
             void DefineIndexesForShardingCounterTombstonesSchemaBase()

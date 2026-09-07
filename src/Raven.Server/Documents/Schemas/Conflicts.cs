@@ -37,6 +37,8 @@ namespace Raven.Server.Documents.Schemas
             Flags = 8
         }
 
+        internal static readonly TableSchema.FixedSizeKeyIndexDef AllConflictedDocsEtagsIndex;
+
         static Conflicts()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
@@ -49,6 +51,14 @@ namespace Raven.Server.Documents.Schemas
                 Slice.From(ctx, "Conflicts", ByteStringType.Immutable, out ConflictsSlice);
                 Slice.From(ctx, "ConflictsBucketAndEtag", ByteStringType.Immutable, out ConflictsBucketAndEtagSlice);
             }
+
+            AllConflictedDocsEtagsIndex = new TableSchema.FixedSizeKeyIndexDef
+            {
+                StartIndex = (int)ConflictsTable.Etag,
+                Name = AllConflictedDocsEtagsSlice,
+                IsGlobal = true
+            };
+
 
             DefineIndexesForConflictsSchema(ConflictsSchemaBase);
             DefineIndexesForShardingConflictsSchemaBase();
@@ -89,12 +99,7 @@ We need a separator in order to delete all conflicts all "users/1" without delet
                     IsGlobal = true,
                     Name = ConflictsIdSlice
                 });
-                schema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-                {
-                    StartIndex = (int)ConflictsTable.Etag,
-                    IsGlobal = true,
-                    Name = AllConflictedDocsEtagsSlice
-                });
+                schema.DefineFixedSizeIndex(AllConflictedDocsEtagsIndex);
                 schema.DefineIndex(new TableSchema.IndexDef
                 {
                     StartIndex = (int)ConflictsTable.Collection,

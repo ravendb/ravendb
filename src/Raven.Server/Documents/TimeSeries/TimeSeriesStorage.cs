@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.TimeSeries
             if (table == null || table.NumberOfEntries == 0 || numberOfEntriesToDelete <= 0)
                 return 0;
 
-            var deleted = table.DeleteBackwardFrom(DeleteRangesSchema.FixedSizeIndexes[CollectionDeletedRangesEtagsSlice], upto, numberOfEntriesToDelete, beforeDelete: tableValueHolder =>
+            var deleted = table.DeleteBackwardFrom(Schemas.DeletedRanges.CollectionDeletedRangesEtagsIndex, upto, numberOfEntriesToDelete, beforeDelete: tableValueHolder =>
             {
                 var reader = tableValueHolder.Reader;
 
@@ -151,13 +151,13 @@ namespace Raven.Server.Documents.TimeSeries
                             break;
                         }
 
-                        if (table.FindByIndex(TimeSeriesSchema.FixedSizeIndexes[CollectionTimeSeriesEtagsSlice], etag, out var reader))
+                        if (table.FindByIndex(Schemas.TimeSeries.CollectionTimeSeriesEtagsIndex, etag, out var reader))
                         {
                             var keyPtr = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
                             AddStatsCleanupCandidate(context, statsCleanupCandidates, keyPtr, keySize);
                         }
 
-                        if (table.DeleteByIndex(TimeSeriesSchema.FixedSizeIndexes[CollectionTimeSeriesEtagsSlice], etag))
+                        if (table.DeleteByIndex(Schemas.TimeSeries.CollectionTimeSeriesEtagsIndex, etag))
                             deletedCount++;
 
                         outdated.Add(it.CurrentKey.Clone(context.Allocator));
@@ -192,7 +192,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public long GetNumberOfTimeSeriesDeletedRanges(DocumentsOperationContext context)
         {
-            var fstIndex = DeleteRangesSchema.FixedSizeIndexes[AllDeletedRangesEtagSlice];
+            var fstIndex = Schemas.DeletedRanges.AllDeletedRangesEtagIndex;
             var fst = context.Transaction.InnerTransaction.FixedTreeFor(fstIndex.Name, sizeof(long));
             return fst.NumberOfEntries;
         }
@@ -2416,7 +2416,7 @@ namespace Raven.Server.Documents.TimeSeries
             var table =  context.TimesSeriesTable(this);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(TimeSeriesSchema.FixedSizeIndexes[AllTimeSeriesEtagSlice], etag, 0))
+            foreach (var result in table.SeekForwardFrom(Schemas.TimeSeries.AllTimeSeriesEtagIndex, etag, 0))
             {
                 yield return CreateTimeSeriesSegmentItem(context, ref result.Reader, includeDocumentChangeVector);
             }
@@ -2479,7 +2479,7 @@ namespace Raven.Server.Documents.TimeSeries
             var table = context.DeleteRangesTable(this);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(DeleteRangesSchema.FixedSizeIndexes[AllDeletedRangesEtagSlice], etag, 0))
+            foreach (var result in table.SeekForwardFrom(Schemas.DeletedRanges.AllDeletedRangesEtagIndex, etag, 0))
             {
                 yield return CreateDeletedRangeItem(context, ref result.Reader);
             }
@@ -2495,7 +2495,7 @@ namespace Raven.Server.Documents.TimeSeries
                 yield break;
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(DeleteRangesSchema.FixedSizeIndexes[CollectionDeletedRangesEtagsSlice], fromEtag, 0))
+            foreach (var result in table.SeekForwardFrom(Schemas.DeletedRanges.CollectionDeletedRangesEtagsIndex, fromEtag, 0))
             {
                 yield return CreateDeletedRangeItem(context, ref result.Reader);
             }
@@ -2554,7 +2554,7 @@ namespace Raven.Server.Documents.TimeSeries
         public TimeSeriesSegmentEntry GetTimeSeries(DocumentsOperationContext context, long etag, TimeSeriesSegmentEntryFields fields = TimeSeriesSegmentEntryFields.All)
         {
             var table = context.TimesSeriesTable(this);
-            var index = TimeSeriesSchema.FixedSizeIndexes[AllTimeSeriesEtagSlice];
+            var index = Schemas.TimeSeries.AllTimeSeriesEtagIndex;
 
             if (table.Read(context.Allocator, index, etag, out var tvr) == false)
                 return null;
@@ -2565,7 +2565,7 @@ namespace Raven.Server.Documents.TimeSeries
         public TimeSeriesDeletedRangeEntry GetTimeSeriesDeletedRange(DocumentsOperationContext context, long etag)
         {
             var table = context.DeleteRangesTable(this);
-            var index = DeleteRangesSchema.FixedSizeIndexes[AllDeletedRangesEtagSlice];
+            var index = Schemas.DeletedRanges.AllDeletedRangesEtagIndex;
 
             if (table.Read(context.Allocator, index, etag, out var tvr) == false)
                 return null;
@@ -2596,7 +2596,7 @@ namespace Raven.Server.Documents.TimeSeries
         {
             var table =  context.TimesSeriesTable(this);
 
-            foreach (var result in table.SeekForwardFrom(TimeSeriesSchema.FixedSizeIndexes[AllTimeSeriesEtagSlice], fromEtag, 0))
+            foreach (var result in table.SeekForwardFrom(Schemas.TimeSeries.AllTimeSeriesEtagIndex, fromEtag, 0))
             {
                 if (take-- <= 0)
                     yield break;
@@ -2616,7 +2616,7 @@ namespace Raven.Server.Documents.TimeSeries
         {
             var table = context.DeleteRangesTable(this);
 
-            foreach (var result in table.SeekForwardFrom(DeleteRangesSchema.FixedSizeIndexes[AllDeletedRangesEtagSlice], fromEtag, 0))
+            foreach (var result in table.SeekForwardFrom(Schemas.DeletedRanges.AllDeletedRangesEtagIndex, fromEtag, 0))
             {
                 if (take-- <= 0)
                     yield break;
@@ -2662,7 +2662,7 @@ namespace Raven.Server.Documents.TimeSeries
             if (table == null)
                 yield break;
 
-            foreach (var result in table.SeekForwardFrom(TimeSeriesSchema.FixedSizeIndexes[CollectionTimeSeriesEtagsSlice], fromEtag, skip: 0))
+            foreach (var result in table.SeekForwardFrom(Schemas.TimeSeries.CollectionTimeSeriesEtagsIndex, fromEtag, skip: 0))
             {
                 if (take-- <= 0)
                     yield break;
@@ -2689,7 +2689,7 @@ namespace Raven.Server.Documents.TimeSeries
             if (table == null)
                 yield break;
 
-            foreach (var result in table.SeekForwardFrom(DeleteRangesSchema.FixedSizeIndexes[CollectionDeletedRangesEtagsSlice], fromEtag, skip: 0))
+            foreach (var result in table.SeekForwardFrom(Schemas.DeletedRanges.CollectionDeletedRangesEtagsIndex, fromEtag, skip: 0))
             {
                 if (take-- <= 0)
                     yield break;
@@ -2863,7 +2863,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public long GetNumberOfTimeSeriesSegments(DocumentsOperationContext context)
         {
-            var fstIndex = TimeSeriesSchema.FixedSizeIndexes[AllTimeSeriesEtagSlice];
+            var fstIndex = Schemas.TimeSeries.AllTimeSeriesEtagIndex;
             var fst = context.Transaction.InnerTransaction.FixedTreeFor(fstIndex.Name, sizeof(long));
             return fst.NumberOfEntries;
         }
@@ -2919,7 +2919,7 @@ namespace Raven.Server.Documents.TimeSeries
         {
             var table =  context.TimesSeriesTable(this);
 
-            var result = table.ReadLast(TimeSeriesSchema.FixedSizeIndexes[AllTimeSeriesEtagSlice]);
+            var result = table.ReadLast(Schemas.TimeSeries.AllTimeSeriesEtagIndex);
             if (result == null)
                 return 0;
 
@@ -2938,7 +2938,7 @@ namespace Raven.Server.Documents.TimeSeries
             if (table == null)
                 return 0;
 
-            var result = table.ReadLast(TimeSeriesSchema.FixedSizeIndexes[CollectionTimeSeriesEtagsSlice]);
+            var result = table.ReadLast(Schemas.TimeSeries.CollectionTimeSeriesEtagsIndex);
             if (result == null)
                 return 0;
 
@@ -2949,7 +2949,7 @@ namespace Raven.Server.Documents.TimeSeries
         {
             var table = context.DeleteRangesTable(this);
 
-            var result = table.ReadLast(DeleteRangesSchema.FixedSizeIndexes[AllDeletedRangesEtagSlice]);
+            var result = table.ReadLast(Schemas.DeletedRanges.AllDeletedRangesEtagIndex);
             if (result == null)
                 return 0;
 
@@ -2968,7 +2968,7 @@ namespace Raven.Server.Documents.TimeSeries
             if (table == null)
                 return 0;
 
-            var result = table.ReadLast(DeleteRangesSchema.FixedSizeIndexes[CollectionDeletedRangesEtagsSlice]);
+            var result = table.ReadLast(Schemas.DeletedRanges.CollectionDeletedRangesEtagsIndex);
             if (result == null)
                 return 0;
 
@@ -3001,14 +3001,14 @@ namespace Raven.Server.Documents.TimeSeries
                 return 0;
             }
 
-            var indexDef = TimeSeriesSchema.FixedSizeIndexes[CollectionTimeSeriesEtagsSlice];
+            var indexDef = Schemas.TimeSeries.CollectionTimeSeriesEtagsIndex;
 
             return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out totalCount, overallDuration);
         }
 
         public long GetNumberOfTimeSeriesDeletedRangesToProcess(DocumentsOperationContext context, string collection, in long afterEtag, out long totalCount, Stopwatch overallDuration)
         {
-            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = _documentsStorage.GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
             if (collectionName == null)
             {
                 totalCount = 0;
@@ -3023,7 +3023,7 @@ namespace Raven.Server.Documents.TimeSeries
                 return 0;
             }
 
-            var indexDef = DeleteRangesSchema.FixedSizeIndexes[CollectionDeletedRangesEtagsSlice];
+            var indexDef = Schemas.DeletedRanges.CollectionDeletedRangesEtagsIndex;
 
             return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out totalCount, overallDuration);
         }

@@ -24,9 +24,8 @@ namespace Raven.Server.Documents.Revisions
                 using (_storage._documentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (var tx = context.OpenWriteTransaction())
                 {
-                    var index = _storage.RevisionsSchema.FixedSizeIndexes[Schemas.Revisions.AllRevisionsEtagsSlice];
                     var table = new Table(_storage.RevisionsSchema, context.Transaction.InnerTransaction);
-                    if (table.FindByIndex(index, etag, out var tvr) == false)
+                    if (table.FindByIndex(Schemas.Revisions.AllRevisionsEtagsIndex, etag, out var tvr) == false)
                         return false;
                         
                     using var doc = TableValueToRevision(context, ref tvr, DocumentFields.Data | DocumentFields.ChangeVector | DocumentFields.LowerId);

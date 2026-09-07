@@ -63,6 +63,9 @@ namespace Raven.Server.Documents.Schemas
             FullChangeVector = 12,
         }
 
+        internal static readonly TableSchema.FixedSizeKeyIndexDef AllRevisionsEtagsIndex;
+        internal static readonly TableSchema.FixedSizeKeyIndexDef CollectionRevisionsEtagsIndex;
+
         static Revisions()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
@@ -78,6 +81,20 @@ namespace Raven.Server.Documents.Schemas
                 Slice.From(ctx, RevisionsTombstones, ByteStringType.Immutable, out RevisionsTombstonesSlice);
                 Slice.From(ctx, CollectionName.GetTablePrefix(CollectionTableType.Revisions), ByteStringType.Immutable, out RevisionsPrefix);
 
+                AllRevisionsEtagsIndex = new TableSchema.FixedSizeKeyIndexDef
+                {
+                    StartIndex = (int)RevisionsTable.Etag,
+                    Name = AllRevisionsEtagsSlice,
+                    IsGlobal = true
+                };
+
+                CollectionRevisionsEtagsIndex = new TableSchema.FixedSizeKeyIndexDef
+                {
+                    StartIndex = (int)RevisionsTable.Etag,
+                    Name = CollectionRevisionsEtagsSlice
+                };
+
+
                 DefineIndexesForRevisionsSchema(RevisionsSchemaBase, changeVectorSlice);
                 DefineIndexesForRevisionsSchema(CompressedRevisionsSchemaBase, changeVectorSlice);
 
@@ -85,7 +102,7 @@ namespace Raven.Server.Documents.Schemas
                 DefineIndexesForShardingRevisionsSchemaBase(ShardingCompressedRevisionsSchemaBase, changeVectorSlice);
 
                 RevisionsSchemaBase.CompressValues(
-                    RevisionsSchemaBase.FixedSizeIndexes[CollectionRevisionsEtagsSlice], compress: false);
+                    Schemas.Revisions.CollectionRevisionsEtagsIndex, compress: false);
                 CompressedRevisionsSchemaBase.CompressValues(
                     CompressedRevisionsSchemaBase.FixedSizeIndexes[CollectionRevisionsEtagsSlice], compress: true);
 
@@ -113,17 +130,8 @@ namespace Raven.Server.Documents.Schemas
                 Name = IdAndEtagSlice,
                 IsGlobal = true
             });
-            revisionsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-            {
-                StartIndex = (int)RevisionsTable.Etag,
-                Name = AllRevisionsEtagsSlice,
-                IsGlobal = true
-            });
-            revisionsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-            {
-                StartIndex = (int)RevisionsTable.Etag,
-                Name = CollectionRevisionsEtagsSlice
-            });
+            revisionsSchema.DefineFixedSizeIndex(AllRevisionsEtagsIndex);
+            revisionsSchema.DefineFixedSizeIndex(CollectionRevisionsEtagsIndex);
             revisionsSchema.DefineIndex(new TableSchema.IndexDef
             {
                 StartIndex = (int)RevisionsTable.DeletedEtag,
