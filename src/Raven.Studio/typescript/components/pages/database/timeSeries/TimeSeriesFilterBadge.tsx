@@ -1,6 +1,6 @@
 import React from "react";
 import moment from "moment";
-import { FilterTimezone } from "./TimeSeriesRangePicker";
+import { FilterTimezone, wallOf, zoneLabel } from "./timeSeriesRange.utils";
 import "./TimeSeriesFilterBadge.scss";
 
 const BADGE_FORMAT = "M/D/YYYY HH:mm";
@@ -20,11 +20,8 @@ function formatFilter(
     endDate: moment.Moment | null,
     timezone: FilterTimezone
 ): string | null {
-    const fmt = (d: moment.Moment) => {
-        const m = d.clone();
-        return (timezone === "utc" ? m.utc() : m.local()).format(BADGE_FORMAT);
-    };
-    const zone = timezone === "utc" ? "UTC" : "Local";
+    const fmt = (d: moment.Moment) => wallOf(d, timezone).format(BADGE_FORMAT);
+    const zone = zoneLabel(timezone);
 
     if (startDate && endDate) {
         return `Between ${fmt(startDate)} - ${fmt(endDate)} (${zone})`;
@@ -51,12 +48,8 @@ export default function TimeSeriesFilterBadge({
         return null;
     }
 
-    // Rendered as a bootstrap-3 split button — the same shape as this view's "New Entry" button:
-    // a .btn-group of two real buttons. The left segment shows the active filter and opens the
-    // filter dialog; the right segment clears it. Two separate buttons (rather than a nested clear)
-    // keep the sizing identical to the other toolbar buttons and the X visible. Colours come from
-    // the badge's own SCSS (the neutral fill/border of the original chip), not a primary variant.
-    // Must live outside a .bs5 scope so the legacy .btn styling resolves.
+    // A bootstrap-3 split button (must stay outside a .bs5 scope so the legacy .btn styling
+    // resolves): left segment opens the filter dialog, right segment clears it.
     return (
         <div className="btn-group time-series-filter-badge">
             <button type="button" className="btn" title="Edit filter" onClick={onEdit}>

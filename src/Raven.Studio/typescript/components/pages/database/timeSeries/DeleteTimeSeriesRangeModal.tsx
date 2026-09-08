@@ -7,11 +7,10 @@ import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import RichAlert from "components/common/RichAlert";
-import TimeSeriesRangePicker, { FilterTimezone, TimeSeriesRange, TimeSeriesRangeState } from "./TimeSeriesRangePicker";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
+import TimeSeriesRangePicker, { TimeSeriesRangeState } from "./TimeSeriesRangePicker";
+import { FilterTimezone, wallOf, zoneLabel, FULL_FORMAT } from "./timeSeriesRange.utils";
 
-const SUMMARY_FORMAT = "YYYY-MM-DD HH:mm:ss.SSS";
-
-// Wait this long after the last range edit before counting, so typing doesn't spam the server.
 const COUNT_DEBOUNCE_MS = 300;
 
 export interface TimeSeriesRangeCount {
@@ -20,16 +19,13 @@ export interface TimeSeriesRangeCount {
     exact: boolean;
 }
 
+type TimeSeriesRange = filterTimeSeriesDates<moment.Moment | null>;
+
 interface DeleteTimeSeriesRangeModalProps {
     timeSeriesName: string;
     startDate: moment.Moment | null;
     endDate: moment.Moment | null;
-    // Zone the grid is displaying, so this destructive dialog opens speaking the same
-    // wall-clock the user is reading off the table. Not written back - deleting a range
-    // shouldn't change a display setting.
     timezone?: FilterTimezone;
-    // Counts the entries in a candidate range on the server. Called (debounced) whenever the
-    // selected range changes, so the dialog always reflects what will actually be deleted.
     resolveCount: (range: TimeSeriesRange) => Promise<TimeSeriesRangeCount>;
     onDelete: (range: TimeSeriesRange) => Promise<void>;
     close: () => void;
@@ -41,10 +37,8 @@ function rangeSignature(range: TimeSeriesRange): string {
 }
 
 function describeRange(range: TimeSeriesRange, timezone: FilterTimezone): string {
-    // Format in the same zone the picker is showing, so this destructive summary and the picker
-    // above it never disagree about the wall-clock. The suffix tells the reader which zone it is.
-    const fmt = (d: moment.Moment) => (timezone === "utc" ? d.clone().utc() : d.clone().local()).format(SUMMARY_FORMAT);
-    const zone = timezone === "utc" ? "UTC" : "Local";
+    const fmt = (d: moment.Moment) => wallOf(d, timezone).format(FULL_FORMAT);
+    const zone = zoneLabel(timezone);
     const { startDate, endDate } = range;
 
     if (startDate && endDate) {
@@ -62,6 +56,8 @@ function describeRange(range: TimeSeriesRange, timezone: FilterTimezone): string
 interface CountState {
     loading: boolean;
     result: TimeSeriesRangeCount | null;
+    // Set when the count request failed for a reason other than an empty range (e.g. 500/network).
+    error?: boolean;
 }
 
 export default function DeleteTimeSeriesRangeModal(props: DeleteTimeSeriesRangeModalProps) {
@@ -74,7 +70,6 @@ export default function DeleteTimeSeriesRangeModal(props: DeleteTimeSeriesRangeM
     }));
     const [countState, setCountState] = useState<CountState>({ loading: true, result: null });
 
-    // Latest range, read inside the debounced effect without making it a dependency.
     const rangeRef = useRef(range.range);
     rangeRef.current = range.range;
     // Monotonic request id so a slow in-flight count can't overwrite a newer one.
@@ -82,8 +77,6 @@ export default function DeleteTimeSeriesRangeModal(props: DeleteTimeSeriesRangeM
 
     const rangeSig = rangeSignature(range.range);
 
-    // Re-count on every (valid) range change, debounced. resolveCount is stable for the life of
-    // the dialog, so it's intentionally excluded from the dependency list.
     useEffect(() => {
         if (!range.canApply) {
             setCountState({ loading: false, result: null });
@@ -100,7 +93,7 @@ export default function DeleteTimeSeriesRangeModal(props: DeleteTimeSeriesRangeM
                 })
                 .catch(() => {
                     if (reqIdRef.current === reqId) {
-                        setCountState({ loading: false, result: { count: 0, exact: true } });
+                        setCountState({ loading: false, result: null, error: true });
                     }
                 });
         }, COUNT_DEBOUNCE_MS);
@@ -108,8 +101,9 @@ export default function DeleteTimeSeriesRangeModal(props: DeleteTimeSeriesRangeM
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [rangeSig, range.canApply]);
 
-    const { loading, result } = countState;
+    const { loading, result, error } = countState;
     const known = !loading && result != null;
+    const countFailed = !loading && !!error;
     const count = result?.count ?? 0;
     const isEmptyRange = known && count === 0;
     const showExactCount = known && result.exact && count > 0;
@@ -158,13 +152,20 @@ export default function DeleteTimeSeriesRangeModal(props: DeleteTimeSeriesRangeM
                     </div>
                 )}
 
-                {range.canApply && !loading && isEmptyRange && (
-                    <RichAlert variant="info" className="mt-3">
-                        No entries match this range — there&apos;s nothing to delete.
+                {range.canApply && countFailed && (
+                    <RichAlert variant="warning" className="mt-3">
+                        Couldn&apos;t determine how many entries match this range. You can still delete, but the count
+                        is unknown.
                     </RichAlert>
                 )}
 
-                {range.canApply && !loading && !isEmptyRange && (
+                {range.canApply && !loading && isEmptyRange && (
+                    <RichAlert variant="info" className="mt-3">
+                        No entries match this range, so there&apos;s nothing to delete.
+                    </RichAlert>
+                )}
+
+                {range.canApply && !loading && !error && !isEmptyRange && (
                     <RichAlert variant="danger" className="mt-3">
                         <div>
                             {showExactCount ? (
@@ -190,16 +191,23 @@ export default function DeleteTimeSeriesRangeModal(props: DeleteTimeSeriesRangeM
                 <Button variant="link" className="link-muted" onClick={close} disabled={asyncDelete.loading}>
                     Cancel
                 </Button>
-                <ButtonWithSpinner
-                    variant="danger"
-                    className="rounded-pill"
-                    icon="trash"
-                    isSpinning={asyncDelete.loading}
-                    disabled={deleteDisabled}
-                    onClick={handleDelete}
+                <ConditionalPopover
+                    conditions={[
+                        { isActive: !range.canApply, message: "Complete the range to delete." },
+                        { isActive: range.canApply && isEmptyRange, message: "No entries match this range." },
+                    ]}
                 >
-                    {asyncDelete.loading ? "Deleting…" : deleteLabel}
-                </ButtonWithSpinner>
+                    <ButtonWithSpinner
+                        variant="danger"
+                        className="rounded-pill"
+                        icon="trash"
+                        isSpinning={asyncDelete.loading}
+                        disabled={deleteDisabled}
+                        onClick={handleDelete}
+                    >
+                        {asyncDelete.loading ? "Deleting…" : deleteLabel}
+                    </ButtonWithSpinner>
+                </ConditionalPopover>
             </Modal.Footer>
         </Modal>
     );

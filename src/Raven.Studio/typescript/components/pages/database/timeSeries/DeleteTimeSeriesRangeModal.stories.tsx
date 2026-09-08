@@ -82,3 +82,16 @@ export const CountingSlowly: StoryObj<typeof DeleteTimeSeriesRangeModal> = {
         />
     ),
 };
+
+export const CountFailed: StoryObj<typeof DeleteTimeSeriesRangeModal> = {
+    render: () => (
+        <DeleteTimeSeriesRangeModal
+            timeSeriesName="HeartRate"
+            startDate={moment().subtract(7, "days")}
+            endDate={moment()}
+            resolveCount={() => Promise.reject(new Error("count failed"))}
+            onDelete={resolve}
+            close={noop}
+        />
+    ),
+};

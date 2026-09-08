@@ -80,9 +80,7 @@ class editTimeSeries extends viewModelBase {
     localStartDateInFilter = ko.observable<moment.Moment>();
     localEndDateInFilter = ko.observable<moment.Moment>();
 
-    // Time zone the grid timestamps are displayed in. Defaults to UTC (how the raw data is stored),
-    // matching the historical "Date (UTC)" column. Purely a display concern — it doesn't affect the
-    // stored data or the filter range.
+    // Display-only zone for grid timestamps. Defaults to UTC (how the raw data is stored).
     displayTimezone = ko.observable<timeSeriesDisplayTimezone>("utc");
     displayTimezoneLabel: KnockoutComputed<string>;
 
@@ -701,15 +699,9 @@ class editTimeSeries extends viewModelBase {
             props: {
                 startDate: this.localStartDateInFilter() || null,
                 endDate: this.localEndDateInFilter() || null,
-                // The grid owns the time zone setting - seed the picker with it so both agree.
+                // Seed the picker with the grid's zone so both agree; applying doesn't change it.
                 timezone: this.displayTimezone(),
-                onApply: (filterDates: filterTimeSeriesDates<moment.Moment>, timezone: timeSeriesDisplayTimezone) => {
-                    // The zone chosen in the filter becomes the grid's zone. Set it before the
-                    // refresh below so the columns are rebuilt once, not twice.
-                    if (this.displayTimezone() !== timezone) {
-                        this.displayTimezone(timezone);
-                        this.gridController().markColumnsDirty();
-                    }
+                onApply: (filterDates: filterTimeSeriesDates<moment.Moment>) => {
                     this.localStartDateInFilter(filterDates.startDate || undefined);
                     this.localEndDateInFilter(filterDates.endDate || undefined);
                     this.itemsSoFar(0);
@@ -728,9 +720,7 @@ class editTimeSeries extends viewModelBase {
     }
 
     private openDeleteRangeModal() {
-        // Prefill the delete range from the active filter (if any). The dialog counts entries
-        // live for whatever range is currently selected, so it can show the real blast radius
-        // — or block an empty range — even after the user edits the dates or picks a preset.
+        // Prefill the delete range from the active filter (if any); the dialog re-counts live.
         this.deleteRangeModalView({
             component: DeleteTimeSeriesRangeModal.default,
             props: {
@@ -747,9 +737,10 @@ class editTimeSeries extends viewModelBase {
 
     // Count the entries in a candidate delete range. Fetches one page: an exact total when the
     // server reports one (incremental series) or the whole range fits in a page; otherwise a
-    // lower bound. A count of 0 (incl. 404 → no such range) means the range is empty.
+    // lower bound. Only a 404 means an empty range; any other failure rejects so the dialog can
+    // show an "unknown count" state rather than pretending the range is empty.
     private resolveRangeCount(range: filterTimeSeriesDates<moment.Moment>): Promise<{ count: number; exact: boolean }> {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             new getTimeSeriesCommand(this.documentId(), this.timeSeriesName(), this.activeDatabase(),
                 0, editTimeSeries.pageSize, true, range.startDate || undefined, range.endDate || undefined)
                 .execute()
@@ -761,7 +752,13 @@ class editTimeSeries extends viewModelBase {
                     const fetched = result.Entries.length;
                     resolve({ count: fetched, exact: fetched < editTimeSeries.pageSize });
                 })
-                .fail(() => resolve({ count: 0, exact: true }));
+                .fail((xhr: JQueryXHR) => {
+                    if (xhr.status === 404) {
+                        resolve({ count: 0, exact: true });
+                    } else {
+                        reject();
+                    }
+                });
         });
     }
 
