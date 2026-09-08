@@ -1,4 +1,5 @@
 import * as yup from "yup";
+import { DeepPartialSkipArrayKey } from "react-hook-form";
 import { setupWizardConstants } from "./utils/setupWizardConstants";
 import { ipAddressFormSchema } from "components/setupWizard/steps/SetupWizardNodeAddressStep";
 
@@ -52,9 +53,8 @@ const userDomainsWithIpsSchema = yup.object().shape({
 const licenseKeyStepSchema = yup.object({
     key: yup.string(),
     licenseInfo: yup.object({
-        licenseType: yup.string<Raven.Server.Commercial.LicenseType>(),
+        licenseStatus: yup.mixed<DeepPartialSkipArrayKey<LicenseStatus>>(),
         userDomainsWithIps: userDomainsWithIpsSchema,
-        maxClusterSize: yup.number(),
     }),
     licenseTypeToGenerate: yup.string<LicenseTypeToGenerate>().nullable(),
     isAcceptTerms: yup.boolean().oneOf([true], "The terms and conditions must be accepted.").required(),

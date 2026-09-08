@@ -1,7 +1,8 @@
 import { SetupWizardFormData } from "components/setupWizard/setupWizardValidation";
+import { setupWizardConstants } from "components/setupWizard/utils/setupWizardConstants";
 
 export function getLicenseType(licenseInfo: SetupWizardFormData["licenseKeyStep"]["licenseInfo"]) {
-    const type = licenseInfo?.licenseType || "None";
+    const type = licenseInfo?.licenseStatus?.Type || "None";
 
     const licenseTiers: Record<Raven.Server.Commercial.LicenseType, number> = {
         None: 0,
@@ -27,6 +28,16 @@ export function getLicenseType(licenseInfo: SetupWizardFormData["licenseKeyStep"
         isEnterprise: () => type === "Enterprise",
         hasLicense: () => type !== "None" && type !== "Invalid",
     };
+}
+
+export function getMaxClusterSize(licenseInfo: SetupWizardFormData["licenseKeyStep"]["licenseInfo"]) {
+    const maxClusterSize = licenseInfo?.licenseStatus?.MaxClusterSize;
+
+    if (maxClusterSize == null) {
+        return setupWizardConstants.AGPL_MAX_CLUSTER_SIZE;
+    }
+
+    return maxClusterSize === 0 ? Infinity : maxClusterSize;
 }
 
 export function fileToBase64(file: File): Promise<string> {

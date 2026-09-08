@@ -152,7 +152,7 @@ function ServerEnvironmentSection({
     control: Control<SetupWizardFormData>;
     licenseInfo: SetupWizardFormData["licenseKeyStep"]["licenseInfo"];
 }) {
-    if (getLicenseType(licenseInfo).isHigherThan("Community")) {
+    if (licenseInfo?.licenseStatus?.HasStudioConfiguration) {
         return (
             <FormGroup>
                 <FormLabel className="d-flex">
@@ -230,7 +230,7 @@ interface ExperimentalFeaturesSectionProps {
 }
 
 function ExperimentalFeaturesSection({ control, licenseInfo }: ExperimentalFeaturesSectionProps) {
-    if (!getLicenseType(licenseInfo).isHigherThan("Community")) {
+    if (!licenseInfo?.licenseStatus?.HasPostgreSqlIntegration) {
         return null;
     }
 
