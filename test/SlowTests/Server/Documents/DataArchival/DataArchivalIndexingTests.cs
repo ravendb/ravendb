@@ -1018,7 +1018,7 @@ public class DataArchivalIndexingTests : RavenTestBase
     {
         public CompaniesByNameJSMapReduce()
         {
-            Maps = new HashSet<string> {@"map('Companies', function (u){ return { Name: u.Name, Count: 1, Id: u.Id};})",};
+            Maps = new HashSet<string> {@"map('Companies', function (u){ return { Name: u.Name, Count: 1};})",};
 
             Reduce = @"groupBy(x => ({ Name: x.Name }))
 .aggregate(g => { 
@@ -1036,7 +1036,7 @@ public class DataArchivalIndexingTests : RavenTestBase
         {
             Maps = new HashSet<string>
             {
-                @"map('Companies', function (u){ return { Name: u.Name, Count: 1, Id: u.Id};})",
+                @"map('Companies', function (u){ return { Name: u.Name, Count: 1};})",
             };
             
             Reduce = @"groupBy(x => ({ Name: x.Name }))
@@ -1056,7 +1056,7 @@ public class DataArchivalIndexingTests : RavenTestBase
         {
             Maps = new HashSet<string>
             {
-                @"map('Companies', function (u){ return { Name: u.Name, Count: 1, Id: u.Id};})",
+                @"map('Companies', function (u){ return { Name: u.Name, Count: 1};})",
             };
 
             Reduce = @"groupBy(x => ({ Name: x.Name }))

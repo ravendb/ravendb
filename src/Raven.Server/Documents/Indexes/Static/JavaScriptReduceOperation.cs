@@ -406,6 +406,44 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
+        internal List<HashSet<string>> GetStaticallyKnownOutputFields()
+        {
+            var shapes = new List<HashSet<string>>();
+
+            foreach (var returnStatement in JavaScriptIndexUtils.GetReturnStatements(Reduce.FunctionDeclaration))
+            {
+                if (returnStatement.Argument is not ObjectExpression oe)
+                    continue;
+
+                var fields = new HashSet<string>();
+                var isStaticallyKnown = true;
+
+                foreach (var prop in oe.Properties)
+                {
+                    if (prop is Property { Computed: false } property)
+                    {
+                        var fieldName = property.GetKey(Engine).AsString();
+                        if (fieldName == "_")
+                        {
+                            isStaticallyKnown = false;
+                            break;
+                        }
+
+                        fields.Add(fieldName);
+                        continue;
+                    }
+
+                    isStaticallyKnown = false;
+                    break;
+                }
+
+                if (isStaticallyKnown && fields.Count > 0)
+                    shapes.Add(fields);
+            }
+
+            return shapes;
+        }
+
         public void SetBufferPoolForTestingPurposes(UnmanagedBuffersPoolWithLowMemoryHandling bufferPool)
         {
             _bufferPool = bufferPool;
