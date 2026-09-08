@@ -37,6 +37,54 @@ jobs:
         run: |
           dotnet build
         
+      # Raven.Quill.Web is an .esproj with no Build.0 entry, so the root dotnet build skips
+      # it. Keep above the NuGet cache clear: generate:api shells out to dotnet build.
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: quill
+        with:
+          filters: |
+            changed:
+              - 'src/Raven.Quill/**'
+              - 'src/Raven.Quill.Web/**'
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+        if: steps.quill.outputs.changed == 'true'
+        with:
+          package_json_file: src/Raven.Quill.Web/package.json
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        if: steps.quill.outputs.changed == 'true'
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: src/Raven.Quill.Web/pnpm-lock.yaml
+
+      - name: Install Quill Dashboard dependencies
+        if: steps.quill.outputs.changed == 'true'
+        run: pnpm install --frozen-lockfile
+        working-directory: src/Raven.Quill.Web
+
+      # server-api.ts is generated but committed, and typechecks fine when stale. Asserted
+      # before `pnpm build`, which re-runs generate:api itself: a stale client that also
+      # breaks tsc would otherwise bury this diagnostic in type errors.
+      - name: Regenerate Quill Dashboard API client
+        if: steps.quill.outputs.changed == 'true'
+        run: pnpm generate:api
+        working-directory: src/Raven.Quill.Web
+
+      - name: Verify committed Quill Dashboard API client matches
+        if: steps.quill.outputs.changed == 'true'
+        run: |
+          if ! git diff --exit-code -- src/Raven.Quill.Web/src/api/generated/server-api.ts; then
+            echo "::error::src/api/generated/server-api.ts is stale. Run 'pnpm generate:api' in src/Raven.Quill.Web and commit the result."
+            exit 1
+          fi
+
+      - name: Compile Quill Dashboard
+        if: steps.quill.outputs.changed == 'true'
+        run: pnpm build
+        working-directory: src/Raven.Quill.Web
+
       - name: Clear NuGet Cache
         run: |
           dotnet nuget locals all --clear

@@ -45,6 +45,7 @@ using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
+using Raven.Server.Commercial.WriteUsageMetering;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
@@ -512,6 +513,7 @@ namespace Raven.Server.ServerWide
                     var term = _engine.CurrentTerm;
                     using (ClusterMaintenanceSupervisor = new ClusterMaintenanceSupervisor(this, _engine.Tag, term))
                     using (Observer = new ClusterObserver(this, ClusterMaintenanceSupervisor, _engine, term, _engine.ContextPool, ServerShutdown))
+                    using (new WriteUsageReporter(this, Observer, term, ServerShutdown))
                     {
                         var oldNodes = new Dictionary<string, string>();
                         while (_engine.LeaderTag == NodeTag && term == _engine.CurrentTerm)
@@ -4103,6 +4105,9 @@ namespace Raven.Server.ServerWide
             internal Action<string, List<ClusterTransactionCommand.SingleClusterDatabaseCommand>> BeforeExecuteClusterTransactionBatch;
             internal Action<ClusterObserver.CompareExchangeTombstonesCleanupState> AfterCompareExchangeTombstonesResult;
             internal bool IgnoreClusterTransactionIndexInCompareExchangeCleaner;
+            internal Action<DynamicJsonValue> OnWriteUsageReportReady;   // capture the genuine assembled body
+            internal bool SkipWriteUsageActualSend;                      // suppress the real POST to api.ravendb.net
+            internal bool ForceWriteUsageReportingEnabled;               // bypass the Quill-license gate in tests
         }
 
 #if DEBUG

@@ -13,6 +13,7 @@ import { mockStore } from "test/mocks/store/MockStore";
 import { mockServices } from "test/mocks/services/MockServices";
 import assertUnreachable from "components/utils/assertUnreachable";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
+import { TasksStubs } from "test/stubs/TasksStubs";
 
 export default {
     title: "Pages/Tasks/Ongoing tasks/Add New Ongoing Task",
@@ -29,6 +30,9 @@ interface AddNewOngoingTaskStoryArgs {
     licenseType: Raven.Server.Commercial.LicenseType;
     databaseAccess: databaseAccessLevel;
     isAiOnly: boolean;
+    hasSubscriptionLimits: boolean;
+    subscriptionsClusterUsage: number;
+    subscriptionsDatabaseCount: number;
 }
 
 export const Default: StoryObj<AddNewOngoingTaskStoryArgs> = {
@@ -43,10 +47,20 @@ export const Default: StoryObj<AddNewOngoingTaskStoryArgs> = {
         databaseType: "sharded",
         licenseType: "EnterpriseAi",
         databaseAccess: "DatabaseAdmin",
+        hasSubscriptionLimits: false,
+        subscriptionsClusterUsage: 0,
+        subscriptionsDatabaseCount: 0,
     },
 };
 
-const commonInit = ({ databaseType, licenseType, databaseAccess }: AddNewOngoingTaskStoryArgs) => {
+const commonInit = ({
+    databaseType,
+    licenseType,
+    databaseAccess,
+    hasSubscriptionLimits,
+    subscriptionsClusterUsage,
+    subscriptionsDatabaseCount,
+}: AddNewOngoingTaskStoryArgs) => {
     const { accessManager, license, databases } = mockStore;
     const { tasksService } = mockServices;
 
@@ -69,8 +83,18 @@ const commonInit = ({ databaseType, licenseType, databaseAccess }: AddNewOngoing
         [db.name]: databaseAccess,
     });
 
-    license.with_LicenseLimited({
-        Type: licenseType,
+    if (hasSubscriptionLimits) {
+        license.with_LicenseLimited({
+            Type: licenseType,
+        });
+    } else {
+        license.with_License({
+            Type: licenseType,
+        });
+    }
+
+    license.with_LimitsUsage({
+        NumberOfSubscriptionsInCluster: subscriptionsClusterUsage,
     });
 
     accessManager.with_securityClearance("ValidUser");
@@ -78,8 +102,14 @@ const commonInit = ({ databaseType, licenseType, databaseAccess }: AddNewOngoing
     clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
 
     tasksService.withGetTasks((dto) => {
-        dto.SubscriptionsCount = 0;
-        dto.OngoingTasks = [];
+        dto.SubscriptionsCount = subscriptionsDatabaseCount;
+        dto.OngoingTasks = Array.from({ length: subscriptionsDatabaseCount }, (_, i) => ({
+            ...TasksStubs.getSubscription(),
+            TaskId: i + 1,
+            SubscriptionId: i + 1,
+            TaskName: `Subscription-${i + 1}`,
+            SubscriptionName: `Subscription-${i + 1}`,
+        }));
         dto.PullReplications = [];
     });
 

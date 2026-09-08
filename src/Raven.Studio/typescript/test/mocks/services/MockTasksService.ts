@@ -201,11 +201,11 @@ export default class MockTasksService extends AutoMockService<TasksService> {
         return this.mockResolvedValue(this.mocks.getLocalFolderPathOptions, dto, TasksStubs.localFolderPathOptions());
     }
 
-    withTestAiConnectionString(dto?: Raven.Server.Web.System.NodeConnectionTestResult) {
+    withTestAiConnectionString(dto?: Raven.Server.Documents.AI.AiConnectionTestResult) {
         return this.mockResolvedValue(
             this.mocks.testAiConnectionString,
             dto,
-            SharedStubs.nodeConnectionTestSuccessResult()
+            SharedStubs.aiConnectionTestSuccessResult()
         );
     }
 

@@ -104,6 +104,7 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         community: { value: true },
         professional: { value: true },
         enterprise: { value: true },
+        quill: { value: true },
     },
     {
         featureName: "RavenDB ETL",
@@ -111,6 +112,7 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         community: { value: false },
         professional: { value: true },
         enterprise: { value: true },
+        quill: { value: true },
     },
     {
         featureName: "SQL ETL",
@@ -118,6 +120,7 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         community: { value: false },
         professional: { value: true },
         enterprise: { value: true },
+        quill: { value: true },
     },
     {
         featureName: "Snowflake ETL",
@@ -125,6 +128,7 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         community: { value: false },
         professional: { value: false },
         enterprise: { value: true },
+        quill: { value: true },
     },
     {
         featureName: "OLAP ETL",
@@ -132,6 +136,7 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         community: { value: false },
         professional: { value: false },
         enterprise: { value: true },
+        quill: { value: true },
     },
     {
         featureName: "Elasticsearch ETL",
@@ -139,6 +144,7 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         community: { value: false },
         professional: { value: false },
         enterprise: { value: true },
+        quill: { value: true },
     },
     {
         featureName: "Kafka ETL",
@@ -146,6 +152,7 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         community: { value: false },
         professional: { value: false },
         enterprise: { value: true },
+        quill: { value: true },
     },
     {
         featureName: "RabbitMQ ETL",
@@ -153,6 +160,7 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         community: { value: false },
         professional: { value: false },
         enterprise: { value: true },
+        quill: { value: true },
     },
     {
         featureName: "Azure Queue Storage ETL",
@@ -160,6 +168,7 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         community: { value: false },
         professional: { value: false },
         enterprise: { value: true },
+        quill: { value: true },
     },
     {
         featureName: "Amazon SQS ETL",
@@ -167,6 +176,7 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         community: { value: false },
         professional: { value: false },
         enterprise: { value: true },
+        quill: { value: true },
     },
     {
         featureName: "Azure Service Bus ETL",

@@ -5,7 +5,7 @@
     OngoingTaskSharedInfo,
 } from "components/models/tasks";
 import useBoolean from "hooks/useBoolean";
-import React, { ReactNode, useCallback, useReducer, useState } from "react";
+import React, { ReactNode, useCallback, useEffect, useReducer, useState } from "react";
 import router from "plugins/router";
 import { RichPanelDetailItem, RichPanelName } from "components/common/RichPanel";
 import Spinner from "react-bootstrap/Spinner";
@@ -14,6 +14,7 @@ import { Icon } from "components/common/Icon";
 import { OngoingTaskOperationConfirmType } from "./OngoingTaskOperationConfirm";
 import assertUnreachable from "components/utils/assertUnreachable";
 import messagePublisher from "common/messagePublisher";
+import recentError from "common/notifications/models/recentError";
 import { useServices } from "components/hooks/useServices";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
@@ -34,6 +35,7 @@ import { TaskCardCategory, TaskCardDisabledCondition } from "components/pages/da
 import { useTaskCardFilters } from "components/pages/database/tasks/shared/useTaskCardFilters";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { getAccessRequiredMessage } from "components/utils/accessUtils";
+import IconName from "../../../../../../typings/server/icons";
 import { StudioConnectionType } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
 import {
     getServerWideShortName,
@@ -440,12 +442,47 @@ export function useOngoingTasksOperations(reload: () => void) {
 
 export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean }) {
     const db = useAppSelector(databaseSelectors.activeDatabase);
-    const [tasks] = useReducer(ongoingTasksReducer, db, ongoingTasksReducerInitializer);
+    const { tasksService } = useServices();
+    const [tasks, dispatch] = useReducer(ongoingTasksReducer, db, ongoingTasksReducerInitializer);
+
+    const fetchTasks = useCallback(
+        async (location: databaseLocationSpecifier) => {
+            try {
+                const tasks = await tasksService.getOngoingTasks(db?.name, location);
+                dispatch({
+                    type: "TasksLoaded",
+                    location,
+                    tasks,
+                });
+            } catch (e) {
+                const errorAndMessage = recentError.tryExtractMessageAndException(e.responseText);
+                dispatch({
+                    type: "TasksLoadError",
+                    location,
+                    error: errorAndMessage.message + (errorAndMessage.error ? ": " + errorAndMessage.error : ""),
+                });
+            }
+        },
+        [db, tasksService, dispatch]
+    );
+
+    const reload = useCallback(async () => {
+        // if database is sharded we need to load from both orchestrator and target node point of view
+        // in case of non-sharded - we have single level: node
+
+        if (db?.isSharded) {
+            const orchestratorTasks = db.nodes.map((node) => fetchTasks({ nodeTag: node.tag }));
+            await Promise.all(orchestratorTasks);
+        }
+
+        await Promise.all(tasks.locations.map(fetchTasks));
+    }, [tasks, fetchTasks, db]);
+
+    useEffect(() => {
+        reload();
+    }, []);
 
     const subscriptionsServerCount = useAppSelector(licenseSelectors.limitsUsage).NumberOfSubscriptionsInCluster;
-
-    const license = useAppSelector(licenseSelectors.licenseInfo);
-    const isProfessionalOrAbove = license.isAtLeast("Professional");
 
     const hasExternalReplication = useAppSelector(licenseSelectors.statusValue("HasExternalReplication"));
     const hasReplicationHub = useAppSelector(licenseSelectors.statusValue("HasPullReplicationAsHub"));
@@ -483,8 +520,7 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
     );
 
     const isSubscriptionDisabled =
-        !isProfessionalOrAbove &&
-        (subscriptionsServerLimitStatus === "limitReached" || subscriptionsDatabaseLimitStatus === "limitReached");
+        subscriptionsServerLimitStatus === "limitReached" || subscriptionsDatabaseLimitStatus === "limitReached";
 
     const { forCurrentDatabase } = useAppUrls();
 

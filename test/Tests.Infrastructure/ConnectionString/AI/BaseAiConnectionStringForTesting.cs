@@ -92,7 +92,7 @@ public abstract class BaseAiConnectorForTesting<T, TConfig> : IAiConnectorForTes
         return connectionString;
     }
 
-    public TConfig GetAiConfiguration()
+    public virtual TConfig GetAiConfiguration()
     {
         var connectionString = GetAiConnectionString();
 
@@ -104,13 +104,17 @@ public abstract class BaseAiConnectorForTesting<T, TConfig> : IAiConnectorForTes
         };
     }
 
+    // How long the connectivity probe may take. Providers that have to load a model before they can answer
+    // (a local Ollama) override this; everyone else keeps the short provider-neutral budget.
+    protected virtual TimeSpan ConnectionProbeTimeout => TimeSpan.FromSeconds(20);
+
     private bool IsConnectionAllowed()
     {
         InMemoryLoggerProvider logger = null;
 
         try
         {
-            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20)))
+            using (var cts = new CancellationTokenSource(ConnectionProbeTimeout))
             {
                 return TryConnect(out logger, cts.Token);
             }
@@ -176,7 +180,7 @@ public abstract class AbstractGenAiConnectorForTesting<T> : BaseAiConnectorForTe
         using (var client = ChatCompletionClient.CreateChatCompletionClient(contextPool, configuration.Connection))
         {
             logger = null;
-            client.TestCompleteAsync(systemPrompt: "Reply with exact word only: raven", "", schema, token).GetAwaiter().GetResult();
+            client.TestCompleteAsync(systemPrompt: "Reply with exact word only: raven", "hi", schema, token).GetAwaiter().GetResult();
             return true;
         }
     }

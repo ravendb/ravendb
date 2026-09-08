@@ -495,6 +495,10 @@ namespace Raven.Server.Commercial
                     break;
                 case SetupMode.LetsEncrypt:
                     break;
+                case SetupMode.None:
+                    foreach (var step in StepsByConfigurationStepType.Values)
+                        step.SetState(State.NotApplicable);
+                    break;
                 default:
                     throw new NotSupportedException($"Setup mode {mode} is not supported for tracking progress.");
             }
