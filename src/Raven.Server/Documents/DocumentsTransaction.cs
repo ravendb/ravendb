@@ -153,16 +153,34 @@ namespace Raven.Server.Documents
             return new DocumentsTransaction(context, tx, _changes);
         }
 
-        // Internal listeners (indexing, ETL, replication, subscriptions) only need to know which *collections* changed
-        private Dictionary<string, bool> _changedCollections;
+        // Internal listeners (indexing, ETL, replication, subscriptions) only need to know which
+        // *collections* changed, what changed in each (documents / counters / time series), and
+        // whether all of it came from incoming replication
+        private Dictionary<string, ChangedCollection> _changedCollections;
+
+        private struct ChangedCollection
+        {
+            public DocumentChangeTypes DocumentTypes; 
+            public bool HasCounters;
+            public bool HasTimeSeries;
+            public bool DocumentsReplicationOnly;
+            public bool CountersReplicationOnly;
+            public bool TimeSeriesReplicationOnly;
+        }
+
+        private ref ChangedCollection GetChangedCollection(string collectionName)
+        {
+            var changedCollections = _changedCollections ??= new Dictionary<string, ChangedCollection>(StringComparer.Ordinal);
+            return ref System.Runtime.InteropServices.CollectionsMarshal.GetValueRefOrAddDefault(changedCollections, collectionName, out _);
+        }
 
         public void AddAfterCommitNotification(string collectionName, string id, string changeVector, DocumentChangeTypes type)
         {
             var triggeredByReplicationThread = IncomingReplicationHandler.IsIncomingInternalReplication;
 
-            var changedCollections = _changedCollections ??= [];
-            ref bool replicationOnly = ref System.Runtime.InteropServices.CollectionsMarshal.GetValueRefOrAddDefault(changedCollections, collectionName, out bool exists);
-            replicationOnly = triggeredByReplicationThread && (exists == false || replicationOnly);
+            ref ChangedCollection changed = ref GetChangedCollection(collectionName);
+            changed.DocumentsReplicationOnly = triggeredByReplicationThread && (changed.DocumentTypes == DocumentChangeTypes.None || changed.DocumentsReplicationOnly);
+            changed.DocumentTypes |= type;
 
             if (_changes.HasConnections == false)
                 return;
@@ -177,18 +195,13 @@ namespace Raven.Server.Documents
             });
         }
 
-        // Internal counter / time series listeners (outgoing replication, ETL) are wakeup only, just need to know if it was TriggeredByReplicationThread
-        private bool _hasCounterChanges;
-        private bool _counterChangesAreReplicationOnly = true;
-        private bool _hasTimeSeriesChanges;
-        private bool _timeSeriesChangesAreReplicationOnly = true;
-
         public void AddAfterCommitNotification(string collectionName, string documentId, string counterName, string changeVector, CounterChangeTypes type, long value = 0)
         {
             var triggeredByReplicationThread = IncomingReplicationHandler.IsIncomingInternalReplication;
 
-            _hasCounterChanges = true;
-            _counterChangesAreReplicationOnly &= triggeredByReplicationThread;
+            ref ChangedCollection changed = ref GetChangedCollection(collectionName);
+            changed.CountersReplicationOnly = triggeredByReplicationThread && (changed.HasCounters == false || changed.CountersReplicationOnly);
+            changed.HasCounters = true;
 
             if (_changes.HasConnections == false)
                 return; // the per-item change object is only needed for connected /changes clients
@@ -209,8 +222,9 @@ namespace Raven.Server.Documents
         {
             var triggeredByReplicationThread = IncomingReplicationHandler.IsIncomingInternalReplication;
 
-            _hasTimeSeriesChanges = true;
-            _timeSeriesChangesAreReplicationOnly &= triggeredByReplicationThread;
+            ref ChangedCollection changed = ref GetChangedCollection(collectionName);
+            changed.TimeSeriesReplicationOnly = triggeredByReplicationThread && (changed.HasTimeSeries == false || changed.TimeSeriesReplicationOnly);
+            changed.HasTimeSeries = true;
 
             if (_changes.HasConnections == false)
                 return; // the per-item change object is only needed for connected /changes clients
@@ -254,15 +268,36 @@ namespace Raven.Server.Documents
 
             if (_changedCollections != null)
             {
-                // one wakeup per changed collection for internal listeners
-                foreach (var changed in _changedCollections)
+                // one wakeup per changed collection per domain for internal listeners
+                foreach (var (collection, changed) in _changedCollections)
                 {
-                    _changes.RaiseInternalDocumentChangeNotification(new DocumentChange
+                    if (changed.DocumentTypes != DocumentChangeTypes.None)
                     {
-                        CollectionName = changed.Key,
-                        Type = DocumentChangeTypes.Put,
-                        TriggeredByReplicationThread = changed.Value
-                    });
+                        _changes.RaiseInternalDocumentChangeNotification(new DocumentChange
+                        {
+                            CollectionName = collection,
+                            Type = changed.DocumentTypes,
+                            TriggeredByReplicationThread = changed.DocumentsReplicationOnly
+                        });
+                    }
+
+                    if (changed.HasCounters)
+                    {
+                        _changes.RaiseInternalCounterChangeNotification(new CounterChange
+                        {
+                            CollectionName = collection,
+                            TriggeredByReplicationThread = changed.CountersReplicationOnly
+                        });
+                    }
+
+                    if (changed.HasTimeSeries)
+                    {
+                        _changes.RaiseInternalTimeSeriesChangeNotification(new TimeSeriesChange
+                        {
+                            CollectionName = collection,
+                            TriggeredByReplicationThread = changed.TimeSeriesReplicationOnly
+                        });
+                    }
                 }
             }
 
@@ -275,28 +310,12 @@ namespace Raven.Server.Documents
                 }
             }
 
-            if (_hasCounterChanges)
-            {
-                _changes.RaiseInternalCounterChangeNotification(new CounterChange
-                {
-                    TriggeredByReplicationThread = _counterChangesAreReplicationOnly
-                });
-            }
-
             if (_counterNotifications?.Count > 0)
             {
                 foreach (var notification in _counterNotifications)
                 {
                     _changes.SendCounterChangeToConnections(notification);
                 }
-            }
-
-            if (_hasTimeSeriesChanges)
-            {
-                _changes.RaiseInternalTimeSeriesChangeNotification(new TimeSeriesChange
-                {
-                    TriggeredByReplicationThread = _timeSeriesChangesAreReplicationOnly
-                });
             }
 
             if (_timeSeriesNotifications?.Count > 0)
@@ -311,10 +330,7 @@ namespace Raven.Server.Documents
         protected override bool ShouldRaiseNotifications()
         {
             return base.ShouldRaiseNotifications()
-                || _changedCollections != null
-                || _documentNotifications != null
-                || _hasCounterChanges
-                || _hasTimeSeriesChanges;
+                || _changedCollections != null;
         }
 
         // the collections created (first seen) in this transaction, with canonical CollectionName instances.

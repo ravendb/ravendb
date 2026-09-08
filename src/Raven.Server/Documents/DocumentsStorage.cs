@@ -366,7 +366,7 @@ namespace Raven.Server.Documents
                     currentCache.LastEtagsByCollection[collection] = colCache;
                 }
             }
-            currentCache.Collections = collectionsForWrites;
+            currentCache.Collections = collectionsForWrites ?? previousCache?.Collections;
             currentCache.RevisionsCount = tx.ReadTree(Schemas.Revisions.RevisionsCountSlice)?.ReadHeader().NumberOfEntries ?? 0;
             currentCache.Published = true; // this instance becomes the committed state - immutable from here on
 
