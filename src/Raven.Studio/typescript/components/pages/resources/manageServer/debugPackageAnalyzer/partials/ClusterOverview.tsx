@@ -116,9 +116,10 @@ function ClusterOverviewWithSize({ summary, width }: ClusterOverviewWithSizeProp
         return names.size;
     }, [nodes]);
 
-    const totalNodes = rows.length;
-    const onlineNodes = nodeInfos.length;
-    const allNodesOnline = onlineNodes === totalNodes;
+    const offlineNodes = Object.keys(summary.UnreachableNodes ?? {}).length;
+    const onlineNodes = nodes.length;
+    const totalNodes = onlineNodes + offlineNodes;
+    const allNodesOnline = offlineNodes === 0;
 
     const clusterUpTime = useMemo(() => {
         let best: string | null = null;
