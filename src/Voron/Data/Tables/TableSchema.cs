@@ -1,3 +1,4 @@
+using System.IO;
 using Sparrow;
 using System;
 using System.Collections.Generic;
@@ -393,7 +394,10 @@ namespace Voron.Data.Tables
                 if (*(int*)currentPtr != 0)
                 {
                     currentPtr = input.Read(currentIndex, out currentSize);
-                    schema.CompressedEtagSourceIndex = FixedSizeKeyIndexDef.ReadFrom(context, currentPtr, currentSize);
+                    var etagSource = FixedSizeKeyIndexDef.ReadFrom(context, currentPtr, currentSize);
+                    if (schema._fixedSizeIndexes.TryGetValue(etagSource.Name, out var defined) == false)
+                        throw new InvalidDataException($"The compressed etag source index '{etagSource.Name}' is not one of the schema's fixed size indexes");
+                    schema.CompressedEtagSourceIndex = defined;
                 }
             }
 
