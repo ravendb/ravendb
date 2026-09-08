@@ -526,7 +526,7 @@ function CompletedSummary() {
                 <Nav className="mb-2">
                     <Nav.Item className="flex-grow">
                         <Nav.Link eventKey="cluster" className="cluster-tab">
-                            Setting up a cluster
+                            Complete cluster setup
                         </Nav.Link>
                     </Nav.Item>
                 </Nav>
@@ -553,33 +553,7 @@ function CompletedSummary() {
                         </Col>
                     </Row>
                     <hr />
-                    <h5>How to set up the cluster nodes?</h5>
-                    <NumberedList>
-                        <NumberedListItem stepKey={1}>
-                            The next step is to download a new RavenDB server for each of the cluster nodes.
-                        </NumberedListItem>
-                        <NumberedListItem stepKey={2}>
-                            When you enter the Setup Wizard on a new node, choose &apos;
-                            <b>Use Setup Package</b>&apos;.
-                            <br />
-                            Do not start a setup process on a node that has already been configured; this is not
-                            supported.
-                        </NumberedListItem>
-                        <NumberedListItem stepKey={3}>
-                            You will be asked to upload the zip file that was just downloaded.
-                        </NumberedListItem>
-                        <NumberedListItem stepKey={4}>
-                            The new server node will join the existing cluster.
-                        </NumberedListItem>
-                    </NumberedList>
-                    <RichAlert variant="info" className="mt-3">
-                        When the Setup Wizard is done and the new node restarts, the cluster will automatically detect
-                        it.
-                        <br />
-                        There is no need to add it manually from Studio.
-                        <br />
-                        Simply access the &apos;Cluster&apos; view and observe the topology update.
-                    </RichAlert>
+                    <ClusterNodesInstructions heading="How to set up the cluster nodes?" />
                 </div>
             </div>
         );
@@ -644,53 +618,41 @@ function CompletedSummary() {
                         </RichAlert>
                     </Tab.Pane>
                     <Tab.Pane eventKey="cluster">
-                        <Row>
-                            <Col md={6} className="vstack gap-2 text-center justify-content-center">
-                                <div>
-                                    <Icon icon="folder" addon="attachment" color="primary" size="lg" />
-                                </div>
-                                <span>The new server will be available at: {studioUrl}</span>
-                            </Col>
-                            <Col md={6} className="vstack gap-2 text-center justify-content-center">
-                                <Icon icon="cluster" color="node" size="lg" />
-                                <span>
-                                    The current <span className="text-node fw-bold">Node {nodeTag}</span> has already
-                                    been configured and requires no further action on your part.
-                                </span>
-                            </Col>
-                        </Row>
-                        <hr />
-                        <h5>How to set up the other nodes?</h5>
-                        <NumberedList>
-                            <NumberedListItem stepKey={1}>
-                                The next step is to download a new RavenDB server for each of the cluster nodes.
-                            </NumberedListItem>
-                            <NumberedListItem stepKey={2}>
-                                When you enter the Setup Wizard on a new node, choose &apos;
-                                <b>Use Setup Package</b>&apos;.
-                                <br />
-                                Do not start a setup process on a node that has already been configured; this is not
-                                supported.
-                            </NumberedListItem>
-                            <NumberedListItem stepKey={3}>
-                                You will be asked to upload the zip file that was just downloaded.
-                            </NumberedListItem>
-                            <NumberedListItem stepKey={4}>
-                                The new server node will join the existing cluster.
-                            </NumberedListItem>
-                        </NumberedList>
-                        <RichAlert variant="info" className="mt-2">
-                            When the Setup Wizard is done and the new node restarts, the cluster will automatically
-                            detect it.
-                            <br />
-                            There is no need to add it manually from Studio.
-                            <br />
-                            Simply access the &apos;Cluster&apos; view and observe the topology update.
-                        </RichAlert>
+                        <ClusterNodesInstructions heading="How to set up the other nodes?" />
                     </Tab.Pane>
                 </Tab.Content>
             </Tab.Container>
         </div>
+    );
+}
+
+function ClusterNodesInstructions({ heading }: { heading: string }) {
+    return (
+        <>
+            <h5>{heading}</h5>
+            <NumberedList>
+                <NumberedListItem stepKey={1}>
+                    The next step is to download a new RavenDB server for each of the cluster nodes.
+                </NumberedListItem>
+                <NumberedListItem stepKey={2}>
+                    When you enter the Setup Wizard on a new node, choose &apos;
+                    <b>Use Setup Package</b>&apos;.
+                    <br />
+                    Do not start a setup process on a node that has already been configured; this is not supported.
+                </NumberedListItem>
+                <NumberedListItem stepKey={3}>
+                    You will be asked to upload the zip file that was just downloaded.
+                </NumberedListItem>
+                <NumberedListItem stepKey={4}>The new server node will join the existing cluster.</NumberedListItem>
+            </NumberedList>
+            <RichAlert variant="info" className="mt-3">
+                When the Setup Wizard is done and the new node restarts, the cluster will automatically detect it.
+                <br />
+                There is no need to add it manually from Studio.
+                <br />
+                Simply access the &apos;Cluster&apos; view and observe the topology update.
+            </RichAlert>
+        </>
     );
 }
 
