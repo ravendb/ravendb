@@ -43,6 +43,12 @@ jest.mock("../typescript/common/eventsCollector", () => ({
     default: new (require("../typescript/test/mocks/hooks/MockEventsCollector").default)()
 }));
 
+jest.mock("../typescript/common/notifications/notificationCenter", () => {
+    const notificationCenter = jest.requireActual("../typescript/common/notifications/notificationCenter");
+    notificationCenter.instance.monitorOperation = jest.fn(() => $.Deferred().promise());
+    return notificationCenter;
+});
+
 jest.mock("../typescript/common/bindingHelpers/aceEditorBindingHandler");
 
 jest.mock("../typescript/common/versionProvider");

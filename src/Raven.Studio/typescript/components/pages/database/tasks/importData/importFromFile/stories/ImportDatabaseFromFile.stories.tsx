@@ -23,22 +23,33 @@ interface ImportFromFileStoryArgs {
     databaseAccess: databaseAccessLevel;
     licenseType: Raven.Server.Commercial.LicenseType;
     hasAllLicenseFeatures: boolean;
+    licenseOverrides?: Partial<LicenseStatus>;
     isEmptyDatabase: boolean;
+    isSharded?: boolean;
 }
 
-function init({ databaseAccess, licenseType, hasAllLicenseFeatures, isEmptyDatabase }: ImportFromFileStoryArgs) {
+function init({
+    databaseAccess,
+    licenseType,
+    hasAllLicenseFeatures,
+    licenseOverrides,
+    isEmptyDatabase,
+    isSharded,
+}: ImportFromFileStoryArgs) {
     const { accessManager, databases, license, collectionsTracker } = mockStore;
     const { tasksService, databasesService } = mockServices;
 
-    const db = databases.withActiveDatabase_NonSharded_SingleNode();
+    const db = isSharded
+        ? databases.withActiveDatabase_Sharded()
+        : databases.withActiveDatabase_NonSharded_SingleNode();
 
     accessManager.with_databaseAccess({ [db.name]: databaseAccess });
     accessManager.with_securityClearance("ValidUser");
 
     if (hasAllLicenseFeatures) {
-        license.with_License({ Type: licenseType });
+        license.with_License({ Type: licenseType, ...licenseOverrides });
     } else {
-        license.with_LicenseLimited({ Type: licenseType });
+        license.with_LicenseLimited({ Type: licenseType, ...licenseOverrides });
     }
 
     collectionsTracker.with_Collections();
@@ -65,6 +76,7 @@ export const Default: StoryObj<ImportFromFileStoryArgs> = {
         licenseType: "Enterprise",
         hasAllLicenseFeatures: false,
         isEmptyDatabase: false,
+        isSharded: false,
     },
 };
 
@@ -74,5 +86,15 @@ export const FullLicense: StoryObj<ImportFromFileStoryArgs> = {
     args: {
         ...Default.args,
         hasAllLicenseFeatures: true,
+    },
+};
+
+export const Sharded: StoryObj<ImportFromFileStoryArgs> = {
+    ...Default,
+    name: "Import From File (sharded database)",
+    args: {
+        ...Default.args,
+        hasAllLicenseFeatures: true,
+        isSharded: true,
     },
 };

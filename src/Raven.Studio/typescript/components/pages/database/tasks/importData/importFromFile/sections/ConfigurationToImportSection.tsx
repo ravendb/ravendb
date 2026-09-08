@@ -172,6 +172,7 @@ export default function ConfigurationToImportSection() {
                                         <Form.Check
                                             type="switch"
                                             id="select-all-ongoing-tasks"
+                                            aria-label="Select all ongoing tasks"
                                             label=""
                                             className="m-0"
                                             disabled={selectableOngoingTaskKeys.length === 0}
@@ -206,6 +207,7 @@ export default function ConfigurationToImportSection() {
                                         <Form.Check
                                             type="switch"
                                             id="select-all-connection-strings"
+                                            aria-label="Select all connection strings"
                                             label=""
                                             className="m-0"
                                             disabled={selectableConnectionStringKeys.length === 0}
@@ -268,6 +270,7 @@ export default function ConfigurationToImportSection() {
                                 <Form.Check
                                     type="switch"
                                     id="select-all-database-settings"
+                                    aria-label="Select all database settings"
                                     label=""
                                     className="m-0"
                                     checked={areAllSettingsSelected}
