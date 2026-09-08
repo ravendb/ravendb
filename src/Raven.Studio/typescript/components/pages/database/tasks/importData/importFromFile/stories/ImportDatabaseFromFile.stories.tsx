@@ -79,22 +79,3 @@ export const Default: StoryObj<ImportFromFileStoryArgs> = {
         isSharded: false,
     },
 };
-
-export const FullLicense: StoryObj<ImportFromFileStoryArgs> = {
-    ...Default,
-    name: "Import From File (all licence features)",
-    args: {
-        ...Default.args,
-        hasAllLicenseFeatures: true,
-    },
-};
-
-export const Sharded: StoryObj<ImportFromFileStoryArgs> = {
-    ...Default,
-    name: "Import From File (sharded database)",
-    args: {
-        ...Default.args,
-        hasAllLicenseFeatures: true,
-        isSharded: true,
-    },
-};
