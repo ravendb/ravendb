@@ -181,7 +181,7 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
         Options.ManualFlushing = true;
         Options.ManualSyncing = true;
 
-        // the flushed free must push the section's free count above NumberOfFreePagesForSparseConsideration (512)
+        // the flushed free must push the section's free count above MinNumberOfFreePagesInSectionForSparseConsideration (512)
         // to register a sparse candidate; the reader's run only needs to be a punchable >= 128 pages
         const int sectionMatePages = 600;
         const int readerPages = 256;
@@ -254,7 +254,7 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
         Options.ManualFlushing = true;
         Options.ManualSyncing = true;
 
-        const int pages = 600; // > NumberOfFreePagesForSparseConsideration (512), so freeing the run yields a punchable region
+        const int pages = 600; // > MinNumberOfFreePagesInSectionForSparseConsideration (512), so freeing the run yields a punchable region
         const int overflowSize = pages * Constants.Storage.PageSize - PageHeader.SizeOf;
 
         long p;

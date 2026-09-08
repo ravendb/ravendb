@@ -166,6 +166,7 @@ public class RavenDB_26344 : StorageTest
         // 6. Open restored database and verify sizes
         var sparseOptions = StorageEnvironmentOptions.ForPathForTests(sparseRestoreDir.FullPath);
         sparseOptions.MaxLogFileSize = Env.Options.MaxLogFileSize;
+        sparseOptions.DisableSparseRegions = true; // the load-time re-punch must not mask what the restore itself produced
 
         using (var restoredEnv = new StorageEnvironment(sparseOptions))
         {
@@ -176,13 +177,17 @@ public class RavenDB_26344 : StorageTest
 
             if (PlatformDetails.RunningOnMacOsx == false)
             {
-                Assert.True(originalPhysical < originalAllocated - (40L * 1024 * 1024),
-                    $"Expected source database to be sparse before backup, but allocated={new Size(originalAllocated, SizeUnit.Bytes)}, physical={new Size(originalPhysical, SizeUnit.Bytes)}");
+                const long freedBytes = 28L * 256 * Constants.Storage.PageSize; // pages[2..29]
+                const long liveDataBytes = 4L * 256 * Constants.Storage.PageSize; // pages[0], pages[1], pages[30], pages[31]
+                const long tolerance = 2L * Constants.Size.Megabyte;
 
-                const long allowedRestoreOverhead = 16L * 1024 * 1024;
-                Assert.True(restoredPhysical <= originalPhysical + allowedRestoreOverhead,
-                    $"Expected restored physical size to stay close to the source sparse file after restore, " +
-                    $"but source physical={new Size(originalPhysical, SizeUnit.Bytes)}, restored physical={new Size(restoredPhysical, SizeUnit.Bytes)}, allocated={new Size(restoredAllocated, SizeUnit.Bytes)}");
+                Assert.True(originalPhysical <= originalAllocated - freedBytes + tolerance,
+                    $"Expected source database to have {new Size(freedBytes, SizeUnit.Bytes)} punched before backup, but allocated={new Size(originalAllocated, SizeUnit.Bytes)}, physical={new Size(originalPhysical, SizeUnit.Bytes)}");
+
+                // the file grows past the 32 overflows; that zero tail is physically allocated in the source but a hole after restore, so bound by the live data rather than by the source
+                Assert.True(restoredPhysical >= liveDataBytes && restoredPhysical <= liveDataBytes + tolerance,
+                    $"Expected the restored data file to physically hold only the {new Size(liveDataBytes, SizeUnit.Bytes)} of live pages, " +
+                    $"but physical={new Size(restoredPhysical, SizeUnit.Bytes)}, allocated={new Size(restoredAllocated, SizeUnit.Bytes)}, source physical={new Size(originalPhysical, SizeUnit.Bytes)}");
             }
         }
     }
