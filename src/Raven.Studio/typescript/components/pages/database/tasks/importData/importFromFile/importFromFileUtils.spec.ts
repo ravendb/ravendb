@@ -14,7 +14,16 @@ import {
     importFromFileSchema,
     ongoingTaskKeys,
 } from "./importFromFileValidation";
+import {
+    adminDefaultDto,
+    adminDefaultOperateOnTypes,
+    allConnectionStringTokens,
+    allOngoingTaskTokens,
+    allSettingTokens,
+    without,
+} from "./importFromFileTestUtils";
 
+type ImportOptions = Raven.Client.Documents.Smuggler.DatabaseSmugglerImportOptions;
 type DatabaseItemType = Raven.Client.Documents.Smuggler.DatabaseItemType;
 
 // Knockout defaults (importDatabaseModel + smugglerDatabaseRecord) with admin access — all
@@ -214,41 +223,6 @@ describe("importFromFileUtils", () => {
     });
 
     describe("toImportDto field matrix", () => {
-        // Spelled out in production order: a reordered or renamed token must fail here rather than
-        // silently change what the server receives.
-        const adminDefaultOperateOnTypes: DatabaseItemType[] = [
-            "DatabaseRecord",
-            "Documents",
-            "Conflicts",
-            "Indexes",
-            "RevisionDocuments",
-            "Identities",
-            "CompareExchange",
-            "CounterGroups",
-            "Attachments",
-            "TimeSeries",
-            "TimeSeriesDeletedRanges",
-            "Subscriptions",
-            "Tombstones",
-            "CompareExchangeTombstones",
-        ];
-
-        const without = (list: DatabaseItemType[], ...excluded: DatabaseItemType[]) =>
-            list.filter((x) => !excluded.includes(x));
-
-        const adminDefaultDto = {
-            IncludeExpired: true,
-            IncludeArtificial: false,
-            IncludeArchived: true,
-            TransformScript: "",
-            RemoveAnalyzers: false,
-            EncryptionKey: undefined as string,
-            OperateOnTypes: adminDefaultOperateOnTypes.join(","),
-            OperateOnDatabaseRecordTypes: "None",
-            Collections: null as string[],
-            MaxReadOpsPerSecond: null as number,
-        };
-
         type Mutation = (data: ImportFromFileFormData) => void;
 
         it("emits the admin defaults exactly, in a fixed token order", () => {
@@ -305,7 +279,7 @@ describe("importFromFileUtils", () => {
             expect(toImportDto(data).OperateOnTypes).toBe(expectedTypes.join(","));
         });
 
-        it.each<[string, keyof typeof adminDefaultDto, boolean, Mutation]>([
+        it.each<[string, keyof ImportOptions, boolean, Mutation]>([
             [
                 "documents.isIncludeExpiredDocuments",
                 "IncludeExpired",
@@ -372,39 +346,10 @@ describe("importFromFileUtils", () => {
             const types = getDatabaseRecordTypes(createDefaultFormData(), ["documentsCompression"], ["genAi"]);
 
             expect(types).toEqual([
-                "Settings",
-                "ConflictSolverConfig",
-                "Client",
-                "Revisions",
-                "Refresh",
-                "Expiration",
-                "SchemaValidation",
-                "DataArchival",
-                "TimeSeries",
-                "Sorters",
-                "Analyzers",
-                "PostgreSQLIntegration",
-                "PeriodicBackups",
-                "ExternalReplications",
-                "RavenEtls",
-                "SqlEtls",
-                "SnowflakeEtls",
-                "OlapEtls",
-                "ElasticSearchEtls",
-                "QueueEtls",
-                "HubPullReplications",
-                "SinkPullReplications",
-                "EmbeddingsGenerations",
-                "CdcSinks",
-                "AiAgents",
-                "RemoteAttachments",
-                "RavenConnectionStrings",
-                "SqlConnectionStrings",
-                "SnowflakeConnectionStrings",
-                "OlapConnectionStrings",
-                "ElasticSearchConnectionStrings",
-                "QueueConnectionStrings",
-                "AiConnectionStrings",
+                ...without(allSettingTokens, "DocumentsCompression"),
+                ...without(allOngoingTaskTokens, "GenAiEtls"),
+                ...allConnectionStringTokens,
+                // parity with the server's expansion of "None" - tokens Studio has no toggle for
                 "LockMode",
                 "QueueSinks",
                 "IndexesHistory",
