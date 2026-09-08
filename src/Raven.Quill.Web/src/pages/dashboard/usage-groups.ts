@@ -4,7 +4,6 @@ import type { QuillApplicationUsage } from "@/api/generated/server-api";
 // id, so the same name arrives many times over. Same-named rows collapse into a group; the topology
 // ids behind it are what tell them apart.
 export type UsageGroup = {
-    key: string;
     label: string;
     isExpandable: boolean;
     rows: QuillApplicationUsage[];
@@ -22,7 +21,6 @@ function byUsageDescending(a: QuillApplicationUsage, b: QuillApplicationUsage) {
 
 function toGroup(name: string, rows: QuillApplicationUsage[]): UsageGroup {
     return {
-        key: `app/${name}`,
         label: name,
         isExpandable: rows.length > 1,
         rows: rows.toSorted(byUsageDescending),
@@ -30,7 +28,6 @@ function toGroup(name: string, rows: QuillApplicationUsage[]): UsageGroup {
     };
 }
 
-// Ordered by usage descending.
 export function toUsageGroups(apps: QuillApplicationUsage[]): UsageGroup[] {
     const byName = new Map<string, QuillApplicationUsage[]>();
 
