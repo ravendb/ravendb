@@ -1282,6 +1282,7 @@ namespace Voron.Data.Tables
 
         public FixedSizeTree GetFixedSizeTree(TableSchema.FixedSizeKeyIndexDef indexDef)
         {
+            Debug.Assert(indexDef.CachePosition >= 0, $"fixed size index {indexDef.Name} has no cache position - it never went through DefineFixedSizeIndex");
             var trees = _resolvedFsiTrees ??= new FixedSizeTree[_schema.FixedSizeIndexes.Count];
             ref FixedSizeTree tree = ref trees[indexDef.CachePosition];
             if (tree != null)
