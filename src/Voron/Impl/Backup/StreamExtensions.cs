@@ -36,7 +36,7 @@ namespace Voron.Impl.Backup
         /// <summary>
         /// Copies from source to destination while detecting contiguous zero-page regions and skipping them to create a sparse file.
         /// The destination file must already be marked as sparse on Windows (via <see cref="SparseFileHelper.TryMarkFileAsSparse"/>).
-        /// Zero runs shorter than <see cref="FreeSpaceHandling.NumberOfFreePagesForSparseConsideration"/> pages are written normally.
+        /// Zero runs shorter than <see cref="FreeSpaceHandling.MinNumberOfContiguousFreePagesForSparseRegion"/> pages (the live hole-punch granularity) are written normally.
         /// </summary>
         public static void CopyToPreservingSparseRegions(this Stream source, Stream destination, Action<int> onProgress, CancellationToken cancellationToken)
         {
@@ -49,8 +49,8 @@ namespace Voron.Impl.Backup
             try
             {
                 // ReSharper disable once ConditionIsAlwaysTrueOrFalse
-                Debug.Assert(bufferSize / pageSize < FreeSpaceHandling.NumberOfFreePagesForSparseConsideration,
-                    $"Below code assumes buffer holds fewer pages ({bufferSize / pageSize}) than the sparse threshold ({FreeSpaceHandling.NumberOfFreePagesForSparseConsideration})");
+                Debug.Assert(bufferSize / pageSize < FreeSpaceHandling.MinNumberOfContiguousFreePagesForSparseRegion,
+                    $"Below code assumes buffer holds fewer pages ({bufferSize / pageSize}) than the sparse threshold ({FreeSpaceHandling.MinNumberOfContiguousFreePagesForSparseRegion})");
 
                 Array.Clear(zeroBuffer, 0, DefaultBufferSize);
 
@@ -164,7 +164,7 @@ namespace Voron.Impl.Backup
             long zeroRegionLength = (long)zeroPageCount * pageSize;
             long zeroStart = logicalPosition - zeroRegionLength;
 
-            if (zeroPageCount < FreeSpaceHandling.NumberOfFreePagesForSparseConsideration)
+            if (zeroPageCount < FreeSpaceHandling.MinNumberOfContiguousFreePagesForSparseRegion)
             {
                 // write zeros
 
