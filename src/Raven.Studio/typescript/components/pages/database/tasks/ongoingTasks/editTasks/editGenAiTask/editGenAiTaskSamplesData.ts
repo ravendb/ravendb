@@ -90,25 +90,25 @@ const jsonSchemaSamples: SampleScript[] = [
         language: "json",
         script: dedent`
             {
-              "name": "some-name",
-              "strict": true,
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "IsCommentSpam": {
-                    "type": "boolean"
-                  },
-                  "Reason": {
-                    "type": "string",
-                    "description": "Concise reason for why this comment was marked as spam or ham"
-                  }
-                },
-                "required": [
-                  "IsCommentSpam",
-                  "Reason"
-                ],
-                "additionalProperties": false
-              }
+                "name": "some-name",
+                "strict": true,
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "IsCommentSpam": {
+                            "type": "boolean"
+                        },
+                        "Reason": {
+                            "type": "string",
+                            "description": "Concise reason for why this comment was marked as spam or ham"
+                        }
+                    },
+                    "required": [
+                        "IsCommentSpam",
+                        "Reason"
+                    ],
+                    "additionalProperties": false
+                }
             }
         `,
     },
