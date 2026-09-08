@@ -66,6 +66,12 @@ namespace Raven.Client.Documents.Indexes
             if (indexOfQuerySource == -1)
                 throw new InvalidOperationException("Cannot understand how to parse the query");
 
+            if (indexOfQuerySource != 0)
+                throw new IndexCompilationException(
+                    $"An index function must start its enumeration from the '{querySourceName}' parameter, e.g. 'from item in {querySourceName}'. " +
+                    $"The outer-most clause of the given expression enumerates over a different source, which cannot be compiled into an index. " +
+                    $"Generated code: {linqQuery}");
+
             linqQuery = linqQuery.Substring(0, indexOfQuerySource) + querySource +
                         linqQuery.Substring(indexOfQuerySource + querySourceName.Length);
 

@@ -13,6 +13,7 @@ using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.AI.Embeddings;
@@ -442,13 +443,27 @@ function map(name, lambda) {
             var additionalSources = sb.ToString();
             foreach (var map in maps)
             {
-                var result = ExecuteCodeAndCollectReferencedCollections(map, additionalSources);
-                mapReferencedCollections.Add(result);
+                try
+                {
+                    var result = ExecuteCodeAndCollectReferencedCollections(map, additionalSources);
+                    mapReferencedCollections.Add(result);
+                }
+                catch (Exception e) when (e is IndexCreationException == false && e is OperationCanceledException == false)
+                {
+                    throw new IndexCompilationException($"Failed to compile the map of JavaScript index '{Definition.Name}', the map must be valid JavaScript. Map: {map}", e);
+                }
             }
 
             if (definition.Reduce != null)
             {
-                _engine.ExecuteWithReset(definition.Reduce);
+                try
+                {
+                    _engine.ExecuteWithReset(definition.Reduce);
+                }
+                catch (Exception e) when (e is IndexCreationException == false && e is OperationCanceledException == false)
+                {
+                    throw new IndexCompilationException($"Failed to compile the reduce of JavaScript index '{Definition.Name}', the reduce must be valid JavaScript. Reduce: {definition.Reduce}", e);
+                }
             }
 
             return mapReferencedCollections;
