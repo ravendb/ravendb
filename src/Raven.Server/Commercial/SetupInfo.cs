@@ -323,16 +323,14 @@ namespace Raven.Server.Commercial
     public sealed class UserDomainsAndLicenseInfo
     {
         public UserDomainsWithIps UserDomainsWithIps { get; set; }
-        public int MaxClusterSize { get; set; }
-        public LicenseType LicenseType { get; set; }
+        public LicenseStatus LicenseStatus { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
                 [nameof(UserDomainsWithIps)] = UserDomainsWithIps.ToJson(),
-                [nameof(MaxClusterSize)] = MaxClusterSize,
-                [nameof(LicenseType)] = LicenseType
+                [nameof(LicenseStatus)] = LicenseStatus?.ToJson()
             };
         }
     }
@@ -345,11 +343,18 @@ namespace Raven.Server.Commercial
 
         public DynamicJsonValue ToJson()
         {
+            var domains = new DynamicJsonValue();
+            if (Domains != null)
+            {
+                foreach (var domain in Domains)
+                    domains[domain.Key] = new DynamicJsonArray(domain.Value.Select(x => x.ToJson()));
+            }
+
             return new DynamicJsonValue
             {
-                [nameof(Emails)] = Emails,
-                [nameof(RootDomains)] = RootDomains,
-                [nameof(Domains)] = DynamicJsonValue.Convert(Domains)
+                [nameof(Emails)] = Emails == null ? null : new DynamicJsonArray(Emails),
+                [nameof(RootDomains)] = RootDomains == null ? null : new DynamicJsonArray(RootDomains),
+                [nameof(Domains)] = domains
             };
         }
     }

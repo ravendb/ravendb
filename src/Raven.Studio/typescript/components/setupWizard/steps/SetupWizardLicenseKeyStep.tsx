@@ -216,12 +216,12 @@ function LicenseKeyBadge() {
         );
     }
 
-    if (licenseStatus !== "valid" || licenseInfo == null || licenseInfo.licenseType == null) {
+    if (licenseStatus !== "valid" || licenseInfo == null || licenseInfo.licenseStatus?.Type == null) {
         return null;
     }
 
-    const badgeClass = getLicenseTypeBadgeClass(licenseInfo.licenseType);
-    const displayName = getLicenseTypeDisplayName(licenseInfo.licenseType);
+    const badgeClass = getLicenseTypeBadgeClass(licenseInfo.licenseStatus.Type);
+    const displayName = getLicenseTypeDisplayName(licenseInfo.licenseStatus.Type);
 
     return (
         <Badge
@@ -730,13 +730,12 @@ export function SetupWizardLicenseKeyStepFooter() {
                 setValue(
                     "licenseKeyStep.licenseInfo",
                     {
-                        licenseType: info.LicenseType,
+                        licenseStatus: info.LicenseStatus,
                         userDomainsWithIps: {
                             email: info.UserDomainsWithIps.Emails,
                             rootDomains: info.UserDomainsWithIps.RootDomains,
                             domains: info.UserDomainsWithIps.Domains,
                         },
-                        maxClusterSize: info.MaxClusterSize,
                     },
                     {
                         shouldDirty: true,
