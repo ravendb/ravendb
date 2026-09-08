@@ -2824,7 +2824,6 @@ namespace Voron.Impl.Journal
 
                 _compressionPager.EnsureMapped(_compressionPagerState, ref tx.PagerTransactionState, pagesWritten, outputBufferInPages);
 
-                var rawTxHeaderPtr = txHeaderPtr;
                 txHeaderPtr = _compressionPager.MakeWritable(_compressionPagerState,
                     _compressionPager.AcquireRawPagePointer(_compressionPagerState, ref tx.PagerTransactionState, pagesWritten)
                 );
@@ -2843,8 +2842,11 @@ namespace Voron.Impl.Journal
 
                 if (compressedLen >= totalSizeWritten)
                 {
-                    // didn't compress, so let's use the raw output, instead
-                    txHeaderPtr = rawTxHeaderPtr;
+                    _compressionPager.EnsureMapped(_compressionPagerState, ref tx.PagerTransactionState, 0, checked((int)pagesWritten));
+                    // txHeaderPtr may have changed because we extended the file, so we need to re-acquire it from the current state
+                    txHeaderPtr = _compressionPager.MakeWritable(_compressionPagerState,
+                        _compressionPager.AcquireRawPagePointer(_compressionPagerState, ref tx.PagerTransactionState, 0)
+                    );
                     performCompression = false;
                 }
             }

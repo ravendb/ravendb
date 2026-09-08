@@ -730,7 +730,7 @@ namespace Raven.Server.Documents.Patch
 
             var filter = ShadowedPropertyFilter.Create(this);
             using var propertiesByInsertionOrder = Blittable.GetPropertiesByInsertionOrder();
-            var order = propertiesByInsertionOrder.PropertiesSpan;
+            var order = propertiesByInsertionOrder.GetPropertiesSpan();
             for (int i = 0; i < order.Length; i++)
             {
                 if (filter.TryGetNonShadowedPropertyName(order[i], out var prop) == false)
