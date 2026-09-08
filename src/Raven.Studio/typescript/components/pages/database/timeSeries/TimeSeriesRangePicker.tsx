@@ -9,34 +9,22 @@ import { MultiRadioToggle } from "components/common/toggles/MultiRadioToggle";
 import { InputItem } from "components/models/common";
 import TimePicker, { TIME_FORMAT, TIME_PARSE_FORMATS } from "./TimePicker";
 import RangeDatePickerHeader from "./RangeDatePickerHeader";
+import { FilterTimezone, wallOf, zoneLabel, FULL_FORMAT } from "./timeSeriesRange.utils";
 import "./TimeSeriesRangePicker.scss";
 
-const FULL_FORMAT = "YYYY-MM-DD HH:mm:ss.SSS";
+export type { FilterTimezone } from "./timeSeriesRange.utils";
 
 type FilterMode = "between" | "before" | "after";
-export type FilterTimezone = "local" | "utc";
-
-// The resolved range this picker produces. Matches filterTimeSeriesDates<moment.Moment>.
-export interface TimeSeriesRange {
-    startDate: moment.Moment | null;
-    endDate: moment.Moment | null;
-}
 
 export interface TimeSeriesRangeState {
-    range: TimeSeriesRange;
+    range: filterTimeSeriesDates<moment.Moment | null>;
     canApply: boolean;
-    // Zone the user is currently working in. Reported back so the caller can keep
-    // the time series grid's own time zone setting in sync with the filter.
     timezone: FilterTimezone;
 }
 
 interface TimeSeriesRangePickerProps {
     startDate: moment.Moment | null;
     endDate: moment.Moment | null;
-    // Zone the picker opens in. The time series grid owns this setting, so the
-    // filter always starts out speaking the same zone the timestamps are shown in.
-    // Changing it inside the picker is reported back via onChange, and the caller
-    // (see editTimeSeries.ts's onApply) pushes it onto the grid when the user applies.
     initialTimezone?: FilterTimezone;
     onChange: (state: TimeSeriesRangeState) => void;
 }
@@ -49,8 +37,6 @@ const modeItems: InputItem<FilterMode>[] = [
 
 interface PresetDef {
     label: string;
-    // `now` and `startOf` are given in the selected timezone's wall-clock, so e.g. "Today" starts
-    // at midnight in that zone rather than midnight local time regardless of the zone shown.
     range: (now: moment.Moment) => { start?: moment.Moment; end?: moment.Moment };
 }
 
@@ -83,8 +69,6 @@ const presetsByMode: Record<FilterMode, PresetDef[]> = {
     ],
 };
 
-// Each mode's first preset is its "current day" shortcut (Today / Until Today / Since Today),
-// used as the default selection when the dialog opens without an incoming range.
 function firstPresetFor(mode: FilterMode): PresetDef {
     return presetsByMode[mode][0];
 }
@@ -94,13 +78,6 @@ const timezoneOptions: SelectOption<FilterTimezone>[] = [
     { value: "utc", label: "UTC" },
 ];
 
-// Wall-clock representation of an instant, seen from the selected timezone.
-function wallOf(instant: moment.Moment, tz: FilterTimezone): moment.Moment {
-    return tz === "utc" ? instant.clone().utc() : instant.clone().local();
-}
-
-// A browser-local Date whose local components equal the timezone wall-clock, so the
-// date picker (which always works in browser-local time) shows the right calendar day.
 function toPickerDate(instant: moment.Moment | null, tz: FilterTimezone): Date | null {
     if (!instant) {
         return null;
@@ -118,7 +95,6 @@ interface BuildResult {
     invalid: boolean;
 }
 
-// Combine the picked day + typed time, interpreted in the selected timezone, into an instant.
 function buildInstant(date: Date | null, time: string, tz: FilterTimezone): BuildResult {
     if (!date) {
         return { value: null, invalid: false };
@@ -140,7 +116,6 @@ function buildInstant(date: Date | null, time: string, tz: FilterTimezone): Buil
     return { value: tz === "utc" ? moment.utc(parts) : moment(parts), invalid: false };
 }
 
-// Helper line showing the same instant expressed in the opposite timezone.
 function oppositeHelper(instant: moment.Moment | null, tz: FilterTimezone): string | null {
     if (!instant) {
         return null;
@@ -150,34 +125,21 @@ function oppositeHelper(instant: moment.Moment | null, tz: FilterTimezone): stri
         : instant.clone().utc().format(FULL_FORMAT) + "Z (UTC)";
 }
 
-// Wall-clock timestamp of an instant in the selected timezone (no zone tag — the sidebar
-// dropdown already states the zone globally).
-function wallStamp(instant: moment.Moment, tz: FilterTimezone): string {
-    return wallOf(instant, tz).format(FULL_FORMAT);
-}
-
-// A piece of the summary line. Only the timestamp is emphasised (`strong`); the words around it
-// stay regular weight.
 interface SummarySegment {
     text: string;
     strong?: boolean;
 }
 
-// A one-line description of what the current selection filters, worded to match the Between /
-// Before / After tabs. Stated in terms of the chosen bound(s) alone, so it's always correct
-// regardless of where the data actually sits.
 function rangeSummary(
     mode: FilterMode,
     startValue: moment.Moment | null,
     endValue: moment.Moment | null,
     tz: FilterTimezone
 ): SummarySegment[] | null {
-    const stamp = (m: moment.Moment): SummarySegment => ({ text: wallStamp(m, tz), strong: true });
-    // Zone suffix so the reader knows whether the shown timestamps are Local or UTC.
-    const zone: SummarySegment = { text: ` (${tz === "utc" ? "UTC" : "Local"}).` };
+    const stamp = (m: moment.Moment): SummarySegment => ({ text: wallOf(m, tz).format(FULL_FORMAT), strong: true });
+    const zone: SummarySegment = { text: ` (${zoneLabel(tz)}).` };
 
     if (mode === "between") {
-        // Skip while the range is inverted — the "end must be after start" error covers that.
         if (!startValue || !endValue || endValue.isBefore(startValue)) {
             return null;
         }
@@ -208,12 +170,8 @@ export default function TimeSeriesRangePicker({
     initialTimezone = "local",
     onChange,
 }: TimeSeriesRangePickerProps) {
-    // Shared "now" used to default any field that has no incoming filter value.
     const [defaultNow] = useState(() => moment());
 
-    // With no incoming filter range, open on the mode's "Today" preset so each option starts on
-    // a sensible current-day window. An incoming range (e.g. prefilled from an active filter)
-    // wins instead, and shows as a custom selection.
     const initialFields = useMemo(() => {
         if (startDate || endDate) {
             return { start: startDate ?? defaultNow, end: endDate ?? defaultNow, preset: null as string | null };
@@ -226,12 +184,8 @@ export default function TimeSeriesRangePicker({
 
     const [mode, setMode] = useState<FilterMode>(() => initialMode(startDate, endDate));
     const [tz, setTz] = useState<FilterTimezone>(initialTimezone);
-    // Label of the currently applied preset shortcut, highlighted in the sidebar.
-    // Cleared whenever the user edits a date/time, so it never lies.
     const [selectedPreset, setSelectedPreset] = useState<string | null>(initialFields.preset);
 
-    // "start" slot drives Between top field and the After single field.
-    // "end" slot drives Between bottom field and the Before single field.
     const [startPickerDate, setStartPickerDate] = useState<Date | null>(() =>
         toPickerDate(initialFields.start, initialTimezone)
     );
@@ -241,16 +195,14 @@ export default function TimeSeriesRangePicker({
     );
     const [endTime, setEndTime] = useState<string>(() => toTimeText(initialFields.end, initialTimezone));
 
-    // Whether the user (or an incoming filter value) has given this slot a meaning of its own,
-    // as opposed to it just holding the "Today" placeholder for a mode that doesn't use it yet.
-    // Mode switches only overwrite a slot when it's still untouched - see changeMode.
+    // Whether a slot holds a real value (typed or prefilled) rather than the mode's "Today"
+    // placeholder; a mode switch only overwrites still-untouched slots.
     const [touched, setTouched] = useState({ start: !!startDate, end: !!endDate });
 
     const startBuild = useMemo(() => buildInstant(startPickerDate, startTime, tz), [startPickerDate, startTime, tz]);
     const endBuild = useMemo(() => buildInstant(endPickerDate, endTime, tz), [endPickerDate, endTime, tz]);
 
     const changeTimezone = (next: FilterTimezone) => {
-        // Preserve the instants, re-express the visible wall-clock in the new timezone.
         if (startBuild.value) {
             setStartPickerDate(toPickerDate(startBuild.value, next));
             setStartTime(toTimeText(startBuild.value, next));
@@ -286,9 +238,6 @@ export default function TimeSeriesRangePicker({
 
     const changeMode = (next: FilterMode) => {
         setMode(next);
-        // Default the newly-selected option's slots to "Today" - but only the ones the user
-        // hasn't given a value of their own, so switching tabs never discards a typed date or a
-        // range prefilled from the active filter (see PR #23363 review).
         const preset = firstPresetFor(next);
         const { start, end } = preset.range(wallOf(moment(), tz));
         if (start !== undefined && !touched.start) {
@@ -301,8 +250,6 @@ export default function TimeSeriesRangePicker({
         setSelectedPreset(fullyDefaulted ? preset.label : null);
     };
 
-    // Manual edits to the fields invalidate the active preset highlight and mark the slot as the
-    // user's own, so a later mode switch won't overwrite it with a default.
     const editStartDate = (d: Date | null) => {
         setStartPickerDate(d);
         setSelectedPreset(null);
@@ -331,16 +278,18 @@ export default function TimeSeriesRangePicker({
         mode === "between" && !!startBuild.value && !!endBuild.value && endBuild.value.isBefore(startBuild.value);
 
     const shownInvalid = (usesStart && startBuild.invalid) || (usesEnd && endBuild.invalid);
-    const canApply = !shownInvalid && !rangeInvalid;
+    // A slot the current mode uses must actually carry a date; a cleared field (null) would
+    // otherwise become an open-ended bound and silently widen the range.
+    const startMissing = usesStart && !startBuild.value;
+    const endMissing = usesEnd && !endBuild.value;
+    const canApply = !shownInvalid && !rangeInvalid && !startMissing && !endMissing;
 
     const startOut = usesStart ? startBuild.value : null;
     const endOut = usesEnd ? endBuild.value : null;
     const startMs = startOut ? startOut.valueOf() : null;
     const endMs = endOut ? endOut.valueOf() : null;
 
-    // Emit the resolved range to the parent only when it actually changes. A ref-guard keeps
-    // this from re-firing on every render (each render mints fresh moment instances), which
-    // would otherwise loop against the parent's setState.
+    // Emit only on real change; a ref-guard stops the effect looping on the fresh moments each render mints.
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
     const lastSig = useRef<string | null>(null);
@@ -395,43 +344,31 @@ export default function TimeSeriesRangePicker({
                     setSelectedItem={(x) => changeMode(x)}
                 />
 
-                {/* Start and End are one unit - grouped so they sit closer to each other than
-                    to the mode toggle above and the summary below.
-
-                    Both slots are ALWAYS rendered, and always labelled, so every mode occupies
-                    exactly the same vertical space. Before/After only use one of them; the unused
-                    slot stays in the layout but is hidden (see `--placeholder` in the SCSS). This
-                    keeps the modal height identical across modes by construction, rather than by
-                    a hand-tuned min-height that goes stale whenever this block changes. */}
+                {/* Both slots are always rendered; the unused one is hidden but kept in the layout
+                    (order:1 in the SCSS drops it to the bottom) so the modal height never changes. */}
                 <div className="vstack gap-2">
-                    {[
-                        <DateTimeField
-                            key="start"
-                            label="Start date"
-                            hidden={!usesStart}
-                            date={startPickerDate}
-                            time={startTime}
-                            timeInvalid={startBuild.invalid}
-                            helper={oppositeHelper(startBuild.value, tz)}
-                            onDateChange={editStartDate}
-                            onTimeChange={editStartTime}
-                        />,
-                        <DateTimeField
-                            key="end"
-                            label="End date"
-                            hidden={!usesEnd}
-                            date={endPickerDate}
-                            time={endTime}
-                            timeInvalid={endBuild.invalid}
-                            helper={oppositeHelper(endBuild.value, tz)}
-                            onDateChange={editEndDate}
-                            onTimeChange={editEndTime}
-                        />,
-                        // Visible slot first, reserved slot last. Before/After use only one field,
-                        // and a blank slot left in the middle reads as a rendering bug - trailing
-                        // slack just reads as padding. Keys keep React from remounting the pickers
-                        // (and losing focus) when the order flips on a mode change.
-                    ].sort((a, b) => Number(a.props.hidden) - Number(b.props.hidden))}
+                    <DateTimeField
+                        label="Start date"
+                        hidden={!usesStart}
+                        date={startPickerDate}
+                        time={startTime}
+                        timeInvalid={startBuild.invalid}
+                        timezone={tz}
+                        helper={oppositeHelper(startBuild.value, tz)}
+                        onDateChange={editStartDate}
+                        onTimeChange={editStartTime}
+                    />
+                    <DateTimeField
+                        label="End date"
+                        hidden={!usesEnd}
+                        date={endPickerDate}
+                        time={endTime}
+                        timeInvalid={endBuild.invalid}
+                        timezone={tz}
+                        helper={oppositeHelper(endBuild.value, tz)}
+                        onDateChange={editEndDate}
+                        onTimeChange={editEndTime}
+                    />
                 </div>
 
                 {rangeInvalid && (
@@ -467,12 +404,11 @@ export default function TimeSeriesRangePicker({
 
 interface DateTimeFieldProps {
     label?: string;
-    // Keeps the slot in the layout but invisible and non-interactive, so the modal
-    // height doesn't change between Between (two slots) and Before/After (one).
     hidden?: boolean;
     date: Date | null;
     time: string;
     timeInvalid: boolean;
+    timezone: FilterTimezone;
     helper: string | null;
     onDateChange: (date: Date | null) => void;
     onTimeChange: (time: string) => void;
@@ -484,6 +420,7 @@ function DateTimeField({
     date,
     time,
     timeInvalid,
+    timezone,
     helper,
     onDateChange,
     onTimeChange,
@@ -521,7 +458,7 @@ function DateTimeField({
                 </div>
                 <div className="flex-grow-1">
                     <label className="md-label d-block mb-1">Time</label>
-                    <TimePicker value={time} invalid={timeInvalid} onChange={onTimeChange} />
+                    <TimePicker value={time} invalid={timeInvalid} timezone={timezone} onChange={onTimeChange} />
                 </div>
             </div>
             <div className="text-muted small mt-1" style={{ minHeight: "1.2em" }}>

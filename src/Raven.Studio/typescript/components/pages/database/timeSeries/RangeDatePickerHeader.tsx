@@ -1,8 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import moment from "moment";
 import classNames from "classnames";
 import { Icon } from "components/common/Icon";
 import { SelectOption } from "components/common/select/Select";
+import { useClickOutside } from "components/hooks/useClickOutside";
+import { useScrollActiveIntoView } from "components/hooks/useScrollActiveIntoView";
 
 const MONTH_NAMES = moment.months();
 
@@ -16,40 +18,14 @@ interface HeaderSelectProps {
     className?: string;
 }
 
-// A controlled dropdown (button + list) styled to mirror Studio's react-select. Used instead of the
-// real Select / a native <select> because both misbehave inside react-datepicker's calendar (its
-// focus and outside-click handling fights them). This stays fully within our control.
+// A controlled dropdown used instead of the real Select / a native <select>, both of which
+// misbehave inside react-datepicker's calendar (their focus and outside-click handling fights it).
 function HeaderSelect({ ariaLabel, value, options, onChange, className }: HeaderSelectProps) {
     const [open, setOpen] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
-    const menuRef = useRef<HTMLUListElement>(null);
-    const activeRef = useRef<HTMLButtonElement>(null);
+    const { listRef: menuRef, activeRef } = useScrollActiveIntoView<HTMLUListElement, HTMLButtonElement>(open);
 
-    useEffect(() => {
-        if (!open) {
-            return;
-        }
-        const handleOutside = (e: MouseEvent) => {
-            if (ref.current && !ref.current.contains(e.target as Node)) {
-                setOpen(false);
-            }
-        };
-        document.addEventListener("mousedown", handleOutside);
-        return () => document.removeEventListener("mousedown", handleOutside);
-    }, [open]);
-
-    // Scroll the currently-selected option into the middle when the menu opens, so reopening a
-    // dropdown always shows the active value without scrolling to find it (matches TimeColumn).
-    useEffect(() => {
-        if (!open) {
-            return;
-        }
-        const menu = menuRef.current;
-        const active = activeRef.current;
-        if (menu && active) {
-            menu.scrollTop = active.offsetTop - menu.clientHeight / 2 + active.clientHeight / 2;
-        }
-    }, [open]);
+    useClickOutside(ref, open, () => setOpen(false));
 
     const selected = options.find((o) => o.value === value);
 
@@ -100,9 +76,6 @@ interface DatePickerHeaderProps {
     nextMonthButtonDisabled: boolean;
 }
 
-// Custom calendar header laying out prev/next arrows and two separate month/year select dropdowns
-// in a single flex row. Done as a custom header because react-datepicker's built-in arrows are
-// absolutely positioned and overlap the dropdowns once the redundant month label is removed.
 export default function RangeDatePickerHeader({
     date,
     changeMonth,

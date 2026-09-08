@@ -9,11 +9,12 @@
         min-height: 352px;
     }
 
-    // The unused Start/End slot in Before/After mode. Keeps its box in the flow (so the
-    // modal height matches Between) while being invisible, untabbable and unclickable.
+    // The unused Start/End slot in Before/After mode. Kept in the flow (so the modal height
+    // matches Between) but invisible, untabbable and pushed to the bottom via order.
     &__field--placeholder {
         visibility: hidden;
         pointer-events: none;
+        order: 1;
     }
 
     // Hard-clamp the width (min + max, not just flex-basis) so it stays identical across

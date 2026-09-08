@@ -3,15 +3,16 @@ import moment from "moment";
 import Modal from "components/common/Modal";
 import { Icon } from "components/common/Icon";
 import Button from "react-bootstrap/Button";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
 import TimeSeriesRangePicker, { FilterTimezone, TimeSeriesRangeState } from "./TimeSeriesRangePicker";
 
 interface FilterTimeSeriesModalProps {
     startDate: moment.Moment | null;
     endDate: moment.Moment | null;
-    // Time zone currently selected in the time series grid. Seeds the picker so the
-    // filter opens speaking the same zone the user sees in the table.
+    // Seeds the picker so the filter opens speaking the same zone shown in the grid. The zone
+    // only governs how typed dates are interpreted here; applying no longer changes the grid.
     timezone?: FilterTimezone;
-    onApply: (dates: filterTimeSeriesDates<moment.Moment>, timezone: FilterTimezone) => void;
+    onApply: (dates: filterTimeSeriesDates<moment.Moment | null>) => void;
     close: () => void;
 }
 
@@ -32,7 +33,7 @@ export default function FilterTimeSeriesModal({
         if (!state.canApply) {
             return;
         }
-        onApply(state.range, state.timezone);
+        onApply(state.range);
         close();
     };
 
@@ -59,9 +60,11 @@ export default function FilterTimeSeriesModal({
                 <Button variant="link" className="link-muted" onClick={close}>
                     Cancel
                 </Button>
-                <Button variant="primary" className="rounded-pill" disabled={!state.canApply} onClick={handleApply}>
-                    Apply filter
-                </Button>
+                <ConditionalPopover conditions={{ isActive: !state.canApply, message: "Complete the range to apply." }}>
+                    <Button variant="primary" className="rounded-pill" disabled={!state.canApply} onClick={handleApply}>
+                        Apply filter
+                    </Button>
+                </ConditionalPopover>
             </Modal.Footer>
         </Modal>
     );
