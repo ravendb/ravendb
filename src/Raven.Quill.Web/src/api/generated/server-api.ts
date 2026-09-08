@@ -1728,8 +1728,6 @@ export interface components {
             to: string;
             /** Format: int64 */
             usage: number;
-            /** @default false */
-            isSystem: boolean;
         };
         QuillPeriodUsage: {
             /** Format: date-time */

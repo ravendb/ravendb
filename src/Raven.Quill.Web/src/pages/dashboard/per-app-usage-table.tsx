@@ -13,12 +13,11 @@ import {
 } from "@tanstack/react-table";
 import { ChevronRight } from "lucide-react";
 import type { QuillApplicationUsage } from "@/api/generated/server-api";
-import { InfoHint } from "@/components/data/info-hint";
 import { WruLabel } from "@/components/data/wru-label";
 import { CountBadge } from "@/components/data/count-badge";
 import { VirtualDataTable, VirtualDataTableSkeleton } from "@/components/table/virtual-data-table";
 import { cn } from "@/lib/utils";
-import { rowKey, SYSTEM_GROUP_DESCRIPTION, toUsageGroups, type UsageGroup } from "@/pages/dashboard/usage-groups";
+import { rowKey, toUsageGroups, type UsageGroup } from "@/pages/dashboard/usage-groups";
 
 // Groups are the top-level rows; the databases behind them are the sub-rows.
 type UsageRow = UsageGroup | QuillApplicationUsage;
@@ -107,13 +106,6 @@ function GroupName({
                 />
                 {group.label}
             </button>
-            {group.isSystem && (
-                // The hint explains the group; it doesn't toggle it. `flex` keeps the icon off the
-                // text baseline an inline wrapper would put it on, which rides a couple of px high.
-                <span className="flex" onClick={(event) => event.stopPropagation()}>
-                    <InfoHint content={SYSTEM_GROUP_DESCRIPTION} />
-                </span>
-            )}
             <CountBadge>{group.rows.length}</CountBadge>
         </span>
     );
