@@ -139,7 +139,7 @@ function getSubRows(row: UsageRow) {
 }
 
 function getRowId(row: UsageRow, _index: number, parent?: Row<UsageRow>) {
-    return isGroup(row) ? row.key : `${parent?.id}/${rowKey(row)}`;
+    return isGroup(row) ? row.label : `${parent?.id}/${rowKey(row)}`;
 }
 
 export function PerAppUsageTable({ apps }: { apps: QuillApplicationUsage[] }) {
