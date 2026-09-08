@@ -92,7 +92,7 @@ namespace Raven.Client.ServerWide.Operations
         public long? PerformanceHints { get; set; }
         public string LoadError { get; set; }
         public long? IndexingErrors { get; set; }
-        public IndexRunningStatus IndexingStatus { get; set; }
+        public IndexRunningStatus? IndexingStatus { get; set; }
         public long? TasksErrors { get; set; }
 
         public virtual DynamicJsonValue ToJson()
@@ -119,7 +119,7 @@ namespace Raven.Client.ServerWide.Operations
                 [nameof(TasksErrors)] = TasksErrors,
 
                 [nameof(DocumentsCount)] = DocumentsCount,
-                [nameof(IndexingStatus)] = IndexingStatus.ToString()
+                [nameof(IndexingStatus)] = IndexingStatus?.ToString()
             };
         }
     }
