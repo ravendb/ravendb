@@ -180,8 +180,10 @@ namespace SlowTests.Issues
                 {
                     @"map('FirstOutput', (row) => {
     return {
-        Value: row.Name,
         TypeName: 'CommunicationType',
+        Communication: {
+            Value: row.Name
+        }
     };
 })",
                 };
@@ -192,7 +194,7 @@ namespace SlowTests.Issues
     return {
         TypeName: g.key.TypeName,
         Communication: {
-            Value: g.values.reduce((x, val) => val.Value, '')
+            Value: g.values.reduce((x, val) => val.Communication.Value, '')
         }
     };
 })";

@@ -263,8 +263,10 @@ function map(name, lambda) {
                 ProcessMaps(definitions, resolver, maps, mapReferencedCollections, out var collectionFunctions);
                 AssertVectorFieldForMapReduceIndexes(mapReferencedCollections);
 
-                
+
                 ProcessReduce(definition, definitions, resolver, indexVersion);
+
+                ValidateFieldsOfMapAndReduceFunctions(collectionFunctions, indexVersion);
 
                 ProcessFields(definition, collectionFunctions);
             }
@@ -349,6 +351,58 @@ function map(name, lambda) {
             }
 
             OutputFields = fields.ToArray();
+        }
+
+        private void ValidateFieldsOfMapAndReduceFunctions(Dictionary<string, Dictionary<string, List<JavaScriptMapOperation>>> collectionFunctions, long indexVersion)
+        {
+            if (ReduceOperation == null || indexVersion < IndexDefinitionBaseServerSide.IndexVersion.JavaScriptMapReduceFieldsValidation)
+                return;
+
+            JavaScriptMapOperation baseline = null;
+
+            foreach (var operation in collectionFunctions.SelectMany(x => x.Value).SelectMany(x => x.Value))
+            {
+                if (operation.HasDynamicReturns || operation.Fields.Count == 0)
+                    continue;
+
+                if (baseline == null)
+                {
+                    baseline = operation;
+                    continue;
+                }
+
+                if (baseline.Fields.SetEquals(operation.Fields) == false)
+                    ThrowFieldsMismatch(baseline.MapString, baseline.Fields, operation.MapString, operation.Fields);
+            }
+
+            if (baseline == null)
+                return;
+
+            foreach (var reduceFields in ReduceOperation.GetStaticallyKnownOutputFields())
+            {
+                if (baseline.Fields.SetEquals(reduceFields) == false)
+                    ThrowFieldsMismatch(baseline.MapString, baseline.Fields, ReduceOperation.ReduceString, reduceFields);
+            }
+
+            foreach (var groupByField in GroupByFields)
+            {
+                if (baseline.Fields.Contains(groupByField.Name) == false)
+                    ThrowIndexCreationException($"is grouping by field '{groupByField.Name}' which is not returned by its map functions. Map fields: {string.Join(", ", baseline.Fields)}");
+            }
+        }
+
+        [DoesNotReturn]
+        private void ThrowFieldsMismatch(string baselineFunction, HashSet<string> baselineFields, string nonMatchingFunction, ICollection<string> nonMatchingFields)
+        {
+            ThrowIndexCreationException($"""
+                                         must return identical fields in its Map and Reduce functions.
+                                         Baseline function: {baselineFunction}
+                                         Non matching function: {nonMatchingFunction}
+
+                                         Common fields: {string.Join(", ", baselineFields.Intersect(nonMatchingFields))}
+                                         Missing fields: {string.Join(", ", baselineFields.Except(nonMatchingFields))}
+                                         Additional fields: {string.Join(", ", nonMatchingFields.Except(baselineFields))}
+                                         """);
         }
 
         private void ProcessReduce(IndexDefinition definition, ObjectInstance definitions, JintPreventResolvingTasksReferenceResolver resolver, long indexVersion)

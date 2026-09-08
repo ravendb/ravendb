@@ -213,11 +213,12 @@ namespace Raven.Server.Documents.Indexes
             public const long CoraxOrderPreservingCompoundNumericEncoding = Base72Version; // RavenDB-26831
             public const long CoraxNumericTreesWithoutFrequencies_72 = 72_002; // RavenDB-27171
             public const long LuceneExactDatesUseTimeTicks_72 = 72_003; // RavenDB-27052
+            public const long JavaScriptMapReduceFieldsValidation = 72_004; // RavenDB-13497
 
             /// <summary>
             /// Remember to bump this
             /// </summary>
-            public const long CurrentVersion = LuceneExactDatesUseTimeTicks_72;
+            public const long CurrentVersion = JavaScriptMapReduceFieldsValidation;
 
             public static bool IsLowerCasedReferencesSupported(long indexVersion)
             {
