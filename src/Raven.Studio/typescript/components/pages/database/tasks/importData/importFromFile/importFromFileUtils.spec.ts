@@ -15,6 +15,8 @@ import {
     ongoingTaskKeys,
 } from "./importFromFileValidation";
 
+type DatabaseItemType = Raven.Client.Documents.Smuggler.DatabaseItemType;
+
 // Knockout defaults (importDatabaseModel + smugglerDatabaseRecord) with admin access — all
 // admin-gated toggles on.
 const createDefaultFormData = () => getDefaultFormData(true);
@@ -208,6 +210,230 @@ describe("importFromFileUtils", () => {
             const dto = toImportDto(data);
             expect(dto.EncryptionKey).toBe("key123");
             expect(dto.MaxReadOpsPerSecond).toBe(500);
+        });
+    });
+
+    describe("toImportDto field matrix", () => {
+        // Spelled out in production order: a reordered or renamed token must fail here rather than
+        // silently change what the server receives.
+        const adminDefaultOperateOnTypes: DatabaseItemType[] = [
+            "DatabaseRecord",
+            "Documents",
+            "Conflicts",
+            "Indexes",
+            "RevisionDocuments",
+            "Identities",
+            "CompareExchange",
+            "CounterGroups",
+            "Attachments",
+            "TimeSeries",
+            "TimeSeriesDeletedRanges",
+            "Subscriptions",
+            "Tombstones",
+            "CompareExchangeTombstones",
+        ];
+
+        const without = (list: DatabaseItemType[], ...excluded: DatabaseItemType[]) =>
+            list.filter((x) => !excluded.includes(x));
+
+        const adminDefaultDto = {
+            IncludeExpired: true,
+            IncludeArtificial: false,
+            IncludeArchived: true,
+            TransformScript: "",
+            RemoveAnalyzers: false,
+            EncryptionKey: undefined as string,
+            OperateOnTypes: adminDefaultOperateOnTypes.join(","),
+            OperateOnDatabaseRecordTypes: "None",
+            Collections: null as string[],
+            MaxReadOpsPerSecond: null as number,
+        };
+
+        type Mutation = (data: ImportFromFileFormData) => void;
+
+        it("emits the admin defaults exactly, in a fixed token order", () => {
+            expect(toImportDto(createDefaultFormData())).toEqual(adminDefaultDto);
+        });
+
+        it.each<[string, DatabaseItemType, Mutation]>([
+            ["documents.isIncludeDocuments", "Documents", (d) => (d.documents.isIncludeDocuments = false)],
+            ["documents.isIncludeConflicts", "Conflicts", (d) => (d.documents.isIncludeConflicts = false)],
+            ["configuration.isIncludeIndexes", "Indexes", (d) => (d.configuration.isIncludeIndexes = false)],
+            ["documents.isIncludeRevisions", "RevisionDocuments", (d) => (d.documents.isIncludeRevisions = false)],
+            ["configuration.isIncludeIdentities", "Identities", (d) => (d.configuration.isIncludeIdentities = false)],
+            [
+                "documents.isIncludeCompareExchange",
+                "CompareExchange",
+                (d) => (d.documents.isIncludeCompareExchange = false),
+            ],
+            ["documents.isIncludeCounters", "CounterGroups", (d) => (d.documents.isIncludeCounters = false)],
+            ["documents.isIncludeAttachments", "Attachments", (d) => (d.documents.isIncludeAttachments = false)],
+            ["documents.isIncludeTimeSeries", "TimeSeries", (d) => (d.documents.isIncludeTimeSeries = false)],
+            [
+                "documents.isIncludeTimeSeriesDeletedRanges",
+                "TimeSeriesDeletedRanges",
+                (d) => (d.documents.isIncludeTimeSeriesDeletedRanges = false),
+            ],
+            ["documents.isIncludeSubscriptions", "Subscriptions", (d) => (d.documents.isIncludeSubscriptions = false)],
+            [
+                "documents.isIncludeDocumentsTombstones",
+                "Tombstones",
+                (d) => (d.documents.isIncludeDocumentsTombstones = false),
+            ],
+            [
+                "documents.isIncludeCompareExchangeTombstones",
+                "CompareExchangeTombstones",
+                (d) => (d.documents.isIncludeCompareExchangeTombstones = false),
+            ],
+        ])("turning off %s removes exactly the %s token and nothing else", (_path, token, mutate) => {
+            const data = createDefaultFormData();
+            mutate(data);
+
+            expect(toImportDto(data)).toEqual({
+                ...adminDefaultDto,
+                OperateOnTypes: without(adminDefaultOperateOnTypes, token).join(","),
+            });
+        });
+
+        it("adds LegacyAttachments right after Attachments", () => {
+            const data = createDefaultFormData();
+            data.documents.isIncludeLegacyAttachments = true;
+
+            const expectedTypes = adminDefaultOperateOnTypes.flatMap((x) =>
+                x === "Attachments" ? [x, "LegacyAttachments"] : [x]
+            );
+            expect(toImportDto(data).OperateOnTypes).toBe(expectedTypes.join(","));
+        });
+
+        it.each<[string, keyof typeof adminDefaultDto, boolean, Mutation]>([
+            [
+                "documents.isIncludeExpiredDocuments",
+                "IncludeExpired",
+                false,
+                (d) => (d.documents.isIncludeExpiredDocuments = false),
+            ],
+            [
+                "documents.isIncludeArtificialDocuments",
+                "IncludeArtificial",
+                true,
+                (d) => (d.documents.isIncludeArtificialDocuments = true),
+            ],
+            [
+                "documents.isIncludeArchivedDocuments",
+                "IncludeArchived",
+                false,
+                (d) => (d.documents.isIncludeArchivedDocuments = false),
+            ],
+            [
+                "configuration.isRemoveAnalyzers",
+                "RemoveAnalyzers",
+                true,
+                (d) => (d.configuration.isRemoveAnalyzers = true),
+            ],
+        ])("flipping %s changes only the %s flag", (_path, field, expected, mutate) => {
+            const data = createDefaultFormData();
+            mutate(data);
+
+            expect(toImportDto(data)).toEqual({ ...adminDefaultDto, [field]: expected });
+        });
+
+        it("sends the transform script only while the toggle is on", () => {
+            const data = createDefaultFormData();
+            data.processing.transformScript = "this.Freight = 1;";
+
+            expect(toImportDto(data).TransformScript).toBe("");
+
+            data.processing.isUseTransformScript = true;
+            expect(toImportDto(data).TransformScript).toBe("this.Freight = 1;");
+        });
+
+        it("ignores a typed encryption key and rate limit while their toggles are off", () => {
+            const data = createDefaultFormData();
+            data.processing.encryptionKey = "key123";
+            data.processing.maxReadOpsPerSecond = 500;
+
+            const dto = toImportDto(data);
+            expect(dto.EncryptionKey).toBeUndefined();
+            expect(dto.MaxReadOpsPerSecond).toBeNull();
+        });
+
+        it("drops DatabaseRecord entirely when no record type is left", () => {
+            const data = createDefaultFormData();
+            data.configuration.isImportAllSettings = false;
+            setAllDatabaseSettings(data, false);
+            data.configuration.isIncludeConnectionStringsAndOngoingTasks = false;
+
+            const dto = toImportDto(data);
+            expect(dto.OperateOnDatabaseRecordTypes).toBeUndefined();
+            expect(dto.OperateOnTypes).toBe(without(adminDefaultOperateOnTypes, "DatabaseRecord").join(","));
+        });
+
+        it("emits the exact server-default-equivalent list for a restrictions-only bypass", () => {
+            const types = getDatabaseRecordTypes(createDefaultFormData(), ["documentsCompression"], ["genAi"]);
+
+            expect(types).toEqual([
+                "Settings",
+                "ConflictSolverConfig",
+                "Client",
+                "Revisions",
+                "Refresh",
+                "Expiration",
+                "SchemaValidation",
+                "DataArchival",
+                "TimeSeries",
+                "Sorters",
+                "Analyzers",
+                "PostgreSQLIntegration",
+                "PeriodicBackups",
+                "ExternalReplications",
+                "RavenEtls",
+                "SqlEtls",
+                "SnowflakeEtls",
+                "OlapEtls",
+                "ElasticSearchEtls",
+                "QueueEtls",
+                "HubPullReplications",
+                "SinkPullReplications",
+                "EmbeddingsGenerations",
+                "CdcSinks",
+                "AiAgents",
+                "RemoteAttachments",
+                "RavenConnectionStrings",
+                "SqlConnectionStrings",
+                "SnowflakeConnectionStrings",
+                "OlapConnectionStrings",
+                "ElasticSearchConnectionStrings",
+                "QueueConnectionStrings",
+                "AiConnectionStrings",
+                "LockMode",
+                "QueueSinks",
+                "IndexesHistory",
+            ]);
+        });
+
+        it("emits IndexesHistory once in the bypass even when index history is also checked", () => {
+            const data = createDefaultFormData();
+            data.configuration.isIncludeIndexHistory = true;
+
+            const types = getDatabaseRecordTypes(data, ["documentsCompression"]);
+            expect(types.filter((x) => x === "IndexesHistory")).toHaveLength(1);
+            expect(types[types.length - 1]).toBe("IndexesHistory");
+        });
+
+        it("still drops restricted tokens when a whole group is re-included without customizing", () => {
+            // customize off + import-all-settings off: the customized path with includeAll on the
+            // task and connection-string groups, so the restriction filter has to hold on its own
+            const data = createDefaultFormData();
+            data.configuration.isImportAllSettings = false;
+            data.configuration.isCustomizeOngoingTasks = false;
+
+            const types = getDatabaseRecordTypes(data, ["documentsCompression"], ["sqlEtls"], ["sqlConnectionStrings"]);
+            expect(types).not.toContain("DocumentsCompression");
+            expect(types).not.toContain("SqlEtls");
+            expect(types).not.toContain("SqlConnectionStrings");
+            expect(types).toContain("RavenEtls");
+            expect(types).toContain("RavenConnectionStrings");
+            expect(types).not.toContain("LockMode");
         });
     });
 
