@@ -173,7 +173,7 @@ namespace Raven.Server.Config.Categories
 
         [Description("Disable further usage of sparse regions for the FS to reclaim free pages. In order to clear existing sparse regions you need to do that manually.")]
         [DefaultValue(false)]
-        [ConfigurationEntry("Storage.DisableSparseRegions", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        [ConfigurationEntry("Storage.DisableSparseRegions", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public bool DisableSparseRegions { get; set; }
 
         [Description("EXPERT: I/O for flush and sync operation is issued for a low priority thread, giving transaction commits higher priority")]
