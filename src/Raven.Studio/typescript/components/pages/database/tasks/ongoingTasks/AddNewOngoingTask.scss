@@ -1,104 +1,5 @@
-@use "sass:color";
 @use "Content/scss/colors";
 @use "Content/scss/sizes";
-@use "Content/scss/bs5variables";
-
-$translate-before-hover-x: 0;
-$translate-hover-x: 100%;
-
-%ongoing-task-card {
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
-    border: 1px solid colors.$border-color-light-var;
-    border-radius: sizes.$border-radius;
-    transition: bs5variables.$transition-base;
-
-    .card-body {
-        position: relative;
-        z-index: 4;
-    }
-
-    &::before {
-        content: "";
-        position: absolute;
-        width: 66.66%;
-        height: 100%;
-        background: transparent;
-        filter: blur(50px);
-        transition: bs5variables.$transition-base;
-    }
-}
-
-$variants: (
-    AI: (
-        border-color: map-get(colors.$task-colors, "ai"),
-        before-gradient: linear-gradient(
-                102deg,
-                rgba(map-get(colors.$task-colors, "ai"), 0.3) 0%,
-                rgba(map-get(colors.$task-colors, "ai"), 0.2) 33%,
-                rgba(123, 81, 255, 0.1) 66%,
-                rgba(123, 81, 255, 0) 91.78%
-            ),
-        before-transform: translateX(50%),
-        before-hover-transform: translateX($translate-hover-x),
-    ),
-    Replication: (
-        border-color: map-get(colors.$task-colors, "replication"),
-        before-gradient: linear-gradient(
-                102deg,
-                rgba(map-get(colors.$task-colors, "replication"), 0.35) 1.5%,
-                rgba(map-get(colors.$task-colors, "replication"), 0) 91.78%
-            ),
-        before-transform: translateX($translate-before-hover-x),
-        before-hover-transform: translateX($translate-hover-x),
-        icon-color: map-get(colors.$task-colors, "replication"),
-    ),
-    Backups: (
-        border-color: map-get(colors.$task-colors, "backups"),
-        before-gradient: linear-gradient(
-                102deg,
-                rgba(map-get(colors.$task-colors, "backups"), 0.35) 1.5%,
-                rgba(map-get(colors.$task-colors, "backups"), 0) 91.78%
-            ),
-        before-transform: translateX($translate-before-hover-x),
-        before-hover-transform: translateX($translate-hover-x),
-        icon-color: map-get(colors.$task-colors, "backups"),
-    ),
-    Subscriptions: (
-        border-color: map-get(colors.$task-colors, "subscriptions"),
-        before-gradient: linear-gradient(
-                102deg,
-                rgba(map-get(colors.$task-colors, "subscriptions"), 0.35) 1.5%,
-                rgba(map-get(colors.$task-colors, "subscriptions"), 0) 91.78%
-            ),
-        before-transform: translateX($translate-before-hover-x),
-        before-hover-transform: translateX($translate-hover-x),
-        icon-color: map-get(colors.$task-colors, "subscriptions"),
-    ),
-    ETL: (
-        border-color: map-get(colors.$task-colors, "etl"),
-        before-gradient: linear-gradient(
-                102deg,
-                rgba(map-get(colors.$task-colors, "etl"), 0.35) 1.5%,
-                rgba(map-get(colors.$task-colors, "etl"), 0) 91.78%
-            ),
-        before-transform: translateX($translate-before-hover-x),
-        before-hover-transform: translateX($translate-hover-x),
-        icon-color: map-get(colors.$task-colors, "etl"),
-    ),
-    Sink: (
-        border-color: map-get(colors.$task-colors, "sink"),
-        before-gradient: linear-gradient(
-                102deg,
-                rgba(map-get(colors.$task-colors, "sink"), 0.35) 1.5%,
-                rgba(map-get(colors.$task-colors, "sink"), 0) 91.78%
-            ),
-        before-transform: translateX($translate-before-hover-x),
-        before-hover-transform: translateX($translate-hover-x),
-        icon-color: map-get(colors.$task-colors, "sink"),
-    ),
-);
 
 .add-new-ongoing-task .radio-toggle .toggle-knob i {
     align-items: center;
@@ -107,68 +8,6 @@ $variants: (
 .add-new-ongoing-task {
     height: calc(100% - #{sizes.$gutter});
     margin: #{sizes.$gutter} #{sizes.$gutter} 0 #{sizes.$gutter};
-
-    @each $name, $props in $variants {
-        $selector: unquote(".add-new-ongoing-task-card.variant-#{$name}");
-        #{$selector} {
-            @extend %ongoing-task-card;
-
-            .task-icon {
-                color: map-get($props, icon-color);
-            }
-
-            &::before {
-                width: 100%;
-                background: map-get($props, before-gradient);
-                left: -100%;
-                filter: blur(2px);
-                transition: bs5variables.$transition-base;
-                transform: map-get($props, before-transform);
-            }
-
-            &:hover {
-                border-color: map-get($props, border-color);
-
-                &::before {
-                    transform: map-get($props, before-hover-transform);
-                }
-            }
-        }
-    }
-}
-
-.add-new-ongoing-task-card {
-    .task-icon {
-        font-size: 1.25rem;
-    }
-
-    .license-restricted-badge {
-        z-index: 4;
-    }
-}
-
-.ongoing-tasks-grid {
-    grid-template-columns: 1fr;
-
-    @container (min-width: 480px) {
-        grid-template-columns: 1fr 1fr;
-    }
-
-    @container (min-width: 720px) {
-        grid-template-columns: 1fr 1fr 1fr;
-    }
-
-    &--compact {
-        @container (min-width: 1100px) {
-            grid-template-columns: repeat(4, 1fr);
-        }
-    }
-}
-
-.add-new-ongoing-task-card.compact {
-    .card-body {
-        padding: sizes.$gutter-sm;
-    }
 }
 
 .add-new-ongoing-task-layout {
@@ -212,7 +51,6 @@ $variants: (
 .add-new-ongoing-task-sidebar,
 .add-new-ongoing-task-horizontal-nav {
     .form-control.filtering-input {
-        box-sizing: border-box !important;
         min-width: 0 !important;
         width: 100% !important;
         max-width: 100% !important;
@@ -221,47 +59,6 @@ $variants: (
         padding-bottom: 0;
         padding-left: sizes.$gutter-xs !important;
         padding-right: sizes.$gutter-xs !important;
-    }
-}
-
-.add-new-ongoing-task-chips-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: sizes.$gutter-xs;
-}
-
-button.add-new-ongoing-task-chip {
-    display: flex;
-    align-items: center;
-    gap: sizes.$gutter-xxs;
-    padding: 4px 10px;
-    border: 1px solid colors.$border-color-light-var;
-    border-radius: 100px;
-    background: transparent;
-    color: colors.$text-muted-var;
-    white-space: nowrap;
-    cursor: pointer;
-    font-size: 0.8125rem;
-    transition:
-        background-color 0.15s ease,
-        color 0.15s ease,
-        border-color 0.15s ease;
-    flex-shrink: 0;
-
-    &:hover:not(:disabled) {
-        background: colors.$panel-bg-2-var;
-        color: colors.$text-emphasis-var;
-    }
-
-    &.active {
-        background: colors.$panel-bg-2-var;
-        color: colors.$text-emphasis-var;
-        border-color: colors.$text-muted-var;
-    }
-
-    &:disabled {
-        opacity: 0.4;
-        cursor: default;
     }
 }
 
@@ -277,10 +74,6 @@ a.add-new-ongoing-task-nav-item {
 
     &:hover {
         background: colors.$panel-bg-2-var;
-    }
-
-    .add-new-ongoing-task-nav-item__newtab {
-        font-size: sizes.$font-size-base;
     }
 }
 
@@ -300,16 +93,5 @@ a.add-new-ongoing-task-nav-item {
     .form-check-label {
         width: 100%;
         cursor: pointer;
-    }
-}
-
-.variant-AI {
-    i {
-        &::before {
-            background: colors.$ai-gradient;
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
     }
 }

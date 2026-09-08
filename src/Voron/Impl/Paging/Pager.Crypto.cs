@@ -71,27 +71,13 @@ public unsafe partial class Pager
 
             buffer = GetBufferAndAddToTxState(pager, pageNumber, cryptoState, numberOfPages);
 
-            var toCopy = numberOfPages * Constants.Storage.PageSize;
-
-            AssertCopyWontExceedPagerFile(state, toCopy, pageNumber);
+            long toCopy = numberOfPages * (long)Constants.Storage.PageSize;
 
             Memory.Copy(buffer.Pointer, pagePointer, toCopy);
 
             DecryptPage(pager, (PageHeader*)buffer.Pointer);
 
             return buffer.Pointer;
-        }
-        
-        [Conditional("DEBUG")]
-        private static void AssertCopyWontExceedPagerFile(State state, int toCopy, long startPageNumberToCopy)
-        {
-            long toCopyInPages = checked(toCopy / Constants.Storage.PageSize + (toCopy % Constants.Storage.PageSize == 0 ? 0 : 1));
-
-            if (startPageNumberToCopy + toCopyInPages > state.NumberOfAllocatedPages)
-            {
-                throw new InvalidOperationException(
-                    $"Copying encrypted page exceeded the page file size. Number of allocated pages is {state.NumberOfAllocatedPages} while it attempted to access page {startPageNumberToCopy} and copy {toCopy} bytes");
-            }
         }
 
         private static ReadOnlySpan<byte> Context => "RavenDB!"u8;
@@ -289,8 +275,7 @@ public unsafe partial class Pager
                 pageHeader->OverflowSize != bufferPointer->OverflowSize)
                 throw new InvalidOperationException($"The header of {pageNumber} was modified, but it was *not* changed in this transaction!");
 
-            var toCopy = numberOfPages * Constants.Storage.PageSize;
-            AssertCopyWontExceedPagerFile(state, toCopy, pageNumber);
+            long toCopy = numberOfPages * (long)Constants.Storage.PageSize;
 
             ulong currentHash = Hashing.XXHash64.Calculate(buffer.Pointer, (ulong)toCopy);
 

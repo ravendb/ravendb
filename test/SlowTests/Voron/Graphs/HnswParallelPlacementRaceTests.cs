@@ -16,10 +16,10 @@ public unsafe class HnswParallelPlacementRaceTests(ITestOutputHelper output) : S
     private const int VectorDimensions = 16;
     private const int VectorSizeInBytes = VectorDimensions * sizeof(float);
 
-    // RavenDB-26809: reproduces the actual use-after-free. A placement worker is parked while it holds a
-    // reference into a node's edges, then the LLT thread moves both that edge buffer and the node array
-    // before the worker resumes. With the fix (per-task edge snapshot + retained node buffer) the build
-    // completes and the graph stays queryable; reverting either guard crashes here under the parked read.
+    // RavenDB-26809: reproduces the actual use-after-free. A placement worker is parked right before it
+    // consumes a node's edges, then the LLT thread moves both that edge buffer and the node array before
+    // the worker resumes. With the fix (per-task edge snapshot + retained node buffer) the build completes
+    // and the graph stays queryable; reverting either guard crashes here under the parked read.
     [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Vector)]
     public void ParallelPlacementSurvivesEdgeAndNodeReallocUnderParkedWorker()
     {

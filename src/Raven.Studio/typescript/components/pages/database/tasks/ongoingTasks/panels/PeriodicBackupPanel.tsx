@@ -48,7 +48,7 @@ interface PeriodicBackupPanelProps extends BaseOngoingTaskPanelProps<OngoingTask
 
 const neverBackedUpText = "Never backed up";
 
-function formatBackupType(backupType: BackupType, isFull: boolean) {
+export function formatBackupType(backupType: BackupType, isFull: boolean) {
     if (!isFull) {
         return "Incremental";
     }

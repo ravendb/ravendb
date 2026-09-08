@@ -20,9 +20,6 @@
     <Project Path="bench/Micro.Benchmark/Micro.Benchmark.csproj">
       <BuildType Solution="Validate|*" Project="Release" />
     </Project>
-    <Project Path="bench/Regression.Benchmark/Regression.Benchmark.csproj">
-      <BuildType Solution="Validate|*" Project="Release" />
-    </Project>
     <Project Path="bench/RequestHandler.Benchmark/RequestHandler.Benchmark.csproj">
       <BuildType Solution="Validate|*" Project="Release" />
     </Project>

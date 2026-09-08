@@ -19,9 +19,20 @@ public class CdcSinkTableProcessor
     private readonly StringBuilder _sb = new();
 
     /// <summary>
-    /// The key used to look up this processor in the table index (schema.table or just table).
+    /// Patch dispatch key for this mapping: "schema.table|discriminator". Unique per processor, so a
+    /// source table mapped several ways dispatches each mapping's patch script separately.
     /// </summary>
     public string Key { get; init; }
+
+    /// <summary>
+    /// Identity of this mapping, unique across the whole configuration: the root collection name,
+    /// extended for an embedded processor with the slash-joined path of embedded property names
+    /// (e.g. "Orders" or "Orders/Departments/Employees"). '/' and '\' inside a segment are escaped
+    /// with '\' so segment boundaries stay unambiguous. Uniqueness follows from config validation:
+    /// root collection names are unique config-wide and embedded property names are unique per parent.
+    /// Persisted with each op so tx-log replay can restore the exact processor.
+    /// </summary>
+    public string Discriminator { get; init; } = string.Empty;
 
     /// <summary>Source table schema (e.g. "public", "dbo"). Empty string when not specified.</summary>
     public string Schema { get; init; }
@@ -31,6 +42,8 @@ public class CdcSinkTableProcessor
 
     /// <summary>Pre-computed Key + "__on_delete" for the OnDelete dispatch path.</summary>
     public string KeyOnDelete { get; init; }
+
+    public bool IgnoresDeletes { get; init; }
 
     /// <summary>
     /// The root table configuration this processor belongs to.

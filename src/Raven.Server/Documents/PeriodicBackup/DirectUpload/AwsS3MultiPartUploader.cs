@@ -114,4 +114,22 @@ public class AwsS3MultiPartUploader : IMultiPartUploader
             },
             _cancellationToken).ConfigureAwait(false);
     }
+
+    public void Abort()
+    {
+        AsyncHelpers.RunSync(AbortAsync);
+    }
+
+    public async Task AbortAsync()
+    {
+        if (_uploadId == null)
+            return;
+
+        await _client.AbortMultipartUploadAsync(new AbortMultipartUploadRequest
+        {
+            BucketName = _bucketName,
+            Key = _key,
+            UploadId = _uploadId
+        }, CancellationToken.None).ConfigureAwait(false);
+    }
 }

@@ -1,20 +1,49 @@
-name: version
+name: labels
 
 on:
   pull_request_target
+
+permissions:
+  contents: read
+  pull-requests: write
 
 jobs:
   labels:
     name: Label
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      # must run before the checkout, so it resolves changed files via the GitHub API
+      # instead of the local (base branch) working tree
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: changes
+        with:
+          filters: |
+            studio:
+              - 'src/Raven.Studio/**/*'
+            outsideStudio:
+              - '!src/Raven.Studio/**/*'
+            client:
+              - 'src/Raven.Client/**/*'
+            quill:
+              - 'src/Raven.Quill/**/*'
+              - 'src/Raven.Quill.Web/**/*'
+              - 'test/QuillTests/**/*'
+              - 'docker/quill/**/*'
 
-      - name: Parse Labels (merged)
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Parse Labels
         shell: pwsh
+        env:
+          # Studio is labelled only when nothing outside src/Raven.Studio was touched
+          studioOnly: ${{ steps.changes.outputs.studio == 'true' && steps.changes.outputs.outsideStudio != 'true' }}
+          clientTouched: ${{ steps.changes.outputs.client }}
+          quillTouched: ${{ steps.changes.outputs.quill }}
         run: |
           $branch = "${{ github.event.pull_request.base.ref }}"
           $labels = New-Object System.Collections.Generic.List[string]
+
+          # --- labels derived from the base branch ---
 
           if ($branch -like 'release/*') {
             # release labels
@@ -45,6 +74,21 @@ jobs:
             }
           }
 
+          # --- labels derived from the changed paths ---
+
+          if (($branch -like 'v*' -or $branch -like 'feature*') -and $env:studioOnly -eq 'true') {
+            $labels.Add('Studio')
+          }
+
+          # Client API changes need migration tracking only on version branches (e.g. v7.2)
+          if ($branch -like 'v*' -and $env:clientTouched -eq 'true') {
+            $labels.Add('migrate-ClientApi')
+          }
+
+          if (($branch -like 'v*' -or $branch -like 'feature*') -and $env:quillTouched -eq 'true') {
+            $labels.Add('area-Quill')
+          }
+
           $unique = $labels | Select-Object -Unique
           $labelStr = ($unique) -join ','
           echo "labelsToApply=$labelStr" >> $env:GITHUB_ENV
@@ -55,8 +99,6 @@ jobs:
           githubOwner: ${{ github.event.pull_request.base.repo.owner.login }}
           repoName: ${{ github.event.repository.name }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COMPlus_ReadyToRunExcludeList: 'System.Security.Cryptography.X509Certificates'
-          Raven_Enable_Per_Test_Logging: 'true'
         shell: pwsh
         run: |
           $json = @'

@@ -4,7 +4,9 @@ import { useAppSelector } from "components/store";
 import React from "react";
 import { Icon } from "components/common/Icon";
 import { useRavenLink } from "hooks/useRavenLink";
-import FeatureAvailabilitySummaryWrapper, { FeatureAvailabilityData } from "components/common/FeatureAvailabilitySummary";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 
 export function EditKafkaEtlInfoHub() {
@@ -23,19 +25,15 @@ export function EditKafkaEtlInfoHub() {
 
     return (
         <AboutViewFloating defaultOpen={hasQueueEtl ? null : "licensing"}>
-            <AccordionItemWrapper
-                targetId="about"
-                icon="about"
-                color="info"
-            >
+            <AccordionItemWrapper targetId="about" icon="about" color="info">
                 <p>
-                    A <strong>Kafka ETL</strong> ongoing-task is an ETL (Extract, Transform & Load) process
-                    that transfers data from this RavenDB database to topics of a Kafka broker.
+                    A <strong>Kafka ETL</strong> ongoing-task is an ETL (Extract, Transform & Load) process that
+                    transfers data from this RavenDB database to topics of a Kafka broker.
                 </p>
                 <ul>
                     <li>
                         Data is extracted from documents only.
-                        <br/>
+                        <br />
                         Attachments, Counters, Time series, and Revisions are not sent.
                     </li>
                     <li className="margin-top-xxs">
@@ -50,20 +48,22 @@ export function EditKafkaEtlInfoHub() {
                         (excluding deletes).
                     </li>
                     <li className="margin-top-xxs">
-                        You can test each script in this view to preview the messages that will be sent by the ETL
-                        task to the destination.
+                        You can test each script in this view to preview the messages that will be sent by the ETL task
+                        to the destination.
                     </li>
                 </ul>
-                <hr/>
+                <hr />
                 <div>
                     Task definition includes:
                     <ul>
-                        <li>A connection string specifying Kafka&apos;s bootstrap servers.
-                            <br/>
+                        <li>
+                            A connection string specifying Kafka&apos;s bootstrap servers.
+                            <br />
                             Connection options can be specified.
                         </li>
                         <li>The transformation scripts definitions.</li>
-                        <li>Per topic, select whether processed documents will be deleted from your RavenDB database.
+                        <li>
+                            Per topic, select whether processed documents will be deleted from your RavenDB database.
                         </li>
                         <li>A responsible node to handle this task can be set.</li>
                     </ul>
@@ -74,10 +74,7 @@ export function EditKafkaEtlInfoHub() {
                     <Icon icon="newtab" /> Docs - Kafka ETL
                 </a>
             </AccordionItemWrapper>
-            <FeatureAvailabilitySummaryWrapper
-                isUnlimited={hasQueueEtl}
-                data={featureAvailability}
-            />
+            <FeatureAvailabilitySummaryWrapper isUnlimited={hasQueueEtl} data={featureAvailability} />
         </AboutViewFloating>
     );
 }

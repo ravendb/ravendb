@@ -65,7 +65,10 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     /// mapping, keyed by the relation's real OID. (Re)built from the RelationMessage that pgoutput sends
     /// before a relation's rows and again on a schema change (see the RelationMessage case in GetCdcEvents).
     /// </summary>
-    private readonly Dictionary<uint, (PostgresTypeCategory[] Types, CdcSinkTableProcessor Processor)> _relationProcessors = new();
+    // Processors: every mapping the relation feeds - a root collection and/or embedded arrays. All share
+    // the same source columns; index 0 is the primary (used to rent the decode buffer). A row is decoded
+    // once and fanned out to all of them.
+    private readonly Dictionary<uint, (PostgresTypeCategory[] Types, IReadOnlyList<CdcSinkTableProcessor> Processors)> _relationProcessors = new();
 
     // PostgreSQL SQLSTATE for insufficient_privilege (e.g. the connection user lacks the
     // REPLICATION role attribute needed to create/read a publication or replication slot).
@@ -463,6 +466,8 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             ct,
             _lastLsn);
 
+        var events = new List<CdcEvent>();
+
         await foreach (var message in replicationStream.WithCancellation(ct))
         {
             LastActivityTime = Database.Time.GetUtcNow();
@@ -482,8 +487,13 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                         await DrainTuple(insert.NewRow, ct);
                         break;
                     }
-                    yield return new CdcEvent(CdcEventType.Upsert,
-                        await DecodeRow(insert.Relation, insert.NewRow, CdcSinkOperation.Upsert, StreamingJsonContext, ct), null);
+                    {
+                        var (procs, values) = await DecodeRowInternal(insert.Relation, insert.NewRow, ct);
+                        events.Clear();
+                        AddUpsertEvents(procs, values, StreamingJsonContext, events);
+                        foreach (var e in events)
+                            yield return e;
+                    }
                     break;
                 case FullUpdateMessage fullUpdate:
                 {
@@ -496,24 +506,21 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                         break;
                     }
 
-                    var (proc, oldValues) = await DecodeRowInternal(fullUpdate.Relation, fullUpdate.OldRow, ct);
-                    var newOp = await DecodeRow(fullUpdate.Relation, fullUpdate.NewRow, CdcSinkOperation.Upsert, StreamingJsonContext, ct);
+                    // OldRow must be consumed before NewRow. Decode both in order; the pre-image is only
+                    // needed when an embedded processor is present (reparent detection).
+                    var (procs, oldValues) = await DecodeRowInternal(fullUpdate.Relation, fullUpdate.OldRow, ct);
+                    var (_, newValues) = await DecodeRowInternal(fullUpdate.Relation, fullUpdate.NewRow, ct);
 
-                    if (newOp?.Processor is { IsRoot: false })
+                    if (HasEmbeddedProcessor(procs) == false)
                     {
-                        var (delete, upsert) = CreateEmbeddedUpdateEvents(newOp, oldValues);
-                        if (delete.HasValue)
-                            yield return delete.Value;
-                        else
-                            proc.ReturnValues(oldValues); // no reparent — release the unused old-values array
-                        yield return upsert;
+                        procs[0].ReturnValues(oldValues); // root-only update - pre-image unused
+                        oldValues = null;
                     }
-                    else
-                    {
-                        // Root table FullUpdateMessage — old values unused, return to pool.
-                        proc.ReturnValues(oldValues);
-                        yield return new CdcEvent(CdcEventType.Upsert, newOp, null);
-                    }
+
+                    events.Clear();
+                    AddUpdateEvents(procs, newValues, oldValues, events);
+                    foreach (var e in events)
+                        yield return e;
                     break;
                 }
                 case UpdateMessage update:
@@ -522,8 +529,15 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                         await DrainTuple(update.NewRow, ct);
                         break;
                     }
-                    yield return new CdcEvent(CdcEventType.Upsert,
-                        await DecodeRow(update.Relation, update.NewRow, CdcSinkOperation.Upsert, StreamingJsonContext, ct), null);
+                    {
+                        // No pre-image available (REPLICA IDENTITY DEFAULT), so we can't detect reparenting -
+                        // upsert into the current parent, matching the single-processor behavior.
+                        var (procs, values) = await DecodeRowInternal(update.Relation, update.NewRow, ct);
+                        events.Clear();
+                        AddUpsertEvents(procs, values, StreamingJsonContext, events);
+                        foreach (var e in events)
+                            yield return e;
+                    }
                     break;
                 case KeyDeleteMessage keyDel:
                     if (IsConfiguredRelation(keyDel.Relation) == false)
@@ -531,8 +545,13 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                         await DrainTuple(keyDel.Key, ct);
                         break;
                     }
-                    yield return new CdcEvent(CdcEventType.Delete,
-                        await DecodeRow(keyDel.Relation, keyDel.Key, CdcSinkOperation.Delete, StreamingJsonContext, ct), null);
+                    {
+                        var (procs, values) = await DecodeRowInternal(keyDel.Relation, keyDel.Key, ct);
+                        events.Clear();
+                        AddDeleteEvents(procs, values, StreamingJsonContext, events);
+                        foreach (var e in events)
+                            yield return e;
+                    }
                     break;
                 case FullDeleteMessage fullDel:
                     if (IsConfiguredRelation(fullDel.Relation) == false)
@@ -540,8 +559,13 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                         await DrainTuple(fullDel.OldRow, ct);
                         break;
                     }
-                    yield return new CdcEvent(CdcEventType.Delete,
-                        await DecodeRow(fullDel.Relation, fullDel.OldRow, CdcSinkOperation.Delete, StreamingJsonContext, ct), null);
+                    {
+                        var (procs, values) = await DecodeRowInternal(fullDel.Relation, fullDel.OldRow, ct);
+                        events.Clear();
+                        AddDeleteEvents(procs, values, StreamingJsonContext, events);
+                        foreach (var e in events)
+                            yield return e;
+                    }
                     break;
                 case CommitMessage commit:
                     _lastLsn = commit.CommitLsn;
@@ -560,7 +584,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     /// </summary>
     private bool IsConfiguredRelation(RelationMessage relation)
     {
-        if (DocumentProcessor.TryGetProcessor(relation.Namespace, relation.RelationName, out _))
+        if (DocumentProcessor.HasProcessors(relation.Namespace, relation.RelationName))
             return true;
 
         if (_unconfiguredRelations.Add(relation.RelationId) && Logger.IsInfoEnabled)
@@ -642,19 +666,12 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         }
     }
 
-    private async Task<CdcSinkDocumentOp> DecodeRow(
-        RelationMessage relation, ReplicationTuple row, CdcSinkOperation operation, JsonOperationContext jsonParsingContext, CancellationToken ct = default)
-    {
-        var (proc, values) = await DecodeRowInternal(relation, row, ct);
-        return DocumentProcessor.ProcessRow(proc, operation, values, jsonParsingContext);
-    }
-
     /// <summary>
-    /// (Re)builds the per-relation decode state (type categories + processor + source column names) from a
+    /// (Re)builds the per-relation decode state (type categories + processors + source column names) from a
     /// RelationMessage and caches it keyed by the relation's real OID. Called when a RelationMessage arrives
     /// (first encounter or schema change) and as a lazy fallback from DecodeRowInternal.
     /// </summary>
-    private (PostgresTypeCategory[] Types, CdcSinkTableProcessor Processor) BuildRelationMapping(RelationMessage relation)
+    private (PostgresTypeCategory[] Types, IReadOnlyList<CdcSinkTableProcessor> Processors) BuildRelationMapping(RelationMessage relation)
     {
         var typeCategories = PostgresColumnTypeMapping.BuildTypeCategoriesFromRelation(relation, _vectorOid);
 
@@ -662,20 +679,21 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         for (int i = 0; i < relation.Columns.Count; i++)
             columnNames[i] = relation.Columns[i].ColumnName;
 
-        var processor = DocumentProcessor.GetProcessor(relation.Namespace, relation.RelationName);
-        processor.SetSourceColumnNames(columnNames);
+        // Set column names on every processor for this relation (root + embedded), then fan rows out to all.
+        DocumentProcessor.SetSourceColumnNames(relation.Namespace, relation.RelationName, columnNames);
+        var processors = DocumentProcessor.GetProcessors(relation.Namespace, relation.RelationName);
 
-        var entry = (typeCategories, processor);
+        var entry = (typeCategories, processors);
         _relationProcessors[relation.RelationId] = entry;
         return entry;
     }
 
     /// <summary>
-    /// Resolves the processor for a relation, decodes a replication tuple into raw column values,
-    /// and returns both. Used by <see cref="DecodeRow"/> and by the reparent detection path
-    /// (which needs the raw values without calling ProcessRow).
+    /// Resolves the processors for a relation, decodes a replication tuple into raw column values (rented
+    /// from the primary processor's pool), and returns both. The caller fans the array out to every
+    /// processor via the AddUpsert/AddDelete/AddUpdate helpers.
     /// </summary>
-    private async Task<(CdcSinkTableProcessor Processor, object[] Values)> DecodeRowInternal(
+    private async Task<(IReadOnlyList<CdcSinkTableProcessor> Processors, object[] Values)> DecodeRowInternal(
         RelationMessage relation, ReplicationTuple row, CancellationToken ct)
     {
         // The RelationMessage that precedes a relation's rows (and is re-sent on schema change) builds the
@@ -683,9 +701,9 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         if (_relationProcessors.TryGetValue(relation.RelationId, out var entry) == false)
             entry = BuildRelationMapping(relation);
 
-        var (types, proc) = entry;
+        var (types, processors) = entry;
 
-        var values = proc.RentValues();
+        var values = processors[0].RentValues();
         int columnIndex = 0;
         var relationKey = $"{relation.Namespace}.{relation.RelationName}";
 
@@ -696,7 +714,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             columnIndex++;
         }
 
-        return (proc, values);
+        return (processors, values);
     }
 
     private string QuoteTableList(List<CdcSinkConfiguration.TableInfo> tables)

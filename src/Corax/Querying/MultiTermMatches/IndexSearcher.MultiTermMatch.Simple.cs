@@ -62,12 +62,20 @@ public partial class IndexSearcher
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MultiTermMatch ExistsQuery(in FieldMetadata field, bool forward = true, bool streamingEnabled = false, in CancellationToken token = default)
     {
-        return forward 
-            ? MultiTermMatchBuilder<ExistsTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>>(field, default(Slice), streamingEnabled: streamingEnabled, token: token) 
-            : MultiTermMatchBuilder<ExistsTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>>(field, default(Slice), streamingEnabled: streamingEnabled, token: token);
+        return forward
+            ? MultiTermMatchBuilder<ExistsTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>>(field, default(Slice), streamingEnabled: streamingEnabled, token: token, scoreAsConstant: true)
+            : MultiTermMatchBuilder<ExistsTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>>(field, default(Slice), streamingEnabled: streamingEnabled, token: token, scoreAsConstant: true);
     }
 
     
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public MultiTermMatch PatternQuery(in FieldMetadata field, Slice pattern, bool forward = true, bool streamingEnabled = false, in CancellationToken token = default)
+    {
+        return forward
+            ? MultiTermMatchBuilder<PatternTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>>(field, pattern, streamingEnabled, validatePostfixLen: false, token: token)
+            : MultiTermMatchBuilder<PatternTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>>(field, pattern, streamingEnabled, validatePostfixLen: false, token: token);
+    }
+
     public MultiTermMatch RegexQuery(in FieldMetadata field, Regex regex, bool forward = true, bool streamingEnabled = false, in CancellationToken token = default)
     {
         if (_fieldsTree == null || _fieldsTree.TryGetCompactTreeFor(field.FieldName, out var terms) == false)

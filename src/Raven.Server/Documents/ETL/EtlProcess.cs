@@ -930,6 +930,9 @@ namespace Raven.Server.Documents.ETL
                         }
 
                         Database.EtlLoader.OnBatchCompleted(ConfigurationName, TransformationName, Statistics);
+
+                        Database.ForTestingPurposes?.OnEtlBatchCompleted?.Invoke(this);
+
                         continue;
                     }
                     try
@@ -992,6 +995,14 @@ namespace Raven.Server.Documents.ETL
                     {
                         return;
                     }
+                }
+                catch (ObjectDisposedException)
+                {
+                    return;
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
                 }
                 catch (Exception e)
                 {

@@ -5,7 +5,7 @@
     OngoingTaskSharedInfo,
 } from "components/models/tasks";
 import useBoolean from "hooks/useBoolean";
-import React, { useCallback, useReducer, useState } from "react";
+import React, { ReactNode, useCallback, useReducer, useState } from "react";
 import router from "plugins/router";
 import { RichPanelDetailItem, RichPanelName } from "components/common/RichPanel";
 import Spinner from "react-bootstrap/Spinner";
@@ -30,14 +30,16 @@ import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils"
 import { useAppUrls } from "hooks/useAppUrls";
 import appUrl from "common/appUrl";
 import { CounterBadge } from "components/common/CounterBadge";
-import IconName from "../../../../../../typings/server/icons";
-import { TaskItemProps } from "components/pages/database/tasks/ongoingTasks/AddNewOngoingTask";
-import ModifyOngoingTaskResult = Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult;
+import { TaskCardCategory, TaskCardDisabledCondition } from "components/pages/database/tasks/shared/AddTaskCardList";
+import { useTaskCardFilters } from "components/pages/database/tasks/shared/useTaskCardFilters";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
+import { getAccessRequiredMessage } from "components/utils/accessUtils";
 import { StudioConnectionType } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
 import {
-    serverWideConnectionStringPrefix,
     getServerWideShortName,
+    serverWideConnectionStringPrefix,
 } from "components/pages/database/settings/connectionStrings/connectionStringsUtils";
+import ModifyOngoingTaskResult = Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult;
 
 export interface BaseOngoingTaskPanelProps<T extends OngoingTaskInfo> {
     data: T;
@@ -436,13 +438,6 @@ export function useOngoingTasksOperations(reload: () => void) {
     };
 }
 
-interface OngoingTasksCategory {
-    categoryName: string;
-    categoryHeaderName?: string;
-    categoryIcon: IconName;
-    tasks: TaskItemProps[];
-}
-
 export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean }) {
     const db = useAppSelector(databaseSelectors.activeDatabase);
     const [tasks] = useReducer(ongoingTasksReducer, db, ongoingTasksReducerInitializer);
@@ -491,17 +486,7 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
         !isProfessionalOrAbove &&
         (subscriptionsServerLimitStatus === "limitReached" || subscriptionsDatabaseLimitStatus === "limitReached");
 
-    const [searchText, setSearchText] = useState<string>("");
-    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
     const { forCurrentDatabase } = useAppUrls();
-
-    const toggleCategory = (categoryName: string) => {
-        setSelectedCategories((prev) =>
-            prev.includes(categoryName) ? prev.filter((c) => c !== categoryName) : [...prev, categoryName]
-        );
-    };
-
-    const resetCategories = () => setSelectedCategories([]);
 
     const getSubscriptionLimitReason = () => {
         if (!isSubscriptionDisabled) {
@@ -513,7 +498,29 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
         return `${limitReachedReason} has reached the maximum number of subscriptions allowed per ${limitReachedReason.toLowerCase()}.`;
     };
 
-    let ongoingTasks: OngoingTasksCategory[] = [
+    const isSharded = db?.isSharded;
+    const getCanHandleOperation = useAppSelector(accessManagerSelectors.getCanHandleOperation);
+
+    const getDisabledConditions = (opts: {
+        accessRequired: databaseAccessLevel;
+        isShardingSupported?: boolean;
+        customDisabledReason?: ReactNode;
+    }): TaskCardDisabledCondition[] => [
+        {
+            isActive: !getCanHandleOperation(opts.accessRequired),
+            message: getAccessRequiredMessage(opts.accessRequired),
+        },
+        {
+            isActive: !opts.isShardingSupported && isSharded,
+            message: "Sharding is not supported for this task",
+        },
+        {
+            isActive: !!opts.customDisabledReason,
+            message: opts.customDisabledReason,
+        },
+    ];
+
+    let ongoingTasks: TaskCardCategory[] = [
         {
             categoryName: "AI",
             categoryIcon: "ai",
@@ -527,7 +534,9 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     showLicenseBadge: !hasGenAi,
                     licenseBadge: "Enterprise AI",
                     link: forCurrentDatabase.editGenAiTaskUrl(),
-                    accessRequired: "DatabaseAdmin",
+                    disabledConditions: getDisabledConditions({
+                        accessRequired: "DatabaseAdmin",
+                    }),
                 },
                 {
                     title: "Embeddings Generation",
@@ -537,8 +546,10 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     target: "EmbeddingsGeneration",
                     showLicenseBadge: !hasEmbeddingGeneration,
                     link: forCurrentDatabase.editEmbeddingsGenerationTaskUrl(),
-                    isShardingSupported: true,
-                    accessRequired: "DatabaseAdmin",
+                    disabledConditions: getDisabledConditions({
+                        accessRequired: "DatabaseAdmin",
+                        isShardingSupported: true,
+                    }),
                 },
             ],
         },
@@ -556,8 +567,10 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     licenseBadge: "Professional +",
                     showLicenseBadge: !hasExternalReplication,
                     link: forCurrentDatabase.editExternalReplicationTaskUrl(),
-                    isShardingSupported: true,
-                    accessRequired: "DatabaseAdmin",
+                    disabledConditions: getDisabledConditions({
+                        accessRequired: "DatabaseAdmin",
+                        isShardingSupported: true,
+                    }),
                 },
                 {
                     title: "Replication Hub",
@@ -569,7 +582,9 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     target: "ReplicationHub",
                     showLicenseBadge: !hasReplicationHub,
                     link: forCurrentDatabase.editReplicationHubTaskUrl(),
-                    accessRequired: "DatabaseAdmin",
+                    disabledConditions: getDisabledConditions({
+                        accessRequired: "DatabaseAdmin",
+                    }),
                 },
                 {
                     title: "Replication Sink",
@@ -581,7 +596,9 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     licenseBadge: "Professional +",
                     showLicenseBadge: !hasReplicationSink,
                     link: forCurrentDatabase.editReplicationSinkTaskUrl(),
-                    accessRequired: "DatabaseAdmin",
+                    disabledConditions: getDisabledConditions({
+                        accessRequired: "DatabaseAdmin",
+                    }),
                 },
             ],
         },
@@ -593,13 +610,15 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     title: "Periodic Backup",
                     description: "Create periodic backups or snapshots of the database on a defined schedule.",
                     iconName: "periodic-backup",
-                    variant: "Backups",
+                    variant: "Backup",
                     licenseBadge: "Professional +",
                     showLicenseBadge: !hasPeriodicBackups,
                     target: "PeriodicBackup",
                     link: forCurrentDatabase.editPeriodicBackupTask("OngoingTasks", false)(),
-                    isShardingSupported: true,
-                    accessRequired: "DatabaseAdmin",
+                    disabledConditions: getDisabledConditions({
+                        accessRequired: "DatabaseAdmin",
+                        isShardingSupported: true,
+                    }),
                 },
             ],
         },
@@ -611,12 +630,14 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     title: "Subscription",
                     description: "Send batches of documents that match a pre-defined query to a client for processing.",
                     iconName: "subscriptions",
-                    variant: "Subscriptions",
+                    variant: "Subscription",
                     target: "Subscription",
                     link: forCurrentDatabase.editSubscriptionTaskUrl(),
-                    isShardingSupported: true,
-                    accessRequired: "DatabaseReadWrite",
-                    customDisabledReason: getSubscriptionLimitReason(),
+                    disabledConditions: getDisabledConditions({
+                        accessRequired: "DatabaseReadWrite",
+                        isShardingSupported: true,
+                        customDisabledReason: getSubscriptionLimitReason(),
+                    }),
                     counterBadge: isProfessionalOrAbove ? null : (
                         <CounterBadge
                             count={tasks.subscriptions.length}
@@ -642,8 +663,10 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     licenseBadge: "Professional +",
                     showLicenseBadge: !hasRavenDbEtl,
                     link: forCurrentDatabase.editRavenEtlTaskUrl(),
-                    isShardingSupported: true,
-                    accessRequired: "DatabaseAdmin",
+                    disabledConditions: getDisabledConditions({
+                        accessRequired: "DatabaseAdmin",
+                        isShardingSupported: true,
+                    }),
                 },
                 {
                     title: "Elasticsearch ETL",
@@ -655,8 +678,10 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     licenseBadge: "Enterprise",
                     showLicenseBadge: !hasElasticSearchEtl,
                     link: forCurrentDatabase.editElasticSearchEtlTaskUrl(),
-                    isShardingSupported: true,
-                    accessRequired: "DatabaseAdmin",
+                    disabledConditions: getDisabledConditions({
+                        accessRequired: "DatabaseAdmin",
+                        isShardingSupported: true,
+                    }),
                 },
                 {
                     title: "Kafka ETL",
@@ -667,7 +692,9 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     licenseBadge: "Enterprise",
                     showLicenseBadge: !hasKafkaEtl,
                     link: forCurrentDatabase.editKafkaEtlTaskUrl(),
-                    accessRequired: "DatabaseAdmin",
+                    disabledConditions: getDisabledConditions({
+                        accessRequired: "DatabaseAdmin",
+                    }),
                 },
                 {
                     title: "SQL ETL",
@@ -679,8 +706,10 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     licenseBadge: "Professional +",
                     showLicenseBadge: !hasSqlEtl,
                     link: forCurrentDatabase.editSqlEtlTaskUrl(),
-                    isShardingSupported: true,
-                    accessRequired: "DatabaseAdmin",
+                    disabledConditions: getDisabledConditions({
+                        accessRequired: "DatabaseAdmin",
+                        isShardingSupported: true,
+                    }),
                 },
                 {
                     title: "Snowflake ETL",
@@ -692,8 +721,10 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     licenseBadge: "Enterprise",
                     showLicenseBadge: !hasSnowflakeEtl,
                     link: forCurrentDatabase.editSnowflakeEtlTaskUrl(),
-                    isShardingSupported: true,
-                    accessRequired: "DatabaseAdmin",
+                    disabledConditions: getDisabledConditions({
+                        accessRequired: "DatabaseAdmin",
+                        isShardingSupported: true,
+                    }),
                 },
                 {
                     title: "OLAP ETL",
@@ -705,8 +736,10 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     link: forCurrentDatabase.editOlapEtlTaskUrl(),
                     licenseBadge: "Enterprise",
                     showLicenseBadge: !hasOlapEtl,
-                    isShardingSupported: true,
-                    accessRequired: "DatabaseAdmin",
+                    disabledConditions: getDisabledConditions({
+                        accessRequired: "DatabaseAdmin",
+                        isShardingSupported: true,
+                    }),
                 },
                 {
                     title: "RabbitMQ ETL",
@@ -718,7 +751,9 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     licenseBadge: "Enterprise",
                     showLicenseBadge: !hasRabbitMqEtl,
                     link: forCurrentDatabase.editRabbitMqEtlTaskUrl(),
-                    accessRequired: "DatabaseAdmin",
+                    disabledConditions: getDisabledConditions({
+                        accessRequired: "DatabaseAdmin",
+                    }),
                 },
                 {
                     title: "Azure Queue Storage ETL",
@@ -730,7 +765,9 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     licenseBadge: "Enterprise",
                     showLicenseBadge: !hasAzureQueueStorageEtl,
                     link: forCurrentDatabase.editAzureQueueStorageEtlTaskUrl(),
-                    accessRequired: "DatabaseAdmin",
+                    disabledConditions: getDisabledConditions({
+                        accessRequired: "DatabaseAdmin",
+                    }),
                 },
                 {
                     title: "Amazon SQS ETL",
@@ -741,7 +778,9 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     licenseBadge: "Enterprise",
                     showLicenseBadge: !hasAmazonSqsEtl,
                     link: forCurrentDatabase.editAmazonSqsEtlTaskUrl(),
-                    accessRequired: "DatabaseAdmin",
+                    disabledConditions: getDisabledConditions({
+                        accessRequired: "DatabaseAdmin",
+                    }),
                 },
             ],
         },
@@ -760,7 +799,9 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     licenseBadge: "Enterprise",
                     showLicenseBadge: !hasKafkaSink,
                     link: forCurrentDatabase.editKafkaSinkTaskUrl(),
-                    accessRequired: "DatabaseAdmin",
+                    disabledConditions: getDisabledConditions({
+                        accessRequired: "DatabaseAdmin",
+                    }),
                 },
                 {
                     title: "RabbitMQ Sink",
@@ -772,7 +813,9 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     licenseBadge: "Enterprise",
                     showLicenseBadge: !hasRabbitMqSink,
                     link: forCurrentDatabase.editRabbitMqSinkTaskUrl(),
-                    accessRequired: "DatabaseAdmin",
+                    disabledConditions: getDisabledConditions({
+                        accessRequired: "DatabaseAdmin",
+                    }),
                 },
                 {
                     title: "Azure Service Bus Sink",
@@ -784,7 +827,9 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     licenseBadge: "Enterprise",
                     showLicenseBadge: !hasAzureServiceBusSink,
                     link: forCurrentDatabase.editAzureServiceBusSinkTaskUrl(),
-                    accessRequired: "DatabaseAdmin",
+                    disabledConditions: getDisabledConditions({
+                        accessRequired: "DatabaseAdmin",
+                    }),
                 },
                 {
                     title: "CDC Sink",
@@ -796,7 +841,9 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     licenseBadge: "Enterprise",
                     showLicenseBadge: !hasCdcSink,
                     link: forCurrentDatabase.editCdcSinkTaskUrl(),
-                    accessRequired: "DatabaseAdmin",
+                    disabledConditions: getDisabledConditions({
+                        accessRequired: "DatabaseAdmin",
+                    }),
                 },
             ],
         },
@@ -806,44 +853,5 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
         ongoingTasks = ongoingTasks.filter((x) => x.categoryName === "AI");
     }
 
-    function getCategoryCount(category: OngoingTasksCategory["categoryName"]) {
-        const categoryTasks = ongoingTasks.find((x) => x.categoryName === category)?.tasks ?? [];
-        return categoryTasks.length;
-    }
-
-    const searchFilteredTasks = ongoingTasks
-        .map((category) => ({
-            ...category,
-            tasks: category.tasks.filter((task) => matchesSearchText(task, searchText)),
-        }))
-        .filter((category) => category.tasks.length > 0);
-
-    const filteredTasks = searchFilteredTasks.filter(
-        (category) => selectedCategories.length === 0 || selectedCategories.includes(category.categoryName)
-    );
-
-    const allCategories = ongoingTasks.map((c) => ({
-        categoryName: c.categoryName,
-        categoryIcon: c.categoryIcon,
-    }));
-
-    return {
-        filteredTasks,
-        searchFilteredTasks,
-        allCategories,
-        searchText,
-        setSearchText,
-        selectedCategories,
-        toggleCategory,
-        resetCategories,
-    };
+    return useTaskCardFilters(ongoingTasks);
 }
-
-const matchesSearchText = (task: TaskItemProps, searchText: string) => {
-    if (!searchText) {
-        return true;
-    }
-
-    const searchLower = searchText.trim().toLowerCase();
-    return task.title.toLowerCase().includes(searchLower) || task.description.toLowerCase().includes(searchLower);
-};
