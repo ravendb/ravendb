@@ -1028,7 +1028,8 @@ namespace Sparrow.Json
             private readonly JsonOperationContext _context;
             private AllocatedMemoryData _allocation;
 
-            public ReadOnlySpan<int> PropertiesSpan => new(Properties, Size);
+            // A method, not a property: System.Text.Json fails on ReadOnlySpan<T> properties
+            public ReadOnlySpan<int> GetPropertiesSpan() => new(Properties, Size);
 
             public int GetPropertyIdByInsertionOrder(int index)
             {
