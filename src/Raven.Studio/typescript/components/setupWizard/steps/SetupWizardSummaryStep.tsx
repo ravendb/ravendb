@@ -29,7 +29,10 @@ export function SetupWizardSummaryStep() {
         !!additionalSettingsStep?.autoIndexingEngineType ||
         !!additionalSettingsStep?.staticIndexingEngineType ||
         !!additionalSettingsStep?.setupCertificatePath ||
-        !!(licenseKeyStep.licenseInfo?.licenseStatus?.HasStudioConfiguration && additionalSettingsStep?.studioEnvironment) ||
+        !!(
+            licenseKeyStep.licenseInfo?.licenseStatus?.HasStudioConfiguration &&
+            additionalSettingsStep?.studioEnvironment
+        ) ||
         !!(securityOption !== "none" && additionalSettingsStep?.adminCertificateExpirationTime) ||
         !!additionalSettingsStep?.postgresqlIntegration;
 
