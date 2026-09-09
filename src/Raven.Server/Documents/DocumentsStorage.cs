@@ -313,15 +313,14 @@ namespace Raven.Server.Documents
             return new DocumentPutAction(this, DocumentDatabase);
         }
 
-        private void ComputeCollectionEtags(Transaction tx, CollectionName collection, ref Table.TableValueHolder holder,
-            DocumentTransactionCache.CollectionCache[] etags)
+        private void ComputeCollectionEtags(Transaction tx, CollectionName collection, DocumentTransactionCache.CollectionCache[] etags)
         {
             ref var entry = ref etags[collection.Index];
-            entry.LastDocumentEtag = ReadLast(tx, DocumentDatabase.GetDocsSchemaForCollection(collection), collection, CollectionTableType.Documents, ref holder)
-                ? TableValueToEtag((int)DocumentsTable.Etag, ref holder.Reader)
+            entry.LastDocumentEtag = ReadLast(tx, DocumentDatabase.GetDocsSchemaForCollection(collection), collection, CollectionTableType.Documents, out var reader)
+                ? TableValueToEtag((int)DocumentsTable.Etag, ref reader)
                 : 0;
-            entry.LastTombstoneEtag = ReadLast(tx, TombstonesSchema, collection, CollectionTableType.Tombstones, ref holder)
-                ? TableValueToEtag((int)TombstoneTable.Etag, ref holder.Reader)
+            entry.LastTombstoneEtag = ReadLast(tx, TombstonesSchema, collection, CollectionTableType.Tombstones, out reader)
+                ? TableValueToEtag((int)TombstoneTable.Etag, ref reader)
                 : 0;
         }
 
@@ -330,11 +329,10 @@ namespace Raven.Server.Documents
             DocumentTransactionCache.CollectionCache[] incremental)
         {
             var full = new DocumentTransactionCache.CollectionCache[collections.Count];
-            Table.TableValueHolder holder = default;
             foreach (var collection in collections.Values)
             {
-                ComputeCollectionEtags(tx, collection, ref holder, full);  
-            } 
+                ComputeCollectionEtags(tx, collection, full);
+            }
 
             foreach (var collection in collections.Values)
             {
@@ -428,11 +426,10 @@ namespace Raven.Server.Documents
             IReadOnlyDictionary<string, CollectionName> collections)
         {
             var etags = new DocumentTransactionCache.CollectionCache[collections.Count];
-            Table.TableValueHolder holder = default;
 
             foreach (var collection in collections.Values)
             {    
-                ComputeCollectionEtags(tx, collection, ref holder, etags);
+                ComputeCollectionEtags(tx, collection, etags);
             }
 
             return etags;
@@ -450,10 +447,9 @@ namespace Raven.Server.Documents
             var etags = new DocumentTransactionCache.CollectionCache[collections.Count];
             Array.Copy(carried, etags, carried.Length);
 
-            Table.TableValueHolder holder = default;
             foreach (var collection in touched ?? [])
             {
-                ComputeCollectionEtags(tx, collection, ref holder, etags);
+                ComputeCollectionEtags(tx, collection, etags);
             }
 
             if (collectionsCreatedHere == null)
@@ -461,7 +457,7 @@ namespace Raven.Server.Documents
 
             foreach (var collection in collectionsCreatedHere.Values)
             {
-                ComputeCollectionEtags(tx, collection, ref holder, etags);
+                ComputeCollectionEtags(tx, collection, etags);
             }
             return etags;
         }
@@ -1549,45 +1545,44 @@ namespace Raven.Server.Documents
                         return col.LastDocumentEtag;
                 }
             }
-            Table.TableValueHolder result = null;
-            if (LastDocument(tx, collection, ref result) == false)
+            if (LastDocument(tx, collection, out var reader) == false)
                 return 0;
 
-            return TableValueToEtag((int)DocumentsTable.Etag, ref result.Reader);
+            return TableValueToEtag((int)DocumentsTable.Etag, ref reader);
         }
 
         public string GetLastDocumentChangeVector(Transaction tx, string collection)
         {
             // read from storage: the transaction cache deliberately does not carry change vectors
-            Table.TableValueHolder result = null;
-            if (LastDocument(tx, collection, ref result) == false)
+            if (LastDocument(tx, collection, out var reader) == false)
                 return null;
 
-            return TableValueToChangeVector((int)DocumentsTable.ChangeVector, ref result.Reader);
+            return TableValueToChangeVector((int)DocumentsTable.ChangeVector, ref reader);
         }
 
-        private bool LastDocument(Transaction transaction, string collection, ref Table.TableValueHolder result)
+        private bool LastDocument(Transaction transaction, string collection, out TableValueReader reader)
         {
             var collectionName = GetCollection(transaction, collection, throwIfDoesNotExist: false);
             if (collectionName == null)
+            {
+                reader = default;
                 return false;
+            }
 
-            return ReadLast(transaction, DocumentDatabase.GetDocsSchemaForCollection(collectionName), collectionName, CollectionTableType.Documents, ref result);
+            return ReadLast(transaction, DocumentDatabase.GetDocsSchemaForCollection(collectionName), collectionName, CollectionTableType.Documents, out reader);
         }
 
-        private bool ReadLast(Transaction transaction, TableSchema schema, CollectionName collectionName, CollectionTableType collectionType, ref Table.TableValueHolder result)
+        private bool ReadLast(Transaction transaction, TableSchema schema, CollectionName collectionName, CollectionTableType collectionType,
+            out TableValueReader reader)
         {
             var table = transaction.OpenTable(schema, collectionName.GetTableName(collectionType));
-
-            // ReSharper disable once UseNullPropagation
             if (table == null)
+            {
+                reader = default;
                 return false;
+            }
 
-            result = table.ReadLast(schema.FixedSizeIndexes[CollectionEtagsSlice]);
-            if (result == null)
-                return false;
-
-            return true;
+            return table.ReadLast(schema.FixedSizeIndexes[CollectionEtagsSlice], out reader);
         }
 
         public long GetLastTombstoneEtag(Transaction tx, string collection)
@@ -1612,11 +1607,10 @@ namespace Raven.Server.Documents
             if (table == null)
                 return 0;
 
-            var result = table.ReadLast(Schemas.Tombstones.CollectionEtagsIndex);
-            if (result == null)
+            if (table.ReadLast(Schemas.Tombstones.CollectionEtagsIndex, out var reader) == false)
                 return 0;
 
-            return TableValueToEtag(1, ref result.Reader);
+            return TableValueToEtag(1, ref reader);
         }
 
         public bool HasTombstonesWithEtagGreaterThanStartAndLowerThanOrEqualToEnd(DocumentsOperationContext context, string collection,

@@ -409,12 +409,11 @@ public unsafe class TaskErrorsStorage
             if (table == null)
                 return null;
 
-            var tvh = table.SeekOneBackwardFrom(Schemas.TaskProcessErrors.Current.Indexes[Schemas.TaskProcessErrors.ByCreatedAt], Slices.Empty, Slices.AfterAllKeys);
-
-            if (tvh == null)
+            if (table.SeekOneBackwardFrom(Schemas.TaskProcessErrors.Current.Indexes[Schemas.TaskProcessErrors.ByCreatedAt], Slices.Empty,
+                    Slices.AfterAllKeys, out var reader) == false)
                 return null;
 
-            return ReadProcessError(ref tvh.Reader, taskName);
+            return ReadProcessError(ref reader, taskName);
         }
     }
 

@@ -122,12 +122,11 @@ public abstract class AbstractCompareExchangeStorage
         {
             var table = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.CompareExchangeTombstoneSchema, ClusterStateMachine.CompareExchangeTombstones);
 
-            var tvh = table.SeekOneBackwardFrom(ClusterStateMachine.CompareExchangeTombstoneSchema.Indexes[ClusterStateMachine.CompareExchangeTombstoneIndex], prefix.Slice, last.Slice);
-
-            if (tvh == null)
+            if (table.SeekOneBackwardFrom(ClusterStateMachine.CompareExchangeTombstoneSchema.Indexes[ClusterStateMachine.CompareExchangeTombstoneIndex],
+                    prefix.Slice, last.Slice, out var reader) == false)
                 return 0;
 
-            return ClusterStateMachine.ReadCompareExchangeOrTombstoneIndex(tvh.Reader);
+            return ClusterStateMachine.ReadCompareExchangeOrTombstoneIndex(reader);
         }
     }
 

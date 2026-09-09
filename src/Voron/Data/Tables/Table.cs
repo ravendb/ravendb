@@ -1604,29 +1604,32 @@ namespace Voron.Data.Tables
             }
         }
 
-        public TableValueHolder SeekOneForwardFromPrefix(TableSchema.AbstractTreeIndexDef index, Slice value)
+        public bool SeekOneForwardFromPrefix(TableSchema.AbstractTreeIndexDef index, Slice value, out TableValueReader reader)
         {
+            reader = default;
+
             var tree = GetTree(index);
             if (tree == null)
-                return null;
+                return false;
 
             using (var it = tree.Iterate(_prefetch))
             {
                 it.SetRequiredPrefix(value);
 
                 if (it.Seek(value) == false)
-                    return null;
+                    return false;
 
                 do
                 {
                     foreach (var result in GetSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator), index))
                     {
-                        return result;
+                        reader = result.Reader;
+                        return true;
                     }
                 } while (it.MoveNext());
             }
 
-            return null;
+            return false;
         }
 
         public IEnumerable<SeekResult> SeekBackwardFrom(TableSchema.AbstractTreeIndexDef index, Slice? prefix, Slice last, long skip)
@@ -1703,34 +1706,37 @@ namespace Voron.Data.Tables
             }
         }
 
-        public TableValueHolder SeekOneBackwardFrom(TableSchema.AbstractTreeIndexDef index, Slice prefix, Slice last)
+        public bool SeekOneBackwardFrom(TableSchema.AbstractTreeIndexDef index, Slice prefix, Slice last, out TableValueReader reader)
         {
+            reader = default;
+
             var tree = GetTree(index);
             if (tree == null)
-                return null;
+                return false;
 
             using (var it = tree.Iterate(_prefetch))
             {
                 if (it.SeekBackward(last) == false)
-                    return null;
+                    return false;
 
                 it.SetRequiredPrefix(prefix);
                 if (SliceComparer.StartWith(it.CurrentKey, it.RequiredPrefix) == false)
                 {
                     if (it.MovePrev() == false)
-                        return null;
+                        return false;
                 }
 
                 do
                 {
                     foreach (var result in GetBackwardSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator), index))
                     {
-                        return result;
+                        reader = result.Reader;
+                        return true;
                     }
                 } while (it.MovePrev());
             }
 
-            return null;
+            return false;
         }
 
         public long GetCountOfMatchesFor(TableSchema.AbstractTreeIndexDef index, Slice value)
@@ -1982,18 +1988,20 @@ namespace Voron.Data.Tables
             }
         }
 
-        public TableValueHolder ReadFirst(TableSchema.FixedSizeKeyIndexDef index)
+        public bool ReadFirst(TableSchema.FixedSizeKeyIndexDef index, out TableValueReader reader)
         {
             var fst = GetFixedSizeTree(index);
 
             using (var it = fst.Iterate(_prefetch))
             {
                 if (it.Seek(0) == false)
-                    return null;
+                {
+                    reader = default;
+                    return false;
+                }
 
-                var result = new TableValueHolder();
-                GetTableValueReader(it, out result.Reader);
-                return result;
+                GetTableValueReader(it, out reader);
+                return true;
             }
         }
 
@@ -2249,18 +2257,20 @@ namespace Voron.Data.Tables
             }
         }
 
-        public TableValueHolder ReadLast(TableSchema.FixedSizeKeyIndexDef index)
+        public bool ReadLast(TableSchema.FixedSizeKeyIndexDef index, out TableValueReader reader)
         {
             var fst = GetFixedSizeTree(index);
 
             using (var it = fst.Iterate(_prefetch))
             {
                 if (it.SeekToLast() == false)
-                    return null;
+                {
+                    reader = default;
+                    return false;
+                }
 
-                var result = new TableValueHolder();
-                GetTableValueReader(it, out result.Reader);
-                return result;
+                GetTableValueReader(it, out reader);
+                return true;
             }
         }
         

@@ -2499,11 +2499,10 @@ namespace Raven.Server.Documents
             if (table == null)
                 return 0;
 
-            var result = table.ReadLast(Schemas.Counters.CollectionCountersEtagsIndex);
-            if (result == null)
+            if (table.ReadLast(Schemas.Counters.CollectionCountersEtagsIndex, out var reader) == false)
                 return 0;
 
-            return TableValueToEtag((int)CountersTable.Etag, ref result.Reader);
+            return TableValueToEtag((int)CountersTable.Etag, ref reader);
         }
 
         public sealed class IndexingMethods
