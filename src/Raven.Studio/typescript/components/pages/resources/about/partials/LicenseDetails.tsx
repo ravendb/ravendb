@@ -262,7 +262,7 @@ function LicenseTable(props: LicenseTableProps) {
                     </div>
                 </div>
             )}
-            {licenseType !== "Developer" && (
+            {licenseType !== "Developer" && licenseType !== "Quill" && (
                 <small className="mt-2 pb-2 text-center text-muted">
                     <Icon icon="info" />
                     We offer a free{" "}
@@ -283,6 +283,7 @@ const availableEverywhere = {
     enterprise: { value: true },
     developer: { value: true },
     enterpriseAi: { value: true },
+    quill: { value: true },
 };
 
 const featureAvailabilityData: FeatureAvailabilitySection[] = [
@@ -298,6 +299,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: false },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: null,
             },
             {
@@ -308,6 +310,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: Infinity },
                 developer: { value: Infinity },
                 enterpriseAi: { value: Infinity },
+                quill: { value: Infinity },
                 fieldInLicense: null,
             },
             {
@@ -318,6 +321,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: Infinity },
                 developer: { value: Infinity },
                 enterpriseAi: { value: Infinity },
+                quill: { value: Infinity },
                 fieldInLicense: null,
             },
             {
@@ -340,6 +344,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: false },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasGenAi",
             },
             {
@@ -350,6 +355,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: false },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasAiAgent",
             },
             {
@@ -360,6 +366,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasAiAssistant",
             },
         ],
@@ -376,6 +383,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: Infinity },
                 developer: { value: "3" },
                 enterpriseAi: { value: Infinity },
+                quill: { value: "1" },
                 fieldInLicense: "MaxClusterSize",
                 suffix: "nodes",
             },
@@ -387,6 +395,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: Infinity },
                 developer: { value: 9 },
                 enterpriseAi: { value: Infinity },
+                quill: { value: 3 },
                 fieldInLicense: "MaxCores",
             },
             {
@@ -397,6 +406,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: Infinity },
                 developer: { value: "36" },
                 enterpriseAi: { value: Infinity },
+                quill: { value: "6" },
                 fieldInLicense: "MaxMemory",
                 suffix: "GB RAM",
             },
@@ -418,6 +428,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: false },
                 fieldInLicense: "HasHighlyAvailableTasks",
             },
             {
@@ -428,6 +439,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: false },
                 fieldInLicense: "HasDynamicNodesDistribution",
             },
         ],
@@ -449,6 +461,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: Infinity },
                 developer: { value: Infinity },
                 enterpriseAi: { value: Infinity },
+                quill: { value: Infinity },
                 fieldInLicense: "MaxNumberOfStaticIndexesPerDatabase",
             },
             {
@@ -459,6 +472,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: Infinity },
                 developer: { value: Infinity },
                 enterpriseAi: { value: Infinity },
+                quill: { value: Infinity },
                 fieldInLicense: "MaxNumberOfStaticIndexesPerCluster",
             },
             {
@@ -469,6 +483,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: Infinity },
                 developer: { value: Infinity },
                 enterpriseAi: { value: Infinity },
+                quill: { value: Infinity },
                 fieldInLicense: "MaxNumberOfAutoIndexesPerDatabase",
             },
             {
@@ -479,6 +494,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: Infinity },
                 developer: { value: Infinity },
                 enterpriseAi: { value: Infinity },
+                quill: { value: Infinity },
                 fieldInLicense: "MaxNumberOfAutoIndexesPerCluster",
             },
             {
@@ -509,6 +525,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasAdditionalAssembliesFromNuGet",
             },
             {
@@ -529,6 +546,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasIndexCleanup",
             },
         ],
@@ -550,6 +568,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasMultiNodeSharding",
             },
             {
@@ -560,6 +579,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: Infinity },
                 developer: { value: 1 },
                 enterpriseAi: { value: Infinity },
+                quill: { value: Infinity },
                 fieldInLicense: "MaxReplicationFactorForSharding",
             },
         ],
@@ -586,6 +606,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasTimeSeriesRollupsAndRetention",
             },
         ],
@@ -607,6 +628,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasSnmpMonitoring",
             },
             {
@@ -617,6 +639,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasMonitoringEndpoints",
             },
             {
@@ -627,6 +650,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasMonitoringEndpoints",
             },
         ],
@@ -658,6 +682,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "CanSetupDefaultRevisionsConfiguration",
             },
             {
@@ -668,6 +693,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: Infinity },
                 developer: { value: Infinity },
                 enterpriseAi: { value: Infinity },
+                quill: { value: Infinity },
                 fieldInLicense: "MaxNumberOfRevisionsToKeep",
             },
             {
@@ -678,6 +704,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: Infinity },
                 developer: { value: Infinity },
                 enterpriseAi: { value: Infinity },
+                quill: { value: Infinity },
                 fieldInLicense: "MaxNumberOfRevisionAgeToKeepInDays",
             },
             {
@@ -693,6 +720,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: Infinity },
                 developer: { value: Infinity },
                 enterpriseAi: { value: Infinity },
+                quill: { value: Infinity },
                 fieldInLicense: "MinPeriodForRefreshInHours",
             },
             {
@@ -703,6 +731,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: Infinity },
                 developer: { value: Infinity },
                 enterpriseAi: { value: Infinity },
+                quill: { value: Infinity },
                 fieldInLicense: "MinPeriodForExpirationInHours",
             },
             {
@@ -718,6 +747,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasDocumentsCompression",
             },
             {
@@ -728,6 +758,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasTcpDataCompression",
             },
         ],
@@ -744,6 +775,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasExternalReplication",
             },
             {
@@ -754,6 +786,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasDelayedExternalReplication",
             },
             {
@@ -764,6 +797,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasPullReplicationAsHub",
             },
             {
@@ -774,6 +808,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasPullReplicationAsSink",
             },
             {
@@ -784,6 +819,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasPullReplicationAsHub",
             },
         ],
@@ -805,6 +841,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasCloudBackups",
             },
             {
@@ -815,6 +852,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasEncryptedBackups",
             },
             {
@@ -825,6 +863,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasSnapshotBackups",
             },
             {
@@ -835,6 +874,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasPeriodicBackup",
             },
         ],
@@ -857,6 +897,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasEmbeddingsGeneration",
                 helperInfo: (
                     <ul>
@@ -880,6 +921,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasRavenEtl",
             },
             {
@@ -890,6 +932,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasSqlEtl",
             },
             {
@@ -900,6 +943,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasSnowflakeEtl",
             },
             {
@@ -910,6 +954,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasOlapEtl",
             },
             {
@@ -920,6 +965,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasElasticSearchEtl",
             },
             {
@@ -930,6 +976,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasPostgreSqlIntegration",
             },
             {
@@ -940,6 +987,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasPowerBI",
             },
             {
@@ -950,6 +998,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasQueueEtl",
             },
             {
@@ -960,6 +1009,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasQueueEtl",
             },
             {
@@ -970,6 +1020,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasQueueEtl",
             },
             {
@@ -980,6 +1031,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasQueueEtl",
             },
             {
@@ -990,6 +1042,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasQueueSink",
             },
             {
@@ -1000,6 +1053,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasQueueSink",
             },
             {
@@ -1010,6 +1064,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasCdcSink",
             },
             {
@@ -1036,6 +1091,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasReadOnlyCertificates",
             },
             {
@@ -1046,6 +1102,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: "TLS 1.3 & X.509" },
                 developer: { value: "TLS 1.3 & X.509" },
                 enterpriseAi: { value: "TLS 1.3 & X.509" },
+                quill: { value: "TLS 1.3 & X.509" },
                 fieldInLicense: null,
             },
             {
@@ -1056,6 +1113,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasEncryption",
             },
         ],
@@ -1077,6 +1135,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasConcurrentDataSubscriptions",
             },
             {
@@ -1087,6 +1146,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasRevisionsInSubscriptions",
             },
             {
@@ -1097,6 +1157,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: Infinity },
                 developer: { value: Infinity },
                 enterpriseAi: { value: Infinity },
+                quill: { value: Infinity },
                 fieldInLicense: "MaxNumberOfSubscriptionsPerDatabase",
             },
             {
@@ -1107,6 +1168,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: Infinity },
                 developer: { value: Infinity },
                 enterpriseAi: { value: Infinity },
+                quill: { value: Infinity },
                 fieldInLicense: "MaxNumberOfSubscriptionsPerCluster",
             },
         ],
@@ -1123,6 +1185,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasServerWideBackups",
             },
             {
@@ -1133,6 +1196,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasServerWideExternalReplications",
             },
             {
@@ -1143,6 +1207,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasServerWideCustomSorters",
             },
             {
@@ -1153,6 +1218,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasServerWideAnalyzers",
             },
         ],
@@ -1169,6 +1235,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasDataArchival",
             },
             {
@@ -1184,6 +1251,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: Infinity },
                 developer: { value: Infinity },
                 enterpriseAi: { value: Infinity },
+                quill: { value: Infinity },
                 fieldInLicense: "MaxNumberOfCustomSortersPerDatabase",
             },
             {
@@ -1194,6 +1262,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: Infinity },
                 developer: { value: Infinity },
                 enterpriseAi: { value: Infinity },
+                quill: { value: Infinity },
                 fieldInLicense: "MaxNumberOfCustomSortersPerCluster",
             },
             {
@@ -1209,6 +1278,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: Infinity },
                 developer: { value: Infinity },
                 enterpriseAi: { value: Infinity },
+                quill: { value: Infinity },
                 fieldInLicense: "MaxNumberOfCustomAnalyzersPerDatabase",
             },
             {
@@ -1219,6 +1289,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: Infinity },
                 developer: { value: Infinity },
                 enterpriseAi: { value: Infinity },
+                quill: { value: Infinity },
                 fieldInLicense: "MaxNumberOfCustomAnalyzersPerCluster",
             },
             {
@@ -1229,6 +1300,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasClientConfiguration",
             },
             {
@@ -1239,6 +1311,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasStudioConfiguration",
             },
             {
@@ -1249,6 +1322,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasSchemaValidation",
             },
             {
@@ -1259,13 +1333,14 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterprise: { value: true },
                 developer: { value: true },
                 enterpriseAi: { value: true },
+                quill: { value: true },
                 fieldInLicense: "HasRemoteAttachments",
             },
         ],
     },
 ];
 
-type LicenseColumn = "agpl" | "community" | "professional" | "enterprise" | "developer" | "enterpriseAi";
+type LicenseColumn = "agpl" | "community" | "professional" | "enterprise" | "developer" | "enterpriseAi" | "quill";
 
 interface ColumnsData {
     columns: LicenseColumn[];
@@ -1286,6 +1361,10 @@ function getColumnsData(license: Raven.Server.Commercial.LicenseType, isCloud: b
         case "None":
             columnsData.columns = ["agpl", "community", "professional", "enterprise", "enterpriseAi"];
             columnsData.current = "agpl";
+            break;
+        case "Quill":
+            columnsData.columns = ["quill"];
+            columnsData.current = "quill";
             break;
         case "Developer":
             columnsData.columns = ["community", "professional", "enterprise", "enterpriseAi", "developer"];
@@ -1414,6 +1493,7 @@ interface FeatureAvailabilityItem {
     enterprise: ValueData;
     developer: ValueData;
     enterpriseAi: ValueData;
+    quill: ValueData;
     suffix?: string;
     helperInfo?: React.ReactNode;
 }

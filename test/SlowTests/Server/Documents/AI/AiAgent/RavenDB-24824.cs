@@ -74,7 +74,7 @@ public class RavenDB_24824(ITestOutputHelper output) : RavenTestBase(output)
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task OutputSchemaFieldTrackedPerTurnInDocument(Options options, GenAiConfiguration config)
     {
         // Covers: SampleObject (.NET object) override, explicit OutputSchema override, NoSchema,
@@ -139,7 +139,7 @@ public class RavenDB_24824(ITestOutputHelper output) : RavenTestBase(output)
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task NoSchemaShorthandsReturnRawString(Options options, GenAiConfiguration config)
     {
         // Covers: Run() sync shorthand and RunAsync() no-arg shorthand both return raw string output.
@@ -163,7 +163,7 @@ public class RavenDB_24824(ITestOutputHelper output) : RavenTestBase(output)
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task SyncStreamOverloadsWork(Options options, GenAiConfiguration config)
     {
         // Covers: Stream(Action<string>) no-schema shorthand and Stream<TAnswer>(Expression, Action) structured overload.
@@ -193,7 +193,7 @@ public class RavenDB_24824(ITestOutputHelper output) : RavenTestBase(output)
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task StreamingNoSchemaPathWorks(Options options, GenAiConfiguration config)
     {
         // Covers: StreamAsync<string> without options routes to NoSchema (regression for last commit fix),
@@ -224,7 +224,7 @@ public class RavenDB_24824(ITestOutputHelper output) : RavenTestBase(output)
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task ConvenienceOverloadsWork(Options options, GenAiConfiguration config)
     {
         // Covers: RunAsync<TAnswer>(TAnswer sampleObject) and RunAsync<TAnswer>(string schema) convenience overloads.
@@ -271,7 +271,7 @@ public class RavenDB_24824(ITestOutputHelper output) : RavenTestBase(output)
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanHandleNoArgsTool(Options options, GenAiConfiguration config)
     {
         // Covers: Handle(name, Func<object>) and Handle<TResult>(name, Func<Task<TResult>>) no-args overloads.
@@ -308,7 +308,7 @@ public class RavenDB_24824(ITestOutputHelper output) : RavenTestBase(output)
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task MultiTurnConversationResumesCorrectlyAfterNoSchemaTurn(Options options, GenAiConfiguration config)
     {
         // After a NoSchema turn, the next turn with the default schema must still produce structured output.
@@ -333,7 +333,7 @@ public class RavenDB_24824(ITestOutputHelper output) : RavenTestBase(output)
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanStreamWithSchemaOverride(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);

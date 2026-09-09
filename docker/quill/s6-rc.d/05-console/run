@@ -1,0 +1,203 @@
+#!/command/with-contenv sh
+
+# The only service that writes to the container's stdout - every other one is piped to its own file
+# under /var/lib/quill/logs by an s6-log consumer, so `docker logs` stays readable.
+
+LOGS=/var/lib/quill/logs
+SETUP="${RAVEN_QUILL_SETUP_PACKAGE_PATH:-/var/lib/quill/setup}"
+STATUS_URL=http://127.0.0.1:5000/api/bootstrap/status
+HEALTH_URL=http://127.0.0.1:5000/healthz
+SERVICES="01-ravendb:ravendb 02-web:web 03-proxy:proxy 04-certwatch:certwatch"
+
+POLL_SECONDS=5
+GRACE_TICKS=$(( ${RAVEN_QUILL_STARTUP_GRACE_SECONDS:-180} / POLL_SECONDS ))
+
+WAITING_MSGS="Sharpening the quill...|Warming up the inkwell...|Dipping the quill...|Unrolling the parchment...|Mixing the ink...|Waking the raven...|Trimming the nib...|Teaching the raven your domain..."
+WAITING_COUNT=$(printf '%s' "$WAITING_MSGS" | awk -F'|' '{print NF}')
+
+
+STATE_DIR=/run/quill-console
+rm -rf "$STATE_DIR"
+mkdir -p "$STATE_DIR"
+
+LINES=0
+
+now_ts() {
+    date '+%Y-%m-%d %H:%M:%S'
+}
+
+say() {
+    if [ "$LINES" -eq 0 ]; then
+        printf '%s  %s\n' "$(now_ts)" "$1"
+    else
+        printf '%19s  %s\n' '' "$1"
+    fi
+    LINES=$((LINES + 1))
+}
+
+err() {
+    if [ "$LINES" -eq 0 ]; then
+        printf '\033[31m%s  %s\033[0m\n' "$(now_ts)" "$1"
+    else
+        printf '\033[31m%19s  %s\033[0m\n' '' "$1"
+    fi
+    LINES=$((LINES + 1))
+}
+
+svc_state() {
+    s6-svstat "/run/service/$1" 2>/dev/null | sed -E 's/\) .*/)/'
+}
+
+print_urls() {
+    base="$(jq -r '.PublicServerUrl // empty' "$SETUP/A/settings.json" 2>/dev/null \
+          | sed -E 's#^https://a\.##; s#:[0-9]+$##')"
+    if [ -z "$base" ]; then
+        return 1
+    fi
+    say "Dashboard: https://dashboard.$base"
+    say "Database:  https://db.$base"
+}
+
+printf '\033[38;5;208m'
+cat <<'BANNER'
+ _______  __   __  ___   ___      ___ 
+|       ||  | |  ||   | |   |    |   |
+|   _   ||  | |  ||   | |   |    |   |
+|  | |  ||  |_|  ||   | |   |    |   |
+|  |_|  ||       ||   | |   |___ |   |___
+|      | |       ||   | |       ||       |
+|____||_||_______||___| |_______||_______|
+Built with love by RavenDB Ltd. ♡
+BANNER
+printf '\033[0m'
+echo "+---------------------------------------------------------------+"
+echo
+echo "  Logs:      $LOGS/{ravendb,web,proxy,certwatch}.log"
+echo
+
+report() {
+    case "$1" in
+        ready)
+            say "Status:    READY"
+            print_urls
+            ;;
+        degraded)
+            err "Status:    DEGRADED - the appliance is not serving requests"
+            ;;
+        failed:*)
+            # WARNED also stops the waiting messages: activation has given a reason for failing, so
+            # carrying on about quills reads as if nothing happened.
+            WARNED=yes
+            err "Status:    FAILED"
+            err "Reason:    ${1#failed:}"
+            err "Details:   $LOGS/web.log"
+            ;;
+    esac
+}
+
+watch_services() {
+    EVENT=""
+    for pair in $SERVICES; do
+        svc="${pair%%:*}"
+        name="${pair##*:}"
+
+        key="$(svc_state "$svc")"
+        if [ -z "$key" ]; then
+            continue
+        fi
+
+        prev=""
+        if [ -f "$STATE_DIR/$svc" ]; then
+            prev="$(cat "$STATE_DIR/$svc")"
+        fi
+        if [ "$key" = "$prev" ]; then
+            continue
+        fi
+        printf '%s' "$key" > "$STATE_DIR/$svc"
+
+        if [ -z "$prev" ]; then
+            continue
+        fi
+
+        EVENT=yes
+        cause="$(printf '%s' "$key" | sed -E 's/^[a-z]+ \((.*)\)$/\1/')"
+        case "${prev%% *} ${key%% *}" in
+            "up down")
+                err "ERROR:     $name is down ($cause)"
+                err "Details:   $LOGS/$name.log"
+                ;;
+            "up up")
+                err "ERROR:     $name stopped unexpectedly and was restarted"
+                err "Details:   $LOGS/$name.log"
+                ;;
+            "down up")
+                say "$name is back up"
+                ;;
+        esac
+    done
+}
+
+LAST=""
+STARTED=""
+WARNED=""
+TICKS=0
+while true; do
+    TICKS=$((TICKS + 1))
+
+    if [ -n "$STARTED" ] || [ "$TICKS" -ge "$GRACE_TICKS" ]; then
+        watch_services
+        if [ -n "$EVENT" ]; then
+            LAST=""
+        fi
+    fi
+
+    json="$(curl -fsS --max-time 5 "$STATUS_URL" 2>/dev/null)"
+    if [ -n "$json" ]; then
+        phase="$(printf '%s' "$json" | jq -r '.state // empty')"
+        reason="$(printf '%s' "$json" | jq -r '.reason // empty')"
+        code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "$HEALTH_URL" 2>/dev/null)"
+
+        if [ -n "$phase" ]; then
+            if [ -n "$reason" ]; then
+                now="failed:$reason"
+            elif [ "$code" = "200" ]; then
+                now=ready
+                STARTED=yes
+            elif [ "$phase" = "Ready" ]; then
+                now=degraded
+                STARTED=yes
+            else
+                now=""
+            fi
+
+            if [ -n "$now" ] && [ "$now" != "$LAST" ]; then
+                LAST="$now"
+                report "$now"
+            fi
+        fi
+    fi
+
+    if [ -z "$STARTED" ] && [ -z "$WARNED" ]; then
+        if [ -z "$QUILL_LICENSE_KEY" ] && [ "$TICKS" -ge 3 ]; then
+            WARNED=yes
+            err "ERROR:     QUILL_LICENSE_KEY is not set, so the appliance cannot activate."
+            err "Details:   $LOGS/web.log"
+        elif [ "$TICKS" -ge "$GRACE_TICKS" ]; then
+            WARNED=yes
+            err "ERROR:     still not ready after $((GRACE_TICKS * POLL_SECONDS))s."
+            err "Details:   $LOGS/web.log"
+        fi
+    fi
+
+    if [ -z "$STARTED" ] && [ -z "$WARNED" ] && [ "$LINES" -eq 0 ]; then
+        idx=$(( (TICKS - 1) % WAITING_COUNT + 1 ))
+        say "$(printf '%s' "$WAITING_MSGS" | cut -d'|' -f "$idx") ($((TICKS * POLL_SECONDS))s)"
+    fi
+
+    if [ "$LINES" -gt 1 ]; then
+        echo
+    fi
+    LINES=0
+
+    sleep "$POLL_SECONDS"
+done

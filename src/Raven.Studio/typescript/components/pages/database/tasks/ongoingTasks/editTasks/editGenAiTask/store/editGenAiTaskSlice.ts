@@ -17,7 +17,7 @@ interface EditGenAiTaskState {
     taskId: number;
     sourceView: EditAiTaskSourceView;
     currentStep: EditGenAiTaskStepId;
-    connectionStringTest: loadableData<Raven.Server.Web.System.NodeConnectionTestResult>;
+    connectionStringTest: loadableData<Raven.Server.Documents.AI.AiConnectionTestResult>;
     contextTest: loadableData<
         { value: string; attachments?: Raven.Server.Documents.ETL.Providers.AI.AiAttachment[] }[]
     >;
@@ -241,7 +241,7 @@ const testConnectionString = createAsyncThunk(
         connectorType: Raven.Client.Documents.Operations.AI.AiConnectorType;
         modelType: Raven.Client.Documents.Operations.AI.AiModelType;
         settings: AiConnectionStringsSettings;
-    }): Promise<Raven.Server.Web.System.NodeConnectionTestResult> => {
+    }): Promise<Raven.Server.Documents.AI.AiConnectionTestResult> => {
         return services.tasksService.testAiConnectionString(
             payload.databaseName,
             payload.connectorType,

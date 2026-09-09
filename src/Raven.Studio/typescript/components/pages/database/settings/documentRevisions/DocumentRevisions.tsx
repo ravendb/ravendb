@@ -445,6 +445,7 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         community: { value: false },
         professional: { value: true },
         enterprise: { value: true },
+        quill: { value: true },
     },
     {
         featureName: "Max revisions to keep",
@@ -452,6 +453,7 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         community: { value: 2 },
         professional: { value: Infinity },
         enterprise: { value: Infinity },
+        quill: { value: Infinity },
     },
     {
         featureName: "Max retention time (days)",
@@ -459,5 +461,6 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         community: { value: 45 },
         professional: { value: Infinity },
         enterprise: { value: Infinity },
+        quill: { value: Infinity },
     },
 ];
