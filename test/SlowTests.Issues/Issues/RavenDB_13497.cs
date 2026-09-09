@@ -145,7 +145,7 @@ namespace SlowTests.Issues
         }
 
         [RavenFact(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        public void SkipsValidationForOlderIndexVersions()
+        public void CompilationSkipsValidationSoExistingIndexesKeepLoading()
         {
             var definition = new IndexDefinition
             {
@@ -157,10 +157,10 @@ namespace SlowTests.Issues
             var configuration = RavenConfiguration.CreateForTesting("foo", ResourceType.Database);
             configuration.Initialize();
 
-            var index = new JavaScriptIndex(definition, configuration, IndexDefinitionBaseServerSide.IndexVersion.LuceneExactDatesUseTimeTicks_72);
+            var index = new JavaScriptIndex(definition, configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
             Assert.NotNull(index.ReduceOperation);
 
-            Assert.Throws<IndexCreationException>(() => new JavaScriptIndex(definition, configuration, IndexDefinitionBaseServerSide.IndexVersion.JavaScriptMapReduceFieldsValidation));
+            Assert.Throws<IndexCreationException>(() => index.ValidateFieldsOfMapAndReduceFunctions());
         }
 
         private class ReduceResults

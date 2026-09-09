@@ -263,10 +263,9 @@ function map(name, lambda) {
                 ProcessMaps(definitions, resolver, maps, mapReferencedCollections, out var collectionFunctions);
                 AssertVectorFieldForMapReduceIndexes(mapReferencedCollections);
 
+                _mapOperations = collectionFunctions.SelectMany(x => x.Value).SelectMany(x => x.Value).ToList();
 
                 ProcessReduce(definition, definitions, resolver, indexVersion);
-
-                ValidateFieldsOfMapAndReduceFunctions(collectionFunctions, indexVersion);
 
                 ProcessFields(definition, collectionFunctions);
             }
@@ -353,14 +352,14 @@ function map(name, lambda) {
             OutputFields = fields.ToArray();
         }
 
-        private void ValidateFieldsOfMapAndReduceFunctions(Dictionary<string, Dictionary<string, List<JavaScriptMapOperation>>> collectionFunctions, long indexVersion)
+        internal void ValidateFieldsOfMapAndReduceFunctions()
         {
-            if (ReduceOperation == null || indexVersion < IndexDefinitionBaseServerSide.IndexVersion.JavaScriptMapReduceFieldsValidation)
+            if (ReduceOperation == null)
                 return;
 
             JavaScriptMapOperation baseline = null;
 
-            foreach (var operation in collectionFunctions.SelectMany(x => x.Value).SelectMany(x => x.Value))
+            foreach (var operation in _mapOperations)
             {
                 if (operation.HasDynamicReturns || operation.Fields.Count == 0)
                     continue;
@@ -704,6 +703,7 @@ function loadVector(pathToEmbedding, aiTaskIdentifier, embeddingSourceDocumentId
         protected readonly IndexDefinition Definition;
         internal readonly Engine _engine;
         protected readonly JavaScriptUtils _javaScriptUtils;
+        private readonly List<JavaScriptMapOperation> _mapOperations;
 
         public JavaScriptReduceOperation ReduceOperation { get; private set; }
 
