@@ -308,16 +308,14 @@ function map(name, lambda) {
 
                     case IndexSourceType.Counters:
                         return new CountersJavaScriptIndex(definition, configuration, indexVersion);
-
-                    default:
-                        throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");
                 }
             }
             catch (Exception e) when (e is IndexCompilationException == false && e is IndexCreationException == false)
             {
                 IndexCompilationException.ThrowFor(definition.Name, e.Message, e);
-                return null;
             }
+
+            throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");
         }
 
         private void ProcessFields(IndexDefinition definition, Dictionary<string, Dictionary<string, List<JavaScriptMapOperation>>> collectionFunctions)
