@@ -244,7 +244,7 @@ namespace Voron.Impl.Backup
             }
 
             long journalSize = Bits.PowerOf2(env.Options.GetJournalFileSize(journalNum, journalInfo));
-            journalFile = new JournalFile(env, env.Options.CreateJournalWriter(journalNum, journalSize), journalNum, FrozenSet<Guid>.Empty);
+            journalFile = new JournalFile(env.Options.CreateJournalWriter(journalNum, journalSize), journalNum, FrozenSet<Guid>.Empty);
             journalFile.AddRef();
             return journalFile;
         }
