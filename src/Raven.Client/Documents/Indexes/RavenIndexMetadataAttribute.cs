@@ -43,7 +43,7 @@ namespace Raven.Client.Documents.Indexes
 
         /// <summary>
         /// Whether the generator could read the index completely. False when the shape cannot be
-        /// determined statically — a JavaScript index, dynamic field creation via <c>CreateField</c>,
+        /// determined statically: a JavaScript index, dynamic field creation via <c>CreateField</c>,
         /// a block-bodied map lambda, or a base class whose own metadata is missing or unanalyzable.
         /// Consumers must treat every other value here as unknown when this is false, rather than as
         /// an empty set, so that an unreadable index never produces a false report.
@@ -80,16 +80,17 @@ namespace Raven.Client.Documents.Indexes
         public int AddMapCount { get; set; }
 
         /// <summary>
+        /// Whether any of those <c>AddMap</c> call sites sits inside a loop, in which case the call count
+        /// understates how many maps are registered at runtime.
+        /// </summary>
+        public bool AddMapInLoop { get; set; }
+
+        /// <summary>
         /// Whether the chain writes to <c>AdditionalSources</c> or <c>AdditionalAssemblies</c>, shipping
         /// C# for the server to compile. A helper called from the map may then be translatable after all,
         /// so rules about untranslatable calls must stand down for such an index.
         /// </summary>
         public bool UsesAdditionalCode { get; set; }
 
-        /// <summary>
-        /// Whether any of those <c>AddMap</c> call sites sits inside a loop, in which case the call count
-        /// understates how many maps are registered at runtime.
-        /// </summary>
-        public bool AddMapInLoop { get; set; }
     }
 }

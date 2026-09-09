@@ -31,8 +31,7 @@ namespace Raven.Analyzers.Queries
             {
                 ConcurrentDictionary<string, INamedTypeSymbol?> indexByName =
                     QueryIndexResolver.CreateIndexNameRegistry(startCtx);
-                ConcurrentDictionary<INamedTypeSymbol, IndexMetadata> metadataCache =
-                    IndexMetadataReader.CreateCache();
+                IndexMetadataRegistry metadataRegistry = new();
                 var pending = new ConcurrentBag<(InvocationExpressionSyntax Invocation, SemanticModel Model)>();
 
                 startCtx.RegisterSyntaxNodeAction(ctx =>
@@ -46,7 +45,7 @@ namespace Raven.Analyzers.Queries
                 startCtx.RegisterCompilationEndAction(endCtx =>
                 {
                     foreach ((InvocationExpressionSyntax invocation, SemanticModel model) in pending)
-                        AnalyzeInvocation(model, invocation, indexByName, metadataCache, endCtx.ReportDiagnostic);
+                        AnalyzeInvocation(model, invocation, indexByName, metadataRegistry, endCtx.ReportDiagnostic);
                 });
             });
         }
@@ -55,7 +54,7 @@ namespace Raven.Analyzers.Queries
             SemanticModel model,
             InvocationExpressionSyntax queryInvocation,
             ConcurrentDictionary<string, INamedTypeSymbol?> indexByName,
-            ConcurrentDictionary<INamedTypeSymbol, IndexMetadata> metadataCache,
+            IndexMetadataRegistry metadataRegistry,
             Action<Diagnostic> reportDiagnostic)
         {
             if (!QueryIndexResolver.IsSessionQueryCall(queryInvocation, model))
@@ -68,7 +67,7 @@ namespace Raven.Analyzers.Queries
             // The index's shape comes from the metadata its own assembly recorded, never from reading its
             // constructor here: that is what lets this rule work when the index lives in a referenced
             // project, whose constructor bodies are absent from compiled metadata entirely.
-            IndexMetadata metadata = IndexMetadataReader.Read(indexClass, metadataCache);
+            IndexMetadata metadata = metadataRegistry.Read(indexClass);
             if (!metadata.Analyzable)
                 return;
 

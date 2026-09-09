@@ -22,7 +22,7 @@ namespace Raven.Analyzers.Shared
     /// </summary>
     /// <remarks>
     /// The chain searches here read constructor source, so like the field extractors they belong to the
-    /// metadata generator, not to the analyzers — an analyzer reads the recorded
+    /// metadata generator, not to the analyzers. An analyzer reads the recorded
     /// <c>RavenIndexMetadataAttribute</c> instead. <see cref="IsReadableIn"/> is the exception and is
     /// used by both: it is what keeps every walk inside the current compilation.
     /// </remarks>
@@ -168,7 +168,7 @@ namespace Raven.Analyzers.Shared
         /// Having <see cref="ISymbol.DeclaringSyntaxReferences"/> is necessary but not sufficient. A
         /// project reference reaches the compiler as a compiled DLL, whose symbols carry no syntax at
         /// all; inside an IDE the same reference is a <see cref="CompilationReference"/>, whose symbols
-        /// do carry syntax — but it belongs to the referenced compilation, and asking this compilation
+        /// do carry syntax, but it belongs to the referenced compilation, and asking this compilation
         /// for a semantic model over a tree it does not own throws. Requiring
         /// <see cref="Compilation.ContainsSyntaxTree"/> covers both, so the walk stops at the assembly
         /// boundary in either host instead of throwing in one of them.

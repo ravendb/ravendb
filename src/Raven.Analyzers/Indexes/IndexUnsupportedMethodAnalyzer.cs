@@ -23,10 +23,17 @@ namespace Raven.Analyzers.Indexes
         {
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.EnableConcurrentExecution();
-            context.RegisterSyntaxNodeAction(Analyze, SyntaxKind.ClassDeclaration);
+
+            // One registry per compilation, shared by every class this analyzer visits.
+            context.RegisterCompilationStartAction(startCtx =>
+            {
+                IndexMetadataRegistry metadataRegistry = new();
+                startCtx.RegisterSyntaxNodeAction(
+                    ctx => Analyze(ctx, metadataRegistry), SyntaxKind.ClassDeclaration);
+            });
         }
 
-        private static void Analyze(SyntaxNodeAnalysisContext context)
+        private static void Analyze(SyntaxNodeAnalysisContext context, IndexMetadataRegistry metadataRegistry)
         {
             var classDecl = (ClassDeclarationSyntax)context.Node;
             if (classDecl.BaseList == null)
@@ -46,7 +53,7 @@ namespace Raven.Analyzers.Indexes
             // helper methods the server compiles and translates, so a source-defined method reference is no
             // longer a reliable "cannot be translated" signal. Suppress RVN009 for the whole class rather
             // than emit a false positive on a working index.
-            if (ShipsServerSideCode(classSymbol))
+            if (ShipsServerSideCode(classSymbol, metadataRegistry))
                 return;
 
             foreach (ConstructorDeclarationSyntax ctor in classDecl.Members.OfType<ConstructorDeclarationSyntax>())
@@ -105,8 +112,8 @@ namespace Raven.Analyzers.Indexes
         // Read from the index's recorded metadata rather than re-derived here: the AdditionalSources
         // write may sit in a base class in another assembly, whose constructor and member syntax this
         // compilation cannot read at all. The generator extracted it where the source was available.
-        private static bool ShipsServerSideCode(INamedTypeSymbol classSymbol) =>
-            IndexMetadataReader.Read(classSymbol).UsesAdditionalCode;
+        private static bool ShipsServerSideCode(INamedTypeSymbol classSymbol, IndexMetadataRegistry metadataRegistry) =>
+            metadataRegistry.Read(classSymbol).UsesAdditionalCode;
 
         private static string GetExpressionKind(SyntaxNode node)
         {

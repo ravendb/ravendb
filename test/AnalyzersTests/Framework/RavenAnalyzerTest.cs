@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Diagnostics;
-using Raven.Analyzers;
+using Raven.Analyzers.Generators;
 
 namespace AnalyzersTests.Framework
 {
@@ -17,8 +17,8 @@ namespace AnalyzersTests.Framework
     /// <remarks>
     /// The two hosts differ and the difference is load-bearing, so tests cover both. A command-line
     /// build compiles each project separately and passes a compiled DLL, whose symbols carry no syntax.
-    /// An IDE passes a <see cref="CompilationReference"/>, whose symbols do carry syntax — belonging to
-    /// the other compilation, so asking this one for a semantic model over it throws. An analyzer that
+    /// An IDE passes a <see cref="CompilationReference"/>, whose symbols do carry syntax, but it belongs
+    /// to the other compilation, so asking this one for a semantic model over it throws. An analyzer that
     /// reads index shape from recorded metadata is unaffected either way, which is the property the
     /// cross-project tests pin down.
     /// </remarks>

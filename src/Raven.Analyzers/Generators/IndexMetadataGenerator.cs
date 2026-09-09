@@ -5,24 +5,24 @@ using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
-using Raven.Analyzers.Generators;
 using Raven.Analyzers.Shared;
 
-namespace Raven.Analyzers
+namespace Raven.Analyzers.Generators
 {
     /// <summary>
-    /// Records the shape of every index class declared in the compilation as assembly-level
-    /// <c>RavenIndexMetadataAttribute</c> entries, so the analyzers can read it back from any assembly.
+    /// Emits one assembly-level <c>RavenIndexMetadataAttribute</c> per index class in the compilation,
+    /// recording the fields it maps and stores and how it defines itself.
     /// </summary>
     /// <remarks>
-    /// An index's shape lives in a constructor body, which does not survive into compiled metadata; an
-    /// attribute does. Running here — in the assembly that declares the index, where the source is
-    /// available — is what lets an analyzer in a different assembly reason about that index at all, and
-    /// it makes a command-line build and an IDE agree, since both read the same recorded values instead
-    /// of one reading source and the other reading nothing.
+    /// An index declares its shape in a constructor body. Constructor bodies are not part of compiled
+    /// metadata, so an analyzer looking at a query has no way to inspect an index that came from a
+    /// referenced assembly. Attributes are part of metadata, so recording the shape here, where the
+    /// source is still available, is what makes those indexes analyzable at all. It also keeps a
+    /// command-line build and an IDE in agreement, because both read these values rather than one
+    /// reading source and the other reading nothing.
     /// <para>
-    /// Abstract bases are recorded too: a derived index in another assembly needs its base's facts to
-    /// know whether the chain assigns a Map.
+    /// Abstract bases get an entry too. A derived index in another assembly needs its base's facts to
+    /// tell whether the chain assigns a Map.
     /// </para>
     /// </remarks>
     [Generator(LanguageNames.CSharp)]
@@ -45,8 +45,8 @@ namespace Raven.Analyzers
                     })
                 .Where(static symbol => symbol is not null);
 
-            // Collect() so the whole set is emitted as one file with one attribute per index. Partial
-            // classes yield the same symbol more than once, hence the de-duplication in Emit.
+            // Collect() so the whole set lands in one file with one attribute per index. A partial class
+            // yields the same symbol once per part, which is what the de-duplication in Emit is for.
             IncrementalValueProvider<(Compilation Left, ImmutableArray<INamedTypeSymbol?> Right)> source =
                 context.CompilationProvider.Combine(indexClasses.Collect());
 
@@ -61,6 +61,7 @@ namespace Raven.Analyzers
             if (indexClasses.IsDefaultOrEmpty)
                 return;
 
+            IndexMetadataRegistry metadataRegistry = new();
             var seen = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
             var builder = new StringBuilder();
 
@@ -73,12 +74,12 @@ namespace Raven.Analyzers
                 if (indexClass == null || !seen.Add(indexClass))
                     continue;
 
-                // An index nested in a generic type, or generic itself, cannot be named by a plain
-                // typeof() in every case; skip rather than emit source that will not compile.
+                // Some index classes cannot be named by an assembly-level typeof() at all. Skip those
+                // rather than emit source that will not compile.
                 if (!TryGetTypeOfExpression(indexClass, out string typeOfArgument))
                     continue;
 
-                IndexMetadata metadata = IndexShapeAggregator.Compute(indexClass, compilation);
+                IndexMetadata metadata = IndexShapeAggregator.Compute(indexClass, compilation, metadataRegistry);
                 AppendAttribute(builder, typeOfArgument, metadata);
             }
 
@@ -93,9 +94,9 @@ namespace Raven.Analyzers
                    .Append(typeOfArgument)
                    .Append(')');
 
-            // Unanalyzable indexes are recorded explicitly rather than omitted, so a consumer can tell
-            // "the generator looked and could not read this" from "nothing recorded this index at all".
-            // Both bail, but only the former is a statement about the index.
+            // Unreadable indexes get an entry saying so rather than no entry at all. Both make a consumer
+            // bail, but only an explicit false says the index was looked at and could not be read, which
+            // is worth being able to tell apart when something is not reporting and you want to know why.
             builder.Append(", Analyzable = ").Append(metadata.Analyzable ? "true" : "false");
 
             if (metadata.Analyzable)
@@ -119,8 +120,8 @@ namespace Raven.Analyzers
 
             builder.Append(", ").Append(name).Append(" = new string[] { ");
 
-            // Ordered so the generated file is stable across runs: an unordered set would reshuffle it
-            // and defeat the incremental caching that keeps IDE typing responsive.
+            // Sorted to keep the generated file byte-identical between runs. An unordered set would
+            // reshuffle it and defeat the incremental caching that keeps typing responsive in an IDE.
             bool first = true;
             foreach (string value in values.OrderBy(v => v, System.StringComparer.Ordinal))
             {
@@ -135,22 +136,21 @@ namespace Raven.Analyzers
         }
 
         /// <summary>
-        /// Builds the argument for a <c>typeof(...)</c> naming <paramref name="type"/>, or returns false
-        /// when the type cannot be named that way.
+        /// Builds the argument for a <c>typeof(...)</c> naming <paramref name="type"/>. Returns false when
+        /// the type cannot be named from an assembly-level attribute.
         /// </summary>
         private static bool TryGetTypeOfExpression(INamedTypeSymbol type, out string expression)
         {
             expression = string.Empty;
 
-            // A type parameter anywhere in the containing chain cannot appear in an assembly-level
-            // typeof(), and an unbound generic index is not something a query can target concretely.
+            // A type parameter cannot appear in an assembly-level typeof(), and a query cannot target an
+            // unbound generic index concretely anyway.
             if (type.IsGenericType || type.ContainingType?.IsGenericType == true)
                 return false;
 
             if (type.DeclaredAccessibility == Accessibility.Private
                 || type.DeclaredAccessibility == Accessibility.Protected)
             {
-                // Not nameable from an assembly-level attribute.
                 return false;
             }
 
