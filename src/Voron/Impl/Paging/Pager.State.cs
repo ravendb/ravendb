@@ -123,6 +123,22 @@ public unsafe partial class Pager
             }, null);
         }
 
+        public static void DrainPendingDisposal()
+        {
+            // drain any pending disposals inline (for tests & scenarios where immediate disposal is required, such as folder deletion)
+            while (PendingDisposal.TryDequeue(out var state))
+            {
+                try
+                {
+                    state.Dispose();
+                }
+                catch
+                {
+                    // same policy as the background drain - a failed close must not stop the rest
+                }
+            }
+        }
+
         ~State()
         {
             try
