@@ -439,7 +439,7 @@ function DateTimeField({
                         <DatePicker
                             selected={date}
                             onChange={onDateChange}
-                            dateFormat="dd/MM/yyyy"
+                            dateFormat="yyyy-MM-dd"
                             calendarClassName="ts-range-datepicker"
                             popperClassName="ts-range-datepicker-popper"
                             renderCustomHeader={(headerProps) => (
