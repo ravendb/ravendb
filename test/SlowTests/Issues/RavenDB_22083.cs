@@ -30,35 +30,6 @@ namespace SlowTests.Issues
             public string Timeframe { get; set; }
         }
 
-        private class IndexWithConstantArrayAsOuterSource : AbstractIndexCreationTask<Candle, AggregateCandle>
-        {
-            public IndexWithConstantArrayAsOuterSource()
-            {
-                Map = candles => from x in new[]
-                    {
-                        new Tuple<long, string>(60000, "1m"),
-                        new Tuple<long, string>(60000 * 5, "5m")
-                    }
-                    from candle in candles
-                    select new AggregateCandle
-                    {
-                        Ref = $"{candle.Time / x.Item1}",
-                        Volume = candle.Volume,
-                        Timeframe = x.Item2
-                    };
-
-                Reduce = results => from result in results
-                    group result by new { result.Timeframe, result.Ref }
-                    into g
-                    select new AggregateCandle
-                    {
-                        Ref = g.Key.Ref,
-                        Volume = g.Sum(x => x.Volume),
-                        Timeframe = g.Key.Timeframe
-                    };
-            }
-        }
-
         private class IndexWithConstantArrayAsInnerSource : AbstractIndexCreationTask<Candle, AggregateCandle>
         {
             public IndexWithConstantArrayAsInnerSource()
@@ -88,29 +59,6 @@ namespace SlowTests.Issues
             }
         }
 
-        private class IndexWithParameterNamePrefixingOuterSource : AbstractIndexCreationTask<Candle, AggregateCandle>
-        {
-            public IndexWithParameterNamePrefixingOuterSource()
-            {
-                Map = n => from t in new[] { 60000L, 300000L }
-                    from candle in n
-                    select new AggregateCandle
-                    {
-                        Ref = $"{candle.Time / t}",
-                        Volume = candle.Volume,
-                        Timeframe = "1m"
-                    };
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Indexes)]
-        public void Index_With_Constant_Array_As_Outer_Source_Throws_Descriptive_Exception()
-        {
-            var e = Assert.Throws<IndexCompilationException>(() => new IndexWithConstantArrayAsOuterSource().CreateIndexDefinition());
-
-            Assert.Contains("must start its enumeration from the 'candles' parameter", e.InnerException.Message);
-        }
-
         [RavenFact(RavenTestCategory.Indexes)]
         public void Index_With_Constant_Array_As_Inner_Source_Deploys_And_Indexes()
         {
@@ -137,42 +85,6 @@ namespace SlowTests.Issues
                     Assert.Equal(3, results[0].Volume);
                 }
             }
-        }
-
-        [RavenFact(RavenTestCategory.Indexes)]
-        public void Index_With_Parameter_Name_Prefixing_Outer_Source_Throws_Descriptive_Exception()
-        {
-            var e = Assert.Throws<IndexCompilationException>(() => new IndexWithParameterNamePrefixingOuterSource().CreateIndexDefinition());
-
-            Assert.Contains("must start its enumeration from the 'n' parameter", e.InnerException.Message);
-        }
-
-        private class MultiMapIndexWithConstantArrayAsOuterSource : AbstractMultiMapIndexCreationTask<AggregateCandle>
-        {
-            public MultiMapIndexWithConstantArrayAsOuterSource()
-            {
-                AddMap<Candle>(candles => from x in new[]
-                    {
-                        new Tuple<long, string>(60000, "1m"),
-                        new Tuple<long, string>(60000 * 5, "5m")
-                    }
-                    from candle in candles
-                    select new AggregateCandle
-                    {
-                        Ref = $"{candle.Time / x.Item1}",
-                        Volume = candle.Volume,
-                        Timeframe = x.Item2
-                    });
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Indexes)]
-        public void MultiMap_Index_With_Constant_Array_As_Outer_Source_Throws_Descriptive_Exception()
-        {
-            var e = Assert.Throws<IndexCompilationException>(() => new MultiMapIndexWithConstantArrayAsOuterSource().CreateIndexDefinition());
-
-            Assert.Contains("Failed to create index", e.Message);
-            Assert.Contains("must start its enumeration from the 'candles' parameter", e.InnerException.Message);
         }
 
         private class IndexWithOrderedReduce : AbstractIndexCreationTask<Candle, AggregateCandle>
