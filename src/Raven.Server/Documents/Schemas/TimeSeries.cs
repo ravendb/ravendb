@@ -1,4 +1,4 @@
-﻿using Raven.Server.Documents.TimeSeries;
+using Raven.Server.Documents.TimeSeries;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
@@ -39,6 +39,8 @@ namespace Raven.Server.Documents.Schemas
         internal static readonly TableSchema.FixedSizeKeyIndexDef AllTimeSeriesEtagIndex;
         internal static readonly TableSchema.FixedSizeKeyIndexDef CollectionTimeSeriesEtagsIndex;
 
+        internal static readonly TableSchema.DynamicKeyIndexDef TimeSeriesBucketAndEtagIndex;
+
         static TimeSeries()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
@@ -61,6 +63,14 @@ namespace Raven.Server.Documents.Schemas
                 StartIndex = (int)TimeSeriesTable.Etag,
                 Name = CollectionTimeSeriesEtagsSlice
             };
+            TimeSeriesBucketAndEtagIndex = new TableSchema.DynamicKeyIndexDef
+            {
+                GenerateKey = TimeSeriesStorage.GenerateBucketAndEtagIndexKeyForTimeSeries,
+                OnEntryChanged = TimeSeriesStorage.UpdateBucketStatsForTimeSeries,
+                IsGlobal = true,
+                Name = TimeSeriesBucketAndEtagSlice
+            };
+
 
 
             DefineIndexesForTimeSeriesSchema(TimeSeriesSchemaBase);
@@ -85,13 +95,7 @@ namespace Raven.Server.Documents.Schemas
             {
                 DefineIndexesForTimeSeriesSchema(ShardingTimeSeriesSchemaBase);
 
-                ShardingTimeSeriesSchemaBase.DefineIndex(new TableSchema.DynamicKeyIndexDef
-                {
-                    GenerateKey = TimeSeriesStorage.GenerateBucketAndEtagIndexKeyForTimeSeries,
-                    OnEntryChanged = TimeSeriesStorage.UpdateBucketStatsForTimeSeries,
-                    IsGlobal = true,
-                    Name = TimeSeriesBucketAndEtagSlice
-                });
+                ShardingTimeSeriesSchemaBase.DefineIndex(TimeSeriesBucketAndEtagIndex);
             }
         }
     }

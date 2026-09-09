@@ -377,7 +377,7 @@ public unsafe class TaskErrorsStorage
         if (table == null)
             yield break;
 
-        foreach (var tvh in table.SeekForwardFrom(Schemas.TaskProcessErrors.Current.Indexes[Schemas.TaskProcessErrors.ByCreatedAt], Slices.BeforeAllKeys, 0))
+        foreach (var tvh in table.SeekForwardFrom(Schemas.TaskProcessErrors.ByCreatedAtIndex, Slices.BeforeAllKeys, 0))
         {
             var error = ReadProcessError(tvh.Result, taskName);
 
@@ -409,11 +409,11 @@ public unsafe class TaskErrorsStorage
             if (table == null)
                 return null;
 
-            if (table.SeekOneBackwardFrom(Schemas.TaskProcessErrors.Current.Indexes[Schemas.TaskProcessErrors.ByCreatedAt], Slices.Empty,
+            if (table.SeekOneBackwardFrom(Schemas.TaskProcessErrors.ByCreatedAtIndex, Slices.Empty,
                     Slices.AfterAllKeys, out var reader) == false)
                 return null;
 
-            return ReadProcessError(ref reader, taskName);
+            return ReadProcessError(reader, taskName);
         }
     }
 
@@ -499,7 +499,7 @@ public unsafe class TaskErrorsStorage
         if (table == null)
             return;
 
-        table.DeleteForwardFrom(Schemas.TaskProcessErrors.Current.Indexes[Schemas.TaskProcessErrors.ByCreatedAt], Slices.BeforeAllKeys, false, 1);
+        table.DeleteForwardFrom(Schemas.TaskProcessErrors.ByCreatedAtIndex, Slices.BeforeAllKeys, false, 1);
     }
 
     private static void DeleteOldestItemErrorsOfTask(Table table)
@@ -508,7 +508,7 @@ public unsafe class TaskErrorsStorage
             return;
 
         var numberOfEntriesToDelete = table.NumberOfEntries - ErrorsLimitPerTaskErrorType;
-        table.DeleteForwardFrom(Schemas.TaskItemErrors.Current.Indexes[Schemas.TaskItemErrors.ByCreatedAt], Slices.BeforeAllKeys, false, numberOfEntriesToDelete);
+        table.DeleteForwardFrom(Schemas.TaskItemErrors.ByCreatedAtIndex, Slices.BeforeAllKeys, false, numberOfEntriesToDelete);
     }
 
     private static string GetProcessErrorsTableName(TaskCategory taskCategory, string taskName)

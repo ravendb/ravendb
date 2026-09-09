@@ -79,7 +79,7 @@ namespace Raven.Server.Documents
             var list = new List<DocumentConflict>();
             LazyStringValue lastId = null;
 
-            foreach (var tvr in table.SeekForwardFrom(ConflictsSchema.Indexes[IdAndChangeVectorSlice], Slices.Empty, 0))
+            foreach (var tvr in table.SeekForwardFrom(Schemas.Conflicts.IdAndChangeVectorIndex, Slices.Empty, 0))
             {
                 var conflict = TableValueToConflictDocument(context, tvr.Result);
 
@@ -219,7 +219,7 @@ namespace Raven.Server.Documents
 
             var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
             long maxEtag = 0L;
-            foreach (var tvr in conflictsTable.SeekForwardFrom(ConflictsSchema.Indexes[IdAndChangeVectorSlice], prefixSlice, 0, true))
+            foreach (var tvr in conflictsTable.SeekForwardFrom(Schemas.Conflicts.IdAndChangeVectorIndex, prefixSlice, 0, true))
             {
                 var etag = TableValueToEtag((int)ConflictsTable.Etag, tvr.Result);
                 if (maxEtag < etag)
@@ -235,7 +235,7 @@ namespace Raven.Server.Documents
 
 
             var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
-            foreach (var tvr in conflictsTable.SeekForwardFrom(ConflictsSchema.Indexes[IdAndChangeVectorSlice], prefixSlice, 0, true))
+            foreach (var tvr in conflictsTable.SeekForwardFrom(Schemas.Conflicts.IdAndChangeVectorIndex, prefixSlice, 0, true))
             {
                 var changeVector = TableValueToChangeVector(context, (int)ConflictsTable.ChangeVector, tvr.Result);
                 if (ChangeVectorUtils.GetConflictStatus(changeVector, expectedChangeVector) == ConflictStatus.AlreadyMerged)
@@ -256,7 +256,7 @@ namespace Raven.Server.Documents
             using (GetConflictsIdPrefix(context, lowerId, out Slice prefixSlice))
             {
                 var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
-                conflictsTable.DeleteForwardFrom(ConflictsSchema.Indexes[IdAndChangeVectorSlice], prefixSlice, true, long.MaxValue, (in TableValueReader conflictDocument) =>
+                conflictsTable.DeleteForwardFrom(Schemas.Conflicts.IdAndChangeVectorIndex, prefixSlice, true, long.MaxValue, (in TableValueReader conflictDocument) =>
                 {
                     var conflicted = TableValueToConflictDocument(context, conflictDocument);
                     var collection = _documentsStorage.ExtractCollectionName(context, conflicted.Collection);
@@ -344,7 +344,7 @@ namespace Raven.Server.Documents
             using (GetConflictsIdPrefix(context, lowerId, out Slice prefixSlice))
             {
                 var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
-                foreach (var _ in conflictsTable.SeekForwardFrom(ConflictsSchema.Indexes[IdAndChangeVectorSlice], prefixSlice, 0, true))
+                foreach (var _ in conflictsTable.SeekForwardFrom(Schemas.Conflicts.IdAndChangeVectorIndex, prefixSlice, 0, true))
                 {
                     return true;
                 }
@@ -368,7 +368,7 @@ namespace Raven.Server.Documents
         {
             var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
             var items = new List<DocumentConflict>();
-            foreach (var tvr in conflictsTable.SeekForwardFrom(ConflictsSchema.Indexes[IdAndChangeVectorSlice], prefixSlice, 0, true))
+            foreach (var tvr in conflictsTable.SeekForwardFrom(Schemas.Conflicts.IdAndChangeVectorIndex, prefixSlice, 0, true))
             {
                 var conflict = TableValueToConflictDocument(context, tvr.Result);
                 items.Add(conflict);
@@ -691,7 +691,7 @@ namespace Raven.Server.Documents
         public long GetNumberOfDocumentsConflicts(DocumentsOperationContext context)
         {
             var table = context.ConflictsTable(this);
-            return table.GetTree(ConflictsSchema.Indexes[ConflictsIdSlice]).ReadHeader().NumberOfEntries;
+            return table.GetTree(Schemas.Conflicts.ConflictsIdIndex).ReadHeader().NumberOfEntries;
         }
 
         public long GetNumberOfConflicts(DocumentsOperationContext context)

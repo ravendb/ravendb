@@ -70,7 +70,7 @@ public abstract class AbstractCompareExchangeStorage
         using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
         using (Slice.External(context.Allocator, buffer, buffer.Length - sizeof(long), out var prefix))
         {
-            foreach (var tvr in table.SeekForwardFromPrefix(ClusterStateMachine.CompareExchangeTombstoneSchema.Indexes[ClusterStateMachine.CompareExchangeTombstoneIndex], keySlice, prefix, 0))
+            foreach (var tvr in table.SeekForwardFromPrefix(ClusterStateMachine.CompareExchangeTombstoneIndexDef, keySlice, prefix, 0))
             {
                 var index = ClusterStateMachine.ReadCompareExchangeOrTombstoneIndex(tvr.Result);
                 if (index <= end)
@@ -122,7 +122,7 @@ public abstract class AbstractCompareExchangeStorage
         {
             var table = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.CompareExchangeTombstoneSchema, ClusterStateMachine.CompareExchangeTombstones);
 
-            if (table.SeekOneBackwardFrom(ClusterStateMachine.CompareExchangeTombstoneSchema.Indexes[ClusterStateMachine.CompareExchangeTombstoneIndex],
+            if (table.SeekOneBackwardFrom(ClusterStateMachine.CompareExchangeTombstoneIndexDef,
                     prefix.Slice, last.Slice, out var reader) == false)
                 return 0;
 

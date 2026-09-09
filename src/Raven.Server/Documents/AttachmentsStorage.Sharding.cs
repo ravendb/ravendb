@@ -21,7 +21,7 @@ namespace Raven.Server.Documents
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
 
-            foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, AttachmentsSchema.DynamicKeyIndexes[AttachmentsBucketAndEtagSlice], bucket, etag))
+            foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, Schemas.Attachments.AttachmentsBucketAndEtagIndex, bucket, etag))
             {
                 var attachment = TableValueToAttachment(context, result.Result);
 
@@ -88,7 +88,7 @@ namespace Raven.Server.Documents
             using (Slice.External(tx.Allocator, rawBucket, sizeof(int), ByteStringType.Immutable, out var bucketSlice))
             {
                 var startSlice = bucketSlice;
-                foreach (var result in table.SeekForwardFromPrefix(AttachmentsSchema.DynamicKeyIndexes[AttachmentsBucketAndHashSlice], startSlice, bucketSlice, skip: 0))
+                foreach (var result in table.SeekForwardFromPrefix(Schemas.Attachments.AttachmentsBucketAndHashIndex, startSlice, bucketSlice, skip: 0))
                 {
                     if (SliceStructComparer.Instance.Equals(startSlice, result.Key))
                         continue;
@@ -129,7 +129,7 @@ namespace Raven.Server.Documents
             using (Slice.External(tx.Allocator, buffer, sizeof(int) + oldHashSize, ByteStringType.Immutable, out var slice))
             using (Slice.External(tx.Allocator, oldHashPtr, oldHashSize, ByteStringType.Immutable, out var hashSlice))
             {
-                var refCount = table.GetCountOfMatchesFor(ShardingAttachmentsSchemaBase.DynamicKeyIndexes[AttachmentsBucketAndHashSlice], slice);
+                var refCount = table.GetCountOfMatchesFor(Schemas.Attachments.AttachmentsBucketAndHashIndex, slice);
                 switch (refCount)
                 {
                     case 1:

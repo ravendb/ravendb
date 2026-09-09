@@ -24,6 +24,9 @@ namespace Raven.Server.Rachis
         internal static readonly Slice LogHistorySlice;
         private static readonly Slice LogHistoryIndexSlice;
         private static readonly Slice LogHistoryDateTimeSlice;
+
+        private static readonly TableSchema.IndexDef LogHistoryIndex;
+        private static readonly TableSchema.FixedSizeKeyIndexDef LogHistoryDateTimeIndex;
         private static readonly TableSchema LogHistoryTable;
 
         private int _logHistoryMaxEntries;
@@ -83,18 +86,21 @@ namespace Raven.Server.Rachis
                 StartIndex = (int)LogHistoryColumn.Guid,
             });
 
-            LogHistoryTable.DefineIndex(new TableSchema.IndexDef
+            LogHistoryIndex = new TableSchema.IndexDef
             {
                 Name = LogHistoryIndexSlice,
                 StartIndex = (int)LogHistoryColumn.Index,
                 Count = 1
-            });
+            };
 
-            LogHistoryTable.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
+            LogHistoryDateTimeIndex = new TableSchema.FixedSizeKeyIndexDef
             {
                 Name = LogHistoryDateTimeSlice,
                 StartIndex = (int)LogHistoryColumn.Ticks
-            });
+            };
+
+            LogHistoryTable.DefineIndex(LogHistoryIndex);
+            LogHistoryTable.DefineFixedSizeIndex(LogHistoryDateTimeIndex);
         }
 
         public void Initialize(RavenTransaction tx, RavenConfiguration configuration, RavenLogger log)
@@ -172,7 +178,7 @@ namespace Raven.Server.Rachis
 
             if (table.NumberOfEntries > _logHistoryMaxEntries)
             {
-                if (table.SeekOneForwardFromPrefix(LogHistoryTable.Indexes[LogHistoryIndexSlice], Slices.BeforeAllKeys, out var reader))
+                if (table.SeekOneForwardFromPrefix(LogHistoryIndex, Slices.BeforeAllKeys, out var reader))
                     table.Delete(reader.Id);
             }
         }
@@ -300,7 +306,7 @@ namespace Raven.Server.Rachis
             var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
             using (Slice.External(context.Transaction.InnerTransaction.Allocator, (byte*)&reversedIndex, sizeof(long), out Slice key))
             {
-                var results = table.SeekForwardFrom(LogHistoryTable.Indexes[LogHistoryIndexSlice], key, 0);
+                var results = table.SeekForwardFrom(LogHistoryIndex, key, 0);
                 var toCancel = new List<HistoryLogEntry>();
                 foreach (var seekResult in results)
                 {
@@ -347,7 +353,7 @@ namespace Raven.Server.Rachis
         public IEnumerable<DynamicJsonValue> GetHistoryLogs(ClusterOperationContext context)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
-            foreach (var entryHolder in table.SeekForwardFrom(LogHistoryTable.FixedSizeIndexes[LogHistoryDateTimeSlice], 0, 0))
+            foreach (var entryHolder in table.SeekForwardFrom(LogHistoryDateTimeIndex, 0, 0))
             {
                 yield return ReadHistoryLog(context, entryHolder);
             }
@@ -363,7 +369,7 @@ namespace Raven.Server.Rachis
             var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
             using (Slice.From(context.Allocator, span, out Slice key))
             {
-                foreach (var entryHolder in table.SeekBackwardFrom(LogHistoryTable.Indexes[LogHistoryIndexSlice], prefix: Slices.Empty, key))
+                foreach (var entryHolder in table.SeekBackwardFrom(LogHistoryIndex, prefix: Slices.Empty, key))
                 {
                     yield return entryHolder.Result;
                 }
@@ -391,7 +397,7 @@ namespace Raven.Server.Rachis
             using (Slice.External(context.Allocator, (byte*)&reversedIndex, sizeof(long), out var key))
             {
                 var res = new List<DynamicJsonValue>();
-                foreach (var entryHolder in table.SeekForwardFrom(LogHistoryTable.Indexes[LogHistoryIndexSlice], key, 0))
+                foreach (var entryHolder in table.SeekForwardFrom(LogHistoryIndex, key, 0))
                 {
                     var entry = ReadHistoryLog(context, entryHolder.Result);
                     if (entry[nameof(LogHistoryColumn.Index)].Equals(index) == false)

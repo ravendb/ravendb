@@ -165,7 +165,7 @@ namespace Raven.Server.Documents
             {
                 *(int*)(keyMem.Ptr) = Bits.SwapBytes((int)flag);
                 slice = new Slice(SliceOptions.Key, keyMem);
-                return table.GetCountOfMatchesFor(AttachmentsSchema.DynamicKeyIndexes[AttachmentsFlagAndHashSlice], slice);
+                return table.GetCountOfMatchesFor(Schemas.Attachments.AttachmentsFlagAndHashIndex, slice);
             }
         }
 
@@ -208,9 +208,9 @@ namespace Raven.Server.Documents
 
                 var attachmentEtag = _documentsStorage.GenerateNextEtag();
                 var changeVector = _documentsStorage.GetNewChangeVector(context, attachmentEtag);
-                var remoteAt = TableValueToLong((int)AttachmentsTable.RemoteAt, ref attachmentTvr);
+                var remoteAt = TableValueToLong((int)AttachmentsTable.RemoteAt, attachmentTvr);
 
-                using (TableValueToSlice(context, (int)AttachmentsTable.Identifier, ref attachmentTvr, out var identifierSlice))
+                using (TableValueToSlice(context, (int)AttachmentsTable.Identifier, attachmentTvr, out var identifierSlice))
                 using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
@@ -268,7 +268,7 @@ namespace Raven.Server.Documents
                     var hasDoc = TryGetDocumentTableValueReaderForAttachment(context, documentId, name, lowerDocumentId, out tvr);
                     if (hasDoc == false)
                         throw new DocumentDoesNotExistException($"Cannot put attachment {name} on a non existent document '{documentId}'.");
-                    if (TableValueToFlags((int)DocumentsTable.Flags, ref tvr).HasFlag(DocumentFlags.Artificial))
+                    if (TableValueToFlags((int)DocumentsTable.Flags, tvr).HasFlag(DocumentFlags.Artificial))
                         throw new InvalidOperationException($"Cannot put attachment {name} on artificial document '{documentId}'.");
                 }
 
@@ -313,20 +313,20 @@ namespace Raven.Server.Documents
                         });
                     }
 
-                    if (table.ReadByKey(keySlice, out TableValueReader oldValue) && TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref oldValue) == RemoteAttachmentFlags.None)
+                    if (table.ReadByKey(keySlice, out TableValueReader oldValue) && TableValueToAttachmentFlags((int)AttachmentsTable.Flags, oldValue) == RemoteAttachmentFlags.None)
                     {
                         // This is an update to the local storage attachment with the same stream and content type
                         // Just updating the etag and casing of the name and the content type.
 
-                        var oldChangeVector = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref oldValue);
+                        var oldChangeVector = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, oldValue);
                         if (expectedChangeVector != null && ChangeVector.CompareVersion(oldChangeVector, expectedChangeVector, context) != 0)
                             ThrowConcurrentException(documentId, name, expectedChangeVector, oldChangeVector);
 
                         changeVector = ChangeVector.GetLocalCvFromPriorAndUpdateDbCv(context, oldChangeVector, _documentDatabase, attachmentEtag);
                         Debug.Assert(changeVector != null);
 
-                        size = TableValueToLong((int)AttachmentsTable.Size, ref oldValue);
-                        ticks = RemoteAttachmentsStorage.TryUpdateRemoteAttachment(context, documentId, name, remoteParams?.At, TableValueToLong((int)AttachmentsTable.RemoteAt, ref oldValue), remoteParams?.Identifier, TableValueToString(context, (int)AttachmentsTable.Identifier, ref oldValue), keySlice);
+                        size = TableValueToLong((int)AttachmentsTable.Size, oldValue);
+                        ticks = RemoteAttachmentsStorage.TryUpdateRemoteAttachment(context, documentId, name, remoteParams?.At, TableValueToLong((int)AttachmentsTable.RemoteAt, oldValue), remoteParams?.Identifier, TableValueToString(context, (int)AttachmentsTable.Identifier, oldValue), keySlice);
 
                         using (SetTableValue(out TableValueBuilder tvb))
                         {
@@ -345,7 +345,7 @@ namespace Raven.Server.Documents
                             {
                                 attachmentExists = true;
 
-                                var oldChangeVector = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref partialTvr);
+                                var oldChangeVector = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, partialTvr);
                                 if (expectedChangeVector != null && ChangeVector.CompareVersion(oldChangeVector, expectedChangeVector, context) != 0)
                                     ThrowConcurrentException(documentId, name, expectedChangeVector, oldChangeVector);
 
@@ -353,7 +353,7 @@ namespace Raven.Server.Documents
 
                                 if (fromSmuggler == false)
                                 {
-                                    var doc = _documentsStorage.TableValueToDocument(context, ref tvr);
+                                    var doc = _documentsStorage.TableValueToDocument(context, tvr);
                                     var collection = _documentsStorage.ExtractCollectionName(context, doc.Data);
                                     var docChangeVector = context.GetChangeVector(doc.ChangeVector);
                                     var configuration = _documentsStorage.RevisionsStorage.GetRevisionsConfiguration(collection.Name, doc.Flags);
@@ -368,17 +368,17 @@ namespace Raven.Server.Documents
                                 }
 
                                 // Delete the attachment stream only if we have a different hash
-                                using (TableValueToSlice(context, (int)AttachmentsTable.Hash, ref partialTvr, out Slice existingHash))
+                                using (TableValueToSlice(context, (int)AttachmentsTable.Hash, partialTvr, out Slice existingHash))
                                 {
-                                    putStream = (existingHash.Content.Match(base64Hash.Content) == false) || TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref partialTvr) is RemoteAttachmentFlags.Remote;
+                                    putStream = (existingHash.Content.Match(base64Hash.Content) == false) || TableValueToAttachmentFlags((int)AttachmentsTable.Flags, partialTvr) is RemoteAttachmentFlags.Remote;
                                     if (putStream)
                                     {
                                         using (TableValueToSlice(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType,
-                                                   ref partialTvr, out Slice existingKey))
+                                                   partialTvr, out Slice existingKey))
                                         {
-                                            var existingEtag = TableValueToEtag((int)AttachmentsTable.Etag, ref partialTvr);
+                                            var existingEtag = TableValueToEtag((int)AttachmentsTable.Etag, partialTvr);
                                             var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
-                                            var existingRemoteAtTicks = TableValueToLong((int)AttachmentsTable.RemoteAt, ref partialTvr);
+                                            var existingRemoteAtTicks = TableValueToLong((int)AttachmentsTable.RemoteAt, partialTvr);
                                             DeleteInternal(context, existingKey, existingEtag, existingHash, changeVector, lastModifiedTicks, flags: DocumentFlags.None, existingRemoteAtTicks);
                                         }
                                     }
@@ -1007,7 +1007,7 @@ namespace Raven.Server.Documents
                     {
                         if (TryReadRevisionAttachmentByKey(table, in partialKeys, out TableValueReader revisionTvr) == false)
                             return null;
-                        return TableValueToAttachment(context, ref revisionTvr);
+                        return TableValueToAttachment(context, revisionTvr);
                     }
                 }
 
@@ -1033,7 +1033,7 @@ namespace Raven.Server.Documents
                     if (table.SeekOnePrimaryKeyPrefix(keySlice, out TableValueReader tvr) == false)
                         return null;
 
-                    return TableValueToAttachment(context, ref tvr);
+                    return TableValueToAttachment(context, tvr);
                 }
             }
         }
@@ -1045,7 +1045,7 @@ namespace Raven.Server.Documents
             if (table.SeekOnePrimaryKeyPrefix(key, out TableValueReader tvr) == false)
                 return null;
 
-            return TableValueToAttachment(context, ref tvr);
+            return TableValueToAttachment(context, tvr);
         }
 
         public Stream GetAttachmentStream(DocumentsOperationContext context, Slice hashSlice)
@@ -1061,7 +1061,7 @@ namespace Raven.Server.Documents
             if (table.SeekOnePrimaryKeyPrefix(key, out TableValueReader tvr) == false)
                 return null;
 
-            return TableValueToId(context, (int)AttachmentsTable.Name, ref tvr);
+            return TableValueToId(context, (int)AttachmentsTable.Name, tvr);
         }
 
         public Stream GetAttachmentStream(DocumentsOperationContext context, Slice hashSlice, out string tag)
@@ -1380,7 +1380,7 @@ namespace Raven.Server.Documents
             var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(_documentDatabase.DocumentsStorage.TombstonesSchema, AttachmentsTombstonesSlice);
             if (tombstoneTable.ReadByKey(key, out var tvr))
             {
-                var tombstone = TableValueToTombstone(context, ref tvr);
+                var tombstone = TableValueToTombstone(context, tvr);
                 if (tombstone.Type != Tombstone.TombstoneType.Attachment)
                 {
                     Debug.Assert(false, "Tombstone must be of type attachment");
@@ -1416,7 +1416,7 @@ namespace Raven.Server.Documents
                 var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(_documentDatabase.DocumentsStorage.TombstonesSchema, AttachmentsTombstonesSlice);
                 if (tombstoneTable.ReadByKey(key, out var existingTombstone))
                 {
-                    attachmentEtag = TableValueToEtag((int)TombstoneTable.Etag, ref existingTombstone);
+                    attachmentEtag = TableValueToEtag((int)TombstoneTable.Etag, existingTombstone);
                     tombstoneTable.Delete(existingTombstone.Id);
                 }
                 else
@@ -1429,13 +1429,13 @@ namespace Raven.Server.Documents
                 return;
             }
 
-            var currentChangeVector = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref tvr);
-            var etag = TableValueToEtag((int)AttachmentsTable.Etag, ref tvr);
+            var currentChangeVector = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, tvr);
+            var etag = TableValueToEtag((int)AttachmentsTable.Etag, tvr);
 
             using (isPartialKey ?
-                TableValueToSlice(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType, ref tvr, out key)
+                TableValueToSlice(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType, tvr, out key)
               : default(ByteStringContext.InternalScope))
-            using (TableValueToSlice(context, (int)AttachmentsTable.Hash, ref tvr, out Slice hash))
+            using (TableValueToSlice(context, (int)AttachmentsTable.Hash, tvr, out Slice hash))
             {
                 if (expectedChangeVector != null && ChangeVector.CompareVersion(currentChangeVector, expectedChangeVector, context) != 0)
                 {
@@ -1447,7 +1447,7 @@ namespace Raven.Server.Documents
                     };
                 }
 
-                var remoteAtTicks = TableValueToLong((int)AttachmentsTable.RemoteAt, ref tvr);
+                var remoteAtTicks = TableValueToLong((int)AttachmentsTable.RemoteAt, tvr);
                 DeleteInternal(context, key, etag, hash, changeVector, lastModifiedTicks, flags: DocumentFlags.None, remoteAtTicks);
             }
 
@@ -1476,7 +1476,7 @@ namespace Raven.Server.Documents
             if (table.ReadByKey(keySlice, out var existingTombstoneTvr) == false)
                 return false;
 
-            changeVector = TableValueToChangeVector(context, (int)TombstoneTable.ChangeVector, ref existingTombstoneTvr);
+            changeVector = TableValueToChangeVector(context, (int)TombstoneTable.ChangeVector, existingTombstoneTvr);
             table.Delete(existingTombstoneTvr.Id);
             return true;
         }
@@ -1617,7 +1617,7 @@ namespace Raven.Server.Documents
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             using var scope = SliceFromAttachmentFlagAndSeparator(context, flag, out var slice);
-            return table.GetCountOfMatchesForPrefix(AttachmentsSchema.DynamicKeyIndexes[AttachmentsFlagAndHashSlice], slice);
+            return table.GetCountOfMatchesForPrefix(Schemas.Attachments.AttachmentsFlagAndHashIndex, slice);
         }
 
         private static ByteStringContext<ByteStringMemoryCache>.InternalScope SliceFromAttachmentFlagAndSeparator(DocumentsOperationContext context, RemoteAttachmentFlags flag, out Slice slice)

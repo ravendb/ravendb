@@ -1,4 +1,4 @@
-﻿using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Context;
 using Voron;
 using Voron.Data.Tables;
 using static Raven.Server.Documents.Schemas.Documents;
@@ -28,7 +28,7 @@ namespace Raven.Server.Documents
                     if (table.FindByIndex(AllDocsEtagsIndex, etag, out var reader) == false) 
                         return false;
                     
-                    var doc = _storage.TableValueToDocument(context, ref reader, DocumentFields.LowerId | DocumentFields.Id);
+                    var doc = _storage.TableValueToDocument(context, reader, DocumentFields.LowerId | DocumentFields.Id);
                     bool isDelete;
                     using (Slice.From(context.Allocator, doc.LowerId.AsReadOnlySpan(), out var lowerId))
                     {

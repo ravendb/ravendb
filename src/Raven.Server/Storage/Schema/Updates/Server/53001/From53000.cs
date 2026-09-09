@@ -34,7 +34,7 @@ namespace Raven.Server.Storage.Schema.Updates.Server
             var table = tx.OpenTable(ClusterStateMachine.CompareExchangeSchema, ClusterStateMachine.CompareExchange);
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                foreach (var tvr in table.SeekForwardFrom(ClusterStateMachine.CompareExchangeSchema.Indexes[ClusterStateMachine.CompareExchangeIndex], Slices.BeforeAllKeys, 0))
+                foreach (var tvr in table.SeekForwardFrom(ClusterStateMachine.CompareExchangeIndexDef, Slices.BeforeAllKeys, 0))
                 {
                     var key = ReadCompareExchangeKey(context, tvr.Result);
                     var value = ReadCompareExchangeValue(context, tvr.Result);

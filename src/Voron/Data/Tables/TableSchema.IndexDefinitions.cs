@@ -27,6 +27,8 @@ namespace Voron.Data.Tables
             public bool IsGlobal;
 
             public Slice Name;
+
+            public int CachePosition = -1;
         }
 
         public sealed class IndexDef : AbstractTreeIndexDef
@@ -226,7 +228,7 @@ namespace Voron.Data.Tables
 
                     value.CopyTo(buffer.Ptr);
                     var reader = value.CreateReader(buffer.Ptr);
-                    return GenerateKey(tx, ref reader, out slice);
+                    return GenerateKey(tx, reader, out slice);
                 }
             }
 
@@ -249,7 +251,7 @@ namespace Voron.Data.Tables
 
                     newValue.CopyTo(buffer.Ptr);
                     var reader = newValue.CreateReader(buffer.Ptr);
-                    OnIndexEntryChanged(tx, key, oldValue, ref reader);
+                    OnIndexEntryChanged(tx, key, oldValue, reader);
                 }
             }
 

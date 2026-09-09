@@ -316,11 +316,13 @@ namespace Raven.Server.Documents
         private void ComputeCollectionEtags(Transaction tx, CollectionName collection, DocumentTransactionCache.CollectionCache[] etags)
         {
             ref var entry = ref etags[collection.Index];
-            entry.LastDocumentEtag = ReadLast(tx, DocumentDatabase.GetDocsSchemaForCollection(collection), collection, CollectionTableType.Documents, out var reader)
-                ? TableValueToEtag((int)DocumentsTable.Etag, ref reader)
+            entry.LastDocumentEtag = ReadLast(tx, DocumentDatabase.GetDocsSchemaForCollection(collection), Schemas.Documents.CollectionEtagsIndex,
+                collection, CollectionTableType.Documents, out var reader)
+                ? TableValueToEtag((int)DocumentsTable.Etag, reader)
                 : 0;
-            entry.LastTombstoneEtag = ReadLast(tx, TombstonesSchema, collection, CollectionTableType.Tombstones, out reader)
-                ? TableValueToEtag((int)TombstoneTable.Etag, ref reader)
+            entry.LastTombstoneEtag = ReadLast(tx, TombstonesSchema, Schemas.Tombstones.CollectionEtagsIndex,
+                collection, CollectionTableType.Tombstones, out reader)
+                ? TableValueToEtag((int)TombstoneTable.Etag, reader)
                 : 0;
         }
 
@@ -1055,7 +1057,7 @@ namespace Raven.Server.Documents
                 if (take-- <= 0)
                     continue; // we need to calculate totalCount correctly
 
-                yield return TableValueToDocument(context, ref reader, fields);
+                yield return TableValueToDocument(context, reader, fields);
             }
         }
 
@@ -1089,7 +1091,7 @@ namespace Raven.Server.Documents
                         if (take-- <= 0)
                             continue; // we need to calculate totalCount correctly
 
-                        yield return TableValueToDocument(context, ref reader, fields);
+                        yield return TableValueToDocument(context, reader, fields);
         }
                 }
             }
@@ -1279,7 +1281,7 @@ namespace Raven.Server.Documents
             if (GetTableValueReaderForDocument(context, lowerId, throwOnConflict, out TableValueReader tvr) == false)
                 return null;
 
-            var doc = TableValueToDocument(context, ref tvr, fields, skipValidationInDebug);
+            var doc = TableValueToDocument(context, tvr, fields, skipValidationInDebug);
 
             context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(doc);
 
@@ -1293,7 +1295,7 @@ namespace Raven.Server.Documents
             if (table.Read(context.Allocator, AllDocsEtagsIndex, etag, out var tvr) == false)
                 return null;
 
-            return TableValueToDocument(context, ref tvr);
+            return TableValueToDocument(context, tvr);
         }
 
         public Tombstone GetTombstoneByEtag(DocumentsOperationContext context, long etag)
@@ -1302,7 +1304,7 @@ namespace Raven.Server.Documents
             if (table.Read(context.Allocator, AllTombstonesEtagsIndex, etag, out var tvr) == false)
                 return null;
 
-            return TableValueToTombstone(context, ref tvr);
+            return TableValueToTombstone(context, tvr);
         }
 
         public long GetNumberOfTombstones(DocumentsOperationContext context)
@@ -1548,7 +1550,7 @@ namespace Raven.Server.Documents
             if (LastDocument(tx, collection, out var reader) == false)
                 return 0;
 
-            return TableValueToEtag((int)DocumentsTable.Etag, ref reader);
+            return TableValueToEtag((int)DocumentsTable.Etag, reader);
         }
 
         public string GetLastDocumentChangeVector(Transaction tx, string collection)
@@ -1557,7 +1559,7 @@ namespace Raven.Server.Documents
             if (LastDocument(tx, collection, out var reader) == false)
                 return null;
 
-            return TableValueToChangeVector((int)DocumentsTable.ChangeVector, ref reader);
+            return TableValueToChangeVector((int)DocumentsTable.ChangeVector, reader);
         }
 
         private bool LastDocument(Transaction transaction, string collection, out TableValueReader reader)
@@ -1569,11 +1571,12 @@ namespace Raven.Server.Documents
                 return false;
             }
 
-            return ReadLast(transaction, DocumentDatabase.GetDocsSchemaForCollection(collectionName), collectionName, CollectionTableType.Documents, out reader);
+            return ReadLast(transaction, DocumentDatabase.GetDocsSchemaForCollection(collectionName), Schemas.Documents.CollectionEtagsIndex,
+                collectionName, CollectionTableType.Documents, out reader);
         }
 
-        private bool ReadLast(Transaction transaction, TableSchema schema, CollectionName collectionName, CollectionTableType collectionType,
-            out TableValueReader reader)
+        private bool ReadLast(Transaction transaction, TableSchema schema, TableSchema.FixedSizeKeyIndexDef collectionEtagsIndex,
+            CollectionName collectionName, CollectionTableType collectionType, out TableValueReader reader)
         {
             var table = transaction.OpenTable(schema, collectionName.GetTableName(collectionType));
             if (table == null)
@@ -1582,7 +1585,7 @@ namespace Raven.Server.Documents
                 return false;
             }
 
-            return table.ReadLast(schema.FixedSizeIndexes[CollectionEtagsSlice], out reader);
+            return table.ReadLast(collectionEtagsIndex, out reader);
         }
 
         public long GetLastTombstoneEtag(Transaction tx, string collection)
@@ -1610,7 +1613,7 @@ namespace Raven.Server.Documents
             if (table.ReadLast(Schemas.Tombstones.CollectionEtagsIndex, out var reader) == false)
                 return 0;
 
-            return TableValueToEtag(1, ref reader);
+            return TableValueToEtag(1, reader);
         }
 
         public bool HasTombstonesWithEtagGreaterThanStartAndLowerThanOrEqualToEnd(DocumentsOperationContext context, string collection,
@@ -1678,13 +1681,13 @@ namespace Raven.Server.Documents
         private static Document ParseDocument(DocumentsOperationContext context, in TableValueReader tvr, DocumentFields fields)
         {
             if (TableValueReader.TryCast<N1>(tvr, out var tvr1))
-                return ParseDocument(context, ref tvr1, fields);
+                return ParseDocument(context, tvr1, fields);
             if (TableValueReader.TryCast<N2>(tvr, out var tvr2))
-                return ParseDocument(context, ref tvr2, fields);
+                return ParseDocument(context, tvr2, fields);
 
             // It will fail on TableValueReader if this is not the case, this is a safe case.
             TableValueReader.TryCast<N4>(tvr, out var tvr4);
-            return ParseDocument(context, ref tvr4, fields);
+            return ParseDocument(context, tvr4, fields);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2115,12 +2118,12 @@ namespace Raven.Server.Documents
 
                     if (beforeDeleted != null)
                     {
-                        var doc = TableValueToDocument(context, ref reader);
+                        var doc = TableValueToDocument(context, reader);
 
                         beforeDeleted(doc);
                     }
 
-                    var id = TableValueToId(context, (int)DocumentsTable.Id, ref reader);
+                    var id = TableValueToId(context, (int)DocumentsTable.Id, reader);
 
                     var deleteOperationResult = Delete(context, id, null, flags);
                     if (deleteOperationResult != null)
@@ -2221,7 +2224,7 @@ namespace Raven.Server.Documents
                 var tombstoneTable = context.TombstonesTable(this);
                 if (tombstoneTable.ReadByKey(lowerId, out var tvr))
                 {
-                    var tombstoneCollection = TableValueToId(context, (int)TombstoneTable.Collection, ref tvr);
+                    var tombstoneCollection = TableValueToId(context, (int)TombstoneTable.Collection, tvr);
                     var tombstoneCollectionName = ExtractCollectionName(context, tombstoneCollection);
 
                     if (tombstoneCollectionName != collectionName)

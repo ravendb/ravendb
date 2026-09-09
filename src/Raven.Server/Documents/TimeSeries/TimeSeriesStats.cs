@@ -22,6 +22,9 @@ namespace Raven.Server.Documents.TimeSeries
         private static readonly Slice TimeSeriesStatsKey;
         private static readonly Slice PolicyIndex;
         private static readonly Slice StartTimeIndex;
+
+        private static readonly TableSchema.IndexDef PolicyIndexDef;
+        private static readonly TableSchema.IndexDef StartTimeIndexDef;
         public static readonly TableSchema TimeSeriesStatsSchema = new TableSchema();
 
         private enum StatsColumns
@@ -53,19 +56,22 @@ namespace Raven.Server.Documents.TimeSeries
                 IsGlobal = true
             });
 
-            TimeSeriesStatsSchema.DefineIndex(new TableSchema.IndexDef
+            PolicyIndexDef = new TableSchema.IndexDef
             {
                 StartIndex = (int)StatsColumns.PolicyName,
                 Name = PolicyIndex
-            });
+            };
 
-            TimeSeriesStatsSchema.DefineIndex(new TableSchema.IndexDef
+            StartTimeIndexDef = new TableSchema.IndexDef
             {
                 // policy, separator, start
                 StartIndex = (int)StatsColumns.PolicyName,
                 Count = 2,
                 Name = StartTimeIndex
-            });
+            };
+
+            TimeSeriesStatsSchema.DefineIndex(PolicyIndexDef);
+            TimeSeriesStatsSchema.DefineIndex(StartTimeIndexDef);
         }
 
         public TimeSeriesStats(TimeSeriesStorage timeSeriesStorage, Transaction tx)
@@ -122,10 +128,10 @@ namespace Raven.Server.Documents.TimeSeries
             if (table.ReadByKey(slicer.StatsKey, out var tvr) == false)
                 return null;
 
-            count = DocumentsStorage.TableValueToLong((int)StatsColumns.Count, ref tvr);
-            start = new DateTime(Bits.SwapBytes(DocumentsStorage.TableValueToLong((int)StatsColumns.Start, ref tvr)));
-            end = DocumentsStorage.TableValueToDateTime((int)StatsColumns.End, ref tvr);
-            mergedChangeVector = ReadMergedChangeVector(context, ref tvr);
+            count = DocumentsStorage.TableValueToLong((int)StatsColumns.Count, tvr);
+            start = new DateTime(Bits.SwapBytes(DocumentsStorage.TableValueToLong((int)StatsColumns.Start, tvr)));
+            end = DocumentsStorage.TableValueToDateTime((int)StatsColumns.End, tvr);
+            mergedChangeVector = ReadMergedChangeVector(context, tvr);
 
             if (count == 0 && start == default && end == default)
             {
@@ -135,7 +141,7 @@ namespace Raven.Server.Documents.TimeSeries
                 return null;
             }
 
-            return DocumentsStorage.TableValueToSlice(context, (int)StatsColumns.Name, ref tvr, out name);
+            return DocumentsStorage.TableValueToSlice(context, (int)StatsColumns.Name, tvr, out name);
         }
 
         public long UpdateStats(DocumentsOperationContext context, TimeSeriesSliceHolder slicer, CollectionName collection, TimeSeriesValuesSegment segment, DateTime baseline, int modifiedEntries, ChangeVector changeVectorToMerge)
@@ -321,7 +327,7 @@ namespace Raven.Server.Documents.TimeSeries
             if (table.ReadByKey(statsKey, out var tvr) == false)
                 return default;
 
-            return GetStats(ref tvr);
+            return GetStats(tvr);
         }
 
         public static (long Count, DateTime Start, DateTime End) GetStats(in TableValueReader tvr)
@@ -355,7 +361,7 @@ namespace Raven.Server.Documents.TimeSeries
             if (table.ReadByKey(key, out var tvr) == false)
                 return null;
 
-            return DocumentsStorage.TableValueToString(context, (int)StatsColumns.Name, ref tvr);
+            return DocumentsStorage.TableValueToString(context, (int)StatsColumns.Name, tvr);
         }
 
         public void UpdateTimeSeriesName(DocumentsOperationContext context, CollectionName collection, TimeSeriesSliceHolder slicer)
@@ -379,14 +385,14 @@ namespace Raven.Server.Documents.TimeSeries
             var table = GetOrCreateTable(context.Transaction.InnerTransaction, collection);
             using (Slice.From(context.Allocator, policy.ToLowerInvariant(), SpecialChars.RecordSeparator, ByteStringType.Immutable, out var name))
             {
-                foreach (var result in table.SeekForwardFrom(TimeSeriesStatsSchema.Indexes[PolicyIndex], name, skip, startsWith: true))
+                foreach (var result in table.SeekForwardFrom(PolicyIndexDef, name, skip, startsWith: true))
                 {
                     var stats = GetStats(result.Result);
                     if (stats.Count == 0)
                         continue;
 
                     var reader = result.Result;
-                    DocumentsStorage.TableValueToSlice(context, (int)StatsColumns.Key, ref reader, out var slice);
+                    DocumentsStorage.TableValueToSlice(context, (int)StatsColumns.Key, reader, out var slice);
                     yield return slice;
 
                     take--;
@@ -404,7 +410,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             using (CombinePolicyNameAndTicks(context, policy.ToLowerInvariant(), start.Ticks, out var key, out var policySlice))
             {
-                foreach (var result in table.SeekBackwardFrom(TimeSeriesStatsSchema.Indexes[StartTimeIndex], policySlice, key))
+                foreach (var result in table.SeekBackwardFrom(StartTimeIndexDef, policySlice, key))
                 {
                     var stats = GetStats(result.Result);
                     if (stats.Count == 0)
@@ -450,7 +456,7 @@ namespace Raven.Server.Documents.TimeSeries
             if (table == null)
                 yield break;
 
-            var policies = table.GetTree(TimeSeriesStatsSchema.Indexes[PolicyIndex]);
+            var policies = table.GetTree(PolicyIndexDef);
             using (var it = policies.Iterate(true))
             {
                 if (it.Seek(Slices.BeforeAllKeys) == false)

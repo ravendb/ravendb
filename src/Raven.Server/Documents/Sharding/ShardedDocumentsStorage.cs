@@ -81,7 +81,7 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
     {
         var table = context.DocumentsTable(this);
 
-        foreach (var result in GetItemsByBucket(context.Allocator, table, DocsSchema.DynamicKeyIndexes[AllDocsBucketAndEtagSlice], bucket, etag, skip, take))
+        foreach (var result in GetItemsByBucket(context.Allocator, table, Schemas.Documents.AllDocsBucketAndEtagIndex, bucket, etag, skip, take))
         {
             yield return TableValueToDocument(context, result.Result, fields);
         }
@@ -307,7 +307,7 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
     {
         var table = context.TombstonesTable(this);
 
-        foreach (var result in GetItemsByBucket(context.Allocator, table, TombstonesSchema.DynamicKeyIndexes[TombstonesBucketAndEtagSlice], bucket, etag))
+        foreach (var result in GetItemsByBucket(context.Allocator, table, Schemas.Tombstones.TombstonesBucketAndEtagIndex, bucket, etag))
         {
             yield return TableValueToTombstone(context, result.Result);
         }
