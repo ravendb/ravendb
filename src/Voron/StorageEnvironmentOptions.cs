@@ -974,14 +974,15 @@ namespace Voron
             {
                 var reusedCount = 0;
                 var reusedLimit = Math.Min(_lastReusedJournalCountOnSync, MaxNumberOfRecyclableJournals);
+                var currentPath = filename.FullPath;
 
                 try
                 {
-                    var fileInfo = new FileInfo(filename.FullPath);
+                    var fileInfo = new FileInfo(currentPath);
                     if (fileInfo.Length < Volatile.Read(ref _currentJournalSizeHint))
                     {
                         // journal sizes only grow, this file can never satisfy a future request
-                        TryDelete(filename.FullPath);
+                        TryDelete(currentPath);
                         return;
                     }
 
@@ -989,7 +990,8 @@ namespace Voron
                     var counter = Interlocked.Increment(ref _reuseCounter);
                     var newName = Path.Combine(JournalPath.FullPath, RecyclableJournalName(counter));
 
-                    File.Move(filename.FullPath, newName);
+                    File.Move(currentPath, newName);
+                    currentPath = newName;
                     lock (_journalsForReuse)
                     {
                         PruneStaleRecyclableJournals();
@@ -998,7 +1000,7 @@ namespace Voron
 
                         if (ExceededReuseLimits())
                         {
-                            TryDelete(filename.FullPath);
+                            TryDelete(currentPath);
                             return;
                         }
 
@@ -1012,7 +1014,7 @@ namespace Voron
                 {
                     if (_log.IsDebugEnabled)
                         _log.Debug((ExceededReuseLimits() ? "Can't remove" : "Can't store") + " journal for reuse : " + filename, ex);
-                    TryDelete(filename.FullPath);
+                    TryDelete(currentPath);
                 }
 
                 bool ExceededReuseLimits() => reusedCount >= reusedLimit;
