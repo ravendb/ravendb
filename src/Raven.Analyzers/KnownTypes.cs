@@ -122,6 +122,13 @@ namespace Raven.Analyzers
         public const string MapFieldName = "Map";
         public const string ReduceFieldName = "Reduce";
 
+        // Assembly-level attribute the generator emits per index type, carrying the index shape so it
+        // can be read back from compiled metadata. Matched by full name: unlike the index base types
+        // above (short-name matched against a base chain rooted in Raven.Client), this is looked up
+        // among arbitrary user assembly attributes, where a short-name match could collide.
+        public const string RavenIndexMetadataAttributeFullName =
+            "Raven.Client.Documents.Indexes.RavenIndexMetadataAttribute";
+
         public const string AddMapMethodName = "AddMap";
         public const string AddMapForAllMethodName = "AddMapForAll";
 

@@ -18,11 +18,14 @@ namespace Raven.Analyzers.Shared
 
     /// <summary>
     /// Walks an index class together with its user-defined base classes (up to the framework
-    /// Abstract* base) to decide whether Map / AddMap is defined anywhere in the chain. Lives in a
-    /// helper class rather than the analyzer so its <see cref="Compilation.GetSemanticModel"/> calls
-    /// (needed to inspect base-class constructors that may live in another syntax tree) follow the
-    /// same pattern as <c>IndexFieldExtractor</c> and do not trip RS1030.
+    /// Abstract* base) to decide whether Map / AddMap is defined anywhere in the chain.
     /// </summary>
+    /// <remarks>
+    /// The chain searches here read constructor source, so like the field extractors they belong to the
+    /// metadata generator, not to the analyzers — an analyzer reads the recorded
+    /// <c>RavenIndexMetadataAttribute</c> instead. <see cref="IsReadableIn"/> is the exception and is
+    /// used by both: it is what keeps every walk inside the current compilation.
+    /// </remarks>
     internal static class IndexInheritanceInspector
     {
         /// <summary>
@@ -35,7 +38,7 @@ namespace Raven.Analyzers.Shared
             // Collect every in-source class declaration in the chain, stopping at the framework base. A
             // metadata-only base cannot be inspected — the Map may well live there, so report Unknown
             // rather than a false positive.
-            if (!TryCollectChainDeclarations(classSymbol, out List<ClassDeclarationSyntax> declarations))
+            if (!TryCollectChainDeclarations(classSymbol, compilation, out List<ClassDeclarationSyntax> declarations))
                 return IndexChainSearch.Unknown;
 
             // A Map assignment counts only when it is reachable from a constructor: directly in a ctor
@@ -115,16 +118,37 @@ namespace Raven.Analyzers.Shared
         /// extractors (RVN007/RVN008) so they all treat a base index class the same way and all bail alike
         /// when a base cannot be read.
         /// </summary>
-        internal static bool TryCollectChainDeclarations(INamedTypeSymbol classSymbol, out List<ClassDeclarationSyntax> declarations)
+        internal static bool TryCollectChainDeclarations(
+            INamedTypeSymbol classSymbol,
+            Compilation compilation,
+            out List<ClassDeclarationSyntax> declarations) =>
+            TryCollectChainDeclarations(classSymbol, compilation, out declarations, out _);
+
+        /// <summary>
+        /// As <see cref="TryCollectChainDeclarations(INamedTypeSymbol, Compilation, out List{ClassDeclarationSyntax})"/>,
+        /// additionally reporting which base type ended the walk. <paramref name="foreignBase"/> is the
+        /// first type in the chain whose source this compilation cannot read, or null when the walk
+        /// reached the framework base and the whole chain was readable.
+        /// </summary>
+        internal static bool TryCollectChainDeclarations(
+            INamedTypeSymbol classSymbol,
+            Compilation compilation,
+            out List<ClassDeclarationSyntax> declarations,
+            out INamedTypeSymbol? foreignBase)
         {
             declarations = [];
+            foreignBase = null;
+
             for (INamedTypeSymbol? type = classSymbol; type != null; type = type.BaseType)
             {
                 if (SyntaxHelpers.IsKnownIndexBaseType(type))
                     break; // reached the framework base; it does not assign Map in user source
 
-                if (type.DeclaringSyntaxReferences.IsDefaultOrEmpty)
-                    return false; // base compiled in another assembly — can't inspect
+                if (!IsReadableIn(type, compilation))
+                {
+                    foreignBase = type;
+                    return false;
+                }
 
                 foreach (SyntaxReference syntaxRef in type.DeclaringSyntaxReferences)
                 {
@@ -137,27 +161,30 @@ namespace Raven.Analyzers.Shared
         }
 
         /// <summary>
-        /// Walks the index class and its user-defined base classes (each paired with its own semantic
-        /// model) and returns true as soon as <paramref name="declarationPredicate"/> matches one. The
-        /// <see cref="Compilation.GetSemanticModel"/> call lives here rather than in the calling analyzer
-        /// so it does not trip RS1030, matching <c>IndexFieldExtractor</c> / <c>IndexStoredFieldExtractor</c>.
-        /// A metadata-only base cannot be inspected and is skipped (the inspectable prefix is still walked).
+        /// Whether <paramref name="type"/>'s source can be inspected using
+        /// <paramref name="compilation"/>'s semantic models.
         /// </summary>
-        internal static bool AnyChainDeclaration(
-            INamedTypeSymbol classSymbol,
-            Compilation compilation,
-            Func<ClassDeclarationSyntax, SemanticModel, bool> declarationPredicate)
+        /// <remarks>
+        /// Having <see cref="ISymbol.DeclaringSyntaxReferences"/> is necessary but not sufficient. A
+        /// project reference reaches the compiler as a compiled DLL, whose symbols carry no syntax at
+        /// all; inside an IDE the same reference is a <see cref="CompilationReference"/>, whose symbols
+        /// do carry syntax — but it belongs to the referenced compilation, and asking this compilation
+        /// for a semantic model over a tree it does not own throws. Requiring
+        /// <see cref="Compilation.ContainsSyntaxTree"/> covers both, so the walk stops at the assembly
+        /// boundary in either host instead of throwing in one of them.
+        /// </remarks>
+        internal static bool IsReadableIn(INamedTypeSymbol type, Compilation compilation)
         {
-            TryCollectChainDeclarations(classSymbol, out List<ClassDeclarationSyntax> declarations);
+            if (type.DeclaringSyntaxReferences.IsDefaultOrEmpty)
+                return false;
 
-            foreach (ClassDeclarationSyntax decl in declarations)
+            foreach (SyntaxReference syntaxRef in type.DeclaringSyntaxReferences)
             {
-                SemanticModel model = compilation.GetSemanticModel(decl.SyntaxTree);
-                if (declarationPredicate(decl, model))
-                    return true;
+                if (!compilation.ContainsSyntaxTree(syntaxRef.SyntaxTree))
+                    return false;
             }
 
-            return false;
+            return true;
         }
 
         /// <summary>
@@ -177,7 +204,7 @@ namespace Raven.Analyzers.Shared
                 if (SyntaxHelpers.IsKnownIndexBaseType(type))
                     break;
 
-                if (type.DeclaringSyntaxReferences.IsDefaultOrEmpty)
+                if (!IsReadableIn(type, compilation))
                     return (count, anyInLoop, true);
 
                 foreach (SyntaxReference syntaxRef in type.DeclaringSyntaxReferences)

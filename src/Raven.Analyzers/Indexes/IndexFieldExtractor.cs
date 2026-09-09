@@ -28,13 +28,32 @@ namespace Raven.Analyzers.Indexes
     internal static class IndexFieldExtractor
     {
         /// <summary>
-        /// Extracts the field names projected by the index <c>Map</c>. <c>StoreAllFields</c> affects
+        /// Reads the field names projected by the index <c>Map</c> out of its constructor source.
+    /// </summary>
+    /// <remarks>
+    /// Used only by the metadata generator. Analyzers must not call this: they read an index's shape
+    /// from its recorded <c>RavenIndexMetadataAttribute</c>, which is the only form available when the
+    /// index comes from a referenced assembly. Keeping extraction on one side of that line is what
+    /// stops the two from disagreeing.
+    /// </remarks>
+    /// <summary> <c>StoreAllFields</c> affects
         /// field <em>storage</em>, not which fields the Map projects, so it does not influence this set.
         /// </summary>
-        public static IndexFieldSet Extract(INamedTypeSymbol indexClass, Compilation compilation)
+        /// <summary>
+        /// Extracts the map-projection fields declared by the readable prefix of the chain, reporting the
+        /// base type that ended the walk in <paramref name="foreignBase"/> (null when the whole chain was
+        /// readable). Unlike <see cref="Extract"/> this does not bail on an unreadable base: the caller
+        /// supplies that base's fields from its recorded metadata instead.
+        /// </summary>
+        public static IndexFieldSet ExtractLocalPrefix(
+            INamedTypeSymbol indexClass,
+            Compilation compilation,
+            out INamedTypeSymbol? foreignBase)
         {
+            foreignBase = null;
+
             // Must have source syntax in this compilation
-            if (indexClass.DeclaringSyntaxReferences.IsEmpty)
+            if (!IndexInheritanceInspector.IsReadableIn(indexClass, compilation))
                 return IndexFieldSet.Bail;
 
             // JS-based indexes cannot be statically analyzed
@@ -46,8 +65,7 @@ namespace Raven.Analyzers.Indexes
             // helper). If a base is metadata-only we cannot read its Map, so bail rather than validate
             // queries against a partial — possibly empty — field set, which would false-positive on
             // every queried field.
-            if (!IndexInheritanceInspector.TryCollectChainDeclarations(indexClass, out List<ClassDeclarationSyntax> declarations))
-                return IndexFieldSet.Bail;
+            IndexInheritanceInspector.TryCollectChainDeclarations(indexClass, compilation, out List<ClassDeclarationSyntax> declarations, out foreignBase);
 
             var allFields = new HashSet<string>(System.StringComparer.Ordinal);
 

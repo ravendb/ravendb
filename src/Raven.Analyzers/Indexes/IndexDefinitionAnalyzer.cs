@@ -74,9 +74,11 @@ namespace Raven.Analyzers.Indexes
             INamedTypeSymbol classSymbol)
         {
             // RVN004 — no constructor in this class OR any user-defined base class assigns Map.
-            // A base index class that defines a shared Map (the common abstract-base pattern) must
-            // count, so the search walks the inheritance chain rather than only this declaration.
-            if (IndexInheritanceInspector.FindMapAssignmentInChain(classSymbol, context.Compilation) != IndexChainSearch.NotFound)
+            // The recorded metadata already covers the whole chain, including a base class in another
+            // assembly whose constructor body this compilation cannot read, so it answers the question
+            // outright. Unanalyzable means the Map may well be there and we must not report.
+            IndexMetadata metadata = IndexMetadataReader.Read(classSymbol);
+            if (!metadata.Analyzable || metadata.AssignsMap)
                 return;
 
             context.ReportDiagnostic(Diagnostic.Create(
@@ -90,12 +92,13 @@ namespace Raven.Analyzers.Indexes
             ClassDeclarationSyntax classDecl,
             INamedTypeSymbol classSymbol)
         {
-            (int totalAddMapCount, bool anyInLoop, bool unknown) =
-                IndexInheritanceInspector.CountAddMapInChain(classSymbol, context.Compilation);
-
-            // A base class is metadata-only; its AddMap calls are invisible, so don't report.
-            if (unknown)
+            // Chain-wide AddMap facts, recorded where the constructors were readable.
+            IndexMetadata metadata = IndexMetadataReader.Read(classSymbol);
+            if (!metadata.Analyzable)
                 return;
+
+            int totalAddMapCount = metadata.AddMapCount;
+            bool anyInLoop = metadata.AddMapInLoop;
 
             if (totalAddMapCount == 0)
             {

@@ -31,8 +31,8 @@ namespace Raven.Analyzers.Queries
             {
                 ConcurrentDictionary<string, INamedTypeSymbol?> indexByName =
                     QueryIndexResolver.CreateIndexNameRegistry(startCtx);
-                var fieldSetCache = new ConcurrentDictionary<INamedTypeSymbol, IndexFieldSet>(
-                    SymbolEqualityComparer.Default);
+                ConcurrentDictionary<INamedTypeSymbol, IndexMetadata> metadataCache =
+                    IndexMetadataReader.CreateCache();
                 var pending = new ConcurrentBag<(InvocationExpressionSyntax Invocation, SemanticModel Model)>();
 
                 startCtx.RegisterSyntaxNodeAction(ctx =>
@@ -46,7 +46,7 @@ namespace Raven.Analyzers.Queries
                 startCtx.RegisterCompilationEndAction(endCtx =>
                 {
                     foreach ((InvocationExpressionSyntax invocation, SemanticModel model) in pending)
-                        AnalyzeInvocation(model, invocation, indexByName, fieldSetCache, endCtx.ReportDiagnostic);
+                        AnalyzeInvocation(model, invocation, indexByName, metadataCache, endCtx.ReportDiagnostic);
                 });
             });
         }
@@ -55,7 +55,7 @@ namespace Raven.Analyzers.Queries
             SemanticModel model,
             InvocationExpressionSyntax queryInvocation,
             ConcurrentDictionary<string, INamedTypeSymbol?> indexByName,
-            ConcurrentDictionary<INamedTypeSymbol, IndexFieldSet> fieldSetCache,
+            ConcurrentDictionary<INamedTypeSymbol, IndexMetadata> metadataCache,
             Action<Diagnostic> reportDiagnostic)
         {
             if (!QueryIndexResolver.IsSessionQueryCall(queryInvocation, model))
@@ -65,9 +65,11 @@ namespace Raven.Analyzers.Queries
             if (indexClass == null)
                 return;
 
-            IndexFieldSet fieldSet = fieldSetCache.GetOrAdd(indexClass,
-                ic => IndexFieldExtractor.Extract(ic, model.Compilation));
-            if (fieldSet.Status == IndexFieldInspection.BailCannotAnalyze)
+            // The index's shape comes from the metadata its own assembly recorded, never from reading its
+            // constructor here: that is what lets this rule work when the index lives in a referenced
+            // project, whose constructor bodies are absent from compiled metadata entirely.
+            IndexMetadata metadata = IndexMetadataReader.Read(indexClass, metadataCache);
+            if (!metadata.Analyzable)
                 return;
 
             // Walk outward from the Query() call to find Where/OrderBy/Search clauses
@@ -98,7 +100,7 @@ namespace Raven.Analyzers.Queries
                 {
                     SeparatedSyntaxList<ArgumentSyntax> args = outerInvocation.ArgumentList.Arguments;
                     if (args.Count > 0)
-                        CheckLambdaFields(args[0].Expression, fieldSet.Fields, methodName, indexClass.Name, reportDiagnostic);
+                        CheckLambdaFields(args[0].Expression, metadata.MapFields, methodName, indexClass.Name, reportDiagnostic);
                 }
 
                 current = outerInvocation;
@@ -108,7 +110,7 @@ namespace Raven.Analyzers.Queries
             // query-expression syntax (from o in session.Query<T, TIndex>() where o.X orderby o.Y ...),
             // the Query() call is the source of a from-clause rather than the receiver of a .Where/.OrderBy
             // invocation, so handle that shape here too.
-            AnalyzeQueryExpressionClauses(queryInvocation, fieldSet.Fields, indexClass.Name, reportDiagnostic);
+            AnalyzeQueryExpressionClauses(queryInvocation, metadata.MapFields, indexClass.Name, reportDiagnostic);
         }
 
         /// <summary>

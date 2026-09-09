@@ -23,16 +23,33 @@ namespace Raven.Analyzers.Indexes
     }
 
     /// <summary>
-    /// Extracts the set of explicitly stored field names from a RavenDB index class constructor.
+    /// Reads the explicitly stored field names out of a RavenDB index class constructor.
+    /// </summary>
+    /// <remarks>
+    /// Used only by the metadata generator; analyzers read the recorded metadata instead. See
+    /// <see cref="IndexFieldExtractor"/> for why extraction lives on the generator side only.
+    /// </remarks>
+    /// <summary>
     /// "Stored" means registered via <c>Store(…)</c>, <c>StoreAllFields(…)</c>,
     /// <c>Stores[…] = FieldStorage.Yes</c>, or <c>StoresStrings[…] = FieldStorage.Yes</c>.
     /// Just being part of the Map projection does NOT make a field stored.
     /// </summary>
     internal static class IndexStoredFieldExtractor
     {
-        public static IndexStoredFieldSet Extract(INamedTypeSymbol indexClass, Compilation compilation)
+        /// <summary>
+        /// Extracts the stored fields declared by the readable prefix of the chain, reporting the base
+        /// type that ended the walk in <paramref name="foreignBase"/> (null when the whole chain was
+        /// readable). Unlike <see cref="Extract"/> this does not bail on an unreadable base: the caller
+        /// merges that base's stored fields from its recorded metadata instead.
+        /// </summary>
+        public static IndexStoredFieldSet ExtractLocalPrefix(
+            INamedTypeSymbol indexClass,
+            Compilation compilation,
+            out INamedTypeSymbol? foreignBase)
         {
-            if (indexClass.DeclaringSyntaxReferences.IsEmpty)
+            foreignBase = null;
+
+            if (!IndexInheritanceInspector.IsReadableIn(indexClass, compilation))
                 return IndexStoredFieldSet.Bail;
 
             if (SyntaxHelpers.IsJavaScriptIndex(indexClass))
@@ -42,8 +59,7 @@ namespace Raven.Analyzers.Indexes
             // base index class, so walk the chain (same helper RVN004 and the map-field extractor use).
             // Bail if a base is metadata-only: an unreadable base could store fields we cannot see, which
             // under ProjectionBehavior.FromIndex would make projected fields wrongly look non-retrievable.
-            if (!IndexInheritanceInspector.TryCollectChainDeclarations(indexClass, out List<ClassDeclarationSyntax> declarations))
-                return IndexStoredFieldSet.Bail;
+            IndexInheritanceInspector.TryCollectChainDeclarations(indexClass, compilation, out List<ClassDeclarationSyntax> declarations, out foreignBase);
 
             var allFields = new HashSet<string>(System.StringComparer.Ordinal);
 
