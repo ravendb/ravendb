@@ -40,7 +40,7 @@ namespace FastTests.Voron.Tables
                     var valueReader = reader.Key.CreateReader();
                     Assert.Equal("Users", valueReader.ReadString(5));
                     Assert.Equal(1L, valueReader.ReadBigEndian<long>());
-                    var handle = reader.Result.Reader;
+                    var handle = reader.Result;
                     int size;
                     Assert.Equal("{'Name': 'Oren'}", Encoding.UTF8.GetString(handle.Read(3, out size), size));
 
@@ -50,7 +50,7 @@ namespace FastTests.Voron.Tables
                     valueReader = reader.Key.CreateReader();
                     Assert.Equal("Users", valueReader.ReadString(5));
                     Assert.Equal(2L, valueReader.ReadBigEndian<long>());
-                    handle = reader.Result.Reader;
+                    handle = reader.Result;
                     Assert.Equal("{'Name': 'Eini'}", Encoding.UTF8.GetString(handle.Read(3, out size), size));
 
                     Assert.False(seekResults.MoveNext());
@@ -146,7 +146,7 @@ namespace FastTests.Voron.Tables
 
                         var handle = reader.Result;
                         int size;
-                        Assert.Equal("{'Name': 'Eini'}", Encoding.UTF8.GetString(handle.Reader.Read(3, out size), size));
+                        Assert.Equal("{'Name': 'Eini'}", Encoding.UTF8.GetString(handle.Read(3, out size), size));
 
                         tx.Commit();
                         gotValues = true;

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
@@ -160,9 +160,9 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
             subscriptionStateTable.DeleteForwardFrom(ClusterStateMachine.SubscriptionStateSchema.Indexes[ClusterStateMachine.SubscriptionStateByBatchIdSlice],
                 batchIdSlice,
-                false, long.MaxValue, shouldAbort: tvh =>
+                false, long.MaxValue, shouldAbort: (in TableValueReader tvh) =>
                 {
-                    var recordBatchId = Bits.SwapBytes(*(long*)tvh.Reader.Read((int)ClusterStateMachine.SubscriptionStateTable.BatchId, out var size));
+                    var recordBatchId = Bits.SwapBytes(*(long*)tvh.Read((int)ClusterStateMachine.SubscriptionStateTable.BatchId, out var size));
                     return recordBatchId != BatchId;
                 });
 

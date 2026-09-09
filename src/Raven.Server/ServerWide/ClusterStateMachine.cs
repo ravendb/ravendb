@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -2617,11 +2617,11 @@ namespace Raven.Server.ServerWide
                 var samePublicKeyHash = new SortedList<DateTime, long>();
                 foreach (var result in certs.SeekForwardFromPrefix(ReplicationCertificatesSchema.Indexes[ReplicationCertificatesHashSlice], publicKeySlice, publicKeySlice, 0))
                 {
-                    using var accessBlittable = new BlittableJsonReaderObject(result.Result.Reader.Read((int)ReplicationCertificatesTable.Access, out var size), size, context);
+                    using var accessBlittable = new BlittableJsonReaderObject(result.Result.Read((int)ReplicationCertificatesTable.Access, out var size), size, context);
 
                     accessBlittable.TryGet(nameof(command.NotAfter), out DateTime notAfter);
 
-                    samePublicKeyHash.Add(notAfter, result.Result.Reader.Id);
+                    samePublicKeyHash.Add(notAfter, result.Result.Id);
                 }
 
                 while (samePublicKeyHash.Count > Constants.Certificates.MaxNumberOfCertsWithSameHash)
@@ -3257,8 +3257,7 @@ namespace Raven.Server.ServerWide
 
             using (Slice.From(context.Allocator, key, out var k))
             {
-                var tvh = new Table.TableValueHolder();
-                if (items.ReadByKey(k, out tvh.Reader) == false)
+                if (items.ReadByKey(k, out var tvh) == false)
                     return null;
                 return GetCurrentItem(context, tvh).Value;
             }
@@ -3339,9 +3338,9 @@ namespace Raven.Server.ServerWide
                         if (take-- <= 0)
                             yield break;
 
-                        var key = ReadCompareExchangeKey(context, tvr.Result.Reader, dbName);
-                        var index = ReadCompareExchangeOrTombstoneIndex(tvr.Result.Reader);
-                        var value = ReadCompareExchangeValue(context, tvr.Result.Reader);
+                        var key = ReadCompareExchangeKey(context, tvr.Result, dbName);
+                        var index = ReadCompareExchangeOrTombstoneIndex(tvr.Result);
+                        var value = ReadCompareExchangeValue(context, tvr.Result);
 
                         yield return (key, index, value);
                     }
@@ -3381,8 +3380,8 @@ namespace Raven.Server.ServerWide
                         if (take-- <= 0)
                             yield break;
 
-                        var key = ReadCompareExchangeKey(context, tvr.Result.Reader, databaseName);
-                        var index = ReadCompareExchangeOrTombstoneIndex(tvr.Result.Reader);
+                        var key = ReadCompareExchangeKey(context, tvr.Result, databaseName);
+                        var index = ReadCompareExchangeOrTombstoneIndex(tvr.Result);
 
                         yield return (key, index);
                     }
@@ -3443,7 +3442,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        internal static unsafe CompareExchangeKey ReadCompareExchangeKey(ClusterOperationContext context, TableValueReader reader, string dbPrefix)
+        internal static unsafe CompareExchangeKey ReadCompareExchangeKey(ClusterOperationContext context, in TableValueReader reader, string dbPrefix)
         {
             var ptr = reader.Read((int)CompareExchangeTable.Key, out var size);
 
@@ -3451,7 +3450,7 @@ namespace Raven.Server.ServerWide
             return new CompareExchangeKey(storageKey, dbPrefix.Length + 1);
         }
 
-        internal static unsafe BlittableJsonReaderObject ReadCompareExchangeValue<TTransaction>(TransactionOperationContext<TTransaction> context, TableValueReader reader)
+        internal static unsafe BlittableJsonReaderObject ReadCompareExchangeValue<TTransaction>(TransactionOperationContext<TTransaction> context, in TableValueReader reader)
             where TTransaction : RavenTransaction
         {
             BlittableJsonReaderObject compareExchangeValue = new BlittableJsonReaderObject(reader.Read((int)CompareExchangeTable.Value, out var size), size, context);
@@ -3459,14 +3458,14 @@ namespace Raven.Server.ServerWide
             return compareExchangeValue;
         }
 
-        public static unsafe long ReadCompareExchangeOrTombstoneIndex(TableValueReader reader)
+        public static unsafe long ReadCompareExchangeOrTombstoneIndex(in TableValueReader reader)
         {
             var index = *(long*)reader.Read((int)CompareExchangeTable.Index, out var size);
             Debug.Assert(size == sizeof(long));
             return index;
         }
 
-        private static unsafe long ReadIdentitiesIndex(TableValueReader reader)
+        private static unsafe long ReadIdentitiesIndex(in TableValueReader reader)
         {
             var index = *(long*)reader.Read((int)IdentitiesTable.Index, out var size);
             Debug.Assert(size == sizeof(long));
@@ -3562,18 +3561,18 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public static unsafe string GetCurrentItemKey(Table.TableValueHolder result)
+        public static unsafe string GetCurrentItemKey(in TableValueReader result)
         {
-            return Encoding.UTF8.GetString(result.Reader.Read(1, out int size), size);
+            return Encoding.UTF8.GetString(result.Read(1, out int size), size);
         }
 
-        private static unsafe (string Key, long Index, BlittableJsonReaderObject Value) GetCurrentItem<TTransaction>(TransactionOperationContext<TTransaction> context, Table.TableValueHolder result)
+        private static unsafe (string Key, long Index, BlittableJsonReaderObject Value) GetCurrentItem<TTransaction>(TransactionOperationContext<TTransaction> context, in TableValueReader result)
             where TTransaction : RavenTransaction
         {
-            var ptr = result.Reader.Read(2, out int size);
+            var ptr = result.Read(2, out int size);
             var doc = new BlittableJsonReaderObject(ptr, size, context);
-            var key = Encoding.UTF8.GetString(result.Reader.Read(1, out size), size);
-            var index = Bits.SwapBytes(*(long*)result.Reader.Read(3, out _));
+            var key = Encoding.UTF8.GetString(result.Read(1, out size), size);
+            var index = Bits.SwapBytes(*(long*)result.Read(3, out _));
 
             Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, doc);
             return (key, index, doc);
@@ -3586,18 +3585,17 @@ namespace Raven.Server.ServerWide
 
             using (Slice.From(context.Allocator, thumbprint.ToLowerInvariant(), out var thumbprintSlice))
             {
-                var tvh = new Table.TableValueHolder();
-                if (certs.ReadByKey(thumbprintSlice, out tvh.Reader) == false)
+                if (certs.ReadByKey(thumbprintSlice, out var tvh) == false)
                     return null;
                 return GetCertificate(context, tvh).Item2;
             }
         }
 
-        private static unsafe (string Key, BlittableJsonReaderObject Cert) GetCertificate<TTransaction>(TransactionOperationContext<TTransaction> context, Table.TableValueHolder result)
+        private static unsafe (string Key, BlittableJsonReaderObject Cert) GetCertificate<TTransaction>(TransactionOperationContext<TTransaction> context, in TableValueReader result)
             where TTransaction : RavenTransaction
         {
-            var ptr = result.Reader.Read((int)CertificatesTable.Data, out var dataSize);
-            var key = Encoding.UTF8.GetString(result.Reader.Read((int)CertificatesTable.Thumbprint, out var size), size);
+            var ptr = result.Read((int)CertificatesTable.Data, out var dataSize);
+            var key = Encoding.UTF8.GetString(result.Read((int)CertificatesTable.Thumbprint, out var size), size);
 
             return GetCertificate(context, ptr, dataSize, key);
         }
@@ -3610,7 +3608,7 @@ namespace Raven.Server.ServerWide
             return (key, doc);
         }
 
-        private static CertificateDefinition GetCertificateDefinition<TTransaction>(TransactionOperationContext<TTransaction> context, Table.TableValueHolder result)
+        private static CertificateDefinition GetCertificateDefinition<TTransaction>(TransactionOperationContext<TTransaction> context, in TableValueReader result)
             where TTransaction : RavenTransaction
         {
             return JsonDeserializationServer.CertificateDefinition(GetCertificate(context, result).Cert);
@@ -3886,9 +3884,9 @@ namespace Raven.Server.ServerWide
                         if (take-- <= 0)
                             yield break;
 
-                        var key = GetIdentityKey(tvr.Result.Reader, dbName);
-                        var value = GetIdentityValue(tvr.Result.Reader);
-                        var index = ReadIdentitiesIndex(tvr.Result.Reader);
+                        var key = GetIdentityKey(tvr.Result, dbName);
+                        var value = GetIdentityValue(tvr.Result);
+                        var index = ReadIdentitiesIndex(tvr.Result);
 
                         yield return (key, value, index);
                     }
@@ -3896,12 +3894,12 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static unsafe long GetIdentityValue(TableValueReader reader)
+        private static unsafe long GetIdentityValue(in TableValueReader reader)
         {
             return *(long*)reader.Read((int)IdentitiesTable.Value, out var _);
         }
 
-        private static unsafe string GetIdentityKey(TableValueReader reader, string dbName)
+        private static unsafe string GetIdentityKey(in TableValueReader reader, string dbName)
         {
             var ptr = reader.Read((int)IdentitiesTable.Key, out var size);
             var key = Encodings.Utf8.GetString(ptr, size).Substring(dbName.Length + 1);
@@ -4025,7 +4023,7 @@ namespace Raven.Server.ServerWide
 
                 foreach (var holder in items.SeekByPrimaryKeyPrefix(startsWithSlice, Slices.Empty, skip))
                 {
-                    var reader = holder.Value.Reader;
+                    var reader = holder.Value;
                     var size = GetDataAndEtagTupleFromReader(context, reader, out BlittableJsonReaderObject doc, out long _);
                     Debug.Assert(size == sizeof(long));
 
@@ -4946,7 +4944,7 @@ namespace Raven.Server.ServerWide
 
             foreach (var (key, val) in certs.SeekByPrimaryKeyPrefix(prefix, Slices.Empty, start))
             {
-                var blittable = GetReplicationCertificateAccessObject(context, ref val.Reader);
+                var blittable = GetReplicationCertificateAccessObject(context, val);
                 string thumbprint = key.ToString().Substring(prefixString.Length);
 
                 if (filter != null)
@@ -4985,7 +4983,7 @@ namespace Raven.Server.ServerWide
 
             foreach (var (key, val) in certs.SeekByPrimaryKeyPrefix(prefix, Slices.Empty, 0))
             {
-                var blittable = GetReplicationCertificateAccessObject(context, ref val.Reader);
+                var blittable = GetReplicationCertificateAccessObject(context, val);
 
                 blittable.TryGet(nameof(RegisterReplicationHubAccessCommand.HubName), out string hub);
                 var details = JsonDeserializationCluster.DetailedReplicationHubAccess(blittable);
@@ -5002,14 +5000,14 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private unsafe string GetCertificateAsBase64(Table.TableValueHolder val)
+        private unsafe string GetCertificateAsBase64(in TableValueReader val)
         {
-            var buffer = val.Reader.Read((int)ReplicationCertificatesTable.Certificate, out var size);
+            var buffer = val.Read((int)ReplicationCertificatesTable.Certificate, out var size);
             string certBase64 = Convert.ToBase64String(new ReadOnlySpan<byte>(buffer, size));
             return certBase64;
         }
 
-        private unsafe BlittableJsonReaderObject GetReplicationCertificateAccessObject(ClusterOperationContext context, ref TableValueReader reader)
+        private unsafe BlittableJsonReaderObject GetReplicationCertificateAccessObject(ClusterOperationContext context, in TableValueReader reader)
         {
             return new BlittableJsonReaderObject(reader.Read((int)ReplicationCertificatesTable.Access, out var size), size, context);
         }
@@ -5044,7 +5042,7 @@ namespace Raven.Server.ServerWide
 
             foreach (var result in certs.SeekForwardFromPrefix(ReplicationCertificatesSchema.Indexes[ReplicationCertificatesHashSlice], publicKeyHash, publicKeyHash, 0))
             {
-                var obj = GetReplicationCertificateAccessObject(context, ref result.Result.Reader);
+                var obj = GetReplicationCertificateAccessObject(context, result.Result);
 
                 // this is a cheap check, not sufficient for real
                 if (obj.TryGet(nameof(userCert.Issuer), out string issuer) == false || issuer != userCert.Issuer)
@@ -5052,7 +5050,7 @@ namespace Raven.Server.ServerWide
 
                 // now we need to do an actual check
 
-                var p = result.Result.Reader.Read((int)ReplicationCertificatesTable.Certificate, out var size);
+                var p = result.Result.Read((int)ReplicationCertificatesTable.Certificate, out var size);
                 var buffer = new byte[size];
                 new Span<byte>(p, size).CopyTo(buffer);
                 using var knownCert = CertificateLoaderUtil.CreateCertificateFromAny(buffer);

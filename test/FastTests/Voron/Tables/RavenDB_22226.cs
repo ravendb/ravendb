@@ -74,7 +74,7 @@ namespace FastTests.Voron.Tables
                 var results = new List<(string key, string shared, long etag)>();
                 foreach (var x in usersTbl.SeekForwardFrom(index, Slices.BeforeAllKeys, 0))
                 {
-                    results.Add((x.Result.Reader.ReadString(0), x.Result.Reader.ReadString(1), x.Result.Reader.ReadLong(2)));
+                    results.Add((x.Result.ReadString(0), x.Result.ReadString(1), x.Result.ReadLong(2)));
                 }
 
                 //Assert results
@@ -93,7 +93,7 @@ namespace FastTests.Voron.Tables
                 results = new List<(string key, string shared, long etag)>();
                 foreach (var x in usersTbl.SeekForwardFrom(index, Slices.BeforeAllKeys, 0))
                 {
-                    results.Add((x.Result.Reader.ReadString(0), x.Result.Reader.ReadString(1), x.Result.Reader.ReadLong(2)));
+                    results.Add((x.Result.ReadString(0), x.Result.ReadString(1), x.Result.ReadLong(2)));
                 }
 
                 //Assert results
@@ -118,7 +118,7 @@ namespace FastTests.Voron.Tables
         }
 
         [StorageIndexEntryKeyGenerator]
-        internal static ByteStringContext.Scope IndexCvEtagKeyGenerator(Transaction tx, ref TableValueReader tvr, out Slice slice)
+        internal static ByteStringContext.Scope IndexCvEtagKeyGenerator(Transaction tx, in TableValueReader tvr, out Slice slice)
         {
             var cvPtr = tvr.Read(1, out var cvSize);
             var etag = tvr.ReadLong(2);

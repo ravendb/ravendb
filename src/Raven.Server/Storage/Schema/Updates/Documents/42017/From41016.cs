@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -286,8 +286,8 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     {
                         var t = new Tombstone
                         {
-                            LowerId = TableValueToString(context, (int)TombstoneTable.LowerId, ref result.Value.Reader),
-                            Type = *(Tombstone.TombstoneType*)result.Value.Reader.Read((int)TombstoneTable.Type, out _),
+                            LowerId = TableValueToString(context, (int)TombstoneTable.LowerId, result.Value),
+                            Type = *(Tombstone.TombstoneType*)result.Value.Read((int)TombstoneTable.Type, out _),
                         };
 
                         if (t.Type != Tombstone.TombstoneType.Counter)
@@ -300,9 +300,9 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
                     // delete counter-tombstones from Tombstones table
                     var countersTombstoneTable = step.WriteTx.OpenTable(TombstonesSchemaBase, CountersTombstonesSlice);
-                    DeleteFromTable(context, countersTombstoneTable, TombstonesSchemaBase.Key, tvh =>
+                    DeleteFromTable(context, countersTombstoneTable, TombstonesSchemaBase.Key, (in TableValueReader reader) =>
                     {
-                        var type = *(Tombstone.TombstoneType*)tvh.Reader.Read((int)TombstoneTable.Type, out _);
+                        var type = *(Tombstone.TombstoneType*)reader.Read((int)TombstoneTable.Type, out _);
                         return type != Tombstone.TombstoneType.Counter;
                     });
                 }
@@ -403,7 +403,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
         {
             foreach (var result in table.SeekByPrimaryKeyPrefix(Slices.BeforeAllKeys, Slices.Empty, skip: 0))
             {
-                yield return (TableValueToCounterDetail(ctx, result.Value.Reader), result.Value.Reader.Id);
+                yield return (TableValueToCounterDetail(ctx, result.Value), result.Value.Id);
             }
         }
 
@@ -517,25 +517,26 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             return dbIdStr;
         }
 
-        private static CounterDetail TableValueToCounterDetail(JsonOperationContext context, TableValueReader tvr)
+        private static CounterDetail TableValueToCounterDetail(JsonOperationContext context, in TableValueReader tvr)
         {
-            var (doc, name) = ExtractDocIdAndNameFromLegacyCounter(context, ref tvr);
+            var reader = tvr; // the table value read helpers take the reader by ref
+            var (doc, name) = ExtractDocIdAndNameFromLegacyCounter(context, reader);
 
             using (name)
             using (doc)
             {
                 return new CounterDetail
                 {
-                    CounterKey = TableValueToString(context, (int)LegacyCountersTable.CounterKey, ref tvr),
+                    CounterKey = TableValueToString(context, (int)LegacyCountersTable.CounterKey, reader),
                     DocumentId = doc.ToString(),
                     CounterName = name.ToString(),
-                    TotalValue = TableValueToLong((int)LegacyCountersTable.Value, ref tvr),
-                    Etag = TableValueToEtag((int)LegacyCountersTable.Etag, ref tvr),
+                    TotalValue = TableValueToLong((int)LegacyCountersTable.Value, reader),
+                    Etag = TableValueToEtag((int)LegacyCountersTable.Etag, reader),
                 };
             }
         }
 
-        private static (LazyStringValue Doc, LazyStringValue Name) ExtractDocIdAndNameFromLegacyCounter(JsonOperationContext context, ref TableValueReader tvr)
+        private static (LazyStringValue Doc, LazyStringValue Name) ExtractDocIdAndNameFromLegacyCounter(JsonOperationContext context, in TableValueReader tvr)
         {
             var p = tvr.Read((int)LegacyCountersTable.CounterKey, out var size);
             Debug.Assert(size > CountersStorage.DbIdAsBase64Size + 2 /* record separators */);
@@ -547,7 +548,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             }
 
             var doc = context.AllocateStringValue(null, p, sizeOfDocId);
-            var name = TableValueToId(context, (int)LegacyCountersTable.Name, ref tvr);
+            var name = TableValueToId(context, (int)LegacyCountersTable.Name, tvr);
             return (doc, name);
         }
 
@@ -681,9 +682,8 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             return maxDbIdIndex;
         }
 
-        private void DeleteFromTable(DocumentsOperationContext context, Table table, TableSchema.IndexDef pk, Func<Table.TableValueHolder, bool> shouldSkip = null)
+        private void DeleteFromTable(DocumentsOperationContext context, Table table, TableSchema.IndexDef pk, Table.DeletePredicateFunc shouldSkip = null)
         {
-            Table.TableValueHolder tableValueHolder = null;
             var tree = table.GetTree(pk);
             var last = Slices.BeforeAllKeys;
 
@@ -702,12 +702,9 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                         if (shouldSkip != null)
                         {
                             var ptr = table.DirectRead(id, out int size, out _);
-                            if (tableValueHolder == null)
-                                tableValueHolder = new Table.TableValueHolder();
+                            var reader = new TableValueReader(id, ptr, size);
 
-                            tableValueHolder.Reader = new TableValueReader(id, ptr, size);
-
-                            if (shouldSkip.Invoke(tableValueHolder))
+                            if (shouldSkip(reader))
                             {
                                 last = it.CurrentKey.Clone(context.Allocator);
 

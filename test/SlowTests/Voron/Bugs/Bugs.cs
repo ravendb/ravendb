@@ -154,7 +154,7 @@ namespace SlowTests.Voron.Bugs
                     var ids = new List<long>();
                     foreach (var tvr in docs.SeekForwardFrom(DocsSchema.Indexes[EtagsSlice], Slices.BeforeAllKeys, 0))
                     {
-                        ids.Add(tvr.Result.Reader.Id);
+                        ids.Add(tvr.Result.Id);
                     }
 
                     foreach (var id in ids)

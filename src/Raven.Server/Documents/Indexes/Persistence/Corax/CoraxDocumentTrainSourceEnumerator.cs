@@ -37,7 +37,7 @@ public class CoraxDocumentTrainSourceEnumerator
                 yield break;
 
             state.Token.ThrowIfCancellationRequested();
-            yield return _documentsStorage.TableValueToDocument(context, ref result.Reader, fields);
+            yield return _documentsStorage.TableValueToDocument(context, result, fields);
         }
     }
 
@@ -56,7 +56,7 @@ public class CoraxDocumentTrainSourceEnumerator
                 yield break;
             
             state.Token.ThrowIfCancellationRequested();
-            yield return _documentsStorage.TableValueToDocument(context, ref result.Reader, fields);
+            yield return _documentsStorage.TableValueToDocument(context, result, fields);
         }
     }
 }

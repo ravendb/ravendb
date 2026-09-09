@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -189,11 +189,11 @@ namespace Raven.Server.Storage.Schema.Updates.Server
             }
         }
 
-        private static unsafe (string, BlittableJsonReaderObject) GetCurrentItem(Transaction tx, JsonOperationContext context, Table.TableValueHolder result)
+        private static unsafe (string, BlittableJsonReaderObject) GetCurrentItem(Transaction tx, JsonOperationContext context, in TableValueReader result)
         {
-            var ptr = result.Reader.Read(2, out int size);
+            var ptr = result.Read(2, out int size);
             var doc = new BlittableJsonReaderObject(ptr, size, context);
-            var key = Encoding.UTF8.GetString(result.Reader.Read(1, out size), size);
+            var key = Encoding.UTF8.GetString(result.Read(1, out size), size);
 
             Transaction.DebugDisposeReaderAfterTransaction(tx, doc);
             return (key, doc);

@@ -674,16 +674,16 @@ namespace Raven.Server.Documents.Revisions
         {
             var collectionName = new CollectionName(collection);
             var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
-            table.DeleteByPrimaryKey(Slices.BeforeAllKeys, deleted =>
+            table.DeleteByPrimaryKey(Slices.BeforeAllKeys, (in TableValueReader deleted) =>
             {
-                var lastModified = TableValueToDateTime((int)RevisionsTable.LastModified, ref deleted.Reader);
+                var lastModified = TableValueToDateTime((int)RevisionsTable.LastModified, deleted);
                 if (lastModified >= time)
                     return false;
 
                 // We won't create tombstones here as it might create LOTS of tombstones
                 // with the same transaction marker and the same change vector.
 
-                using (TableValueToSlice(context, (int)RevisionsTable.LowerId, ref deleted.Reader, out Slice lowerId))
+                using (TableValueToSlice(context, (int)RevisionsTable.LowerId, deleted, out Slice lowerId))
                 using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
                 {
                     IncrementCountOfRevisions(context, prefixSlice, -1);
@@ -772,7 +772,7 @@ namespace Raven.Server.Documents.Revisions
                     if (numberOfRevisionsToDelete <= deleted)
                         break;
 
-                    var tvr = read.Result.Reader;
+                    var tvr = read.Result;
                     var revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector | DocumentFields.LowerId);
 
                     if (configuration.MinimumRevisionAgeToKeep.HasValue &&
@@ -1139,7 +1139,7 @@ namespace Raven.Server.Documents.Revisions
                         yield break;
                     }
 
-                    var tvr = read.Result.Reader;
+                    var tvr = read.Result;
                     var revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector | DocumentFields.LowerId);
 
                     if (state.ShouldDelete(revision) == false)
@@ -1167,7 +1167,7 @@ namespace Raven.Server.Documents.Revisions
             long conflictCount = 0;
             foreach (var read in table.SeekForwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, skip: 0, startsWith: true))
             {
-                var tvr = read.Result.Reader;
+                var tvr = read.Result;
                 using (var revision = TableValueToRevision(context, ref tvr, DocumentFields.Default))
                 {
                     if (revision.Flags.Contain(DocumentFlags.Conflicted) || revision.Flags.Contain(DocumentFlags.Resolved))
@@ -1193,7 +1193,7 @@ namespace Raven.Server.Documents.Revisions
             var table = context.RevisionsTable(this);
 
 
-            IEnumerable<TableValueHolder> revisions;
+            IEnumerable<TableValueReader> revisions;
 
             using var _ = GetEtagAsSlice(context, 0, out var startSlice);
 
@@ -1212,29 +1212,29 @@ namespace Raven.Server.Documents.Revisions
                     throw new ArgumentOutOfRangeException(nameof(type), $"Unsupported revision type: {type}");
             }
 
-            TableValueHolder prevTvh = null;
+            long prevRevisionId = -1;
             foreach (var tvh in revisions)
             {
-                if (prevTvh != null)
-                    context.Transaction.InnerTransaction.ForgetAbout(prevTvh.Reader.Id);
+                if (prevRevisionId != -1)
+                    context.Transaction.InnerTransaction.ForgetAbout(prevRevisionId);
 
-                prevTvh = tvh;
+                prevRevisionId = tvh.Id;
 
                 if (type == RevisionType.Deleted)
                 {
-                    var etag = TableValueToEtag((int)RevisionsTable.DeletedEtag, ref tvh.Reader);
+                    var etag = TableValueToEtag((int)RevisionsTable.DeletedEtag, tvh);
                     if (etag == NotDeletedRevisionMarker)
                         yield break;
                 }
 
-                yield return TableValueToRevision(context, ref tvh.Reader, DocumentFields.Id | DocumentFields.ChangeVector | DocumentFields.Data);
+                yield return TableValueToRevision(context, tvh, DocumentFields.Id | DocumentFields.ChangeVector | DocumentFields.Data);
                 if (--take <= 0)
                     yield break;
             }
 
             yield break;
 
-            static IEnumerable<TableValueHolder> EnumerateSeekResults(IEnumerable<SeekResult> enumerable)
+            static IEnumerable<TableValueReader> EnumerateSeekResults(IEnumerable<SeekResult> enumerable)
             {
                 foreach (var seekResult in enumerable)
                     yield return seekResult.Result;
@@ -1249,15 +1249,15 @@ namespace Raven.Server.Documents.Revisions
             if (table == null || take == 0)
                 yield break;
 
-            TableValueHolder prevTvh = null;
+            long prevRevisionId = -1;
             foreach (var tvh in table.SeekBackwardFromLast(Schemas.Revisions.CollectionRevisionsEtagsIndex, skip))
             {
-                if (prevTvh != null)
-                    context.Transaction.InnerTransaction.ForgetAbout(prevTvh.Reader.Id);
+                if (prevRevisionId != -1)
+                    context.Transaction.InnerTransaction.ForgetAbout(prevRevisionId);
 
-                prevTvh = tvh;
+                prevRevisionId = tvh.Id;
 
-                var tvr = tvh.Reader;
+                var tvr = tvh;
                 var revision = TableValueToRevision(context, ref tvr, DocumentFields.Id | DocumentFields.ChangeVector);
 
                 switch (type)
@@ -1307,7 +1307,7 @@ namespace Raven.Server.Documents.Revisions
 
                         foreach (var item in table.SeekForwardFromPrefix(RevisionsSchema.Indexes[IdAndEtagSlice], startSlice, lowerPrefix, skip: 0))
                         {
-                            var revision = TableValueToRevision(context, ref item.Result.Reader, DocumentFields.LowerId | DocumentFields.Id);
+                            var revision = TableValueToRevision(context, item.Result, DocumentFields.LowerId | DocumentFields.Id);
                             startId = revision.LowerId;
                             yield return revision.Id;
 
@@ -1339,7 +1339,7 @@ namespace Raven.Server.Documents.Revisions
                         yield break;
                     }
 
-                    var tvr = read.Result.Reader;
+                    var tvr = read.Result;
                     var revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector | DocumentFields.LowerId);
 
                     if (shouldSkip != null && shouldSkip.Invoke(revision))
@@ -1554,13 +1554,13 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        private void MarkRevisionsAsConflictedIfNeeded(DocumentsOperationContext context, in RevisionKeys keys, DocumentFlags flags, TableValueReader tvr, Table table,
+        private void MarkRevisionsAsConflictedIfNeeded(DocumentsOperationContext context, in RevisionKeys keys, DocumentFlags flags, in TableValueReader tvr, Table table,
             ChangeVector incomingChangeVector)
         {
             // Revisions are immutable, but if there was a conflict we need to update the flags accordingly with the `Conflicted` flag.
             if (flags.Contain(DocumentFlags.Conflicted))
             {
-                var currentFlags = TableValueToFlags((int)RevisionsTable.Flags, ref tvr);
+                var currentFlags = TableValueToFlags((int)RevisionsTable.Flags, tvr);
                 if (currentFlags.Contain(DocumentFlags.Conflicted) == false)
                 {
                     MarkRevisionAsConflicted(context, tvr, table, in keys, incomingChangeVector);
@@ -1568,21 +1568,22 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        private unsafe void MarkRevisionAsConflicted(DocumentsOperationContext context, TableValueReader tvr, Table table, in RevisionKeys keys, ChangeVector incomingChangeVector)
+        private unsafe void MarkRevisionAsConflicted(DocumentsOperationContext context, in TableValueReader tvr, Table table, in RevisionKeys keys, ChangeVector incomingChangeVector)
         {
-            EnsureValidRevisionTable(context, in keys.Revision, ref table, ref tvr);
+            var reader = tvr; // the table value read helpers take the reader by ref
+            EnsureValidRevisionTable(context, in keys.Revision, ref table, ref reader);
 
-            var revisionCopy = context.GetMemory(tvr.Size);
+            var revisionCopy = context.GetMemory(reader.Size);
             // we have to copy it to the side because we might do a defrag during update, and that
             // can cause corruption if we read from the old value (which we just deleted)
-            Memory.Copy(revisionCopy.Address, tvr.Pointer, tvr.Size);
-            var copyTvr = new TableValueReader(revisionCopy.Address, tvr.Size);
+            Memory.Copy(revisionCopy.Address, reader.Pointer, reader.Size);
+            var copyTvr = new TableValueReader(revisionCopy.Address, reader.Size);
 
             var revision = TableValueToRevision(context, ref copyTvr);
             var flags = revision.Flags | DocumentFlags.Conflicted;
             var newEtag = _database.DocumentsStorage.GenerateNextEtag();
-            var deletedEtag = TableValueToEtag((int)RevisionsTable.DeletedEtag, ref tvr);
-            var resolvedFlag = TableValueToFlags((int)RevisionsTable.Resolved, ref tvr);
+            var deletedEtag = TableValueToEtag((int)RevisionsTable.DeletedEtag, ref reader);
+            var resolvedFlag = TableValueToFlags((int)RevisionsTable.Resolved, ref reader);
 
             WriteRevisionTableRecord(context, table, in keys, new RevisionsTableRow
             {
@@ -1610,7 +1611,7 @@ namespace Raven.Server.Documents.Revisions
             if (table.IsOwned(tvr.Id) == false)
             {
                 // We request to update/remove revision with the wrong collection
-                var revision = TableValueToRevision(context, ref tvr);
+                var revision = TableValueToRevision(context, tvr);
                 var currentCollection = _documentsStorage.ExtractCollectionName(context, revision.Data);
 
                 if (_logger.IsInfoEnabled)
@@ -1694,14 +1695,14 @@ namespace Raven.Server.Documents.Revisions
                 var table = context.RevisionsTable(this);
                 foreach (var tvr in table.SeekBackwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, lastKey, 0))
                 {
-                    var lastModified = TableValueToDateTime((int)RevisionsTable.LastModified, ref tvr.Result.Reader);
+                    var lastModified = TableValueToDateTime((int)RevisionsTable.LastModified, tvr.Result);
                     if (lastModified > max)
                         continue;
 
                     if (result == null ||
                         result.LastModified < lastModified)
                     {
-                        result = TableValueToRevision(context, ref tvr.Result.Reader);
+                        result = TableValueToRevision(context, tvr.Result);
                     }
                 }
                 return result;
@@ -1731,18 +1732,18 @@ namespace Raven.Server.Documents.Revisions
                 {
                     if (collection == null)
                     {
-                        var ptr = tvr.Result.Reader.Read((int)RevisionsTable.Document, out var size);
+                        var ptr = tvr.Result.Read((int)RevisionsTable.Document, out var size);
                         var data = new BlittableJsonReaderObject(ptr, size, context);
                         collection = _documentsStorage.ExtractCollectionName(context, data).Name;
                     }
 
-                    var etag = TableValueToEtag((int)RevisionsTable.Etag, ref tvr.Result.Reader);
+                    var etag = TableValueToEtag((int)RevisionsTable.Etag, tvr.Result);
                     if (etag > parameters.EtagBarrier)
                     {
                         return null;
                     }
 
-                    var lastModified = TableValueToDateTime((int)RevisionsTable.LastModified, ref tvr.Result.Reader);
+                    var lastModified = TableValueToDateTime((int)RevisionsTable.LastModified, tvr.Result);
                     if (lastModified > parameters.Before)
                     {
                         foundAfter = true;
@@ -1755,7 +1756,7 @@ namespace Raven.Server.Documents.Revisions
                         if (result == null)
                         {
                             // we will take this old revision if no other was found
-                            result = TableValueToRevision(context, ref tvr.Result.Reader);
+                            result = TableValueToRevision(context, tvr.Result);
                             prev = result;
                         }
                         break;
@@ -1763,7 +1764,7 @@ namespace Raven.Server.Documents.Revisions
 
                     if (result == null)
                     {
-                        result = TableValueToRevision(context, ref tvr.Result.Reader);
+                        result = TableValueToRevision(context, tvr.Result);
                         prev = result;
                         continue;
                     }
@@ -1771,13 +1772,13 @@ namespace Raven.Server.Documents.Revisions
                     if (result.LastModified < lastModified)
                     {
                         prev = result;
-                        result = TableValueToRevision(context, ref tvr.Result.Reader);
+                        result = TableValueToRevision(context, tvr.Result);
                         continue;
                     }
 
                     if (prev.LastModified < lastModified)
                     {
-                        prev = TableValueToRevision(context, ref tvr.Result.Reader);
+                        prev = TableValueToRevision(context, tvr.Result);
                     }
                 }
 
@@ -1963,7 +1964,7 @@ namespace Raven.Server.Documents.Revisions
                         {
                                 token.ThrowIfCancellationRequested();
 
-                                var state = ShouldProcessNextRevisionId(ctx, ref tvr.Reader, parameters, result, out var id);
+                                var state = ShouldProcessNextRevisionId(ctx, tvr, parameters, result, out var id);
                                 if (state == NextRevisionIdResult.Break)
                                     break;
                                 if (state == NextRevisionIdResult.Continue)
@@ -2005,7 +2006,7 @@ namespace Raven.Server.Documents.Revisions
                 }
             }
 
-        private bool GetRevisionsByCollection(DocumentsOperationContext context, string collection, long lastScannedEtag, out IEnumerable<TableValueHolder> revisions)
+        private bool GetRevisionsByCollection(DocumentsOperationContext context, string collection, long lastScannedEtag, out IEnumerable<TableValueReader> revisions)
         {
             revisions = null;
             lastScannedEtag = long.Max(0, lastScannedEtag - 1);
@@ -2343,7 +2344,7 @@ namespace Raven.Server.Documents.Revisions
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
             using (readCtx.OpenReadTransaction())
             {
-                IEnumerable<Table.TableValueHolder> tvrs = null;
+                IEnumerable<TableValueReader> tvrs = null;
                 if (collection != null)
                 {
                     var collectionName = _documentsStorage.GetCollection(readCtx.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
@@ -2378,7 +2379,7 @@ namespace Raven.Server.Documents.Revisions
                 {
                     token.ThrowIfCancellationRequested();
 
-                    var state = ShouldProcessNextRevisionId(readCtx, ref tvr.Reader, parameters, result, out var id);
+                    var state = ShouldProcessNextRevisionId(readCtx, tvr, parameters, result, out var id);
                     if (state == NextRevisionIdResult.Break)
                         break;
                     if (state == NextRevisionIdResult.Continue)
@@ -2403,15 +2404,15 @@ namespace Raven.Server.Documents.Revisions
             Found
         }
 
-        private NextRevisionIdResult ShouldProcessNextRevisionId(DocumentsOperationContext context, ref TableValueReader reader, Parameters parameters, OperationResult result, out LazyStringValue id)
+        private NextRevisionIdResult ShouldProcessNextRevisionId(DocumentsOperationContext context, in TableValueReader reader, Parameters parameters, OperationResult result, out LazyStringValue id)
         {
             result.ScannedRevisions++;
 
             if (result.ScannedRevisions % 1024 == 0)
                 parameters.OnProgress?.Invoke(result);
 
-            id = TableValueToId(context, (int)RevisionsTable.Id, ref reader);
-            var etag = TableValueToEtag((int)RevisionsTable.Etag, ref reader);
+            id = TableValueToId(context, (int)RevisionsTable.Id, reader);
+            var etag = TableValueToEtag((int)RevisionsTable.Etag, reader);
             parameters.LastScannedEtag = etag;
 
             if (parameters.ScannedIds.Add(id) == false)
@@ -2431,7 +2432,7 @@ namespace Raven.Server.Documents.Revisions
                 return NextRevisionIdResult.Continue;
             }
 
-            var date = TableValueToDateTime((int)RevisionsTable.LastModified, ref reader);
+            var date = TableValueToDateTime((int)RevisionsTable.LastModified, reader);
             if (date < parameters.MinimalDate)
                 return NextRevisionIdResult.Break;
 
@@ -2651,7 +2652,7 @@ namespace Raven.Server.Documents.Revisions
                 if (take-- <= 0)
                     yield break;
 
-                var document = TableValueToRevision(context, ref tvr.Result.Reader);
+                var document = TableValueToRevision(context, tvr.Result);
                 yield return document;
             }
         }
@@ -2674,17 +2675,17 @@ namespace Raven.Server.Documents.Revisions
                 if (take-- <= 0)
                     yield break;
 
-                var etag = TableValueToEtag((int)RevisionsTable.DeletedEtag, ref tvr.Result.Reader);
+                var etag = TableValueToEtag((int)RevisionsTable.DeletedEtag, tvr.Result);
                 if (etag == NotDeletedRevisionMarker)
                     yield break;
 
-                using (TableValueToSlice(context, (int)RevisionsTable.LowerId, ref tvr.Result.Reader, out Slice lowerId))
+                using (TableValueToSlice(context, (int)RevisionsTable.LowerId, tvr.Result, out Slice lowerId))
                 {
                     if (IsRevisionsBinEntry(context, table, lowerId, etag) == false)
                         continue;
                 }
 
-                yield return TableValueToRevision(context, ref tvr.Result.Reader);
+                yield return TableValueToRevision(context, tvr.Result);
             }
         }
 
@@ -2698,9 +2699,8 @@ namespace Raven.Server.Documents.Revisions
 
             foreach (var result in table.SeekForwardFrom(RevisionsSchema.Indexes[DeleteRevisionEtagSlice], startSlice, 0))
             {
-                ref var reader = ref result.Result.Reader;
-                var deleteRevision = TableValueToRevision(context, ref reader, DocumentFields.Id);
-                var deletedEtag = TableValueToEtag((int)RevisionsTable.DeletedEtag, ref reader);
+                var deleteRevision = TableValueToRevision(context, result.Result, DocumentFields.Id);
+                var deletedEtag = TableValueToEtag((int)RevisionsTable.DeletedEtag, result.Result);
                 lastEtag = deletedEtag;
                 if (deleteRevision.LastModified >= before)
                     break;
@@ -2797,7 +2797,7 @@ namespace Raven.Server.Documents.Revisions
                 if (take-- <= 0)
                     yield break;
 
-                var document = TableValueToRevision(context, ref tvr.Reader, fields);
+                var document = TableValueToRevision(context, tvr, fields);
                 yield return document;
             }
         }
@@ -2818,7 +2818,7 @@ namespace Raven.Server.Documents.Revisions
                 if (take-- <= 0)
                     yield break;
 
-                var document = TableValueToRevision(context, ref tvr.Reader, fields);
+                var document = TableValueToRevision(context, tvr, fields);
                 yield return document;
             }
         }
@@ -2879,7 +2879,7 @@ namespace Raven.Server.Documents.Revisions
 
         private IEnumerable<(Document Previous, Document Current)> GetCurrentAndPreviousRevisionsFrom(
             DocumentsOperationContext context,
-            IEnumerable<Table.TableValueHolder> iterator,
+            IEnumerable<TableValueReader> iterator,
             Table table,
             long take)
         {
@@ -2895,15 +2895,15 @@ namespace Raven.Server.Documents.Revisions
             {
                 if (take-- <= 0)
                     break;
-                var current = TableValueToRevision(context, ref tvr.Reader);
+                var current = TableValueToRevision(context, tvr);
 
-                using (docsSchemaIndex.GetValue(context.Allocator, ref tvr.Reader, out var idAndEtag))
+                using (docsSchemaIndex.GetValue(context.Allocator, tvr, out var idAndEtag))
                 using (Slice.External(context.Allocator, idAndEtag, idAndEtag.Size - sizeof(long), out var prefix))
                 {
                     bool hasPrevious = false;
                     foreach (var prevTvr in table.SeekBackwardFrom(docsSchemaIndex, prefix, idAndEtag, 1))
                     {
-                        var previous = TableValueToRevision(context, ref prevTvr.Result.Reader);
+                        var previous = TableValueToRevision(context, prevTvr.Result);
 
                         yield return (previous, current);
                         hasPrevious = true;
@@ -2917,48 +2917,48 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        internal static unsafe Document TableValueToRevision(DocumentsOperationContext context, ref TableValueReader tvr, DocumentFields fields = DocumentFields.All)
+        internal static unsafe Document TableValueToRevision(DocumentsOperationContext context, in TableValueReader tvr, DocumentFields fields = DocumentFields.All)
         {
             if (fields == DocumentFields.All)
             {
                 return new Document(context, tvr.Id)
                 {
                     StorageId = tvr.Id,
-                    LowerId = TableValueToString(context, (int)RevisionsTable.LowerId, ref tvr),
-                    Id = TableValueToId(context, (int)RevisionsTable.Id, ref tvr),
-                    Etag = TableValueToEtag((int)RevisionsTable.Etag, ref tvr),
-                    LastModified = TableValueToDateTime((int)RevisionsTable.LastModified, ref tvr),
-                    Flags = TableValueToFlags((int)RevisionsTable.Flags, ref tvr),
-                    TransactionMarker = TableValueToShort((int)RevisionsTable.TransactionMarker, nameof(RevisionsTable.TransactionMarker), ref tvr),
-                    ChangeVector = ReadChangeVectorFromTvr(context, ref tvr),
+                    LowerId = TableValueToString(context, (int)RevisionsTable.LowerId, tvr),
+                    Id = TableValueToId(context, (int)RevisionsTable.Id, tvr),
+                    Etag = TableValueToEtag((int)RevisionsTable.Etag, tvr),
+                    LastModified = TableValueToDateTime((int)RevisionsTable.LastModified, tvr),
+                    Flags = TableValueToFlags((int)RevisionsTable.Flags, tvr),
+                    TransactionMarker = TableValueToShort((int)RevisionsTable.TransactionMarker, nameof(RevisionsTable.TransactionMarker), tvr),
+                    ChangeVector = ReadChangeVectorFromTvr(context, tvr),
                     Data = new BlittableJsonReaderObject(tvr.Read((int)RevisionsTable.Document, out var size), size, context)
                 };
             }
 
-            return ParseRevisionPartial(context, ref tvr, fields);
+            return ParseRevisionPartial(context, tvr, fields);
         }
 
-        private static unsafe Document ParseRevisionPartial(DocumentsOperationContext context, ref TableValueReader tvr, DocumentFields fields)
+        private static unsafe Document ParseRevisionPartial(DocumentsOperationContext context, in TableValueReader tvr, DocumentFields fields)
         {
             var result = new Document(context, tvr.Id);
 
             if (fields.Contain(DocumentFields.LowerId))
-                result.LowerId = TableValueToString(context, (int)RevisionsTable.LowerId, ref tvr);
+                result.LowerId = TableValueToString(context, (int)RevisionsTable.LowerId, tvr);
 
             if (fields.Contain(DocumentFields.Id))
-                result.Id = TableValueToId(context, (int)RevisionsTable.Id, ref tvr);
+                result.Id = TableValueToId(context, (int)RevisionsTable.Id, tvr);
 
             if (fields.Contain(DocumentFields.Data))
                 result.Data = new BlittableJsonReaderObject(tvr.Read((int)RevisionsTable.Document, out var size), size, context);
 
             if (fields.Contain(DocumentFields.ChangeVector))
-                result.ChangeVector = ReadChangeVectorFromTvr(context, ref tvr);
+                result.ChangeVector = ReadChangeVectorFromTvr(context, tvr);
 
-            result.Etag = TableValueToEtag((int)RevisionsTable.Etag, ref tvr);
-            result.LastModified = TableValueToDateTime((int)RevisionsTable.LastModified, ref tvr);
-            result.Flags = TableValueToFlags((int)RevisionsTable.Flags, ref tvr);
+            result.Etag = TableValueToEtag((int)RevisionsTable.Etag, tvr);
+            result.LastModified = TableValueToDateTime((int)RevisionsTable.LastModified, tvr);
+            result.Flags = TableValueToFlags((int)RevisionsTable.Flags, tvr);
             result.StorageId = tvr.Id;
-            result.TransactionMarker = TableValueToShort((int)RevisionsTable.TransactionMarker, nameof(RevisionsTable.TransactionMarker), ref tvr);
+            result.TransactionMarker = TableValueToShort((int)RevisionsTable.TransactionMarker, nameof(RevisionsTable.TransactionMarker), tvr);
 
             return result;
         }
@@ -2986,7 +2986,7 @@ namespace Raven.Server.Documents.Revisions
                         yield break;
                     }
                     take--;
-                    yield return TableValueToRevision(context, ref item.Result.Reader);
+                    yield return TableValueToRevision(context, item.Result);
                 }
             }
         }

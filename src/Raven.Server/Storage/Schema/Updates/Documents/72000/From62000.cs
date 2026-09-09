@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Raven.Client.Documents.Attachments;
@@ -143,9 +143,10 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
                         foreach (var read in readTable.SeekByPrimaryKey(Slices.BeforeAllKeys, skip))
                         {
-                            using (TableValueReaderUtil.CloneTableValueReader(context, read))
+                            var readCopy = read; // CloneTableValueReader writes the copy back through the parameter
+                            using (TableValueReaderUtil.CloneTableValueReader(context, ref readCopy))
                             {
-                                Attachment attachmentOld = TableValueToAttachmentOld(context, streamsTree, ref read.Reader, out var scope);
+                                Attachment attachmentOld = TableValueToAttachmentOld(context, streamsTree, read, out var scope);
 
                                 using (scope)
                                 using (AttachmentOldToTableValue(context, writeTable, attachmentOld, out var tvb, out var pkSlice))
@@ -247,20 +248,20 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             return info->TotalSize;
         }
 
-        private unsafe Attachment TableValueToAttachmentOld(DocumentsOperationContext context, Tree tree, ref TableValueReader tvr, out ByteStringContext<ByteStringMemoryCache>.InternalScope scope)
+        private unsafe Attachment TableValueToAttachmentOld(DocumentsOperationContext context, Tree tree, in TableValueReader tvr, out ByteStringContext<ByteStringMemoryCache>.InternalScope scope)
         {
             var result = new Attachment
             {
                 StorageId = tvr.Id,
-                Key = DocumentsStorage.TableValueToString(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType, ref tvr),
-                Etag = DocumentsStorage.TableValueToEtag((int)AttachmentsTable.Etag, ref tvr),
-                ChangeVector = DocumentsStorage.TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref tvr),
-                Name = DocumentsStorage.TableValueToId(context, (int)AttachmentsTable.Name, ref tvr),
-                ContentType = DocumentsStorage.TableValueToId(context, (int)AttachmentsTable.ContentType, ref tvr),
+                Key = DocumentsStorage.TableValueToString(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType, tvr),
+                Etag = DocumentsStorage.TableValueToEtag((int)AttachmentsTable.Etag, tvr),
+                ChangeVector = DocumentsStorage.TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, tvr),
+                Name = DocumentsStorage.TableValueToId(context, (int)AttachmentsTable.Name, tvr),
+                ContentType = DocumentsStorage.TableValueToId(context, (int)AttachmentsTable.ContentType, tvr),
                 TransactionMarker = *(short*)tvr.Read((int)AttachmentsTable.TransactionMarker, out int _)
             };
 
-            scope = DocumentsStorage.TableValueToSlice(context, (int)AttachmentsTable.Hash, ref tvr, out result.Base64Hash);
+            scope = DocumentsStorage.TableValueToSlice(context, (int)AttachmentsTable.Hash, tvr, out result.Base64Hash);
 
             result.Size = GetAttachmentStreamLength(tree, result.Base64Hash);
 
@@ -268,7 +269,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
         }
 
         [StorageIndexEntryKeyGenerator]
-        internal static unsafe ByteStringContext.Scope GenerateFlagAndHashForAttachments(Transaction tx, ref TableValueReader tvr, out Slice slice)
+        internal static unsafe ByteStringContext.Scope GenerateFlagAndHashForAttachments(Transaction tx, in TableValueReader tvr, out Slice slice)
         {
             var hashPtr = tvr.Read((int)AttachmentsTable.Hash, out var hashSize);
 

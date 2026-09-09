@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -190,7 +190,7 @@ namespace Raven.Server.NotificationCenter
 
             foreach (var tvr in table.SeekForwardFrom(Documents.Schemas.Notifications.Current.Indexes[Documents.Schemas.Notifications.ByCreatedAt], Slices.BeforeAllKeys, 0))
             {
-                yield return Read(context, ref tvr.Result.Reader);
+                yield return Read(context, tvr.Result);
             }
         }
 
@@ -209,7 +209,7 @@ namespace Raven.Server.NotificationCenter
             {
                 foreach (var tvr in table.SeekForwardFrom(Documents.Schemas.Notifications.Current.Indexes[Documents.Schemas.Notifications.ByType], typeSlice, 0))
                 {
-                    var notification = Read(context, ref tvr.Result.Reader);
+                    var notification = Read(context, tvr.Result);
                     
                     if (notification.Type != notificationTypeSwapped)
                         break;
@@ -242,7 +242,7 @@ namespace Raven.Server.NotificationCenter
 
             foreach (var tvr in table.SeekForwardFrom(Documents.Schemas.Notifications.Current.Indexes[Documents.Schemas.Notifications.ByPostponedUntil], Slices.BeforeAllKeys, 0))
             {
-                var action = Read(context, ref tvr.Result.Reader);
+                var action = Read(context, tvr.Result);
 
                 if (action.PostponedUntil == null)
                 {
@@ -289,7 +289,7 @@ namespace Raven.Server.NotificationCenter
             {
                 foreach (var notification in table.SeekByPrimaryKeyPrefix(prefixSlice, prefixSlice, skip: 0))
                 {
-                    yield return Read(context, ref notification.Value.Reader);
+                    yield return Read(context, notification.Value);
                 }
             }
         }
@@ -365,7 +365,7 @@ namespace Raven.Server.NotificationCenter
             return count;
         }
 
-        private NotificationTableValue Read(JsonOperationContext context, ref TableValueReader reader)
+        private NotificationTableValue Read(JsonOperationContext context, in TableValueReader reader)
         {
             var createdAt = new DateTime(Bits.SwapBytes(*(long*)reader.Read(Documents.Schemas.Notifications.NotificationsTable.CreatedAtIndex, out _)));
 

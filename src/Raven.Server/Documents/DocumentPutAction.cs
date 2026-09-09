@@ -169,7 +169,7 @@ namespace Raven.Server.Documents
                     // "" / empty - means, must be new
                     // anything else - must match exactly
 
-                    oldChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref oldValue);
+                    oldChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, oldValue);
 
                     if (expectedChangeVector != null && ChangeVector.CompareVersion(oldChangeVector, expectedChangeVector, context) != 0)
                         ThrowConcurrentException(id, expectedChangeVector, oldChangeVector);
@@ -184,7 +184,7 @@ namespace Raven.Server.Documents
                     if (oldCollectionName != collectionName)
                         ThrowInvalidCollectionNameChange(id, oldCollectionName, collectionName);
 
-                    var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, ref oldValue);
+                    var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, oldValue);
 
                     newFlags = _documentsStorage.GetFlagsFromOldDocumentForPut(newFlags, oldFlags, nonPersistentFlags);
                     
@@ -227,8 +227,8 @@ namespace Raven.Server.Documents
                     {
                         if (_documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, newFlags, oldDoc, oldChangeVector, collectionName))
                         {
-                            var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, ref oldValue);
-                            var oldTicks = TableValueToDateTime((int)DocumentsTable.LastModified, ref oldValue);
+                            var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, oldValue);
+                            var oldTicks = TableValueToDateTime((int)DocumentsTable.LastModified, oldValue);
 
                             _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, oldDoc, oldFlags | DocumentFlags.HasRevisions | DocumentFlags.FromOldDocumentRevision, NonPersistentDocumentFlags.None,
                                 oldChangeVector, oldTicks.Ticks, configuration, collectionName);
@@ -765,10 +765,10 @@ namespace Raven.Server.Documents
                 if (IsTombstoneOfId(tombstoneKey, id) == false)
                     return null;
 
-                if (tombstoneTable.IsOwned(tvh.Reader.Id))
+                if (tombstoneTable.IsOwned(tvh.Id))
                 {
-                    var changeVector = TableValueToChangeVector(context, (int)Tombstones.TombstoneTable.ChangeVector, ref tvh.Reader);
-                    tombstoneTable.Delete(tvh.Reader.Id);
+                    var changeVector = TableValueToChangeVector(context, (int)Tombstones.TombstoneTable.ChangeVector, tvh);
+                    tombstoneTable.Delete(tvh.Id);
                     return changeVector;
                 }
             }

@@ -1,4 +1,4 @@
-﻿using Sparrow.Server;
+using Sparrow.Server;
 using Voron.Data.Tables;
 
 namespace Voron.Benchmark.Table
@@ -214,12 +214,12 @@ namespace Voron.Benchmark.Table
 
                         foreach (var reader in table.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
                         {
-                            for (var f = 0; f < reader.Reader.Count; f++)
+                            for (var f = 0; f < reader.Count; f++)
                             {
                                 unsafe
                                 {
                                     int size;
-                                    reader.Reader.Read(f, out size);
+                                    reader.Read(f, out size);
                                 }
                             }
                         }
@@ -251,12 +251,12 @@ namespace Voron.Benchmark.Table
 
                         foreach (var reader in table.SeekByPrimaryKey(_sortedKeysPerThread[currentThreadIndex][0], 0))
                         {
-                            for (var f = 0; f < reader.Reader.Count; f++)
+                            for (var f = 0; f < reader.Count; f++)
                             {
                                 unsafe
                                 {
                                     int size;
-                                    reader.Reader.Read(f, out size);
+                                    reader.Read(f, out size);
                                 }
                             }
                         }

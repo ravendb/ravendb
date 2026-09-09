@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Revisions;
@@ -209,7 +209,7 @@ namespace SlowTests.Issues
         private static void AssertSeekBackwardForFixedSizeTrees(Table table, FixedSizeKeyIndexDef voronIndex, long endEtag, bool empty, long? expectedEtag = null)
         {
             var tvhs = table.SeekBackwardFrom(voronIndex, endEtag);
-            var keys = tvhs.Select(tvh => DocumentsStorage.TableValueToEtag((int)TestTable.KeyEtag, ref tvh.Reader)).ToList();
+            var keys = tvhs.Select(tvh => DocumentsStorage.TableValueToEtag((int)TestTable.KeyEtag, tvh)).ToList();
 
             if (empty)
             {
@@ -255,9 +255,9 @@ namespace SlowTests.Issues
                     Assert.NotEmpty(seekResults);
                     using var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None);
 
-                    var tvr = seekResults[0].Result.Reader;
+                    var tvr = seekResults[0].Result;
 
-                    var lastLocalEtag = DocumentsStorage.TableValueToEtag((int)TestTable.Etag, ref tvr);
+                    var lastLocalEtag = DocumentsStorage.TableValueToEtag((int)TestTable.Etag, tvr);
 
                     if (expectedEtag.HasValue)
                     {
@@ -271,7 +271,7 @@ namespace SlowTests.Issues
                         Assert.True(endEtag >= lastLocalEtag, $"endEtag {endEtag}, lastLocalEtag: {lastLocalEtag}");
 
 
-                    var lastLocalId = DocumentsStorage.TableValueToString(ctx, (int)TestTable.LowerId, ref tvr);
+                    var lastLocalId = DocumentsStorage.TableValueToString(ctx, (int)TestTable.LowerId, tvr);
                     Assert.Equal(id, lastLocalId);
 
                 }
@@ -296,15 +296,15 @@ namespace SlowTests.Issues
                     Assert.NotEmpty(seekResults);
                     using var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None);
 
-                    var tvr = seekResults[0].Result.Reader;
+                    var tvr = seekResults[0].Result;
 
                     if (expectedEtag.HasValue)
                     {
-                        var lastLocalEtag = DocumentsStorage.TableValueToEtag((int)TestTable.Etag, ref tvr);
+                        var lastLocalEtag = DocumentsStorage.TableValueToEtag((int)TestTable.Etag, tvr);
                         Assert.Equal(expectedEtag.Value, lastLocalEtag);
                     }
 
-                    string lastLocalId = DocumentsStorage.TableValueToString(ctx, (int)TestTable.LowerId, ref tvr).ToString();
+                    string lastLocalId = DocumentsStorage.TableValueToString(ctx, (int)TestTable.LowerId, tvr).ToString();
                     Assert.Equal(id, lastLocalId);
                 }
             }

@@ -182,7 +182,7 @@ public unsafe class TaskErrorsStorage
         }
     }
 
-    private static TaskProcessErrorTableValue ReadProcessError(ref TableValueReader reader, string taskName)
+    private static TaskProcessErrorTableValue ReadProcessError(in TableValueReader reader, string taskName)
     {
         var createdAt = new DateTime(Bits.SwapBytes(*(long*)reader.Read(Schemas.TaskProcessErrors.TaskProcessErrorsTable.CreatedAtIndex, out _)));
         var affectedDocumentsCount = Bits.SwapBytes(*(long*)reader.Read(Schemas.TaskProcessErrors.TaskProcessErrorsTable.AffectedDocumentsCountIndex, out _));
@@ -199,7 +199,7 @@ public unsafe class TaskErrorsStorage
         };
     }
 
-    private static TaskItemErrorTableValue ReadItemError(ref TableValueReader reader, string taskName)
+    private static TaskItemErrorTableValue ReadItemError(in TableValueReader reader, string taskName)
     {
         var createdAt = new DateTime(Bits.SwapBytes(*(long*)reader.Read(Schemas.TaskItemErrors.TaskItemErrorsTable.CreatedAtIndex, out _)));
         var documentId = reader.ReadString(Schemas.TaskItemErrors.TaskItemErrorsTable.DocumentIdIndex);
@@ -379,7 +379,7 @@ public unsafe class TaskErrorsStorage
 
         foreach (var tvh in table.SeekForwardFrom(Schemas.TaskProcessErrors.Current.Indexes[Schemas.TaskProcessErrors.ByCreatedAt], Slices.BeforeAllKeys, 0))
         {
-            var error = ReadProcessError(ref tvh.Result.Reader, taskName);
+            var error = ReadProcessError(tvh.Result, taskName);
 
             yield return error;
         }
@@ -393,7 +393,7 @@ public unsafe class TaskErrorsStorage
 
         foreach (var tvh in table.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
         {
-            var error = ReadItemError(ref tvh.Reader, taskName);
+            var error = ReadItemError(tvh, taskName);
 
             yield return error;
         }

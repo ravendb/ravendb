@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using JetBrains.Annotations;
@@ -72,7 +72,7 @@ public abstract class AbstractCompareExchangeStorage
         {
             foreach (var tvr in table.SeekForwardFromPrefix(ClusterStateMachine.CompareExchangeTombstoneSchema.Indexes[ClusterStateMachine.CompareExchangeTombstoneIndex], keySlice, prefix, 0))
             {
-                var index = ClusterStateMachine.ReadCompareExchangeOrTombstoneIndex(tvr.Result.Reader);
+                var index = ClusterStateMachine.ReadCompareExchangeOrTombstoneIndex(tvr.Result);
                 if (index <= end)
                     return true;
 
@@ -156,9 +156,9 @@ public abstract class AbstractCompareExchangeStorage
             foreach (var item in items.SeekByPrimaryKeyPrefix(keySlice, Slices.Empty, start))
             {
                 pageSize--;
-                var key = ClusterStateMachine.ReadCompareExchangeKey(context, item.Value.Reader, _databaseName);
-                var index = ClusterStateMachine.ReadCompareExchangeOrTombstoneIndex(item.Value.Reader);
-                var value = ClusterStateMachine.ReadCompareExchangeValue(context, item.Value.Reader);
+                var key = ClusterStateMachine.ReadCompareExchangeKey(context, item.Value, _databaseName);
+                var index = ClusterStateMachine.ReadCompareExchangeOrTombstoneIndex(item.Value);
+                var value = ClusterStateMachine.ReadCompareExchangeValue(context, item.Value);
                 yield return (key, index, value);
 
                 if (pageSize == 0)

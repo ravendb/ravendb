@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -2426,7 +2426,7 @@ namespace Raven.Server.Rachis
             var reversedEntryIndex = Bits.SwapBytes(index);
             using (Slice.External(context.Transaction.InnerTransaction.Allocator, (byte*)&reversedEntryIndex, sizeof(long), out Slice key))
             {
-                table.DeleteByPrimaryKey(key, _ => true);
+                table.DeleteByPrimaryKey(key, (in TableValueReader _) => true);
             }
         }
 

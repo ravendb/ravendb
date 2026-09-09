@@ -79,7 +79,7 @@ namespace SlowTests.Server.Documents.Revisions
                     {
                         foreach (var sr in table.SeekByPrimaryKeyPrefix(Slices.BeforeAllKeys, Slices.Empty, 0))
                         {
-                            var tvr = sr.Value.Reader;
+                            var tvr = sr.Value;
                             byte* keyPtr = tvr.Read((int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType, out int keySize);
                             if (IsRevisionAttachmentKey(keyPtr, keySize) == false)
                                 continue;
@@ -173,7 +173,7 @@ namespace SlowTests.Server.Documents.Revisions
                     {
                         foreach (var sr in table.SeekByPrimaryKeyPrefix(Slices.BeforeAllKeys, Slices.Empty, 0))
                         {
-                            var tvr = sr.Value.Reader;
+                            var tvr = sr.Value;
                             byte* keyPtr = tvr.Read((int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType, out int keySize);
                             if (IsRevisionAttachmentKey(keyPtr, keySize) == false)
                                 continue;
