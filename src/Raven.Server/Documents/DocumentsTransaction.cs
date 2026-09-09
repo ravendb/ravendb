@@ -57,10 +57,14 @@ namespace Raven.Server.Documents
 
         private struct CollectionTables
         {
+            public CollectionName Collection;
             public Voron.Data.Tables.Table Documents;
             public Voron.Data.Tables.Table CompressedDocuments;
             public Voron.Data.Tables.Table Tombstones;
         }
+
+
+        internal List<CollectionName> CollectionsTouched;
 
         private CollectionTables[] GrowCollectionTables(int index)
         {
@@ -96,7 +100,14 @@ namespace Raven.Server.Documents
             if (tables == null || (uint)index >= (uint)tables.Length)
                 tables = GrowCollectionTables(index);
 
-            return ref tables[index];
+            ref CollectionTables entry = ref tables[index];
+            if (entry.Collection == null)
+            {
+                entry.Collection = collection;
+                (CollectionsTouched ??= []).Add(collection);
+            }
+
+            return ref entry;
         }
 
         public DocumentsTransaction(DocumentsOperationContext context, Transaction transaction, DocumentsChanges changes)

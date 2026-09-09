@@ -38,13 +38,24 @@ namespace Raven.Server.ServerWide.Context
         public long RevisionsCount;
         public long LastEtag;
 
-        public sealed class CollectionCache
+        public struct CollectionCache 
         {
             public long LastDocumentEtag;
             public long LastTombstoneEtag;
-            public string LastChangeVector;
         }
 
-        public readonly Dictionary<string, CollectionCache> LastEtagsByCollection = new(StringComparer.OrdinalIgnoreCase);
+        public CollectionCache[] EtagsByCollectionIndex = []; // indexed using CollectionName.Index
+
+        public bool TryGetCollectionEtags(string collection, out CollectionCache etags)
+        {
+            if (Collections?.TryGetValue(collection, out var collectionName) is true)
+            {
+                etags = EtagsByCollectionIndex[collectionName.Index];
+                return true;
+            }
+
+            etags = default;
+            return false;
+        }
     }
 }
