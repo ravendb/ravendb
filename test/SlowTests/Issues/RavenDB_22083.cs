@@ -145,5 +145,55 @@ namespace SlowTests.Issues
 
             Assert.Contains("must start its enumeration from the 'n' parameter", e.InnerException.Message);
         }
+
+        private class IndexWithOrderedReduce : AbstractIndexCreationTask<Candle, AggregateCandle>
+        {
+            public IndexWithOrderedReduce()
+            {
+                Map = candles => from candle in candles
+                    select new AggregateCandle
+                    {
+                        Ref = $"{candle.Time / 60000}",
+                        Volume = candle.Volume,
+                        Timeframe = "1m"
+                    };
+
+                Reduce = results => results
+                    .GroupBy(x => new { x.Timeframe, x.Ref })
+                    .Select(g => new AggregateCandle
+                    {
+                        Ref = g.Key.Ref,
+                        Volume = g.Sum(x => x.Volume),
+                        Timeframe = g.Key.Timeframe
+                    })
+                    .OrderBy(x => x.Ref);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Indexes)]
+        public void Index_With_Ordered_Reduce_Deploys_And_Indexes()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.ExecuteIndex(new IndexWithOrderedReduce());
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Candle { Volume = 1, Time = 60000 });
+                    session.Store(new Candle { Volume = 2, Time = 60000 });
+                    session.SaveChanges();
+                }
+
+                Indexes.WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<AggregateCandle, IndexWithOrderedReduce>().ToList();
+
+                    Assert.Equal(1, results.Count);
+                    Assert.Equal(3, results[0].Volume);
+                }
+            }
+        }
     }
 }

@@ -60,19 +60,16 @@ namespace Raven.Client.Documents.Indexes
 
         private static string FormatLinqQuery(LambdaExpression expr, string querySource, string linqQuery)
         {
-            var querySourceName = expr.Parameters.First().Name;
+            var querySourceParameter = expr.Parameters.First();
+            var querySourceName = querySourceParameter.Name;
+
+            ThrowIfEnumerationDoesNotStartFromQuerySource(expr, querySourceParameter, linqQuery);
 
             var querySourceMatch = Regex.Match(linqQuery, $@"\b{Regex.Escape(querySourceName)}\b");
             if (querySourceMatch.Success == false)
                 throw new InvalidOperationException("Cannot understand how to parse the query");
 
             var indexOfQuerySource = querySourceMatch.Index;
-
-            if (indexOfQuerySource != 0)
-                throw new IndexCompilationException(
-                    $"An index function must start its enumeration from the '{querySourceName}' parameter, e.g. 'from item in {querySourceName}'. " +
-                    $"The outer-most clause of the given expression enumerates over a different source, which cannot be compiled into an index. " +
-                    $"Generated code: {linqQuery}");
 
             linqQuery = linqQuery.Substring(0, indexOfQuerySource) + querySource +
                         linqQuery.Substring(indexOfQuerySource + querySourceName.Length);
@@ -85,6 +82,39 @@ namespace Raven.Client.Documents.Indexes
 
             linqQuery = JSBeautify.Apply(linqQuery);
             return linqQuery;
+        }
+
+        private static void ThrowIfEnumerationDoesNotStartFromQuerySource(LambdaExpression expr, ParameterExpression querySourceParameter, string linqQuery)
+        {
+            var body = StripConvert(expr.Body);
+            if (body is MethodCallExpression == false)
+                return;
+
+            var root = body;
+            while (root is MethodCallExpression call)
+            {
+                var source = call.Object ?? call.Arguments.FirstOrDefault();
+                if (source == null)
+                    break;
+
+                root = StripConvert(source);
+            }
+
+            if (root is ParameterExpression parameter && ReferenceEquals(parameter, querySourceParameter))
+                return;
+
+            throw new IndexCompilationException(
+                $"An index function must start its enumeration from the '{querySourceParameter.Name}' parameter, e.g. 'from item in {querySourceParameter.Name}'. " +
+                $"The outer-most clause of the given expression enumerates over a different source, which cannot be compiled into an index. " +
+                $"Generated code: {linqQuery}");
+        }
+
+        private static Expression StripConvert(Expression expression)
+        {
+            while (expression.NodeType == ExpressionType.Convert || expression.NodeType == ExpressionType.ConvertChecked)
+                expression = ((UnaryExpression)expression).Operand;
+
+            return expression;
         }
 
         private static MethodCallExpression GetFirstMethodCallExpression(Expression expression)
