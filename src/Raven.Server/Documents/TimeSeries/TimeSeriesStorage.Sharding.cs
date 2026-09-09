@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.TimeSeries
         {
             var table = context.TimesSeriesTable(this);
 
-            foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, TimeSeriesSchema.DynamicKeyIndexes[TimeSeriesBucketAndEtagSlice], bucket, etag))
+            foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, Schemas.TimeSeries.TimeSeriesBucketAndEtagIndex, bucket, etag))
             {
                 yield return CreateTimeSeriesSegmentItem(context, result.Result, includeDocumentChangeVector);
             }
@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.TimeSeries
         {
             var table = context.DeleteRangesTable(this);
 
-            foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, DeleteRangesSchema.DynamicKeyIndexes[DeletedRangesBucketAndEtagSlice], bucket, etag))
+            foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, Schemas.DeletedRanges.DeletedRangesBucketAndEtagIndex, bucket, etag))
             {
                 yield return CreateDeletedRangeItem(context, result.Result);
             }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -1330,7 +1330,7 @@ namespace Voron.Recovery
                 TimeSeriesSegmentEntry item;
                 try
                 {
-                    item = TimeSeriesStorage.CreateTimeSeriesItem(context, ref tvr);
+                    item = TimeSeriesStorage.CreateTimeSeriesItem(context, tvr);
                     if (item == null)
                     {
                         if (_logger.IsErrorEnabled)
@@ -1420,7 +1420,7 @@ namespace Voron.Recovery
                 CounterGroupDetail counterGroup = null;
                 try
                 {
-                    counterGroup = CountersStorage.TableValueToCounterGroupDetail(context, ref tvr);
+                    counterGroup = CountersStorage.TableValueToCounterGroupDetail(context, tvr);
                     if (counterGroup == null)
                     {
                         if (_logger.IsErrorEnabled)
@@ -1454,7 +1454,7 @@ namespace Voron.Recovery
                 {
                     if (_logger.IsInfoEnabled)
                     {
-                        using (var key = DocumentsStorage.TableValueToString(context, (int)CountersTable.CounterKey, ref tvr))
+                        using (var key = DocumentsStorage.TableValueToString(context, (int)CountersTable.CounterKey, tvr))
                         {
                             _logger.Info(
                                 $"Found counter-group item (key = '{key}') with counter-data document that is missing '{CountersStorage.Values}' property.");
@@ -1498,7 +1498,7 @@ namespace Voron.Recovery
                 Document document = null;
                 try
                 {
-                    document = DocumentsStorage.ParseRawDataSectionDocumentWithValidation(context, ref tvr, sizeInBytes);
+                    document = DocumentsStorage.ParseRawDataSectionDocumentWithValidation(context, tvr, sizeInBytes);
                     if (document == null)
                     {
                         if (_logger.IsErrorEnabled)
@@ -1663,7 +1663,7 @@ namespace Voron.Recovery
             int index = tvr.Count > (int)RevisionsTable.FullChangeVector
                 ? (int)RevisionsTable.FullChangeVector
                 : (int)RevisionsTable.RevisionPk;
-            return DocumentsStorage.TableValueToChangeVector(index, ref tvr);
+            return DocumentsStorage.TableValueToChangeVector(index, tvr);
         }
 
         private static Document ParseRawDataSectionRevisionWithValidation(JsonOperationContext context, ref TableValueReader tvr, int expectedSize)
@@ -1677,12 +1677,12 @@ namespace Voron.Recovery
             var result = new Document
             {
                 StorageId = tvr.Id,
-                LowerId = DocumentsStorage.TableValueToString(context, (int)RevisionsTable.LowerId, ref tvr),
-                Id = DocumentsStorage.TableValueToId(context, (int)RevisionsTable.Id, ref tvr),
-                Etag = DocumentsStorage.TableValueToEtag((int)RevisionsTable.Etag, ref tvr),
+                LowerId = DocumentsStorage.TableValueToString(context, (int)RevisionsTable.LowerId, tvr),
+                Id = DocumentsStorage.TableValueToId(context, (int)RevisionsTable.Id, tvr),
+                Etag = DocumentsStorage.TableValueToEtag((int)RevisionsTable.Etag, tvr),
                 Data = new BlittableJsonReaderObject(ptr, size, context),
-                LastModified = DocumentsStorage.TableValueToDateTime((int)RevisionsTable.LastModified, ref tvr),
-                Flags = DocumentsStorage.TableValueToFlags((int)RevisionsTable.Flags, ref tvr),
+                LastModified = DocumentsStorage.TableValueToDateTime((int)RevisionsTable.LastModified, tvr),
+                Flags = DocumentsStorage.TableValueToFlags((int)RevisionsTable.Flags, tvr),
                 TransactionMarker = *(short*)tvr.Read((int)RevisionsTable.TransactionMarker, out size),
                 ChangeVector = ReadChangeVectorStringFromTvr(ref tvr)
             };
@@ -1706,7 +1706,7 @@ namespace Voron.Recovery
                 DocumentConflict conflict = null;
                 try
                 {
-                    conflict = ConflictsStorage.ParseRawDataSectionConflictWithValidation(context, ref tvr, sizeInBytes, out var changeVector);
+                    conflict = ConflictsStorage.ParseRawDataSectionConflictWithValidation(context, tvr, sizeInBytes, out var changeVector);
                     if (conflict == null)
                     {
                         if (_logger.IsErrorEnabled)

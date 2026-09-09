@@ -63,6 +63,15 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly TableSchema _errorsSchema = new TableSchema();
 
+        private static readonly TableSchema.IndexDef ErrorTimestampsIndex = new()
+        {
+            StartIndex = 0,
+            // there is just a single instance of this table
+            // but we need it to be local so we'll be able to compact it
+            IsGlobal = false,
+            Name = IndexSchema.ErrorTimestampsSlice
+        };
+
         private readonly Dictionary<string, CollectionName> _referencedCollections;
         
         private StorageEnvironment _environment;
@@ -108,14 +117,7 @@ namespace Raven.Server.Documents.Indexes
 
         private unsafe void CreateSchema(DocumentDatabase documentDatabase)
         {
-            _errorsSchema.DefineIndex(new TableSchema.IndexDef
-            {
-                StartIndex = 0,
-                // there is just a single instance of this table
-                // but we need it to be local so we'll be able to compact it
-                IsGlobal = false,
-                Name = IndexSchema.ErrorTimestampsSlice
-            });
+            _errorsSchema.DefineIndex(ErrorTimestampsIndex);
 
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenWriteTransaction())
@@ -334,7 +336,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 var table = tx.InnerTransaction.OpenTable(_errorsSchema, "Errors");
 
-                table.DeleteForwardFrom(_errorsSchema.Indexes[IndexSchema.ErrorTimestampsSlice], Slices.BeforeAllKeys, startsWith: false, numberOfEntriesToDelete: long.MaxValue);
+                table.DeleteForwardFrom(ErrorTimestampsIndex, Slices.BeforeAllKeys, startsWith: false, numberOfEntriesToDelete: long.MaxValue);
 
                 tx.Commit();
             }
@@ -349,7 +351,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 var table = tx.InnerTransaction.OpenTable(_errorsSchema, "Errors");
 
-                foreach (var tvr in table.SeekForwardFrom(_errorsSchema.Indexes[IndexSchema.ErrorTimestampsSlice], Slices.BeforeAllKeys, start))
+                foreach (var tvr in table.SeekForwardFrom(ErrorTimestampsIndex, Slices.BeforeAllKeys, start))
                 {
                     if (pageSize-- <= 0)
                         break;
@@ -393,7 +395,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 var table = tx.InnerTransaction.OpenTable(_errorsSchema, "Errors");
 
-                using (var it = table.GetTree(_errorsSchema.Indexes[IndexSchema.ErrorTimestampsSlice]).Iterate(false))
+                using (var it = table.GetTree(ErrorTimestampsIndex).Iterate(false))
                 {
                     if (it.Seek(Slices.AfterAllKeys) == false)
                         return null;
@@ -1077,7 +1079,7 @@ namespace Raven.Server.Documents.Indexes
                 return;
 
             var numberOfEntriesToDelete = table.NumberOfEntries - MaxNumberOfKeptErrors;
-            table.DeleteForwardFrom(_errorsSchema.Indexes[IndexSchema.ErrorTimestampsSlice], Slices.BeforeAllKeys, false, numberOfEntriesToDelete);
+            table.DeleteForwardFrom(ErrorTimestampsIndex, Slices.BeforeAllKeys, false, numberOfEntriesToDelete);
         }
 
         public static IndexType ReadIndexType(string name, StorageEnvironment environment)

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -292,7 +292,7 @@ public sealed class FollowerReadAndCommitSnapshotCommand : MergedTransactionComm
                             fixed (byte* pBuffer = reader.Buffer)
                             {
                                 tvr = new TableValueReader(pBuffer, size);
-                                table.Insert(ref tvr);
+                                table.Insert(tvr);
                             }
                         }
                     }

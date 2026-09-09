@@ -1,4 +1,4 @@
-﻿using Raven.Server.Documents.Sharding;
+using Raven.Server.Documents.Sharding;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
@@ -36,6 +36,8 @@ namespace Raven.Server.Documents.Schemas
         internal static readonly TableSchema.FixedSizeKeyIndexDef AllTombstonesEtagsIndex;
         internal static readonly TableSchema.FixedSizeKeyIndexDef DeletedEtagsIndex;
 
+        internal static readonly TableSchema.DynamicKeyIndexDef TombstonesBucketAndEtagIndex;
+
         static Tombstones()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
@@ -68,6 +70,14 @@ namespace Raven.Server.Documents.Schemas
                 Name = DeletedEtagsSlice,
                 IsGlobal = false
             };
+            TombstonesBucketAndEtagIndex = new TableSchema.DynamicKeyIndexDef
+            {
+                GenerateKey = ShardedDocumentsStorage.GenerateBucketAndEtagIndexKeyForTombstones,
+                OnEntryChanged = ShardedDocumentsStorage.UpdateBucketStatsForTombstones,
+                IsGlobal = true,
+                Name = TombstonesBucketAndEtagSlice
+            };
+
 
 
             DefineIndexesForTombstonesSchema(TombstonesSchemaBase);
@@ -91,13 +101,7 @@ namespace Raven.Server.Documents.Schemas
             {
                 DefineIndexesForTombstonesSchema(ShardingTombstonesSchema);
 
-                ShardingTombstonesSchema.DefineIndex(new TableSchema.DynamicKeyIndexDef
-                {
-                    GenerateKey = ShardedDocumentsStorage.GenerateBucketAndEtagIndexKeyForTombstones,
-                    OnEntryChanged = ShardedDocumentsStorage.UpdateBucketStatsForTombstones,
-                    IsGlobal = true,
-                    Name = TombstonesBucketAndEtagSlice
-                });
+                ShardingTombstonesSchema.DefineIndex(TombstonesBucketAndEtagIndex);
             }
         }
     }

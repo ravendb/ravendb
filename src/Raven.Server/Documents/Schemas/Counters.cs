@@ -1,4 +1,4 @@
-﻿using Sparrow.Server;
+using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
 
@@ -38,6 +38,8 @@ namespace Raven.Server.Documents.Schemas
         internal static readonly TableSchema.FixedSizeKeyIndexDef AllCountersEtagIndex;
         internal static readonly TableSchema.FixedSizeKeyIndexDef CollectionCountersEtagsIndex;
 
+        internal static readonly TableSchema.DynamicKeyIndexDef CountersBucketAndEtagIndex;
+
         static Counters()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
@@ -60,6 +62,14 @@ namespace Raven.Server.Documents.Schemas
                 StartIndex = (int)CountersTable.Etag,
                 Name = CollectionCountersEtagsSlice
             };
+            CountersBucketAndEtagIndex = new TableSchema.DynamicKeyIndexDef
+            {
+                GenerateKey = CountersStorage.GenerateBucketAndEtagIndexKeyForCounters,
+                OnEntryChanged = CountersStorage.UpdateBucketStatsForCounters,
+                IsGlobal = true,
+                Name = CountersBucketAndEtagSlice
+            };
+
 
 
             DefineIndexesForCountersSchema(CountersSchemaBase);
@@ -85,13 +95,7 @@ namespace Raven.Server.Documents.Schemas
             {
                 DefineIndexesForCountersSchema(ShardingCountersSchemaBase);
 
-                ShardingCountersSchemaBase.DefineIndex(new TableSchema.DynamicKeyIndexDef
-                {
-                    GenerateKey = CountersStorage.GenerateBucketAndEtagIndexKeyForCounters,
-                    OnEntryChanged = CountersStorage.UpdateBucketStatsForCounters,
-                    IsGlobal = true,
-                    Name = CountersBucketAndEtagSlice
-                });
+                ShardingCountersSchemaBase.DefineIndex(CountersBucketAndEtagIndex);
             }
         }
     }

@@ -32,6 +32,8 @@ namespace Raven.Server.Documents.TimeSeries
         public static readonly Slice TimeSeriesRollupTable;
         private static readonly Slice RollupKey;
         private static readonly Slice NextRollupIndex;
+
+        private static readonly TableSchema.IndexDef NextRollupIndexDef;
         private enum RollupColumns
         {
             // documentId/Name
@@ -70,6 +72,13 @@ namespace Raven.Server.Documents.TimeSeries
             }
 
             RollupSchema = new TableSchema();
+            NextRollupIndexDef = new TableSchema.IndexDef
+            {
+                StartIndex = (int)RollupColumns.NextRollup,
+                Count = 1,
+                Name = NextRollupIndex
+            };
+
             RollupSchema.DefineKey(new TableSchema.IndexDef
             {
                 StartIndex = (int)RollupColumns.Key,
@@ -77,12 +86,7 @@ namespace Raven.Server.Documents.TimeSeries
                 Name = RollupKey
             });
 
-            RollupSchema.DefineIndex(new TableSchema.IndexDef // this isn't fixed-size since we expect to have duplicates
-            {
-                StartIndex = (int)RollupColumns.NextRollup,
-                Count = 1,
-                Name = NextRollupIndex
-            });
+            RollupSchema.DefineIndex(NextRollupIndexDef);
         }
 
         private readonly RavenLogger _logger;
@@ -195,7 +199,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             using (DocumentsStorage.GetEtagAsSlice(context, start, out var startSlice))
             {
-                foreach (var item in table.SeekForwardFrom(RollupSchema.Indexes[NextRollupIndex], startSlice, 0))
+                foreach (var item in table.SeekForwardFrom(NextRollupIndexDef, startSlice, 0))
                 {
                     if (take <= 0)
                         return;
@@ -440,7 +444,7 @@ namespace Raven.Server.Documents.TimeSeries
                         continue;
                     }
 
-                    if (item.Etag != DocumentsStorage.TableValueToLong((int)RollupColumns.Etag, ref current))
+                    if (item.Etag != DocumentsStorage.TableValueToLong((int)RollupColumns.Etag, current))
                         continue; // concurrency check
 
                     try

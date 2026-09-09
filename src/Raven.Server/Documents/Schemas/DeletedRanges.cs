@@ -1,4 +1,4 @@
-﻿using Raven.Server.Documents.TimeSeries;
+using Raven.Server.Documents.TimeSeries;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
@@ -33,6 +33,8 @@ namespace Raven.Server.Documents.Schemas
         internal static readonly TableSchema.FixedSizeKeyIndexDef AllDeletedRangesEtagIndex;
         internal static readonly TableSchema.FixedSizeKeyIndexDef CollectionDeletedRangesEtagsIndex;
 
+        internal static readonly TableSchema.DynamicKeyIndexDef DeletedRangesBucketAndEtagIndex;
+
         static DeletedRanges()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
@@ -56,6 +58,14 @@ namespace Raven.Server.Documents.Schemas
                 StartIndex = (int)DeletedRangeTable.Etag,
                 Name = CollectionDeletedRangesEtagsSlice
             };
+            DeletedRangesBucketAndEtagIndex = new TableSchema.DynamicKeyIndexDef
+            {
+                GenerateKey = TimeSeriesStorage.GenerateBucketAndEtagIndexKeyForDeletedRanges,
+                OnEntryChanged = TimeSeriesStorage.UpdateBucketStatsForDeletedRanges,
+                IsGlobal = true,
+                Name = DeletedRangesBucketAndEtagSlice
+            };
+
 
 
             DefineIndexesForDeletedRangesSchema(DeleteRangesSchemaBase);
@@ -81,13 +91,7 @@ namespace Raven.Server.Documents.Schemas
             {
                 DefineIndexesForDeletedRangesSchema(ShardingDeleteRangesSchemaBase);
 
-                ShardingDeleteRangesSchemaBase.DefineIndex(new TableSchema.DynamicKeyIndexDef
-                {
-                    GenerateKey = TimeSeriesStorage.GenerateBucketAndEtagIndexKeyForDeletedRanges,
-                    OnEntryChanged = TimeSeriesStorage.UpdateBucketStatsForDeletedRanges,
-                    IsGlobal = true,
-                    Name = DeletedRangesBucketAndEtagSlice
-                });
+                ShardingDeleteRangesSchemaBase.DefineIndex(DeletedRangesBucketAndEtagIndex);
             }
         }
     }

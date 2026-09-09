@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Revisions
                     if (table.FindByIndex(Schemas.Revisions.AllRevisionsEtagsIndex, etag, out var tvr) == false)
                         return false;
                         
-                    using var doc = TableValueToRevision(context, ref tvr, DocumentFields.Data | DocumentFields.ChangeVector | DocumentFields.LowerId);
+                    using var doc = TableValueToRevision(context, tvr, DocumentFields.Data | DocumentFields.ChangeVector | DocumentFields.LowerId);
                     if (doc.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false
                         || metadata.TryGet(Constants.Documents.Metadata.Collection, out string collection) == false)
                         return false;
@@ -65,11 +65,11 @@ namespace Raven.Server.Documents.Revisions
                 using (GetKeyWithEtag(context, lowerId, etag: long.MaxValue, out var compoundPrefix))
                 {
                     var table = _parent.EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
-                    if (table.SeekOneBackwardFrom(_parent.RevisionsSchema.Indexes[Schemas.Revisions.IdAndEtagSlice], lowerIdPrefix, compoundPrefix,
+                    if (table.SeekOneBackwardFrom(Schemas.Revisions.IdAndEtagIndex, lowerIdPrefix, compoundPrefix,
                             out var reader) == false)
                         throw new InvalidOperationException($"Found no revision to delete for '{id}' in collection '{collectionName.Name}'.");
 
-                    var lastRevision = TableValueToRevision(context, ref reader, DocumentFields.ChangeVector | DocumentFields.LowerId);
+                    var lastRevision = TableValueToRevision(context, reader, DocumentFields.ChangeVector | DocumentFields.LowerId);
                     _parent.DeleteRevisionFromTable(context, table, new Dictionary<string, Table>(), lastRevision, collectionName, context.GetChangeVector(lastRevision.ChangeVector), _parent._database.Time.GetUtcNow().Ticks, lastRevision.Flags);
                     IncrementCountOfRevisions(context, lowerIdPrefix, -1);
                 }

@@ -17,7 +17,7 @@ namespace Raven.Server.Documents
         {
             var table = context.CountersTable(this);
 
-            foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, CountersSchema.DynamicKeyIndexes[CountersBucketAndEtagSlice], bucket, etag))
+            foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, Schemas.Counters.CountersBucketAndEtagIndex, bucket, etag))
             {
                 yield return CreateReplicationBatchItem(context, result.Result);
             }
@@ -27,7 +27,7 @@ namespace Raven.Server.Documents
         {
             var table = context.CountersTombstonesTable(this);
 
-            foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, CounterTombstonesSchema.DynamicKeyIndexes[CounterTombstonesBucketAndEtagSlice], bucket, etag))
+            foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, Schemas.CounterTombstones.CounterTombstonesBucketAndEtagIndex, bucket, etag))
             {
                 yield return TableValueToCounterTombstoneDetail(context, result.Result);
             }

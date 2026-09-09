@@ -158,7 +158,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             var bigEndBatchId = Bits.SwapBytes(BatchId.Value);
             using var _ = Slice.External(context.Allocator, (byte*)&bigEndBatchId, sizeof(long), out var batchIdSlice);
 
-            subscriptionStateTable.DeleteForwardFrom(ClusterStateMachine.SubscriptionStateSchema.Indexes[ClusterStateMachine.SubscriptionStateByBatchIdSlice],
+            subscriptionStateTable.DeleteForwardFrom(ClusterStateMachine.SubscriptionStateByBatchIdIndexDef,
                 batchIdSlice,
                 false, long.MaxValue, shouldAbort: (in TableValueReader tvh) =>
                 {

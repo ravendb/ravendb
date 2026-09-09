@@ -38,7 +38,7 @@ namespace Voron.Data.Tables
         private FixedSizeTree _inactiveSections;
         private FixedSizeTree _activeCandidateSection;
 
-        private Dictionary<Slice, Tree> _treesBySliceCache;
+        private Tree[] _resolvedIndexTrees;
         private Dictionary<Slice, Dictionary<Slice, FixedSizeTree>> _fixedSizeTreeCache;
 
         public readonly Slice Name;
@@ -139,8 +139,8 @@ namespace Voron.Data.Tables
             }
 #endif
             var tvr = new TableValueReader(data, size);
-            DeleteValueFromIndex(previousId, ref tvr);
-            InsertIndexValuesFor(newId, ref tvr);
+            DeleteValueFromIndex(previousId, tvr);
+            InsertIndexValuesFor(newId, tvr);
 
             if (compressed)
             {
@@ -409,7 +409,7 @@ namespace Voron.Data.Tables
                 {
                     var tvr = new TableValueReader(oldData, oldDataSize);
                     UpdateValuesFromIndex(id,
-                        ref tvr,
+                        tvr,
                         builder,
                         forceUpdate);
                     if (oldCompressed)
@@ -439,7 +439,7 @@ namespace Voron.Data.Tables
                     AssertNoReferenceToOldData(builder, pos, builder.Size);
 
                     var tvr = new TableValueReader(oldData, oldDataSize);
-                    UpdateValuesFromIndex(id, ref tvr, builder, forceUpdate);
+                    UpdateValuesFromIndex(id, tvr, builder, forceUpdate);
 
                     if (oldCompressed)
                     {
@@ -543,13 +543,13 @@ namespace Voron.Data.Tables
                     size = buffer.Length;
 
                     var tvr = new TableValueReader(ptr, size);
-                    DeleteValueFromIndex(id, ref tvr);
+                    DeleteValueFromIndex(id, tvr);
                 }
             }
             else
             {
                 var tvr = new TableValueReader(ptr, size);
-                DeleteValueFromIndex(id, ref tvr);
+                DeleteValueFromIndex(id, tvr);
             }
 
             DeleteInternal(id);
@@ -563,7 +563,7 @@ namespace Voron.Data.Tables
             AssertWritableTable();
 
             var tvr = new TableValueReader(ptr, size);
-            DeleteValueFromIndex(id, ref tvr);
+            DeleteValueFromIndex(id, tvr);
             if (compressed)
                 _tx.ForgetAbout(id);
             DeleteInternal(id);
@@ -716,7 +716,7 @@ namespace Voron.Data.Tables
             {
                 using (dynamicKeyIndexDef.GetValue(_tx, value, out Slice val))
                 {
-                    dynamicKeyIndexDef.OnIndexEntryChanged(_tx, val, oldValue: value, newValue: ref TableValueReaderUtils.EmptyReader);
+                    dynamicKeyIndexDef.OnIndexEntryChanged(_tx, val, oldValue: value, newValue: TableValueReaderUtils.EmptyReader);
 
                     var tree = GetTree(dynamicKeyIndexDef);
                     RemoveValueFromDynamicIndex(id, dynamicKeyIndexDef, tree, val);
@@ -784,7 +784,7 @@ namespace Voron.Data.Tables
             }
 
             var tvr = builder.CreateReader(pos);
-            InsertIndexValuesFor(id, ref tvr);
+            InsertIndexValuesFor(id, tvr);
 
             _stats.NumberOfEntries++;
 
@@ -1255,7 +1255,7 @@ namespace Voron.Data.Tables
                 {
                     using (dynamicKeyIndexDef.GetValue(_tx, value, out Slice dynamicKey))
                     {
-                        dynamicKeyIndexDef.OnIndexEntryChanged(_tx, dynamicKey, oldValue: ref TableValueReaderUtils.EmptyReader, newValue: value);
+                        dynamicKeyIndexDef.OnIndexEntryChanged(_tx, dynamicKey, oldValue: TableValueReaderUtils.EmptyReader, newValue: value);
                         
                         var dynamicIndex = GetTree(dynamicKeyIndexDef);
                         AddValueToDynamicIndex(id, dynamicKeyIndexDef, dynamicIndex, dynamicKey, TreeNodeFlags.Data | TreeNodeFlags.NewOnly);
@@ -1413,38 +1413,30 @@ namespace Voron.Data.Tables
             return false;
         }
 
-        internal Tree GetTree(Slice name, bool isIndexTree)
-        {
-            if (_treesBySliceCache != null && _treesBySliceCache.TryGetValue(name, out Tree tree))
-                return tree;
-
-            var treeHeader = (TreeRootHeader*)_tableTree.DirectRead(name);
-            if (treeHeader == null)
-                throw new VoronErrorException($"Cannot find tree {name} in table {Name}");
-
-            tree = Tree.Open(_tx.LowLevelTransaction, _tx, name, *treeHeader, isIndexTree: isIndexTree, newPageAllocator: TablePageAllocator);
-            
-            _treesBySliceCache ??= new Dictionary<Slice, Tree>(SliceStructComparer.Instance);
-            _treesBySliceCache[name] = tree;
-
-            return tree;
-        }
-
         internal Tree GetTree(AbstractTreeIndexDef idx)
         {
             DisposableExceptions.ThrowIfDisposedOnDebug(_tx);
-            
-            Tree tree;
+
+            // a global index lives in the transaction's root, where the transaction already caches it
             if (idx.IsGlobal)
+                return _tx.ReadTree(idx.Name, isIndexTree: true, newPageAllocator: GlobalPageAllocator);
+
+            Debug.Assert(idx.CachePosition >= 0, $"tree index {idx.Name} has no cache position - it never went through TableSchema.DefineIndex/DefineKey");
+
+            var trees = _resolvedIndexTrees ??= new Tree[_schema.TreeIndexCount];
+            ref Tree tree = ref trees[idx.CachePosition];
+            if (tree != null)
             {
-                tree = _tx.ReadTree(idx.Name, isIndexTree: true, newPageAllocator: GlobalPageAllocator);
-            }
-            else
-            {
-                tree = GetTree(idx.Name, true);
+                Debug.Assert(SliceComparer.Equals(tree.Name, idx.Name),
+                    $"index tree cache position {idx.CachePosition} holds '{tree.Name}' but was asked for '{idx.Name}' on table {Name}");
+                return tree;
             }
 
-            return tree;
+            var treeHeader = (TreeRootHeader*)_tableTree.DirectRead(idx.Name);
+            if (treeHeader == null)
+                throw new VoronErrorException($"Cannot find tree {idx.Name} in table {Name}");
+
+            return tree = Tree.Open(_tx.LowLevelTransaction, _tx, idx.Name, *treeHeader, isIndexTree: true, newPageAllocator: TablePageAllocator);
         }
 
         public bool DeleteByKey(Slice key)
@@ -2577,18 +2569,15 @@ namespace Voron.Data.Tables
 
             AssertValidIndexes();
 
-            if (_treesBySliceCache == null)
+            if (_resolvedIndexTrees == null)
                 return;
 
-            foreach (var item in _treesBySliceCache)
+            foreach (var tree in _resolvedIndexTrees)
             {
-                var tree = item.Value;
-                if (tree.HeaderModified is false)
+                if (tree == null || tree.HeaderModified is false)
                     continue;
 
-                var treeName = item.Key;
-
-                using (_tableTree.DirectAdd(treeName, sizeof(TreeRootHeader), out byte* ptr))
+                using (_tableTree.DirectAdd(tree.Name, sizeof(TreeRootHeader), out byte* ptr))
                 {
                     *(TreeRootHeader*)ptr = tree.ReadHeader();
                 }
