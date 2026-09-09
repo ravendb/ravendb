@@ -5,7 +5,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Indexes.Counters
@@ -111,18 +110,7 @@ namespace Raven.Client.Documents.Indexes.Counters
 
             var indexDefinition = builder.ToIndexDefinition(Conventions, validateMap: false);
 
-            try
-            {
-                foreach (var map in _maps.Select(generateMap => generateMap()))
-                {
-                    string formattedMap = map;
-                    indexDefinition.Maps.Add(formattedMap);
-                }
-            }
-            catch (Exception e)
-            {
-                throw new IndexCompilationException("Failed to create index " + IndexName, e);
-            }
+            IndexDefinitionHelper.AddMaps(indexDefinition.Maps, _maps, IndexName);
 
             return indexDefinition;
         }
