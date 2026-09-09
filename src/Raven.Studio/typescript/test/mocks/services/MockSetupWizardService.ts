@@ -38,9 +38,7 @@ export default class MockSetupWizardService extends AutoMockService<SetupWizardS
             };
 
             const config = licenseConfigs[license.Id];
-            return config
-                ? { ...baseInfo, LicenseStatus: { ...baseInfo.LicenseStatus, ...config } }
-                : baseInfo;
+            return config ? { ...baseInfo, LicenseStatus: { ...baseInfo.LicenseStatus, ...config } } : baseInfo;
         });
     }
 
