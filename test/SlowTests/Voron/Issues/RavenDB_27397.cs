@@ -358,25 +358,26 @@ public class RavenDB_27397 : StorageTest
 
         // a prepared file appears after the half-fill trigger fires, and every roll consumes it
         // again - so probe between small write batches, when no roll can take it away. The file
-        // shows up on disk before the zeroing finishes writing it (on Windows it is created empty
-        // and grows), so wait for it to reach full size, not merely to exist.
+        // shows up on disk while the zeroing is still writing it, and a roll can only consume it
+        // once it is registered in the reuse pool (which happens after the zeroing completes) -
+        // so wait for the registration, not for any on-disk size heuristic.
         var next = 0;
         string prepared = null;
         Assert.True(SpinWait.SpinUntil(() =>
         {
-            var pool = GetRecyclableJournalFiles();
-            if (pool.Length > 0)
+            if (Env.Options.GetNumberOfJournalsForReuse() > 0)
             {
-                prepared = pool[0];
-                return new FileInfo(prepared).Length >= 128 * 1024;
+                // freeze the pool: no further preparation may add a second file between here and
+                // the roll, so the roll below has exactly one candidate to consume
+                Options.EnableJournalPoolPrewarming = false;
+                prepared = GetRecyclableJournalFiles().Single();
+                return true;
             }
 
             WriteItems(next, 2);
             next += 2;
             return false;
-        }, TimeSpan.FromSeconds(60)), prepared == null
-            ? "the half-fill trigger did not prepare a pool file"
-            : $"prepared file did not reach full size: {new FileInfo(prepared).Length}");
+        }, TimeSpan.FromSeconds(60)), "the half-fill trigger did not prepare a pool file");
 
         // fully written (zeroed), not sparse - the writes are what convert the extents
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
