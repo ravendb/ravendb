@@ -27,6 +27,7 @@ interface FeatureAvailabilitySummaryStoryArgs {
     community: FeatureAvailabilityValueData;
     professional: FeatureAvailabilityValueData;
     enterprise: FeatureAvailabilityValueData;
+    quill: FeatureAvailabilityValueData;
 }
 
 export const FeatureAvailabilitySummaryStory: StoryObj<FeatureAvailabilitySummaryStoryArgs> = {
@@ -51,6 +52,7 @@ export const FeatureAvailabilitySummaryStory: StoryObj<FeatureAvailabilitySummar
                             community: args.community,
                             professional: args.professional,
                             enterprise: args.enterprise,
+                            quill: args.quill,
                         },
                     ]}
                 />
@@ -66,6 +68,7 @@ export const FeatureAvailabilitySummaryStory: StoryObj<FeatureAvailabilitySummar
         community: { value: false },
         professional: { value: true },
         enterprise: { value: true },
+        quill: { value: true },
     },
     argTypes: {
         licenseType: licenseArgType,

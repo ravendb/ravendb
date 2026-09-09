@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.ServerSentEvents;
@@ -31,6 +32,7 @@ using Raven.Server.Documents.SchemaValidation.ErrorMessage;
 using Raven.Server.Json;
 using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Exceptions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
@@ -190,14 +192,7 @@ public class ChatCompletionClient : IDisposable
 
         await using var responseStream = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
         IToolCallState toolCallState = _settings.CreateToolCallState();
-        object message = null;
-        StringBuilder stringContent = structuredOutput ? null : new StringBuilder();
-        // OpenAI streams the refusal as delta.refusal text fragments to concatenate; Azure/Google derive a full
-        // message from finish_reason/content_filter_results per chunk. Keep them apart so a repeated (or two-part)
-        // provider message isn't concatenated into a garbled string.
-        var refusalFragments = new StringBuilder();
-        string providerRefusal = null;
-        string finishReason = null;
+        var result = new AiResultBuilder(parser);
 
         // need two contexts here because we run two parsing operations at once, first for each of the SSE events
         // and then for the internal buffer that there are providing.
@@ -239,50 +234,27 @@ public class ChatCompletionClient : IDisposable
             }
 
             var choice = (BlittableJsonReaderObject)choices[0];
-            var hasDelta = choice.TryGet(Constants.ResponseFields.Delta, out BlittableJsonReaderObject delta);
-            var refusalDelta = _settings.GetRefusal(choice, delta, streaming: true, out var refusalIsComplete);
-            if (string.IsNullOrEmpty(refusalDelta) == false)
-            {
-                if (refusalIsComplete)
-                    providerRefusal ??= refusalDelta; // set-once: a full provider message, may repeat across chunks
-                else
-                    refusalFragments.Append(refusalDelta); // OpenAI delta.refusal fragments
-            }
+            if (choice.TryGet(Constants.ResponseFields.FinishReason, out string chunkFinishReason))
+                result.RecordFinishReason(chunkFinishReason);
 
-            if (choice.TryGet(Constants.ResponseFields.FinishReason, out string fr) && string.IsNullOrEmpty(fr) == false)
-                finishReason ??= fr;
-
-            if (hasDelta)
+            if (choice.TryGet(Constants.ResponseFields.Delta, out BlittableJsonReaderObject delta))
             {
-                if (TryGetDeltaContent(delta, out LazyStringValue content))
+                var refusalDelta = _settings.GetRefusal(choice, delta, streaming: true, out var _);
+                if (string.IsNullOrEmpty(refusalDelta) == false)
+                {
+                    result.SetRefusal(streamingContext.GetLazyString(refusalDelta));
+                }
+                else if (delta.TryGet(Constants.ResponseFields.Content, out LazyStringValue content) && content?.Length > 0)
                 {
                     toolCallState.AddAndReset();
 
-                    if (structuredOutput)
-                    {
-                        var final = parser.Process(content);
-                        if (streamedPropertyBuffer.Length is not 0) // Length is the written data length (not the buffer real size)
-                        {
-                            // here we send all the data that wasn't sent so far to the client
-                            await streamedPropertyCallback(streamedPropertyBuffer.AsMemory());
-                            // reset the buffer length so we can overwrite the start of the buffer
-                            // and only retain in memory the parts we'll need to send next time
-                            streamedPropertyBuffer.Length = 0;
-                        }
-
-                        if (final is not null)
-                        {
-                            message = final;
-                        }
-                    }
-                    else
-                    {
-                        // For unstructured output, stream the raw text chunks directly
-                        stringContent.Append(content);
-                        streamedPropertyBuffer.Append(content.AsSpan());
-                        await streamedPropertyCallback(streamedPropertyBuffer.AsMemory());
-                        streamedPropertyBuffer.Length = 0;
-                    }
+                    if (result.AcceptContent(content))
+                        await StreamContentAsync(content);
+                }
+                else if (TryGetDeltaReasoning(delta, out LazyStringValue reasoning))
+                {
+                    toolCallState.AddAndReset();
+                    result.AcceptReasoning(reasoning);
                 }
 
                 if (delta.TryGet(Constants.ResponseFields.ToolCalls, out BlittableJsonReaderArray toolCalls))
@@ -294,13 +266,6 @@ public class ChatCompletionClient : IDisposable
                 }
             }
         }
-
-        // Surface a refusal before returning tool calls: a stream can carry partial tool-call deltas and then be cut
-        // by a content filter (e.g. Azure emits finish_reason=content_filter with truncated output). Returning here
-        // would hand the agent loop truncated tool-call JSON while silently dropping the refusal.
-        var refusal = string.IsNullOrEmpty(providerRefusal) ? refusalFragments.ToString() : providerRefusal;
-        if (string.IsNullOrEmpty(refusal) == false)
-            RefusedToAnswerException.Throw(refusal, message?.ToString(), finishReason, GetRequestId(response.Headers));
 
         // Some OpenAI-like APIs return an empty array instead of omitting the field when no tool calls are made
         if (toolCallState.TryGetToolCallsForMessage(out var allToolCalls))
@@ -317,29 +282,169 @@ public class ChatCompletionClient : IDisposable
             };
         }
 
-        if (structuredOutput == false)
-        {
-            var fullText = stringContent.ToString();
-            return new AiResponse(AiResponseType.Result)
-            {
-                Message = streamingContext.ReadObject(new DynamicJsonValue
-                {
-                    [Constants.ResponseFields.Role] = Constants.RequestFields.RoleAssistantValue,
-                    [Constants.ResponseFields.Content] = fullText,
-                }, "persisted/streamed/message"),
-                Result = fullText,
-            };
-        }
+        result.FinalizeOrThrow(streamingContext, response);
 
+        if (result.TryGetChunk(out var chunk))
+            await StreamContentAsync(streamingContext.GetLazyString(chunk));
+
+        var finalResult = result.GetResult();
         return new AiResponse(AiResponseType.Result)
         {
             Message = streamingContext.ReadObject(new DynamicJsonValue
             {
                 [Constants.ResponseFields.Role] = Constants.RequestFields.RoleAssistantValue,
-                [Constants.ResponseFields.Content] = message,
+                [Constants.ResponseFields.Content] = finalResult,
             }, "persisted/streamed/message"),
-            Result = message,
+            Result = finalResult,
         };
+
+        async Task StreamContentAsync(LazyStringValue content)
+        {
+            if (structuredOutput == false)
+                streamedPropertyBuffer.Append(content.AsSpan());
+
+            await FlushStreamedPropertyAsync();
+        }
+
+        async Task FlushStreamedPropertyAsync()
+        {
+            if (streamedPropertyBuffer.Length is not 0) // Length is the written data length (not the buffer real size)
+            {
+                await streamedPropertyCallback(streamedPropertyBuffer.AsMemory());
+                streamedPropertyBuffer.Length = 0;
+            }
+        }
+    }
+
+    private sealed class AiResultBuilder
+    {
+        private readonly SseStreamingJsonParser _parser;
+        private readonly StringBuilder _text;
+        private string _pendingChunk;
+        private StringBuilder _reasoningFallback;
+        private BlittableJsonReaderObject _message;
+        private string _finishReason;
+        private bool _sawContent;
+        private bool _refused;
+
+        public AiResultBuilder(SseStreamingJsonParser parser)
+        {
+            _parser = parser;
+            _text = parser == null ? new StringBuilder() : null;
+        }
+
+        public void RecordFinishReason(string finishReason)
+        {
+            if (finishReason != null)
+                _finishReason = finishReason;
+        }
+
+        public bool SetRefusal(LazyStringValue refusalDelta)
+        {
+            _refused = true;
+            return AcceptContent(refusalDelta);
+        }
+
+        public bool AcceptContent(LazyStringValue content)
+        {
+            _sawContent = true;
+            _reasoningFallback = null;
+
+            if (_parser == null)
+            {
+                _text.Append(content);
+                return true;
+            }
+
+            if (_parser.TryProcess(content, out var final) == false)
+                return false;
+
+            if (final != null)
+                _message = final;
+
+            return true;
+        }
+
+        public void AcceptReasoning(LazyStringValue reasoning)
+        {
+            if (_sawContent == false)
+                (_reasoningFallback ??= new StringBuilder()).Append(reasoning);
+        }
+
+        public void FinalizeOrThrow(JsonOperationContext context, HttpResponseMessage response)
+        {
+            if (_refused)
+                RefusedToAnswerException.Throw(_message.ToString(), "[streaming]", _finishReason, GetRequestId(response.Headers));
+
+            if (_parser == null)
+            {
+                TryPromoteReasoningFallback(out _pendingChunk);
+                return;
+            }
+
+            if (string.Equals(_finishReason, Constants.ResponseFields.FinishReasonLength, StringComparison.OrdinalIgnoreCase))
+                throw new TooManyTokensException(
+                    $"The model response was truncated (finish_reason='length') before producing a complete structured answer.{GetReasoningPreview()}")
+                {
+                    RequestId = GetRequestId(response.Headers)
+                };
+
+            if (_message == null && _sawContent == false && _reasoningFallback is { Length: > 0 })
+            {
+                if (_parser.TryProcess(context.GetLazyString(_reasoningFallback.ToString()), out var final) && final != null)
+                {
+                    _message = final;
+                    _pendingChunk = string.Empty;
+                }
+            }
+
+            if (_message == null)
+            {
+                var problem = _sawContent
+                    ? _parser.IsInvalid
+                        ? "streamed content that is not valid JSON"
+                        : "streamed content that did not form a complete JSON object"
+                    : _reasoningFallback is { Length: > 0 }
+                        ? "streamed no content, and its reasoning is not the structured answer"
+                        : "streamed no content";
+                throw UnexpectedResponseException.Create(
+                    $"Structured output was requested but the model {problem} (finish_reason='{_finishReason}').{GetReasoningPreview()}",
+                    response, content: (string)null);
+            }
+        }
+
+        public bool TryGetChunk(out string chunk)
+        {
+            chunk = _pendingChunk;
+            return chunk != null;
+        }
+
+        public object GetResult() => _parser == null ? _text.ToString() : _message;
+
+        private bool TryPromoteReasoningFallback(out string reasoning)
+        {
+            if (_sawContent || _reasoningFallback is not { Length: > 0 })
+            {
+                reasoning = null;
+                return false;
+            }
+
+            reasoning = _reasoningFallback.ToString();
+            _text.Append(reasoning);
+            _reasoningFallback = null;
+            return true;
+        }
+
+        private string GetReasoningPreview()
+        {
+            if (_reasoningFallback is not { Length: > 0 })
+                return string.Empty;
+
+            const int maxLength = 500;
+            return _reasoningFallback.Length <= maxLength
+                ? $" Reasoning: {_reasoningFallback}"
+                : $" Reasoning: {_reasoningFallback.ToString(0, maxLength)}...";
+        }
     }
 
     private static bool TryGetDeltaContent(BlittableJsonReaderObject delta, out LazyStringValue content)
@@ -348,13 +453,18 @@ public class ChatCompletionClient : IDisposable
         if (delta.TryGet(Constants.ResponseFields.Content, out content) && content?.Length > 0)
             return true;
 
-        if (delta.TryGet(Constants.ResponseFields.ReasoningContent, out content) && content?.Length > 0)
+        return TryGetDeltaReasoning(delta, out content);
+    }
+
+    private static bool TryGetDeltaReasoning(BlittableJsonReaderObject delta, out LazyStringValue reasoning)
+    {
+        if (delta.TryGet(Constants.ResponseFields.ReasoningContent, out reasoning) && reasoning?.Length > 0)
             return true;
 
-        if (delta.TryGet(Constants.ResponseFields.Reasoning, out content) && content?.Length > 0)
+        if (delta.TryGet(Constants.ResponseFields.Reasoning, out reasoning) && reasoning?.Length > 0)
             return true;
 
-        content = null;
+        reasoning = null;
         return false;
     }
 
@@ -378,6 +488,31 @@ public class ChatCompletionClient : IDisposable
         return (r.Result.ToString(), r.Message.ToString());
     }
 
+    public async Task<bool> TestSupportsToolsAsync(CancellationToken token)
+    {
+        try
+        {
+            using var _ = _contextPool.AllocateOperationContext(out JsonOperationContext context);
+
+            var userMessage = context.ReadObject(new DynamicJsonValue
+            {
+                [Constants.RequestFields.Role] = Constants.RequestFields.RoleUserValue,
+                [Constants.RequestFields.Content] = "hi"
+            }, "probe/user");
+
+            var paramsSchema = GetSchemaForTool(schema: null, sampleObject: "{\"reason\":\"why the tool is being called\"}");
+            var tool = GetTool(context, "connection_test_probe", "A probe so the request matches an agent call. Do not call it.", paramsSchema);
+
+            var request = CreateCompletionRequest(context, messages: [userMessage], attachments: null, tools: [context.ReadObject(tool, "probe/tool")], useTools: true, streaming: false, schema: null);
+            await EnsureRequestAcceptedAsync(context, request, token);
+            return true;
+        }
+        catch (UnsuccessfulAiRequestException e) when (e.StatusCode == HttpStatusCode.BadRequest)
+        {
+            return false;
+        }
+    }
+
     private const string AcceptsImageInputProbePngBase64 =
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
 
@@ -395,14 +530,25 @@ public class ChatCompletionClient : IDisposable
                 [Constants.RequestFields.Content] = "describe the image"
             }, "probe/user");
 
-            var request = CreateCompletionRequest(context, messages: [userMessage], attachments: [attachment], tools: null, useTools: false, streaming: false, EmptySchema);
-            await CompleteAsync(context, request, new AiUsage(), schema: null, trace: null, token);
+            var request = CreateCompletionRequest(context, messages: [userMessage], attachments: [attachment], tools: null, useTools: false, streaming: false, schema: null);
+            await EnsureRequestAcceptedAsync(context, request, token);
             return true;
         }
         catch (Exception)
         {
             return false;
         }
+    }
+    
+    private async Task EnsureRequestAcceptedAsync(JsonOperationContext context, HttpRequestMessage request, CancellationToken token)
+    {
+        AddDefaultHeaders(request);
+        using var response = await SendRequestAsync(request, token);
+        if (response.IsSuccessStatusCode)
+            return;
+
+        var responseContent = await GetResponseContentAsync(context, response, token);
+        HandleUnsuccessfulResponse(response, responseContent);
     }
 
     public async Task<AiResponse> CompleteAsync(JsonOperationContext context, HttpRequestMessage request, AiUsage usage, string schema, AiDebugTrace trace, CancellationToken token)
@@ -491,20 +637,14 @@ public class ChatCompletionClient : IDisposable
 
         public object GetContent(JsonOperationContext context, bool structuredOutput)
         {
-            // Try content, then reasoning_content, then reasoning (for LM Studio and other OpenAI-like APIs that still use the older mechanism)
-            if (TryGetDeltaContent(Message, out var content) == false)
-            {
-                _choice0.TryGet(Constants.ResponseFields.FinishReason, out string finishReason);
-                var refusal = client.GetRefusal(_choice0, Message);
-                if (string.IsNullOrEmpty(refusal))
-                    throw UnexpectedResponseException.Create(message: "No response content", response, responseContent);
+            _choice0.TryGet(Constants.ResponseFields.FinishReason, out string finishReason);
+            var lengthTruncated = string.Equals(finishReason, Constants.ResponseFields.FinishReasonLength, StringComparison.OrdinalIgnoreCase);
 
-                RefusedToAnswerException.Throw(refusal, responseContent.ToString(), finishReason, GetRequestId(response.Headers));
-            }
+            var hasContent = Message.TryGet(Constants.ResponseFields.Content, out LazyStringValue content) && content?.Length > 0;
 
-            object result = structuredOutput
-                ? context.Sync.ReadForMemory(content, "ai/output")
-                : content.ToString();
+            var result = structuredOutput
+                ? GetStructuredContent(context, content, hasContent, finishReason, lengthTruncated)
+                : GetPlainTextContent(content, hasContent, finishReason, lengthTruncated);
 
             Message.Modifications ??= new DynamicJsonValue(Message);
             Message.Modifications[Constants.ResponseFields.Content] = result;
@@ -512,6 +652,57 @@ public class ChatCompletionClient : IDisposable
             return result;
         }
 
+        private object GetStructuredContent(JsonOperationContext context, LazyStringValue content, bool hasContent, string finishReason, bool lengthTruncated)
+        {
+            // a truncated response is incomplete even if its content is valid JSON
+            if (lengthTruncated)
+                throw Truncated();
+
+            // content -> reasoning_content -> reasoning: reasoning is only a fallback when no 'content' was
+            // produced at all (RavenDB-25681)
+            if (hasContent == false && TryGetDeltaReasoning(Message, out content) == false)
+                throw NoUsableAnswer(finishReason);
+
+            try
+            {
+                return context.Sync.ReadForMemory(content, "ai/output");
+            }
+            catch (Exception e) when (e is InvalidDataException or InvalidStartOfObjectException or EndOfStreamException)
+            {
+                throw UnexpectedResponseException.Create(
+                    $"Structured output was requested but the model returned content that is not valid JSON (finish_reason='{finishReason}'). Content: {content}",
+                    response, responseContent);
+            }
+        }
+
+        private object GetPlainTextContent(LazyStringValue content, bool hasContent, string finishReason, bool lengthTruncated)
+        {
+            if (hasContent == false)
+            {
+                if (lengthTruncated)
+                    throw Truncated();
+
+                if (TryGetDeltaContent(Message, out content) == false)
+                    throw NoUsableAnswer(finishReason);
+            }
+
+            return content.ToString();
+        }
+
+        private Exception NoUsableAnswer(string finishReason)
+        {
+            var refusal = client.GetRefusal(_choice0, Message);
+            if (string.IsNullOrEmpty(refusal) == false)
+                RefusedToAnswerException.Throw(refusal, responseContent.ToString(), finishReason, GetRequestId(response.Headers));
+
+            return UnexpectedResponseException.Create(message: "No response content", response, responseContent);
+        }
+
+        private TooManyTokensException Truncated() =>
+            new($"The model response was truncated (finish_reason='length') before producing a complete answer. Response content: {responseContent}")
+            {
+                RequestId = GetRequestId(response.Headers)
+            };
     }
 
     protected virtual Task<HttpResponseMessage> SendRequestAsync(HttpRequestMessage request, CancellationToken token) => _client.SendAsync(request, token);
@@ -599,7 +790,7 @@ public class ChatCompletionClient : IDisposable
         });
 
         // Optional
-        if (tools?.Count > 0)
+        if (tools?.Count > 0 && (useTools || _settings.SupportsToolChoiceNone))
         {
             writer.WriteComma();
             writer.WriteArray(Constants.RequestFields.Tools, tools);
@@ -1069,6 +1260,7 @@ public class ChatCompletionClient : IDisposable
             public const string ReasoningContent = "reasoning_content";
             public const string Reasoning = "reasoning";
             public const string FinishReason = "finish_reason";
+            public const string FinishReasonLength = "length";
             public const string ToolCalls = "tool_calls";
             public const string Refusal = "refusal";
             public const string Usage = "usage";

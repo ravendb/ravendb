@@ -19,7 +19,7 @@ public class RavenDB_25307 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CallingAddActionResponseFromHandle_ShouldThrow(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -51,7 +51,7 @@ public class RavenDB_25307 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task Handle_TaskOfTResult_DoesNotBindToObjectOverload(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
