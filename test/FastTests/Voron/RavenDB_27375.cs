@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System;
 using System.IO;
 using Sparrow.Platform;
@@ -74,7 +75,7 @@ namespace FastTests.Voron
 
             // NVMe-shaped: 8KB writes at 100us. Small writes, but no budgeted volume is this fast.
             for (var i = 0; i < 16; i++)
-                gate.RecordJournalWrite(TimeSpan.FromMicroseconds(100).Ticks, 8 * 1024);
+                gate.RecordJournalWrite(TimeSpan.FromMicroseconds(100).Ticks, 8 * 1024, Stopwatch.GetTimestamp());
             Assert.Equal(global::Voron.Impl.Journal.DeviceWriteBudget.DeviceClass.Fast, gate.MeasuredDeviceClass);
 
             // gp3-shaped: 12KB writes at 1.5ms. Small writes must NOT classify - a small write can be
@@ -83,12 +84,12 @@ namespace FastTests.Voron
                 syncCostThresholdTicks: TimeSpan.FromMilliseconds(100).Ticks, queueDepthThreshold: 5,
                 classifyAboveLatencyTicks: TimeSpan.FromMilliseconds(2).Ticks);
             for (var i = 0; i < 16; i++)
-                gp3.RecordJournalWrite(TimeSpan.FromMilliseconds(1.5).Ticks, 12 * 1024);
+                gp3.RecordJournalWrite(TimeSpan.FromMilliseconds(1.5).Ticks, 12 * 1024, Stopwatch.GetTimestamp());
             Assert.Equal(global::Voron.Impl.Journal.DeviceWriteBudget.DeviceClass.Unknown, gp3.MeasuredDeviceClass);
 
             // large writes above the size gate classify by the ordinary threshold: 9ms EWMA => Budgeted
             for (var i = 0; i < 16; i++)
-                gp3.RecordJournalWrite(TimeSpan.FromMilliseconds(9).Ticks, 512 * 1024);
+                gp3.RecordJournalWrite(TimeSpan.FromMilliseconds(9).Ticks, 512 * 1024, Stopwatch.GetTimestamp());
             Assert.Equal(global::Voron.Impl.Journal.DeviceWriteBudget.DeviceClass.Budgeted, gp3.MeasuredDeviceClass);
         }
     }

@@ -101,16 +101,16 @@ namespace Voron.Impl.Journal
         private long _lastJournalWriteActivityTimestamp;
         private readonly long _classifyAboveLatencyTicks;
 
-        public void RecordJournalWrite(long latencyTicks, long sizeInBytes)
+        public void RecordJournalWrite(long latencyTicks, long sizeInBytes, long time)
         {
-            Volatile.Write(ref _lastJournalWriteActivityTimestamp, Stopwatch.GetTimestamp());
+            Volatile.Write(ref _lastJournalWriteActivityTimestamp, time);
             _journalWriteLatencyTicks.Update(latencyTicks);
             _journalWriteSizeBytes.Update(sizeInBytes);
         }
 
-        public void RecordJournalWriteActivity()
+        public void RecordJournalWriteActivity(long time)
         {
-            Volatile.Write(ref _lastJournalWriteActivityTimestamp, Stopwatch.GetTimestamp());
+            Volatile.Write(ref _lastJournalWriteActivityTimestamp, time);
         }
 
         public bool JournalWriteRecentlyActive =>
