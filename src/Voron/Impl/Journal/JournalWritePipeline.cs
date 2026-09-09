@@ -82,6 +82,8 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
     {
         var write = RentWrite(file, posBy4Kb, (int)totalNumberOf4Kbs, transactions);
 
+        _env.WriteFlow.RecordJournalWriteSubmitted();
+
         file.AddRef();
 
         try

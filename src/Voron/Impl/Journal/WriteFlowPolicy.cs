@@ -144,12 +144,26 @@ public sealed class WriteFlowPolicy
 
     public void RecordJournalWrite(long latencyTicks, long sizeInBytes)
     {
+        var time = Stopwatch.GetTimestamp();
+        Volatile.Write(ref _lastJournalWriteActivityTimestamp, time);
         _writeLatencyTicks.Update(latencyTicks);
         _writeSizeBytes.Update(sizeInBytes);
-        Device.RecordJournalWrite(latencyTicks, sizeInBytes);
+        Device.RecordJournalWrite(latencyTicks, sizeInBytes, time);
     }
 
-    public void RecordJournalWriteSubmitted() => Device.RecordJournalWriteActivity();
+    public void RecordJournalWriteSubmitted()
+    {
+        var time = Stopwatch.GetTimestamp();
+        Volatile.Write(ref _lastJournalWriteActivityTimestamp, time);
+        Device.RecordJournalWriteActivity(time);
+    }
+
+    internal const int RecentJournalWriteWindowMs = 250;
+    private static readonly long RecentJournalWriteWindowTimestampTicks = RecentJournalWriteWindowMs * Stopwatch.Frequency / 1000;
+    private long _lastJournalWriteActivityTimestamp;
+
+    private bool JournalWriteRecentlyActive =>
+        Stopwatch.GetTimestamp() - Volatile.Read(ref _lastJournalWriteActivityTimestamp) < RecentJournalWriteWindowTimestampTicks;
 
     public void RecordBatchClosed(BatchCloseReason reason, int operations, long modifiedBytes)
     {
@@ -311,7 +325,8 @@ public sealed class WriteFlowPolicy
     // journal writes are what a user waits for, they have highest priority. 
     // We can't starve the flusher indefinitely either, and high backlog would inflate journal write latency.
     // This is the balance between the two, defer flushing when we can, but not too long to have I/O storm
-    public bool ShouldFlusherYieldToJournal(long unflushedPages) =>
+    public bool ShouldFlusherYieldToJournal(bool journalWriteActive, long unflushedPages) =>
+        (journalWriteActive || JournalWriteRecentlyActive) && // ensure that there are currently writes (or have been very recently), no sense to yield otherwise
         _writeLatencyTicks.Current >= _pipelineAboveLatencyTicks * 2 &&
         unflushedPages < 4 * _options.MaxNumberOfPagesInJournalBeforeFlush;
 

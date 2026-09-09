@@ -67,7 +67,15 @@ namespace Voron
 
                     if (_flushWriterEvent.Wait(5000) == false)
                     {
-                        if (_envsToSync.Count == 0)
+                        if (_maybeNeedToFlush.IsEmpty == false)
+                        {
+                            // we have pending flush requests, but no activity has occurred for a while
+                            // can happen if we yield to other operations and no new flush requests come in
+                            _flushWriterEvent.Set();
+                            continue;
+                        }
+
+                        if (_envsToSync.IsEmpty)
                             continue;
 
                         if (_log.IsDebugEnabled)
@@ -200,7 +208,7 @@ namespace Voron
                 if (envToFlush.Journal.Applicator.ShouldFlush == false)
                     continue; // nothing to do
 
-                if (envToFlush.WriteFlow.ShouldFlusherYieldToJournal(numberOfNewPagesSinceLastFlush))
+                if (envToFlush.WriteFlow.ShouldFlusherYieldToJournal(envToFlush.Journal.IsJournalWriteActive, numberOfNewPagesSinceLastFlush))
                 {
                     _maybeNeedToFlush.Enqueue(req);
                     continue;
