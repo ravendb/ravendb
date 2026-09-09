@@ -855,14 +855,15 @@ namespace Raven.Server.Documents.TransactionMerger
         {
             public readonly Stopwatch Timer = Stopwatch.StartNew();
 
+            // batch size should be determined consistently throughout its lifetime
+            private readonly double _windowMs = merger.GetBatchingWindowDurationInMs();
+
             public WriteFlowPolicy.BatchCloseReason CloseReason = WriteFlowPolicy.BatchCloseReason.QueueEmpty;
 
-            // called when the _previous_ tx is done, and we *can* close, we check whether we _should_ 
+            // called when the _previous_ tx is done, and we *can* close, we check whether we _should_
             // if we keep the tx open longer, we get better batch and better throughput (min latency cost)
             public bool ShouldCloseBatch(int batchOperations, long modifiedSize)
             {
-                var windowMs = merger.GetBatchingWindowDurationInMs();
-
                 if (merger._operations.IsEmpty)
                 {
                     // we have no more operations to process, we can close the batch and return results to the callers
@@ -870,7 +871,7 @@ namespace Raven.Server.Documents.TransactionMerger
                     return true;
                 }
 
-                if (Timer.ElapsedMilliseconds > windowMs)
+                if (Timer.ElapsedMilliseconds > _windowMs)
                 {
                     // a batch this small closing as soon as it may is arrival-capped, treat it as such
                     CloseReason = batchOperations < WriteFlowPolicy.TinyBatchOperations
