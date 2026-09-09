@@ -41,9 +41,9 @@ namespace SlowTests.Cluster
         }
 
         [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.ClusterTransactions)]
-        public Task ParallelClusterTransactions() => ParallelClusterTransactions(3);
+        public Task ParallelClusterTransactions() => ParallelClusterTransactionsInternal(3);
 
-        public async Task ParallelClusterTransactions(int numberOfNodes)
+        public async Task ParallelClusterTransactionsInternal(int numberOfNodes)
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
 
