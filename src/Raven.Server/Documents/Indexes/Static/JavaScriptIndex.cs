@@ -296,19 +296,27 @@ function map(name, lambda) {
 
         internal static AbstractJavaScriptIndex Create(IndexDefinition definition, RavenConfiguration configuration, long indexVersion)
         {
-            switch (definition.SourceType)
+            try
             {
-                case IndexSourceType.Documents:
-                    return new JavaScriptIndex(definition, configuration, indexVersion);
+                switch (definition.SourceType)
+                {
+                    case IndexSourceType.Documents:
+                        return new JavaScriptIndex(definition, configuration, indexVersion);
 
-                case IndexSourceType.TimeSeries:
-                    return new TimeSeriesJavaScriptIndex(definition, configuration, indexVersion);
+                    case IndexSourceType.TimeSeries:
+                        return new TimeSeriesJavaScriptIndex(definition, configuration, indexVersion);
 
-                case IndexSourceType.Counters:
-                    return new CountersJavaScriptIndex(definition, configuration, indexVersion);
+                    case IndexSourceType.Counters:
+                        return new CountersJavaScriptIndex(definition, configuration, indexVersion);
 
-                default:
-                    throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");
+                    default:
+                        throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");
+                }
+            }
+            catch (Exception e) when (e is IndexCompilationException == false && e is IndexCreationException == false)
+            {
+                IndexCompilationException.ThrowFor(definition.Name, e.Message, e);
+                return null;
             }
         }
 
