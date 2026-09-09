@@ -90,7 +90,7 @@ internal static partial class QueryPlanBuilder
                                ?? throw new InvalidOperationException("Spatial clause has no pre-resolved field name.");
 
             var fieldMetadata = QueryBuilderHelper.GetFieldMetadata(allocator, fieldName, index, builderParams.IndexFieldsMapping,
-                builderParams.HasDynamics, builderParams.DynamicFields, hasBoost: builderParams.HasBoost);
+                builderParams.HasDynamics, builderParams.DynamicFields, hasBoost: builderParams.HasBoost && clause.IsNegated == false);
 
             var sp = cur.Spatial;
             var distanceErrorPct = sp.DistanceErrorPct >= 0
