@@ -834,7 +834,18 @@ namespace Sparrow.Json
             UnmanagedJsonParser parser = null;
             BlittableJsonDocumentBuilder builder = null;
             var generation = _generation;
-            var streamDisposer = token?.Register(static (state) => ((Stream)state).Dispose(), stream);
+            var streamDisposer = token?.Register(static (state) =>
+            {
+                try
+                {
+                    ((Stream)state).Dispose();
+                }
+                catch
+                {
+                    // errors are expected, this is racy with the cancellation token and the stream's lifecycle
+                    // those should not propagate
+                }
+            }, stream);
             try
             {
                 parser = _cachedAsyncParser;
