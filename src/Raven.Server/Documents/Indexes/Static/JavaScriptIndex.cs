@@ -447,16 +447,16 @@ function map(name, lambda) {
 
             var mapReferencedCollections = new List<MapMetadata>();
             var additionalSources = sb.ToString();
-            foreach (var map in maps)
+            for (var i = 0; i < maps.Count; i++)
             {
                 try
                 {
-                    var result = ExecuteCodeAndCollectReferencedCollections(map, additionalSources);
+                    var result = ExecuteCodeAndCollectReferencedCollections(maps[i], additionalSources);
                     mapReferencedCollections.Add(result);
                 }
                 catch (Exception e)
                 {
-                    IndexCompilationException.ThrowFor(Definition.Name, e.Message, e, nameof(IndexDefinition.Maps), map);
+                    IndexCompilationException.ThrowFor(Definition.Name, e.Message, e, nameof(IndexDefinition.Maps), definition.Maps.ElementAt(i));
                 }
             }
 
