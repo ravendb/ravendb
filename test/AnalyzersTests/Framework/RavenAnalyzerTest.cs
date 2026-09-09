@@ -39,6 +39,12 @@ namespace AnalyzersTests.Framework
             new(BuildDefaultReferences);
 
         /// <summary>
+        /// The same reference set the analyzer tests compile against, for tests that need to drive a
+        /// compilation themselves rather than go through <see cref="AnalyzeAsync{TAnalyzer}"/>.
+        /// </summary>
+        internal static IReadOnlyList<MetadataReference> MetadataReferences => DefaultReferences.Value;
+
+        /// <summary>
         /// Parses <paramref name="source"/>, compiles it with Raven.Client referenced,
         /// runs <typeparamref name="TAnalyzer"/>, and returns diagnostics ordered by source position.
         /// Throws <see cref="InvalidOperationException"/> if the compilation has any errors,
