@@ -450,7 +450,7 @@ function map(name, lambda) {
                 }
                 catch (Exception e)
                 {
-                    throw new IndexCompilationException($"Failed to compile the map of JavaScript index '{Definition.Name}': {e.Message}", e);
+                    IndexCompilationException.ThrowFor(Definition.Name, e.Message, e, nameof(IndexDefinition.Maps), map);
                 }
             }
 
@@ -462,7 +462,7 @@ function map(name, lambda) {
                 }
                 catch (Exception e)
                 {
-                    throw new IndexCompilationException($"Failed to compile the reduce of JavaScript index '{Definition.Name}': {e.Message}", e);
+                    IndexCompilationException.ThrowFor(Definition.Name, e.Message, e, nameof(IndexDefinition.Reduce), definition.Reduce);
                 }
             }
 

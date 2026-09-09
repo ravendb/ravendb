@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Tests.Infrastructure;
 using Xunit;
@@ -221,6 +222,37 @@ namespace SlowTests.Issues
                     Assert.Equal(1, results.Count);
                     Assert.Equal(3, results[0].Volume);
                 }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.JavaScript)]
+        public void JavaScript_Index_With_Invalid_Map_Throws_IndexCompilationException()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var e = Assert.Throws<IndexCompilationException>(() => store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
+                {
+                    Name = "BrokenJsMap",
+                    Maps = { "map('Candles', function (c) { return { Volume: c.Volume }; )" }
+                })));
+
+                Assert.Equal(nameof(IndexDefinition.Maps), e.IndexDefinitionProperty);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.JavaScript)]
+        public void JavaScript_Index_With_Invalid_Reduce_Throws_IndexCompilationException()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var e = Assert.Throws<IndexCompilationException>(() => store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
+                {
+                    Name = "BrokenJsReduce",
+                    Maps = { "map('Candles', function (c) { return { Volume: c.Volume }; })" },
+                    Reduce = "groupBy(x => x.Volume).aggregate(g => { return { Volume: g.values.reduce((a, b) => a + b.Volume, 0) }; )"
+                })));
+
+                Assert.Equal(nameof(IndexDefinition.Reduce), e.IndexDefinitionProperty);
             }
         }
     }
