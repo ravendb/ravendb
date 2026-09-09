@@ -5,6 +5,7 @@ using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Http;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Operations;
@@ -38,8 +39,18 @@ namespace Raven.Server.Web.Studio.Sharding.Processors
             foreach (var bucketRange in results.BucketRanges.Values)
             {
                 if (bucketRange.ShardNumbers.Count > 1 && bucketRange.FromBucket == bucketRange.ToBucket)
-                    bucketRange.OwnerShardNumber = ShardHelper.GetShardNumberFor(configuration, (int)bucketRange.FromBucket);
+                    bucketRange.OwnerShardNumber = GetOwnerShard(configuration, (int)bucketRange.FromBucket);
             }
+        }
+
+        private static int GetOwnerShard(ShardingConfiguration configuration, int bucket)
+        {
+            if (configuration.BucketMigrations != null &&
+                configuration.BucketMigrations.TryGetValue(bucket, out var migration) &&
+                migration.Status != MigrationStatus.OwnershipTransferred)
+                return migration.DestinationShard;
+
+            return ShardHelper.GetShardNumberFor(configuration, bucket);
         }
     }
 
