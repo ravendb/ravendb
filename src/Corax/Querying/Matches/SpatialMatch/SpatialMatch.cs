@@ -163,12 +163,12 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
         return false;
     }
 
+    // Corax indexes points only, so a point inside the shape satisfies within, contains and intersects alike.
     private bool IsTrue(SpatialRelation answer) => answer switch
     {
-        SpatialRelation.Within or SpatialRelation.Contains => _spatialRelation is Utils.Spatial.SpatialRelation.Within
-            or Utils.Spatial.SpatialRelation.Contains,
+        SpatialRelation.Within or SpatialRelation.Contains or SpatialRelation.Intersects
+            => _spatialRelation is not Utils.Spatial.SpatialRelation.Disjoint,
         SpatialRelation.Disjoint => _spatialRelation is Utils.Spatial.SpatialRelation.Disjoint,
-        SpatialRelation.Intersects => _spatialRelation is Utils.Spatial.SpatialRelation.Intersects,
         _ => throw new NotSupportedException()
     };
 
