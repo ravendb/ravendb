@@ -546,9 +546,10 @@ namespace Voron.Data.BTrees
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void FreePage(TreePage page)
         {
-            if (page is DecompressedLeafPage dlp)
-                dlp.Invalidate();
-                
+            if (_tree.IsLeafCompressionSupported)
+                _tree.DecompressionsCache.MarkInvalidated(page.PageNumber, DecompressionUsage.Write);
+
+
             _tree.FreePage(page);
         }
 
