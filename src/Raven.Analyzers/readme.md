@@ -38,6 +38,26 @@ Map = orders => orders.SelectMany(o => o.Lines).Select(l => new { l.Product });
 
 The split follows the [RS1038](https://github.com/dotnet/roslyn-analyzers/issues/7438) rule: analyzer assemblies must only depend on compiler-provided references. `Microsoft.CodeAnalysis.CSharp.Workspaces` is not a compiler-provided reference — it is only available inside an IDE host — so code-fix providers must live in a separate assembly. IDEs load both DLLs from the analyzer folder automatically; `dotnet build` loads only the analyzer DLL, which keeps command-line builds free of the Workspaces dependency and the RS1038 warning.
 
+### Roslyn version floor
+
+Both assemblies are pinned to `Microsoft.CodeAnalysis` **4.4.0** through `VersionOverride`, well below
+the repo-wide version, and they deliberately do not track it. An analyzer is forward compatible but not
+backward: the compiler refuses to load one built against a newer Roslyn than itself, reports `CS9057`,
+and under `TreatWarningsAsErrors` that is a build *failure* in the consumer's project. Since these DLLs
+ship inside `RavenDB.Client`, the version pinned here is the oldest SDK a consumer can build with.
+4.4.0 covers roughly the .NET 7 SDK and VS 2022 17.4 upward. Roslyn 4.0 is a hard floor because
+`IIncrementalGenerator` does not exist before it.
+
+Two consequences worth knowing before touching these projects:
+
+- `CentralPackageTransitivePinningEnabled` is switched **off** in both. The repo pins
+  `System.Collections.Immutable` and `System.Reflection.Metadata` far newer than the host compiler
+  ships, and pinning them here makes the analyzer fail to load with `CS8032`. Roslyn's own constraints
+  are the correct ones for an assembly the compiler loads.
+- `ImmutableArray<T>` at that version predates `CollectionBuilderAttribute`, so collection expressions
+  do not work with it (`CS9210`). `SupportedDiagnostics` and `FixableDiagnosticIds` use
+  `ImmutableArray.Create(...)` for that reason, not by preference.
+
 The shared helpers the code-fix providers reuse from `Raven.Analyzers` — `KnownTypes`, `DiagnosticIds`, and the public members of `SyntaxHelpers` — are declared `public` so they are visible across the assembly boundary. There is no `InternalsVisibleTo` bridge: `Raven.Analyzers.CodeFixes` references `Raven.Analyzers` as an ordinary project reference and calls those public APIs directly. (Helpers used only within `Raven.Analyzers` stay `internal`.)
 
 ## How index facts reach the analyzers
