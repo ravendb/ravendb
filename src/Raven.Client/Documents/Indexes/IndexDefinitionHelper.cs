@@ -100,7 +100,7 @@ namespace Raven.Client.Documents.Indexes
 
         private static void ThrowIfEnumerationDoesNotStartFromQuerySource(LambdaExpression expr, ParameterExpression querySourceParameter, string linqQuery)
         {
-            var body = StripConvert(expr.Body);
+            var body = expr.Body.SkipConvertExpressions();
             if (body is MethodCallExpression == false)
                 return;
 
@@ -111,7 +111,7 @@ namespace Raven.Client.Documents.Indexes
                 if (source == null)
                     break;
 
-                root = StripConvert(source);
+                root = source.SkipConvertExpressions();
             }
 
             if (root is ParameterExpression parameter && parameter.Name == querySourceParameter.Name)
@@ -121,14 +121,6 @@ namespace Raven.Client.Documents.Indexes
                 $"An index function must start its enumeration from the '{querySourceParameter.Name}' parameter, e.g. 'from item in {querySourceParameter.Name}'. " +
                 $"The outer-most clause of the given expression enumerates over a different source, which cannot be compiled into an index. " +
                 $"Generated code: {linqQuery}");
-        }
-
-        private static Expression StripConvert(Expression expression)
-        {
-            while (expression.NodeType == ExpressionType.Convert || expression.NodeType == ExpressionType.ConvertChecked)
-                expression = ((UnaryExpression)expression).Operand;
-
-            return expression;
         }
 
         private static MethodCallExpression GetFirstMethodCallExpression(Expression expression)
