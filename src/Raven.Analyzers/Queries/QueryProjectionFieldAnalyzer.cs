@@ -35,10 +35,8 @@ namespace Raven.Analyzers.Queries
             {
                 ConcurrentDictionary<string, INamedTypeSymbol?> indexByName =
                     QueryIndexResolver.CreateIndexNameRegistry(startCtx);
-                var storedFieldCache = new ConcurrentDictionary<INamedTypeSymbol, IndexStoredFieldSet>(
-                    SymbolEqualityComparer.Default);
-                var mapFieldCache = new ConcurrentDictionary<INamedTypeSymbol, IndexFieldSet>(
-                    SymbolEqualityComparer.Default);
+                ConcurrentDictionary<INamedTypeSymbol, IndexMetadata> metadataCache =
+                    IndexMetadataReader.CreateCache();
                 var pending = new ConcurrentBag<(InvocationExpressionSyntax Invocation, SemanticModel Model)>();
                 var pendingQueries = new ConcurrentBag<(QueryExpressionSyntax Query, SemanticModel Model)>();
 
@@ -62,10 +60,10 @@ namespace Raven.Analyzers.Queries
                 startCtx.RegisterCompilationEndAction(endCtx =>
                 {
                     foreach ((InvocationExpressionSyntax invocation, SemanticModel model) in pending)
-                        AnalyzeInvocation(model, invocation, indexByName, storedFieldCache, mapFieldCache, endCtx.ReportDiagnostic);
+                        AnalyzeInvocation(model, invocation, indexByName, metadataCache, endCtx.ReportDiagnostic);
 
                     foreach ((QueryExpressionSyntax query, SemanticModel model) in pendingQueries)
-                        AnalyzeQueryExpression(model, query, indexByName, storedFieldCache, mapFieldCache, endCtx.ReportDiagnostic);
+                        AnalyzeQueryExpression(model, query, indexByName, metadataCache, endCtx.ReportDiagnostic);
                 });
             });
         }
@@ -74,8 +72,7 @@ namespace Raven.Analyzers.Queries
             SemanticModel model,
             InvocationExpressionSyntax invocation,
             ConcurrentDictionary<string, INamedTypeSymbol?> indexByName,
-            ConcurrentDictionary<INamedTypeSymbol, IndexStoredFieldSet> storedFieldCache,
-            ConcurrentDictionary<INamedTypeSymbol, IndexFieldSet> mapFieldCache,
+            ConcurrentDictionary<INamedTypeSymbol, IndexMetadata> metadataCache,
             Action<Diagnostic> reportDiagnostic)
         {
             string? methodName = SyntaxHelpers.GetMethodName(invocation);
@@ -103,7 +100,7 @@ namespace Raven.Analyzers.Queries
             // (but not including) this projection. Shared with the query-expression path so both forms
             // resolve the projection context identically.
             if (!TryResolveProjectionContext(model, queryCall, memberAccess.Expression,
-                    indexByName, storedFieldCache, mapFieldCache, out ProjectionFields fields))
+                    indexByName, metadataCache, out ProjectionFields fields))
                 return;
 
             // Now check projected fields based on which form this is
@@ -128,8 +125,7 @@ namespace Raven.Analyzers.Queries
             SemanticModel model,
             QueryExpressionSyntax query,
             ConcurrentDictionary<string, INamedTypeSymbol?> indexByName,
-            ConcurrentDictionary<INamedTypeSymbol, IndexStoredFieldSet> storedFieldCache,
-            ConcurrentDictionary<INamedTypeSymbol, IndexFieldSet> mapFieldCache,
+            ConcurrentDictionary<INamedTypeSymbol, IndexMetadata> metadataCache,
             Action<Diagnostic> reportDiagnostic)
         {
             if (query.Body.Continuation != null)
@@ -147,7 +143,7 @@ namespace Raven.Analyzers.Queries
                 return;
 
             if (!TryResolveProjectionContext(model, queryCall, sourceExpression,
-                    indexByName, storedFieldCache, mapFieldCache, out ProjectionFields fields))
+                    indexByName, metadataCache, out ProjectionFields fields))
                 return;
 
             string paramName = query.FromClause.Identifier.ValueText;
@@ -174,8 +170,7 @@ namespace Raven.Analyzers.Queries
             InvocationExpressionSyntax queryCall,
             ExpressionSyntax behaviorChainExpression,
             ConcurrentDictionary<string, INamedTypeSymbol?> indexByName,
-            ConcurrentDictionary<INamedTypeSymbol, IndexStoredFieldSet> storedFieldCache,
-            ConcurrentDictionary<INamedTypeSymbol, IndexFieldSet> mapFieldCache,
+            ConcurrentDictionary<INamedTypeSymbol, IndexMetadata> metadataCache,
             out ProjectionFields fields)
         {
             fields = default;
@@ -188,26 +183,16 @@ namespace Raven.Analyzers.Queries
             if (sourceType == null)
                 return false;
 
-            // Extract stored fields from the index (bail if analysis not possible); cached per compilation
-            IndexStoredFieldSet storedSet = storedFieldCache.GetOrAdd(indexClass,
-                ic => IndexStoredFieldExtractor.Extract(ic, model.Compilation));
-            if (storedSet.Status == StoredFieldsStatus.BailCannotAnalyze)
+            // Stored and map fields both come from the index's recorded metadata, so this works whether
+            // the index is declared here or in a referenced assembly whose constructor bodies are gone.
+            IndexMetadata metadata = IndexMetadataReader.Read(indexClass, metadataCache);
+            if (!metadata.Analyzable)
                 return false;
 
-            // If StoreAllFields was used, the stored set equals the map projection
-            ImmutableHashSet<string> storedFields;
-            if (storedSet.Status == StoredFieldsStatus.AllStored)
-            {
-                IndexFieldSet mapFields = mapFieldCache.GetOrAdd(indexClass,
-                    ic => IndexFieldExtractor.Extract(ic, model.Compilation));
-                if (mapFields.Status == IndexFieldInspection.BailCannotAnalyze)
-                    return false;
-                storedFields = mapFields.Fields;
-            }
-            else
-            {
-                storedFields = storedSet.Fields;
-            }
+            // StoreAllFields makes every map-projection field stored, so the stored set is the projection.
+            ImmutableHashSet<string> storedFields = metadata.StoreAllFields
+                ? metadata.MapFields
+                : metadata.StoredFields;
 
             ImmutableHashSet<string> sourceMembers = SourceMemberExtractor.GetPublicMembers(sourceType);
 
