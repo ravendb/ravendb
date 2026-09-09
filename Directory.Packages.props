@@ -23,7 +23,7 @@
     <PackageVersion Include="CsvHelper" Version="33.1.0" />
     <PackageVersion Include="DasMulli.Win32.ServiceUtils.Signed" Version="1.1.0" />
     <PackageVersion Include="Elastic.Clients.Elasticsearch" Version="9.5.0" />
-    <PackageVersion Include="FluentFTP" Version="53.0.2" />
+    <PackageVersion Include="FluentFTP" Version="54.2.0" />
     <PackageVersion Include="FubarDev.FtpServer" Version="3.1.2" />
     <PackageVersion Include="FubarDev.FtpServer.FileSystem.DotNet" Version="3.1.2" />
     <PackageVersion Include="FubarDev.FtpServer.FileSystem.InMemory" Version="3.1.2" />
@@ -51,8 +51,6 @@
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.0.2" />
     <PackageVersion Include="Microsoft.Diagnostics.NETCore.Client" Version="0.2.661903" />
     <PackageVersion Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.2.5" />
-    <PackageVersion Include="Microsoft.DotNet.xunit.performance" Version="1.0.0-alpha-build0041" />
-    <PackageVersion Include="Microsoft.DotNet.xunit.performance.runner.cli" Version="1.0.0-alpha-build0041" />
     <PackageVersion Include="Microsoft.Extensions.Caching.Abstractions" Version="10.0.11" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.11" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.11" />
@@ -108,7 +106,7 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.17.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.17.0" />
     <PackageVersion Include="Oracle.ManagedDataAccess.Core" Version="23.26.300" />
-    <PackageVersion Include="Parquet.Net" Version="5.5.0" />
+    <PackageVersion Include="Parquet.Net" Version="6.1.0" />
     <PackageVersion Include="Pgvector" Version="0.3.2" />
     <PackageVersion Include="pgsqlparser" Version="1.0.0" />
     <PackageVersion Include="Polly" Version="8.7.0" />
@@ -138,13 +136,12 @@
     <PackageVersion Include="System.Text.Json" Version="10.0.11" />
     <PackageVersion Include="System.Threading.Channels" Version="10.0.11" />
     <PackageVersion Include="TypeScripter" Version="0.5.4" />
-    <PackageVersion Include="xRetry.v3" Version="1.0.0-rc3" />
-    <PackageVersion Include="xunit" Version="2.9.3" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
-    <PackageVersion Include="xunit.v3" Version="3.2.2" />
-    <PackageVersion Include="xunit.v3.assert" Version="3.2.2" />
-    <PackageVersion Include="xunit.v3.extensibility.core" Version="3.2.2" />
-    <PackageVersion Include="xunit.v3.runner.utility" Version="3.2.2" />
+    <PackageVersion Include="xRetry.v3" Version="1.0.0" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
+    <PackageVersion Include="xunit.v3.assert" Version="4.0.0" />
+    <PackageVersion Include="xunit.v3.extensibility.core" Version="4.0.0" />
+    <PackageVersion Include="xunit.v3.mtp-off" Version="4.0.0" />
+    <PackageVersion Include="xunit.v3.runner.utility" Version="4.0.0" />
     <PackageVersion Include="YamlDotNet" Version="18.1.0" />
     <PackageVersion Include="ZstdSharp.Port" Version="0.8.8" />
   </ItemGroup>
