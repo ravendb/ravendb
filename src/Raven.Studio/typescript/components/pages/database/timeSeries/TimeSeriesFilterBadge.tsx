@@ -3,7 +3,8 @@ import moment from "moment";
 import { FilterTimezone, wallOf, zoneLabel } from "./timeSeriesRange.utils";
 import "./TimeSeriesFilterBadge.scss";
 
-const BADGE_FORMAT = "M/D/YYYY HH:mm";
+// Deliberately compact (no seconds/ms) for a glanceable chip, but same ISO family as the grid.
+const BADGE_FORMAT = "YYYY-MM-DD HH:mm";
 
 interface TimeSeriesFilterBadgeProps {
     startDate: moment.Moment | null;

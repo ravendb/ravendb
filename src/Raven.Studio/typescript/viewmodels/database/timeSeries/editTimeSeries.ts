@@ -59,7 +59,7 @@ class timeSeriesInfo {
 }
 
 class editTimeSeries extends viewModelBase {
-    static timeSeriesFormat = "YYYY-MM-DD HH:mm:ss.SSS";
+    static timeSeriesFormat = generalUtils.timeSeriesFullDateFormat;
     static pageSize = 100;
     
     view = require("views/database/timeSeries/editTimeSeries.html");
