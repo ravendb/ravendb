@@ -35,7 +35,6 @@ import { TaskCardCategory, TaskCardDisabledCondition } from "components/pages/da
 import { useTaskCardFilters } from "components/pages/database/tasks/shared/useTaskCardFilters";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { getAccessRequiredMessage } from "components/utils/accessUtils";
-import IconName from "../../../../../../typings/server/icons";
 import { StudioConnectionType } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
 import {
     getServerWideShortName,
@@ -674,7 +673,7 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                         isShardingSupported: true,
                         customDisabledReason: getSubscriptionLimitReason(),
                     }),
-                    counterBadge: isProfessionalOrAbove ? null : (
+                    counterBadge: (
                         <CounterBadge
                             count={tasks.subscriptions.length}
                             limit={subscriptionsDatabaseLimit}
