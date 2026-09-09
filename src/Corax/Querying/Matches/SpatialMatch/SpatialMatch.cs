@@ -91,7 +91,7 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
 
     public SkipSortingResult AttemptToSkipSorting() => SkipSortingResult.WillSkipSorting;
     public QueryCountConfidence Confidence => QueryCountConfidence.Low;
-    public bool IsBoosting => false;
+    public bool IsBoosting => typeof(TBoosting) == typeof(HasBoosting);
 
     public int Fill(Span<long> matches)
     {
