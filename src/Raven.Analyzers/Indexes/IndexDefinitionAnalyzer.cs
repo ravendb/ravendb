@@ -29,10 +29,17 @@ namespace Raven.Analyzers.Indexes
         {
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.EnableConcurrentExecution();
-            context.RegisterSyntaxNodeAction(Analyze, SyntaxKind.ClassDeclaration);
+
+            // One registry per compilation, shared by every class this analyzer visits.
+            context.RegisterCompilationStartAction(startCtx =>
+            {
+                IndexMetadataRegistry metadataRegistry = new();
+                startCtx.RegisterSyntaxNodeAction(
+                    ctx => Analyze(ctx, metadataRegistry), SyntaxKind.ClassDeclaration);
+            });
         }
 
-        private static void Analyze(SyntaxNodeAnalysisContext context)
+        private static void Analyze(SyntaxNodeAnalysisContext context, IndexMetadataRegistry metadataRegistry)
         {
             var classDecl = (ClassDeclarationSyntax)context.Node;
             if (classDecl.BaseList == null)
@@ -63,21 +70,22 @@ namespace Raven.Analyzers.Indexes
             bool isMultiMap = SyntaxHelpers.IsMultiMapIndexCreationTask(classSymbol);
 
             if (isMultiMap)
-                CheckMultiMapAddMapCalls(context, classDecl, classSymbol);
+                CheckMultiMapAddMapCalls(context, classDecl, classSymbol, metadataRegistry);
             else
-                CheckRegularIndexMapAssignment(context, classDecl, classSymbol);
+                CheckRegularIndexMapAssignment(context, classDecl, classSymbol, metadataRegistry);
         }
 
         private static void CheckRegularIndexMapAssignment(
             SyntaxNodeAnalysisContext context,
             ClassDeclarationSyntax classDecl,
-            INamedTypeSymbol classSymbol)
+            INamedTypeSymbol classSymbol,
+            IndexMetadataRegistry metadataRegistry)
         {
             // RVN004 — no constructor in this class OR any user-defined base class assigns Map.
             // The recorded metadata already covers the whole chain, including a base class in another
             // assembly whose constructor body this compilation cannot read, so it answers the question
             // outright. Unanalyzable means the Map may well be there and we must not report.
-            IndexMetadata metadata = IndexMetadataReader.Read(classSymbol);
+            IndexMetadata metadata = metadataRegistry.Read(classSymbol);
             if (!metadata.Analyzable || metadata.AssignsMap)
                 return;
 
@@ -90,10 +98,11 @@ namespace Raven.Analyzers.Indexes
         private static void CheckMultiMapAddMapCalls(
             SyntaxNodeAnalysisContext context,
             ClassDeclarationSyntax classDecl,
-            INamedTypeSymbol classSymbol)
+            INamedTypeSymbol classSymbol,
+            IndexMetadataRegistry metadataRegistry)
         {
             // Chain-wide AddMap facts, recorded where the constructors were readable.
-            IndexMetadata metadata = IndexMetadataReader.Read(classSymbol);
+            IndexMetadata metadata = metadataRegistry.Read(classSymbol);
             if (!metadata.Analyzable)
                 return;
 

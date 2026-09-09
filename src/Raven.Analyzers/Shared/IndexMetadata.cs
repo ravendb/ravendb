@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
@@ -8,13 +9,13 @@ namespace Raven.Analyzers.Shared
     /// <summary>
     /// The statically-known shape of one index class, covering its whole inheritance chain. Read back
     /// from the <c>RavenIndexMetadataAttribute</c> that the generator emits into the assembly declaring
-    /// the index, so the values are identical whether the index came from source or a referenced DLL.
+    /// the index, so the values are the same whether the index came from source or a referenced DLL.
     /// </summary>
     /// <remarks>
     /// <see cref="Analyzable"/> false means "unknown", never "empty". Every consumer must bail on it:
     /// treating an unreadable index as having no fields would make every queried field look unindexed.
     /// </remarks>
-    internal readonly record struct IndexMetadata(
+    internal sealed record IndexMetadata(
         bool Analyzable,
         ImmutableHashSet<string> MapFields,
         ImmutableHashSet<string> StoredFields,
@@ -26,7 +27,8 @@ namespace Raven.Analyzers.Shared
     {
         /// <summary>
         /// No metadata was found, or the generator recorded that it could not read the index. Both mean
-        /// the shape is unknown, so callers must not report anything that depends on it.
+        /// the shape is unknown, so callers must not report anything that depends on it. A single shared
+        /// instance, since this is by far the most frequently returned value.
         /// </summary>
         public static readonly IndexMetadata Unknown = new(
             Analyzable: false,
@@ -40,36 +42,40 @@ namespace Raven.Analyzers.Shared
     }
 
     /// <summary>
-    /// Reads <see cref="IndexMetadata"/> for an index symbol out of the assembly attributes of the
-    /// assembly that declares it.
+    /// Reads <see cref="IndexMetadata"/> for index symbols. One instance per compilation.
     /// </summary>
     /// <remarks>
-    /// Only the declaring assembly is inspected, never the full reference closure: the generator always
-    /// emits an index's metadata into the assembly that declares it, so a single
-    /// <see cref="ISymbol.ContainingAssembly"/> lookup suffices and the cost stays proportional to the
-    /// indexes actually queried rather than to the number of references.
+    /// Metadata for an index always sits on the assembly that declares it, so a lookup only ever needs
+    /// that one assembly's attributes. Those are indexed by type the first time an assembly is touched,
+    /// which keeps a lookup at one dictionary hit. Scanning the attribute list per index instead would
+    /// cost O(indexes squared) in an assembly that declares many of them, since each scan walks every
+    /// recorded entry to find one.
     /// </remarks>
-    internal static class IndexMetadataReader
+    internal sealed class IndexMetadataRegistry
     {
-        /// <summary>
-        /// Creates a per-compilation cache. Metadata for one index is looked up at most once even when
-        /// many queries target it; analyzers run concurrently, hence the concurrent dictionary.
-        /// </summary>
-        public static ConcurrentDictionary<INamedTypeSymbol, IndexMetadata> CreateCache() =>
+        // Analyzers run concurrently over one compilation, so both the outer map and the lazily built
+        // per-assembly maps have to be safe to reach from several threads at once. The inner maps are
+        // fully populated before being published, and never mutated afterwards.
+        private readonly ConcurrentDictionary<IAssemblySymbol, IReadOnlyDictionary<INamedTypeSymbol, IndexMetadata>> _byAssembly =
             new(SymbolEqualityComparer.Default);
 
-        public static IndexMetadata Read(
-            INamedTypeSymbol indexClass,
-            ConcurrentDictionary<INamedTypeSymbol, IndexMetadata> cache) =>
-            cache.GetOrAdd(indexClass, Read);
-
-        public static IndexMetadata Read(INamedTypeSymbol indexClass)
+        public IndexMetadata Read(INamedTypeSymbol indexClass)
         {
+            IReadOnlyDictionary<INamedTypeSymbol, IndexMetadata> recorded =
+                _byAssembly.GetOrAdd(indexClass.ContainingAssembly, BuildFor);
+
             // Generic index classes are recorded by their open definition, because that is what
             // typeof(Foo<>) binds to in the generated attribute.
-            INamedTypeSymbol target = indexClass.OriginalDefinition;
+            return recorded.TryGetValue(indexClass.OriginalDefinition, out IndexMetadata? metadata)
+                ? metadata
+                : IndexMetadata.Unknown;
+        }
 
-            foreach (AttributeData attribute in indexClass.ContainingAssembly.GetAttributes())
+        private static IReadOnlyDictionary<INamedTypeSymbol, IndexMetadata> BuildFor(IAssemblySymbol assembly)
+        {
+            Dictionary<INamedTypeSymbol, IndexMetadata> result = new(SymbolEqualityComparer.Default);
+
+            foreach (AttributeData attribute in assembly.GetAttributes())
             {
                 if (attribute.AttributeClass?.ToDisplayString() != KnownTypes.RavenIndexMetadataAttributeFullName)
                     continue;
@@ -80,13 +86,10 @@ namespace Raven.Analyzers.Shared
                 if (attribute.ConstructorArguments[0].Value is not INamedTypeSymbol recordedType)
                     continue;
 
-                if (!SymbolEqualityComparer.Default.Equals(recordedType.OriginalDefinition, target))
-                    continue;
-
-                return Parse(attribute);
+                result[recordedType.OriginalDefinition] = Parse(attribute);
             }
 
-            return IndexMetadata.Unknown;
+            return result;
         }
 
         private static IndexMetadata Parse(AttributeData attribute)
@@ -100,7 +103,7 @@ namespace Raven.Analyzers.Shared
             bool addMapInLoop = false;
             bool usesAdditionalCode = false;
 
-            foreach (System.Collections.Generic.KeyValuePair<string, TypedConstant> named in attribute.NamedArguments)
+            foreach (KeyValuePair<string, TypedConstant> named in attribute.NamedArguments)
             {
                 switch (named.Key)
                 {
@@ -131,8 +134,8 @@ namespace Raven.Analyzers.Shared
                 }
             }
 
-            // A recorded-but-unanalyzable index carries no usable values; collapse it to Unknown so
-            // there is a single "cannot reason about this" representation for callers to test.
+            // A recorded but unable to be analyzed index carries no usable values; collapse it to Unknown so
+            // there is a single "cannot reason about this" value for callers to test.
             return analyzable
                 ? new IndexMetadata(true, mapFields, storedFields, storeAllFields, assignsMap, addMapCount, addMapInLoop, usesAdditionalCode)
                 : IndexMetadata.Unknown;

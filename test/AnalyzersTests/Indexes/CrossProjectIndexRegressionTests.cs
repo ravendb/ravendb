@@ -10,7 +10,7 @@ using Xunit;
 namespace AnalyzersTests.Indexes
 {
     /// <summary>
-    /// Covers indexes that live in a different project from the code being analysed — the layout where
+    /// Covers indexes that live in a different project from the code being analysed, the layout where
     /// index classes sit in their own assembly and queries reference them.
     /// </summary>
     /// <remarks>

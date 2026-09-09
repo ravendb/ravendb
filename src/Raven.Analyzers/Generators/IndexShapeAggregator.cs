@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Raven.Analyzers.Indexes;
@@ -13,30 +12,16 @@ namespace Raven.Analyzers.Generators
     /// the recorded metadata of the first base class it cannot read.
     /// </summary>
     /// <remarks>
-    /// This is the generator's half of the design: it runs in the assembly that declares the index,
-    /// where the constructor bodies are available, and produces the values that
-    /// <c>RavenIndexMetadataAttribute</c> carries into compiled metadata for every other assembly to
-    /// read back. Because each recorded value already describes a full chain, splicing one base's
-    /// metadata terminates the walk — there is no need to reach further up into assemblies that may
-    /// themselves be unreadable.
+    /// Runs in the assembly that declares the index, which is the only place the constructor bodies
+    /// exist. Every recorded value already describes a full chain, so splicing one base's metadata ends
+    /// the walk; there is no need to climb further into assemblies that may not be readable either.
     /// </remarks>
     internal static class IndexShapeAggregator
     {
-        /// <summary>
-        /// The shape of an index whose chain contributes nothing: the identity for the merge below, and
-        /// what an index sitting directly on a framework base starts from.
-        /// </summary>
-        private static readonly IndexMetadata Empty = new(
-            Analyzable: true,
-            MapFields: ImmutableHashSet<string>.Empty,
-            StoredFields: ImmutableHashSet<string>.Empty,
-            StoreAllFields: false,
-            AssignsMap: false,
-            AddMapCount: 0,
-            AddMapInLoop: false,
-            UsesAdditionalCode: false);
-
-        public static IndexMetadata Compute(INamedTypeSymbol indexClass, Compilation compilation)
+        public static IndexMetadata Compute(
+            INamedTypeSymbol indexClass,
+            Compilation compilation,
+            IndexMetadataRegistry metadataRegistry)
         {
             // A JavaScript index defines its maps as strings; nothing about its shape is knowable from
             // the C# side, so record it as unanalyzable rather than as an index with no fields.
@@ -83,7 +68,7 @@ namespace Raven.Analyzers.Generators
             // The chain continues into an assembly whose source we cannot read. Its recorded metadata is
             // the only way to learn what it contributes; without it the shape is unknown, and reporting
             // "no fields" instead would make every field queried through this index look unindexed.
-            IndexMetadata inherited = IndexMetadataReader.Read(foreignBase);
+            IndexMetadata inherited = metadataRegistry.Read(foreignBase);
             if (!inherited.Analyzable)
                 return IndexMetadata.Unknown;
 

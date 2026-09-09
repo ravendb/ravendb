@@ -35,8 +35,7 @@ namespace Raven.Analyzers.Queries
             {
                 ConcurrentDictionary<string, INamedTypeSymbol?> indexByName =
                     QueryIndexResolver.CreateIndexNameRegistry(startCtx);
-                ConcurrentDictionary<INamedTypeSymbol, IndexMetadata> metadataCache =
-                    IndexMetadataReader.CreateCache();
+                IndexMetadataRegistry metadataRegistry = new();
                 var pending = new ConcurrentBag<(InvocationExpressionSyntax Invocation, SemanticModel Model)>();
                 var pendingQueries = new ConcurrentBag<(QueryExpressionSyntax Query, SemanticModel Model)>();
 
@@ -60,10 +59,10 @@ namespace Raven.Analyzers.Queries
                 startCtx.RegisterCompilationEndAction(endCtx =>
                 {
                     foreach ((InvocationExpressionSyntax invocation, SemanticModel model) in pending)
-                        AnalyzeInvocation(model, invocation, indexByName, metadataCache, endCtx.ReportDiagnostic);
+                        AnalyzeInvocation(model, invocation, indexByName, metadataRegistry, endCtx.ReportDiagnostic);
 
                     foreach ((QueryExpressionSyntax query, SemanticModel model) in pendingQueries)
-                        AnalyzeQueryExpression(model, query, indexByName, metadataCache, endCtx.ReportDiagnostic);
+                        AnalyzeQueryExpression(model, query, indexByName, metadataRegistry, endCtx.ReportDiagnostic);
                 });
             });
         }
@@ -72,7 +71,7 @@ namespace Raven.Analyzers.Queries
             SemanticModel model,
             InvocationExpressionSyntax invocation,
             ConcurrentDictionary<string, INamedTypeSymbol?> indexByName,
-            ConcurrentDictionary<INamedTypeSymbol, IndexMetadata> metadataCache,
+            IndexMetadataRegistry metadataRegistry,
             Action<Diagnostic> reportDiagnostic)
         {
             string? methodName = SyntaxHelpers.GetMethodName(invocation);
@@ -100,7 +99,7 @@ namespace Raven.Analyzers.Queries
             // (but not including) this projection. Shared with the query-expression path so both forms
             // resolve the projection context identically.
             if (!TryResolveProjectionContext(model, queryCall, memberAccess.Expression,
-                    indexByName, metadataCache, out ProjectionFields fields))
+                    indexByName, metadataRegistry, out ProjectionFields fields))
                 return;
 
             // Now check projected fields based on which form this is
@@ -125,7 +124,7 @@ namespace Raven.Analyzers.Queries
             SemanticModel model,
             QueryExpressionSyntax query,
             ConcurrentDictionary<string, INamedTypeSymbol?> indexByName,
-            ConcurrentDictionary<INamedTypeSymbol, IndexMetadata> metadataCache,
+            IndexMetadataRegistry metadataRegistry,
             Action<Diagnostic> reportDiagnostic)
         {
             if (query.Body.Continuation != null)
@@ -143,7 +142,7 @@ namespace Raven.Analyzers.Queries
                 return;
 
             if (!TryResolveProjectionContext(model, queryCall, sourceExpression,
-                    indexByName, metadataCache, out ProjectionFields fields))
+                    indexByName, metadataRegistry, out ProjectionFields fields))
                 return;
 
             string paramName = query.FromClause.Identifier.ValueText;
@@ -170,7 +169,7 @@ namespace Raven.Analyzers.Queries
             InvocationExpressionSyntax queryCall,
             ExpressionSyntax behaviorChainExpression,
             ConcurrentDictionary<string, INamedTypeSymbol?> indexByName,
-            ConcurrentDictionary<INamedTypeSymbol, IndexMetadata> metadataCache,
+            IndexMetadataRegistry metadataRegistry,
             out ProjectionFields fields)
         {
             fields = default;
@@ -185,7 +184,7 @@ namespace Raven.Analyzers.Queries
 
             // Stored and map fields both come from the index's recorded metadata, so this works whether
             // the index is declared here or in a referenced assembly whose constructor bodies are gone.
-            IndexMetadata metadata = IndexMetadataReader.Read(indexClass, metadataCache);
+            IndexMetadata metadata = metadataRegistry.Read(indexClass);
             if (!metadata.Analyzable)
                 return false;
 
