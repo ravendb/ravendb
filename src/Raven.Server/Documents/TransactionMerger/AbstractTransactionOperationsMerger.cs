@@ -829,7 +829,7 @@ namespace Raven.Server.Documents.TransactionMerger
             {
                 foreach (var op in previousPendingOps)
                 {
-                    op.Exception = e;
+                    op.Exception ??= e; // the first exception is the one that we want to report
                 }
 
                 // it's safe to call this twice
