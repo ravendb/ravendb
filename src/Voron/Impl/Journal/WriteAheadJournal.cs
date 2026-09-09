@@ -343,7 +343,7 @@ namespace Voron.Impl.Journal
 
             _lastFile = now;
 
-            var journal = new JournalFile(_env, journalPager, _journalIndex, FrozenSet<Guid>.Empty);
+            var journal = new JournalFile(journalPager, _journalIndex, FrozenSet<Guid>.Empty);
             journal.Incarnation = incarnation;
             journal.InitialWritePosIn4Kb = JournalHeaderRecord.SizeIn4Kb;
             journal.NewlyCreatedFile = true;
@@ -498,7 +498,7 @@ namespace Voron.Impl.Journal
                             ? _env.Options.CreateReadOnlyJournalWriter(journalNumber, journalPagerState.TotalAllocatedSize)
                             : _env.Options.CreateJournalWriter(journalNumber, journalPagerState.TotalAllocatedSize);
 
-                        var jrnlFile = new JournalFile(_env, jrnlWriter, journalNumber, journalReader.RecoveredJournalIds.ToFrozenSet())
+                        var jrnlFile = new JournalFile(jrnlWriter, journalNumber, journalReader.RecoveredJournalIds.ToFrozenSet())
                         {
                             IsHardLinked = isHardLinked,
                             Incarnation = journalReader.Incarnation
@@ -2604,7 +2604,7 @@ namespace Voron.Impl.Journal
             JournalFile AddJournal(long index, bool isHardLinked)
             {
                 var journalWriter = _env.Options.CreateJournalWriterForBranchEnvironment(index, existingJournalFileName, journalFile);
-                var journal = new JournalFile(_env, journalWriter, index, FrozenSet<Guid>.Empty)
+                var journal = new JournalFile(journalWriter, index, FrozenSet<Guid>.Empty)
                 {
                     IsHardLinked = isHardLinked,
                     Incarnation = journalFile.Incarnation

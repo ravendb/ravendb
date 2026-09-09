@@ -9,7 +9,7 @@ using Constants = Voron.Global.Constants;
 
 namespace Voron.Impl.Journal
 {
-    public sealed unsafe class JournalFile(StorageEnvironment env, JournalWriter journalWriter, long journalNumber, FrozenSet<Guid> recoveredJournalIds) : IDisposable
+    public sealed unsafe class JournalFile(JournalWriter journalWriter, long journalNumber, FrozenSet<Guid> recoveredJournalIds) : IDisposable
     {
         public long LastTransactionId;
 
