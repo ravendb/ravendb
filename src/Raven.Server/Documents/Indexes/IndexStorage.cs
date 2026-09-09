@@ -356,17 +356,17 @@ namespace Raven.Server.Documents.Indexes
 
                     var error = new IndexingError();
 
-                    var ptr = tvr.Result.Reader.Read(0, out int size);
+                    var ptr = tvr.Result.Read(0, out int size);
                     error.Timestamp = new DateTime(Bits.SwapBytes(*(long*)ptr), DateTimeKind.Utc);
 
-                    ptr = tvr.Result.Reader.Read(1, out size);
+                    ptr = tvr.Result.Read(1, out size);
                     if (size != 0)
                         error.Document = context.AllocateStringValue(null, ptr, size);
 
-                    ptr = tvr.Result.Reader.Read(2, out size);
+                    ptr = tvr.Result.Read(2, out size);
                     error.Action = context.AllocateStringValue(null, ptr, size);
 
-                    ptr = tvr.Result.Reader.Read(3, out size);
+                    ptr = tvr.Result.Read(3, out size);
                     error.Error = context.AllocateStringValue(null, ptr, size);
 
                     errors.Add(error);

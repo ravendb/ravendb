@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Operations.TimeSeries;
@@ -253,12 +253,12 @@ namespace Raven.Server.Documents.TimeSeries
         }
 
         // Field 6 (MergedChangeVector) is present only on newer stats rows; legacy rows have <=6 fields.
-        private static ChangeVector ReadMergedChangeVector(DocumentsOperationContext context, ref TableValueReader tvr)
+        private static ChangeVector ReadMergedChangeVector(DocumentsOperationContext context, in TableValueReader tvr)
         {
             if (tvr.Count <= (int)StatsColumns.MergedChangeVector)
                 return null;
 
-            return DocumentsStorage.TableValueToChangeVector(context, (int)StatsColumns.MergedChangeVector, ref tvr);
+            return DocumentsStorage.TableValueToChangeVector(context, (int)StatsColumns.MergedChangeVector, tvr);
         }
 
         internal static void WriteStatsTableRecord(DocumentsOperationContext context, Table table, TimeSeriesSliceHolder slicer, DateTime start, DateTime end, long count, Slice name, ChangeVector mergedChangeVector)
@@ -324,11 +324,11 @@ namespace Raven.Server.Documents.TimeSeries
             return GetStats(ref tvr);
         }
 
-        public static (long Count, DateTime Start, DateTime End) GetStats(ref TableValueReader tvr)
+        public static (long Count, DateTime Start, DateTime End) GetStats(in TableValueReader tvr)
         {
-            var count = DocumentsStorage.TableValueToLong((int)StatsColumns.Count, ref tvr);
-            var start = new DateTime(Bits.SwapBytes(DocumentsStorage.TableValueToLong((int)StatsColumns.Start, ref tvr)), DateTimeKind.Utc);
-            var end = DocumentsStorage.TableValueToDateTime((int)StatsColumns.End, ref tvr);
+            var count = DocumentsStorage.TableValueToLong((int)StatsColumns.Count, tvr);
+            var start = new DateTime(Bits.SwapBytes(DocumentsStorage.TableValueToLong((int)StatsColumns.Start, tvr)), DateTimeKind.Utc);
+            var end = DocumentsStorage.TableValueToDateTime((int)StatsColumns.End, tvr);
 
             return (count, start, end);
         }
@@ -340,7 +340,7 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 foreach (var result in table.SeekByPrimaryKeyPrefix(documentKeyPrefix, Slices.Empty, 0))
                 {
-                    var name = DocumentsStorage.TableValueToChangeVector(context, (int)StatsColumns.Name, ref result.Value.Reader);
+                    var name = DocumentsStorage.TableValueToChangeVector(context, (int)StatsColumns.Name, result.Value);
                     if (GetStats(context, docId, name).Count == 0)
                         continue;
 
@@ -381,11 +381,11 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 foreach (var result in table.SeekForwardFrom(TimeSeriesStatsSchema.Indexes[PolicyIndex], name, skip, startsWith: true))
                 {
-                    var stats = GetStats(ref result.Result.Reader);
+                    var stats = GetStats(result.Result);
                     if (stats.Count == 0)
                         continue;
 
-                    var reader = result.Result.Reader;
+                    var reader = result.Result;
                     DocumentsStorage.TableValueToSlice(context, (int)StatsColumns.Key, ref reader, out var slice);
                     yield return slice;
 
@@ -406,11 +406,11 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 foreach (var result in table.SeekBackwardFrom(TimeSeriesStatsSchema.Indexes[StartTimeIndex], policySlice, key))
                 {
-                    var stats = GetStats(ref result.Result.Reader);
+                    var stats = GetStats(result.Result);
                     if (stats.Count == 0)
                         continue;
 
-                    var currentStart = new DateTime(Bits.SwapBytes(DocumentsStorage.TableValueToLong((int)StatsColumns.Start, ref result.Result.Reader)));
+                    var currentStart = new DateTime(Bits.SwapBytes(DocumentsStorage.TableValueToLong((int)StatsColumns.Start, result.Result)));
                     if (currentStart > start)
                     {
                         if (logger.IsDebugEnabled)
@@ -418,7 +418,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                         yield break;
                     }
-                    DocumentsStorage.TableValueToSlice(context, (int)StatsColumns.Key, ref result.Result.Reader, out var slice);
+                    DocumentsStorage.TableValueToSlice(context, (int)StatsColumns.Key, result.Result, out var slice);
 
                     yield return slice;
 

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Server;
@@ -17,14 +17,14 @@ namespace Raven.Server.Documents
 
             foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, ConflictsSchema.DynamicKeyIndexes[ConflictsBucketAndEtagSlice], bucket, etag))
             {
-                yield return TableValueToConflictDocument(context, ref result.Result.Reader);
+                yield return TableValueToConflictDocument(context, result.Result);
             }
         }
 
         [StorageIndexEntryKeyGenerator]
-        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForConflicts(Transaction tx, ref TableValueReader tvr, out Slice slice)
+        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForConflicts(Transaction tx, in TableValueReader tvr, out Slice slice)
         {
-            return ShardedDocumentsStorage.GenerateBucketAndEtagIndexKey(tx, idIndex: (int)ConflictsTable.LowerId, etagIndex: (int)ConflictsTable.Etag, ref tvr, out slice);
+            return ShardedDocumentsStorage.GenerateBucketAndEtagIndexKey(tx, idIndex: (int)ConflictsTable.LowerId, etagIndex: (int)ConflictsTable.Etag, tvr, out slice);
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -23,7 +23,7 @@ namespace Raven.Server.Documents
 
             foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, AttachmentsSchema.DynamicKeyIndexes[AttachmentsBucketAndEtagSlice], bucket, etag))
             {
-                var attachment = TableValueToAttachment(context, ref result.Result.Reader);
+                var attachment = TableValueToAttachment(context, result.Result);
 
                 var stream = GetAttachmentStream(context, attachment.Base64Hash);
                 if (stream == null)
@@ -36,19 +36,19 @@ namespace Raven.Server.Documents
         }
 
         [StorageIndexEntryKeyGenerator]
-        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForAttachments(Transaction tx, ref TableValueReader tvr, out Slice slice)
+        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForAttachments(Transaction tx, in TableValueReader tvr, out Slice slice)
         {
             return ShardedDocumentsStorage.ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(tx, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType,
-                (int)AttachmentsTable.Etag, ref tvr, out slice);
+                (int)AttachmentsTable.Etag, tvr, out slice);
         }
 
         [StorageIndexEntryKeyGenerator]
-        internal static ByteStringContext.Scope GenerateBucketAndHashForAttachments(Transaction tx, ref TableValueReader tvr, out Slice slice)
+        internal static ByteStringContext.Scope GenerateBucketAndHashForAttachments(Transaction tx, in TableValueReader tvr, out Slice slice)
         {
-            return GenerateBucketAndHash(tx, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType, (int)AttachmentsTable.Hash, ref tvr, out slice);
+            return GenerateBucketAndHash(tx, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType, (int)AttachmentsTable.Hash, tvr, out slice);
         }
 
-        private static ByteStringContext.Scope GenerateBucketAndHash(Transaction tx, int keyIndex, int hashIndex, ref TableValueReader tvr, out Slice slice)
+        private static ByteStringContext.Scope GenerateBucketAndHash(Transaction tx, int keyIndex, int hashIndex, in TableValueReader tvr, out Slice slice)
         {
             var docsCtx = tx.Owner as DocumentsOperationContext;
             var database = ShardedDocumentDatabase.CastToShardedDocumentDatabase(docsCtx!.DocumentDatabase);
@@ -67,7 +67,7 @@ namespace Raven.Server.Documents
             return scope;
         }
 
-        private static int GetBucketFromAttachmentKey(int keyIndex, TableValueReader tvr, ShardedDocumentDatabase database)
+        private static int GetBucketFromAttachmentKey(int keyIndex, in TableValueReader tvr, ShardedDocumentDatabase database)
         {
             var keyPtr = tvr.Read(keyIndex, out var keySize);
             int sizeOfDocId = AttachmentKey.GetSizeOfDocId(new ReadOnlySpan<byte>(keyPtr, keySize));
@@ -108,7 +108,7 @@ namespace Raven.Server.Documents
             return (total, count);
         }
 
-        internal static void UpdateBucketStatsForAttachments(Transaction tx, Slice key, ref TableValueReader oldValue, ref TableValueReader newValue)
+        internal static void UpdateBucketStatsForAttachments(Transaction tx, Slice key, in TableValueReader oldValue, in TableValueReader newValue)
         {
             var streamSize = 0L;
             var tree = tx.CreateTree(AttachmentsSlice);
@@ -159,7 +159,7 @@ namespace Raven.Server.Documents
                 }
             }
 
-            ShardedDocumentsStorage.UpdateBucketStatsInternal(tx, key, ref newValue, changeVectorIndex: (int)AttachmentsTable.ChangeVector, sizeChange: newValue.Size - oldValue.Size + streamSize);
+            ShardedDocumentsStorage.UpdateBucketStatsInternal(tx, key, newValue, changeVectorIndex: (int)AttachmentsTable.ChangeVector, sizeChange: newValue.Size - oldValue.Size + streamSize);
         }
     }
 }

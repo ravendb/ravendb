@@ -690,13 +690,13 @@ namespace Voron.Data.Tables
                 $"Invalid index {indexDefName} on {Name}, attempted to delete value but the value from {id} wasn\'t in the index");
         }
 
-        private void DeleteValueFromIndex(long id, ref TableValueReader value)
+        private void DeleteValueFromIndex(long id, in TableValueReader value)
         {
             AssertWritableTable();
 
             if (_schema.Key != null)
             {
-                using (_schema.Key.GetValue(_tx.Allocator, ref value, out Slice keySlice))
+                using (_schema.Key.GetValue(_tx.Allocator, value, out Slice keySlice))
                 {
                     var pkTree = GetTree(_schema.Key);
                     pkTree.Delete(keySlice);
@@ -707,7 +707,7 @@ namespace Voron.Data.Tables
             {
                 // For now we wont create secondary indexes on Compact trees.
                 var indexTree = GetTree(indexDef);
-                using (indexDef.GetValue(_tx.Allocator, ref value, out Slice val))
+                using (indexDef.GetValue(_tx.Allocator, value, out Slice val))
                 {
                     var fst = GetFixedSizeTree(indexTree, val.Clone(_tx.Allocator), 0, indexDef.IsGlobal);
                     if (fst.Delete(id).NumberOfEntriesDeleted == 0)
@@ -719,9 +719,9 @@ namespace Voron.Data.Tables
 
             foreach (var dynamicKeyIndexDef in _schema.DynamicKeyIndexes.Values)
             {
-                using (dynamicKeyIndexDef.GetValue(_tx, ref value, out Slice val))
+                using (dynamicKeyIndexDef.GetValue(_tx, value, out Slice val))
                 {
-                    dynamicKeyIndexDef.OnIndexEntryChanged(_tx, val, oldValue: ref value, newValue: ref TableValueReaderUtils.EmptyReader);
+                    dynamicKeyIndexDef.OnIndexEntryChanged(_tx, val, oldValue: value, newValue: ref TableValueReaderUtils.EmptyReader);
 
                     var tree = GetTree(dynamicKeyIndexDef);
                     RemoveValueFromDynamicIndex(id, dynamicKeyIndexDef, tree, val);
@@ -731,7 +731,7 @@ namespace Voron.Data.Tables
             foreach (var indexDef in _schema.FixedSizeIndexes.Values)
             {
                 var index = GetFixedSizeTree(indexDef);
-                var key = indexDef.GetValue(ref value);
+                var key = indexDef.GetValue(value);
                 if (index.Delete(key).NumberOfEntriesDeleted == 0)
                 {
                     ThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt(id, indexDef.Name);
@@ -962,7 +962,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        private void UpdateValuesFromIndex(long id, ref TableValueReader oldVer, TableValueBuilder newVer, bool forceUpdate)
+        private void UpdateValuesFromIndex(long id, in TableValueReader oldVer, TableValueBuilder newVer, bool forceUpdate)
         {
             AssertWritableTable();
 
@@ -970,7 +970,7 @@ namespace Voron.Data.Tables
             {
                 if (_schema.Key != null)
                 {
-                    using (_schema.Key.GetValue(_tx.Allocator, ref oldVer, out Slice oldKeySlice))
+                    using (_schema.Key.GetValue(_tx.Allocator, oldVer, out Slice oldKeySlice))
                     using (_schema.Key.GetValue(_tx.Allocator, newVer, out Slice newKeySlice))
                     {
                         if (SliceComparer.AreEqual(oldKeySlice, newKeySlice) == false ||
@@ -986,7 +986,7 @@ namespace Voron.Data.Tables
                 foreach (var indexDef in _schema.Indexes.Values)
                 {
                     // For now we wont create secondary indexes on Compact trees.
-                    using (indexDef.GetValue(_tx.Allocator, ref oldVer, out Slice oldVal))
+                    using (indexDef.GetValue(_tx.Allocator, oldVer, out Slice oldVal))
                     using (indexDef.GetValue(_tx.Allocator, newVer, out Slice newVal))
                     {
                         if (SliceComparer.AreEqual(oldVal, newVal) == false ||
@@ -1003,10 +1003,10 @@ namespace Voron.Data.Tables
 
                 foreach (var dynamicKeyIndexDef in _schema.DynamicKeyIndexes.Values)
                 {
-                    using (dynamicKeyIndexDef.GetValue(_tx, ref oldVer, out Slice oldVal))
+                    using (dynamicKeyIndexDef.GetValue(_tx, oldVer, out Slice oldVal))
                     using (dynamicKeyIndexDef.GetValue(_tx, newVer, out Slice newVal))
                     {
-                        dynamicKeyIndexDef.OnIndexEntryChanged(_tx, key: newVal, oldValue: ref oldVer, newValue: newVer);
+                        dynamicKeyIndexDef.OnIndexEntryChanged(_tx, key: newVal, oldValue: oldVer, newValue: newVer);
 
                         if (SliceComparer.AreEqual(oldVal, newVal) == false ||
                             forceUpdate)
@@ -1022,7 +1022,7 @@ namespace Voron.Data.Tables
                 foreach (var indexDef in _schema.FixedSizeIndexes.Values)
                 {
                     var index = GetFixedSizeTree(indexDef);
-                    var oldKey = indexDef.GetValue(ref oldVer);
+                    var oldKey = indexDef.GetValue(oldVer);
                     var newKey = indexDef.GetValue(_tx.Allocator, newVer);
 
                     if (oldKey != newKey || forceUpdate)
@@ -1160,7 +1160,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        internal long Insert(ref TableValueReader reader)
+        internal long Insert(in TableValueReader reader)
         {
             AssertWritableTable();
 
@@ -1210,7 +1210,7 @@ namespace Voron.Data.Tables
                 id = page.PageNumber * Constants.Storage.PageSize;
             }
 
-            InsertIndexValuesFor(id, ref reader);
+            InsertIndexValuesFor(id, reader);
 
             NumberOfEntries++;
 
@@ -1225,7 +1225,7 @@ namespace Voron.Data.Tables
             return id;
         }
 
-        private void InsertIndexValuesFor(long id, ref TableValueReader value)
+        private void InsertIndexValuesFor(long id, in TableValueReader value)
         {
             AssertWritableTable();
 
@@ -1234,7 +1234,7 @@ namespace Voron.Data.Tables
             {
                 if (pk != null)
                 {
-                    using (pk.GetValue(_tx.Allocator, ref value, out Slice pkVal))
+                    using (pk.GetValue(_tx.Allocator, value, out Slice pkVal))
                     {
                         var pkIndex = GetTree(pk);
 
@@ -1248,7 +1248,7 @@ namespace Voron.Data.Tables
                 foreach (var indexDef in _schema.Indexes.Values)
                 {
                     // For now we wont create secondary indexes on Compact trees.
-                    using (indexDef.GetValue(_tx.Allocator, ref value, out Slice val))
+                    using (indexDef.GetValue(_tx.Allocator, value, out Slice val))
                     {
                         var indexTree = GetTree(indexDef);
                         var index = GetFixedSizeTree(indexTree, val, 0, indexDef.IsGlobal);
@@ -1258,9 +1258,9 @@ namespace Voron.Data.Tables
 
                 foreach (var dynamicKeyIndexDef in _schema.DynamicKeyIndexes.Values)
                 {
-                    using (dynamicKeyIndexDef.GetValue(_tx, ref value, out Slice dynamicKey))
+                    using (dynamicKeyIndexDef.GetValue(_tx, value, out Slice dynamicKey))
                     {
-                        dynamicKeyIndexDef.OnIndexEntryChanged(_tx, dynamicKey, oldValue: ref TableValueReaderUtils.EmptyReader, newValue: ref value);
+                        dynamicKeyIndexDef.OnIndexEntryChanged(_tx, dynamicKey, oldValue: ref TableValueReaderUtils.EmptyReader, newValue: value);
                         
                         var dynamicIndex = GetTree(dynamicKeyIndexDef);
                         AddValueToDynamicIndex(id, dynamicKeyIndexDef, dynamicIndex, dynamicKey, TreeNodeFlags.Data | TreeNodeFlags.NewOnly);
@@ -1270,7 +1270,7 @@ namespace Voron.Data.Tables
                 foreach (var indexDef in _schema.FixedSizeIndexes.Values)
                 {
                     var index = GetFixedSizeTree(indexDef);
-                    var key = indexDef.GetValue(ref value);
+                    var key = indexDef.GetValue(value);
                     if (index.Add(key, idAsSlice) == false)
                         ThrowInvalidDuplicateFixedSizeTreeKey(key, indexDef);
                 }
@@ -1469,25 +1469,25 @@ namespace Voron.Data.Tables
             return true;
         }
 
-        private IEnumerable<TableValueHolder> GetSecondaryIndexForValue(Tree tree, Slice value, TableSchema.AbstractTreeIndexDef index, bool pullTvr = true)
+        private IEnumerable<TableValueReader> GetSecondaryIndexForValue(Tree tree, Slice value, TableSchema.AbstractTreeIndexDef index, bool pullTvr = true)
         {
             try
             {
                 var fstIndex = GetFixedSizeTree(tree, value, 0, index.IsGlobal);
-                var result = new TableValueHolder();
                 using (var it = fstIndex.Iterate())
                 {
                     if (it.Seek(long.MinValue) == false)
                         yield break;
 
+                    TableValueReader reader = default;
                     do
                     {
                         if (pullTvr)
                         {
-                            ReadById(it.CurrentKey, out result.Reader);
+                            ReadById(it.CurrentKey, out reader);
                         }
 
-                        yield return result;
+                        yield return reader;
 
                     } while (it.MoveNext());
                 }
@@ -1498,7 +1498,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        private IEnumerable<TableValueHolder> GetBackwardSecondaryIndexForValue(Tree tree, Slice value, TableSchema.AbstractTreeIndexDef index)
+        private IEnumerable<TableValueReader> GetBackwardSecondaryIndexForValue(Tree tree, Slice value, TableSchema.AbstractTreeIndexDef index)
         {
             try
             {
@@ -1508,11 +1508,10 @@ namespace Voron.Data.Tables
                     if (it.SeekToLast() == false)
                         yield break;
 
-                    var result = new TableValueHolder();
                     do
                     {
-                        ReadById(it.CurrentKey, out result.Reader);
-                        yield return result;
+                        ReadById(it.CurrentKey, out var reader);
+                        yield return reader;
                     } while (it.MovePrev());
                 }
             }
@@ -1628,7 +1627,7 @@ namespace Voron.Data.Tables
                 {
                     foreach (var result in GetSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator), index))
                     {
-                        reader = result.Reader;
+                        reader = result;
                         return true;
                     }
                 } while (it.MoveNext());
@@ -1735,7 +1734,7 @@ namespace Voron.Data.Tables
                 {
                     foreach (var result in GetBackwardSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator), index))
                     {
-                        reader = result.Reader;
+                        reader = result;
                         return true;
                     }
                 } while (it.MovePrev());
@@ -1768,7 +1767,6 @@ namespace Voron.Data.Tables
 
             if (def.SupportDuplicateKeys == false)
             {
-                var result = new TableValueHolder();
                 using (var it = tree.Iterate(_prefetch))
                 {
                     it.SetRequiredPrefix(requiredPrefix);
@@ -1784,12 +1782,12 @@ namespace Voron.Data.Tables
                     {
                         if (pullTvr)
                         {
-                            GetTableValueReader(it, out result.Reader);
+                            GetTableValueReader(it, out var reader);
 
                             yield return new SeekResult
                             {
                                 Key = it.CurrentKey,
-                                Result = result
+                                Result = reader
                             };
                         }
                         else
@@ -1841,7 +1839,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        public IEnumerable<(Slice Key, TableValueHolder Value)> SeekByPrimaryKeyPrefix(Slice requiredPrefix, Slice startAfter, long skip)
+        public IEnumerable<(Slice Key, TableValueReader Value)> SeekByPrimaryKeyPrefix(Slice requiredPrefix, Slice startAfter, long skip)
         {
             var isStartAfter = startAfter.Equals(Slices.Empty) == false;
 
@@ -1861,17 +1859,16 @@ namespace Voron.Data.Tables
                 if (it.Skip(skip) == false)
                     yield break;
 
-                var result = new TableValueHolder();
                 do
                 {
-                    GetTableValueReader(it, out result.Reader);
-                    yield return (it.CurrentKey, result);
+                    GetTableValueReader(it, out var reader);
+                    yield return (it.CurrentKey, reader);
                 }
                 while (it.MoveNext());
             }
         }
 
-        public IEnumerable<TableValueHolder> SeekByPrimaryKey(Slice value, long skip)
+        public IEnumerable<TableValueReader> SeekByPrimaryKey(Slice value, long skip)
         {
             var pk = _schema.Key;
             var tree = GetTree(pk);
@@ -1886,17 +1883,16 @@ namespace Voron.Data.Tables
                 if (it.Skip(skip) == false)
                     yield break;
 
-                var result = new TableValueHolder();
                 do
                 {
-                    GetTableValueReader(it, out result.Reader);
-                    yield return result;
+                    GetTableValueReader(it, out var reader);
+                    yield return reader;
                 }
                 while (it.MoveNext());
             }
         }
 
-        public IEnumerable<TableValueHolder> SeekBackwardByPrimaryKey(Slice value, long skip)
+        public IEnumerable<TableValueReader> SeekBackwardByPrimaryKey(Slice value, long skip)
         {
             var pk = _schema.Key;
             var tree = GetTree(pk);
@@ -1908,11 +1904,10 @@ namespace Voron.Data.Tables
                 if (it.Skip(-skip) == false)
                     yield break;
 
-                var result = new TableValueHolder();
                 do
                 {
-                    GetTableValueReader(it, out result.Reader);
-                    yield return result;
+                    GetTableValueReader(it, out var reader);
+                    yield return reader;
                 }
                 while (it.MovePrev());
             }
@@ -1949,13 +1944,12 @@ namespace Voron.Data.Tables
             }
         }
 
-        public void DeleteByPrimaryKey(Slice value, Func<TableValueHolder, bool> deletePredicate)
+        public void DeleteByPrimaryKey(Slice value, DeletePredicateFunc deletePredicate)
         {
             AssertWritableTable();
 
             var pk = _schema.Key;
             var tree = GetTree(pk);
-            TableValueHolder tableValueHolder = null;
             value = value.Clone(_tx.Allocator);
             try
             {
@@ -1971,9 +1965,8 @@ namespace Voron.Data.Tables
                             var id = it.CreateReaderForCurrent().Read<long>();
                             var ptr = DirectRead(id, out int size, out bool compressed);
 
-                            tableValueHolder ??= new TableValueHolder();
-                            tableValueHolder.Reader = new TableValueReader(id, ptr, size);
-                            if (deletePredicate(tableValueHolder))
+                            var reader = new TableValueReader(id, ptr, size);
+                            if (deletePredicate(reader))
                             {
                                 value.Release(_tx.Allocator);
                                 value = it.CurrentKey.Clone(_tx.Allocator);
@@ -2102,7 +2095,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        public IEnumerable<(long Key, TableValueHolder TableValueHolder)> IterateForDictionaryTraining(FixedSizeKeyIndexDef index, long skip = 1, long seek = 0)
+        public IEnumerable<(long Key, TableValueReader Reader)> IterateForDictionaryTraining(FixedSizeKeyIndexDef index, long skip = 1, long seek = 0)
         {
             if (skip < 1)
                 throw new ArgumentOutOfRangeException(nameof(skip), "The skip must be positive and non zero.");
@@ -2193,7 +2186,6 @@ namespace Voron.Data.Tables
 
                 var pager = _tx.LowLevelTransaction.DataPager;
                 var dataPagerState = _tx.LowLevelTransaction.DataPagerState;
-                var result = new TableValueHolder();
 
                 bool hasMore;
                 do
@@ -2209,8 +2201,8 @@ namespace Voron.Data.Tables
                     // Do the actual processing to train by yielding the reader.
                     for (int i = 0; i < readDocuments; i++)
                     {
-                        long currentKey = GetTableValueReader(chunk, i, out result.Reader);
-                        yield return (currentKey, result);
+                        long currentKey = GetTableValueReader(chunk, i, out TableValueReader reader);
+                        yield return (currentKey, reader);
                     }
                 }
                 while (hasMore);
@@ -2218,7 +2210,7 @@ namespace Voron.Data.Tables
         }
 
 
-        public IEnumerable<TableValueHolder> SeekForwardFrom(FixedSizeKeyIndexDef index, long key, long skip)
+        public IEnumerable<TableValueReader> SeekForwardFrom(FixedSizeKeyIndexDef index, long key, long skip)
         {
             var fst = GetFixedSizeTree(index);
 
@@ -2230,13 +2222,12 @@ namespace Voron.Data.Tables
                 if (it.Skip(skip) == false)
                     yield break;
 
-                var result = new TableValueHolder();
                 if (_onCorruptedDataHandler == null)
                 {
                     do
                     {
-                        GetTableValueReader(it, out result.Reader);
-                        yield return result;
+                        GetTableValueReader(it, out var reader);
+                        yield return reader;
                     } while (it.MoveNext());
                 }
                 else
@@ -2244,9 +2235,10 @@ namespace Voron.Data.Tables
                     do
                     {
                         bool successfully = true;
+                        TableValueReader reader = default;
                         try
                         {
-                            GetTableValueReader(it, out result.Reader);
+                            GetTableValueReader(it, out reader);
                         }
                         catch (InvalidOperationException e)
                         {
@@ -2255,7 +2247,7 @@ namespace Voron.Data.Tables
                         }
 
                         if (successfully)
-                            yield return result;
+                            yield return reader;
 
                     } while (it.MoveNext());
                 }
@@ -2279,7 +2271,7 @@ namespace Voron.Data.Tables
             }
         }
         
-        public IEnumerable<TableValueHolder> SeekBackwardFromLast(TableSchema.FixedSizeKeyIndexDef index, long skip = 0)
+        public IEnumerable<TableValueReader> SeekBackwardFromLast(TableSchema.FixedSizeKeyIndexDef index, long skip = 0)
         {
             var fst = GetFixedSizeTree(index);
             using (var it = fst.Iterate(_prefetch))
@@ -2290,16 +2282,15 @@ namespace Voron.Data.Tables
                 if (it.Skip(-skip) == false)
                     yield break;
 
-                var result = new TableValueHolder();
                 do
                 {
-                    GetTableValueReader(it, out result.Reader);
-                    yield return result;
+                    GetTableValueReader(it, out var reader);
+                    yield return reader;
                 } while (it.MovePrev());
             }
         }
 
-        public IEnumerable<TableValueHolder> SeekBackwardFrom(TableSchema.FixedSizeKeyIndexDef index, long key, long skip = 0)
+        public IEnumerable<TableValueReader> SeekBackwardFrom(TableSchema.FixedSizeKeyIndexDef index, long key, long skip = 0)
         {
             var fst = GetFixedSizeTree(index);
             using (var it = fst.Iterate(_prefetch))
@@ -2310,12 +2301,10 @@ namespace Voron.Data.Tables
                 if (it.Skip(-skip) == false)
                     yield break;
 
-                var result = new TableValueHolder();
                 do
                 {
-
-                    GetTableValueReader(it, out result.Reader);
-                    yield return result;
+                    GetTableValueReader(it, out var reader);
+                    yield return reader;
                 } while (it.MovePrev());
             }
         }
@@ -2377,7 +2366,7 @@ namespace Voron.Data.Tables
             return true;
         }
 
-        public long DeleteBackwardFrom(FixedSizeKeyIndexDef index, long value, long numberOfEntriesToDelete, Action<TableValueHolder> beforeDelete = null)
+        public long DeleteBackwardFrom(FixedSizeKeyIndexDef index, long value, long numberOfEntriesToDelete, BeforeDeleteAction beforeDelete = null)
         {
             AssertWritableTable();
 
@@ -2386,7 +2375,6 @@ namespace Voron.Data.Tables
 
             long deleted = 0;
             var fst = GetFixedSizeTree(index);
-            TableValueHolder tableValueHolder = null;
             // deleting from a table can shift things around, so we delete 
             // them one at a time
             while (deleted < numberOfEntriesToDelete)
@@ -2404,9 +2392,8 @@ namespace Voron.Data.Tables
                     if (beforeDelete != null)
                     {
                         var ptr = DirectRead(id, out int size, out bool compressed);
-                        tableValueHolder ??= new TableValueHolder();
-                        tableValueHolder.Reader = new TableValueReader(id, ptr, size);
-                        beforeDelete(tableValueHolder);
+                        var reader = new TableValueReader(id, ptr, size);
+                        beforeDelete(reader);
                         Delete(id, ptr, size, compressed);
                     }
                     else
@@ -2459,14 +2446,13 @@ namespace Voron.Data.Tables
             }
         }
 
-        public bool DeleteByPrimaryKeyPrefix(Slice startSlice, Action<TableValueHolder> beforeDelete = null, Func<TableValueHolder, bool> shouldAbort = null)
+        public bool DeleteByPrimaryKeyPrefix(Slice startSlice, BeforeDeleteAction beforeDelete = null, DeletePredicateFunc shouldAbort = null)
         {
             AssertWritableTable();
 
             bool deleted = false;
             var pk = _schema.Key;
             var tree = GetTree(pk);
-            TableValueHolder tableValueHolder = null;
             while (true)
             {
                 using (var it = tree.Iterate(_prefetch))
@@ -2480,13 +2466,12 @@ namespace Voron.Data.Tables
                     if (beforeDelete != null || shouldAbort != null)
                     {
                         var ptr = DirectRead(id, out int size, out bool compressed);
-                        tableValueHolder ??= new TableValueHolder();
-                        tableValueHolder.Reader = new TableValueReader(id, ptr, size);
-                        if (shouldAbort?.Invoke(tableValueHolder) == true)
+                        var reader = new TableValueReader(id, ptr, size);
+                        if (shouldAbort != null && shouldAbort(reader))
                         {
                             return deleted;
                         }
-                        beforeDelete?.Invoke(tableValueHolder);
+                        beforeDelete?.Invoke(reader);
 
                         Delete(id, ptr, size, compressed);
                     }
@@ -2501,7 +2486,7 @@ namespace Voron.Data.Tables
         }
 
         public long DeleteForwardFrom(TableSchema.AbstractTreeIndexDef index, Slice value, bool startsWith, long numberOfEntriesToDelete,
-            Action<TableValueHolder> beforeDelete = null, Func<TableValueHolder, bool> shouldAbort = null)
+            BeforeDeleteAction beforeDelete = null, DeletePredicateFunc shouldAbort = null)
         {
             AssertWritableTable();
 
@@ -2510,7 +2495,6 @@ namespace Voron.Data.Tables
 
             long deleted = 0;
             var tree = GetTree(index);
-            TableValueHolder tableValueHolder = null;
             while (deleted < numberOfEntriesToDelete)
             {
                 // deleting from a table can shift things around, so we delete 
@@ -2531,14 +2515,12 @@ namespace Voron.Data.Tables
                         if (beforeDelete != null || shouldAbort != null)
                         {
                             var ptr = DirectRead(fstIt.CurrentKey, out int size, out bool compressed);
-                            if (tableValueHolder == null)
-                                tableValueHolder = new TableValueHolder();
-                            tableValueHolder.Reader = new TableValueReader(fstIt.CurrentKey, ptr, size);
-                            if (shouldAbort?.Invoke(tableValueHolder) == true)
+                            var reader = new TableValueReader(fstIt.CurrentKey, ptr, size);
+                            if (shouldAbort != null && shouldAbort(reader))
                             {
                                 return deleted;
                             }
-                            beforeDelete?.Invoke(tableValueHolder);
+                            beforeDelete?.Invoke(reader);
                             Delete(fstIt.CurrentKey, ptr, size, compressed);
                         }
                         else
@@ -2563,7 +2545,6 @@ namespace Voron.Data.Tables
             var deleted = 0;
             var pk = _schema.Key;
             var pkTree = GetTree(pk);
-            TableValueHolder tableValueHolder = null;
             while (deleted < numberOfEntriesToDelete)
             {
                 using (var it = pkTree.Iterate(_prefetch))
@@ -2575,11 +2556,8 @@ namespace Voron.Data.Tables
                     var id = it.CreateReaderForCurrent().Read<long>();
                     var ptr = DirectRead(id, out int size, out bool compressed);
 
-                    if (tableValueHolder == null)
-                        tableValueHolder = new TableValueHolder();
-
-                    tableValueHolder.Reader = new TableValueReader(id, ptr, size);
-                    var currentIndex = *(long*)tableValueHolder.Reader.Read(1, out _);
+                    var reader = new TableValueReader(id, ptr, size);
+                    var currentIndex = *(long*)reader.Read(1, out _);
 
                     if (currentIndex > upToIndex)
                         return false;
@@ -2782,15 +2760,12 @@ namespace Voron.Data.Tables
         public struct SeekResult
         {
             public Slice Key;
-            public TableValueHolder Result;
+            public TableValueReader Result;
         }
 
-        public sealed class TableValueHolder
-        {
-            // we need this so we'll not have to create a new allocation
-            // of TableValueReader per value
-            public TableValueReader Reader;
-        }
+        public delegate void BeforeDeleteAction(in TableValueReader reader);
+
+        public delegate bool DeletePredicateFunc(in TableValueReader reader);
 
         public ReturnTableValueBuilderToCache Allocate(out TableValueBuilder builder)
         {

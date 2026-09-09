@@ -1,4 +1,4 @@
-﻿using Raven.Server.Documents;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
@@ -54,22 +54,23 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     var writeTable = step.DocumentsStorage.RevisionsStorage.EnsureRevisionTableCreated(step.WriteTx, collectionName, RevisionsSchemaBase);
                     foreach (var read in readTable.SeekForwardFrom(CollectionRevisionsEtagsIndex, 0, 0))
                     {
-                        using (TableValueReaderUtil.CloneTableValueReader(context, read))
+                        var readCopy = read; // CloneTableValueReader writes the copy back through the parameter
+                        using (TableValueReaderUtil.CloneTableValueReader(context, ref readCopy))
                         using (writeTable.Allocate(out TableValueBuilder write))
                         {
-                            var flags = TableValueToFlags((int)LegacyRevisionsTable.Flags, ref read.Reader);
-                            var lastModified = TableValueToDateTime((int)LegacyRevisionsTable.LastModified, ref read.Reader);
+                            var flags = TableValueToFlags((int)LegacyRevisionsTable.Flags, read);
+                            var lastModified = TableValueToDateTime((int)LegacyRevisionsTable.LastModified, read);
 
-                            write.Add(read.Reader.Read((int)LegacyRevisionsTable.ChangeVector, out int size), size);
-                            write.Add(read.Reader.Read((int)LegacyRevisionsTable.LowerId, out size), size);
-                            write.Add(read.Reader.Read((int)LegacyRevisionsTable.RecordSeparator, out size), size);
-                            write.Add(read.Reader.Read((int)LegacyRevisionsTable.Etag, out size), size);
-                            write.Add(read.Reader.Read((int)LegacyRevisionsTable.Id, out size), size);
-                            write.Add(read.Reader.Read((int)LegacyRevisionsTable.Document, out size), size);
+                            write.Add(readCopy.Read((int)LegacyRevisionsTable.ChangeVector, out int size), size);
+                            write.Add(readCopy.Read((int)LegacyRevisionsTable.LowerId, out size), size);
+                            write.Add(readCopy.Read((int)LegacyRevisionsTable.RecordSeparator, out size), size);
+                            write.Add(readCopy.Read((int)LegacyRevisionsTable.Etag, out size), size);
+                            write.Add(readCopy.Read((int)LegacyRevisionsTable.Id, out size), size);
+                            write.Add(readCopy.Read((int)LegacyRevisionsTable.Document, out size), size);
                             write.Add((int)flags);
-                            write.Add(read.Reader.Read((int)LegacyRevisionsTable.DeletedEtag, out size), size);
+                            write.Add(readCopy.Read((int)LegacyRevisionsTable.DeletedEtag, out size), size);
                             write.Add(lastModified.Ticks);
-                            write.Add(read.Reader.Read((int)LegacyRevisionsTable.TransactionMarker, out size), size);
+                            write.Add(readCopy.Read((int)LegacyRevisionsTable.TransactionMarker, out size), size);
                             if ((flags & DocumentFlags.Resolved) == DocumentFlags.Resolved)
                             {
                                 write.Add((int)DocumentFlags.Resolved);

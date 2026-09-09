@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -739,9 +739,9 @@ namespace Raven.Server.Rachis
 
                                     foreach (var holder in inputTable.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
                                     {
-                                        binaryWriter.Write(holder.Reader.Size);
-                                        copier.Copy(holder.Reader.Pointer, holder.Reader.Size);
-                                        CalculateTotalSize(ref items, ref totalSizeInBytes, sizeof(int) + holder.Reader.Size);
+                                        binaryWriter.Write(holder.Size);
+                                        copier.Copy(holder.Pointer, holder.Size);
+                                        CalculateTotalSize(ref items, ref totalSizeInBytes, sizeof(int) + holder.Size);
                                     }
                                     break;
                                 default:
@@ -812,7 +812,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        internal static unsafe BlittableJsonReaderObject BuildRachisEntryToSend<TTransaction>(TransactionOperationContext<TTransaction> context, Table.TableValueHolder value)
+        internal static unsafe BlittableJsonReaderObject BuildRachisEntryToSend<TTransaction>(TransactionOperationContext<TTransaction> context, in TableValueReader value)
             where TTransaction : RavenTransaction
         {
             BlittableJsonReaderObject entry;
@@ -830,21 +830,21 @@ namespace Raven.Server.Rachis
                 
                 writer.WritePropertyName(nameof(RachisEntry.Index));
 
-                var index = Bits.SwapBytes(*(long*)value.Reader.Read(0, out int size));
+                var index = Bits.SwapBytes(*(long*)value.Read(0, out int size));
                 Debug.Assert(size == sizeof(long));
                 writer.WriteValue(index);
 
                 writer.WritePropertyName(nameof(RachisEntry.Term));
-                var term = *(long*)value.Reader.Read(1, out size);
+                var term = *(long*)value.Read(1, out size);
                 Debug.Assert(size == sizeof(long));
                 writer.WriteValue(term);
 
                 writer.WritePropertyName(nameof(RachisEntry.Entry));
-                writer.WriteEmbeddedBlittableDocument(value.Reader.Read(2, out size), size);
+                writer.WriteEmbeddedBlittableDocument(value.Read(2, out size), size);
 
 
                 writer.WritePropertyName(nameof(RachisEntry.Flags));
-                var flags = *(RachisEntryFlags*)value.Reader.Read(3, out size);
+                var flags = *(RachisEntryFlags*)value.Read(3, out size);
                 Debug.Assert(size == sizeof(RachisEntryFlags));
                 writer.WriteValue(flags.ToString());
 

@@ -1,4 +1,4 @@
-﻿using Raven.Server.Documents;
+using Raven.Server.Documents;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Sparrow.Json;
@@ -55,7 +55,7 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                     {
                         foreach (var item in oldTable.SeekByPrimaryKeyPrefix(keyPrefix, Slices.Empty, 0))
                         {
-                            var index = DocumentsStorage.TableValueToLong((int)ClusterStateMachine.CompareExchangeTable.Index, ref item.Value.Reader);
+                            var index = DocumentsStorage.TableValueToLong((int)ClusterStateMachine.CompareExchangeTable.Index, item.Value);
 
                             using (CompareExchangeCommandBase.GetPrefixIndexSlices(step.ReadTx.Allocator, db, index, out var buffer))
                             using (Slice.External(step.WriteTx.Allocator, buffer.Ptr, buffer.Length, out var prefixIndexSlice))
@@ -63,7 +63,7 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                             using (var ctx = JsonOperationContext.ShortTermSingleUse())
                             {
                                 using (var bjro = new BlittableJsonReaderObject(
-                                        item.Value.Reader.Read((int)ClusterStateMachine.CompareExchangeTable.Value, out var size1),
+                                        item.Value.Read((int)ClusterStateMachine.CompareExchangeTable.Value, out var size1),
                                         size1, ctx).Clone(ctx)
                                 )
                                 {

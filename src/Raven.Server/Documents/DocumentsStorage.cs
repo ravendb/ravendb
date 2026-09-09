@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -398,7 +398,7 @@ namespace Raven.Server.Documents
                 var collectionsForWrites = new Dictionary<string, CollectionName>(collectionsForReads, StringComparer.OrdinalIgnoreCase);
                foreach (var entry in collectionsTable.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
                 {
-                    var collection = TableValueToId(ctx, (int)CollectionsTable.Name, ref entry.Reader).ToString();
+                    var collection = TableValueToId(ctx, (int)CollectionsTable.Name, entry).ToString();
                     if (collectionsForWrites.ContainsKey(collection))
                         continue;
 
@@ -889,7 +889,7 @@ namespace Raven.Server.Documents
                 {
                     token.ThrowIfCancellationRequested();
 
-                    var document = TableValueToDocument(context, ref result.Value.Reader, fields);
+                    var document = TableValueToDocument(context, result.Value, fields);
                     string documentId = document.Id;
                     if (documentId.StartsWith(idPrefix, StringComparison.OrdinalIgnoreCase) == false)
                     {
@@ -940,7 +940,7 @@ namespace Raven.Server.Documents
             {
                 if (take-- <= 0)
                     yield break;
-                yield return TableValueToDocument(context, ref result.Reader, fields);
+                yield return TableValueToDocument(context, result, fields);
             }
         }
 
@@ -953,7 +953,7 @@ namespace Raven.Server.Documents
             {
                 if (take-- <= 0)
                     yield break;
-                yield return TableValueToDocument(context, ref result.Reader, fields);
+                yield return TableValueToDocument(context, result, fields);
             }
         }
 
@@ -974,7 +974,7 @@ namespace Raven.Server.Documents
             {
                 if (take-- <= 0)
                     yield break;
-                yield return TableValueToDocument(context, ref result.Reader, fields);
+                yield return TableValueToDocument(context, result, fields);
             }
         }
 
@@ -1021,7 +1021,7 @@ namespace Raven.Server.Documents
                     yield break;
                 }
 
-                yield return TableValueToDocument(context, ref result.Reader, fields);
+                yield return TableValueToDocument(context, result, fields);
             }
         }
 
@@ -1032,7 +1032,7 @@ namespace Raven.Server.Documents
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(Schemas.Documents.AllDocsEtagsIndex, etag, 0))
             {
-                yield return DocumentReplicationItem.From(TableValueToDocument(context, ref result.Reader, fields), context);
+                yield return DocumentReplicationItem.From(TableValueToDocument(context, result, fields), context);
             }
         }
 
@@ -1146,7 +1146,7 @@ namespace Raven.Server.Documents
 
                 _forTestingPurposes?.DelayDocumentLoad?.Wait(DocumentDatabase.DatabaseShutdown);
 
-                yield return TableValueToDocument(context, ref result.Reader, fields);
+                yield return TableValueToDocument(context, result, fields);
             }
         }
 
@@ -1215,7 +1215,7 @@ namespace Raven.Server.Documents
             {
                 if (IsTombstoneOfId(tombstoneKey, lowerId))
                 {
-                    var current = TableValueToTombstone(context, ref tvh.Reader);
+                    var current = TableValueToTombstone(context, tvh);
                     if (mostRecent == null ||
                         GetConflictStatusForVersion(context, current.ChangeVector, mostRecent.ChangeVector) == ConflictStatus.Update)
                     {
@@ -1318,7 +1318,7 @@ namespace Raven.Server.Documents
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(AllDocsEtagsIndex, 0, 0))
             {
-                yield return TableValueToId(context, (int)DocumentsTable.Id, ref result.Reader);
+                yield return TableValueToId(context, (int)DocumentsTable.Id, result);
             }
         }
 
@@ -1337,7 +1337,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public static (int ActualSize, int AllocatedSize, bool IsCompressed) GetMetrics(Table table, TableValueReader tvr)
+        public static (int ActualSize, int AllocatedSize, bool IsCompressed) GetMetrics(Table table, in TableValueReader tvr)
         {
             var info = table.GetInfoFor(tvr.Id);
             return (tvr.Size, info.AllocatedSize, info.IsCompressed);
@@ -1383,7 +1383,7 @@ namespace Raven.Server.Documents
                 if (take-- <= 0)
                     yield break;
 
-                yield return TableValueToTombstone(context, ref result.Reader);
+                yield return TableValueToTombstone(context, result);
             }
         }
 
@@ -1397,7 +1397,7 @@ namespace Raven.Server.Documents
                 if (take-- <= 0)
                     break;
 
-                var tombstone = TableValueToTombstone(context, ref result.Reader);
+                var tombstone = TableValueToTombstone(context, result);
                 tombstones.Add(tombstone.CloneInternal(context));
             }
 
@@ -1417,7 +1417,7 @@ namespace Raven.Server.Documents
                 if (take-- <= 0)
                     yield break;
 
-                yield return TableValueToTombstone(context, ref result.Reader);
+                yield return TableValueToTombstone(context, result);
             }
         }
 
@@ -1433,7 +1433,7 @@ namespace Raven.Server.Documents
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(Schemas.Tombstones.AllTombstonesEtagsIndex, etag, 0))
             {
-                var tombstoneItem = TombstoneReplicationItem.From(context, TableValueToTombstone(context, ref result.Reader));
+                var tombstoneItem = TombstoneReplicationItem.From(context, TableValueToTombstone(context, result));
 
                 if (revisionTombstonesWithId == false && tombstoneItem is RevisionTombstoneReplicationItem revisionTombstone)
                     revisionTombstone.StripDocumentIdFromKeyIfNeeded(context);
@@ -1459,7 +1459,7 @@ namespace Raven.Server.Documents
                 if (take-- <= 0)
                     yield break;
 
-                yield return TableValueToTombstone(context, ref result.Reader);
+                yield return TableValueToTombstone(context, result);
             }
         }
 
@@ -1531,7 +1531,7 @@ namespace Raven.Server.Documents
                 if (take-- <= 0)
                     yield break;
 
-                yield return TableValueToTombstone(context, ref result.Reader);
+                yield return TableValueToTombstone(context, result);
             }
         }
 
@@ -1634,9 +1634,9 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal Document TableValueToDocument(DocumentsOperationContext context, ref TableValueReader tvr, DocumentFields fields = DocumentFields.All, bool skipValidationInDebug = false)
+        internal Document TableValueToDocument(DocumentsOperationContext context, in TableValueReader tvr, DocumentFields fields = DocumentFields.All, bool skipValidationInDebug = false)
         {
-            var document = ParseDocument(context, ref tvr, fields);
+            var document = ParseDocument(context, tvr, fields);
 #if DEBUG
             if (skipValidationInDebug == false)
             {
@@ -1675,74 +1675,74 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static Document ParseDocument(DocumentsOperationContext context, ref TableValueReader tvr, DocumentFields fields)
+        private static Document ParseDocument(DocumentsOperationContext context, in TableValueReader tvr, DocumentFields fields)
         {
-            if (TableValueReader.TryCast<N1>(ref tvr, out var tvr1))
+            if (TableValueReader.TryCast<N1>(tvr, out var tvr1))
                 return ParseDocument(context, ref tvr1, fields);
-            if (TableValueReader.TryCast<N2>(ref tvr, out var tvr2))
+            if (TableValueReader.TryCast<N2>(tvr, out var tvr2))
                 return ParseDocument(context, ref tvr2, fields);
 
             // It will fail on TableValueReader if this is not the case, this is a safe case.
-            TableValueReader.TryCast<N4>(ref tvr, out var tvr4);
+            TableValueReader.TryCast<N4>(tvr, out var tvr4);
             return ParseDocument(context, ref tvr4, fields);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static Document ParseDocument<TTableValueReader>(DocumentsOperationContext context, ref TTableValueReader tvr, DocumentFields fields)
+        private static Document ParseDocument<TTableValueReader>(DocumentsOperationContext context, in TTableValueReader tvr, DocumentFields fields)
             where TTableValueReader : struct, ITableValueReader
         {
             if (fields == DocumentFields.All)
             {
                 var doc = new Document(context, tvr.Id);
-                return InitializeDocument(context, doc, ref tvr);
+                return InitializeDocument(context, doc, tvr);
             }
 
-            return ParseDocumentPartial(context, ref tvr, fields);
+            return ParseDocumentPartial(context, tvr, fields);
         }
 
-        private static Document ParseDocumentPartial<TTableValueReader>(DocumentsOperationContext context, ref TTableValueReader tvr, DocumentFields fields)
+        private static Document ParseDocumentPartial<TTableValueReader>(DocumentsOperationContext context, in TTableValueReader tvr, DocumentFields fields)
             where TTableValueReader : struct, ITableValueReader
         {
             var result = new Document(context, tvr.Id);
 
             if (fields.Contain(DocumentFields.LowerId))
-                result.LowerId = TableValueToString(context, (int)DocumentsTable.LowerId, ref tvr);
+                result.LowerId = TableValueToString(context, (int)DocumentsTable.LowerId, tvr);
 
             if (fields.Contain(DocumentFields.Id))
-                result.Id = TableValueToId(context, (int)DocumentsTable.Id, ref tvr);
+                result.Id = TableValueToId(context, (int)DocumentsTable.Id, tvr);
 
             if (fields.Contain(DocumentFields.Data))
                 result.Data = new BlittableJsonReaderObject(tvr.Read((int)DocumentsTable.Data, out int size), size, context);
 
             if (fields.Contain(DocumentFields.ChangeVector))
-                result.ChangeVector = TableValueToChangeVector((int)DocumentsTable.ChangeVector, ref tvr);
+                result.ChangeVector = TableValueToChangeVector((int)DocumentsTable.ChangeVector, tvr);
 
-            result.Etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr);
-            result.LastModified = TableValueToDateTime((int)DocumentsTable.LastModified, ref tvr);
-            result.Flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr);
+            result.Etag = TableValueToEtag((int)DocumentsTable.Etag, tvr);
+            result.LastModified = TableValueToDateTime((int)DocumentsTable.LastModified, tvr);
+            result.Flags = TableValueToFlags((int)DocumentsTable.Flags, tvr);
             result.StorageId = tvr.Id;
-            result.TransactionMarker = TableValueToShort((int)DocumentsTable.TransactionMarker, nameof(DocumentsTable.TransactionMarker), ref tvr);
+            result.TransactionMarker = TableValueToShort((int)DocumentsTable.TransactionMarker, nameof(DocumentsTable.TransactionMarker), tvr);
 
             return result;
         }
 
-        private static Document InitializeDocument<TTableValueReader>(JsonOperationContext context, Document document, ref TTableValueReader tvr)
+        private static Document InitializeDocument<TTableValueReader>(JsonOperationContext context, Document document, in TTableValueReader tvr)
             where TTableValueReader : struct, ITableValueReader
         {
             document.StorageId = tvr.Id;
-            document.LowerId = TableValueToString(context, (int)DocumentsTable.LowerId, ref tvr);
-            document.Id = TableValueToId(context, (int)DocumentsTable.Id, ref tvr);
-            document.Etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr);
+            document.LowerId = TableValueToString(context, (int)DocumentsTable.LowerId, tvr);
+            document.Id = TableValueToId(context, (int)DocumentsTable.Id, tvr);
+            document.Etag = TableValueToEtag((int)DocumentsTable.Etag, tvr);
             document.Data = new BlittableJsonReaderObject(tvr.Read((int)DocumentsTable.Data, out int size), size, context);
-            document.ChangeVector = TableValueToChangeVector((int)DocumentsTable.ChangeVector, ref tvr);
-            document.LastModified = TableValueToDateTime((int)DocumentsTable.LastModified, ref tvr);
-            document.Flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr);
-            document.TransactionMarker = TableValueToShort((int)DocumentsTable.TransactionMarker, nameof(DocumentsTable.TransactionMarker), ref tvr);
+            document.ChangeVector = TableValueToChangeVector((int)DocumentsTable.ChangeVector, tvr);
+            document.LastModified = TableValueToDateTime((int)DocumentsTable.LastModified, tvr);
+            document.Flags = TableValueToFlags((int)DocumentsTable.Flags, tvr);
+            document.TransactionMarker = TableValueToShort((int)DocumentsTable.TransactionMarker, nameof(DocumentsTable.TransactionMarker), tvr);
 
             return document;
         }
 
-        public static Document ParseRawDataSectionDocumentWithValidation(JsonOperationContext context, ref TableValueReader tvr, int expectedSize)
+        public static Document ParseRawDataSectionDocumentWithValidation(JsonOperationContext context, in TableValueReader tvr, int expectedSize)
         {
             var datPtr = tvr.Read((int)DocumentsTable.Data, out int size);
             if (size > expectedSize || size <= 0)
@@ -1751,10 +1751,10 @@ namespace Raven.Server.Documents
             BlittableJsonReaderObject.BlittableValidation(context, datPtr, size);
             
             var doc = new Document();
-            return InitializeDocument(context, doc, ref tvr);
+            return InitializeDocument(context, doc, tvr);
         }
 
-        public static Tombstone TableValueToTombstone(JsonOperationContext context, ref TableValueReader tvr)
+        public static Tombstone TableValueToTombstone(JsonOperationContext context, in TableValueReader tvr)
         {
             if (tvr.Pointer == null)
                 return null;
@@ -1762,28 +1762,28 @@ namespace Raven.Server.Documents
             var result = new Tombstone
             {
                 StorageId = tvr.Id,
-                LowerId = TableValueToString(context, (int)TombstoneTable.LowerId, ref tvr),
-                Etag = TableValueToEtag((int)TombstoneTable.Etag, ref tvr),
-                DeletedEtag = TableValueToEtag((int)TombstoneTable.DeletedEtag, ref tvr),
+                LowerId = TableValueToString(context, (int)TombstoneTable.LowerId, tvr),
+                Etag = TableValueToEtag((int)TombstoneTable.Etag, tvr),
+                DeletedEtag = TableValueToEtag((int)TombstoneTable.DeletedEtag, tvr),
                 Type = *(Tombstone.TombstoneType*)tvr.Read((int)TombstoneTable.Type, out int _),
                 TransactionMarker = *(short*)tvr.Read((int)TombstoneTable.TransactionMarker, out int _),
-                ChangeVector = TableValueToChangeVector((int)TombstoneTable.ChangeVector, ref tvr),
-                LastModified = TableValueToDateTime((int)TombstoneTable.LastModified, ref tvr),
-                Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr),
+                ChangeVector = TableValueToChangeVector((int)TombstoneTable.ChangeVector, tvr),
+                LastModified = TableValueToDateTime((int)TombstoneTable.LastModified, tvr),
+                Flags = TableValueToFlags((int)TombstoneTable.Flags, tvr),
             };
 
             switch (result.Type)
             {
                 case Tombstone.TombstoneType.Document:
-                    result.Collection = TableValueToId(context, (int)TombstoneTable.Collection, ref tvr);
+                    result.Collection = TableValueToId(context, (int)TombstoneTable.Collection, tvr);
                     result.LowerId = UnwrapLowerIdIfNeeded(context, result.LowerId);
                     break;
                 case Tombstone.TombstoneType.Revision:
-                    result.Collection = TableValueToId(context, (int)TombstoneTable.Collection, ref tvr);
-                    result.RevisionVersion = ReadRevisionVersion(context, ref tvr);
+                    result.Collection = TableValueToId(context, (int)TombstoneTable.Collection, tvr);
+                    result.RevisionVersion = ReadRevisionVersion(context, tvr);
                     break;
                 case Tombstone.TombstoneType.Attachment:
-                    result.RevisionVersion = ReadRevisionVersion(context, ref tvr);
+                    result.RevisionVersion = ReadRevisionVersion(context, tvr);
                     break;
             }
 
@@ -1791,10 +1791,10 @@ namespace Raven.Server.Documents
         }
 
         // Field 9 (TombstoneTable.RevisionVersion) -- present only on Hashed-form RT/RAT writes; legacy 9-field rows have no slot.
-        private static string ReadRevisionVersion(JsonOperationContext context, ref TableValueReader tvr)
+        private static string ReadRevisionVersion(JsonOperationContext context, in TableValueReader tvr)
         {
             return tvr.Count > (int)TombstoneTable.RevisionVersion
-                ? TableValueToChangeVector((int)TombstoneTable.RevisionVersion, ref tvr)
+                ? TableValueToChangeVector((int)TombstoneTable.RevisionVersion, tvr)
                 : null;
         }
 
@@ -2969,7 +2969,7 @@ namespace Raven.Server.Documents
             var collections = tx.OpenTable(CollectionsSchema, CollectionsSlice);
             foreach (var tvr in collections.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
             {
-                var collection = TableValueToId(context, (int)CollectionsTable.Name, ref tvr.Reader);
+                var collection = TableValueToId(context, (int)CollectionsTable.Name, tvr);
                 var collectionName = new CollectionName(collection);
                 result.Add(collection, collectionName);
             }
@@ -2978,7 +2978,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static long TableValueToEtag<TTableValueReader>(int index, ref TTableValueReader tvr)
+        public static long TableValueToEtag<TTableValueReader>(int index, in TTableValueReader tvr)
             where TTableValueReader : struct, ITableValueReader
         {
             var ptr = tvr.Read(index, out _);
@@ -2987,7 +2987,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static long TableValueToLong<TTableValueReader>(int index, ref TTableValueReader tvr)
+        public static long TableValueToLong<TTableValueReader>(int index, in TTableValueReader tvr)
             where TTableValueReader : struct, ITableValueReader
         {
             var ptr = tvr.Read(index, out _);
@@ -2995,14 +2995,14 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static DocumentFlags TableValueToFlags<TTableValueReader>(int index, ref TTableValueReader tvr)
+        public static DocumentFlags TableValueToFlags<TTableValueReader>(int index, in TTableValueReader tvr)
             where TTableValueReader : struct, ITableValueReader
         {
             return *(DocumentFlags*)tvr.Read(index, out _);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static RemoteAttachmentFlags TableValueToAttachmentFlags(int index, ref TableValueReader tvr)
+        public static RemoteAttachmentFlags TableValueToAttachmentFlags(int index, in TableValueReader tvr)
         {
             var ptr = tvr.Read(index, out _);
             var etag = Bits.SwapBytes(*(int*)ptr);
@@ -3010,7 +3010,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static short TableValueToShort<TTableValueReader>(int index, string name, ref TTableValueReader tvr)
+        public static short TableValueToShort<TTableValueReader>(int index, string name, in TTableValueReader tvr)
             where TTableValueReader : struct, ITableValueReader
         {
             var value = *(short*)tvr.Read(index, out int size);
@@ -3032,14 +3032,14 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static DateTime TableValueToDateTime<TTableValueReader>(int index, ref TTableValueReader tvr)
+        public static DateTime TableValueToDateTime<TTableValueReader>(int index, in TTableValueReader tvr)
             where TTableValueReader : struct, ITableValueReader
         {
             return new DateTime(*(long*)tvr.Read(index, out _), DateTimeKind.Utc);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static DateTime? TableValueToNullableDateTime(int index, ref TableValueReader tvr)
+        public static DateTime? TableValueToNullableDateTime(int index, in TableValueReader tvr)
         {
             var ticks = *(long*)tvr.Read(index, out _);
             if (ticks < 0)
@@ -3048,7 +3048,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static LazyStringValue TableValueToString<TTableValueReader>(JsonOperationContext context, int index, ref TTableValueReader tvr)
+        public static LazyStringValue TableValueToString<TTableValueReader>(JsonOperationContext context, int index, in TTableValueReader tvr)
             where TTableValueReader : struct, ITableValueReader
         {
             var ptr = tvr.Read(index, out int size);
@@ -3056,7 +3056,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static string TableValueToChangeVector<TTableValueReader>(int index, ref TTableValueReader tvr)
+        public static string TableValueToChangeVector<TTableValueReader>(int index, in TTableValueReader tvr)
             where TTableValueReader : struct, ITableValueReader
         {
             var ptr = tvr.Read(index, out int size);
@@ -3064,7 +3064,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ChangeVector TableValueToChangeVector<TTableValueReader>(DocumentsOperationContext context, int index, ref TTableValueReader tvr)
+        public static ChangeVector TableValueToChangeVector<TTableValueReader>(DocumentsOperationContext context, int index, in TTableValueReader tvr)
             where TTableValueReader : struct, ITableValueReader
         {
             var ptr = tvr.Read(index, out int size);
@@ -3072,7 +3072,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static LazyStringValue TableValueToId<TTableValueReader>(JsonOperationContext context, int index, ref TTableValueReader tvr)
+        public static LazyStringValue TableValueToId<TTableValueReader>(JsonOperationContext context, int index, in TTableValueReader tvr)
             where TTableValueReader : struct, ITableValueReader
         {
             var ptr = tvr.Read(index, out _);
@@ -3084,7 +3084,7 @@ namespace Raven.Server.Documents
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ByteStringContext.InternalScope TableValueToSlice<TTableValueReader>(DocumentsOperationContext context,
-            int index, ref TTableValueReader tvr, out Slice slice)
+            int index, in TTableValueReader tvr, out Slice slice)
             where TTableValueReader : struct, ITableValueReader
         {
             var ptr = tvr.Read(index, out int size);

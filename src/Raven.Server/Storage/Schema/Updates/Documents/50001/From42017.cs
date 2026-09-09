@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -154,7 +154,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             var collections = step.WriteTx.OpenTable(CollectionsSchemaBase, CollectionsSlice);
             foreach (var tvr in collections.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
             {
-                var collection = DocumentsStorage.TableValueToId(context, (int)CollectionsTable.Name, ref tvr.Reader);
+                var collection = DocumentsStorage.TableValueToId(context, (int)CollectionsTable.Name, tvr);
                 var collectionName = new CollectionName(collection);
                 var tableTree = step.WriteTx.CreateTree(collectionName.GetTableName(CollectionTableType.Documents), RootObjectType.Table);
                 DocsSchemaBase.SerializeSchemaIntoTableTree(tableTree);
@@ -176,7 +176,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                 var tableId = tvr.Id;
                 var countersTable = new Table(CountersSchemaBase, step.WriteTx);
                 var counterNames = GetCountersForDocumentInternal(context, docId, countersTable).ToList();
-                var doc = step.DocumentsStorage.TableValueToDocument(context, ref tvr, skipValidationInDebug: true);
+                var doc = step.DocumentsStorage.TableValueToDocument(context, tvr, skipValidationInDebug: true);
                 if (doc.TryGetMetadata(out var metadata) == false)
                 {
                     if (counterNames.Count > 0)
@@ -268,7 +268,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             {
                 foreach (var result in table.SeekByPrimaryKeyPrefix(Slices.BeforeAllKeys, Slices.Empty, skip: 0))
                 {
-                    yield return CreateReplicationBatchItem(ctx, ref result.Value.Reader);
+                    yield return CreateReplicationBatchItem(ctx, result.Value);
                 }
 
                 yield break;
@@ -279,13 +279,13 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                 if (table.SeekOnePrimaryKeyPrefix(documentKeyPrefix, out var reader))
                 {
                     // first entry with prefix
-                    yield return CreateReplicationBatchItem(ctx, ref reader);
+                    yield return CreateReplicationBatchItem(ctx, reader);
                 }
 
                 foreach (var result in table.SeekByPrimaryKeyPrefix(Slices.BeforeAllKeys, documentKeyPrefix, skip: 0))
                 {
                     //all entries that start after prefix
-                    yield return CreateReplicationBatchItem(ctx, ref result.Value.Reader);
+                    yield return CreateReplicationBatchItem(ctx, result.Value);
                 }
             }
         }
@@ -345,7 +345,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                             if (table.SeekOneBackwardByPrimaryKeyPrefix(documentKeyPrefix, counterKeySlice, out var tvr) == false)
                                 continue;
 
-                            using (var counterGroupKey = DocumentsStorage.TableValueToString(context, (int)CountersTable.CounterKey, ref tvr))
+                            using (var counterGroupKey = DocumentsStorage.TableValueToString(context, (int)CountersTable.CounterKey, tvr))
                             {
                                 if (entriesToUpdate.TryGetValue(counterGroupKey, out var putCountersData))
                                 {
@@ -353,9 +353,9 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                                 }
                                 else
                                 {
-                                    var existingChangeVector = DocumentsStorage.TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref tvr);
+                                    var existingChangeVector = DocumentsStorage.TableValueToChangeVector(context, (int)CountersTable.ChangeVector, tvr);
 
-                                    using (data = GetCounterValuesData(context, ref tvr))
+                                    using (data = GetCounterValuesData(context, tvr))
                                     {
                                         data = data.Clone(context);
                                     }

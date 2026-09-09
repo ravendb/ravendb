@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -32,11 +32,11 @@ namespace Raven.Server.Documents.Sharding
             bucketStats.LastModifiedTicks = nowTicks;
         }
 
-        public void UpdateBucketAndChangeVector(DocumentsOperationContext ctx, int bucket, long nowTicks, long sizeChange, long numOfDocsChanged, int changeVectorIndex, ref TableValueReader value)
+        public void UpdateBucketAndChangeVector(DocumentsOperationContext ctx, int bucket, long nowTicks, long sizeChange, long numOfDocsChanged, int changeVectorIndex, in TableValueReader value)
         {
             UpdateBucket(bucket, nowTicks, sizeChange, numOfDocsChanged);
 
-            var changeVector = DocumentsStorage.TableValueToChangeVector(ctx, changeVectorIndex, ref value);
+            var changeVector = DocumentsStorage.TableValueToChangeVector(ctx, changeVectorIndex, value);
             if (_mergedChangeVectors.TryGetValue(bucket, out var currentMergedCv))
             {
                 changeVector = currentMergedCv.MergeWith(changeVector, ctx);

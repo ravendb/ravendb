@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -200,11 +200,11 @@ namespace Raven.Server.Documents.TimeSeries
                     if (take <= 0)
                         return;
 
-                    var rollUpTime = DocumentsStorage.TableValueToEtag((int)RollupColumns.NextRollup, ref item.Result.Reader);
+                    var rollUpTime = DocumentsStorage.TableValueToEtag((int)RollupColumns.NextRollup, item.Result);
                     if (rollUpTime > currentTicks)
                         return;
 
-                    DocumentsStorage.TableValueToSlice(context, (int)RollupColumns.Key, ref item.Result.Reader, out var key);
+                    DocumentsStorage.TableValueToSlice(context, (int)RollupColumns.Key, item.Result, out var key);
                     SplitKey(key, out var docId, out var name);
                     name = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetOriginalName(context, docId, name);
 
@@ -213,11 +213,11 @@ namespace Raven.Server.Documents.TimeSeries
                         Key = key,
                         DocId = docId,
                         Name = name,
-                        Collection = DocumentsStorage.TableValueToId(context, (int)RollupColumns.Collection, ref item.Result.Reader),
+                        Collection = DocumentsStorage.TableValueToId(context, (int)RollupColumns.Collection, item.Result),
                         NextRollup = new DateTime(rollUpTime),
-                        RollupPolicy = DocumentsStorage.TableValueToString(context, (int)RollupColumns.PolicyToApply, ref item.Result.Reader),
-                        Etag = DocumentsStorage.TableValueToLong((int)RollupColumns.Etag, ref item.Result.Reader),
-                        ChangeVector = DocumentsStorage.TableValueToChangeVector(context, (int)RollupColumns.ChangeVector, ref item.Result.Reader)
+                        RollupPolicy = DocumentsStorage.TableValueToString(context, (int)RollupColumns.PolicyToApply, item.Result),
+                        Etag = DocumentsStorage.TableValueToLong((int)RollupColumns.Etag, item.Result),
+                        ChangeVector = DocumentsStorage.TableValueToChangeVector(context, (int)RollupColumns.ChangeVector, item.Result)
                     };
 
                     if (_logger.IsInfoEnabled)

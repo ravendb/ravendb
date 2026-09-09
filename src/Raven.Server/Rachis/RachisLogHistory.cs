@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using Raven.Client.Util;
@@ -353,7 +353,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public IEnumerable<Table.TableValueHolder> GetHistoryLogs(ClusterOperationContext context, long fromIndex)
+        public IEnumerable<TableValueReader> GetHistoryLogs(ClusterOperationContext context, long fromIndex)
         {
             var reveredNextIndex = Bits.SwapBytes(fromIndex);
             Span<byte> span = stackalloc byte[sizeof(long)];
@@ -370,7 +370,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public static RachisConsensus.RachisDebugLogEntry CreateFromHistory(Table.TableValueHolder value)
+        public static RachisConsensus.RachisDebugLogEntry CreateFromHistory(in TableValueReader value)
         {
             RachisConsensus.RachisDebugLogEntry entry = new()
             {
@@ -404,7 +404,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private static unsafe DynamicJsonValue ReadHistoryLog(ClusterOperationContext context, Table.TableValueHolder entryHolder)
+        private static unsafe DynamicJsonValue ReadHistoryLog(ClusterOperationContext context, in TableValueReader entryHolder)
         {
             var djv = new DynamicJsonValue();
 
@@ -418,7 +418,7 @@ namespace Raven.Server.Rachis
             djv[nameof(LogHistoryColumn.Type)] = ReadType(entryHolder);
             djv[nameof(LogHistoryColumn.State)] = ReadState(entryHolder).ToString();
 
-            var resultPtr = entryHolder.Reader.Read((int)(LogHistoryColumn.Result), out size);
+            var resultPtr = entryHolder.Read((int)(LogHistoryColumn.Result), out size);
             if (size > 0)
             {
                 var blittableResult = new BlittableJsonReaderObject(resultPtr, size, context);
@@ -430,10 +430,10 @@ namespace Raven.Server.Rachis
                 djv[nameof(LogHistoryColumn.Result)] = null;
             }
 
-            var exTypePtr = entryHolder.Reader.Read((int)(LogHistoryColumn.ExceptionType), out size);
+            var exTypePtr = entryHolder.Read((int)(LogHistoryColumn.ExceptionType), out size);
             djv[nameof(LogHistoryColumn.ExceptionType)] = size > 0 ? Encoding.UTF8.GetString(exTypePtr, size) : null;
 
-            var exMsg = entryHolder.Reader.Read((int)(LogHistoryColumn.ExceptionMessage), out size);
+            var exMsg = entryHolder.Read((int)(LogHistoryColumn.ExceptionMessage), out size);
             djv[nameof(LogHistoryColumn.ExceptionMessage)] = size > 0 ? Encoding.UTF8.GetString(exMsg, size) : null;
 
             return djv;
@@ -442,44 +442,44 @@ namespace Raven.Server.Rachis
         public long NumberOfEntries(ClusterOperationContext context) => 
             context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice).NumberOfEntries;
 
-        private static unsafe long ReadCommittedTerm(Table.TableValueHolder entryHolder)
+        private static unsafe long ReadCommittedTerm(in TableValueReader entryHolder)
         {
-            return *(long*)entryHolder.Reader.Read((int)(LogHistoryColumn.CommittedTerm), out _);
+            return *(long*)entryHolder.Read((int)(LogHistoryColumn.CommittedTerm), out _);
         }
 
-        private static unsafe HistoryStatus ReadState(Table.TableValueHolder entryHolder)
+        private static unsafe HistoryStatus ReadState(in TableValueReader entryHolder)
         {
-            return (*(HistoryStatus*)entryHolder.Reader.Read((int)(LogHistoryColumn.State), out _));
+            return (*(HistoryStatus*)entryHolder.Read((int)(LogHistoryColumn.State), out _));
         }
 
-        private static unsafe string ReadType(Table.TableValueHolder entryHolder)
+        private static unsafe string ReadType(in TableValueReader entryHolder)
         {
             int size;
-            var typeString = entryHolder.Reader.Read((int)(LogHistoryColumn.Type), out size);
+            var typeString = entryHolder.Read((int)(LogHistoryColumn.Type), out size);
             var type = Encoding.UTF8.GetString(typeString, size);
             return type;
         }
 
-        private static unsafe long ReadTerm(Table.TableValueHolder entryHolder)
+        private static unsafe long ReadTerm(in TableValueReader entryHolder)
         {
-            return *(long*)entryHolder.Reader.Read((int)(LogHistoryColumn.Term), out _);
+            return *(long*)entryHolder.Read((int)(LogHistoryColumn.Term), out _);
         }
 
-        private static unsafe long ReadIndex(Table.TableValueHolder entryHolder)
+        private static unsafe long ReadIndex(in TableValueReader entryHolder)
         {
-            return Bits.SwapBytes(*(long*)entryHolder.Reader.Read((int)(LogHistoryColumn.Index), out _));
+            return Bits.SwapBytes(*(long*)entryHolder.Read((int)(LogHistoryColumn.Index), out _));
         }
 
-        private static unsafe string ReadGuid(Table.TableValueHolder entryHolder)
+        private static unsafe string ReadGuid(in TableValueReader entryHolder)
         {
-            var guidPtr = entryHolder.Reader.Read((int)(LogHistoryColumn.Guid), out var size);
+            var guidPtr = entryHolder.Read((int)(LogHistoryColumn.Guid), out var size);
             var guid = Encoding.UTF8.GetString(guidPtr, size);
             return guid;
         }
 
-        private static unsafe DateTime ReadCreateAt(Table.TableValueHolder entryHolder)
+        private static unsafe DateTime ReadCreateAt(in TableValueReader entryHolder)
         {
-            var ticks = Bits.SwapBytes(*(long*)entryHolder.Reader.Read((int)(LogHistoryColumn.Ticks), out _));
+            var ticks = Bits.SwapBytes(*(long*)entryHolder.Read((int)(LogHistoryColumn.Ticks), out _));
             return new DateTime(ticks);
         }
 
