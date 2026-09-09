@@ -22,7 +22,7 @@ namespace Raven.Analyzers.CodeFixes.Subscriptions
     public sealed class SubscriptionOpenSessionCodeFixProvider : CodeFixProvider
     {
         public override ImmutableArray<string> FixableDiagnosticIds =>
-            [DiagnosticIds.SubscriptionStoreOpenSession];
+            ImmutableArray.Create(DiagnosticIds.SubscriptionStoreOpenSession);
 
         public override FixAllProvider? GetFixAllProvider() =>
             WellKnownFixAllProviders.BatchFixer;

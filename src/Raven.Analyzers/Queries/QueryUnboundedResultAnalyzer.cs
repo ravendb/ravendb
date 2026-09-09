@@ -17,7 +17,7 @@ namespace Raven.Analyzers.Queries
     public sealed class QueryUnboundedResultAnalyzer : DiagnosticAnalyzer
     {
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-            [DiagnosticDescriptors.QueryUnboundedResult];
+            ImmutableArray.Create(DiagnosticDescriptors.QueryUnboundedResult);
 
         public override void Initialize(AnalysisContext context)
         {

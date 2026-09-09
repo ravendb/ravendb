@@ -17,7 +17,7 @@ namespace Raven.Analyzers.Queries
     public sealed class QueryUnsupportedMethodAnalyzer : DiagnosticAnalyzer
     {
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-            [DiagnosticDescriptors.QueryUnsupportedMethodCall];
+            ImmutableArray.Create(DiagnosticDescriptors.QueryUnsupportedMethodCall);
 
         public override void Initialize(AnalysisContext context)
         {

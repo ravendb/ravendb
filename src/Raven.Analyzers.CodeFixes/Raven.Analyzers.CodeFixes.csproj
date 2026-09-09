@@ -10,6 +10,15 @@
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <DevelopmentDependency>true</DevelopmentDependency>
     <LangVersion>preview</LangVersion>
+    <!-- Must match Raven.Analyzers; see the note on its PackageReference. -->
+    <RavenAnalyzerRoslynVersion>4.4.0</RavenAnalyzerRoslynVersion>
+    <!--
+      Transitive pinning is repo-wide, but must not apply here. It would drag this assembly's
+      System.Collections.Immutable and System.Reflection.Metadata up to the repo's versions, which are
+      newer than the ones the host compiler ships, and the analyzer then fails to load with CS8032.
+      Roslyn's own constraints are the correct ones for an assembly the compiler loads.
+    -->
+    <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <!--
@@ -23,7 +32,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" PrivateAssets="all" />
+    <!-- Declared explicitly rather than taken transitively from Workspaces: this project uses
+         Microsoft.CodeAnalysis.CSharp types (SyntaxNode, the CSharp.Syntax nodes) directly. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" VersionOverride="$(RavenAnalyzerRoslynVersion)" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" VersionOverride="$(RavenAnalyzerRoslynVersion)" PrivateAssets="all" />
     <ProjectReference Include="..\Raven.Analyzers\Raven.Analyzers.csproj" PrivateAssets="all" />
   </ItemGroup>
 </Project>

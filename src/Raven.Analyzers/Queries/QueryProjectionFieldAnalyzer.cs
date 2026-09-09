@@ -24,7 +24,7 @@ namespace Raven.Analyzers.Queries
     public sealed class QueryProjectionFieldAnalyzer : DiagnosticAnalyzer
     {
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-            [DiagnosticDescriptors.QueryProjectionFieldNotRetrievable];
+            ImmutableArray.Create(DiagnosticDescriptors.QueryProjectionFieldNotRetrievable);
 
         public override void Initialize(AnalysisContext context)
         {

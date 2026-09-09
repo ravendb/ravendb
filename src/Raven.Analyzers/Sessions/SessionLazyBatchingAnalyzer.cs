@@ -24,7 +24,7 @@ namespace Raven.Analyzers.Sessions
     public sealed class SessionLazyBatchingAnalyzer : DiagnosticAnalyzer
     {
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-            [DiagnosticDescriptors.SessionLazyBatching];
+            ImmutableArray.Create(DiagnosticDescriptors.SessionLazyBatching);
 
         public override void Initialize(AnalysisContext context)
         {

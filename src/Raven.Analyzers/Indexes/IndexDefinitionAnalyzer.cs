@@ -18,12 +18,11 @@ namespace Raven.Analyzers.Indexes
     public sealed class IndexDefinitionAnalyzer : DiagnosticAnalyzer
     {
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-        [
+            ImmutableArray.Create(
             DiagnosticDescriptors.IndexMapAssignedOutsideCtor,
             DiagnosticDescriptors.IndexMissingMapAssignment,
             DiagnosticDescriptors.MultiMapIndexMissingAddMap,
-            DiagnosticDescriptors.MultiMapIndexSingleAddMap
-        ];
+            DiagnosticDescriptors.MultiMapIndexSingleAddMap);
 
         public override void Initialize(AnalysisContext context)
         {

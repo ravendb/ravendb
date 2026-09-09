@@ -1,7 +1,7 @@
 // Expected diagnostic: RVN013 — "Query result is not bounded by Take()"
-// RavenDB queries default to returning at most 128 documents per request (the server's
-// page size). Without an explicit .Take(n), the intent is invisible and the query may
-// silently fetch far more data than intended as the dataset grows.
+// An unbounded query returns every matching document: the server applies no default limit
+// and the client only sends one when you set it. Without an explicit .Take(n) the result
+// size is whatever the dataset happens to hold.
 //
 // Fix: add .Take(n) before the materializing call (ToList, ToArray, etc.) to make the
 // limit explicit and self-documenting.

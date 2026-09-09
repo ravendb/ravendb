@@ -17,7 +17,7 @@ namespace Raven.Analyzers.Indexes
     public sealed class IndexUnsupportedMethodAnalyzer : DiagnosticAnalyzer
     {
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-            [DiagnosticDescriptors.IndexUnsupportedMethodCall];
+            ImmutableArray.Create(DiagnosticDescriptors.IndexUnsupportedMethodCall);
 
         public override void Initialize(AnalysisContext context)
         {

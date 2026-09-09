@@ -24,7 +24,7 @@ namespace Raven.Analyzers.Subscriptions
     public sealed class SubscriptionOpenSessionAnalyzer : DiagnosticAnalyzer
     {
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-            [DiagnosticDescriptors.SubscriptionStoreOpenSession];
+            ImmutableArray.Create(DiagnosticDescriptors.SubscriptionStoreOpenSession);
 
         public override void Initialize(AnalysisContext context)
         {

@@ -20,7 +20,7 @@ namespace Raven.Analyzers.Queries
     public sealed class QueryIndexFieldAnalyzer : DiagnosticAnalyzer
     {
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-            [DiagnosticDescriptors.QueryFieldNotIndexed];
+            ImmutableArray.Create(DiagnosticDescriptors.QueryFieldNotIndexed);
 
         public override void Initialize(AnalysisContext context)
         {
