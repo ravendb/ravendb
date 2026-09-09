@@ -172,8 +172,8 @@ namespace Raven.Server.Rachis
 
             if (table.NumberOfEntries > _logHistoryMaxEntries)
             {
-                var reader = table.SeekOneForwardFromPrefix(LogHistoryTable.Indexes[LogHistoryIndexSlice], Slices.BeforeAllKeys);
-                table.Delete(reader.Reader.Id);
+                if (table.SeekOneForwardFromPrefix(LogHistoryTable.Indexes[LogHistoryIndexSlice], Slices.BeforeAllKeys, out var reader))
+                    table.Delete(reader.Id);
             }
         }
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -889,7 +889,7 @@ namespace SlowTests.Issues
                 if (id == null)
                 {
                     id = "users/1";
-                    tvr = readTable.ReadFirst(database.DocumentsStorage.CountersStorage.CountersSchema.FixedSizeIndexes[Counters.AllCountersEtagSlice]).Reader;
+                    Assert.True(readTable.ReadFirst(database.DocumentsStorage.CountersStorage.CountersSchema.FixedSizeIndexes[Counters.AllCountersEtagSlice], out tvr));
                 }
                 else
                 {

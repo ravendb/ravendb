@@ -2919,11 +2919,10 @@ namespace Raven.Server.Documents.TimeSeries
         {
             var table =  context.TimesSeriesTable(this);
 
-            var result = table.ReadLast(Schemas.TimeSeries.AllTimeSeriesEtagIndex);
-            if (result == null)
+            if (table.ReadLast(Schemas.TimeSeries.AllTimeSeriesEtagIndex, out var reader) == false)
                 return 0;
 
-            return DocumentsStorage.TableValueToEtag((int)TimeSeriesTable.Etag, ref result.Reader);
+            return DocumentsStorage.TableValueToEtag((int)TimeSeriesTable.Etag, ref reader);
         }
 
         public long GetLastTimeSeriesEtag(DocumentsOperationContext context, string collection)
@@ -2938,22 +2937,20 @@ namespace Raven.Server.Documents.TimeSeries
             if (table == null)
                 return 0;
 
-            var result = table.ReadLast(Schemas.TimeSeries.CollectionTimeSeriesEtagsIndex);
-            if (result == null)
+            if (table.ReadLast(Schemas.TimeSeries.CollectionTimeSeriesEtagsIndex, out var reader) == false)
                 return 0;
 
-            return DocumentsStorage.TableValueToEtag((int)TimeSeriesTable.Etag, ref result.Reader);
+            return DocumentsStorage.TableValueToEtag((int)TimeSeriesTable.Etag, ref reader);
         }
 
         public long GetLastTimeSeriesDeletedRangesEtag(DocumentsOperationContext context)
         {
             var table = context.DeleteRangesTable(this);
 
-            var result = table.ReadLast(Schemas.DeletedRanges.AllDeletedRangesEtagIndex);
-            if (result == null)
+            if (table.ReadLast(Schemas.DeletedRanges.AllDeletedRangesEtagIndex, out var reader) == false)
                 return 0;
 
-            return DocumentsStorage.TableValueToEtag((int)DeletedRangeTable.Etag, ref result.Reader);
+            return DocumentsStorage.TableValueToEtag((int)DeletedRangeTable.Etag, ref reader);
         }
 
         public long GetLastTimeSeriesDeletedRangesEtag(DocumentsOperationContext context, string collection)
@@ -2968,11 +2965,10 @@ namespace Raven.Server.Documents.TimeSeries
             if (table == null)
                 return 0;
 
-            var result = table.ReadLast(Schemas.DeletedRanges.CollectionDeletedRangesEtagsIndex);
-            if (result == null)
+            if (table.ReadLast(Schemas.DeletedRanges.CollectionDeletedRangesEtagsIndex, out var reader) == false)
                 return 0;
 
-            return DocumentsStorage.TableValueToEtag((int)DeletedRangeTable.Etag, ref result.Reader);
+            return DocumentsStorage.TableValueToEtag((int)DeletedRangeTable.Etag, ref reader);
         }
 
         private static void MarkSegmentAsPendingDeletion(DocumentsOperationContext context, string collection, long etag)
