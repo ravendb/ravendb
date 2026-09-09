@@ -75,6 +75,7 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         community: { value: false },
         professional: { value: true },
         enterprise: { value: true },
+        quill: { value: true },
     },
     {
         featureName: "Snapshot Backups",
@@ -82,5 +83,6 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         community: { value: false },
         professional: { value: false },
         enterprise: { value: true },
+        quill: { value: true },
     },
 ];

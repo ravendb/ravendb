@@ -27,6 +27,13 @@ public class CdcSinkHandler : DatabaseRequestHandler
             await processor.ExecuteAsync();
     }
 
+    [RavenAction("/databases/*/admin/cdc-sink/dry-run", "POST", AuthorizationStatus.DatabaseAdmin)]
+    public async Task DryRun()
+    {
+        using (var processor = new CdcSinkHandlerProcessorForCdcTest(this))
+            await processor.ExecuteAsync();
+    }
+
     [RavenAction("/databases/*/cdc-sink/errors", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
     public async Task GetErrors()
     {

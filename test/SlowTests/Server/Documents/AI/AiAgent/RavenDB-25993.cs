@@ -17,7 +17,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
     public class RavenDB_25993(ITestOutputHelper output) : RavenTestBase(output)
     {
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task AgentParameterTypeTest(Options options, GenAiConfiguration config)
         {
             using var store = GetDocumentStore(options);
@@ -76,7 +76,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task AgentParameterTypeTest_Primitives(Options options, GenAiConfiguration config)
         {
             using var store = GetDocumentStore(options);
@@ -130,7 +130,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task AgentParameterTypeTest_Array(Options options, GenAiConfiguration config)
         {
             using var store = GetDocumentStore(options);
@@ -199,7 +199,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task MultiAgentStringParametersInsteadOfNumberBug(Options options, GenAiConfiguration config)
         {
             using var store = GetDocumentStore(options);
@@ -270,7 +270,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task MultiAgentTypeConflict(Options options, GenAiConfiguration config)
         {
             using var store = GetDocumentStore(options);

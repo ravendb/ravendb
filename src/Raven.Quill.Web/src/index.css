@@ -1,0 +1,282 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@fontsource-variable/inter";
+/* Fontsource's default entry ships only the upright faces, so the italics need their own
+   import or the browser synthesises an oblique for markdown emphasis in AI replies. */
+@import "@fontsource-variable/inter/wght-italic.css";
+@import "@fontsource-variable/geist-mono";
+@import "streamdown/styles.css";
+@import "./styles/theme.css";
+
+/* Streamdown builds its markdown styling from Tailwind utility classes, so Tailwind must scan
+   its dist output to emit them. */
+@source "../node_modules/streamdown/dist/*.js";
+
+/* The shadcn components use `data-open:`/`data-closed:` throughout, which Tailwind compiles to
+   the bare `[data-open]`/`[data-closed]` attributes Base UI sets (Autocomplete, Combobox). The
+   Radix-based components (Dialog, AlertDialog, Sheet, DropdownMenu, Select, Popover, Tooltip)
+   set `data-state="open"|"closed"` instead, so their transition utilities never matched and the
+   open/close animations silently did nothing. Match both conventions. */
+@custom-variant data-open (&:is([data-open], [data-state="open"]));
+@custom-variant data-closed (&:is([data-closed], [data-state="closed"]));
+
+@layer base {
+    * {
+        border-color: var(--color-border);
+        outline-color: color-mix(in oklch, var(--color-ring) 50%, transparent);
+    }
+
+    html,
+    body,
+    #root {
+        height: 100%;
+    }
+
+    /* Scale the whole rem-based UI up fluidly as the viewport widens, so it doesn't feel
+       undersized on large monitors. Below ~1536px it stays at the user's base size; it grows
+       gently to 1.125x (matching the original ceiling) by ~2360px. Expressed in rem (not px) so
+       it respects the reader's browser font-size preference. Tailwind breakpoints use the initial
+       font size in media queries, so they're unaffected by this. */
+    html {
+        font-size: clamp(1rem, 0.77rem + 0.24vw, 1.125rem);
+    }
+
+    body {
+        background-color: var(--color-background);
+        color: var(--color-foreground);
+        font-family: var(--font-sans);
+    }
+
+    button:not(:disabled),
+    [role="button"]:not(:disabled) {
+        cursor: pointer;
+    }
+
+    ::selection {
+        background-color: color-mix(in oklab, var(--brand-500) 30%, transparent);
+        color: var(--color-foreground);
+    }
+
+    :is(input, textarea):autofill,
+    :is(input, textarea):-webkit-autofill {
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: var(--color-foreground);
+        caret-color: var(--color-foreground);
+    }
+
+    /* Native number steppers ignore our class-based dark mode (we never set color-scheme),
+       so the up/down arrows render dark-on-dark and vanish on dark inputs. Scope color-scheme
+       to number inputs to recolor the steppers without touching scrollbars or other controls. */
+    input[type="number"] {
+        color-scheme: light;
+    }
+
+    .dark input[type="number"] {
+        color-scheme: dark;
+    }
+
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+        margin-left: 0.25rem;
+        opacity: 0.6;
+    }
+
+    input[type="number"]:hover::-webkit-inner-spin-button,
+    input[type="number"]:focus-within::-webkit-inner-spin-button,
+    input[type="number"]:hover::-webkit-outer-spin-button,
+    input[type="number"]:focus-within::-webkit-outer-spin-button {
+        opacity: 1;
+    }
+
+    /* The native color swatch is a sharp-cornered, bordered rectangle. We render color inputs
+       as small circular swatch buttons, so drop the wrapper's built-in padding and let the
+       swatch fill the input as a circle. */
+    input[type="color"]::-webkit-color-swatch-wrapper {
+        padding: 0;
+    }
+
+    input[type="color"]::-webkit-color-swatch {
+        border: none;
+        border-radius: 100vh;
+    }
+
+    input[type="color"]::-moz-color-swatch {
+        border: none;
+        border-radius: 100vh;
+    }
+
+    ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: color-mix(in oklch, var(--color-foreground) 10%, transparent);
+        border-radius: 8px;
+        border: 2px solid transparent;
+        background-clip: padding-box;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: color-mix(in oklch, var(--color-foreground) 20%, transparent);
+        background-clip: padding-box;
+    }
+}
+
+@layer components {
+    /* Subtle brand wash layered over a card's solid background (kept as a real CSS
+       class so tailwind-merge doesn't drop the card's bg-color utility). */
+    .card-premium-gradient {
+        background-image: linear-gradient(
+            to bottom right,
+            color-mix(in oklab, var(--brand-500) 15%, transparent),
+            color-mix(in oklab, var(--brand-500) 5%, transparent) 50%,
+            transparent
+        );
+    }
+
+    .app-shell {
+        --app-sidebar-width: 13.75rem;
+        --app-sidebar-collapsed-width: 3.5rem;
+        --app-assistant-track: 0rem;
+
+        display: grid;
+        grid-template-columns: var(--app-sidebar-collapsed-width) minmax(0, 1fr) var(--app-assistant-track);
+        /* Optional banner row (collapses to 0 when absent), then header, then body. */
+        grid-template-rows: auto auto minmax(0, 1fr);
+        height: 100svh;
+        /* clip, not hidden: `hidden` is still a scroll container, so focusing the assistant composer
+           while the column is mid-transition (and the panel therefore still overflows) let the browser
+           scroll the whole shell sideways to reveal it. `clip` cannot be scrolled at all. */
+        overflow: clip;
+        transition: grid-template-columns 200ms ease-out;
+    }
+
+    .app-shell--assistant-open {
+        --app-assistant-track: var(--app-assistant-width);
+    }
+
+    /* While the assistant resize handle is dragged, the column must track the pointer directly. */
+    .app-shell--assistant-resizing {
+        transition: none;
+    }
+
+    .app-shell__banner {
+        grid-row: 1;
+        grid-column: 1 / -1;
+    }
+
+    .app-shell__header {
+        grid-row: 2;
+        grid-column: 1 / -1;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+    }
+
+    .app-shell__sidebar {
+        grid-row: 3;
+        grid-column: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .app-shell__main {
+        grid-row: 3;
+        grid-column: 2;
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr);
+        min-width: 0;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .app-shell__assistant {
+        grid-row: 3;
+        grid-column: 3;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        /* Fixed at the open width so the chat doesn't reflow while the column animates;
+           the closed 0-width track lets the shell's overflow clip it off-screen. */
+        width: var(--app-assistant-width);
+    }
+
+    @media (min-width: 64rem) {
+        .app-shell {
+            grid-template-columns: var(--app-sidebar-width) minmax(0, 1fr) var(--app-assistant-track);
+        }
+
+        .app-shell--collapsed {
+            grid-template-columns: var(--app-sidebar-collapsed-width) minmax(0, 1fr) var(--app-assistant-track);
+        }
+    }
+}
+
+/* Two-column settings rows, for a `FieldGroup` wrapping fields with `orientation="responsive"`.
+
+   Deliberately unlayered: `FieldGroup` and `FieldContent` carry Tailwind's `gap-5` and `flex-1`, and
+   @layer utilities outranks @layer components regardless of specificity, so a components-layer rule
+   here would never apply. */
+
+/* Symmetric breathing room around each divider. `gap` alone cannot do this: the border sits on the
+   top edge of every row after the first, so the whole gap lands above the line and none below it. */
+.settings-rows {
+    gap: 0;
+}
+
+/* Padding on the rows rather than their container, so each divider spans the panel edge to edge the
+   way a table's row borders do, and so the panel needs no padding of its own. Same 1rem as the
+   read-only table's cells, which puts both on one rhythm. */
+.settings-rows > * {
+    padding: 1rem;
+}
+
+/* Below 60rem the label column is already bounded by the control's intrinsic width, so it only needs
+   pinning once the container is wide enough for the slack to stretch a description into an unreadable
+   180-character line. Controls then sit against the trailing edge, the way settings rows read. */
+@container field-group (min-width: 60rem) {
+    .settings-rows > [data-slot="field"][data-orientation="responsive"] {
+        justify-content: space-between;
+        gap: 3rem;
+    }
+
+    .settings-rows > [data-slot="field"][data-orientation="responsive"] > [data-slot="field-content"] {
+        flex: 0 1 26rem;
+    }
+}
+
+/* The shared toggle paints both hover and the selected state with `bg-muted`, which leaves a selected
+   segment at 1.14:1 against its neighbours - far below the 3:1 WCAG 1.4.11 asks of a state indicator -
+   and makes hovering an unselected segment look like selecting it. In a settings row the selected
+   segment is the current value, so it has to be unmistakable. Tokens, so both themes follow. */
+.settings-rows [data-slot="toggle-group-item"][data-state="on"] {
+    background-color: var(--color-foreground);
+    color: var(--color-background);
+}
+
+.settings-rows [data-slot="toggle-group-item"][data-state="on"]:hover {
+    background-color: color-mix(in oklab, var(--color-foreground) 86%, transparent);
+    color: var(--color-background);
+}
+
+/* Rows a pending shift-click range would cover. The wash is forced because the row's own selected
+   and hover backgrounds are more specific, and the whole range has to read as one block. */
+@utility table-row-range-preview {
+    box-shadow: inset 3px 0 0 var(--color-primary);
+    background-color: color-mix(in oklab, var(--color-primary) 10%, transparent) !important;
+}
+
+@utility no-scrollbar {
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}

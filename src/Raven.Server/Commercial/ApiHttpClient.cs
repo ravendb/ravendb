@@ -33,8 +33,16 @@ namespace Raven.Server.Commercial
         public static Task<HttpResponseMessage> PostAsync(string relativeUri, HttpContent content, HttpCompletionOption completionOption, bool shouldRetry = true, CancellationToken token = default)
         {
             if (shouldRetry == false)
-                return Instance.PostAsync(relativeUri, content, token); 
-            
+            {
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Post,
+                    Content = content,
+                    RequestUri = new Uri(relativeUri, UriKind.Relative)
+                };
+                return Instance.SendAsync(request, completionOption, token);
+            }
+
             return RetryPolicy.ExecuteAsync(t =>
             {
                 var request = new HttpRequestMessage
@@ -50,12 +58,46 @@ namespace Raven.Server.Commercial
         public static Task<HttpResponseMessage> PostAsync(string relativeUri, HttpContent content, bool shouldRetry = true, CancellationToken token = default) =>
             PostAsync(relativeUri, content, completionOption: HttpCompletionOption.ResponseContentRead, shouldRetry, token);
 
+        public static Task<HttpResponseMessage> PutAsync(string relativeUri, HttpContent content, HttpCompletionOption completionOption, bool shouldRetry = true, CancellationToken token = default)
+        {
+            if (shouldRetry == false)
+            {
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Put,
+                    Content = content,
+                    RequestUri = new Uri(relativeUri, UriKind.Relative)
+                };
+                return Instance.SendAsync(request, completionOption, token);
+            }
+
+            return RetryPolicy.ExecuteAsync(t =>
+            {
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Put,
+                    Content = content,
+                    RequestUri = new Uri(relativeUri, UriKind.Relative)
+                };
+                return Instance.SendAsync(request, completionOption, t);
+            }, token, continueOnCapturedContext: false);
+        }
+
+        public static Task<HttpResponseMessage> PutAsync(string relativeUri, HttpContent content, bool shouldRetry = true, CancellationToken token = default) =>
+            PutAsync(relativeUri, content, completionOption: HttpCompletionOption.ResponseContentRead, shouldRetry, token);
+
         public static Task<HttpResponseMessage> GetAsync(string relativeUri, bool shouldRetry = true, CancellationToken token = default)
         {
             if (shouldRetry == false)
-                return Instance.GetAsync(relativeUri, token); 
-            
+                return Instance.GetAsync(relativeUri, token);
+
             return RetryPolicy.ExecuteAsync(t => Instance.GetAsync(relativeUri, t), token, continueOnCapturedContext: false);
+        }
+
+        public static Task<HttpResponseMessage> GetAsync(string relativeUri, HttpCompletionOption completionOption, AsyncRetryPolicy<HttpResponseMessage> policy = null, CancellationToken token = default)
+        {
+            policy ??= RetryPolicy;
+            return policy.ExecuteAsync(t => Instance.GetAsync(relativeUri, completionOption, t), token, continueOnCapturedContext: false);
         }
 
         static ApiHttpClient()

@@ -74,7 +74,7 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
     enableDocumentExpiration = ko.observable<boolean>(false);
     isCommunityLicense = licenseModel.getStatusValue("Type") === "Community";
 
-    testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
+    testConnectionResult = ko.observable<Raven.Server.Documents.AI.AiConnectionTestResult>();
 
     constructor(db: database) {
         super(db);

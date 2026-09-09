@@ -8,7 +8,7 @@ namespace Raven.Server.Commercial
 
         Community = 1,
 
-        Reserved = 2,
+        Quill = 2,
 
         Professional = 3,
 

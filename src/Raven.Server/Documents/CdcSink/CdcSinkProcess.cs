@@ -34,7 +34,7 @@ using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents.CdcSink;
 
-public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
+public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler, IAsyncDisposable
 {
     internal const string Tag = "CDC Sink";
 
@@ -68,6 +68,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         Name = Configuration.Name;
         Statistics = new CdcSinkProcessStatistics(Name, database.Configuration.CdcSink);
         DocumentProcessor = new CdcSinkDocumentProcessor(configuration, defaultSchema) { Logger = Logger };
+        ExceptionAggregator = new ExceptionAggregator(Logger, $"Could not dispose {GetType().Name}: '{Name}'");
     }
 
     protected CancellationToken CancellationToken => _cts.Token;
@@ -433,7 +434,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         }
     }
 
-    protected async Task<(string Checkpoint, int Rows)> SubmitBatch(List<CdcSinkDocumentOp> ops, string checkpoint = null,
+    protected virtual async Task<(string Checkpoint, int Rows)> SubmitBatch(List<CdcSinkDocumentOp> ops, string checkpoint = null,
         Dictionary<string, CdcSinkTableLoadState> tableLoadUpdates = null,
         Commands.CdcSinkBatchCommand.DocumentGrouper grouper = null)
     {
@@ -515,12 +516,22 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
             stats.Dispose();
             statsAggregator.Complete();
+
+            // Raise the completion event for every batch that ran - including a fully-failed one - so the
+            // live performance view picks up its stats. Success is tracked separately via LastBatchTime and
+            // the health status; this event is purely for performance reporting. Guarded so a handler
+            // failure can't mask the original batch exception.
+            try
+            {
+                Database.CdcSinkLoader.OnBatchCompleted(Configuration.Name, Name, Statistics);
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsWarnEnabled)
+                    Logger.Warn($"[{Name}] Failed to raise the CDC Sink batch-completed event.", e);
+            }
         }
 
-        // Raise the completion event for every batch that ran - including a fully-failed one - so the
-        // live performance view picks up its stats. Success is tracked separately via LastBatchTime and
-        // the health status; this event is purely for performance reporting.
-        Database.CdcSinkLoader.OnBatchCompleted(Configuration.Name, Name, Statistics);
         return (persistedCheckpoint, ops.Count);
     }
 
@@ -721,7 +732,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     /// while we're waiting for the next event, we immediately flush any accumulated ops
     /// without waiting for another event to arrive.
     /// </summary>
-    protected async Task ProcessCdcStream(CancellationToken ct)
+    protected virtual async Task ProcessCdcStream(CancellationToken ct)
     {
         var batch = new List<CdcSinkDocumentOp>();
         var pending = new List<CdcSinkDocumentOp>();
@@ -1050,7 +1061,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     /// keys, and the context whose memory the ops' blittables reference (the caller disposes it once
     /// the batch has been written).
     /// </summary>
-    private readonly record struct InitialLoadBatch(List<CdcSinkDocumentOp> Ops, string[] LastKeys, IDisposable Context);
+    protected readonly record struct InitialLoadBatch(List<CdcSinkDocumentOp> Ops, string[] LastKeys, IDisposable Context);
 
     /// <summary>
     /// Returns a completed batch's values to their per-table pools and clears the reference, so a
@@ -1065,7 +1076,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         ops = null;
     }
 
-    private async Task<InitialLoadBatch> ReadOneBatch(
+    protected virtual async Task<InitialLoadBatch> ReadOneBatch(
         DbConnection conn, CdcSinkConfiguration.TableInfo tableInfo, List<string> keyColumns,
         string[] lastKeys, int maxBatchSize, CancellationToken ct)
     {
@@ -1116,8 +1127,18 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                     var columnNames = new string[reader.FieldCount];
                     for (int i = 0; i < reader.FieldCount; i++)
                         columnNames[i] = reader.GetName(i);
-                    // Sets column names on every processor of this table so each recomputes its indices.
-                    DocumentProcessor.SetSourceColumnNames(tableInfo.Schema, tableInfo.TableName, columnNames);
+
+                    try
+                    {
+                        DocumentProcessor.SetSourceColumnNames(tableInfo.Schema, tableInfo.TableName, columnNames);
+                    }
+                    catch (InvalidOperationException e)
+                    {
+                        throw new CdcSinkFaultedException(
+                            $"Initial load cannot start for table '{tableInfo.FullName}': {e.Message} " +
+                            "Fix the table configuration; the task will restart.", e);
+                    }
+
                     columnNamesSet = true;
                 }
                 else
@@ -1373,7 +1394,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     }
 
 
-    protected CdcSinkTaskState LoadState(DocumentsOperationContext context)
+    protected virtual CdcSinkTaskState LoadState(DocumentsOperationContext context)
     {
         var stateDocId = CdcSinkTaskState.GetDocumentId(Configuration.Name);
         var doc = Database.DocumentsStorage.Get(context, stateDocId);
@@ -1384,21 +1405,27 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         return JsonDeserializationServer.CdcSinkTaskState(doc.Data);
     }
 
-    public virtual void Dispose()
+    protected readonly ExceptionAggregator ExceptionAggregator;
+
+    private void DisposeCore()
     {
         // Mark disposed up front so a concurrent GetConnectionStatus() bails out before touching _cts,
         // even on the never-started path where Stop() returns early but _cts is still disposed below.
         _disposed.Raise();
 
-        var exceptionAggregator = new ExceptionAggregator(Logger, $"Could not dispose {GetType().Name}: '{Name}'");
+        ExceptionAggregator.Execute(() => Stop("Dispose"));
+        ExceptionAggregator.Execute(() => _cts.Dispose());
+        ExceptionAggregator.Execute(() => CommandBuilder.Dispose());
 
-        exceptionAggregator.Execute(() => Stop("Dispose"));
+        ExceptionAggregator.ThrowIfNeeded();
+    }
 
-        exceptionAggregator.Execute(() => _cts.Dispose());
+    public virtual void Dispose() => DisposeCore();
 
-        exceptionAggregator.Execute(() => CommandBuilder.Dispose());
-
-        exceptionAggregator.ThrowIfNeeded();
+    public virtual ValueTask DisposeAsync()
+    {
+        DisposeCore();
+        return ValueTask.CompletedTask;
     }
 
     public void LowMemory(LowMemorySeverity lowMemorySeverity)
