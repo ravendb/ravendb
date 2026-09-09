@@ -62,9 +62,11 @@ namespace Raven.Client.Documents.Indexes
         {
             var querySourceName = expr.Parameters.First().Name;
 
-            var indexOfQuerySource = linqQuery.IndexOf(querySourceName, StringComparison.Ordinal);
-            if (indexOfQuerySource == -1)
+            var querySourceMatch = Regex.Match(linqQuery, $@"\b{Regex.Escape(querySourceName)}\b");
+            if (querySourceMatch.Success == false)
                 throw new InvalidOperationException("Cannot understand how to parse the query");
+
+            var indexOfQuerySource = querySourceMatch.Index;
 
             if (indexOfQuerySource != 0)
                 throw new IndexCompilationException(
