@@ -99,11 +99,15 @@ namespace Sparrow.Json
             {
                 // PERF: Check if flush completed synchronously to avoid async state machine
                 var flushTask = FlushAsync(_cancellationToken);
-                if (flushTask.IsCompletedSuccessfully == false)
+                if (flushTask.IsCompletedSuccessfully)
+                {
+                    // Fast synchronous path: consume the completed task, releasing its pooled source
+                    flushTask.GetAwaiter().GetResult();
+                }
+                else
+                {
                     return DisposeAsyncSlow(flushTask);
-
-                // Fast synchronous path
-                flushTask.GetAwaiter().GetResult();
+                }
                 if (_wroteToOutputStream)
                 {
                     var outputFlushTask = _outputStream.FlushAsync(_cancellationToken);
