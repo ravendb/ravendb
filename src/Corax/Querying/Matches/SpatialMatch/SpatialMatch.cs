@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Threading;
 using Corax.Mappings;
 using Corax.Querying.Matches.Meta;
@@ -262,16 +261,13 @@ public sealed class SpatialMatch<TBoosting> : IPostFilterMatch, ISpatialFilterQu
 
     public void Score(Span<long> matches, Span<float> scores, float boostFactor)
     {
+        // CompiledQueryMatch.Score calls every resolved leaf, negated ones included, and a negated leaf is resolved
+        // without boost - it has no score data to hand over. Same contract as TermMatch.Score.
         if (typeof(TBoosting) != typeof(HasBoosting))
-            ThrowPrimitiveHasNoBoostingData();
+            return;
 
         _spatialScore.CalculateScore(matches, scores, boostFactor, _spatialRelation);
         _spatialScore.Dispose();
-    }
-
-    private void ThrowPrimitiveHasNoBoostingData()
-    {
-        throw new InvalidDataException($"{nameof(SpatialMatch<TBoosting>)}");
     }
 
     public QueryInspectionNode Inspect()
