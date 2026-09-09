@@ -64,6 +64,21 @@
       <Platform Solution="Release|Any CPU" Project="Win32" />
       <Build Solution="*|Any CPU" Project="false" />
     </Project>
+    <Project Path="src/Raven.Quill.Web/Raven.Quill.Web.esproj">
+      <BuildType Solution="Validate|Any CPU" Project="Release" />
+      <BuildType Solution="Validate|x64" Project="Debug" />
+      <BuildType Solution="Validate|x86" Project="Debug" />
+      <Platform Project="AnyCPU" />
+      <Build Solution="*|x64" />
+      <Build Solution="*|x86" />
+      <Deploy Solution="*|x64" />
+      <Deploy Solution="*|x86" />
+    </Project>
+    <Project Path="src/Raven.Quill/Raven.Quill.csproj">
+      <BuildType Solution="Validate|Any CPU" Project="Release" />
+      <BuildType Solution="Validate|x64" Project="Debug" />
+      <BuildType Solution="Validate|x86" Project="Debug" />
+    </Project>
     <Project Path="src/Raven.Server/Raven.Server.csproj" />
     <Project Path="src/Raven.Studio/Raven.Studio.csproj">
       <BuildType Solution="Validate|*" Project="Release" />
@@ -90,6 +105,11 @@
     </Project>
     <Project Path="test/LicenseTests/LicenseTests.csproj">
       <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+    <Project Path="test/QuillTests/QuillTests.csproj">
+      <BuildType Solution="Validate|Any CPU" Project="Release" />
+      <BuildType Solution="Validate|x64" Project="Debug" />
+      <BuildType Solution="Validate|x86" Project="Debug" />
     </Project>
     <Project Path="test/RachisTests/RachisTests.csproj">
       <BuildType Solution="Validate|*" Project="Release" />
