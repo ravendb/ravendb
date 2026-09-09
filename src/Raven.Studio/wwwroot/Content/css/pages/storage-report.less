@@ -586,12 +586,17 @@
 
     .label.shard-pending-removal {
         background-color: transparent;
-        border: 1px dashed @text-muted;
-        color: @text-muted;
+        border: 1px dashed @brand-warning;
+        color: @brand-warning;
         cursor: help;
 
         i {
             margin-right: 3px;
+        }
+
+        .pending-removal-text {
+            margin-left: 4px;
+            font-weight: normal;
         }
     }
 }

@@ -7,6 +7,10 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
+using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Sharding;
+using Raven.Client.Util;
+using Raven.Server.Utils;
 using Raven.Server.Web.Studio.Processors;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
@@ -120,6 +124,80 @@ namespace SlowTests.Sharding
             public int TotalSize;
             public int DocCount;
             public HashSet<int> Buckets;
+        }
+
+        [RavenFact(RavenTestCategory.Sharding)]
+        public async Task GetBucketsView_OwnerShardIsTheDestinationDuringWholeMigration()
+        {
+            DoNotReuseServer();
+            using (var store = Sharding.GetDocumentStore())
+            {
+                // drive the migration by hand, so we can inspect the buckets report while it is held in each status
+                Server.ServerStore.Sharding.ManualMigration = true;
+
+                const string id = "foo/bar";
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Original shard" }, id);
+                    await session.SaveChangesAsync();
+                }
+
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                var bucket = Sharding.GetBucket(record.Sharding, id);
+                var sourceShard = ShardHelper.GetShardNumberFor(record.Sharding, bucket);
+                var destinationShard = ShardingTestBase.GetNextSortedShardNumber(record.Sharding.Shards, sourceShard);
+
+                var result = await Server.ServerStore.Sharding.StartBucketMigration(store.Database, bucket, destinationShard, RaftIdGenerator.NewId());
+                var migrationIndex = result.Index;
+
+                var exists = WaitForDocument<User>(store, id, predicate: null, database: ShardHelper.ToShardName(store.Database, destinationShard));
+                Assert.True(exists, $"{id} wasn't found at shard {destinationShard}");
+
+                // Moving: the bucket already exists on both shards, but the sharding configuration still points at the source
+                await AssertOwnerShardAsync(store, bucket, MigrationStatus.Moving, sourceShard, destinationShard);
+
+                string lastSourceChangeVector;
+                using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, sourceShard)))
+                {
+                    var user = await session.LoadAsync<User>(id);
+                    lastSourceChangeVector = session.Advanced.GetChangeVectorFor(user);
+                }
+
+                result = await Server.ServerStore.Sharding.SourceMigrationCompleted(store.Database, bucket, migrationIndex, lastSourceChangeVector, RaftIdGenerator.NewId());
+                await Server.ServerStore.Cluster.WaitForIndexNotification(result.Index);
+
+                // Moved: the destination has everything, but the sharding configuration still points at the source
+                await AssertOwnerShardAsync(store, bucket, MigrationStatus.Moved, sourceShard, destinationShard);
+
+                result = await Server.ServerStore.Sharding.DestinationMigrationConfirm(store.Database, bucket, migrationIndex);
+                await Server.ServerStore.Cluster.WaitForIndexNotification(result.Index);
+
+                // OwnershipTransferred: the sharding configuration points at the destination, the source copy awaits cleanup
+                await AssertOwnerShardAsync(store, bucket, MigrationStatus.OwnershipTransferred, sourceShard, destinationShard);
+            }
+        }
+
+        private async Task AssertOwnerShardAsync(IDocumentStore store, int bucket, MigrationStatus expectedStatus, int sourceShard, int destinationShard)
+        {
+            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+            Assert.True(record.Sharding.BucketMigrations.TryGetValue(bucket, out var migration), $"bucket {bucket} is not migrating");
+            Assert.Equal(expectedStatus, migration.Status);
+            Assert.Equal(sourceShard, migration.SourceShard);
+            Assert.Equal(destinationShard, migration.DestinationShard);
+
+            // the orchestrator picks up the record change asynchronously
+            var ownerShard = await WaitForValueAsync(async () =>
+            {
+                var results = await store.Operations.SendAsync(new GetBucketsOperation(range: 1));
+                return results.BucketRanges.TryGetValue(bucket, out var bucketRange) ? bucketRange.OwnerShardNumber : null;
+            }, (int?)destinationShard);
+
+            var results = await store.Operations.SendAsync(new GetBucketsOperation(range: 1));
+            Assert.True(results.BucketRanges.TryGetValue(bucket, out var bucketRange), $"bucket {bucket} is missing from the report");
+            Assert.Equal(2, bucketRange.ShardNumbers.Count);
+            Assert.Contains(sourceShard, bucketRange.ShardNumbers);
+            Assert.Contains(destinationShard, bucketRange.ShardNumbers);
+            Assert.Equal((int?)destinationShard, ownerShard);
         }
 
         [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]

@@ -39,7 +39,7 @@
                         <!-- ko foreach: shards -->
                             <!-- ko if: $parent.isShardPendingRemoval($data) -->
                                 <span class="label label-default shard-pending-removal" data-bind="attr: { title: $parent.pendingRemovalTooltip() }">
-                                    <i class="icon-trash"></i><span data-bind="text: '#' + $data"></span>
+                                    <i class="icon-waiting"></i><span data-bind="text: '#' + $data"></span><span class="pending-removal-text">pending removal</span>
                                 </span>
                             <!-- /ko -->
                             <!-- ko ifnot: $parent.isShardPendingRemoval($data) -->
