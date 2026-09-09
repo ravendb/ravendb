@@ -44,16 +44,6 @@ namespace FastTests.Issues
                         Volume = candle.Volume,
                         Timeframe = x.Item2
                     };
-
-                Reduce = results => from result in results
-                    group result by new { result.Timeframe, result.Ref }
-                    into g
-                    select new AggregateCandle
-                    {
-                        Ref = g.Key.Ref,
-                        Volume = g.Sum(x => x.Volume),
-                        Timeframe = g.Key.Timeframe
-                    };
             }
         }
 
