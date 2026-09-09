@@ -18,7 +18,7 @@ namespace Raven.Analyzers.Indexes
     public sealed class IndexFanOutAnalyzer : DiagnosticAnalyzer
     {
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-            [DiagnosticDescriptors.IndexFanOut];
+            ImmutableArray.Create(DiagnosticDescriptors.IndexFanOut);
 
         public override void Initialize(AnalysisContext context)
         {

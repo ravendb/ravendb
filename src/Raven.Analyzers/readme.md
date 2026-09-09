@@ -29,16 +29,67 @@ Map = orders => orders.SelectMany(o => o.Lines).Select(l => new { l.Product });
 
 ## Assembly structure
 
-The `RavenDB.Analyzers` NuGet package ships two DLLs under `analyzers/dotnet/cs/`:
+`RavenDB.Client.nupkg` ships two DLLs under `analyzers/dotnet/cs/`:
 
 | Assembly | Contents | References |
 |---|---|---|
-| `Raven.Analyzers.dll` (`src/Raven.Analyzers`) | All diagnostic analyzers and shared helpers | `Microsoft.CodeAnalysis.CSharp` only |
+| `Raven.Analyzers.dll` (`src/Raven.Analyzers`) | All diagnostic analyzers, the index-metadata source generator, and shared helpers | `Microsoft.CodeAnalysis.CSharp` only |
 | `Raven.Analyzers.CodeFixes.dll` (`src/Raven.Analyzers.CodeFixes`) | All `CodeFixProvider` implementations | `+ Microsoft.CodeAnalysis.CSharp.Workspaces` |
 
 The split follows the [RS1038](https://github.com/dotnet/roslyn-analyzers/issues/7438) rule: analyzer assemblies must only depend on compiler-provided references. `Microsoft.CodeAnalysis.CSharp.Workspaces` is not a compiler-provided reference — it is only available inside an IDE host — so code-fix providers must live in a separate assembly. IDEs load both DLLs from the analyzer folder automatically; `dotnet build` loads only the analyzer DLL, which keeps command-line builds free of the Workspaces dependency and the RS1038 warning.
 
 The shared helpers the code-fix providers reuse from `Raven.Analyzers` — `KnownTypes`, `DiagnosticIds`, and the public members of `SyntaxHelpers` — are declared `public` so they are visible across the assembly boundary. There is no `InternalsVisibleTo` bridge: `Raven.Analyzers.CodeFixes` references `Raven.Analyzers` as an ordinary project reference and calls those public APIs directly. (Helpers used only within `Raven.Analyzers` stay `internal`.)
+
+## How index facts reach the analyzers
+
+Several rules need to know something about an index: which fields its `Map` projects, which it
+stores, whether the chain assigns a `Map` at all. An index declares all of that inside a
+constructor body, and **constructor bodies are not part of compiled metadata**. An analyzer
+looking at a query in one project therefore cannot read an index that lives in another one; there
+is nothing there to read.
+
+Attributes *are* part of metadata. So `IndexMetadataGenerator` runs in the project that declares
+the index, where the source is available, extracts the shape, and records it as an assembly-level
+`RavenIndexMetadataAttribute` (one per index class, including abstract bases). Analyzers then read
+that attribute back through the ordinary symbol API, and get the same answer whether the index came
+from source in the same project or from a referenced DLL.
+
+```csharp
+// generated into the project that declares the index
+[assembly: RavenIndexMetadata(typeof(BooksByAuthor), Analyzable = true,
+    MapFields = new string[] { "AuthorId" }, StoreAllFields = false,
+    AssignsMap = true, AddMapCount = 0, AddMapInLoop = false, UsesAdditionalCode = false)]
+```
+
+`RavenIndexMetadataAttribute` lives in `Raven.Client` (so both projects bind the same type) and is
+marked `[EditorBrowsable(Never)]`, so it stays out of completion lists. Nobody writes it by hand.
+
+There is exactly one path here. Analyzers never read an index constructor: `IndexFieldExtractor`,
+`IndexStoredFieldExtractor` and the chain walks in `IndexInheritanceInspector` belong to the
+generator, and `IndexMetadataRegistry` is the only way an analyzer obtains index facts. Rules that
+inspect the index *in front of them* rather than facts extracted from one (RVN001, RVN009's call
+scan, RVN014) work on local syntax as usual.
+
+`Analyzable = false` means the generator looked and could not read the index: a JavaScript index,
+dynamic fields via `CreateField`, a block-bodied `Map`, or a base class whose own metadata is
+missing. Consumers treat that as *unknown*, never as *no fields*, and report nothing. Generic and
+private index classes cannot be named by an assembly-level `typeof()` and so get no entry at all,
+with the same effect.
+
+Which rule uses which recorded fact:
+
+| Rule | Reads |
+|---|---|
+| RVN004 | `AssignsMap` |
+| RVN005, RVN006 | `AddMapCount`, `AddMapInLoop` |
+| RVN007 | `MapFields` |
+| RVN008 | `MapFields`, `StoredFields`, `StoreAllFields` |
+| RVN009 | `UsesAdditionalCode` (suppression only) |
+
+`test/AnalyzersTests/Indexes/CrossProjectIndexRegressionTests.cs` covers this, running every case
+through both a compiled DLL and a `CompilationReference`, because a command-line build supplies the
+former and an IDE the latter. `IndexMetadataGeneratorIncrementalityTests` pins the generator's
+caching, which is invisible to any other test: if it regresses the generator merely gets slow.
 
 ## Sandbox and benchmarking
 
@@ -276,6 +327,8 @@ class CompanyIndex : AbstractIndexCreationTask<Company>
 
 RavenDB translates the LINQ chain into a server-side query against a specific index. If a `Where` or `OrderBy` clause references a field that is not in the index's projection, the server cannot match documents against that field and the query silently returns no results or an error at runtime.
 
+The index may live in a different project from the query. Its shape is read from the metadata its own assembly records (see [How index facts reach the analyzers](#how-index-facts-reach-the-analyzers)); when no metadata is recorded for it, or it could not be read, this rule reports nothing.
+
 ```csharp
 class OrderIndex : AbstractIndexCreationTask<Order>
 {
@@ -327,6 +380,8 @@ RavenDB fetches each projected field from the index entry (if the field is store
 | `FromDocument` / `FromDocumentOrThrow` | Source document only: no stored field lookup |
 
 Fields are stored via `Store(x => x.Field, FieldStorage.Yes)`, `Store("FieldName", FieldStorage.Yes)`, `Stores[…] = FieldStorage.Yes`, `StoresStrings["FieldName"] = FieldStorage.Yes`, or `StoreAllFields(FieldStorage.Yes)`. Just appearing in the `Map` projection does **not** store a field.
+
+As with RVN007, the index may live in a different project; its stored-field facts come from the metadata its own assembly records (see [How index facts reach the analyzers](#how-index-facts-reach-the-analyzers)).
 
 ```csharp
 class OrderIndex : AbstractIndexCreationTask<Order>
@@ -597,10 +652,10 @@ async Task GetDataAsync(IAsyncDocumentSession session, string userId, string ord
 
 **Triggered by:** calling `ToList()`, `ToArray()`, `ToListAsync()`, or `ToArrayAsync()` on an `IRavenQueryable<T>` chain that does not have a `.Take(n)` call anywhere in the chain.
 
-RavenDB queries default to returning at most 128 documents per request (the server's page size). Without an explicit `.Take(n)`, the intent is invisible. As your dataset grows, the query may silently fetch far more data than you originally intended, degrading performance. Add `.Take(n)` to make the limit explicit.
+An unbounded query returns **every** matching document: the server applies no default limit (`IndexQueryServerSide.PageSize` starts at `int.MaxValue`), and the client only sends a `limit` when you set one. Without an explicit `.Take(n)` the result size is whatever the dataset happens to hold, so a query that was fine against test data can pull the whole collection in production. Add `.Take(n)` to bound it.
 
 ```csharp
-// ❌ Bad: implicitly bounded by 128 documents
+// ❌ Bad: unbounded, returns every match
 var users = session.Query<User>().ToList();   // RVN013
 
 // ✅ Good: explicit bound
@@ -610,7 +665,7 @@ var users = session.Query<User>().Take(10).ToList();
 This applies to filtered queries as well:
 
 ```csharp
-// ❌ Bad: implicitly bounded by 128 documents
+// ❌ Bad: unbounded, returns every match
 var activeUsers = session.Query<User>()
     .Where(u => u.Active)
     .ToList();   // RVN013
@@ -625,7 +680,7 @@ var activeUsers = session.Query<User>()
 And to async queries:
 
 ```csharp
-// ❌ Bad: implicitly bounded by 128 documents
+// ❌ Bad: unbounded, returns every match
 var users = await session.Query<User>().ToListAsync();   // RVN013
 
 // ✅ Good: explicit bound

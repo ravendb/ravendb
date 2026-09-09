@@ -228,7 +228,7 @@ namespace Raven.Analyzers.Shared
             messageFormat: "'{0}' returns an unbounded result set. Add .Take(n) before {0} to limit the number of documents fetched from the server.",
             introducedAt: "7.2",
             destinationSeverity: DiagnosticSeverity.Warning,
-            description: "RavenDB queries default to returning at most 128 documents per request (the server's page size). Without an explicit .Take(n), the intent is invisible and the query may silently fetch far more data than intended as the dataset grows. Add .Take(n) to make the limit explicit.",
+            description: "An unbounded query returns every matching document: the server applies no default limit and the client only sends one when you set it. Without an explicit .Take(n) the result size is whatever the dataset happens to hold, so a query that is fine against test data can pull a whole collection in production. Add .Take(n) to bound it.",
             helpCode: "CCHF6Z");
 
         /// <summary>

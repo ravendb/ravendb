@@ -8,6 +8,15 @@
     <DevelopmentDependency>true</DevelopmentDependency>
     <IsPackable>false</IsPackable>
     <LangVersion>preview</LangVersion>
+    <!-- Shared with Raven.Analyzers.CodeFixes; both DLLs must bind the same Roslyn. -->
+    <RavenAnalyzerRoslynVersion>4.4.0</RavenAnalyzerRoslynVersion>
+    <!--
+      Transitive pinning is repo-wide, but must not apply here. It would drag this assembly's
+      System.Collections.Immutable and System.Reflection.Metadata up to the repo's versions, which are
+      newer than the ones the host compiler ships, and the analyzer then fails to load with CS8032.
+      Roslyn's own constraints are the correct ones for an assembly the compiler loads.
+    -->
+    <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
     <Nullable>enable</Nullable>
     <!--
       This project is not packaged on its own. Raven.Analyzers.dll and
@@ -17,7 +26,18 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
+    <!--
+      Pinned WELL BELOW the repo-wide version, and deliberately not kept in step with it.
+
+      An analyzer is forward compatible but not backward: the compiler refuses to load one built
+      against a Roslyn newer than itself, reports CS9057, and with TreatWarningsAsErrors that is a
+      build failure in the consumer's project. Since these DLLs ship inside RavenDB.Client, the
+      version chosen here is the oldest SDK a consumer can build with. Compiling against the repo's
+      own Roslyn would break every consumer whose SDK is older than ours.
+
+      Raise it only with a reason, knowing it drops the SDKs below the new value.
+    -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" VersionOverride="$(RavenAnalyzerRoslynVersion)" PrivateAssets="all" />
     <!--
       Microsoft.CodeAnalysis.CSharp.Workspaces is intentionally NOT referenced here.
       Per RS1038 (https://github.com/dotnet/roslyn-analyzers/issues/7438) analyzer

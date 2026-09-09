@@ -18,7 +18,7 @@ namespace Raven.Analyzers.CodeFixes.Sessions
     public sealed class SessionLazyBatchingCodeFixProvider : CodeFixProvider
     {
         public override ImmutableArray<string> FixableDiagnosticIds =>
-            [DiagnosticIds.SessionLazyBatching];
+            ImmutableArray.Create(DiagnosticIds.SessionLazyBatching);
 
         public override FixAllProvider? GetFixAllProvider() =>
             WellKnownFixAllProviders.BatchFixer;
