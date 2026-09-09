@@ -114,6 +114,16 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
             return result;
         }
 
+        public static bool Contains(object source, object value)
+        {
+            return source is IEnumerable enumerable && AsDynamicArray(enumerable).Contains(value);
+        }
+
+        public static bool Contains(object source, object value, IEqualityComparer comparer)
+        {
+            return source is IEnumerable enumerable && AsDynamicArray(enumerable).Contains(value, comparer);
+        }
+
         public static dynamic ElementAt(IEnumerable source, int index)
         {
             return ElementAtOrDefault(source, index);
@@ -145,6 +155,7 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
             if (source == null) return DynamicNullObject.Null;
 
             var enumerator = source.GetEnumerator();
+            using var disposableEnumerator = enumerator as IDisposable;
             if (enumerator.MoveNext() == false)
                 return DynamicNullObject.Null;
 
@@ -163,7 +174,7 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
         {
             if (source == null) return DynamicNullObject.Null;
 
-            var enumerator = source.GetEnumerator();
+            using var enumerator = source.GetEnumerator();
             if (enumerator.MoveNext() == false)
                 return DynamicNullObject.Null;
 
@@ -180,12 +191,37 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
 
         public static IEnumerable<dynamic> Concat(object source, object other)
         {
-            return new DynamicArray(((IEnumerable<object>)source).Concat((IEnumerable<object>)other));
+            return AsDynamicArray(source).Concat(AsEnumerable(other));
         }
 
         public static IEnumerable<dynamic> Intersect(object source, object other)
         {
             return new DynamicArray(((IEnumerable<object>)source).Intersect((IEnumerable<object>)other));
+        }
+
+        public static bool SequenceEqual(object source, object other)
+        {
+            if (source is not IEnumerable first || other is not IEnumerable second)
+                return false;
+
+            var dynamicArray = source as DynamicArray ?? new DynamicArray(first);
+            return dynamicArray.SequenceEqual(second);
+        }
+
+        private static DynamicArray AsDynamicArray(object source)
+        {
+            if (source is DynamicArray dynamicArray)
+                return dynamicArray;
+
+            return new DynamicArray(AsEnumerable(source));
+        }
+
+        private static IEnumerable AsEnumerable(object source)
+        {
+            if (source is IEnumerable enumerable)
+                return enumerable;
+
+            throw new ArgumentException("The value must be enumerable.", nameof(source));
         }
 
         public static IOrderedEnumerable<dynamic> OrderBy(IEnumerable source, Func<dynamic, dynamic> keySelector)
