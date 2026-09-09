@@ -448,9 +448,9 @@ function map(name, lambda) {
                     var result = ExecuteCodeAndCollectReferencedCollections(map, additionalSources);
                     mapReferencedCollections.Add(result);
                 }
-                catch (Exception e) when (e is IndexCreationException == false && e is OperationCanceledException == false)
+                catch (Exception e)
                 {
-                    throw new IndexCompilationException($"Failed to compile the map of JavaScript index '{Definition.Name}', the map must be valid JavaScript. Map: {map}", e);
+                    throw new IndexCompilationException($"Failed to compile the map of JavaScript index '{Definition.Name}': {e.Message}", e);
                 }
             }
 
@@ -460,9 +460,9 @@ function map(name, lambda) {
                 {
                     _engine.ExecuteWithReset(definition.Reduce);
                 }
-                catch (Exception e) when (e is IndexCreationException == false && e is OperationCanceledException == false)
+                catch (Exception e)
                 {
-                    throw new IndexCompilationException($"Failed to compile the reduce of JavaScript index '{Definition.Name}', the reduce must be valid JavaScript. Reduce: {definition.Reduce}", e);
+                    throw new IndexCompilationException($"Failed to compile the reduce of JavaScript index '{Definition.Name}': {e.Message}", e);
                 }
             }
 
