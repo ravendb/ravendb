@@ -100,7 +100,7 @@ namespace Raven.Client.Documents.Indexes
                 root = StripConvert(source);
             }
 
-            if (root is ParameterExpression parameter && ReferenceEquals(parameter, querySourceParameter))
+            if (root is ParameterExpression parameter && parameter.Name == querySourceParameter.Name)
                 return;
 
             throw new IndexCompilationException(
