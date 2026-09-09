@@ -419,9 +419,9 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
                     case Tombstone.TombstoneType.Document:
                         var collection = tombstone.Collection;
                         if (collectionNames.TryGetValue(collection, out var collectionName) == false)
-                            collectionName = new CollectionName(collection);
+                            throw new InvalidOperationException($"Found a tombstone of collection '{collection}' in bucket {bucket} of '{_documentDatabase.Name}', but that collection is not in the collections map. The tombstone cannot exist without it.");
 
-                        writeTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
+                        writeTable = context.Transaction.GetOrOpenTombstonesTable(collectionName, TombstonesSchema);
                         break;
 
                     case Tombstone.TombstoneType.Revision:
