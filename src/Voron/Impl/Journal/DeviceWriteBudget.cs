@@ -71,7 +71,10 @@ namespace Voron.Impl.Journal
         private readonly double _exitQueueDepth;
         private readonly Stopwatch _clock = Stopwatch.StartNew();
         private double _activeQueueThreshold; // the enter value while trickling, the exit value while draining
-        private Sparrow.Server.Utils.SimpleEwma<long> _syncCostTicksEwma = new(smoothing: 4);
+        
+        private Sparrow.Server.Utils.SimpleEwma<long> _syncCostTicksEwma = new(smoothing: 4, 
+            validityMs: 60_000); // sync happens rarely, so we give it plenty of time to expire any measurements
+        
         private Sparrow.Server.Utils.SimpleEwma<double> _queueDepth = new(smoothing: 4);
         private long _lastSampleMs;
         private long _lastBusyMs;
@@ -95,9 +98,10 @@ namespace Voron.Impl.Journal
             Budgeted // example: gp3 - both bandwidth & IOPS limits that we hit
         }
 
-        // journal write telemetry across EVERY environment on this device
-        private Sparrow.Server.Utils.SimpleEwma<long> _journalWriteLatencyTicks = new(smoothing: 8);
-        private Sparrow.Server.Utils.SimpleEwma<long> _journalWriteSizeBytes = new(smoothing: 8);
+        // journal write telemetry across EVERY environment on this device, intentionally long-lived because it shows disk perf
+        // if the disk perf change (burstable, load, etc), we'll update the status with ~8 measurements anyway
+        private Sparrow.Server.Utils.SimpleEwma<long> _journalWriteLatencyTicks = new(smoothing: 8, validityMs: Sparrow.Server.Utils.SimpleEwma.NeverExpires);
+        private Sparrow.Server.Utils.SimpleEwma<long> _journalWriteSizeBytes = new(smoothing: 8, validityMs: Sparrow.Server.Utils.SimpleEwma.NeverExpires);
         private long _lastJournalWriteActivityTimestamp;
         private readonly long _classifyAboveLatencyTicks;
 
