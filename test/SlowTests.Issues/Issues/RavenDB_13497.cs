@@ -20,15 +20,14 @@ namespace SlowTests.Issues
         }
 
         [RavenFact(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        public void ThrowsWhenReduceReturnsDifferentFieldsThanMap()
+        public void ThrowsWhenReduceRenamesMapField()
         {
             using (var store = GetDocumentStore())
             {
-                var e = Assert.Throws<IndexCreationException>(() => store.ExecuteIndex(new UsersReducedWithAdditionalField()));
+                var e = Assert.Throws<IndexCreationException>(() => store.ExecuteIndex(new UsersReducedWithRenamedField()));
 
-                Assert.Contains("must return identical fields in its Map and Reduce functions", e.Message);
+                Assert.Contains("must return all fields of its Map functions in the Reduce function", e.Message);
                 Assert.Contains("Missing fields: Count", e.Message);
-                Assert.Contains("Additional fields: Total", e.Message);
             }
         }
 
@@ -39,7 +38,7 @@ namespace SlowTests.Issues
             {
                 var e = Assert.Throws<IndexCreationException>(() => store.ExecuteIndex(new UsersReducedWithMissingField()));
 
-                Assert.Contains("must return identical fields in its Map and Reduce functions", e.Message);
+                Assert.Contains("must return all fields of its Map functions in the Reduce function", e.Message);
                 Assert.Contains("Missing fields: Count", e.Message);
             }
         }
@@ -51,7 +50,34 @@ namespace SlowTests.Issues
             {
                 var e = Assert.Throws<IndexCreationException>(() => store.ExecuteIndex(new UsersAndEmployeesReducedWithNonMatchingMaps()));
 
-                Assert.Contains("must return identical fields in its Map and Reduce functions", e.Message);
+                Assert.Contains("must return identical fields in all its Map functions", e.Message);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void AllowsReduceWithAdditionalDerivedFields(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                store.ExecuteIndex(new UsersReducedWithDerivedField());
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Joe", Age = 33 });
+                    session.Store(new User { Name = "Joe", Age = 34 });
+
+                    session.SaveChanges();
+
+                    Indexes.WaitForIndexing(store);
+
+                    var results = session.Query<ReduceResults>("UsersReducedWithDerivedField").ToList();
+
+                    Assert.Equal(1, results.Count);
+                    Assert.Equal("Joe", results[0].Name);
+                    Assert.Equal(2, results[0].Count);
+                    Assert.Equal("Multiple", results[0].Status);
+                }
             }
         }
 
@@ -123,9 +149,9 @@ namespace SlowTests.Issues
         {
             var definition = new IndexDefinition
             {
-                Name = "UsersReducedWithAdditionalField",
+                Name = "UsersReducedWithRenamedField",
                 Maps = new HashSet<string> { Maps.MatchingMap },
-                Reduce = Maps.ReduceWithAdditionalField
+                Reduce = Maps.ReduceWithRenamedField
             };
 
             var configuration = RavenConfiguration.CreateForTesting("foo", ResourceType.Database);
@@ -142,6 +168,8 @@ namespace SlowTests.Issues
             public string Name { get; set; }
 
             public int Count { get; set; }
+
+            public string Status { get; set; }
         }
 
         private static class Maps
@@ -151,16 +179,29 @@ namespace SlowTests.Issues
             public const string MatchingReduce = @"groupBy(x => x.Name)
                 .aggregate(g => { return { Name: g.key, Count: g.values.reduce((total, val) => val.Count + total, 0) }; })";
 
-            public const string ReduceWithAdditionalField = @"groupBy(x => x.Name)
+            public const string ReduceWithRenamedField = @"groupBy(x => x.Name)
                 .aggregate(g => { return { Name: g.key, Total: g.values.reduce((total, val) => val.Count + total, 0) }; })";
         }
 
-        private class UsersReducedWithAdditionalField : AbstractJavaScriptIndexCreationTask
+        private class UsersReducedWithRenamedField : AbstractJavaScriptIndexCreationTask
         {
-            public UsersReducedWithAdditionalField()
+            public UsersReducedWithRenamedField()
             {
                 Maps = new HashSet<string> { RavenDB_13497.Maps.MatchingMap };
-                Reduce = RavenDB_13497.Maps.ReduceWithAdditionalField;
+                Reduce = RavenDB_13497.Maps.ReduceWithRenamedField;
+            }
+        }
+
+        private class UsersReducedWithDerivedField : AbstractJavaScriptIndexCreationTask
+        {
+            public UsersReducedWithDerivedField()
+            {
+                Maps = new HashSet<string> { RavenDB_13497.Maps.MatchingMap };
+                Reduce = @"groupBy(x => x.Name)
+                    .aggregate(g => {
+                        var count = g.values.reduce((total, val) => val.Count + total, 0);
+                        return { Name: g.key, Count: count, Status: count > 1 ? 'Multiple' : 'Single' };
+                    })";
             }
         }
 

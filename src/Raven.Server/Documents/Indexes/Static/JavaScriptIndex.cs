@@ -380,8 +380,8 @@ function map(name, lambda) {
 
             foreach (var reduceFields in ReduceOperation.GetStaticallyKnownOutputFields())
             {
-                if (baseline.Fields.SetEquals(reduceFields) == false)
-                    ThrowFieldsMismatch(baseline.MapString, baseline.Fields, ReduceOperation.ReduceString, reduceFields);
+                if (baseline.Fields.IsSubsetOf(reduceFields) == false)
+                    ThrowReduceMissingFields(baseline.MapString, baseline.Fields, ReduceOperation.ReduceString, reduceFields);
             }
 
             foreach (var groupByField in GroupByFields)
@@ -395,13 +395,25 @@ function map(name, lambda) {
         private void ThrowFieldsMismatch(string baselineFunction, HashSet<string> baselineFields, string nonMatchingFunction, ICollection<string> nonMatchingFields)
         {
             ThrowIndexCreationException($"""
-                                         must return identical fields in its Map and Reduce functions.
+                                         must return identical fields in all its Map functions.
                                          Baseline function: {baselineFunction}
                                          Non matching function: {nonMatchingFunction}
 
                                          Common fields: {string.Join(", ", baselineFields.Intersect(nonMatchingFields))}
                                          Missing fields: {string.Join(", ", baselineFields.Except(nonMatchingFields))}
                                          Additional fields: {string.Join(", ", nonMatchingFields.Except(baselineFields))}
+                                         """);
+        }
+
+        [DoesNotReturn]
+        private void ThrowReduceMissingFields(string mapFunction, HashSet<string> mapFields, string reduceFunction, ICollection<string> reduceFields)
+        {
+            ThrowIndexCreationException($"""
+                                         must return all fields of its Map functions in the Reduce function.
+                                         Map function: {mapFunction}
+                                         Reduce function: {reduceFunction}
+
+                                         Missing fields: {string.Join(", ", mapFields.Except(reduceFields))}
                                          """);
         }
 
