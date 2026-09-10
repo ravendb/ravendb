@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System;
 using System.Collections.Concurrent;
@@ -257,79 +257,65 @@ namespace Raven.Embedded
 
             process.Exited += (sender, e) => ServerProcessExited?.Invoke(sender, new ServerProcessExitedEventArgs());
 
-            bool domainBind;
-
 #if NET462
             AppDomain.CurrentDomain.DomainUnload += (s, args) =>
             {
                 ShutdownServerProcess(process);
             };
-            domainBind = true;
 #else
             AssemblyLoadContext.Default.Unloading += c =>
             {
                 ShutdownServerProcess(process);
             };
-            domainBind = true;
 #endif
 
-            if (domainBind == false)
-                throw new InvalidOperationException("Should not happen!");
-
-            string? url = null;
-            var startupDuration = Stopwatch.StartNew();
-
-            var outputString = await ProcessHelper.ReadOutput(process.StandardOutput, startupDuration, _serverOptions, async (line, builder) =>
+            var serverUrlTcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var outputString = process.ReadOutput(onOutputLine: line =>
             {
-                if (line == null)
-                {
-                    var errorString = await ProcessHelper.ReadOutput(process.StandardError, startupDuration, _serverOptions, null).ConfigureAwait(false);
-
-                    ShutdownServerProcess(process);
-
-                    throw new InvalidOperationException(BuildStartupExceptionMessage(builder.ToString(), errorString));
-                }
-
                 const string prefix = "Server available on: ";
                 if (line.StartsWith(prefix))
+                    serverUrlTcs.TrySetResult(line.Substring(prefix.Length));
+            });
+
+            try
+            {
+                var startupTask = Task.WhenAny(serverUrlTcs.Task, outputString.Completion);
+                var isCompleted = await startupTask.WaitWithTimeout(_serverOptions.MaxServerStartupTimeDuration).ConfigureAwait(false);
+                var exitCode = outputString.ExitCode;
+
+                if (isCompleted == false || serverUrlTcs.Task.IsCompleted == false || exitCode.HasValue)
                 {
-                    url = line.Substring(prefix.Length);
-                    return true;
+                    throw new InvalidOperationException(isCompleted == false
+                        ? $"Server startup did not complete within {_serverOptions.MaxServerStartupTimeDuration}."
+                        : "The server process exited before startup completed.");
                 }
 
-                return false;
-            }).ConfigureAwait(false);
+                var serverUrl = new Uri(await serverUrlTcs.Task.ConfigureAwait(false));
 
-            if (url == null)
-            {
-                var errorString = await ProcessHelper.ReadOutput(process.StandardError, startupDuration, _serverOptions, null).ConfigureAwait(false);
-
-                ShutdownServerProcess(process);
-
-                throw new InvalidOperationException(BuildStartupExceptionMessage(outputString, errorString));
+                return (serverUrl, process);
             }
-
-            return (new Uri(url), process);
-        }
-
-        private static string BuildStartupExceptionMessage(string? outputString, string? errorString)
-        {
-            var sb = new StringBuilder();
-            sb.AppendLine("Unable to start the RavenDB Server");
-
-            if (string.IsNullOrWhiteSpace(errorString) == false)
+            catch (Exception e)
             {
-                sb.AppendLine("Error:");
-                sb.AppendLine(errorString);
-            }
+                try
+                {
+                    // Capture the exit code before cleanup can terminate a still-running process.
+                    var exitCodeBeforeShutdown = outputString.ExitCode;
 
-            if (string.IsNullOrWhiteSpace(outputString) == false)
-            {
-                sb.AppendLine("Output:");
-                sb.AppendLine(outputString);
-            }
+                    ShutdownServerProcess(process);
+                    await outputString.DrainAsync(_serverOptions.ProcessKillTimeout).ConfigureAwait(false);
 
-            return sb.ToString();
+                    var message = new StringBuilder();
+                    message.AppendLine("Unable to start the RavenDB Server");
+                    message.AppendLine(e.Message);
+                    outputString.AppendDiagnostics(message, exitCodeBeforeShutdown);
+
+                    throw new InvalidOperationException(message.ToString(), e);
+                }
+                finally
+                {
+                    process.Dispose();
+                }
+            }
         }
 
         public void OpenStudioInBrowser()
