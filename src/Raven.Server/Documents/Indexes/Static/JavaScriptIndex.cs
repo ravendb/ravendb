@@ -263,7 +263,8 @@ function map(name, lambda) {
                 ProcessMaps(definitions, resolver, maps, mapReferencedCollections, out var collectionFunctions);
                 AssertVectorFieldForMapReduceIndexes(mapReferencedCollections);
 
-                
+                _mapOperations = collectionFunctions.SelectMany(x => x.Value).SelectMany(x => x.Value).ToList();
+
                 ProcessReduce(definition, definitions, resolver, indexVersion);
 
                 ProcessFields(definition, collectionFunctions);
@@ -349,6 +350,70 @@ function map(name, lambda) {
             }
 
             OutputFields = fields.ToArray();
+        }
+
+        internal void ValidateFieldsOfMapAndReduceFunctions()
+        {
+            if (ReduceOperation == null)
+                return;
+
+            JavaScriptMapOperation baseline = null;
+
+            foreach (var operation in _mapOperations)
+            {
+                if (operation.HasDynamicReturns || operation.Fields.Count == 0)
+                    continue;
+
+                if (baseline == null)
+                {
+                    baseline = operation;
+                    continue;
+                }
+
+                if (baseline.Fields.SetEquals(operation.Fields) == false)
+                    ThrowFieldsMismatch(baseline.MapString, baseline.Fields, operation.MapString, operation.Fields);
+            }
+
+            if (baseline == null)
+                return;
+
+            foreach (var reduceFields in ReduceOperation.GetStaticallyKnownOutputFields())
+            {
+                if (baseline.Fields.IsSubsetOf(reduceFields) == false)
+                    ThrowReduceMissingFields(baseline.MapString, baseline.Fields, ReduceOperation.ReduceString, reduceFields);
+            }
+
+            foreach (var groupByField in GroupByFields)
+            {
+                if (baseline.Fields.Contains(groupByField.Name) == false)
+                    ThrowIndexCreationException($"is grouping by field '{groupByField.Name}' which is not returned by its map functions. Map fields: {string.Join(", ", baseline.Fields)}");
+            }
+        }
+
+        [DoesNotReturn]
+        private void ThrowFieldsMismatch(string baselineFunction, HashSet<string> baselineFields, string nonMatchingFunction, ICollection<string> nonMatchingFields)
+        {
+            ThrowIndexCreationException($"""
+                                         must return identical fields in all its Map functions.
+                                         Baseline function: {baselineFunction}
+                                         Non matching function: {nonMatchingFunction}
+
+                                         Common fields: {string.Join(", ", baselineFields.Intersect(nonMatchingFields))}
+                                         Missing fields: {string.Join(", ", baselineFields.Except(nonMatchingFields))}
+                                         Additional fields: {string.Join(", ", nonMatchingFields.Except(baselineFields))}
+                                         """);
+        }
+
+        [DoesNotReturn]
+        private void ThrowReduceMissingFields(string mapFunction, HashSet<string> mapFields, string reduceFunction, ICollection<string> reduceFields)
+        {
+            ThrowIndexCreationException($"""
+                                         must return all fields of its Map functions in the Reduce function.
+                                         Map function: {mapFunction}
+                                         Reduce function: {reduceFunction}
+
+                                         Missing fields: {string.Join(", ", mapFields.Except(reduceFields))}
+                                         """);
         }
 
         private void ProcessReduce(IndexDefinition definition, ObjectInstance definitions, JintPreventResolvingTasksReferenceResolver resolver, long indexVersion)
@@ -638,6 +703,7 @@ function loadVector(pathToEmbedding, aiTaskIdentifier, embeddingSourceDocumentId
         protected readonly IndexDefinition Definition;
         internal readonly Engine _engine;
         protected readonly JavaScriptUtils _javaScriptUtils;
+        private readonly List<JavaScriptMapOperation> _mapOperations;
 
         public JavaScriptReduceOperation ReduceOperation { get; private set; }
 

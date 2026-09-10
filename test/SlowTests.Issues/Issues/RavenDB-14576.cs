@@ -110,7 +110,7 @@ namespace SlowTests.Issues
         return {
             ParentId: g.key.ParentId,
             ParentName: g.key.ParentName,
-            ChildFolderOrDocument: arr
+            ChildDocument: arr
         };
     })"
                 };
