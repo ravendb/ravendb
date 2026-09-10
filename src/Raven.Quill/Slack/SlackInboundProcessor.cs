@@ -18,6 +18,8 @@ internal sealed class SlackInboundProcessor(
 {
     internal const string UnsupportedKindReply = "I can only read text messages right now.";
     internal const string ErrorReply = "Sorry - something went wrong handling that message. Please try again.";
+    internal const string ConversationExpiredReply =
+        "By the way, this is a fresh conversation - our previous one ended after a period of inactivity, so I no longer have its context.";
     internal const string OverloadReply =
         "I'm still working through your earlier messages, so that one didn't make it. Please resend it once I've replied.";
 
@@ -173,8 +175,6 @@ internal sealed class SlackInboundProcessor(
         if (prompt.Length == 0)
             return;
 
-        var conversationId = SlackConversationId.ForUtcDay(shortChannelId, sender, DateTime.UtcNow);
-
         var config = await AgentLookup.FindAsync(store, database, channel.AgentId, ct);
         if (config is null)
             throw new InvalidOperationException($"agent '{channel.AgentId}' is no longer registered in this app");
@@ -188,18 +188,26 @@ internal sealed class SlackInboundProcessor(
             throw new InvalidOperationException(bindError);
         }
 
+        var conversationId = ChannelConversationId.For(ChannelType.Slack, shortChannelId, sender, parameters);
+
         var reply = new SlackStreamingReply(slack, settings.BotToken, dmChannel, options.Value.Slack, logger, ct);
 
         try
         {
-            await router.RunAsync(
+            var result = await router.RunAsync(
                 new AgentRequest(database, config.Identifier, conversationId, prompt, channel.Id!,
                     parameters.ToDictionary(
                         parameter => parameter.Key,
-                        parameter => AgentParameterValue.FromString(parameter.Value))),
+                        parameter => AgentParameterValue.FromString(parameter.Value)),
+                    new ConversationLifetime(
+                        options.Value.ChannelConversationIdleWindow,
+                        options.Value.ChannelConversationRetention)),
                 reply.OnChunkAsync, config, ct);
 
             await reply.FinalizeAsync();
+
+            if (result.StartedFresh)
+                await TrySendAsync(slack, database, shortChannelId, settings, dmChannel, ConversationExpiredReply, ct);
 
             if (reply.IsEmpty)
                 if (logger.IsWarnEnabled)

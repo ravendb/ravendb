@@ -164,6 +164,14 @@ builder.Services.AddOptions<ApplianceOptions>()
         "Discord GatewayHandshakeTimeout must be positive")
     .Validate(o => o.Discord.GatewayRestartDelay > TimeSpan.Zero, "Discord GatewayRestartDelay must be positive")
     .Validate(o => o.Discord.MaxGatewayFrameBytes > 0, "Discord MaxGatewayFrameBytes must be positive")
+    .Validate(o => o.ChannelConversationRetention is not { } retention ||
+                   (retention > TimeSpan.Zero && retention.TotalSeconds <= int.MaxValue),
+        "ChannelConversationRetention must be positive and at most int.MaxValue seconds; " +
+        "leave it unset to keep channel conversations forever")
+    .Validate(o => o.ChannelConversationIdleWindow is not { } idleWindow ||
+                   (idleWindow > TimeSpan.Zero && idleWindow.TotalSeconds <= int.MaxValue),
+        "ChannelConversationIdleWindow must be positive and at most int.MaxValue seconds; " +
+        "leave it unset to keep channel conversation transcripts forever")
     .ValidateOnStart();
 
 builder.Services.AddSingleton<IDocumentStore>(sp =>

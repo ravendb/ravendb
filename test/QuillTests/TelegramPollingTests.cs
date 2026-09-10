@@ -104,8 +104,10 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         Assert.Equal(app.Slug, request.Database);
         Assert.Equal(Channel.IdPrefix + channelId, request.ChannelId);
         Assert.Equal("hello there", request.Prompt);
-        Assert.StartsWith($"chats/tg/{channelId}/555/", request.ConversationId);
+        Assert.StartsWith($"chats/telegram/{channelId}/555/", request.ConversationId);
         Assert.True(AgentRouter.TryNormalizeConversationId(request.ConversationId, out _, out _));
+        Assert.NotNull(request.Lifetime?.TranscriptIdleWindow);
+        Assert.NotNull(request.Lifetime?.PreviewRetention);
         Assert.Equal("customers/42", request.Parameters["customerId"].GetString());
         Assert.Equal("777", request.Parameters["senderId"].GetString());
 
@@ -172,11 +174,10 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         Assert.Empty(Router.Requests);
         Assert.DoesNotContain(Mock.ChatActions, a => a.ChatId == chatId);
 
-        var conversationId = TelegramConversationId.ForUtcDay(channelId, chatId, DateTime.UtcNow);
         using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
-            Assert.Null(await session.LoadAsync<object>(conversationId));
-            Assert.Null(await session.LoadAsync<object>(ConversationPreview.IdFor(conversationId)));
+            Assert.Empty(await session.Advanced.LoadStartingWithAsync<object>("chats/"));
+            Assert.Empty(await session.Advanced.LoadStartingWithAsync<object>(ConversationPreview.IdPrefix));
         }
 
         await app.DeleteChannelAsync(channelId);
@@ -559,18 +560,63 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Updating_a_constant_binding_starts_a_fresh_conversation_with_the_new_value()
+    {
+        var (app, channelId, token) = await ProvisionAsync(
+            bindings: new Dictionary<string, ChannelParameterBinding>
+            {
+                ["customerId"] = new() { Source = ChannelParameterSource.Constant, Value = "users/1" },
+            },
+            declared: [new AiAgentParameter("customerId", "scope")]);
+        await using var appGuard = app;
+
+        const long chatId = 640;
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 640, "first question");
+        await Mock.WaitUntilAsync(() => Router.Requests.Count >= 1, "the first agent run");
+        var first = Router.Requests[0];
+        Assert.Equal("users/1", first.Parameters["customerId"].GetString());
+        await Mock.WaitUntilAsync(
+            () => Mock.LastGetUpdatesOffset(token) > 0, "the first update to be confirmed");
+
+        await app.UpdateChannelAsync(channelId, new UpdateChannelRequest(null, null, null,
+            new TelegramUpdateRequest(ParameterBindings: new Dictionary<string, ChannelParameterBinding>
+            {
+                ["customerId"] = new() { Source = ChannelParameterSource.Constant, Value = "users/2" },
+            })));
+
+        await Mock.WaitUntilAsync(
+            () => Mock.LastGetUpdatesOffset(token) is null or 0, "the runtime swap after the update");
+
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 640, "second question");
+        await Mock.WaitUntilAsync(() => Router.Requests.Count >= 2, "the second agent run");
+
+        var second = Router.Requests[^1];
+        Assert.Equal("users/2", second.Parameters["customerId"].GetString());
+        Assert.NotEqual(first.ConversationId, second.ConversationId);
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Clear_command_deletes_the_conversation_and_its_preview()
     {
         var (app, channelId, token) = await ProvisionAsync();
         await using var appGuard = app;
 
         const long chatId = 300;
-        var conversationId = TelegramConversationId.ForUtcDay(channelId, chatId, DateTime.UtcNow);
+        var chatPrefix = TelegramConversationId.ChatPrefix(channelId, chatId);
+        var currentId = TelegramConversationId.For(channelId, chatId, new());
+        var supersededId = chatPrefix + "aaaaaaaaaaaaaaaa";
+        var legacyDatedId = chatPrefix + "2026-08-17/bbbbbbbbbbbbbbbb";
         using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
-            await session.StoreAsync(new ConversationPreview { ConversationId = conversationId },
-                ConversationPreview.IdFor(conversationId));
-            await session.StoreAsync(new { Seeded = true }, conversationId);
+            foreach (var conversationId in new[] { currentId, supersededId, legacyDatedId })
+            {
+                await session.StoreAsync(new ConversationPreview { ConversationId = conversationId },
+                    ConversationPreview.IdFor(conversationId));
+                await session.StoreAsync(new { Seeded = true }, conversationId);
+            }
+
             await session.SaveChangesAsync();
         }
 
@@ -581,9 +627,51 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         Assert.Empty(Router.Requests);
         using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
-            Assert.Null(await session.LoadAsync<object>(conversationId));
-            Assert.Null(await session.LoadAsync<object>(ConversationPreview.IdFor(conversationId)));
+            foreach (var conversationId in new[] { currentId, supersededId, legacyDatedId })
+            {
+                Assert.Null(await session.LoadAsync<object>(conversationId));
+                Assert.Null(await session.LoadAsync<object>(ConversationPreview.IdFor(conversationId)));
+            }
         }
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task An_idle_rolled_turn_sends_a_fresh_conversation_notice_after_the_reply()
+    {
+        var (app, channelId, token) = await ProvisionAsync();
+        await using var appGuard = app;
+        Router.StartedFresh = true;
+
+        const long chatId = 330;
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 330, "hello again");
+
+        await Mock.WaitUntilAsync(
+            () => Mock.SentMessages.Any(m => m.ChatId == chatId && m.Text.Contains("fresh conversation")),
+            "the fresh-conversation notice");
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Clear_command_works_even_when_a_binding_cannot_be_satisfied()
+    {
+        var (app, channelId, token) = await ProvisionAsync(
+            bindings: new Dictionary<string, ChannelParameterBinding>
+            {
+                ["handle"] = new() { Source = ChannelParameterSource.Username },
+            },
+            declared: [new AiAgentParameter("handle", "sender's handle")]);
+        await using var appGuard = app;
+
+        const long chatId = 305;
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 305, "/clear");
+        await Mock.WaitUntilAsync(
+            () => Mock.SentMessages.Any(m => m.ChatId == chatId && m.Text.Contains("cleared")), "the confirmation");
+
+        Assert.DoesNotContain(Mock.SentMessages, m => m.ChatId == chatId && m.Text.Contains("username"));
+        Assert.Empty(Router.Requests);
 
         await app.DeleteChannelAsync(channelId);
     }
@@ -663,7 +751,7 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         const long groupChatId = -520;
         const long supergroupChatId = -521;
         const long channelChatId = -522;
-        var conversationId = TelegramConversationId.ForUtcDay(channelId, supergroupChatId, DateTime.UtcNow);
+        var conversationId = TelegramConversationId.For(channelId, supergroupChatId, new());
         using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
             await session.StoreAsync(new ConversationPreview { ConversationId = conversationId },

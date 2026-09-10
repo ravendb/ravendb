@@ -118,6 +118,24 @@ public class ConversationsEndpointTests(ITestOutputHelper output) : QuillTestBas
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task GetConversation_falls_back_to_the_preview_when_the_transcript_expired()
+    {
+        await using var app = await NewAppAsync();
+        await SeedPreviewAsync(app.Store, app.Slug, "chats/expired", "order-support", DateTime.UtcNow.AddMinutes(-5),
+            lastUserPrompt: "hello", lastAgentReply: "hi there");
+
+        var detail = await app.GetConversationAsync("chats/expired");
+
+        Assert.Equal("chats/expired", detail.Id);
+        var transcript = detail.Transcript;
+        Assert.Equal(2, transcript.Length);
+        Assert.Equal(AiMessageRole.User, transcript[0].Role);
+        Assert.Equal("hello", transcript[0].Content);
+        Assert.Equal(AiMessageRole.Assistant, transcript[1].Role);
+        Assert.Equal("hi there", transcript[1].Content);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task GetConversation_returns_404_for_non_conversation_or_unknown_id()
     {
         await using var app = await NewAppAsync();

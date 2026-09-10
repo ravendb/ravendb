@@ -42,8 +42,10 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
         var request = Assert.Single(Router.Requests);
         Assert.Equal("What are your hours?", request.Prompt);
         Assert.Equal(Channel.IdPrefix + channel.ChannelId, request.ChannelId);
-        Assert.Matches($"^chats/discord/{channel.ChannelId}/{Sender}/\\d{{4}}-\\d{{2}}-\\d{{2}}$", request.ConversationId);
+        Assert.Matches($"^chats/discord/{channel.ChannelId}/{Sender}/[0-9a-f]{{16}}$", request.ConversationId);
         Assert.Equal(Sender, request.Parameters["discordUser"].GetString());
+        Assert.NotNull(request.Lifetime?.TranscriptIdleWindow);
+        Assert.NotNull(request.Lifetime?.PreviewRetention);
 
         await Discord.WaitUntilAsync(
             () => Discord.EditedMessages.Any(e => e.Content == "Hello from the fake agent."), "the finalized edit");
@@ -51,6 +53,20 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
         var sent = Assert.Single(Discord.SentMessages);
         Assert.Equal(DmChannel, sent.ChannelId);
         Assert.All(Discord.EditedMessages, e => Assert.Equal(sent.MessageId, e.MessageId));
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task An_idle_rolled_turn_sends_a_fresh_conversation_notice_after_the_reply()
+    {
+        await using var app = await NewAppAsync();
+        await NewChannelAsync(app);
+        Router.StartedFresh = true;
+
+        await Discord.DispatchDmAsync("msg-fresh-1", DmChannel, Sender, "hello again");
+
+        await Discord.WaitUntilAsync(
+            () => Discord.SentMessages.Any(m => m.ChannelId == DmChannel && m.Content.Contains("fresh conversation")),
+            "the fresh-conversation notice");
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -256,6 +272,50 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
 
         await Discord.WaitUntilAsync(() => Router.Requests.Count == 1, "the agent dispatch");
         Assert.Equal("dana.dev", Assert.Single(Router.Requests).Parameters["handle"].GetString());
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Updating_a_constant_binding_starts_a_fresh_conversation_with_the_new_value()
+    {
+        await using var app = await NewAppAsync();
+
+        var agentId = "discord-agent-" + Guid.NewGuid().ToString("N")[..8];
+        await app.ProvisionAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = agentId,
+            Name = "Discord Demo Agent",
+            SystemPrompt = "You are a placeholder demo agent.",
+            ConnectionStringName = app.Host.ConnectionStringName,
+            Parameters = [new AiAgentParameter("userId", "the customer's document id")],
+        });
+
+        var botToken = NewBotToken();
+        Discord.AddBot(botToken, NewApplicationId(), NewBotUserId());
+        var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
+            ChannelType.Discord, agentId, null,
+            Discord: new(botToken, ParameterBindings: new Dictionary<string, ChannelParameterBinding>
+            {
+                ["userId"] = new() { Source = ChannelParameterSource.Constant, Value = "users/1" },
+            })));
+
+        await Discord.DispatchDmAsync("msg-const-1", DmChannel, Sender, "first question");
+        await Discord.WaitUntilAsync(() => Router.Requests.Count == 1, "the first agent dispatch");
+
+        await app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
+            Discord: new(ParameterBindings: new Dictionary<string, ChannelParameterBinding>
+            {
+                ["userId"] = new() { Source = ChannelParameterSource.Constant, Value = "users/2" },
+            })));
+
+        await Discord.WaitUntilAsync(() => Discord.Identifies.Count >= 2, "the gateway swap after the update");
+        await Discord.DispatchDmAsync("msg-const-2", DmChannel, Sender, "second question");
+        await Discord.WaitUntilAsync(() => Router.Requests.Count == 2, "the second agent dispatch");
+
+        var first = Router.Requests[0];
+        var second = Router.Requests[1];
+        Assert.Equal("users/1", first.Parameters["userId"].GetString());
+        Assert.Equal("users/2", second.Parameters["userId"].GetString());
+        Assert.NotEqual(first.ConversationId, second.ConversationId);
     }
 
     [RavenFact(RavenTestCategory.Quill)]

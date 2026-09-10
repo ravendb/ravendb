@@ -20,6 +20,11 @@ const TELEGRAM_MESSAGE_DEFAULTS = {
         label: "Conversation cleared (/clear)",
         defaultText: "Conversation cleared. The next message starts a fresh one.",
     },
+    conversationExpired: {
+        label: "Fresh conversation notice",
+        defaultText:
+            "By the way, this is a fresh conversation - our previous one ended after a period of inactivity, so I no longer have its context.",
+    },
     usernameMissing: {
         label: "Telegram username missing",
         defaultText:
@@ -73,9 +78,10 @@ export const TELEGRAM_MESSAGE_FIELDS = (Object.keys(TELEGRAM_MESSAGE_DEFAULTS) a
 // Every message key belongs to exactly one group.
 const MESSAGE_GROUPS: { title: string; description: string; keys: MessageKey[] }[] = [
     {
-        title: "Commands",
-        description: "Replies to the /start and /clear commands.",
-        keys: ["greeting", "conversationCleared"],
+        title: "Conversation",
+        description:
+            "Replies to the /start and /clear commands, and the notice sent when an inactive conversation starts fresh.",
+        keys: ["greeting", "conversationCleared", "conversationExpired"],
     },
     {
         title: "Collecting details",
