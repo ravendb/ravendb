@@ -33,11 +33,11 @@ namespace Raven.Analyzers.Queries
 
             context.RegisterCompilationStartAction(startCtx =>
             {
-                ConcurrentDictionary<string, INamedTypeSymbol?> indexByName =
-                    QueryIndexResolver.CreateIndexNameRegistry(startCtx);
-                IndexMetadataRegistry metadataRegistry = new();
-                var pending = new ConcurrentBag<(InvocationExpressionSyntax Invocation, SemanticModel Model)>();
-                var pendingQueries = new ConcurrentBag<(QueryExpressionSyntax Query, SemanticModel Model)>();
+                // Reported straight from the syntax node actions, not from a compilation-end action. An
+                // IDE does not run compilation-end actions while you type, so a rule reporting from
+                // there never appears in the editor and shows up only in a full build.
+                QueryIndexResolver.IndexNameRegistry indexByName = new(startCtx.Compilation);
+                IndexMetadataRegistry metadataRegistry = new(startCtx.Compilation);
 
                 startCtx.RegisterSyntaxNodeAction(ctx =>
                 {
@@ -45,32 +45,25 @@ namespace Raven.Analyzers.Queries
                     string? methodName = SyntaxHelpers.GetMethodName(invocation);
                     if (methodName != KnownTypes.ProjectIntoMethodName && methodName != KnownTypes.SelectMethodName)
                         return;
-                    pending.Add((invocation, ctx.SemanticModel));
+
+                    AnalyzeInvocation(ctx.SemanticModel, invocation, indexByName, metadataRegistry, ctx.ReportDiagnostic);
                 }, SyntaxKind.InvocationExpression);
 
                 // The fluent path above only sees Select/ProjectInto invocations. A projection written in
                 // C# query-expression syntax (from o in session.Query<S, I>()... select new { o.X }) has a
-                // SelectClauseSyntax, not a Select invocation, so it is collected and analyzed separately.
+                // SelectClauseSyntax, not a Select invocation, so it is handled separately.
                 startCtx.RegisterSyntaxNodeAction(ctx =>
                 {
-                    pendingQueries.Add(((QueryExpressionSyntax)ctx.Node, ctx.SemanticModel));
+                    AnalyzeQueryExpression(
+                        ctx.SemanticModel, (QueryExpressionSyntax)ctx.Node, indexByName, metadataRegistry, ctx.ReportDiagnostic);
                 }, SyntaxKind.QueryExpression);
-
-                startCtx.RegisterCompilationEndAction(endCtx =>
-                {
-                    foreach ((InvocationExpressionSyntax invocation, SemanticModel model) in pending)
-                        AnalyzeInvocation(model, invocation, indexByName, metadataRegistry, endCtx.ReportDiagnostic);
-
-                    foreach ((QueryExpressionSyntax query, SemanticModel model) in pendingQueries)
-                        AnalyzeQueryExpression(model, query, indexByName, metadataRegistry, endCtx.ReportDiagnostic);
-                });
             });
         }
 
         private static void AnalyzeInvocation(
             SemanticModel model,
             InvocationExpressionSyntax invocation,
-            ConcurrentDictionary<string, INamedTypeSymbol?> indexByName,
+            QueryIndexResolver.IndexNameRegistry indexByName,
             IndexMetadataRegistry metadataRegistry,
             Action<Diagnostic> reportDiagnostic)
         {
@@ -123,7 +116,7 @@ namespace Raven.Analyzers.Queries
         private static void AnalyzeQueryExpression(
             SemanticModel model,
             QueryExpressionSyntax query,
-            ConcurrentDictionary<string, INamedTypeSymbol?> indexByName,
+            QueryIndexResolver.IndexNameRegistry indexByName,
             IndexMetadataRegistry metadataRegistry,
             Action<Diagnostic> reportDiagnostic)
         {
@@ -168,7 +161,7 @@ namespace Raven.Analyzers.Queries
             SemanticModel model,
             InvocationExpressionSyntax queryCall,
             ExpressionSyntax behaviorChainExpression,
-            ConcurrentDictionary<string, INamedTypeSymbol?> indexByName,
+            QueryIndexResolver.IndexNameRegistry indexByName,
             IndexMetadataRegistry metadataRegistry,
             out ProjectionFields fields)
         {

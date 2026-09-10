@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -15,37 +16,87 @@ namespace Raven.Analyzers.Shared
     internal static class QueryIndexResolver
     {
         /// <summary>
-        /// Builds the index-name → index-class registry both query analyzers query when a string
-        /// <c>indexName</c> is used. Registered once per compilation. The value is <c>null</c> when
-        /// the name is <em>ambiguous</em> — two or more distinct index classes resolve to the same
-        /// name (e.g. same short name in different namespaces). An ambiguous name cannot be resolved
-        /// to a single field set, so it must not be validated (doing so would false-positive against
-        /// the wrong index). A single registry build keeps the two analyzers in lockstep.
+        /// Index-name to index-class lookup, used only when a query names its index with a string.
+        /// The map is built the first time it is asked for and reused after that.
         /// </summary>
-        internal static ConcurrentDictionary<string, INamedTypeSymbol?> CreateIndexNameRegistry(
-            CompilationStartAnalysisContext startCtx)
+        /// <remarks>
+        /// This deliberately walks the compilation on demand rather than being filled by a
+        /// <c>RegisterSymbolAction</c>. A symbol action only finishes once every symbol has been
+        /// visited, which forces the analyzer to hold its findings until
+        /// <c>RegisterCompilationEndAction</c>. An IDE does not run compilation-end actions while you
+        /// type, so any rule reporting from there is invisible in the editor and shows up only in a
+        /// full build. Building the map lazily lets both query rules report straight from their syntax
+        /// node action, which is what makes them appear live.
+        /// <para>
+        /// A null value means the name is <em>ambiguous</em>: two or more distinct index classes resolve
+        /// to it, so it cannot be validated against a single field set without risking a false positive
+        /// against the wrong index.
+        /// </para>
+        /// </remarks>
+        internal sealed class IndexNameRegistry
         {
-            var registry = new ConcurrentDictionary<string, INamedTypeSymbol?>(StringComparer.Ordinal);
+            private readonly Compilation _compilation;
+            private Dictionary<string, INamedTypeSymbol?>? _byName;
 
-            startCtx.RegisterSymbolAction(symCtx =>
+            public IndexNameRegistry(Compilation compilation) => _compilation = compilation;
+
+            public bool TryResolve(string indexName, out INamedTypeSymbol? indexClass)
             {
-                var type = (INamedTypeSymbol)symCtx.Symbol;
-                if (!SyntaxHelpers.IsIndexCreationTask(type))
-                    return;
+                // Analyzers run concurrently, so two threads can race to build the map. Both produce the
+                // same content, so the loser's copy is simply dropped rather than guarded with a lock.
+                _byName ??= Build(_compilation);
 
-                string? key = ComputeIndexKey(type);
-                if (key == null)
-                    return;
+                return _byName.TryGetValue(indexName, out indexClass) && indexClass != null;
+            }
 
-                // First registration wins the slot; a second, distinct type collapses it to null
-                // (ambiguous) and it stays null thereafter.
-                registry.AddOrUpdate(
-                    key,
-                    type,
-                    (_, existing) => SymbolEqualityComparer.Default.Equals(existing, type) ? existing : null);
-            }, SymbolKind.NamedType);
+            private static Dictionary<string, INamedTypeSymbol?> Build(Compilation compilation)
+            {
+                var result = new Dictionary<string, INamedTypeSymbol?>(StringComparer.Ordinal);
 
-            return registry;
+                foreach (INamedTypeSymbol type in EnumerateTypes(compilation.Assembly.GlobalNamespace))
+                {
+                    if (!SyntaxHelpers.IsIndexCreationTask(type))
+                        continue;
+
+                    string? key = ComputeIndexKey(type);
+                    if (key == null)
+                        continue;
+
+                    // First registration wins the slot; a second, distinct type collapses it to null
+                    // (ambiguous) and it stays null thereafter.
+                    if (result.TryGetValue(key, out INamedTypeSymbol? existing))
+                    {
+                        if (!SymbolEqualityComparer.Default.Equals(existing, type))
+                            result[key] = null;
+                    }
+                    else
+                    {
+                        result[key] = type;
+                    }
+                }
+
+                return result;
+            }
+
+            private static IEnumerable<INamedTypeSymbol> EnumerateTypes(INamespaceOrTypeSymbol container)
+            {
+                foreach (ISymbol member in container.GetMembers())
+                {
+                    switch (member)
+                    {
+                        case INamespaceSymbol nested:
+                            foreach (INamedTypeSymbol type in EnumerateTypes(nested))
+                                yield return type;
+                            break;
+
+                        case INamedTypeSymbol type:
+                            yield return type;
+                            foreach (INamedTypeSymbol nestedType in EnumerateTypes(type))
+                                yield return nestedType;
+                            break;
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -86,7 +137,7 @@ namespace Raven.Analyzers.Shared
         internal static INamedTypeSymbol? ResolveIndexClass(
             InvocationExpressionSyntax invocation,
             SemanticModel model,
-            ConcurrentDictionary<string, INamedTypeSymbol?> indexByName)
+            IndexNameRegistry indexByName)
         {
             if (SyntaxHelpers.GetMethodSymbol(invocation, model) is not IMethodSymbol method)
                 return null;
@@ -110,7 +161,7 @@ namespace Raven.Analyzers.Shared
                 if (literal == null)
                     return null;
 
-                indexByName.TryGetValue(literal, out INamedTypeSymbol? found);
+                indexByName.TryResolve(literal, out INamedTypeSymbol? found);
                 return found;
             }
 

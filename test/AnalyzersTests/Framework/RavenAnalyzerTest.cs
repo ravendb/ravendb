@@ -25,7 +25,15 @@ namespace AnalyzersTests.Framework
     public enum ReferenceKind
     {
         CompiledDll,
-        CompilationReference
+        CompilationReference,
+
+        /// <summary>
+        /// A <see cref="CompilationReference"/> whose compilation does NOT include the referenced
+        /// project's generated code, which is what an IDE can hand the analysed compilation. The
+        /// recorded attribute is therefore absent and the analyzer has to fall back to reading the
+        /// index out of the referenced compilation's source.
+        /// </summary>
+        CompilationReferenceWithoutGeneratedOutput
     }
 
     /// <summary>
@@ -125,12 +133,16 @@ namespace AnalyzersTests.Framework
             CSharpParseOptions parseOptions = new(LanguageVersion.Preview);
 
             CSharpCompilation referenced = Compile("ReferencedAssembly", referencedSource, DefaultReferences.Value, parseOptions);
-            referenced = RunMetadataGenerator(referenced, parseOptions, "referenced project");
+
+            if (referenceKind != ReferenceKind.CompilationReferenceWithoutGeneratedOutput)
+                referenced = RunMetadataGenerator(referenced, parseOptions, "referenced project");
+
             AssertNoCompileErrors(referenced, "Referenced project");
 
             MetadataReference reference = referenceKind switch
             {
                 ReferenceKind.CompilationReference => referenced.ToMetadataReference(),
+                ReferenceKind.CompilationReferenceWithoutGeneratedOutput => referenced.ToMetadataReference(),
                 _ => ToCompiledDll(referenced)
             };
 

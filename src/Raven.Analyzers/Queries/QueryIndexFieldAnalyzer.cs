@@ -29,87 +29,166 @@ namespace Raven.Analyzers.Queries
 
             context.RegisterCompilationStartAction(startCtx =>
             {
-                ConcurrentDictionary<string, INamedTypeSymbol?> indexByName =
-                    QueryIndexResolver.CreateIndexNameRegistry(startCtx);
-                IndexMetadataRegistry metadataRegistry = new();
-                var pending = new ConcurrentBag<(InvocationExpressionSyntax Invocation, SemanticModel Model)>();
+                QueryIndexResolver.IndexNameRegistry indexByName = new(startCtx.Compilation);
+                IndexMetadataRegistry metadataRegistry = new(startCtx.Compilation);
+
+                // Registered on the operator being reported on, and on the query expression containing
+                // the clauses being reported on, rather than on the Query() call they hang off.
+                //
+                // Two reasons. A rule reporting from RegisterCompilationEndAction is invisible in an
+                // editor, which only runs the per-file actions while you type, so the diagnostic has to
+                // come from a syntax node action. And a syntax node action's diagnostic has to land
+                // inside the node it was registered for: registering on Query() and reporting on an
+                // enclosing .Where() lambda produces the diagnostic in a full compilation pass but not
+                // in the per-file pass an editor performs, which is exactly the shape that made this
+                // rule show up in `dotnet build` and nowhere else.
+                startCtx.RegisterSyntaxNodeAction(ctx =>
+                {
+                    AnalyzeOperatorInvocation(
+                        ctx.SemanticModel, (InvocationExpressionSyntax)ctx.Node, indexByName, metadataRegistry, ctx.ReportDiagnostic);
+                }, SyntaxKind.InvocationExpression);
 
                 startCtx.RegisterSyntaxNodeAction(ctx =>
                 {
-                    var invocation = (InvocationExpressionSyntax)ctx.Node;
-                    if (SyntaxHelpers.GetMethodName(invocation) != KnownTypes.QueryMethods.Query)
-                        return;
-                    pending.Add((invocation, ctx.SemanticModel));
-                }, SyntaxKind.InvocationExpression);
-
-                startCtx.RegisterCompilationEndAction(endCtx =>
-                {
-                    foreach ((InvocationExpressionSyntax invocation, SemanticModel model) in pending)
-                        AnalyzeInvocation(model, invocation, indexByName, metadataRegistry, endCtx.ReportDiagnostic);
-                });
+                    AnalyzeQueryExpression(
+                        ctx.SemanticModel, (QueryExpressionSyntax)ctx.Node, indexByName, metadataRegistry, ctx.ReportDiagnostic);
+                }, SyntaxKind.QueryExpression);
             });
         }
 
-        private static void AnalyzeInvocation(
+        /// <summary>
+        /// Checks one filtering or ordering operator in a fluent chain against the index it queries.
+        /// </summary>
+        private static void AnalyzeOperatorInvocation(
             SemanticModel model,
-            InvocationExpressionSyntax queryInvocation,
-            ConcurrentDictionary<string, INamedTypeSymbol?> indexByName,
+            InvocationExpressionSyntax invocation,
+            QueryIndexResolver.IndexNameRegistry indexByName,
             IndexMetadataRegistry metadataRegistry,
             Action<Diagnostic> reportDiagnostic)
         {
-            if (!QueryIndexResolver.IsSessionQueryCall(queryInvocation, model))
+            if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess)
                 return;
 
-            INamedTypeSymbol? indexClass = QueryIndexResolver.ResolveIndexClass(queryInvocation, model, indexByName);
-            if (indexClass == null)
+            string methodName = memberAccess.Name.Identifier.Text;
+            if (!IsFilterOrOrderMethod(methodName))
                 return;
+
+            SeparatedSyntaxList<ArgumentSyntax> args = invocation.ArgumentList.Arguments;
+            if (args.Count == 0)
+                return;
+
+            if (!TryFindQueryCall(memberAccess.Expression, model, out InvocationExpressionSyntax? queryInvocation))
+                return;
+
+            if (!TryResolveIndexFields(queryInvocation!, model, indexByName, metadataRegistry,
+                    out INamedTypeSymbol? indexClass, out ImmutableHashSet<string> mapFields))
+            {
+                return;
+            }
+
+            CheckLambdaFields(args[0].Expression, mapFields, methodName, indexClass!.Name, reportDiagnostic);
+        }
+
+        /// <summary>
+        /// Walks down the receiver chain looking for the <c>session.Query</c> call this operator applies
+        /// to, stopping at anything that changes the element type.
+        /// </summary>
+        /// <remarks>
+        /// After a projection (Select / ProjectInto), a grouping (GroupBy, giving an IGrouping) or a
+        /// fan-out (SelectMany), a subsequent Where or OrderBy binds to the new shape rather than to the
+        /// source document, so its fields must not be checked against the index. Without that stop,
+        /// GroupBy(o =&gt; o.Category).Where(g =&gt; g.Key == "x") would flag the IGrouping member "Key" as
+        /// not indexed. An operator placed after a projection is RVN002's concern, not this rule's.
+        /// </remarks>
+        private static bool TryFindQueryCall(
+            ExpressionSyntax receiver,
+            SemanticModel model,
+            out InvocationExpressionSyntax? queryInvocation)
+        {
+            queryInvocation = null;
+
+            for (ExpressionSyntax? current = receiver; current != null;)
+            {
+                if (current is not InvocationExpressionSyntax invocation)
+                    return false;
+
+                if (QueryIndexResolver.IsSessionQueryCall(invocation, model))
+                {
+                    queryInvocation = invocation;
+                    return true;
+                }
+
+                if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess)
+                    return false;
+
+                string name = memberAccess.Name.Identifier.Text;
+                if (name == KnownTypes.SelectMethodName
+                    || name == KnownTypes.ProjectIntoMethodName
+                    || name == KnownTypes.SelectManyMethodName
+                    || name == KnownTypes.GroupByMethodName)
+                {
+                    return false;
+                }
+
+                current = memberAccess.Expression;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Resolves the index a <c>Query</c> call targets and its recorded map fields. False when the
+        /// index cannot be resolved or its shape is not known.
+        /// </summary>
+        private static bool TryResolveIndexFields(
+            InvocationExpressionSyntax queryInvocation,
+            SemanticModel model,
+            QueryIndexResolver.IndexNameRegistry indexByName,
+            IndexMetadataRegistry metadataRegistry,
+            out INamedTypeSymbol? indexClass,
+            out ImmutableHashSet<string> mapFields)
+        {
+            indexClass = QueryIndexResolver.ResolveIndexClass(queryInvocation, model, indexByName);
+            mapFields = ImmutableHashSet<string>.Empty;
+
+            if (indexClass == null)
+                return false;
 
             // The index's shape comes from the metadata its own assembly recorded, never from reading its
             // constructor here: that is what lets this rule work when the index lives in a referenced
             // project, whose constructor bodies are absent from compiled metadata entirely.
             IndexMetadata metadata = metadataRegistry.Read(indexClass);
             if (!metadata.Analyzable)
+                return false;
+
+            mapFields = metadata.MapFields;
+            return true;
+        }
+
+        /// <summary>
+        /// Checks the <c>where</c> / <c>orderby</c> clauses of a query written in C# query-expression
+        /// syntax against the index its first <c>from</c> clause queries.
+        /// </summary>
+        private static void AnalyzeQueryExpression(
+            SemanticModel model,
+            QueryExpressionSyntax queryExpr,
+            QueryIndexResolver.IndexNameRegistry indexByName,
+            IndexMetadataRegistry metadataRegistry,
+            Action<Diagnostic> reportDiagnostic)
+        {
+            if (queryExpr.FromClause.Expression is not InvocationExpressionSyntax queryInvocation)
                 return;
 
-            // Walk outward from the Query() call to find Where/OrderBy/Search clauses
-            SyntaxNode current = queryInvocation;
-            while (true)
+            if (!QueryIndexResolver.IsSessionQueryCall(queryInvocation, model))
+                return;
+
+            if (!TryResolveIndexFields(queryInvocation, model, indexByName, metadataRegistry,
+                    out INamedTypeSymbol? indexClass, out ImmutableHashSet<string> mapFields))
             {
-                if (current.Parent is not MemberAccessExpressionSyntax memberAccess)
-                    break;
-                if (memberAccess.Parent is not InvocationExpressionSyntax outerInvocation)
-                    break;
-
-                string methodName = memberAccess.Name.Identifier.Text;
-
-                // Stop at an element-type-changing boundary: after a projection (Select / ProjectInto),
-                // a grouping (GroupBy -> IGrouping<TKey, TElement>), or a fan-out (SelectMany), a
-                // subsequent Where/OrderBy binds to the new shape rather than the source document /
-                // index, so its fields must not be checked against the index field set (the
-                // operator-after-projection case is RVN002's concern). Without this, e.g.
-                // GroupBy(o => o.Category).Where(g => g.Key == "x") would flag the IGrouping member
-                // "Key" as not indexed — a false RVN007.
-                if (methodName == KnownTypes.SelectMethodName
-                    || methodName == KnownTypes.ProjectIntoMethodName
-                    || methodName == KnownTypes.SelectManyMethodName
-                    || methodName == KnownTypes.GroupByMethodName)
-                    break;
-
-                if (IsFilterOrOrderMethod(methodName))
-                {
-                    SeparatedSyntaxList<ArgumentSyntax> args = outerInvocation.ArgumentList.Arguments;
-                    if (args.Count > 0)
-                        CheckLambdaFields(args[0].Expression, metadata.MapFields, methodName, indexClass.Name, reportDiagnostic);
-                }
-
-                current = outerInvocation;
+                return;
             }
 
-            // The method-chain walk above only sees the fluent form. When the query is written in C#
-            // query-expression syntax (from o in session.Query<T, TIndex>() where o.X orderby o.Y ...),
-            // the Query() call is the source of a from-clause rather than the receiver of a .Where/.OrderBy
-            // invocation, so handle that shape here too.
-            AnalyzeQueryExpressionClauses(queryInvocation, metadata.MapFields, indexClass.Name, reportDiagnostic);
+            AnalyzeQueryExpressionClauses(queryExpr, mapFields, indexClass!.Name, reportDiagnostic);
         }
 
         /// <summary>
@@ -118,22 +197,14 @@ namespace Raven.Analyzers.Queries
         /// against the index field set, using the from-clause range variable as the lambda parameter.
         /// </summary>
         private static void AnalyzeQueryExpressionClauses(
-            InvocationExpressionSyntax queryInvocation,
+            QueryExpressionSyntax queryExpr,
             ImmutableHashSet<string> indexedFields,
             string indexClassName,
             Action<Diagnostic> reportDiagnostic)
         {
-            if (queryInvocation.Parent is not FromClauseSyntax fromClause
-                || fromClause.Expression != queryInvocation)
-                return;
-
-            // Only the first from-clause (whose parent is the QueryExpression itself) introduces the
-            // source range variable that binds to the index. A secondary `from` (fan-out) sits in the
-            // query body and is intentionally not treated as the index source.
-            if (fromClause.Parent is not QueryExpressionSyntax queryExpr)
-                return;
-
-            string paramName = fromClause.Identifier.ValueText;
+            // Only the first from-clause introduces the source range variable that binds to the index.
+            // A secondary `from` (fan-out) sits in the query body and is not the index source.
+            string paramName = queryExpr.FromClause.Identifier.ValueText;
 
             // Only the clauses of the first query body operate on the source document / index. A
             // continuation (select … into g …) rebinds to the projected shape, so its clauses live in

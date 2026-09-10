@@ -89,6 +89,7 @@ namespace AnalyzersTests.Indexes
         [RavenTheory(RavenTestCategory.ClientApi)]
         [InlineData(ReferenceKind.CompiledDll)]
         [InlineData(ReferenceKind.CompilationReference)]
+        [InlineData(ReferenceKind.CompilationReferenceWithoutGeneratedOutput)]
         public async Task Query_On_Field_Missing_From_Referenced_Index_Is_Reported(
             ReferenceKind referenceKind)
         {
@@ -123,6 +124,7 @@ namespace AnalyzersTests.Indexes
         [RavenTheory(RavenTestCategory.ClientApi)]
         [InlineData(ReferenceKind.CompiledDll)]
         [InlineData(ReferenceKind.CompilationReference)]
+        [InlineData(ReferenceKind.CompilationReferenceWithoutGeneratedOutput)]
         public async Task Query_On_Field_Present_In_Referenced_Index_Is_Not_Reported(
             ReferenceKind referenceKind)
         {
@@ -155,6 +157,7 @@ namespace AnalyzersTests.Indexes
         [RavenTheory(RavenTestCategory.ClientApi)]
         [InlineData(ReferenceKind.CompiledDll)]
         [InlineData(ReferenceKind.CompilationReference)]
+        [InlineData(ReferenceKind.CompilationReferenceWithoutGeneratedOutput)]
         public async Task Index_Inheriting_Map_From_Referenced_Base_Does_Not_Report_Missing_Map(
             ReferenceKind referenceKind)
         {
@@ -180,6 +183,7 @@ namespace AnalyzersTests.Indexes
         [RavenTheory(RavenTestCategory.ClientApi)]
         [InlineData(ReferenceKind.CompiledDll)]
         [InlineData(ReferenceKind.CompilationReference)]
+        [InlineData(ReferenceKind.CompilationReferenceWithoutGeneratedOutput)]
         public async Task Index_Whose_Referenced_Base_Assigns_No_Map_Is_Reported(
             ReferenceKind referenceKind)
         {
@@ -209,6 +213,7 @@ namespace AnalyzersTests.Indexes
         [RavenTheory(RavenTestCategory.ClientApi)]
         [InlineData(ReferenceKind.CompiledDll)]
         [InlineData(ReferenceKind.CompilationReference)]
+        [InlineData(ReferenceKind.CompilationReferenceWithoutGeneratedOutput)]
         public async Task Projection_Of_Field_Not_Stored_By_Referenced_Index_Is_Reported(
             ReferenceKind referenceKind)
         {
@@ -246,6 +251,7 @@ namespace AnalyzersTests.Indexes
         [RavenTheory(RavenTestCategory.ClientApi)]
         [InlineData(ReferenceKind.CompiledDll)]
         [InlineData(ReferenceKind.CompilationReference)]
+        [InlineData(ReferenceKind.CompilationReferenceWithoutGeneratedOutput)]
         public async Task Helper_Call_Is_Not_Reported_When_Referenced_Base_Ships_Server_Side_Code(
             ReferenceKind referenceKind)
         {

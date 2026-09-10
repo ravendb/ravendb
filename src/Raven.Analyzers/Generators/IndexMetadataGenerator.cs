@@ -76,7 +76,7 @@ namespace Raven.Analyzers.Generators
             // wholly local never touches it. Rebuilding it for the indexes that do is affordable because
             // this whole step is cached: it re-runs when this one class changes, not on every edit.
             IndexMetadata metadata = IndexShapeAggregator.Compute(
-                indexClass, context.SemanticModel.Compilation, new IndexMetadataRegistry());
+                indexClass, context.SemanticModel.Compilation, new IndexMetadataRegistry(context.SemanticModel.Compilation));
 
             return new RecordedIndexShape(
                 TypeName: typeName,

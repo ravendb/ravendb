@@ -53,11 +53,34 @@ namespace Raven.Analyzers.Shared
     /// </remarks>
     internal sealed class IndexMetadataRegistry
     {
-        // Analyzers run concurrently over one compilation, so both the outer map and the lazily built
-        // per-assembly maps have to be safe to reach from several threads at once. The inner maps are
-        // fully populated before being published, and never mutated afterwards.
+        /// <summary>
+        /// Bound on how far the source fallback below follows project references. Chains are one or two
+        /// hops in practice; the cap only exists so a pathological reference graph cannot recurse forever.
+        /// </summary>
+        private const int MaxReferenceDepth = 8;
+
+        // Analyzers run concurrently over one compilation, so every map here has to be safe to reach from
+        // several threads at once. The per-assembly maps are fully populated before being published, and
+        // never mutated afterwards.
         private readonly ConcurrentDictionary<IAssemblySymbol, IReadOnlyDictionary<INamedTypeSymbol, IndexMetadata>> _byAssembly =
             new(SymbolEqualityComparer.Default);
+
+        private readonly ConcurrentDictionary<INamedTypeSymbol, IndexMetadata> _fromSource =
+            new(SymbolEqualityComparer.Default);
+
+        private readonly Compilation _compilation;
+        private readonly int _depth;
+
+        public IndexMetadataRegistry(Compilation compilation)
+            : this(compilation, depth: 0)
+        {
+        }
+
+        private IndexMetadataRegistry(Compilation compilation, int depth)
+        {
+            _compilation = compilation;
+            _depth = depth;
+        }
 
         public IndexMetadata Read(INamedTypeSymbol indexClass)
         {
@@ -66,9 +89,53 @@ namespace Raven.Analyzers.Shared
 
             // Generic index classes are recorded by their open definition, because that is what
             // typeof(Foo<>) binds to in the generated attribute.
-            return recorded.TryGetValue(indexClass.OriginalDefinition, out IndexMetadata? metadata)
-                ? metadata
-                : IndexMetadata.Unknown;
+            if (recorded.TryGetValue(indexClass.OriginalDefinition, out IndexMetadata? metadata))
+                return metadata;
+
+            return ReadFromReferencedSource(indexClass);
+        }
+
+        /// <summary>
+        /// Last resort when no metadata was recorded for <paramref name="indexClass"/>: read the index out
+        /// of the source of the compilation that declares it.
+        /// </summary>
+        /// <remarks>
+        /// A command-line build never needs this. Every project is compiled to a DLL, the generator runs as
+        /// part of that compile, and the attribute is physically present in the metadata the referencing
+        /// project reads.
+        /// <para>
+        /// An IDE does need it. It does not compile the referenced project to a DLL; it hands the compilation
+        /// under analysis an in-memory view of it as a <see cref="CompilationReference"/>, and that view need
+        /// not include the referenced project's generated code, in which case the attribute is simply absent.
+        /// The source is present though, which is the one thing an IDE always has, and a
+        /// <see cref="CompilationReference"/> exposes the compilation that owns it, so the shape can be read
+        /// the same way the generator would have read it.
+        /// </para>
+        /// Without this, every rule that depends on recorded index facts stays silent across a project
+        /// boundary in the IDE while working correctly on the command line.
+        /// </remarks>
+        private IndexMetadata ReadFromReferencedSource(INamedTypeSymbol indexClass)
+        {
+            if (_depth >= MaxReferenceDepth)
+                return IndexMetadata.Unknown;
+
+            if (SymbolEqualityComparer.Default.Equals(indexClass.ContainingAssembly, _compilation.Assembly))
+            {
+                // Declared in the compilation being analysed, where the generator runs. A missing entry
+                // means it deliberately recorded nothing, so re-reading the source here would only
+                // disagree with what the build concluded.
+                return IndexMetadata.Unknown;
+            }
+
+            if (_compilation.GetMetadataReference(indexClass.ContainingAssembly) is not CompilationReference reference)
+                return IndexMetadata.Unknown; // a compiled DLL carries no source to fall back to
+
+            return _fromSource.GetOrAdd(
+                indexClass,
+                symbol => Generators.IndexShapeAggregator.Compute(
+                    symbol,
+                    reference.Compilation,
+                    new IndexMetadataRegistry(reference.Compilation, _depth + 1)));
         }
 
         private static IReadOnlyDictionary<INamedTypeSymbol, IndexMetadata> BuildFor(IAssemblySymbol assembly)

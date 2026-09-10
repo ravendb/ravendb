@@ -32,7 +32,7 @@ namespace Raven.Analyzers.Indexes
             // One registry per compilation, shared by every class this analyzer visits.
             context.RegisterCompilationStartAction(startCtx =>
             {
-                IndexMetadataRegistry metadataRegistry = new();
+                IndexMetadataRegistry metadataRegistry = new(startCtx.Compilation);
                 startCtx.RegisterSyntaxNodeAction(
                     ctx => Analyze(ctx, metadataRegistry), SyntaxKind.ClassDeclaration);
             });
