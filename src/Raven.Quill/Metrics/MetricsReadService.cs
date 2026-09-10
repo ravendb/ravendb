@@ -158,7 +158,8 @@ internal static class MetricsReadService
 
         var metrics = new AppUsageMetrics(
             Conversations: new MetricCard(convNow, Delta(convNow, convPrev), ToDoubles(convByBucket)),
-            Tokens: new MetricCard(tokNow, Delta(tokNow, tokPrev), ToDoubles(tokByBucket)));
+            Tokens: new MetricCard(tokNow, Delta(tokNow, tokPrev), ToDoubles(tokByBucket)),
+            Buckets: buckets.ToArray());
 
         var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database), ct);
         
@@ -648,12 +649,7 @@ internal static class MetricsReadService
         return await configSession.LoadAllStartingWithAsync<App>(AppLookup.IdPrefix, ct);
     }
 
-    private static DateTime Utc(DateTime d) => d.Kind switch
-    {
-        DateTimeKind.Utc => d,
-        DateTimeKind.Local => d.ToUniversalTime(),
-        _ => DateTime.SpecifyKind(d, DateTimeKind.Utc),
-    };
+    private static DateTime Utc(DateTime d) => UsagePeriod.ToUtc(d);
 
     // isolate per-app failures: one bad tenant DB can't 500 a global fan-out
 

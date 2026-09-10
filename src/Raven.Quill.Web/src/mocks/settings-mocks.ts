@@ -1,5 +1,10 @@
 import { http, HttpResponse } from "msw";
-import type { LicenseResponse, QuillApplicationUsage, QuillUsageResponse } from "@/api/generated/server-api";
+import type {
+    LicenseResponse,
+    QuillApplicationUsage,
+    QuillPeriodUsage,
+    QuillUsageResponse,
+} from "@/api/generated/server-api";
 import type { CertificateItem } from "@/api/custom-services/certificates-service";
 import { apiHttp } from "./api-http";
 import { MS_IN } from "@/lib/time";
@@ -8,8 +13,19 @@ export const settingsMocks = {
     feedback: () => apiHttp.post("/api/settings/feedback", ({ response }) => response(204).empty()),
     license: (response: LicenseResponse = sampleLicense) =>
         apiHttp.get("/api/settings/license", ({ response: res }) => res(200).json(response)),
-    usage: (response: QuillUsageResponse = sampleQuillUsage) =>
-        apiHttp.get("/api/settings/usage", ({ response: res }) => res(200).json(response)),
+    usage: (response?: QuillUsageResponse) =>
+        apiHttp.get("/api/settings/usage", ({ query, response: res }) =>
+            res(200).json(
+                response ?? {
+                    ...sampleQuillUsage,
+                    byPeriod: sampleByPeriod(
+                        Number(query.get("year")),
+                        optionalNumber(query.get("month")),
+                        optionalNumber(query.get("day")),
+                    ),
+                },
+            ),
+        ),
     certificates: (response: CertificateItem[] = sampleCertificates) =>
         apiHttp.get("/api/settings/certificates/get", ({ response: res }) => res(200).json(response)),
     // The OpenAPI contract only documents the 400 responses for generate (real
@@ -135,17 +151,33 @@ function usageRow(
     };
 }
 
-// ~30 daily points with a gentle wave so the writes chart has shape.
-export const sampleQuillUsage: QuillUsageResponse = {
-    byPeriod: Array.from({ length: 30 }, (_, index) => {
-        const day = String(index + 1).padStart(2, "0");
-        const wave = Math.sin((index / 29) * Math.PI * 2);
+function optionalNumber(value: string | null): number | null {
+    return value === null ? null : Number(value);
+}
+
+// One bucket per hour of the day, day of the month, or month of the year, mirroring the
+// server's zero-filled grid, with a gentle wave so the writes chart has shape.
+function sampleByPeriod(year: number, month: number | null, day: number | null): QuillPeriodUsage[] {
+    const bucketStart = (index: number) => {
+        if (month === null) return Date.UTC(year, index, 1);
+        if (day === null) return Date.UTC(year, month - 1, index + 1);
+        return Date.UTC(year, month - 1, day, index);
+    };
+    const daysInMonth = month === null ? 0 : new Date(Date.UTC(year, month, 0)).getUTCDate();
+    const bucketCount = month === null ? 12 : day === null ? daysInMonth : 24;
+
+    return Array.from({ length: bucketCount }, (_, index) => {
+        const wave = Math.sin((index / (bucketCount - 1)) * Math.PI * 2);
         return {
-            from: `2026-06-${day}T00:00:00Z`,
-            to: `2026-06-${day}T23:59:59Z`,
+            from: new Date(bucketStart(index)).toISOString(),
+            to: new Date(bucketStart(index + 1)).toISOString(),
             usage: Math.round(280000 + wave * 130000),
         };
-    }),
+    });
+}
+
+export const sampleQuillUsage: QuillUsageResponse = {
+    byPeriod: sampleByPeriod(2026, 6, null),
     // Mirrors what a real licence covering several appliances reports: many system rows sharing the
     // config database's name, a repeated app name, and unique apps - each distinguished only by
     // topology id, and deliberately out of order so the grouping is doing the work.

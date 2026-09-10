@@ -40,14 +40,19 @@ internal sealed class LicenseStatsProvider : ILicenseStatsProvider
 
     public async Task<QuillUsageResponse> GetUsageAsync(int year, int? month, int? day, CancellationToken token)
     {
-        var r = await _ravendb.SendAsync("/admin/license/quill/usage", "POST", new
+        var period = new UsagePeriod(year, month, day);
+        var (transport, content) = await _ravendb.SendAsync("/admin/license/quill/usage", "POST", new
         {
-            Month = month,
-            Year = year,
-            Day = day
+            Month = period.Month,
+            Year = period.Year,
+            Day = period.Day
         }, token);
 
-        var usage = await _ravendb.DeserializeAsync<QuillUsageResponse>(r.Content, token);
+        if (transport != AiHelperStatus.Success)
+            throw new LicenseUsageUnavailableException($"the license server did not return usage data (transport {transport})");
+
+        var usage = await _ravendb.DeserializeAsync<QuillUsageResponse>(content, token)
+            ?? throw new LicenseUsageUnavailableException("the license server returned an unreadable usage response");
 
         var perApplicationUsages = (usage.PerApplication ?? [])
             .GroupBy(p => (p.TopologyId, p.ApplicationName))
@@ -60,6 +65,26 @@ internal sealed class LicenseStatsProvider : ILicenseStatsProvider
                 IsSystem: string.Equals(g.Key.ApplicationName, _configDatabase, StringComparison.OrdinalIgnoreCase)))
             .ToList();
 
-        return new QuillUsageResponse(perApplicationUsages, usage.ByPeriod);
+        return new QuillUsageResponse(perApplicationUsages, FillEmptyBuckets(usage.ByPeriod ?? [], period));
+    }
+
+    // The license server only reports periods that saw writes, so the chart would otherwise skip
+    // quiet hours/days. Lay the rows over the period's full bucket grid (clamped to now) so every
+    // bucket is present, with zero usage where nothing was reported.
+    private static List<QuillPeriodUsage> FillEmptyBuckets(List<QuillPeriodUsage> reported, UsagePeriod period)
+    {
+        var buckets = period.Buckets();
+        var usageByBucket = new long[buckets.Count];
+        foreach (var row in reported)
+        {
+            var i = period.IndexOf(UsagePeriod.ToUtc(row.From));
+            if (i < 0)
+                continue;
+            usageByBucket[i] += row.Usage;
+        }
+
+        return buckets
+            .Select((start, i) => new QuillPeriodUsage(start, period.BucketEnd(start), usageByBucket[i]))
+            .ToList();
     }
 }
