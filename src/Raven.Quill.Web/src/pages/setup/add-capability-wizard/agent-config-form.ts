@@ -6,13 +6,15 @@ import type {
     AiAgentToolQuery,
     WebhookBinding,
 } from "@/api/generated/server-api";
-import type {
-    AgentActionFormData,
-    AgentConfigurationFormData,
-    AgentFormData,
-    AgentParameterFormData,
-    AgentQueryToolFormData,
+import {
+    toAgentIdentifier,
+    type AgentActionFormData,
+    type AgentConfigurationFormData,
+    type AgentFormData,
+    type AgentParameterFormData,
+    type AgentQueryToolFormData,
 } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
+import { useCapabilityWizardStore } from "@/pages/setup/add-capability-wizard/capability-wizard-store";
 
 // Mapping between the wizard's editable agent configuration (form values) and the
 // AiAgentConfiguration the server API speaks. Mirrors Studio's editAiAgentUtils.
@@ -142,7 +144,7 @@ export function suggestionToAgentConfiguration(
 
     return {
         name: suggestion.name ?? "",
-        identifier: suggestion.identifier ?? "",
+        identifier: suggestion.identifier ?? toAgentIdentifier(suggestion.name ?? ""),
         systemPrompt: suggestion.systemPrompt ?? "",
         // The response shape is not editable while the editor is hidden, so any suggested or
         // stored shape is replaced with the fixed one.
@@ -168,9 +170,14 @@ export function applySuggestionToForm(
 ) {
     setValue("create.mode", "ai");
     setValue("create.selectedIndex", index);
+    seedAgentConfiguration(setValue, suggestion);
+}
+
+export function seedAgentConfiguration(setValue: UseFormSetValue<AgentFormData>, suggestion: AiAgentConfiguration) {
     // Seeded configurations are expected to be valid, so validating here clears any
     // stale errors left over from an abandoned manual setup.
     setValue("review", suggestionToAgentConfiguration(suggestion), { shouldValidate: true });
+    useCapabilityWizardStore.getState().setHasEditedIdentifier(false);
 }
 
 // Builds the editable part of the provision payload from form values. Sub-agents stay
@@ -182,7 +189,7 @@ export function buildAgentConfigurationPayload(
 
     return {
         name: config.name.trim(),
-        identifier: config.identifier.trim() || null,
+        identifier: config.identifier.trim(),
         connectionStringName: values.connection.connectionStringName,
         systemPrompt: config.systemPrompt.trim(),
         sampleObject: config.sampleObject.trim() || null,
