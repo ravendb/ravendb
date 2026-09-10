@@ -25,8 +25,17 @@ import { ConfirmDialogProvider } from "components/common/ConfirmDialog";
 import { userEvent } from "@testing-library/user-event";
 import { DialogProvider } from "components/common/Dialog";
 import { SplitViewProvider } from "components/common/splitView/SplitView";
+import { I18nextProvider } from "react-i18next";
+import { i18n } from "common/i18n/i18n";
+import { StudioLanguage } from "common/i18n/resources";
 
 let needsTestMock = true;
+
+export async function rtlChangeLanguage(language: StudioLanguage) {
+    await act(async () => {
+        await i18n.changeLanguage(language);
+    });
+}
 
 if (needsTestMock) {
     configureMockServices(mockServices.context);
@@ -95,21 +104,23 @@ export function MockProviders({ children, isSplitViewDisabled }: MockProvidersPr
 
     return (
         <ReduxProvider store={store}>
-            <DirtyFlagProvider setIsDirty={mockHooks.useDirtyFlag.mock}>
-                <ConfirmDialogProvider>
-                    <DialogProvider>
-                        <ServiceProvider services={mockServices.context}>
-                            <ChangesProvider changes={mockHooks.useChanges.mock}>
-                                {isSplitViewDisabled ? (
-                                    <>{children}</>
-                                ) : (
-                                    <SplitViewProvider>{children}</SplitViewProvider>
-                                )}
-                            </ChangesProvider>
-                        </ServiceProvider>
-                    </DialogProvider>
-                </ConfirmDialogProvider>
-            </DirtyFlagProvider>
+            <I18nextProvider i18n={i18n}>
+                <DirtyFlagProvider setIsDirty={mockHooks.useDirtyFlag.mock}>
+                    <ConfirmDialogProvider>
+                        <DialogProvider>
+                            <ServiceProvider services={mockServices.context}>
+                                <ChangesProvider changes={mockHooks.useChanges.mock}>
+                                    {isSplitViewDisabled ? (
+                                        <>{children}</>
+                                    ) : (
+                                        <SplitViewProvider>{children}</SplitViewProvider>
+                                    )}
+                                </ChangesProvider>
+                            </ServiceProvider>
+                        </DialogProvider>
+                    </ConfirmDialogProvider>
+                </DirtyFlagProvider>
+            </I18nextProvider>
         </ReduxProvider>
     );
 }

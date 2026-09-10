@@ -1,0 +1,20 @@
+{
+    "title": "Odświeżanie dokumentów",
+    "loadError": "Nie udało się wczytać konfiguracji odświeżania dokumentów",
+    "saveSuccess": "Konfiguracja odświeżania została zapisana",
+    "enableSwitch": "Włącz odświeżanie dokumentów",
+    "customFrequencySwitch": "Ustaw własną częstotliwość odświeżania",
+    "frequencyPlaceholder": "Domyślnie ({{seconds}})",
+    "secondsAddon": "sekund",
+    "limitWarning": "Twoja licencja nie pozwala na częstotliwość wyższą niż {{hours}} godzin ({{seconds}} sekund)",
+    "maxItemsSwitch": "Ustaw maksymalną liczbę dokumentów przetwarzanych w jednym przebiegu",
+    "itemsAddon": "dokumentów",
+    "about": {
+        "intro": "Gdy <strong>odświeżanie dokumentów</strong> jest włączone:",
+        "scanItem": "Serwer skanuje bazę danych z zadaną <strong>częstotliwością</strong> w poszukiwaniu dokumentów do odświeżenia.",
+        "metadataItem": "Każdy dokument z właściwością <code>@refresh</code> w metadanych, której czas minął w momencie skanowania, zostanie zmodyfikowany przez usunięcie tej właściwości.",
+        "triggerItem": "Ta modyfikacja uruchomi procesy powiązane z dokumentem, np. ponowne indeksowanie lub udział w zadaniu ciągłym (replikacja, ETL, subskrypcje itd.), zgodnie z Twoją konfiguracją.",
+        "exampleLabel": "Przykład dokumentu zaplanowanego do odświeżenia:",
+        "docsLink": "Dokumentacja - Odświeżanie dokumentów"
+    }
+}
