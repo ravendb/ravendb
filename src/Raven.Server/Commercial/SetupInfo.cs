@@ -330,8 +330,8 @@ namespace Raven.Server.Commercial
         {
             return new DynamicJsonValue
             {
-                [nameof(Emails)] = Emails == null ? null : new DynamicJsonArray(Emails),
-                [nameof(RootDomains)] = RootDomains == null ? null : new DynamicJsonArray(RootDomains),
+                [nameof(Emails)] = Emails,
+                [nameof(RootDomains)] = RootDomains,
                 [nameof(Domains)] = DynamicJsonValue.Convert(Domains)
             };
         }
