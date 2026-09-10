@@ -1,0 +1,141 @@
+@use "sass:map";
+@use "Content/scss/bs5variables";
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.import-page {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: sizes.$gutter;
+    overflow: hidden;
+}
+
+.import-page-body {
+    flex-grow: 1;
+    min-height: 0;
+}
+
+.import-page-content {
+    min-height: 0;
+    overflow-y: auto;
+}
+
+// same look as .gather-debug-info-scope-btn (Gather Debug Info - select databases)
+.import-scope-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: sizes.$gutter-xs;
+    flex: 1;
+    padding: sizes.$gutter-sm sizes.$gutter;
+    border: sizes.$border-width solid colors.$border-color-light-var;
+    border-radius: sizes.$border-radius;
+    background: transparent;
+    color: colors.$text-color-var;
+    cursor: pointer;
+    transition: filter 0.1s;
+
+    &:hover:not(.active) {
+        filter: colors.$hover-filter-var;
+    }
+
+    &.active {
+        background: var(--faded-primary);
+        border-color: var(--text-faded-primary);
+        color: var(--text-color);
+
+        i {
+            color: var(--text-faded-primary);
+        }
+
+        body[data-theme="blue"] & {
+            color: var(--bs-body-color);
+
+            i {
+                color: var(--text-faded-primary);
+            }
+        }
+    }
+}
+
+.import-info-panel {
+    padding: sizes.$gutter-sm;
+    background: var(--panel-bg-2);
+    border: sizes.$border-width solid colors.$border-color-light-var;
+    border-radius: sizes.$border-radius;
+}
+
+.import-collections-list {
+    max-height: 450px;
+    overflow-y: auto;
+}
+
+.import-list-header {
+    display: flex;
+    align-items: center;
+    gap: sizes.$gutter-xs;
+    padding: sizes.$gutter-xs;
+    background: var(--panel-bg-3);
+    border: sizes.$border-width solid colors.$border-color-light-var;
+    border-radius: sizes.$border-radius;
+
+    .form-check {
+        padding-left: 0;
+        min-height: unset;
+    }
+}
+
+.import-list-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: sizes.$gutter-xxs sizes.$gutter-xs;
+    border-bottom: sizes.$border-width solid colors.$border-color-light-var;
+
+    &:last-child {
+        border-bottom: none;
+    }
+}
+
+.import-side-nav {
+    // narrow viewports need the space for the section content, not the nav labels
+    width: 200px;
+    flex-shrink: 0;
+
+    @media (min-width: map.get(bs5variables.$grid-breakpoints, "xxl")) {
+        width: 280px;
+    }
+
+    hr {
+        margin: sizes.$gutter-xxs 0;
+    }
+
+    .import-side-nav-item {
+        display: flex;
+        align-items: center;
+        gap: sizes.$gutter-xxs;
+        width: 100%;
+        padding: sizes.$gutter-xxs sizes.$gutter-xs;
+        background: transparent;
+        border: none;
+        border-radius: sizes.$border-radius;
+        color: colors.$text-muted-color;
+        text-align: left;
+
+        &:hover {
+            color: colors.$text-emphasis-color;
+        }
+
+        &.active {
+            background-color: colors.$panel-bg-2;
+            color: colors.$text-emphasis-color;
+        }
+    }
+
+    .import-side-nav-subitem {
+        padding-left: sizes.$gutter-md;
+        font-size: 0.875rem;
+    }
+}

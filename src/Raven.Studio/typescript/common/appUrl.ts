@@ -65,6 +65,7 @@ class appUrl {
         query: (indexName?: string) => ko.pureComputed(() => appUrl.forQuery(appUrl.currentDatabase(), indexName)),
         terms: (indexName?: string) => ko.pureComputed(() => appUrl.forTerms(indexName, appUrl.currentDatabase())),
         addNewOngoingTaskUrl: (isAiOnly: boolean) => ko.pureComputed(() => appUrl.forAddNewOngoingTasks(appUrl.currentDatabase(), isAiOnly)),
+        importDataOptionsUrl: ko.pureComputed(() => appUrl.forImportDataOptions(appUrl.currentDatabase())),
         importDatabaseFromFileUrl: ko.pureComputed(() => appUrl.forImportDatabaseFromFile(appUrl.currentDatabase())),
         importCollectionFromCsv: ko.pureComputed(() => appUrl.forImportCollectionFromCsv(appUrl.currentDatabase())),
         importDatabaseFromSql: ko.pureComputed(() => appUrl.forImportFromSql(appUrl.currentDatabase())),
@@ -627,6 +628,11 @@ class appUrl {
     static forTerms(indexName: string, db: database): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/indexes/terms/" + encodeURIComponent(indexName) + "?" + databasePart;
+    }
+
+    static forImportDataOptions(db: database): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        return "#databases/tasks/importOptions?" + databasePart;
     }
 
     static forImportDatabaseFromFile(db: database): string {

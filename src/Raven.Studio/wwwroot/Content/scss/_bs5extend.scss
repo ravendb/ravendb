@@ -339,7 +339,7 @@ select {
         --#{$prefix}alert-bg: #{$bg};
         --#{$prefix}alert-border-color: #{$border-color};
 
-        > h3,
+        > :is(h1, h2, h3, h4, h5, h6),
         .title-icon {
             color: $title-color;
         }
