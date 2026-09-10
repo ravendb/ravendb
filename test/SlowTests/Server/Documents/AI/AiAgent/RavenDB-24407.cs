@@ -287,9 +287,15 @@ public class RavenDB_24407 : RavenTestBase
                 Assert.True(chatDoc.LinkedConversations.Count > 0);
 
                 var historyChat = await GetChat(store, chatDoc.LinkedConversations.First());
-                var lastMsg = historyChat.Messages.Last();
 
-                await AssertWithDumpAsync(lastMsg.Role, async () => await DumpAllAsync(store, chatDoc, chatDoc.LinkedConversations));
+                AssertNoOrphanToolMessages(historyChat);
+
+                var lastMsg = historyChat.Messages.Last();
+                if (lastMsg.Role == "user")
+                {
+                    var dump = await DumpAllAsync(store, chatDoc, chatDoc.LinkedConversations);
+                    Assert.Fail($"History conversation ends on an unanswered 'user' message.\n{dump}");
+                }
             }
             else
             {
@@ -444,17 +450,6 @@ public class RavenDB_24407 : RavenTestBase
         using (var session = store.OpenAsyncSession())
         {
             return await session.LoadAsync<Chat>(chatId);
-        }
-    }
-
-    private static async Task AssertWithDumpAsync(
-        string lastMsgRole,
-        Func<Task<string>> dumpFactory)
-    {
-        if (lastMsgRole != "tool")
-        {
-            var msg = await dumpFactory(); // build dump only on failure
-            Assert.Fail($"Expected last history message role 'tool' but was '{lastMsgRole}'.\n{msg}");
         }
     }
 
