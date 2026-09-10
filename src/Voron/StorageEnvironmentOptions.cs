@@ -1240,8 +1240,17 @@ namespace Voron
                     }
                     catch (Exception e) when (i < retries - 1 && e is UnauthorizedAccessException or IOException)
                     {
-                        // On Windows, memory-mapped file handles may not be fully released by
-                        // the kernel yet even after the pager is disposed. Retry after a brief delay.
+                        // On Windows the file stays locked while anything still maps it. A pager state that
+                        // nothing references any more only closes its mapping once its finalizer hands it to
+                        // the background disposal queue, so push that through instead of just waiting.
+                        if (i == 1)
+                        {
+                            GC.Collect();
+                            GC.WaitForPendingFinalizers();
+                        }
+
+                        Pager.State.DrainPendingDisposal();
+
                         Thread.Sleep(50);
                     }
                 }
