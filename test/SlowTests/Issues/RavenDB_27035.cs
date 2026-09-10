@@ -332,6 +332,36 @@ public class RavenDB_27035 : RavenTestBase
         return false;
     }
 
+    // A list holding both a null and a number puts the same entry in the longs tree and in the null posting list. Summing
+    // the two counted it twice, and the surplus hid the string-valued entry the scan then dropped.
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void OrderByAsLongShouldNotDropDocumentsWhenAListHoldsNullAndANumber(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Movie { Id = "movies/1", Title = new object[] { null, 10L } });
+                session.Store(new Movie { Id = "movies/2", Title = "Alpha" });
+                session.SaveChanges();
+            }
+
+            store.ExecuteIndex(new Movies_ByTitle());
+            Indexes.WaitForIndexing(store);
+
+            using (var session = store.OpenSession())
+            {
+                var results = session.Advanced.RawQuery<Movie>("from index 'Movies/ByTitle' order by Title as long include timings()")
+                    .Timings(out var timings)
+                    .ToList();
+
+                var plan = Assert.IsType<QueryInspectionNode>(timings.QueryPlan);
+                Assert.True(results.Count == 2, $"got {results.Count}: {PlanOperations(plan)}");
+            }
+        }
+    }
+
     private static string PlanOperations(QueryInspectionNode node)
     {
         var operations = new List<string>();

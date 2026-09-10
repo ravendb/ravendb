@@ -405,15 +405,56 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         }
 
         // entries -> terms is keyed by entry id, so its count is the number of entries with a value in that tree
-        long covered = EntriesToTermsReader(treeName)?.NumberOfEntries ?? 0;
+        var entriesWithValue = EntriesToTermsReader(treeName);
+        long covered = entriesWithValue?.NumberOfEntries ?? 0;
 
-        if (TryGetPostingListForNull(field, out var nullPostingListId))
-            covered += GetPostingList(nullPostingListId)?.State.NumberOfEntries ?? 0;
-
+        // a field is either absent from an entry or holds values, so non-existing cannot overlap with the rest
         if (TryGetPostingListForNonExisting(field, out var nonExistingPostingListId))
             covered += GetPostingList(nonExistingPostingListId)?.State.NumberOfEntries ?? 0;
 
-        return covered >= NumberOfEntries;
+        if (covered >= NumberOfEntries)
+            return true;
+
+        return TryGetPostingListForNull(field, out var nullPostingListId)
+               && NullsCoverTheRest(nullPostingListId, entriesWithValue, NumberOfEntries - covered);
+    }
+
+    /// <summary>A list holding both a null and a value puts that entry in the null posting list and in the value tree
+    /// alike, so nulls have to be counted per entry: adding the list wholesale double counts it, and the surplus then
+    /// hides an entry of another type that the scan would skip. Walks at most as many nulls as the gap needs.</summary>
+    private bool NullsCoverTheRest(long nullPostingListId, Lookup<Int64LookupKey> entriesWithValue, long deficit)
+    {
+        var postingList = GetPostingList(nullPostingListId);
+        if (postingList == null)
+            return false;
+
+        long remaining = postingList.State.NumberOfEntries;
+        if (remaining < deficit) // not enough nulls even before discounting the overlap
+            return false;
+
+        if (entriesWithValue == null) // no value tree, so no entry can be in both
+            return true;
+
+        const int batchSize = 1024;
+        using var entriesScope = Allocator.Allocate(batchSize, out Span<long> entries);
+        using var termsScope = Allocator.Allocate(batchSize, out Span<long> terms);
+
+        var it = postingList.Iterate();
+        while (deficit > 0 && remaining >= deficit && it.Fill(entries, out var read))
+        {
+            EntryIdEncodings.DecodeAndDiscardFrequency(entries, read);
+            entriesWithValue.GetFor(entries[..read], terms[..read], long.MinValue);
+
+            for (int i = 0; i < read; i++)
+            {
+                if (terms[i] == long.MinValue) // a null on an entry with no value in the tree we would scan
+                    deficit--;
+            }
+
+            remaining -= read;
+        }
+
+        return deficit <= 0;
     }
 
     public bool TryGetTermsOfField(in FieldMetadata field, out ExistsTermProvider<Lookup<CompactKeyLookup>.ForwardIterator> existsTermProvider)
