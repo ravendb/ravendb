@@ -58,6 +58,8 @@ import accessManagerSlice = require("components/common/shell/accessManagerSlice"
 import UpgradeModal = require("./shell/UpgradeModal");
 import getStudioBootstrapCommand = require("commands/resources/getStudioBootstrapCommand");
 import serverSettings = require("common/settings/serverSettings");
+import i18nModule = require("common/i18n/i18n");
+import i18nResources = require("common/i18n/resources");
 import getLatestVersionInfoCommand = require("commands/version/getLatestVersionInfoCommand");
 import StudioSearchWithDatabaseSwitcher = require("components/shell/studioSearchWithDatabaseSelector/StudioSearchWithDatabaseSwitcher");
 import ProtractedRequestMessage = require("components/shell/partials/ProtractedRequestMessage");
@@ -385,6 +387,11 @@ class shell extends viewModelBase {
                         (_name, setting: simpleStudioSetting<string>) =>
                             shell.applyMonospaceFont(setting.getValue())
                     );
+                    studioSettings.default.registerOnSettingChangedHandler(
+                        (name) => name === "language",
+                        (_name, setting: simpleStudioSetting<i18nResources.StudioLanguage>) =>
+                            shell.applyLanguage(setting.getValue())
+                    );
 
                     // bind event handles before we connect to server wide notification center
                     // (connection will be started after executing this method) - it was just scheduled 2 lines above
@@ -444,6 +451,13 @@ class shell extends viewModelBase {
 
         shell.applyTableFont(settings.tableFont.getValue());
         shell.applyMonospaceFont(settings.monospaceFont.getValue());
+        shell.applyLanguage(settings.language.getValue());
+    }
+
+    static applyLanguage(value: i18nResources.StudioLanguage) {
+        if (i18nModule.i18n.language !== value) {
+            i18nModule.i18n.changeLanguage(value);
+        }
     }
 
     static applyTableFont(value: string) {

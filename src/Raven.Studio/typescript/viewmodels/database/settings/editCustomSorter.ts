@@ -7,6 +7,7 @@ import saveCustomSorterCommand = require("commands/database/settings/saveCustomS
 import getCustomSortersCommand = require("commands/database/settings/getCustomSortersCommand");
 import messagePublisher = require("common/messagePublisher");
 import fileImporter = require("common/fileImporter");
+import i18nModule = require("common/i18n/i18n");
 
 class editCustomSorter extends viewModelBase {
 
@@ -43,7 +44,7 @@ class editCustomSorter extends viewModelBase {
                         this.editedSorter(new customSorter(matchedSorter));
                         this.dirtyFlag = this.editedSorter().dirtyFlag;
                     } else {
-                        messagePublisher.reportWarning("Unable to find custom sorter named: " + args.name);
+                        messagePublisher.reportWarning(i18nModule.translate("editCustomSorter:notFound", { name: args.name }));
                         router.navigate(appUrl.forCustomSorters(db));
                         
                         return false;

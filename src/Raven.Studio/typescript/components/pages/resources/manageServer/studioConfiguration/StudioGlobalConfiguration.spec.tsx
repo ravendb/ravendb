@@ -16,4 +16,11 @@ describe("StudioGlobalConfiguration", function () {
 
         expect(await screen.findByText(/Licensing/)).toBeInTheDocument();
     });
+
+    it("renders language selector outside the license gate", async () => {
+        const { screen } = rtlRender(<LicenseRestricted />);
+
+        const label = await screen.findByText("Language");
+        expect(label.closest(".item-disabled")).toBeNull();
+    });
 });

@@ -41,6 +41,12 @@ import { CellValueWrapper } from "components/common/virtualTable/cells/CellValue
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
 import AceEditor from "components/common/ace/AceEditor";
 import studioSettings = require("common/settings/studioSettings");
+import { languageNames, StudioLanguage, supportedLanguages } from "common/i18n/resources";
+
+const languageOptions: SelectOption<StudioLanguage>[] = supportedLanguages.map((language) => ({
+    value: language,
+    label: languageNames[language],
+}));
 
 export default function StudioGlobalConfiguration() {
     const [tableHoveredFont, setTableHoveredFont] = useState<string>(null);
@@ -56,6 +62,7 @@ export default function StudioGlobalConfiguration() {
             isSendUsageStats: settings.sendUsageStats.getValue(),
             tableFont: settings.tableFont.getValue(),
             monospaceFont: settings.monospaceFont.getValue(),
+            language: settings.language.getValue(),
         };
     });
 
@@ -92,6 +99,7 @@ export default function StudioGlobalConfiguration() {
             settings.sendUsageStats.setValueLazy(formData.isSendUsageStats);
             settings.tableFont.setValue(formData.tableFont);
             settings.monospaceFont.setValue(formData.monospaceFont);
+            settings.language.setValue(formData.language);
 
             await settings.save();
             reset(formData);
@@ -137,6 +145,19 @@ export default function StudioGlobalConfiguration() {
                                 Save
                             </ButtonWithSpinner>
                         </ConditionalPopover>
+                        <Card className="mb-3">
+                            <Card.Body className="vstack gap-3">
+                                <div className="gap-1">
+                                    <FormLabel className="mb-0 md-label">Language</FormLabel>
+                                    <FormSelect
+                                        control={control}
+                                        name="language"
+                                        options={languageOptions}
+                                        isSearchable={false}
+                                    />
+                                </div>
+                            </Card.Body>
+                        </Card>
                         <div className={hasStudioConfiguration ? null : "item-disabled pe-none"}>
                             <Card>
                                 <Card.Body className="vstack gap-3">

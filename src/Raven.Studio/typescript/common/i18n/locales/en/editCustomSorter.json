@@ -1,0 +1,10 @@
+{
+    "heading_new": "New Custom Sorter",
+    "heading_edit": "Edit Custom Sorter",
+    "cancelTitle": "Return to Custom Sorters View",
+    "loadFromFileTitle": "Upload custom sorter from file",
+    "nameLabel": "Sorter Name",
+    "namePlaceholder": "Enter sorter name",
+    "codeLabel": "Code:",
+    "notFound": "Unable to find custom sorter named: {{name}}"
+}

@@ -1,0 +1,20 @@
+{
+    "title": "Document Refresh",
+    "loadError": "Unable to load document refresh",
+    "saveSuccess": "Refresh configuration saved successfully",
+    "enableSwitch": "Enable Document Refresh",
+    "customFrequencySwitch": "Set custom refresh frequency",
+    "frequencyPlaceholder": "Default ({{seconds}})",
+    "secondsAddon": "seconds",
+    "limitWarning": "Your current license does not allow a frequency higher than {{hours}} hours ({{seconds}} seconds)",
+    "maxItemsSwitch": "Set max number of documents to process in a single run",
+    "itemsAddon": "items",
+    "about": {
+        "intro": "When <strong>Document Refresh</strong> is enabled:",
+        "scanItem": "The server scans the database at the specified <strong>frequency</strong>, searching for documents that should be refreshed.",
+        "metadataItem": "Any document that has a <code>@refresh</code> metadata property whose time has passed at the time of the scan will be modified by removing this property.",
+        "triggerItem": "This modification will trigger any processes related to the document, such as: re-indexing or taking part in an ongoing-task (e.g. Replication, ETL, Subscriptions, etc.), as defined by your configuration.",
+        "exampleLabel": "Example of a document scheduled for refresh:",
+        "docsLink": "Docs - Document Refresh"
+    }
+}

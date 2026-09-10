@@ -13,6 +13,9 @@ import ConfirmDialog = require("components/common/ConfirmDialog");
 import Dialog = require("components/common/Dialog");
 import SplitView = require("components/common/splitView/SplitView");
 import ActiveDatabaseGuard = require("components/common/ActiveDatabaseGuard");
+import ReactI18next = require("react-i18next");
+import i18nModule = require("common/i18n/i18n");
+import i18nBindingHandler = require("common/bindingHelpers/i18nBindingHandler");
 
 class extensions {
     static install() {
@@ -21,6 +24,7 @@ class extensions {
         extensions.installBindingHandlers();
         extensions.configureValidation();
         extensions.installReactHandler();
+        i18nBindingHandler.install();
 
         virtualGrid.install();
         listView.install();
@@ -254,9 +258,10 @@ class extensions {
                     const activeDatabaseGuard = options.databaseName
                         ? react.createElement(ActiveDatabaseGuard.ActiveDatabaseGuard, { databaseName: options.databaseName }, dirtyFlagWrapper)
                         : dirtyFlagWrapper;
+                    const i18nWrapper = react.createElement(ReactI18next.I18nextProvider, { i18n: i18nModule.i18n }, activeDatabaseGuard);
 
                     // Keep it as last wrapper
-                    const reduxWrapper = react.createElement(Redux.Provider, { store: store.default } as Redux.ProviderProps, activeDatabaseGuard);
+                    const reduxWrapper = react.createElement(Redux.Provider, { store: store.default } as Redux.ProviderProps, i18nWrapper);
 
                     root.render(reduxWrapper);
                 }
