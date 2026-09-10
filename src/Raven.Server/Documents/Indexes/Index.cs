@@ -291,6 +291,8 @@ namespace Raven.Server.Documents.Indexes
             Definition = definition;
             Collections = new HashSet<string>(Definition.Collections, StringComparer.OrdinalIgnoreCase);
 
+            _lastQueriedTimeTracker = new LastQueriedTimeTracker(DateTime.UtcNow, elapsedSinceQueried: 0);
+
             if (Collections.Contains(Constants.Documents.Collections.AllDocumentsCollection))
             {
                 HandleAllDocs = true;
@@ -3288,6 +3290,9 @@ namespace Raven.Server.Documents.Indexes
 
         public bool NoQueryRecently()
         {
+            if (_initialized == false)
+                return false;
+
             var last = _lastQueriedTimeTracker.LastQueryDate;
             return DocumentDatabase.Time.GetUtcNow() - last > Configuration.TimeSinceLastQueryAfterWhichDeepCleanupCanBeExecuted.AsTimeSpan;
         }
