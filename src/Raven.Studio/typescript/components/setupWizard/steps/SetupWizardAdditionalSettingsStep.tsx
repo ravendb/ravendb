@@ -61,14 +61,16 @@ function useAdditionalSettingsFormSideEffects() {
     const { licenseKeyStep } = useWatch({ control });
 
     useEffect(() => {
-        if (getLicenseType(licenseKeyStep.licenseInfo).isDeveloper()) {
-            setValue("additionalSettingsStep.studioEnvironment", "Development", {
-                shouldDirty: true,
-            });
-        } else if (getLicenseType(licenseKeyStep.licenseInfo).isProfessionalOrHigher()) {
-            setValue("additionalSettingsStep.studioEnvironment", "Production", {
-                shouldDirty: true,
-            });
+        if (licenseKeyStep.licenseInfo?.licenseStatus?.HasStudioConfiguration) {
+            if (getLicenseType(licenseKeyStep.licenseInfo).isDeveloper()) {
+                setValue("additionalSettingsStep.studioEnvironment", "Development", {
+                    shouldDirty: true,
+                });
+            } else if (getLicenseType(licenseKeyStep.licenseInfo).isProfessionalOrHigher()) {
+                setValue("additionalSettingsStep.studioEnvironment", "Production", {
+                    shouldDirty: true,
+                });
+            }
         }
 
         const { unsubscribe } = watch((values, { name }) => {
