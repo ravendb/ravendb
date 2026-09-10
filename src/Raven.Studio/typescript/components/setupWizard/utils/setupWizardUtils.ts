@@ -1,5 +1,6 @@
 import { SetupWizardFormData } from "components/setupWizard/setupWizardValidation";
 import { setupWizardConstants } from "components/setupWizard/utils/setupWizardConstants";
+import { normalizeMaxClusterSize } from "components/common/shell/licenseSlice";
 
 export function getLicenseType(licenseInfo: SetupWizardFormData["licenseKeyStep"]["licenseInfo"]) {
     const type = licenseInfo?.licenseStatus?.Type || "None";
@@ -37,7 +38,7 @@ export function getMaxClusterSize(licenseInfo: SetupWizardFormData["licenseKeySt
         return setupWizardConstants.AGPL_MAX_CLUSTER_SIZE;
     }
 
-    return maxClusterSize === 0 ? Infinity : maxClusterSize;
+    return normalizeMaxClusterSize(maxClusterSize) ?? Infinity;
 }
 
 export function fileToBase64(file: File): Promise<string> {
