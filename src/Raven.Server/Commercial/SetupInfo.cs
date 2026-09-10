@@ -300,7 +300,7 @@ namespace Raven.Server.Commercial
         }
     }
 
-    public sealed class SubDomainAndIps
+    public sealed class SubDomainAndIps : IDynamicJson
     {
         public string SubDomain { get; set; }
         public List<string> Ips { get; set; }
@@ -328,18 +328,11 @@ namespace Raven.Server.Commercial
 
         public DynamicJsonValue ToJson()
         {
-            var domains = new DynamicJsonValue();
-            if (Domains != null)
-            {
-                foreach (var domain in Domains)
-                    domains[domain.Key] = new DynamicJsonArray(domain.Value.Select(x => x.ToJson()));
-            }
-
             return new DynamicJsonValue
             {
                 [nameof(Emails)] = Emails == null ? null : new DynamicJsonArray(Emails),
                 [nameof(RootDomains)] = RootDomains == null ? null : new DynamicJsonArray(RootDomains),
-                [nameof(Domains)] = domains
+                [nameof(Domains)] = DynamicJsonValue.Convert(Domains)
             };
         }
     }
