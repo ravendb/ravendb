@@ -24,7 +24,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         {
         }
 
-        [RavenMultiplatformTheory(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+        [RavenTheory(RavenTestCategory.Ai)]
         [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task CanUseQueryToolWithSecuredServer(Options options, GenAiConfiguration config)
         {

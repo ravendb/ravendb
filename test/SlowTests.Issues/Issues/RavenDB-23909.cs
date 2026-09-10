@@ -13,7 +13,7 @@ namespace SlowTests.Issues;
 
 public class RavenDB_23909(ITestOutputHelper output) : EmbeddingsGenerationTestBase(output)
 {
-    [RavenMultiplatformTheory(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenTheory(RavenTestCategory.Ai)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public async Task Auto(Options options)
     {
@@ -46,7 +46,7 @@ public class RavenDB_23909(ITestOutputHelper output) : EmbeddingsGenerationTestB
         }
     }
     
-    [RavenMultiplatformTheory(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenTheory(RavenTestCategory.Ai)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public async Task AlreadyQuantizedVectorShouldThrow(Options options)
     {
@@ -93,7 +93,7 @@ public class RavenDB_23909(ITestOutputHelper output) : EmbeddingsGenerationTestB
         }
     }
 
-    [RavenMultiplatformTheory(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenTheory(RavenTestCategory.Ai)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public async Task Static(Options options)
     {
@@ -130,7 +130,7 @@ public class RavenDB_23909(ITestOutputHelper output) : EmbeddingsGenerationTestB
         }
     }
 
-    [RavenMultiplatformTheory(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenTheory(RavenTestCategory.Ai)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public async Task StaticJs(Options options)
     {

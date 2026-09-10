@@ -120,7 +120,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenMultiplatformFact(RavenTestCategory.Licensing | RavenTestCategory.Cluster | RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+        [RavenFact(RavenTestCategory.Licensing | RavenTestCategory.Cluster | RavenTestCategory.Ai)]
         public async Task SystemCollections_AreReported_FromCollectionsTheProductCreates()
         {
             var (nodes, leader) = await CreateRaftCluster(1, watcherCluster: true);
