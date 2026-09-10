@@ -13,7 +13,6 @@ using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints.Helpers;
 using Raven.Quill.Licensing;
-using Raven.Quill.Logging;
 using Raven.Quill.Raven;
 using Raven.Quill.Wizard;
 
@@ -21,10 +20,6 @@ namespace Raven.Quill.Metrics;
 
 internal static class MetricsReadService
 {
-    internal sealed class MetricsLogger;
-
-    private static readonly QuillLogger<MetricsLogger> Log = new();
-
     private const string ConversationIdPrefix = "chats/";
 
     private const string UnknownModel = "unknown";
@@ -40,8 +35,7 @@ internal static class MetricsReadService
             async app => (Usage: await GetAppUsageAsync(store, app, period, ct), App: app),
             fallback: app => (
                 Usage: (Conversations: new long[buckets.Count], Messages: new long[buckets.Count], Tokens: new long[buckets.Count]),
-                App: app),
-            ct);
+                App: app));
 
         var conversations = new long[buckets.Count];
         var messages = new long[buckets.Count];
@@ -118,7 +112,7 @@ internal static class MetricsReadService
             using var session = store.OpenAsyncSession(app.Database);
             var metricRows = await QueryAllMetricRowsAsync(session, ct);
             return new AppTokens(app.Slug, metricRows.Sum(r => r.Tokens));
-        }, fallback: null, ct);
+        }, fallback: null);
 
         var sorted = results
             .OrderByDescending(a => a.Tokens)
@@ -316,8 +310,7 @@ internal static class MetricsReadService
                 ChannelsLabel: null,
                 StatusSubtitle: "Database unavailable",
                 CreatedAt: Utc(app.CreatedAt),
-                UpdatedAt: Utc(app.CreatedAt)),
-            ct);
+                UpdatedAt: Utc(app.CreatedAt)));
     }
 
     public static async Task<ApplianceAppResponse?> GetDashboardAppAsync(
@@ -657,31 +650,20 @@ internal static class MetricsReadService
     };
 
     // isolate per-app failures: one bad tenant DB can't 500 a global fan-out
-    private const int MaxFanoutConcurrency = 8;
-
     private static async Task<List<TResult>> ForEachAppAsync<TResult>(
         IReadOnlyList<App> apps,
         Func<App, Task<TResult>> body,
-        Func<App, TResult>? fallback,
-        CancellationToken ct)
+        Func<App, TResult>? fallback)
     {
-        using var gate = new SemaphoreSlim(MaxFanoutConcurrency);
         var results = await Task.WhenAll(apps.Select(async app =>
         {
-            await gate.WaitAsync(ct);
             try
             {
                 return (HasValue: true, Value: await body(app));
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {
-                if (Log.IsWarnEnabled)
-                    Log.Warn(e, $"Dashboard fan-out: skipping app {app.Slug} ({app.Database})");
                 return fallback is null ? (HasValue: false, Value: default!) : (HasValue: true, Value: fallback(app));
-            }
-            finally
-            {
-                gate.Release();
             }
         }));
 

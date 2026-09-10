@@ -16,7 +16,5 @@ public sealed class SlackOptions
 
     public int SenderQueueCapacity { get; set; } = 8;
 
-    public int MaxConcurrentTurns { get; set; } = 32;
-
     public TimeSpan SignatureTolerance { get; set; } = TimeSpan.FromMinutes(5);
 }
