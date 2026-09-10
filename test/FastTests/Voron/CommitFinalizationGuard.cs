@@ -32,7 +32,7 @@ namespace FastTests.Voron
             Assert.Contains("subscriber failed", FlattenMessages(e));
         }
 
-        [RavenFact(RavenTestCategory.Voron)]
+        [RavenMultiplatformFact(RavenTestCategory.Voron, RavenArchitecture.X64)]
         public void SubscriberFailureAfterAsyncJournalWriteTakesEnvironmentDown()
         {
             var tx = Env.WriteTransaction();
