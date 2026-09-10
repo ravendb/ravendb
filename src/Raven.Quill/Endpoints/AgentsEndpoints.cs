@@ -1,4 +1,3 @@
-﻿using Microsoft.Extensions.Options;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Exceptions;
@@ -116,7 +115,6 @@ public static class AgentsEndpoints
         string slug,
         EditAgentRequest request,
         IDocumentStore store,
-        IOptions<ApplianceOptions> options,
         QuillLogger<AgentsLogger> logger,
         HttpContext ctx,
         CancellationToken ct)
@@ -133,8 +131,7 @@ public static class AgentsEndpoints
         if (existing is null)
             return Results.NotFound(new ApiErrorResponse($"no agent '{body.Identifier}' in app '{slug}'"));
 
-        var validationError = await AgentConfigValidator.ValidateAndPrepareAsync(
-            store, slug, request, options.Value.AllowPrivateWebhookTargets, ct);
+        var validationError = await AgentConfigValidator.ValidateAndPrepareAsync(store, slug, request, ct);
         if (validationError is not null)
             return validationError;
 
