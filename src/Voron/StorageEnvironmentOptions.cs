@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -408,6 +409,10 @@ namespace Voron
         {
             public const string TempFileExtension = ".tmp";
             public const string BuffersFileExtension = ".buffers";
+            
+            public static bool IsTemporaryFile(string path) =>
+                path.EndsWith(BuffersFileExtension, StringComparison.OrdinalIgnoreCase) ||
+                path.EndsWith(TempFileExtension, StringComparison.OrdinalIgnoreCase);
 
             private readonly VoronPathSetting _basePath;
 
@@ -774,9 +779,19 @@ namespace Voron
                 if (Directory.Exists(TempPath.FullPath) == false)
                     return;
 
-                foreach (var file in Directory.GetFiles(TempPath.FullPath).Where(x => x.EndsWith(BuffersFileExtension, StringComparison.OrdinalIgnoreCase) || x.EndsWith(TempFileExtension, StringComparison.OrdinalIgnoreCase)))
+                foreach (var file in Directory.GetFiles(TempPath.FullPath).Where(IsTemporaryFile))
                 {
-                    DeleteTempFile(file);
+                    try
+                    {
+                        DeleteTempFile(file);
+                    }
+                    catch (Exception e) when (e is UnauthorizedAccessException or IOException)
+                    {
+                        // failing to open the environment over a leftover temp file would make the whole directory
+                        // permanently unusable, and GetTemporaryPager renames around such a file anyway (RavenDB-27226)
+                        if (_log.IsInfoEnabled)
+                            _log.Info($"Could not delete the temporary file '{file}', leaving it behind. It will be picked up again the next time this temp directory is cleaned up.", e);
+                    }
                 }
             }
 
@@ -820,7 +835,7 @@ namespace Voron
                         if (File.Exists(tempFile.FullPath))
                             File.Delete(tempFile.FullPath);
                     }
-                    catch (IOException e)
+                    catch (Exception e) when (e is IOException or UnauthorizedAccessException)
                     {
                         // this can happen if someone is holding the file, shouldn't happen
                         // but might if there is some FS caching involved where it shouldn't
@@ -834,9 +849,9 @@ namespace Voron
                             true, // deleteOnClose
                             false); //usePageProtection
                     }
-                    catch (FileNotFoundException e)
+                    catch (Exception e) when (e is FileNotFoundException || IsFileInaccessible(e))
                     {
-                        // unique case, when file was previously deleted, but still exists. 
+                        // unique case, when file was previously deleted, but still exists.
                         // This can happen on cifs mount, see RavenDB-10923
                         // if this is a temp file we can try recreate it in a different name
                         Rename();
@@ -845,6 +860,17 @@ namespace Voron
                 }
 
                 throw new InvalidOperationException("Unable to create temporary mapped file " + name + ", even after trying multiple times.", err);
+            }
+
+            private static bool IsFileInaccessible(Exception e)
+            {
+                if (e is UnauthorizedAccessException)
+                    return true;
+
+                return e is IOException && e.InnerException is Win32Exception
+                {
+                    NativeErrorCode: (int)Win32NativeFileErrors.ERROR_ACCESS_DENIED or (int)Win32NativeFileErrors.ERROR_SHARING_VIOLATION
+                };
             }
 
             public override AbstractPager CreateScratchPager(string name, long initialSize)

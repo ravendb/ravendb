@@ -135,6 +135,7 @@ namespace Voron.Platform.Win32
     public enum Win32NativeFileErrors
     {
         ERROR_FILE_NOT_FOUND = 0x2,
+        ERROR_ACCESS_DENIED = 0x5, // also what a delete-pending file reports (STATUS_DELETE_PENDING) and what CreateFile returns for a directory
         ERROR_DISK_FULL = 0x70,
         ERROR_NOT_READY = 0x15,
         ERROR_SHARING_VIOLATION = 0x20, // The process cannot access the file because it is being used by another process

@@ -74,14 +74,23 @@ namespace Voron.Impl.Journal
             _headerAccessor = env.HeaderAccessor;
 
             _compressionPager = CreateCompressionPager(_env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize);
+
             _journalApplicator = new JournalApplicator(this);
             _lastCompressionAccelerationInfo = new CompressionAccelerationStats(env.Options);
 
             _disposeRunner = new DisposeOnce<SingleAttempt>(() =>
             {
-                _compressionPager.Dispose();
+                _forTestingPurposes?.OnJournalDispose_BeforeTakingCompressionPagerWriteLock?.Invoke();
+
+                lock (_writeLock)
+                {
+                    _compressionPager.Dispose();
+                }
+
+                _forTestingPurposes?.OnJournalDispose_AfterDisposingCompressionPager?.Invoke();
 
                 _journalApplicator.Dispose();
+
                 if (_env.Options.OwnsPagers)
                 {
                     foreach (var logFile in _files)
@@ -2113,6 +2122,8 @@ namespace Voron.Impl.Journal
 
         private AbstractPager CreateCompressionPager(long initialSize)
         {
+            Debug.Assert(Monitor.IsEntered(_writeLock) || _compressionPager == null, "CreateCompressionPager must be called under _writeLock");
+
             return _env.Options.CreateTemporaryBufferPager($"compression.{_compressionPagerCounter++:D10}{StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.BuffersFileExtension}", initialSize);
         }
 
@@ -2122,6 +2133,15 @@ namespace Voron.Impl.Journal
 
         private void ReduceSizeOfCompressionBufferIfNeeded(bool forceReduce = false)
         {
+            Debug.Assert(Monitor.IsEntered(_writeLock), "ReduceSizeOfCompressionBufferIfNeeded must be called under _writeLock");
+
+            if (_disposeRunner.DisposedRequested)
+            {
+                // the journal is being torn down, possibly by a thread blocked on _writeLock right now - swapping the
+                // pager can only leak it or throw from here on
+                return;
+            }
+
             var maxSize = _env.Options.MaxScratchBufferSize;
             if (ShouldReduceSizeOfCompressionPager(maxSize, forceReduce) == false)
             {
@@ -2132,7 +2152,6 @@ namespace Voron.Impl.Journal
 
                 return;
             }
-
 
             // the compression pager is too large, we probably had a big transaction and now can
             // free all of that and come back to more reasonable values.
@@ -2147,7 +2166,7 @@ namespace Voron.Impl.Journal
             _lastCompressionBufferReduceCheck = DateTime.UtcNow;
 
             _compressionPager.Dispose();
-           
+
             _forTestingPurposes?.OnReduceSizeOfCompressionBufferIfNeeded_RightAfterDisposingCompressionPager?.Invoke();
 
             _compressionPager = CreateCompressionPager(maxSize);
@@ -2222,12 +2241,25 @@ namespace Voron.Impl.Journal
             if (_forTestingPurposes != null)
                 return _forTestingPurposes;
 
-            return _forTestingPurposes = new TestingStuff();
+            return _forTestingPurposes = new TestingStuff(this);
         }
 
         internal sealed class TestingStuff
         {
+            private readonly WriteAheadJournal _journal;
+
+            public TestingStuff(WriteAheadJournal journal)
+            {
+                _journal = journal;
+            }
+
             internal Action OnReduceSizeOfCompressionBufferIfNeeded_RightAfterDisposingCompressionPager;
+
+            internal Action OnJournalDispose_BeforeTakingCompressionPagerWriteLock;
+
+            internal Action OnJournalDispose_AfterDisposingCompressionPager;
+
+            internal AbstractPager CompressionPager => _journal._compressionPager;
         }
     }
 
