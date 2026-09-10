@@ -34,7 +34,7 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
     private readonly CancellationToken _token;
     private bool _isTermMatch;
     private IDisposable _startsWithDisposeHandler;
-    private HashSet<long> _alreadyReturned;
+    private Dictionary<long, double> _alreadyReturned; // entry -> distance to the shape centre (unused when NoBoosting)
     private long _fieldRootPage;
     private double _xShapeCenter;
     private double _yShapeCenter;
@@ -131,15 +131,18 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
 
     private bool CheckEntryManually(long id)
     {
-        if (_alreadyReturned?.TryGetValue(id, out _) ?? false)
+        if (_alreadyReturned?.ContainsKey(id) ?? false)
         {
             return false;
         }
-        _alreadyReturned ??= new HashSet<long>();
-        if (TryGetMatchingPoint(id, out _, out _) == false)
+        _alreadyReturned ??= new Dictionary<long, double>();
+        if (TryGetMatchingPoint(id, out var latitude, out var longitude) == false)
             return false;
 
-        _alreadyReturned.Add(id);
+        // the entry is open right here, so keep its distance for Score instead of reading it again there
+        _alreadyReturned.Add(id, typeof(TBoosting) == typeof(HasBoosting)
+            ? SpatialUtils.HaverstineDistanceInInternationalNauticalMiles(_yShapeCenter, _xShapeCenter, latitude, longitude)
+            : 0);
         return true;
     }
 
@@ -204,15 +207,18 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
 
         const double bias = 0.01;
 
-        // Distances have to be read here: Fill only looks at an entry when its geohash cell is not entirely inside the
-        // shape, so collecting them there would leave every entry taken in bulk without one.
+        // Fill measured the entries it had to open (boundary cells, AndWith). The rest still have to be read here: an
+        // entry taken in bulk from a cell entirely inside the shape was never opened, and an entry from the other side
+        // of an OR has to be read to learn it is not ours.
         using var _ = _allocator.Allocate(matches.Length, out Span<double> distances);
         double maxDistance = 0;
         for (int i = 0; i < matches.Length; ++i)
         {
-            distances[i] = TryGetMatchingPoint(matches[i], out var latitude, out var longitude)
-                ? SpatialUtils.HaverstineDistanceInInternationalNauticalMiles(_yShapeCenter, _xShapeCenter, latitude, longitude)
-                : -1;
+            distances[i] = _alreadyReturned != null && _alreadyReturned.TryGetValue(matches[i], out var cached)
+                ? cached
+                : TryGetMatchingPoint(matches[i], out var latitude, out var longitude)
+                    ? SpatialUtils.HaverstineDistanceInInternationalNauticalMiles(_yShapeCenter, _xShapeCenter, latitude, longitude)
+                    : -1;
             maxDistance = Math.Max(distances[i], maxDistance);
         }
 
