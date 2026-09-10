@@ -2,12 +2,17 @@
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
+using Raven.Server.Documents;
+using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Errors;
+using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Utils;
 using Tests.Infrastructure;
 using Xunit;
@@ -97,6 +102,98 @@ public class RavenDB_19109 : RavenTestBase
         {
             IOExtensions.DeleteFile(disableMarkerPath);
         }
+    }
+
+    [RavenFact(RavenTestCategory.Indexes)]
+    public async Task IdleOperationsShouldNotThrowWhenIndexIsDisabledByMarker()
+    {
+        DoNotReuseServer();
+
+        using var store = GetDocumentStore(out var databasePath);
+        var index = new IndexToDisable();
+        index.Execute(store);
+        Indexes.WaitForIndexing(store);
+
+        DocumentDatabase database = await Databases.GetDocumentDatabaseInstanceFor(store);
+        Assert.IsNotType<FaultyInMemoryIndex>(database.IndexStore.GetIndex(index.IndexName));
+
+        // sanity: a healthy index survives idle operations
+        database.IndexStore.RunIdleOperations(DatabaseCleanupMode.Regular);
+        database.IndexStore.RunIdleOperations(DatabaseCleanupMode.Deep);
+
+        var disableMarkerPath = Path.Combine(databasePath, "Indexes", index.IndexName, "disable.marker");
+        try
+        {
+            DoCommand(store, true, out _);
+            File.Create(disableMarkerPath).Dispose();
+            DoCommand(store, false, out _);
+
+            database = await Databases.GetDocumentDatabaseInstanceFor(store);
+            Assert.IsType<FaultyInMemoryIndex>(database.IndexStore.GetIndex(index.IndexName));
+
+            // the faulty placeholder must not break the database-wide idle operations
+            database.IndexStore.RunIdleOperations(DatabaseCleanupMode.Regular);
+            database.IndexStore.RunIdleOperations(DatabaseCleanupMode.Deep);
+        }
+        finally
+        {
+            IOExtensions.DeleteFile(disableMarkerPath);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Cluster)]
+    public async Task ClusterMaintenanceReportShouldNotThrowWhenIndexIsDisabledByMarker()
+    {
+        DoNotReuseServer();
+
+        using var store = GetDocumentStore(out var databasePath);
+        var index = new IndexToDisable();
+        index.Execute(store);
+        Indexes.WaitForIndexing(store);
+
+        DocumentDatabase database = await Databases.GetDocumentDatabaseInstanceFor(store);
+        Assert.IsNotType<FaultyInMemoryIndex>(database.IndexStore.GetIndex(index.IndexName));
+
+        // sanity: a healthy index can be reported
+        DatabaseStatusReport.ObservedIndexStatus status = FillIndexInfo(database, index.IndexName);
+        Assert.Equal(IndexState.Normal, status.State);
+        Assert.False(status.IsStale);
+
+        var disableMarkerPath = Path.Combine(databasePath, "Indexes", index.IndexName, "disable.marker");
+        try
+        {
+            DoCommand(store, true, out _);
+            File.Create(disableMarkerPath).Dispose();
+            DoCommand(store, false, out _);
+
+            database = await Databases.GetDocumentDatabaseInstanceFor(store);
+            Assert.IsType<FaultyInMemoryIndex>(database.IndexStore.GetIndex(index.IndexName));
+
+            // the faulty placeholder must still produce a status entry for the cluster observer
+            status = FillIndexInfo(database, index.IndexName);
+            Assert.Equal(IndexState.Error, status.State);
+            Assert.True(status.IsStale);
+            Assert.Equal((long)Raven.Server.Documents.Indexes.Index.IndexProgressStatus.Faulty, status.LastIndexedEtag);
+        }
+        finally
+        {
+            IOExtensions.DeleteFile(disableMarkerPath);
+        }
+    }
+
+    private static DatabaseStatusReport.ObservedIndexStatus FillIndexInfo(DocumentDatabase database, string indexName)
+    {
+        var index = database.IndexStore.GetIndex(indexName);
+        Assert.NotNull(index);
+
+        var report = new DatabaseStatusReport();
+        using (var context = QueryOperationContext.Allocate(database, needsServerContext: true))
+        using (context.OpenReadTransaction())
+        {
+            ClusterMaintenanceWorker.FillIndexInfo(index, context, DateTime.UtcNow, report);
+        }
+
+        return report.LastIndexStats[indexName];
     }
 
     private IDocumentStore GetDocumentStore(out string databasePath, [CallerMemberName] string caller = null)
