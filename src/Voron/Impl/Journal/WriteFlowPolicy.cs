@@ -250,7 +250,10 @@ public sealed class WriteFlowPolicy
     // if we are making large writes, we'll be limited by device bandwidth, not latency.
     private bool IsCommitLatencyBound => _writeSizeBytes.Current < 256 * Constants.Size.Kilobyte;
 
-    private bool IsMeasuredFastDevice => Device.IsMeasuredFastDevice;
+    private DeviceWriteBudget.DeviceClass MeasuredDeviceClass =>
+        _options.ForTestingPurposes?.ForceMeasuredDeviceClass ?? Device.MeasuredDeviceClass;
+
+    private bool IsMeasuredFastDevice => MeasuredDeviceClass == DeviceWriteBudget.DeviceClass.Fast;
 
     private bool PipeliningEnabled => _maxConcurrentJournalWrites > 1;
 
@@ -317,7 +320,7 @@ public sealed class WriteFlowPolicy
             return configured; // pinned by the user, in either direction
 
         // Zstd is 400MB/sec vs. LZ4 1.5GB/sec - only make sense to go to this effort if the device is constrained
-        return Device.MeasuredDeviceClass == DeviceWriteBudget.DeviceClass.Budgeted
+        return MeasuredDeviceClass == DeviceWriteBudget.DeviceClass.Budgeted
             ? JournalCompressionAlgorithm.Zstd
             : JournalCompressionAlgorithm.Lz4;
     }

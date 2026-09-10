@@ -69,12 +69,14 @@ public class RavenDB_27278(ITestOutputHelper output) : RavenTestBase(output)
         });
     }
 
-    [RavenFact(RavenTestCategory.Voron)]
-    public unsafe void CorruptedSizeOfForeignTransactionMustNotAffectSiblings()
+    [RavenTheory(RavenTestCategory.Voron)]
+    [InlineData(true)]
+    [InlineData(false)]
+    public unsafe void CorruptedSizeOfForeignTransactionMustNotAffectSiblings(bool compressed)
     {
-        var setup = PrepareSharedJournalWithVictimTx();
+        var setup = PrepareSharedJournalWithVictimTx(compressed);
 
-        // the size field is not covered by the transaction hash, so a garbage size fails the hash
+        // the size fields are not covered by the transaction hash, so a garbage size fails the hash
         // validation over a wrong byte range. The 4KB rescan must not trust it: it revalidates every
         // candidate position, so branch B provably keeps b1 AND b2 while only the owner fails
         const int garbageSize = 400 * 1024;
@@ -88,12 +90,20 @@ public class RavenDB_27278(ITestOutputHelper output) : RavenTestBase(output)
         fixed (byte* p = bytes)
         {
             var header = (TransactionHeader*)(p + setup.Victim.Offset);
-            Assert.NotEqual(-1, (long)header->CompressedSize);
-            header->CompressedSize = garbageSize;
+            if (compressed)
+            {
+                Assert.NotEqual(-1, (long)header->CompressedSize);
+                header->CompressedSize = garbageSize;
+            }
+            else
+            {
+                Assert.Equal(-1, (long)header->CompressedSize);
+                header->UncompressedSize = garbageSize;
+            }
         }
         File.WriteAllBytes(setup.JournalFile, bytes);
 
-        using var rootOptions = CreateOptions(setup.RootPath);
+        using var rootOptions = CreateOptions(setup.RootPath, compressed);
 
         using var root = new StorageEnvironment(rootOptions);
         using var _ = root.Journal.SharedJournalsScope();
@@ -103,7 +113,7 @@ public class RavenDB_27278(ITestOutputHelper output) : RavenTestBase(output)
             Assert.Equal("yes", rootTx.ReadTree("rootTree").Read("root").Reader.ToString());
         }
 
-        using (var branchB = OpenBranch(setup.BranchBPath, root))
+        using (var branchB = OpenBranch(setup.BranchBPath, root, compressed))
         using (var tx = branchB.ReadTransaction())
         {
             Tree tree = tx.ReadTree("treeB");
@@ -119,7 +129,7 @@ public class RavenDB_27278(ITestOutputHelper output) : RavenTestBase(output)
         // the owner of the corrupted transaction fails on its transaction sequence gap
         Assert.Throws<InvalidJournalException>(() =>
         {
-            using var branchA = OpenBranch(setup.BranchAPath, root);
+            using var branchA = OpenBranch(setup.BranchAPath, root, compressed);
         });
     }
 
@@ -134,7 +144,7 @@ public class RavenDB_27278(ITestOutputHelper output) : RavenTestBase(output)
     // root + branches A and B share one hard-linked journal file, nothing flushed or synced, so every
     // environment fully replays it on startup. File order: root txs, A boot, link record, B boot,
     // b1(B), victim(A), b2(B), a2(A)
-    private Setup PrepareSharedJournalWithVictimTx()
+    private Setup PrepareSharedJournalWithVictimTx(bool compressed = true)
     {
         var setup = new Setup
         {
@@ -147,7 +157,7 @@ public class RavenDB_27278(ITestOutputHelper output) : RavenTestBase(output)
         IOExtensions.DeleteDirectory(setup.BranchBPath);
 
         {
-            using var rootOptions = CreateOptions(setup.RootPath);
+            using var rootOptions = CreateOptions(setup.RootPath, compressed);
             rootOptions.InitialLogFileSize = 1024 * 1024; // single physical journal file
 
             using var root = new StorageEnvironment(rootOptions);
@@ -163,8 +173,8 @@ public class RavenDB_27278(ITestOutputHelper output) : RavenTestBase(output)
             root.Journal.BranchJournalMerger = new SharedJournalTests.MyJournalMerger(mre);
             var task = Task.Run(() =>
             {
-                var branchA = OpenBranch(setup.BranchAPath, root);
-                var branchB = OpenBranch(setup.BranchBPath, root);
+                var branchA = OpenBranch(setup.BranchAPath, root, compressed);
+                var branchB = OpenBranch(setup.BranchBPath, root, compressed);
 
                 using (var tx = branchB.WriteTransaction())
                 {
@@ -224,19 +234,24 @@ public class RavenDB_27278(ITestOutputHelper output) : RavenTestBase(output)
         return setup;
     }
 
-    private static StorageEnvironment OpenBranch(string branchPath, StorageEnvironment root)
+    private static StorageEnvironment OpenBranch(string branchPath, StorageEnvironment root, bool compressed = true)
     {
-        StorageEnvironmentOptions options = CreateOptions(branchPath);
+        StorageEnvironmentOptions options = CreateOptions(branchPath, compressed);
         options.RootJournal = root.Journal;
         return new StorageEnvironment(options);
     }
 
-    private static StorageEnvironmentOptions CreateOptions(string path)
+    private static StorageEnvironmentOptions CreateOptions(string path, bool compressed = true)
     {
         StorageEnvironmentOptions options = StorageEnvironmentOptions.ForPathForTests(path);
         options.ManualFlushing = true;
         options.ManualSyncing = true;
         options.OnRecoveryError += (_, _) => { }; // the server always subscribes this (see SharedJournalsEventsConfig)
+
+        // force the journal's compression decision: a device measured as fast stores everything below 512KB raw,
+        // so pin the device class and set the threshold to the direction the test wants
+        options.ForTestingPurposesOnly().ForceMeasuredDeviceClass = DeviceWriteBudget.DeviceClass.Unknown;
+        options.CompressTxAboveSizeInBytes = compressed ? 0 : long.MaxValue;
         return options;
     }
 
