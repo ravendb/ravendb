@@ -1,12 +1,27 @@
 import React from "react";
 import { composeStories } from "@storybook/react-webpack5";
-import { rtlRender } from "test/rtlTestUtils";
+import { rtlChangeLanguage, rtlRender } from "test/rtlTestUtils";
 import * as stories from "./DocumentRefresh.stories";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 
 const { DefaultDocumentRefresh, LicenseRestricted, InitialDocumentRefresh } = composeStories(stories);
 
 describe("DocumentRefresh", () => {
+    afterEach(async () => {
+        await rtlChangeLanguage("en");
+    });
+
+    it("renders in Polish after language change", async () => {
+        const { screen } = rtlRender(<DefaultDocumentRefresh />);
+        await screen.findByText("Enable Document Refresh");
+
+        await rtlChangeLanguage("pl");
+
+        expect(await screen.findByText("Włącz odświeżanie dokumentów")).toBeInTheDocument();
+        expect(await screen.findByRole("button", { name: /Zapisz/ })).toBeInTheDocument();
+        expect(screen.getByText("odświeżanie dokumentów", { selector: "strong" })).toBeInTheDocument();
+    });
+
     it("can render", async () => {
         const { screen } = rtlRender(<DefaultDocumentRefresh />);
 

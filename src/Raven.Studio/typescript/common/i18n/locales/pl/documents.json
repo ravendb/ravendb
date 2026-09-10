@@ -1,0 +1,27 @@
+{
+    "newDocument": "Nowy dokument",
+    "toggleDropdown": "Rozwiń menu",
+    "newDocumentInCollection": "Nowy dokument w bieżącej kolekcji",
+    "selectionLabel": "Zaznaczenie",
+    "copyIds": "Kopiuj identyfikatory",
+    "copyLimitReason": "Można skopiować maksymalnie {{limit}} dokumentów",
+    "copyDialogTitle": "Dokumenty",
+    "copyIdsDialogTitle": "Identyfikatory dokumentów",
+    "query": "Zapytanie",
+    "queryTitle": "Odpytaj bieżącą kolekcję",
+    "exportPanel": {
+        "button": "Eksportuj do pliku",
+        "title": "Eksportuj dokumenty jako CSV/JSON",
+        "format": "Format",
+        "columns": "Kolumny",
+        "allColumns": "Wszystkie",
+        "visibleColumns": "Widoczne"
+    },
+    "display": "Wyświetlanie",
+    "displayTitle_custom": "Używany jest własny układ i kolejność kolumn",
+    "displayTitle_default": "Wybierz widoczne kolumny",
+    "dataChanged": "Dane uległy zmianie. Wyniki mogą zawierać duplikaty lub nieaktualne wpisy.",
+    "emptyGrid_allDocuments": "Baza danych nie zawiera dokumentów",
+    "emptyGrid_collection": "Kolekcja jest pusta",
+    "collectionRemoved": "Kolekcja {{name}} została usunięta"
+}
