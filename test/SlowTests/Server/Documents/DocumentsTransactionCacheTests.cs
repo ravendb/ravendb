@@ -18,7 +18,7 @@ namespace SlowTests.Server.Documents
         {
         }
 
-        [RavenTheory(RavenTestCategory.Core | RavenTestCategory.Compression)]
+        [RavenMultiplatformTheory(RavenTestCategory.Core | RavenTestCategory.Compression, RavenArchitecture.X64)]
         [InlineData(true)]
         [InlineData(false)]
         public async Task TransactionCacheShouldMatchStorageAfterEveryKindOfCollectionChange(bool compressed)
