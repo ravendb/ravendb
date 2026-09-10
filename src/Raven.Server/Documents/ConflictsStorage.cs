@@ -491,7 +491,7 @@ namespace Raven.Server.Documents
 
                     //make sure that the relevant collection tree exists
 
-                    var table = GetOrOpenTable(collectionName, _documentDatabase.GetDocsSchemaForCollection(collectionName));
+                    var table = context.Transaction.GetOrOpenDocumentsTable(collectionName, _documentDatabase.GetDocsSchemaForCollection(collectionName));
                     table.Delete(existingDoc.StorageId);
                 }
                 else if (existing.Tombstone != null)
@@ -514,7 +514,7 @@ namespace Raven.Server.Documents
 
                     collectionName = _documentsStorage.GetCollection(context.Transaction.InnerTransaction, existingTombstone.Collection, throwIfDoesNotExist: true);
 
-                    var table = GetOrOpenTable(collectionName, _documentsStorage.TombstonesSchema);
+                    var table = context.Transaction.GetOrOpenTombstonesTable(collectionName, _documentsStorage.TombstonesSchema);
                     table.Delete(existingTombstone.StorageId);
 
                 }
@@ -574,9 +574,6 @@ namespace Raven.Server.Documents
                     (int)flags);
 
                 context.Transaction.AddAfterCommitNotification(collectionName.Name, id, incomingChangeVector, DocumentChangeTypes.Conflict);
-
-                Table GetOrOpenTable(CollectionName name, TableSchema schema) => 
-                    context.Transaction.GetOrOpenDocumentsTable(name, schema);
 
                 void AddToConflictsTable(string changeVector, string col, byte* data, int dataSize, long lastModified, int documentFlags)
                 {
