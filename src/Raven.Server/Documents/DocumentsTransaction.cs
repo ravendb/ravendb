@@ -76,6 +76,10 @@ namespace Raven.Server.Documents
         
         public Voron.Data.Tables.Table GetOrOpenDocumentsTable(CollectionName collection, Voron.Data.Tables.TableSchema schema)
         {
+            Debug.Assert(ReferenceEquals(schema, _context.DocumentDatabase.DocumentsStorage.DocsSchema) ||
+                         ReferenceEquals(schema, _context.DocumentDatabase.DocumentsStorage.CompressedDocsSchema),
+                $"GetOrOpenDocumentsTable was given a non-documents schema for collection '{collection.Name}'");
+
             ref CollectionTables entry = ref GetTableEntry(collection);
             ref var slot = ref (schema.Compressed ? ref entry.CompressedDocuments : ref entry.Documents);
             return slot ??= InnerTransaction.OpenTable(schema, collection.GetTableName(CollectionTableType.Documents));
