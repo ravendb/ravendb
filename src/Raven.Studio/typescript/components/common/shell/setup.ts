@@ -19,6 +19,7 @@ import { accessManagerActions } from "components/common/shell/accessManagerSlice
 import { aiAssistantActions } from "./aiAssistantSlice";
 import { chatbotActions } from "components/shell/chatbot/store/chatbotSlice";
 import router from "plugins/router";
+import { initI18n } from "common/i18n/i18n";
 
 let initialized = false;
 
@@ -234,6 +235,7 @@ function initYup() {
 }
 
 export function commonInit() {
+    initI18n();
     initRedux();
     initYup();
 }

@@ -2,6 +2,7 @@ import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import StudioEnvironment = Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment;
 import { allStudioEnvironments } from "components/common/studioConfiguration/StudioConfigurationUtils";
+import { StudioLanguage, supportedLanguages } from "common/i18n/resources";
 
 const schema = yup
     .object({
@@ -11,6 +12,10 @@ const schema = yup
         isSendUsageStats: yup.boolean(),
         tableFont: yup.string().required(),
         monospaceFont: yup.string().required(),
+        language: yup
+            .string<StudioLanguage>()
+            .oneOf([...supportedLanguages])
+            .required(),
     })
     .required();
 

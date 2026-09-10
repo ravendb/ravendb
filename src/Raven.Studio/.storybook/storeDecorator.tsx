@@ -1,13 +1,15 @@
 import { resetAllMocks } from "storybook/test";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createStoreConfiguration } from "../typescript/components/store";
 import { throttledUpdateLicenseLimitsUsage } from "../typescript/components/common/shell/setup";
 import { setEffectiveTestStore } from "../typescript/components/storeCompat";
 import { Provider } from "react-redux";
 import React from "react";
+import { i18n } from "../typescript/common/i18n/i18n";
 
 export const StoreDecorator = (Story, context) => {
     useTheme(context.globals.theme);
+    useLanguage(context.globals.language);
 
     const [store] = useState(() => {
         throttledUpdateLicenseLimitsUsage.cancel();
@@ -27,6 +29,14 @@ export const StoreDecorator = (Story, context) => {
         </Provider>
     );
 };
+
+function useLanguage(language: string) {
+    useEffect(() => {
+        if (language && i18n.language !== language) {
+            i18n.changeLanguage(language);
+        }
+    }, [language]);
+}
 
 const stylesheetPrefix = "styles/";
 

@@ -30,12 +30,16 @@ import moment from "moment";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import RichAlert from "components/common/RichAlert";
+import { useStudioTranslation } from "hooks/useStudioTranslation";
+import { StudioTrans } from "components/common/i18n/StudioTrans";
 
 const defaultItemsToProcess = 65536;
 
 export default function DocumentRefresh() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { databasesService } = useServices();
+    const { t } = useStudioTranslation("documentRefresh");
+    const { t: tCommon } = useStudioTranslation("common");
 
     const asyncGetRefreshConfiguration = useAsyncCallback<DocumentRefreshFormData>(async () =>
         mapToFormData(await databasesService.getRefreshConfiguration(databaseName))
@@ -64,6 +68,7 @@ export default function DocumentRefresh() {
     });
 
     const refreshFrequencyInHours = moment.duration(formValues.refreshFrequency, "seconds").asHours();
+    const minPeriodForRefreshInSeconds = moment.duration(minPeriodForRefreshInHours, "hours").asSeconds();
 
     const isLimitWarningVisible =
         minPeriodForRefreshInHours > 0 &&
@@ -111,7 +116,7 @@ export default function DocumentRefresh() {
                 MaxItemsToProcess: formData.isLimitMaxItemsToProcessEnabled ? formData.maxItemsToProcess : null,
             });
 
-            messagePublisher.reportSuccess("Refresh configuration saved successfully");
+            messagePublisher.reportSuccess(t("saveSuccess"));
             activeDatabaseTracker.default.database().hasRefreshConfiguration(formData.isDocumentRefreshEnabled);
 
             reset(formData);
@@ -123,7 +128,7 @@ export default function DocumentRefresh() {
     }
 
     if (asyncGetRefreshConfiguration.status === "error") {
-        return <LoadError error="Unable to load document refresh" refresh={asyncGetRefreshConfiguration.execute} />;
+        return <LoadError error={t("loadError")} refresh={asyncGetRefreshConfiguration.execute} />;
     }
 
     return (
@@ -132,7 +137,7 @@ export default function DocumentRefresh() {
                 <Row className="gy-sm">
                     <Col>
                         <Form onSubmit={handleSubmit(onSave)} autoComplete="off">
-                            <AboutViewHeading title="Document Refresh" icon="expos-refresh" />
+                            <AboutViewHeading title={t("title")} icon="expos-refresh" />
                             <ButtonWithSpinner
                                 type="submit"
                                 variant="primary"
@@ -141,7 +146,7 @@ export default function DocumentRefresh() {
                                 disabled={!formState.isDirty || isLimitWarningVisible}
                                 isSpinning={formState.isSubmitting}
                             >
-                                Save
+                                {tCommon("save")}
                             </ButtonWithSpinner>
                             <Col>
                                 <Card>
@@ -152,7 +157,7 @@ export default function DocumentRefresh() {
                                                 control={control}
                                                 disabled={formState.isSubmitting}
                                             >
-                                                Enable Document Refresh
+                                                {t("enableSwitch")}
                                             </FormSwitch>
                                             <div>
                                                 <FormSwitch
@@ -163,7 +168,7 @@ export default function DocumentRefresh() {
                                                         formState.isSubmitting || !formValues.isDocumentRefreshEnabled
                                                     }
                                                 >
-                                                    Set custom refresh frequency
+                                                    {t("customFrequencySwitch")}
                                                 </FormSwitch>
                                                 <FormInput
                                                     name="refreshFrequency"
@@ -172,23 +177,20 @@ export default function DocumentRefresh() {
                                                     disabled={
                                                         formState.isSubmitting || !formValues.isRefreshFrequencyEnabled
                                                     }
-                                                    placeholder={
-                                                        minPeriodForRefreshInHours > 0
-                                                            ? `Default (${moment
-                                                                  .duration(minPeriodForRefreshInHours, "hours")
-                                                                  .asSeconds()})`
-                                                            : "Default (60)"
-                                                    }
-                                                    addon="seconds"
+                                                    placeholder={t("frequencyPlaceholder", {
+                                                        seconds:
+                                                            minPeriodForRefreshInHours > 0
+                                                                ? minPeriodForRefreshInSeconds
+                                                                : 60,
+                                                    })}
+                                                    addon={t("secondsAddon")}
                                                 />
                                                 {isLimitWarningVisible && (
                                                     <RichAlert variant="warning" className="mt-3">
-                                                        Your current license does not allow a frequency higher than{" "}
-                                                        {minPeriodForRefreshInHours} hours (
-                                                        {moment
-                                                            .duration(minPeriodForRefreshInHours, "hours")
-                                                            .asSeconds()}{" "}
-                                                        seconds)
+                                                        {t("limitWarning", {
+                                                            hours: minPeriodForRefreshInHours,
+                                                            seconds: minPeriodForRefreshInSeconds,
+                                                        })}
                                                     </RichAlert>
                                                 )}
                                             </div>
@@ -201,7 +203,7 @@ export default function DocumentRefresh() {
                                                         formState.isSubmitting || !formValues.isDocumentRefreshEnabled
                                                     }
                                                 >
-                                                    Set max number of documents to process in a single run
+                                                    {t("maxItemsSwitch")}
                                                 </FormSwitch>
                                                 <FormInput
                                                     name="maxItemsToProcess"
@@ -211,7 +213,7 @@ export default function DocumentRefresh() {
                                                         formState.isSubmitting ||
                                                         !formValues.isLimitMaxItemsToProcessEnabled
                                                     }
-                                                    addon="items"
+                                                    addon={t("itemsAddon")}
                                                 />
                                             </div>
                                         </div>
@@ -224,29 +226,35 @@ export default function DocumentRefresh() {
                         <AboutViewAnchored>
                             <AccordionItemWrapper targetId="1" icon="about" color="info">
                                 <p>
-                                    When <strong>Document Refresh</strong> is enabled:
+                                    <StudioTrans
+                                        ns="documentRefresh"
+                                        i18nKey="about.intro"
+                                        components={{ strong: <strong /> }}
+                                    />
                                 </p>
                                 <ul>
                                     <li>
-                                        The server scans the database at the specified <strong>frequency</strong>,
-                                        searching for documents that should be refreshed.
+                                        <StudioTrans
+                                            ns="documentRefresh"
+                                            i18nKey="about.scanItem"
+                                            components={{ strong: <strong /> }}
+                                        />
                                     </li>
                                     <li>
-                                        Any document that has a <code>@refresh</code> metadata property whose time has
-                                        passed at the time of the scan will be modified by removing this property.
+                                        <StudioTrans
+                                            ns="documentRefresh"
+                                            i18nKey="about.metadataItem"
+                                            components={{ code: <code /> }}
+                                        />
                                     </li>
-                                    <li>
-                                        This modification will trigger any processes related to the document, such as:
-                                        re-indexing or taking part in an ongoing-task (e.g. Replication, ETL,
-                                        Subscriptions, etc.), as defined by your configuration.
-                                    </li>
+                                    <li>{t("about.triggerItem")}</li>
                                 </ul>
-                                <p>Example of a document scheduled for refresh:</p>
+                                <p>{t("about.exampleLabel")}</p>
                                 <Code code={codeExample} language="javascript" />
                                 <hr />
-                                <div className="small-label mb-2">useful links</div>
+                                <div className="small-label mb-2">{tCommon("usefulLinks")}</div>
                                 <a href={documentRefreshDocsLink} target="_blank">
-                                    <Icon icon="newtab" /> Docs - Document Refresh
+                                    <Icon icon="newtab" /> {t("about.docsLink")}
                                 </a>
                             </AccordionItemWrapper>
                             <FeatureAvailabilitySummaryWrapper
