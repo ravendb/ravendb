@@ -24,7 +24,7 @@ namespace SlowTests.Server.Documents.AI.Embeddings;
 
 public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGenerationTestBase(output)
 {
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task CanSingleDocumentHaveTwoEmbeddings()
     {
         using var store = GetDocumentStore();
@@ -76,7 +76,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
         AssertMissingEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Names", ["Name3"], id);
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task DocumentsWithSingleValue()
     {
         using (var store = GetDocumentStore())
@@ -99,7 +99,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
         }
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task DocumentsWithListOfValues()
     {
         using (var store = GetDocumentStore())
@@ -123,7 +123,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
         }
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task DocumentsWithNestedPropertyPath()
     {
         using (var store = GetDocumentStore())
@@ -149,7 +149,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
         }
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task DocumentsWithNestedArrayPropertyPath()
     {
         using (var store = GetDocumentStore())
@@ -175,7 +175,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
         }
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task EmbeddingsMustBeGeneratedOnlyOnceInDifferentBatches()
     {
         using (var store = GetDocumentStore())
@@ -229,7 +229,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
         }
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task UpdateOfDocumentsWithSingleValue()
     {
         using (var store = GetDocumentStore())
@@ -268,7 +268,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
         }
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task HandlingOfNonStringValues()
     {
         using (var store = GetDocumentStore())
@@ -292,7 +292,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
         }
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task FieldsToIncludeMustBeRespected()
     {
         using (var store = GetDocumentStore())
@@ -322,7 +322,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
         }
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task ModificationOfNonProcessedFieldsWillTriggerTaskButWontGenerateEmbeddings()
     {
         using (var store = GetDocumentStore())
@@ -386,7 +386,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
         }
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task DefaultBatchSizeMustBeRespected()
     {
         using (var store = GetDocumentStore())
@@ -416,7 +416,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
         }
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task CustomBatchSizeMustBeRespected()
     {
         const int batchSize = 4;
@@ -454,7 +454,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
         }
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task HandlingOfDocumentDeletions()
     {
         var dto1 = new Dto { Name = "Name1" };
@@ -497,7 +497,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
         }
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task WillSetExpirationOnCacheDocuments()
     {
         var dto = new Dto { Name = "Name1" };
@@ -532,7 +532,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
         }
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task WillUpdateExpirationOnCacheDocuments()
     {
         var dto = new Dto { Id = "dtos/1", Name = "Name1" };
@@ -599,7 +599,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
         }
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task SimpleJsTransformation()
     {
         const string aiIntegrationName = "local-Onnx-AI";
@@ -633,7 +633,7 @@ embeddings.generate(
         }
     }
     
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task NestedJsTransformation()
     {
         const string aiIntegrationName = "local-Onnx-AI";
@@ -665,7 +665,7 @@ embeddings.generate(
         }
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task HashingOfTextShouldBeCaseInsensitiveAndTrimWhitespaces()
     {
         var dto = new Dto() { Name = "\n UPPERCASEVALUE\n\r " };
@@ -693,7 +693,7 @@ embeddings.generate(
 
     private record Test(string Id, DateTime? Expires);
 
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task TextChunkingInScript()
     {
         const string plainTextToChunk =
@@ -724,7 +724,7 @@ embeddings.generate(
         }
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public void ChunkPlainTextShouldWork()
     {
         const string plainTextToChunk = "this is a relatively long text that should produce multiple chunks because of the chunking configuration (max tokens per chunk)";
@@ -735,7 +735,7 @@ embeddings.generate(
         Assert.Equal(expectedChunks, chunks);
     }
     
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public void PlainTextSplitLinesShouldWork()
     {
         const string plainTextToChunk = "This is a relatively - long text\n that should produce multiple chunks\n\r because of the chunking configuration; (max tokens per chunk). It also contains, separators in random places.";
@@ -746,7 +746,7 @@ embeddings.generate(
         Assert.Equal(expectedChunks, chunks);
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task MarkdownChunkingInScript()
     {
         const string markdownTextToChunk =
@@ -801,7 +801,7 @@ Console.WriteLine(""Hello, World!"");";
         }
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task CanUseHtmlChunkingInScript()
     {
         const string htmlTextToChunk =
@@ -849,7 +849,7 @@ Console.WriteLine(""Hello, World!"");";
         }
     }
     
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task CanUseHtmlChunkingInPaths()
     {
         const string htmlTextToChunk =
@@ -903,7 +903,7 @@ Console.WriteLine(""Hello, World!"");";
         }
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task TransformationWithArrayFieldOutput()
     {
         var dto = new Dto { Name = "CoolName" };
@@ -929,7 +929,7 @@ Console.WriteLine(""Hello, World!"");";
         }
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Ai | RavenTestCategory.Vector | RavenTestCategory.Etl, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai | RavenTestCategory.Vector | RavenTestCategory.Etl)]
     public async Task QuantizationOfEmbeddingsInTwoTasks()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
@@ -962,7 +962,7 @@ Console.WriteLine(""Hello, World!"");";
         AssertEmbeddingsForPath(store, configuration2, connectionString2, "Names", ["CoolName"], id);
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task QuantizationOfEmbeddingsInTask()
     {
         var dto = new Dto { Name = "CoolName" };
@@ -1009,7 +1009,7 @@ Console.WriteLine(""Hello, World!"");";
         }
     }
 
-    [RavenMultiplatformTheory(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenTheory(RavenTestCategory.Ai)]
     [InlineData(VectorEmbeddingType.Int8)]
     [InlineData(VectorEmbeddingType.Binary)]
     [InlineData(VectorEmbeddingType.Single)]
@@ -1107,7 +1107,7 @@ Console.WriteLine(""Hello, World!"");";
         }
     }
     
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task CollisionOfTwoEmbeddingsInSingleTask()
     {
         using var store = GetDocumentStore();
@@ -1145,7 +1145,7 @@ Console.WriteLine(""Hello, World!"");";
         AssertEmbeddingsForPath(store, config, connection, "Names", ["Name1"], id);
     }
     
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task CollisionOfTwoEmbeddingsInTwoTasks()
     {
         using var store = GetDocumentStore();
@@ -1193,7 +1193,7 @@ Console.WriteLine(""Hello, World!"");";
         AssertEmbeddingsForPath(store, config2, connection2, "Names", ["Name1"], id);
     }
     
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task CanUseProjectedFieldNameForQuery()
     {
         const string plainTextToChunk = "some text that should produce a single chunk";
