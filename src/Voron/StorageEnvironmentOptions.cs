@@ -1975,6 +1975,8 @@ namespace Voron
         {
             internal Action<long> BeforeLinkFiles;
 
+            internal DeviceWriteBudget.DeviceClass? ForceMeasuredDeviceClass;
+
             internal bool SimulateCannotLinkJournals;
 
             internal Func<long, PartialJournalWriteFailure> SimulatePartialJournalWriteFailure;
