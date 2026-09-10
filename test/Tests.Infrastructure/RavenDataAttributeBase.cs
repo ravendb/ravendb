@@ -9,6 +9,7 @@ public abstract class RavenDataAttributeBase : DataAttribute
 
     internal static readonly bool Is32Bit = RuntimeInformation.ProcessArchitecture == Architecture.X86;
     internal const string ShardingSkipMessage = "RavenDB-19879: Skip Sharded database tests on x86 architecture.";
+    internal const string AiSkipMessage = "RavenDB-27513: Skip AI tests on x86 architecture.";
 
     protected string GetSkipReason(RavenDatabaseMode databaseMode) => GetSkipReason(databaseMode, Skip);
 
