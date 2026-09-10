@@ -73,7 +73,7 @@ public class RavenDB_24407 : RavenTestBase
         public string[] Tags { get; set; }
     }
 
-    [RavenMultiplatformTheory(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenRetryTheory(RavenTestCategory.Ai, maxRetries: 3, delayBetweenRetriesMs: 10_000)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = [true, false])]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = [false, true], Skip = "RavenDB-24806")]

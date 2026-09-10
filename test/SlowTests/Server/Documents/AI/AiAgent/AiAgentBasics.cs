@@ -185,7 +185,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             Assert.NotNull(chat.Id);
         }
 
-        [RavenMultiplatformTheory(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+        [RavenRetryTheory(RavenTestCategory.Ai, maxRetries: 3, delayBetweenRetriesMs: 10_000)]
         [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Google | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task CanRunTest(Options options, GenAiConfiguration config)
         {
