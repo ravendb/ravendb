@@ -940,6 +940,10 @@ public class ChatCompletionClient : IDisposable
             catch (Exception)
             {
                 var rawBody = Encoding.UTF8.GetString(ms.GetBuffer(), 0, contentLength);
+
+                if (response.IsSuccessStatusCode == false)
+                    UnsuccessfulAiRequestException.Throw(rawBody, response.StatusCode, GetRequestId(response.Headers));
+
                 throw UnexpectedResponseException.Create(message: "Received an unrecognized response from the server", response, rawBody);
             }
         }
