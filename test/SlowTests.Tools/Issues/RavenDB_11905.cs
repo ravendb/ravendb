@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
+using Raven.Server.Documents;
 using Sparrow.Logging;
 using Tests.Infrastructure;
 using Voron.Recovery;
@@ -24,13 +25,21 @@ namespace SlowTests.Tools.Issues
             var dbPath = NewDataPath();
             var recoveryExportPath = NewDataPath();
 
-            using (GetDocumentStore(new Options()
+            DocumentDatabase database;
+
+            using (var store = GetDocumentStore(new Options()
             {
                 Path = dbPath
             }))
             {
-
+                database = await GetDatabase(store.Database);
             }
+
+            // disposing the store deletes the database, but on a single node that does not wait for this node
+            // to release it - the recovery below opens the very same directory, and on Windows it cannot delete
+            // the leftover temp files while the environment still has them mapped
+            Assert.True(await database.DatabaseShutdownCompleted.WaitAsync(TimeSpan.FromMinutes(1)),
+                $"'{database.Name}' was not unloaded, the recovery would run against a directory that is still in use");
 
             using (var recovery = new Recovery(new VoronRecoveryConfiguration()
             {

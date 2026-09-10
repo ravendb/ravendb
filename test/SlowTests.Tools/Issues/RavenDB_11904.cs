@@ -7,6 +7,7 @@ using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents;
 using Sparrow.Logging;
 using Tests.Infrastructure;
 using Voron.Recovery;
@@ -38,6 +39,7 @@ namespace SlowTests.Tools.Issues
             var recoveryExportPath = NewDataPath(prefix: Guid.NewGuid().ToString());
 
             DatabaseStatistics databaseStatistics;
+            DocumentDatabase database;
 
             // create db with sample data
             using (var store = GetDocumentStore(new Options()
@@ -59,7 +61,14 @@ namespace SlowTests.Tools.Issues
                 await Samples.CreateLegacyNorthwindDatabaseAsync(store);
 
                 databaseStatistics = store.Maintenance.Send(new GetStatisticsOperation());
+                database = await GetDatabase(store.Database);
             }
+
+            // disposing the store deletes the database, but on a single node that does not wait for this node
+            // to release it - everything below reads and reopens that very same directory, and the shutdown is
+            // still free to move journals around until it completes
+            Assert.True(await database.DatabaseShutdownCompleted.WaitAsync(TimeSpan.FromMinutes(1)),
+                $"'{database.Name}' was not unloaded, the recovery would run against a directory that is still in use");
 
             var journals = new DirectoryInfo(Path.Combine(dbPath, "Journals")).GetFiles();
 
