@@ -1106,6 +1106,10 @@ type TombstonesStateOnWire = Omit<Raven.Server.Documents.TombstoneCleaner.Tombst
 // Server ToJson() method converts the version object to a string
 type LicenseStatus = Omit<Raven.Server.Commercial.LicenseStatus, "Version"> & { Version: string };
 
+type UserDomainsAndLicenseInfo = Omit<Raven.Server.Commercial.UserDomainsAndLicenseInfo, "LicenseStatus"> & {
+    LicenseStatus: LicenseStatus;
+};
+
 
 type SqlConnectionStringFactoryName =
     | "Microsoft.Data.SqlClient"

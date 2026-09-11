@@ -91,7 +91,7 @@
         "vite": "^8.1.5",
         "vite-plugin-singlefile": "^2.3.3",
         "vite-plugin-svgr": "^5.2.0",
-        "vitest": "^4.1.10"
+        "vitest": "^4.1.11"
     },
     "msw": {
         "workerDirectory": [

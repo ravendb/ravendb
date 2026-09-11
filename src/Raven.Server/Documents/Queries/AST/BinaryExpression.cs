@@ -21,8 +21,6 @@ namespace Raven.Server.Documents.Queries.AST
         {
             OperatorType.GreaterThan => true,
             OperatorType.GreaterThanEqual => true,
-            OperatorType.LessThan => true,
-            OperatorType.LessThanEqual => true,
             _ => false,
         };
 

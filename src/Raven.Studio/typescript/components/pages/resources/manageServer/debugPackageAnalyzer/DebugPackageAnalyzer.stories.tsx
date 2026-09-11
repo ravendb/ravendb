@@ -109,6 +109,7 @@ interface SectionToggles {
     showOngoingTasks: boolean;
     showRaftDebug: boolean;
     showObserverDecisions: boolean;
+    nodeCUnreachable: boolean;
     // Node scope
     showNetworkInfo: boolean;
     showThreadsInfo: boolean;
@@ -132,6 +133,7 @@ const defaultSectionArgs: SectionToggles = {
     showOngoingTasks: true,
     showRaftDebug: true,
     showObserverDecisions: true,
+    nodeCUnreachable: false,
     showNetworkInfo: true,
     showThreadsInfo: true,
     showDatabaseStats: true,
@@ -169,6 +171,7 @@ const sectionArgTypes = {
     showOngoingTasks: { name: "Ongoing tasks (summary)", control: "boolean", table: { category: clusterSections } },
     showRaftDebug: { name: "Raft debug", control: "boolean", table: { category: clusterSections } },
     showObserverDecisions: { name: "Observer decisions", control: "boolean", table: { category: clusterSections } },
+    nodeCUnreachable: { name: "Node C unreachable", control: "boolean", table: { category: clusterSections } },
     showNetworkInfo: { name: "Network info", control: "boolean", table: { category: nodeSections } },
     showThreadsInfo: { name: "Threads info", control: "boolean", table: { category: nodeSections } },
     showDatabaseStats: { name: "Database stats", control: "boolean", table: { category: databaseSections } },
@@ -198,7 +201,7 @@ function renderAnalyzer(nodeTags: string[], args: SectionToggles) {
         indexingPerNode: !args.showIndexingPerNode,
         ongoingTasks: !args.showOngoingTasks,
     };
-    const summary = DebugPackageStubs.storySummary(nodeTags, omit);
+    const summary = DebugPackageStubs.storySummary(nodeTags, omit, args.nodeCUnreachable ? ["C"] : []);
 
     // The async sections fetch from manageServerService; configure each mock to resolve either a
     // filled stub or its empty value based on the matching control (off = empty).

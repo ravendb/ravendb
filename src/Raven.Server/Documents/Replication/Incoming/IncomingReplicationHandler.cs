@@ -427,12 +427,16 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 }
 
                                 var nonPersistentFlags = GetNonPersistentDocumentFlags();
-                                if (doc.Flags.Contain(DocumentFlags.Revision))
+                                if (doc.Flags.Contain(DocumentFlags.DeleteRevision))
                                 {
-                                    database.DocumentsStorage.RevisionsStorage.Put(
+                                    var collection = doc.Collection != null ?
+                                        new CollectionName(doc.Collection) :
+                                        database.DocumentsStorage.ExtractCollectionName(context, document);
+
+                                    database.DocumentsStorage.RevisionsStorage.Delete(
                                         context,
                                         doc.Id,
-                                        document,
+                                        collection,
                                         doc.Flags,
                                         nonPersistentFlags,
                                         incomingChangeVector,
@@ -440,16 +444,12 @@ namespace Raven.Server.Documents.Replication.Incoming
                                     continue;
                                 }
 
-                                if (doc.Flags.Contain(DocumentFlags.DeleteRevision))
+                                if (doc.Flags.Contain(DocumentFlags.Revision))
                                 {
-                                    var collection = doc.Collection != null ? 
-                                        new CollectionName(doc.Collection) : 
-                                        database.DocumentsStorage.ExtractCollectionName(context, document);
-
-                                    database.DocumentsStorage.RevisionsStorage.Delete(
+                                    database.DocumentsStorage.RevisionsStorage.Put(
                                         context,
                                         doc.Id,
-                                        collection,
+                                        document,
                                         doc.Flags,
                                         nonPersistentFlags,
                                         incomingChangeVector,

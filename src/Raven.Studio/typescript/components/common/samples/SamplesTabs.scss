@@ -1,13 +1,13 @@
 @use "Content/scss/sizes";
 @use "Content/scss/colors";
 
-.sample-queries-tabs {
+.samples-tabs {
     &.card {
         border-radius: sizes.$border-radius;
         overflow: hidden;
     }
 
-    .sample-queries-nav {
+    .samples-nav {
         display: flex;
         flex-wrap: wrap;
         align-items: center;
@@ -17,6 +17,13 @@
         &::after {
             display: none;
         }
+    }
+
+    .samples-close {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        align-self: stretch;
     }
 
     .nav-item {
@@ -92,51 +99,7 @@
     }
 }
 
-.patch-ace-editor-wrapper {
-    position: relative;
-}
-
-.patch-ace-placeholder {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    display: flex;
-    align-items: flex-start;
-    // gutter 42px + 1px border + 4px ace line padding = 47px to align with first char
-    padding-top: 2px;
-    padding-left: 47px;
-
-    &__text {
-        font-family: var(--monospace-font, var(--bs-font-monospace));
-        font-size: 14px;
-        color: var(--token-boolean);
-        opacity: 0.6;
-        white-space: pre;
-        line-height: 26px;
-    }
-
-    &__link {
-        pointer-events: auto;
-        background: none;
-        border: none;
-        padding: 0;
-        font-family: inherit;
-        font-size: inherit;
-        line-height: inherit;
-        color: var(--token-keyword);
-        opacity: 0.8;
-        cursor: pointer;
-        text-decoration: none;
-        font-weight: bold;
-
-        &:hover {
-            text-decoration: underline;
-            opacity: 1;
-        }
-    }
-}
-
-.patch-samples-panel {
+.ace-samples-panel {
     margin-top: sizes.$gutter-xxxs;
     border-radius: sizes.$border-radius;
 

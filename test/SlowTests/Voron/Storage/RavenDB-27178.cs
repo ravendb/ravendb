@@ -14,7 +14,7 @@ namespace SlowTests.Voron.Storage
         {
         }
 
-        [RavenFact(RavenTestCategory.Voron)]
+        [RavenMultiplatformFact(RavenTestCategory.Voron, RavenArchitecture.X64)]
         public void AsyncCommitTransactionInheritsClientStateFromCommittingTransaction()
         {
             // DocumentsStorage stores its per-commit cache in the transaction's client state during
