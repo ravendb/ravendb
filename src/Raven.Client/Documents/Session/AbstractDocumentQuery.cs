@@ -589,10 +589,20 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// <returns></returns>
         public void OpenSubclause()
         {
+            OpenSubclause(isSearchStatement: false);
+        }
+
+        void IAbstractDocumentQueryAccessor.OpenSubclause(bool isSearchStatement)
+        {
+            OpenSubclause(isSearchStatement);
+        }
+
+        private void OpenSubclause(bool isSearchStatement)
+        {
             _currentClauseDepth++;
 
             var tokens = GetCurrentWhereTokens();
-            AppendOperatorIfNeeded(tokens);
+            AppendOperatorIfNeeded(tokens, isSearchStatement);
             NegateIfNeeded(tokens, null);
 
             tokens.AddLast(OpenSubclauseToken.Create());
@@ -1336,7 +1346,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             AssertMethodIsCurrentlySupported(nameof(Search));
 
             var tokens = GetCurrentWhereTokens();
-            AppendOperatorIfNeeded(tokens);
+            AppendOperatorIfNeeded(tokens, isSearchStatement: true);
 
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
             NegateIfNeeded(tokens, fieldName);
@@ -1808,7 +1818,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             }
         }
 
-        private void AppendOperatorIfNeeded(LinkedList<QueryToken> tokens)
+        private void AppendOperatorIfNeeded(LinkedList<QueryToken> tokens, bool isSearchStatement = false)
         {
             AssertNoRawQuery();
 
@@ -1841,8 +1851,9 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
             var token = GetDefaultOperatorToken();
 
-            if (lastWhere.Options?.SearchOperator != null)
-                token = QueryOperatorToken.Or; // default to OR operator after search if AND was not specified explicitly
+            // consecutive search statements are alternatives; anything else joins with the default operator
+            if (isSearchStatement && lastWhere.Options?.SearchOperator != null)
+                token = QueryOperatorToken.Or;
 
             tokens.AddLast(token);
             return;

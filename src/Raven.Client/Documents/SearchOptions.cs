@@ -19,8 +19,8 @@ namespace Raven.Client.Documents
         /// </summary>
         Not = 4,
         /// <summary>
-        /// RavenDB will attempt to match up semantics between search statements in the following manner: 
-        /// An AND operator will be used between a non-search statement and the immediate search statement that follows.
+        /// RavenDB will attempt to match up semantics between search statements in the following manner:
+        /// An AND operator will be used between a non-search statement and the immediate search statement that follows, and between a search statement and the clause that follows it.
         /// An OR operator will be used between consecutive searches.
         /// </summary>
         Guess = 8

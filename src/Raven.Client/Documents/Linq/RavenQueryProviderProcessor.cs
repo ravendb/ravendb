@@ -1828,10 +1828,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             VisitExpression(target);
             _insideWhereOrSearchCounter--;
 
-            if (expressions.Count > 1)
-            {
-                DocumentQuery.OpenSubclause();
-            }
+            var first = true;
 
             foreach (var expression in Enumerable.Reverse(expressions))
             {
@@ -1859,11 +1856,16 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                 var @operator = (SearchOperator)value;
 
+                // And overrides the OR consecutive search statements get by default; Or names that default, so it adds nothing.
+                // Nothing to join after Intersect(), which resets _chainedWhere.
                 if (_chainedWhere && options.HasFlag(SearchOptions.And))
-                {
                     DocumentQuery.AndAlso();
-                }
-                
+
+                // A group of searches is one statement, joined to what precedes it by its first member.
+                if (first && expressions.Count > 1)
+                    ((IAbstractDocumentQueryAccessor)DocumentQuery).OpenSubclause(isSearchStatement: true);
+                first = false;
+
                 if (options.HasFlag(SearchOptions.Not))
                 {
                     if (options.HasFlag(SearchOptions.And) && IsPreviousSearchOnSameField(target, expression))
@@ -1881,11 +1883,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 }
 
                 DocumentQuery.Boost(boost);
-
-                if (options.HasFlag(SearchOptions.And))
-                {
-                    _chainedWhere = true;
-                }
             }
 
             if (expressions.Count > 1)
@@ -1893,19 +1890,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 DocumentQuery.CloseSubclause();
             }
 
-            if (LinqPathProvider.GetValueFromExpressionWithoutConversion(searchExpression.Arguments[4], out value) == false)
-            {
-                throw new InvalidOperationException("Could not extract value from " + searchExpression);
-            }
+            // whatever the flags said about the previous clause, the next one joins this statement with AND
+            _chainedWhere = true;
 
-            if (((SearchOptions)value).HasFlag(SearchOptions.Guess))
-                _chainedWhere = true;
-            
             return;
 
             void WhereExistsAndNegatedSearch(ExpressionInfo expressionInfo, string searchTerms, SearchOperator @operator)
             {
-                DocumentQuery.OpenSubclause();
+                ((IAbstractDocumentQueryAccessor)DocumentQuery).OpenSubclause(isSearchStatement: true);
                 DocumentQuery.WhereExists(expressionInfo.Path);
                 DocumentQuery.AndAlso();
                 DocumentQuery.NegateNext();
