@@ -39,7 +39,7 @@ function suggestionFailureMessage(failureStatus: string | null) {
         case "InvalidCredentials":
             return AI_LICENSE_UNAVAILABLE_MESSAGE;
         case "OutOfTokens":
-            return "The AI service has used up its quota for now. Try again later, describe your own agent below, or set one up manually.";
+            return "The AI service has used up its quota for now. Try again later, or set the agent up manually.";
         default:
             return "AI could not suggest agents from your data. Describe your own below, or set one up manually.";
     }
