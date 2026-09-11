@@ -24,6 +24,16 @@ if ! (test -f "${MS_DEB_NAME}" \
 fi
 
 dpkg -i $MS_DEB_NAME
+
+# Microsoft's feed carries no .NET 8 runtime for Ubuntu 26.04 and later - it ships only 10.0 - so
+# the dependency lookup further down cannot resolve there and the build aborts. ppa:dotnet/backports
+# does serve 8.0 for those releases (this is the same PPA the v7.2 branch uses for every release).
+# Added only for 26.04+, so dependency resolution on the older releases, which works against
+# Microsoft's feed today, is left exactly as it was.
+if [[ $release -ge 26 ]]; then
+    add-apt-repository ppa:dotnet/backports -y
+fi
+
 apt update
 
 DOWNLOAD_URL=${DOWNLOAD_URL:-"https://daily-builds.s3.amazonaws.com/RavenDB-${RAVENDB_VERSION}-${RAVEN_PLATFORM}.tar.bz2"}
@@ -61,7 +71,7 @@ else
 fi
 
 
-export DEB_DEPS="${DOTNET_RUNTIME_DEPS}, libc6-dev (>= 2.27)"
+export DEB_DEPS="${DOTNET_RUNTIME_DEPS}, libc6-dev (>= 2.27), adduser"
 
 echo ".NET Runtime: $DOTNET_FULL_VERSION"
 echo "Package dependencies: $DEB_DEPS"

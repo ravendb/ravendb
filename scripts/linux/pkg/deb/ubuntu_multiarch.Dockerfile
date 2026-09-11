@@ -11,7 +11,7 @@ ARG DISTRO_VERSION
 
 RUN apt update \ 
     && apt-get -y dist-upgrade \
-    && apt install -y curl wget apt-transport-https 
+    && apt install -y curl wget apt-transport-https software-properties-common
 
 RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y dos2unix devscripts dh-make wget gettext-base lintian curl debhelper
 
