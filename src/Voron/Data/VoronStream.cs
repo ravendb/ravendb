@@ -113,6 +113,9 @@ namespace Voron.Data
             UpdateLastPageIfNeeded(chunk.PageNumber);
 
             var pos = _position - _chunksOffsets[_index];
+            if (pos < 0 || pos >= chunk.ChunkSize)
+                ThrowReadOutOfChunkBounds(pos, 1, chunk.ChunkSize);
+
             _position++; //move ptr
             return LastPage.DataPointer[pos];
         }
@@ -144,6 +147,10 @@ namespace Voron.Data
             UpdateLastPageIfNeeded(chunk.PageNumber);
 
             var pos = _position - _chunksOffsets[_index];
+            // fail here rather than let a bad offset turn into an out-of-bounds native read (AVE)
+            if (pos < 0 || pos + count > chunk.ChunkSize)
+                ThrowReadOutOfChunkBounds(pos, count, chunk.ChunkSize);
+
             fixed (byte* dst = buffer)
             {
                 Memory.Copy(dst + offset, LastPage.DataPointer + pos, count);
@@ -207,6 +214,13 @@ namespace Voron.Data
         public override void Write(byte[] buffer, int offset, int count)
         {
             throw new NotSupportedException("The method or operation is not supported by VoronStream.");
+        }
+
+        [DoesNotReturn]
+        private void ThrowReadOutOfChunkBounds(long pos, int count, int chunkSize)
+        {
+            throw new InvalidOperationException(
+                $"Attempted to read {count} byte(s) at offset {pos} of chunk {_index} of stream '{Name}', but that chunk holds {chunkSize} bytes. Stream position: {_position}, length: {Length}.");
         }
 
         [DoesNotReturn]
