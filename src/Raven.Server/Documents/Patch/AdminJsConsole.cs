@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Cli;
@@ -11,20 +12,35 @@ namespace Raven.Server.Documents.Patch
     public sealed class AdminJsConsole
     {
         private readonly DocumentDatabase _database;
+        private readonly ShardedDatabaseContext _databaseContext;
         public readonly RavenLogger Log = RavenLogManager.Instance.GetLoggerForServer<AdminJsConsole>();
         private readonly RavenServer _server;
 
-        public AdminJsConsole(RavenServer server, DocumentDatabase database)
+        private readonly string _targetDescription;
+
+        public AdminJsConsole(RavenServer server, DocumentDatabase database) : this(server, database, null)
+        {
+        }
+
+        public AdminJsConsole(RavenServer server, ShardedDatabaseContext databaseContext) : this(server, null, databaseContext)
+        {
+        }
+
+        private AdminJsConsole(RavenServer server, DocumentDatabase database, ShardedDatabaseContext databaseContext)
         {
             _server = server;
             _database = database;
+            _databaseContext = databaseContext;
+            if (database != null)
+                _targetDescription = $"database script for \"{database.Name}\"";
+            else if (databaseContext != null)
+                _targetDescription = $"orchestrator script for \"{databaseContext.DatabaseName}\"";
+            else
+                _targetDescription = "server script";
+
             if (Log.IsWarnEnabled)
             {
-                if (database != null)
-                    Log.Warn($"AdminJSConsole : Preparing to execute database script for \"{database.Name}\"");
-                else
-                    Log.Warn("AdminJSConsole : Preparing to execute server script");
-
+                Log.Warn($"AdminJSConsole : Preparing to execute {_targetDescription}");
             }
         }
 
@@ -38,12 +54,12 @@ namespace Raven.Server.Documents.Patch
 
             try
             {
-                DocumentsOperationContext databaseCtx = null;
+                DocumentsOperationContext docsCtx = null;
                 using (_server.AdminScripts.GetScriptRunner(new AdminJsScriptKey(script.Script), false, out var run))
                 using (_server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverCtx))
                 using (_server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext clusterCtx))
-                using (_database?.DocumentsStorage.ContextPool.AllocateOperationContext(out databaseCtx))
-                using (var result = run.Run(serverCtx, databaseCtx, "execute", new object[] { _server, _database, serverCtx, clusterCtx, databaseCtx }))
+                using (_database?.DocumentsStorage.ContextPool.AllocateOperationContext(out docsCtx))
+                using (var result = run.Run(serverCtx, docsCtx, "execute", new object[] { _server, _database, serverCtx, clusterCtx, docsCtx, _databaseContext }))
                 {
                     var toJson = RavenCli.ConvertResultToString(result);
 
@@ -54,7 +70,7 @@ namespace Raven.Server.Documents.Patch
 
                     if (Log.IsWarnEnabled)
                     {
-                        Log.Warn($"Finished executing database script. Total time: {sw.Elapsed} ");
+                        Log.Warn($"Finished executing {_targetDescription}. Total time: {sw.Elapsed} ");
                     }
 
                     return toJson;
@@ -104,11 +120,13 @@ namespace Raven.Server.Documents.Patch
 
         public override void GenerateScript(ScriptRunner runner)
         {
-            runner.AddScript($@"function execute(server, database, serverCtx, clusterCtx, databaseCtx){{ 
+            runner.AddScript($$"""
+                               function execute(server, database, serverCtx, clusterCtx, databaseCtx, orchestratorCtx){
 
-{_script}
+                               {{_script}}
 
-}};");
+                               };
+                               """);
         }
 
         private bool Equals(AdminJsScriptKey other)

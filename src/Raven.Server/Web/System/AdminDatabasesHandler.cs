@@ -1072,7 +1072,7 @@ namespace Raven.Server.Web.System
 
                 if (isServerScript)
                 {
-                    var console = new AdminJsConsole(Server, null);
+                    var console = new AdminJsConsole(Server, database: null);
                     if (console.Log.IsWarnEnabled)
                     {
                         console.Log.Warn($"The certificate that was used to initiate the operation: {clientCert ?? "None"}");
@@ -1084,14 +1084,8 @@ namespace Raven.Server.Web.System
                 }
                 else if (string.IsNullOrWhiteSpace(name) == false)
                 {
-                    //database script
-                    var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name);
-                    if (database == null)
-                    {
-                        DatabaseDoesNotExistException.Throw(name);
-                    }
+                    var console = await GetDatabaseConsoleAsync();
 
-                    var console = new AdminJsConsole(Server, database);
                     if (console.Log.IsWarnEnabled)
                     {
                         console.Log.Warn($"The certificate that was used to initiate the operation: {clientCert ?? "None"}");
@@ -1111,6 +1105,33 @@ namespace Raven.Server.Web.System
                 {
                     await textWriter.WriteAsync(result);
                     await textWriter.FlushAsync();
+                }
+            }
+
+            async Task<AdminJsConsole> GetDatabaseConsoleAsync()
+            {
+                var databaseResult = ServerStore.DatabasesLandlord.TryGetOrCreateDatabase(name);
+                switch (databaseResult.DatabaseStatus)
+                {
+                    case DatabasesLandlord.DatabaseSearchResult.Status.Sharded:
+                        var databaseContext = databaseResult.DatabaseContext;
+                        if (databaseContext.DatabaseRecord.Sharding.Orchestrator.Topology.RelevantFor(ServerStore.NodeTag) == false)
+                            throw new DatabaseNotRelevantException(name + " is not relevant for " + ServerStore.NodeTag);
+
+                        if (databaseContext.DatabaseShutdown.IsCancellationRequested)
+                            throw new DatabaseDisabledException($"Database {databaseContext.DatabaseName} was shutdown.");
+
+                        return new AdminJsConsole(Server, databaseContext);
+                    case DatabasesLandlord.DatabaseSearchResult.Status.Database:
+                        var database = await databaseResult.DatabaseTask;
+                        if (database == null)
+                            throw DatabaseDoesNotExistException.CreateWithMessage(name, message: null);
+
+                        return new AdminJsConsole(Server, database);
+                    case DatabasesLandlord.DatabaseSearchResult.Status.Missing:
+                        throw DatabaseDoesNotExistException.CreateWithMessage(name, message: null);
+                    default:
+                        throw new InvalidOperationException("Unexpected " + nameof(DatabasesLandlord.DatabaseSearchResult) + ": " + databaseResult.DatabaseStatus);
                 }
             }
         }
