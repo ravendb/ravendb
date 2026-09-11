@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import React, { ChangeEvent, useEffect, useState } from "react";
+import React, { ChangeEvent, useEffect, useRef, useState } from "react";
 import Form from "react-bootstrap/Form";
 import FormGroup from "react-bootstrap/FormGroup";
 import InputGroup from "react-bootstrap/InputGroup";
@@ -36,14 +36,37 @@ export default function DurationPicker(props: DurationPickerProps) {
     const [minutes, setMinutes] = useState(initialValues?.minutes ?? null);
     const [seconds, setSeconds] = useState(initialValues?.seconds ?? null);
 
+    // the last value this picker and its consumer agreed on, so that emitting and syncing don't echo each other
+    const lastTotalSecondsRef = useRef(totalSeconds);
+
     useEffect(() => {
         if (days == null && hours == null && minutes == null && seconds == null) {
             return;
         }
 
         const calculatedTotalSeconds = seconds + minutes * 60 + hours * 60 * 60 + days * 24 * 60 * 60;
+
+        if (calculatedTotalSeconds === lastTotalSecondsRef.current) {
+            return;
+        }
+
+        lastTotalSecondsRef.current = calculatedTotalSeconds;
         onChange(calculatedTotalSeconds);
-    }, [onChange, days, hours, minutes, seconds, totalSeconds]);
+    }, [onChange, days, hours, minutes, seconds]);
+
+    useEffect(() => {
+        if (totalSeconds === lastTotalSecondsRef.current) {
+            return;
+        }
+
+        lastTotalSecondsRef.current = totalSeconds;
+
+        const values = getInitialValues(totalSeconds, showDays);
+        setDays(values?.days ?? null);
+        setHours(values?.hours ?? null);
+        setMinutes(values?.minutes ?? null);
+        setSeconds(values?.seconds ?? null);
+    }, [totalSeconds, showDays]);
 
     const getInputValue = (event: React.ChangeEvent<HTMLInputElement>) => {
         const value = event.currentTarget.value;

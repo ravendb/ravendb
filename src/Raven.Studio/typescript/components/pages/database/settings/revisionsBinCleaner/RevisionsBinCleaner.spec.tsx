@@ -40,8 +40,8 @@ describe("RevisionsBinCleaner", () => {
         const durationPickerInputsAfter = queryAllByClassName(durationPickerAfter, "form-control");
         expect(durationPickerInputsAfter).toHaveLength(3);
 
-        durationPickerInputsAfter.forEach((input, index) => {
-            expect(input).toHaveValue(durationPickerValues[index]);
+        durationPickerInputsAfter.forEach((input) => {
+            expect(input).toHaveValue(null);
             expect(input).toBeDisabled();
         });
     });
