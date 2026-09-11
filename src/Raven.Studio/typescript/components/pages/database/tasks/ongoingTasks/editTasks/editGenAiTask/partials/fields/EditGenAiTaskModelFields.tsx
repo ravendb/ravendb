@@ -12,7 +12,6 @@ import { useRef } from "react";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import AceEditor from "components/common/ace/AceEditor";
 import ReactAce from "react-ace";
-import Code from "components/common/Code";
 import SampleObjectAndSchemaFields from "components/common/sampleObjectAndSchemaFields/SampleObjectAndSchemaFields";
 import AiAssistantWindow from "components/common/aiAssistant/AiAssistantWindow";
 import AiAssistantButton from "components/common/aiAssistant/AiAssistantButton";
@@ -23,6 +22,7 @@ import { EditGenAiTaskFormData } from "../../utils/editGenAiTaskValidation";
 import useEditGenAiTaskToolsSection from "../../hooks/useEditGenAiTaskToolsSection";
 import useBoolean from "components/hooks/useBoolean";
 import EditGenAiTaskQueryToolItem from "./EditGenAiTaskQueryToolItem";
+import { jsonSchemaSamplesTabs, promptSamplesTabs, sampleObjectSamplesTabs } from "../../editGenAiTaskSamplesData";
 
 export default function EditGenAiTaskModelFields() {
     const { control, setValue } = useFormContext<EditGenAiTaskFormData>();
@@ -52,51 +52,48 @@ export default function EditGenAiTaskModelFields() {
                         <Icon icon="info" color="info" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </FormLabel>
-                <div className="position-relative">
-                    <FormAceEditor
-                        aceRef={promptRef}
-                        control={control}
-                        name="prompt"
-                        mode="text"
-                        actions={[
-                            { component: <AceEditor.FullScreenAction /> },
-                            {
-                                component: <AceEditor.HelpAction message={<PromptSyntaxHelp />} />,
-                                position: "bottom",
-                            },
-                        ]}
-                        wrapEnabled
-                        setOptions={{
-                            indentedSoftWrap: false,
-                        }}
-                        isFullScreenLabelHidden
-                    />
-                    {formValues.prompt?.length > 0 && (
-                        <AiAssistantButton handleClick={toggleIsAiAssistOpen} right="48px" />
-                    )}
-                    {isAiAssistOpen && (
-                        <AiAssistantWindow
-                            data={{
-                                View: "GenAI",
-                                Message: getRefinePromptMessage(formValues),
-                            }}
-                            acceptResult={(text) => setValue("prompt", text)}
-                            successMessage="AI refined your prompt based on your input and information from the previous steps."
-                            closeWindow={toggleIsAiAssistOpen}
-                            right="48px"
-                        />
-                    )}
-                </div>
+                <FormAceEditor
+                    aceRef={promptRef}
+                    control={control}
+                    name="prompt"
+                    mode="text"
+                    actions={[{ component: <AceEditor.FullScreenAction /> }]}
+                    samplesPanel={{ tabs: promptSamplesTabs }}
+                    aiAssistantSlot={
+                        <>
+                            {formValues.prompt?.length > 0 && (
+                                <AiAssistantButton handleClick={toggleIsAiAssistOpen} right="48px" />
+                            )}
+                            {isAiAssistOpen && (
+                                <AiAssistantWindow
+                                    data={{
+                                        View: "GenAI",
+                                        Message: getRefinePromptMessage(formValues),
+                                    }}
+                                    acceptResult={(text) => setValue("prompt", text)}
+                                    successMessage="AI refined your prompt based on your input and information from the previous steps."
+                                    closeWindow={toggleIsAiAssistOpen}
+                                    right="48px"
+                                />
+                            )}
+                        </>
+                    }
+                    wrapEnabled
+                    setOptions={{
+                        indentedSoftWrap: false,
+                    }}
+                    isFullScreenLabelHidden
+                />
             </FormGroup>
             <SampleObjectAndSchemaFields
                 control={control}
                 setValue={setValue}
                 sampleObjectName="sampleObject"
                 sampleObject={formValues.sampleObject}
-                sampleObjectSyntaxHelp={<SampleObjectSyntaxHelp />}
+                sampleObjectSamplesPanel={{ tabs: sampleObjectSamplesTabs }}
                 jsonSchemaName="jsonSchema"
                 jsonSchema={formValues.jsonSchema}
-                jsonSchemaSyntaxHelp={<JsonSchemaSyntaxHelp />}
+                jsonSchemaSamplesPanel={{ tabs: jsonSchemaSamplesTabs }}
                 canRegenerateSchemaName="canRegenerateSchema"
             />
             <div className="hstack mt-3 mb-1">
@@ -195,63 +192,6 @@ function TracingFields() {
                 </FormGroup>
             )}
         </>
-    );
-}
-
-function PromptSyntaxHelp() {
-    const samplePrompt =
-        "Check if the following blog post comment is spam or not. A spam comment typically includes irrelevant or promotional content, excessive links, misleading information, or is written with the intent to manipulate search rankings or advertise products/services. Consider the language, intent, and relevance of the comment to the blog post topic. ";
-
-    return (
-        <div>
-            <div>Sample prompt</div>
-            <Code code={samplePrompt} language="plaintext" whiteSpace="normal" />
-        </div>
-    );
-}
-
-function SampleObjectSyntaxHelp() {
-    const code = `{
-    "IsCommentSpam": true,
-    "Reason": "Concise reason for why this comment was marked as spam or ham"
-}`;
-
-    return (
-        <div>
-            <div>Sample response object</div>
-            <Code code={code} language="json" />
-        </div>
-    );
-}
-
-function JsonSchemaSyntaxHelp() {
-    const code = `{
-  "name": "some-name",
-  "strict": true,
-  "schema": {
-    "type": "object",
-    "properties": {
-      "IsCommentSpam": {
-        "type": "boolean"
-      },
-      "Reason": {
-        "type": "string",
-        "description": "Concise reason for why this comment was marked as spam or ham"
-      }
-    },
-    "required": [
-      "IsCommentSpam",
-      "Reason"
-    ],
-    "additionalProperties": false
-  }
-}`;
-
-    return (
-        <div>
-            <div>Sample JSON schema</div>
-            <Code code={code} language="json" />
-        </div>
     );
 }
 

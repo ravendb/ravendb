@@ -4584,6 +4584,8 @@ namespace Raven.Server.Documents.Indexes
         private int? _minBatchSize;
 
         private const int MinMapBatchSize = 128;
+
+        public const int CanContinueBatchCheckInterval = 128;
         internal const int MinMapReduceBatchSize = 64;
 
         private int MinBatchSize
@@ -4677,7 +4679,7 @@ namespace Raven.Server.Documents.Indexes
             RenewTransaction
         }
 
-        public CanContinueBatchResult CanContinueBatch(in CanContinueBatchParameters parameters, ref TimeSpan maxTimeForDocumentTransactionToRemainOpen)
+        public CanContinueBatchResult CanContinueBatch(in CanContinueBatchParameters parameters, ref TimeSpan maxTimeForDocumentTransactionToRemainOpen, ref long lastCheckedSeenItemsCount)
         {
             if (Configuration.MapBatchSize.HasValue && parameters.Count >= Configuration.MapBatchSize.Value)
             {
@@ -4691,11 +4693,13 @@ namespace Raven.Server.Documents.Indexes
                 return CanContinueBatchResult.False;
             }
 
-            if (parameters.Count % 128 != 0)
+            if (lastCheckedSeenItemsCount > 0 && parameters.SeenCount - lastCheckedSeenItemsCount < CanContinueBatchCheckInterval)
             {
-                // do the actual check only every N ops
+                // the counter advances in jumps (fanout results, loaded items) - do the actual check on the first call and then once per at least CanContinueBatchCheckInterval seen items
                 return CanContinueBatchResult.True;
             }
+
+            lastCheckedSeenItemsCount = parameters.SeenCount;
 
             if (parameters.Sw.Elapsed > maxTimeForDocumentTransactionToRemainOpen)
             {
@@ -4733,11 +4737,10 @@ namespace Raven.Server.Documents.Indexes
                 return CanContinueBatchResult.False;
             }
 
-            var cpuCreditsAlertFlag = DocumentDatabase.ServerStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised;
-            if (cpuCreditsAlertFlag.IsRaised())
+            if (DocumentDatabase.ServerStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised())
             {
                 HandleStoppedBatchesConcurrently(parameters.Stats, parameters.Count,
-                   canContinue: () => cpuCreditsAlertFlag.IsRaised() == false,
+                   canContinue: () => DocumentDatabase.ServerStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised() == false,
                    reason: "CPU credits balance is low", parameters.WorkType);
 
                 parameters.Stats.RecordBatchCompletedReason(parameters.WorkType, $"The batch was stopped after processing {parameters.Count:#,#;;0} documents because the CPU credits balance is almost completely used");

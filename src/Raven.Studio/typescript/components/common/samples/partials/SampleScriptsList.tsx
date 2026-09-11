@@ -1,5 +1,5 @@
 import React from "react";
-import { SampleScript } from "./sampleQueriesTypes";
+import { SampleScript } from "./samplesTypes";
 import Code from "components/common/Code";
 import LoadButton from "./LoadButton";
 
@@ -30,7 +30,8 @@ function SampleScriptCard({ sample, onSelect }: SampleScriptCardProps) {
             <div className="text-muted small lh-1 mb-2">{sample.description}</div>
             <Code
                 code={sample.script}
-                language="rql"
+                language={sample.language ?? "rql"}
+                whiteSpace={sample.whiteSpace}
                 isRunQueryHidden
                 extraActions={<LoadButton onSelect={() => onSelect(sample.script)} />}
             />
