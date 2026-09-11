@@ -1207,6 +1207,7 @@ export interface components {
         AppSource: {
             type: string;
             connectionString: string;
+            database: string;
         };
         AppTokens: {
             slug: string;

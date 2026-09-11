@@ -4,6 +4,7 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide.Operations;
@@ -313,7 +314,7 @@ internal static class MetricsReadService
                     Name: app.AppName,
                     Slug: app.Slug,
                     Status: "unavailable",
-                    Source: new AppSource(Type: "", ConnectionString: ""),
+                    Source: new AppSource(Type: "", ConnectionString: "", Database: ""),
                     TablesCount: 0,
                     DocumentsCount: 0,
                     CapabilitiesCount: 0,
@@ -351,10 +352,14 @@ internal static class MetricsReadService
         var cdc = record.CdcSinks?.FirstOrDefault();
         var tablesCount = cdc?.Tables?.Count ?? 0;
         var sourceType = "";
+        var sourceDatabase = "";
         if (cdc?.ConnectionStringName is { } csName)
         {
             if (record.SqlConnectionStrings is not null && record.SqlConnectionStrings.TryGetValue(csName, out var sql))
+            {
                 sourceType = MapSourceType(sql.FactoryName);
+                sourceDatabase = ExtractDatabaseName(sql.FactoryName, sql.ConnectionString);
+            }
         }
         var agentsCount = record.AiAgents?.Count ?? 0;
         var hasSyncErrors = cdc is { Disabled: false } && await HasSyncErrorsAsync(store, app.Database, ct);
@@ -366,7 +371,7 @@ internal static class MetricsReadService
             Name: app.AppName,
             Slug: app.Slug,
             Status: status,
-            Source: new AppSource(sourceType, ConnectionString: ""),
+            Source: new AppSource(sourceType, ConnectionString: "", Database: sourceDatabase),
             TablesCount: tablesCount,
             DocumentsCount: stats.CountOfDocuments,
             CapabilitiesCount: agentsCount,
@@ -377,6 +382,21 @@ internal static class MetricsReadService
             StatusSubtitle: subtitle,
             CreatedAt: Utc(app.CreatedAt),
             UpdatedAt: Utc(app.CreatedAt));
+    }
+
+    private static string ExtractDatabaseName(string? factoryName, string? connectionString)
+    {
+        if (string.IsNullOrEmpty(factoryName) || string.IsNullOrEmpty(connectionString))
+            return "";
+
+        try
+        {
+            return SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(factoryName, connectionString).Database ?? "";
+        }
+        catch (Exception)
+        {
+            return "";
+        }
     }
 
     private static string MapSourceType(string? factory)
