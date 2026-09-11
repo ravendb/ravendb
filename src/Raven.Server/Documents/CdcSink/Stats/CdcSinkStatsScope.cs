@@ -41,9 +41,9 @@ public class CdcSinkStatsScope : StatsScope<CdcSinkRunStats, CdcSinkStatsScope>
         _stats.NumberOfReadMessages++;
     }
 
-    public void RecordProcessedMessage()
+    public void RecordProcessedMessages(int count)
     {
-        _stats.NumberOfProcessedMessages++;
+        _stats.NumberOfProcessedMessages += count;
     }
 
     public void RecordReadError()
