@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Sparrow.Utils;
 
 namespace Raven.Server.Utils
@@ -22,17 +23,25 @@ namespace Raven.Server.Utils
 
         private const string OutputNotAvailable = "<not available: output was not read in time>";
 
-        // failures that will never resolve by trying again: the executable is missing, is not
-        // runnable, or we are not allowed to run it
-        private static readonly int[] PermanentStartErrorCodes =
-        {
-            2, // ERROR_FILE_NOT_FOUND / ENOENT
-            3, // ERROR_PATH_NOT_FOUND
-            5, // ERROR_ACCESS_DENIED
-            8, // ENOEXEC
-            13, // EACCES
-            193 // ERROR_BAD_EXE_FORMAT
-        };
+        // Failures that will never resolve by trying again: the executable is missing, is not
+        // runnable, or we are not allowed to run it. Win32Exception.NativeErrorCode carries a Win32
+        // code on Windows and an errno on POSIX, and the two namespaces collide - 8 is ENOEXEC on
+        // POSIX but ERROR_NOT_ENOUGH_MEMORY, which is transient, on Windows - so one shared list
+        // would misclassify on both platforms.
+        private static readonly int[] PermanentStartErrorCodes = PlatformDetails.RunningOnPosix
+            ? new[]
+            {
+                2, // ENOENT
+                8, // ENOEXEC
+                13 // EACCES
+            }
+            : new[]
+            {
+                2, // ERROR_FILE_NOT_FOUND
+                3, // ERROR_PATH_NOT_FOUND
+                5, // ERROR_ACCESS_DENIED
+                193 // ERROR_BAD_EXE_FORMAT
+            };
 
         public sealed class OnDatabaseDeleteParameters
         {
@@ -78,11 +87,26 @@ namespace Raven.Server.Utils
             {
                 token.ThrowIfCancellationRequested();
 
+                // The budget has to bound the attempt itself, not only the gaps between attempts:
+                // capping just the delays lets a configured total of 90s run for 90s plus one full
+                // attempt timeout, and makes the budget meaningless when it is below the timeout.
+                TimeSpan attemptTimeout = parameters.Timeout;
+                TimeSpan budgetLeft = parameters.MaxRetryDuration - totalDuration.Elapsed;
+
+                if (budgetLeft <= TimeSpan.Zero && attempt > 1)
+                {
+                    throw new InvalidOperationException(
+                        $"Executing {commandDescription} was abandoned after {attempt - 1} attempt(s): the retry budget of {parameters.MaxRetryDuration} is exhausted.");
+                }
+
+                if (budgetLeft > TimeSpan.Zero && budgetLeft < attemptTimeout)
+                    attemptTimeout = budgetLeft;
+
                 parameters.OnAttempt?.Invoke();
 
                 try
                 {
-                    await RunOnceAsync(parameters, args, commandDescription, attempt, token).ConfigureAwait(false);
+                    await RunOnceAsync(parameters, args, commandDescription, attempt, attemptTimeout, token).ConfigureAwait(false);
                     return;
                 }
                 catch (OperationCanceledException) when (token.IsCancellationRequested)
@@ -115,16 +139,17 @@ namespace Raven.Server.Utils
             }
         }
 
-        private static async Task RunOnceAsync(OnDatabaseDeleteParameters parameters, string args, string commandDescription, int attempt, CancellationToken token)
+        private static async Task RunOnceAsync(OnDatabaseDeleteParameters parameters, string args, string commandDescription, int attempt,
+            TimeSpan attemptTimeout, CancellationToken token)
         {
             Process process = null;
             try
             {
-                // one budget per attempt, shared by the process wait and both stream reads, so the
-                // configured timeout means what it says instead of being applied once per wait
+                // one budget per attempt for the process wait, so the configured timeout means what
+                // it says instead of being applied once per wait
                 using (CancellationTokenSource attemptCts = CancellationTokenSource.CreateLinkedTokenSource(token))
                 {
-                    attemptCts.CancelAfter(parameters.Timeout);
+                    attemptCts.CancelAfter(attemptTimeout);
                     CancellationToken attemptToken = attemptCts.Token;
 
                     ProcessStartInfo startInfo = new ProcessStartInfo
@@ -153,30 +178,44 @@ namespace Raven.Server.Utils
                         throw new InvalidOperationException($"Unable to execute {commandDescription}. Failed to start process.", e);
                     }
 
-                    Task<string> readStdOut = process.StandardOutput.ReadToEndAsync(attemptToken);
-                    Task<string> readStdErr = process.StandardError.ReadToEndAsync(attemptToken);
+                    // Deliberately bound to the shutdown token rather than to the attempt timeout: on a
+                    // timeout we kill the tree and then drain whatever the script managed to write, and
+                    // a read cancelled by the very token that defines the timeout always comes back
+                    // empty. ReadWithBudgetAsync is what bounds these instead.
+                    Task<string> readStdOut = process.StandardOutput.ReadToEndAsync(token);
+                    Task<string> readStdErr = process.StandardError.ReadToEndAsync(token);
 
                     bool timedOut = false;
                     try
                     {
                         await process.WaitForExitAsync(attemptToken).ConfigureAwait(false);
                     }
-                    catch (OperationCanceledException) when (token.IsCancellationRequested == false)
+                    catch (OperationCanceledException)
                     {
+                        // Kill the entire tree whatever cancelled the wait. On a timeout a surviving
+                        // grandchild holds the redirected pipes open, which is what used to make reading
+                        // the output block forever. On shutdown it matters even more: Process.Dispose()
+                        // closes handles but never terminates the process, so the tree would be
+                        // reparented and outlive the server it was spawned by.
+                        KillProcessTree(process);
+
+                        if (token.IsCancellationRequested)
+                        {
+                            ObserveFailure(readStdOut);
+                            ObserveFailure(readStdErr);
+                            throw;
+                        }
+
                         timedOut = true;
                     }
 
                     if (timedOut)
                     {
-                        // kill the entire tree: a surviving grandchild holds the redirected pipes open,
-                        // which is what used to make reading the output block forever
-                        KillProcessTree(process);
-
                         string timedOutStdOut = await ReadWithBudgetAsync(readStdOut).ConfigureAwait(false);
                         string timedOutStdErr = await ReadWithBudgetAsync(readStdErr).ConfigureAwait(false);
 
                         throw new InvalidOperationException(
-                            $"Unable to execute {commandDescription}, waited for {(int)parameters.Timeout.TotalMilliseconds} ms but the process didn't exit. " +
+                            $"Unable to execute {commandDescription}, waited for {(int)attemptTimeout.TotalMilliseconds} ms but the process didn't exit. " +
                             $"Output: {timedOutStdOut}{Environment.NewLine}Errors: {timedOutStdErr}");
                     }
 

@@ -172,8 +172,11 @@ namespace Raven.Server.Config.Categories
                      "The hook fires when the deletion starts, not when it completes, and it can neither delay nor prevent the deletion. " +
                      "Delivery is best-effort: the event may be delivered more than once (retries, or a repeated delete request) and may be " +
                      "lost if cluster leadership changes while it is being dispatched, so the script must be idempotent. " +
+                     "Some removal paths raise no event at all - a replication factor reduction, and a database whose topology references " +
+                     "nodes that are no longer cluster members, whose record is removed in the same cluster transaction. " +
                      "The script inherits the environment of the RavenDB server process, including any RAVEN_ prefixed secrets, and its " +
-                     "standard output and standard error are written to the server log.")]
+                     "standard output and standard error are written to the server log and, when the hook fails, into the alert raised in " +
+                     "the notification center, which is persisted.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Databases.OnDatabaseDelete.Exec", ConfigurationEntryScope.ServerWideOnly)]
         public string OnDatabaseDeleteExec { get; set; }
@@ -181,7 +184,9 @@ namespace Raven.Server.Config.Categories
         /// <summary>
         /// EXPERT: The optional user arguments for the 'Databases.OnDatabaseDelete.Exec' command or executable.
         /// </summary>
-        [Description("EXPERT: The optional user arguments for the 'Databases.OnDatabaseDelete.Exec' command or executable. The arguments must be escaped for the command line.")]
+        [Description("EXPERT: The optional user arguments for the 'Databases.OnDatabaseDelete.Exec' command or executable. The arguments must be escaped for the command line. " +
+                     "This value is never written to the log, but it is passed to the process on its command line and is therefore visible to any local user " +
+                     "listing processes. Pass a credential through the environment or a file the script reads instead.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Databases.OnDatabaseDelete.Exec.Arguments", ConfigurationEntryScope.ServerWideOnly, isSecured: true)]
         public string OnDatabaseDeleteExecArguments { get; set; }

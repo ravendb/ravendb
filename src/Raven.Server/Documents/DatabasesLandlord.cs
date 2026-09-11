@@ -628,9 +628,12 @@ namespace Raven.Server.Documents
                     _logger.Operations(title, e);
 
                 // server-scoped on purpose: the deletion drops the database's own notifications storage,
-                // so a database-scoped alert would be erased by the very event that raised it
+                // so a database-scoped alert would be erased by the very event that raised it. Being
+                // server-scoped is also why the key has to carry the database name: the notification id
+                // is built from the alert type and the key alone, so without it every failure would
+                // overwrite the previous one and dismissing it once would mute the channel for good.
                 _serverStore.NotificationCenter.Add(AlertRaised.Create(null, title, message, AlertType.DatabaseEventExecFailure,
-                    NotificationSeverity.Error, details: new ExceptionDetails(e)));
+                    NotificationSeverity.Error, key: databaseName, details: new ExceptionDetails(e)));
             }
             finally
             {
