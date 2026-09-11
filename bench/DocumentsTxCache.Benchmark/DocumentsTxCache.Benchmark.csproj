@@ -1,7 +1,7 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <RuntimeFrameworkVersion>8.0.29</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>8.0.31</RuntimeFrameworkVersion>
     <AssemblyName>DocumentsTxCache.Benchmark</AssemblyName>
     <OutputType>Exe</OutputType>
     <PackageId>DocumentsTxCache.Benchmark</PackageId>
