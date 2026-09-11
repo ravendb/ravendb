@@ -277,7 +277,9 @@ internal static partial class QueryPlanBuilder
                     var p = template.Prebuilt[i];
                     bool mayHaveMissingEntries = p.MayHaveMissingEntries
                         || indexSearcher.GetDistinctTermCountInField(fieldMeta) == 0 // no entries at all
-                        || indexSearcher.HasAnyNonExistingEntries(fieldMeta);         
+                        || indexSearcher.HasAnyNonExistingEntries(fieldMeta)
+                        // a mixed-type field has entries the tree we would scan never sees (RavenDB-27035)
+                        || indexSearcher.SortFieldTreeCoversAllEntries(fieldMeta, p.FieldType) == false;
                     result[i] = new OrderMetadata(fieldMeta, p.Ascending, p.FieldType, p.NullsSortMode, mayHaveMissingEntries);
                     break;
                 }

@@ -9,6 +9,7 @@ using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Querying.Matches;
 using Corax.Querying.Matches.Meta;
+using Corax.Querying.Matches.SortingMatches.Meta;
 using Corax.Querying.Matches.TermsProviders;
 using Corax.Utils;
 using Sparrow;
@@ -427,6 +428,35 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         }
 
         return termCount;
+    }
+
+    /// <summary>Whether the field's value tree for <paramref name="fieldType"/>, plus nulls, holds every entry that has
+    /// this field. False for a mixed-type field: a scan of one tree would skip the other types' entries (RavenDB-27035).</summary>
+    public bool SortFieldTreeCoversAllEntries(in FieldMetadata field, MatchCompareFieldType fieldType)
+    {
+        Slice treeName;
+        switch (fieldType)
+        {
+            case MatchCompareFieldType.Sequence:
+                treeName = field.FieldName;
+                break;
+            case MatchCompareFieldType.Integer:
+                IndexFieldsMappingBuilder.GetFieldNameForLongs(Allocator, field.FieldName, out treeName);
+                break;
+            case MatchCompareFieldType.Floating:
+                IndexFieldsMappingBuilder.GetFieldNameForDoubles(Allocator, field.FieldName, out treeName);
+                break;
+            default:
+                return false;
+        }
+
+        // entries -> terms is keyed by entry id, so its count is the number of entries with a value in that tree
+        long covered = EntriesToTermsReader(treeName)?.NumberOfEntries ?? 0;
+
+        if (TryGetPostingListForNull(field, out var nullPostingListId))
+            covered += NumberOfDocumentsUnderSpecificTerm(nullPostingListId);
+
+        return covered >= NumberOfEntriesForExists(field);
     }
 
     public bool TryGetTermsOfField(in FieldMetadata field, out ExistsTermsProvider<Lookup<CompactKeyLookup>.ForwardIterator> existsTermsProvider)
