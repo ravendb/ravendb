@@ -23,11 +23,11 @@ function rootTable(collectionName: string): CdcSinkTableConfig {
         primaryKeyColumns: ["id"],
         columns: [{ column: "id", name: "Id", type: "Default" }],
         patch: null,
-        onDelete: null,
+        onDelete: { patch: null, ignoreDeletes: false },
         disabled: false,
         embeddedTables: [],
         linkedTables: [],
-    } as unknown as CdcSinkTableConfig;
+    };
 }
 
 describe("parseConfigFile provider", () => {
