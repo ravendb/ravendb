@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -30,45 +31,40 @@ namespace Voron.Impl
         private const int MaxNumberOfPagesToCache = 128; // 128 * 8K = 1 MB, beyond that, we'll not both
         private readonly MultipleUseFlag _isLowMemory = new MultipleUseFlag();
         private readonly MultipleUseFlag _isExtremelyLowMemory = new MultipleUseFlag();
-        private readonly PerCoreContainer<NativeAllocation>[] _items;
-        private readonly CountingConcurrentStack<NativeAllocation>[] _globalStacks;
+        private readonly PerCoreContainer<NativeAllocation, NativeAllocationContainerPolicy>[] _items;
+        private readonly SlotState[] _slotStates;
         private readonly Timer _cleanupTimer;
         private long _generation;
         public bool Disabled;
         private long _currentlyInUseBytes;
+        private readonly TimeSpan _idleTime = TimeSpan.FromMinutes(10);
+        private DateTime _lastCleanupTime = DateTime.MinValue;
+        private readonly TimeSpan _cleanupInterval = TimeSpan.FromMinutes(2);
 
         public long Generation => _generation;
 
         private readonly int _maxNumberOfAllocationsToKeepInGlobalStackPerSlot;
-        private readonly long[] _numberOfAllocationsDisposedInGlobalStacks;
-
-        private readonly DateTime[] _lastPerCoreCleanups;
-        private readonly TimeSpan _perCoreCleanupInterval = TimeSpan.FromMinutes(5);
-
-        private readonly DateTime[] _lastGlobalStackRebuilds;
-        private readonly TimeSpan _globalStackRebuildInterval = TimeSpan.FromMinutes(15);
 
         public EncryptionBuffersPool(bool registerLowMemory = true, bool registerCleanup = true)
         {
-            _maxNumberOfAllocationsToKeepInGlobalStackPerSlot = PlatformDetails.Is32Bits == false
-                ? 128
-                : 32;
+            _maxNumberOfAllocationsToKeepInGlobalStackPerSlot = PlatformDetails.Is32Bits == false ? 128 : 32;
 
             var numberOfSlots = Bits.MostSignificantBit(MaxNumberOfPagesToCache * Constants.Storage.PageSize) + 1;
-            _items = new PerCoreContainer<NativeAllocation>[numberOfSlots];
-            _globalStacks = new CountingConcurrentStack<NativeAllocation>[numberOfSlots];
-            _lastPerCoreCleanups = new DateTime[numberOfSlots];
-            _lastGlobalStackRebuilds = new DateTime[numberOfSlots];
-            _numberOfAllocationsDisposedInGlobalStacks = new long[numberOfSlots];
-
-            var now = DateTime.UtcNow;
+            _items = new PerCoreContainer<NativeAllocation, NativeAllocationContainerPolicy>[numberOfSlots];
+            _slotStates = new SlotState[numberOfSlots];
 
             for (int i = 0; i < _items.Length; i++)
             {
-                _items[i] = new PerCoreContainer<NativeAllocation>();
-                _globalStacks[i] = new CountingConcurrentStack<NativeAllocation>();
-                _lastPerCoreCleanups[i] = now;
-                _lastGlobalStackRebuilds[i] = now;
+                ref var state = ref _slotStates[i];
+                state = new SlotState { Size = 1L << i };
+                state.Policy = new NativeAllocationContainerPolicy(_slotStates[i], _idleTime, () => DateTime.UtcNow);
+
+                // Increase shared ring buffer capacity to compensate for removed global stacks
+                var globalSlots = _maxNumberOfAllocationsToKeepInGlobalStackPerSlot * 2;
+                _items[i] = new PerCoreContainer<NativeAllocation, NativeAllocationContainerPolicy>(
+                    numberOfGlobalSlots: globalSlots,
+                    numberOfSlotsPerCore: 64,
+                    policy: state.Policy);
             }
 
             if (registerLowMemory)
@@ -107,20 +103,6 @@ namespace Voron.Impl
 
                 Debug.Assert(size == allocation.Size, $"size ({size}) == allocation.Size ({allocation.Size})");
 
-                return allocation.Ptr;
-            }
-
-            var currentGlobalStack = _globalStacks[index];
-
-            while (currentGlobalStack.TryPop(out allocation))
-            {
-                if (allocation.InUse.Raise() == false)
-                    continue;
-
-                Debug.Assert(size == allocation.Size, $"size ({size}) == allocation.Size ({allocation.Size})");
-
-                thread = NativeMemory.ThreadAllocations.Value;
-                thread.Allocations += size;
                 return allocation.Ptr;
             }
 
@@ -166,18 +148,6 @@ namespace Voron.Impl
                 return;
             }
 
-            var addToGlobalPool = ForTestingPurposes == null || ForTestingPurposes.CanAddToGlobalPool;
-
-            var currentGlobalStack = _globalStacks[index];
-            if (addToGlobalPool && currentGlobalStack.Count < _maxNumberOfAllocationsToKeepInGlobalStackPerSlot)
-            {
-                // updating the thread allocations since we released the memory back to the pool
-                ForTestingPurposes?.OnUpdateMemoryStatsForThread?.Invoke(size);
-                NativeMemory.UpdateMemoryStatsForThread(allocatingThread, size);
-                currentGlobalStack.Push(allocation);
-                return;
-            }
-
             ForTestingPurposes?.OnFree4KbAlignedMemory?.Invoke(size);
             PlatformSpecific.NativeMemory.Free4KbAlignedMemory(ptr, size, allocatingThread);
         }
@@ -195,27 +165,15 @@ namespace Voron.Impl
             if (_isExtremelyLowMemory.Raise() == false)
                 return;
 
+            // Use RemoveAllPolicy to clear everything regardless of idle time
+            var removeAllPolicy = new RemoveAllContainerPolicy(_slotStates);
             for (int i = 0; i < _items.Length; i++)
             {
-                ClearStack(_globalStacks[i]);
-
-                foreach (var allocation in _items[i].EnumerateAndClear())
+                _items[i].Cleanup(removeAllPolicy, allocation =>
                 {
                     if (allocation.InUse.Raise())
                         allocation.Dispose();
-                }
-            }
-
-            static void ClearStack(CountingConcurrentStack<NativeAllocation> stack)
-            {
-                if (stack == null || stack.IsEmpty)
-                    return;
-
-                while (stack.TryPop(out var allocation))
-                {
-                    if (allocation.InUse.Raise())
-                        allocation.Dispose();
-                }
+                });
             }
         }
 
@@ -233,61 +191,22 @@ namespace Voron.Impl
 
             for (int i = 0; i < _items.Length; i++)
             {
-                var totalStackSize = 0L;
-                var totalGlobalStackSize = 0L;
+                var slotState = _slotStates[i];
 
-                var numberOfItems = 0;
-                var numberOfGlobalStackItems = 0;
-
-                foreach (var (allocation, _) in _items[i])
-                {
-                    if (allocation.InUse.IsRaised())
-                    {
-                        // not in the pool or disposed
-                        continue;
-                    }
-
-                    totalStackSize += allocation.Size;
-                    numberOfItems++;
-                }
-
-                foreach (var allocation in _globalStacks[i])
-                {
-                    if (allocation.InUse.IsRaised())
-                    {
-                        // not in the pool or disposed
-                        continue;
-                    }
-
-                    totalGlobalStackSize += allocation.Size;
-                    numberOfGlobalStackItems++;
-                }
+                var numberOfItems = Volatile.Read(ref slotState.Count);
+                var totalBytes = Volatile.Read(ref slotState.Bytes);
 
                 if (numberOfItems > 0)
                 {
-                    stats.TotalPoolSize += totalStackSize;
+                    stats.TotalPoolSize += totalBytes;
                     stats.TotalNumberOfItems += numberOfItems;
 
                     stats.Details.Add(new EncryptionBufferStats.AllocationInfo
                     {
-                        AllocationType = EncryptionBufferStats.AllocationType.PerCore,
-                        TotalSize = totalStackSize,
-                        NumberOfItems = numberOfItems,
-                        AllocationSize = totalStackSize / numberOfItems
-                    });
-                }
-
-                if (numberOfGlobalStackItems > 0)
-                {
-                    stats.TotalPoolSize += totalGlobalStackSize;
-                    stats.TotalNumberOfItems += numberOfGlobalStackItems;
-
-                    stats.Details.Add(new EncryptionBufferStats.AllocationInfo
-                    {
-                        AllocationType = EncryptionBufferStats.AllocationType.Global,
-                        TotalSize = totalGlobalStackSize,
-                        NumberOfItems = numberOfGlobalStackItems,
-                        AllocationSize = totalGlobalStackSize / numberOfGlobalStackItems
+                        AllocationType = EncryptionBufferStats.AllocationType.Unified,
+                        TotalSize = totalBytes,
+                        NumberOfItems = (int)numberOfItems,
+                        AllocationSize = totalBytes / numberOfItems
                     });
                 }
             }
@@ -297,81 +216,25 @@ namespace Voron.Impl
 
         private void Cleanup(object _)
         {
+            var currentTime = DateTime.UtcNow;
+            if (currentTime - _lastCleanupTime < _cleanupInterval)
+                return;
+
             if (Monitor.TryEnter(_locker) == false)
                 return;
 
             try
             {
-                var currentTime = DateTime.UtcNow;
-                var idleTime = TimeSpan.FromMinutes(10);
+                _lastCleanupTime = currentTime;
 
                 for (int i = 0; i < _items.Length; i++)
                 {
-                    var currentStack = _items[i];
-                    var currentGlobalStack = _globalStacks[i];
-
-                    var perCoreCleanupNeeded = currentGlobalStack.IsEmpty || currentTime - _lastPerCoreCleanups[i] >= _perCoreCleanupInterval;
-                    if (perCoreCleanupNeeded)
+                    // Use default policy for time-based cleanup
+                    _items[i].Cleanup(_slotStates[i].Policy, allocation =>
                     {
-                        _lastPerCoreCleanups[i] = currentTime;
-
-                        foreach (var current in currentStack)
-                        {
-                            var allocation = current.Item;
-                            var timeInPool = currentTime - allocation.InPoolSince;
-                            if (timeInPool <= idleTime)
-                                continue;
-
-                            if (allocation.InUse.Raise() == false)
-                                continue;
-
-                            currentStack.Remove(current.Item, current.Pos);
+                        if (allocation.InUse.Raise())
                             allocation.Dispose();
-                        }
-
-                        continue;
-                    }
-
-                    using (var globalStackEnumerator = currentGlobalStack.GetEnumerator())
-                    {
-                        while (globalStackEnumerator.MoveNext())
-                        {
-                            var allocation = globalStackEnumerator.Current;
-
-                            var timeInPool = currentTime - allocation.InPoolSince;
-                            if (timeInPool <= idleTime)
-                                continue;
-
-                            if (allocation.InUse.Raise() == false)
-                                continue;
-
-                            allocation.Dispose();
-                            _numberOfAllocationsDisposedInGlobalStacks[i]++;
-                        }
-                    }
-
-                    var globalStackRebuildNeeded = currentTime - _lastGlobalStackRebuilds[i] >= _globalStackRebuildInterval;
-
-                    if (globalStackRebuildNeeded && _numberOfAllocationsDisposedInGlobalStacks[i] > 0)
-                    {
-                        _lastGlobalStackRebuilds[i] = currentTime;
-
-                        _numberOfAllocationsDisposedInGlobalStacks[i] = 0;
-
-                        var localStack = new CountingConcurrentStack<NativeAllocation>();
-
-                        while (currentGlobalStack.TryPop(out var allocation))
-                        {
-                            if (allocation.InUse.Raise() == false)
-                                continue;
-
-                            allocation.InUse.Lower();
-                            localStack.Push(allocation);
-                        }
-
-                        while (localStack.TryPop(out var allocation))
-                            currentGlobalStack.Push(allocation);
-                    }
+                    });
                 }
             }
             catch (Exception e)
@@ -397,6 +260,73 @@ namespace Voron.Impl
             }
         }
 
+        private sealed class SlotState
+        {
+            public long Size;
+            public long Count;
+            public long Bytes;
+            public NativeAllocationContainerPolicy Policy;
+        }
+
+        private readonly struct NativeAllocationContainerPolicy : IPerCoreContainerPolicy<NativeAllocation>
+        {
+            private readonly SlotState _state;
+            private readonly TimeSpan _idleTime;
+            private readonly Func<DateTime> _currentTimeProvider;
+
+            public NativeAllocationContainerPolicy(SlotState state, TimeSpan idleTime, Func<DateTime> currentTimeProvider)
+            {
+                _state = state;
+                _idleTime = idleTime;
+                _currentTimeProvider = currentTimeProvider;
+            }
+
+            public bool CanRemove => true;
+
+            public bool ShouldRemove(NativeAllocation item, int coreIndex)
+            {
+                var timeInPool = _currentTimeProvider() - item.InPoolSince;
+                return timeInPool > _idleTime;
+            }
+
+            public void OnAdded(NativeAllocation item, int coreIndex)
+            {
+                Interlocked.Increment(ref _state.Count);
+                Interlocked.Add(ref _state.Bytes, _state.Size);
+            }
+
+            public void OnRemoved(NativeAllocation item, int coreIndex)
+            {
+                Interlocked.Decrement(ref _state.Count);
+                Interlocked.Add(ref _state.Bytes, -_state.Size);
+            }
+        }
+
+        private readonly struct RemoveAllContainerPolicy : IPerCoreContainerPolicy<NativeAllocation>
+        {
+            private readonly SlotState[] _slotStates;
+
+            public RemoveAllContainerPolicy(SlotState[] slotStates)
+            {
+                _slotStates = slotStates;
+            }
+
+            public bool CanRemove => true;
+
+            public bool ShouldRemove(NativeAllocation item, int coreIndex) => true;
+
+            public void OnAdded(NativeAllocation item, int coreIndex) => throw new NotSupportedException();
+
+            public void OnRemoved(NativeAllocation item, int coreIndex)
+            {
+                // Find the slot index from the allocation size
+                var index = Bits.MostSignificantBit(item.Size);
+                var slotState = _slotStates[index];
+                Interlocked.Decrement(ref slotState.Count);
+                Interlocked.Add(ref slotState.Bytes, -slotState.Size);
+            }
+        }
+
         internal TestingStuff ForTestingPurposes;
 
         internal TestingStuff ForTestingPurposesOnly()
@@ -410,8 +340,6 @@ namespace Voron.Impl
         internal sealed class TestingStuff
         {
             public bool CanAddToPerCorePool = true;
-
-            public bool CanAddToGlobalPool = true;
 
             public Action<long> OnFree4KbAlignedMemory;
 
@@ -471,7 +399,8 @@ namespace Voron.Impl
         public enum AllocationType
         {
             PerCore,
-            Global
+            Global,
+            Unified
         }
 
         public DynamicJsonValue ToJson()
