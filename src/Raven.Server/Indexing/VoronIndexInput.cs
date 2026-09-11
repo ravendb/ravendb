@@ -124,7 +124,7 @@ namespace Raven.Server.Indexing
 
         public override void Seek(long pos, IState s)
         {
-            if (pos > _stream.Length)
+            if (pos < 0 || pos > _stream.Length)
                 ThrowInvalidSeekPosition(pos);
 
             var state = s as VoronState;

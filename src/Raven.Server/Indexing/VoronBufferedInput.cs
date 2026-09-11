@@ -207,7 +207,7 @@ public sealed class VoronBufferedInput : BufferedIndexInput
 
     public override void SeekInternal(long pos, IState s)
     {
-        if (pos > _stream.Length)
+        if (pos < 0 || pos > _stream.Length)
             ThrowInvalidSeekPosition(pos);
 
         if (s is not VoronState state)
