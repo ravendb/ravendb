@@ -1,15 +1,9 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
+using System;
 using System.Dynamic;
-using System.Linq;
-using System.Reflection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Util;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
 {
@@ -49,10 +43,6 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
 
                     serializer.Populate(reader, entity);
                 }
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Could not populate entity.", ex);
             }
             finally
             {
@@ -103,8 +93,8 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
                 //This is to handle the case when user defined it's own contract resolver
                 //or we are serializing dynamic object
 
-                var changes = removeIdentityProperty && TryRemoveIdentityProperty(reader, type, conventions, isDynamicObject);
-                changes |= TrySimplifyJson(reader, type);
+                var changes = removeIdentityProperty && BlittableJsonConverterHelper.TryRemoveIdentityProperty(reader, type, conventions, isDynamicObject);
+                changes |= BlittableJsonConverterHelper.TrySimplifyJson(reader, type, ShouldSkipSimplification);
 
                 if (changes)
                 {
@@ -118,171 +108,9 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
             return reader;
         }
 
-        private static bool TryRemoveIdentityProperty(BlittableJsonReaderObject document, Type entityType, DocumentConventions conventions, bool isDynamicObject)
+        private static bool ShouldSkipSimplification(Type propertyType)
         {
-            var identityProperty = conventions.GetIdentityProperty(entityType);
-            if (identityProperty == null)
-            {
-                if (conventions.AddIdFieldToDynamicObjects && isDynamicObject)
-                {
-                    if (document.Modifications == null)
-                        document.Modifications = new DynamicJsonValue(document);
-
-                    document.Modifications.Remove("Id");
-                    return true;
-                }
-
-                return false;
-            }
-
-            if (document.Modifications == null)
-                document.Modifications = new DynamicJsonValue(document);
-
-            document.Modifications.Remove(conventions.GetConvertedPropertyNameFor(identityProperty));
-            return true;
-        }
-
-        private static bool TrySimplifyJson(BlittableJsonReaderObject document, Type rootType)
-        {
-            var simplified = false;
-            foreach (var propertyName in document.GetPropertyNames())
-            {
-                var propertyType = GetPropertyType(propertyName, rootType);
-                if (propertyType == typeof(JObject) || propertyType == typeof(JArray) || propertyType == typeof(JValue))
-                {
-                    // don't simplify the property if it's a JObject
-                    continue;
-                }
-
-                var propertyValue = document[propertyName];
-
-                if (propertyValue is BlittableJsonReaderArray propertyArray)
-                {
-                    simplified |= TrySimplifyJson(propertyArray, propertyType);
-                    continue;
-                }
-
-                var propertyObject = propertyValue as BlittableJsonReaderObject;
-                if (propertyObject == null)
-                    continue;
-
-                if (propertyObject.TryGet(Constants.Json.Fields.Type, out string type) == false)
-                {
-                    simplified |= TrySimplifyJson(propertyObject, propertyType);
-                    continue;
-                }
-
-                if (ShouldSimplifyJsonBasedOnType(type) == false)
-                    continue;
-
-                simplified = true;
-
-                if (document.Modifications == null)
-                    document.Modifications = new DynamicJsonValue(document);
-
-                if (propertyObject.TryGet(Constants.Json.Fields.Values, out BlittableJsonReaderArray values) == false)
-                {
-                    if (propertyObject.Modifications == null)
-                        propertyObject.Modifications = new DynamicJsonValue(propertyObject);
-
-                    propertyObject.Modifications.Remove(Constants.Json.Fields.Type);
-                    continue;
-                }
-
-                document.Modifications[propertyName] = values;
-
-                simplified |= TrySimplifyJson(values, propertyType);
-            }
-
-            return simplified;
-        }
-
-        private static bool TrySimplifyJson(BlittableJsonReaderArray array, Type rootType)
-        {
-            var itemType = GetItemType();
-
-            var simplified = false;
-            foreach (var item in array)
-            {
-                var itemObject = item as BlittableJsonReaderObject;
-                if (itemObject == null)
-                    continue;
-
-                simplified |= TrySimplifyJson(itemObject, itemType);
-            }
-
-            return simplified;
-
-            Type GetItemType()
-            {
-                if (rootType == null)
-                    return null;
-
-                if (rootType.IsArray)
-                    return rootType.GetElementType();
-
-                var enumerableInterface = rootType.GetInterface(typeof(IEnumerable<>).Name);
-                if (enumerableInterface == null)
-                    return null;
-
-                return enumerableInterface.GenericTypeArguments[0];
-            }
-        }
-
-        private static bool ShouldSimplifyJsonBasedOnType(string typeValue)
-        {
-            var type = Type.GetType(typeValue);
-
-            if (type == null)
-                return false;
-
-            if (type.IsArray)
-                return true;
-
-            if (type.GetGenericArguments().Length == 0)
-                return type == typeof(Enumerable);
-
-            return typeof(IEnumerable).IsAssignableFrom(type.GetGenericTypeDefinition());
-        }
-
-        internal static Type GetPropertyType(string propertyName, Type rootType)
-        {
-            if (rootType == null)
-                return null;
-
-            MemberInfo memberInfo = null;
-            try
-            {
-                memberInfo = ReflectionUtil.GetPropertyOrFieldFor(rootType, BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic, propertyName);
-            }
-            catch (AmbiguousMatchException)
-            {
-                var memberInfos = ReflectionUtil.GetPropertiesAndFieldsFor(rootType, BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic)
-                    .Where(x => x.Name == propertyName)
-                    .ToList();
-
-                while (typeof(object) != rootType)
-                {
-                    memberInfo = memberInfos.FirstOrDefault(x => x.DeclaringType == rootType);
-                    if (memberInfo != null)
-                        break;
-
-                    if (rootType.BaseType == null)
-                        break;
-
-                    rootType = rootType.BaseType;
-                }
-            }
-
-            switch (memberInfo)
-            {
-                case PropertyInfo pi:
-                    return pi.PropertyType;
-                case FieldInfo fi:
-                    return fi.FieldType;
-                default:
-                    return null;
-            }
+            return propertyType == typeof(JObject) || propertyType == typeof(JArray) || propertyType == typeof(JValue);
         }
     }
 }
