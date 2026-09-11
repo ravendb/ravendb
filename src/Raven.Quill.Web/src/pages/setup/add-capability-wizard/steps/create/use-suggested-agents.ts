@@ -58,7 +58,7 @@ export function useSuggestedAgents(): {
     return {
         isSuggesting: (query.isFetching || !suggestedAgents) && suggestions.length === 0,
         startedAt: getFetchStartedAt(suggestQuery.queryKey),
-        isConsentRequired: query.data?.isConsentRequired === true,
+        isConsentRequired: query.data?.failureStatus === "ConsentRequired",
         failureStatus: query.data?.failureStatus ?? null,
         recheck: () => {
             recheckConsent();
