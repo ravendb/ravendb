@@ -34,7 +34,8 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
     private readonly CancellationToken _token;
     private bool _isTermMatch;
     private IDisposable _startsWithDisposeHandler;
-    private Dictionary<long, double> _alreadyReturned; // entry -> distance to the shape centre (unused when NoBoosting)
+    // entry -> distance to the shape centre, -1 when it has no matching point
+    private Dictionary<long, double> _alreadyReturned;
     private long _fieldRootPage;
     private double _xShapeCenter;
     private double _yShapeCenter;
@@ -107,6 +108,9 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
 
             if (_isTermMatch)
             {
+                // the cell is entirely inside the shape, so every entry is a match; Score still needs a distance for each
+                if (typeof(TBoosting) == typeof(HasBoosting))
+                    RecordDistances(matches.Slice(currentIdx, read));
                 currentIdx += read;
             }
             else if (read > 0)
@@ -140,11 +144,30 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
             return false;
 
         // the entry is open right here, so keep its distance for Score instead of reading it again there
-        _alreadyReturned.Add(id, typeof(TBoosting) == typeof(HasBoosting)
-            ? SpatialUtils.HaverstineDistanceInInternationalNauticalMiles(_yShapeCenter, _xShapeCenter, latitude, longitude)
-            : 0);
+        _alreadyReturned.Add(id, typeof(TBoosting) == typeof(HasBoosting) ? DistanceFromCentre(latitude, longitude) : 0);
         return true;
     }
+
+    // Every entry this match returns has to reach Score with its distance measured, so an entry taken in bulk is opened
+    // here, once - the read Score would otherwise do for it, minus the repeat for an entry that two cells share.
+    private void RecordDistances(Span<long> ids)
+    {
+        _alreadyReturned ??= new Dictionary<long, double>();
+        for (int i = 0; i < ids.Length; ++i)
+        {
+            if (i % 1024 == 0)
+                _token.ThrowIfCancellationRequested();
+
+            var id = ids[i];
+            if (_alreadyReturned.ContainsKey(id))
+                continue;
+
+            _alreadyReturned.Add(id, TryGetMatchingPoint(id, out var latitude, out var longitude) ? DistanceFromCentre(latitude, longitude) : -1);
+        }
+    }
+
+    private double DistanceFromCentre(double latitude, double longitude)
+        => SpatialUtils.HaverstineDistanceInInternationalNauticalMiles(_yShapeCenter, _xShapeCenter, latitude, longitude);
 
     // The first point of the entry that satisfies the relation.
     private bool TryGetMatchingPoint(long id, out double latitude, out double longitude)
@@ -207,22 +230,17 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
 
         const double bias = 0.01;
 
-        // Fill measured the entries it had to open (boundary cells, AndWith). The rest still have to be read here: an
-        // entry taken in bulk from a cell entirely inside the shape was never opened, and an entry from the other side
-        // of an OR has to be read to learn it is not ours.
+        // Fill and AndWith recorded every entry this match returned together with its distance, so nothing is read here.
+        // Anything else in matches came from the other side of an OR and is not ours.
         using var _ = _allocator.Allocate(matches.Length, out Span<double> distances);
         double maxDistance = 0;
         for (int i = 0; i < matches.Length; ++i)
         {
-            distances[i] = _alreadyReturned != null && _alreadyReturned.TryGetValue(matches[i], out var cached)
-                ? cached
-                : TryGetMatchingPoint(matches[i], out var latitude, out var longitude)
-                    ? SpatialUtils.HaverstineDistanceInInternationalNauticalMiles(_yShapeCenter, _xShapeCenter, latitude, longitude)
-                    : -1;
+            distances[i] = _alreadyReturned != null && _alreadyReturned.TryGetValue(matches[i], out var distance) ? distance : -1;
             maxDistance = Math.Max(distances[i], maxDistance);
         }
 
-        if (maxDistance < double.Epsilon)
+        if (maxDistance == 0) // every matched point sits at the center - nothing to grade
             return;
 
         for (int i = 0; i < matches.Length; ++i)
