@@ -11,6 +11,7 @@ using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Querying.Matches;
 using Corax.Querying.Matches.Meta;
+using Corax.Querying.Matches.SortingMatches.Meta;
 using Corax.Querying.Matches.TermProviders;
 using Corax.Utils;
 using Sparrow;
@@ -381,6 +382,79 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         }
         
         return termAmount;
+    }
+
+    /// <summary>Whether the field's value tree for <paramref name="fieldType"/>, plus nulls and non-existing, holds every
+    /// entry. False for a mixed-type field: a scan of one tree would skip the other types' entries (RavenDB-27035).</summary>
+    public bool SortFieldTreeCoversAllEntries(in FieldMetadata field, MatchCompareFieldType fieldType)
+    {
+        Slice treeName;
+        switch (fieldType)
+        {
+            case MatchCompareFieldType.Sequence:
+                treeName = field.FieldName;
+                break;
+            case MatchCompareFieldType.Integer:
+                IndexFieldsMappingBuilder.GetFieldNameForLongs(Allocator, field.FieldName, out treeName);
+                break;
+            case MatchCompareFieldType.Floating:
+                IndexFieldsMappingBuilder.GetFieldNameForDoubles(Allocator, field.FieldName, out treeName);
+                break;
+            default:
+                return false;
+        }
+
+        // entries -> terms is keyed by entry id, so its count is the number of entries with a value in that tree
+        var entriesWithValue = EntriesToTermsReader(treeName);
+        long covered = entriesWithValue?.NumberOfEntries ?? 0;
+
+        // a field is either absent from an entry or holds values, so non-existing cannot overlap with the rest
+        if (TryGetPostingListForNonExisting(field, out var nonExistingPostingListId))
+            covered += GetPostingList(nonExistingPostingListId)?.State.NumberOfEntries ?? 0;
+
+        if (covered >= NumberOfEntries)
+            return true;
+
+        return TryGetPostingListForNull(field, out var nullPostingListId)
+               && NullsCoverTheRest(nullPostingListId, entriesWithValue, NumberOfEntries - covered);
+    }
+
+    /// <summary>A list holding both a null and a value puts that entry in the null posting list and in the value tree
+    /// alike, so nulls have to be counted per entry: adding the list wholesale double counts it, and the surplus then
+    /// hides an entry of another type that the scan would skip. Walks at most as many nulls as the gap needs.</summary>
+    private bool NullsCoverTheRest(long nullPostingListId, Lookup<Int64LookupKey> entriesWithValue, long deficit)
+    {
+        var postingList = GetPostingList(nullPostingListId);
+        if (postingList == null)
+            return false;
+
+        long remaining = postingList.State.NumberOfEntries;
+        if (remaining < deficit) // not enough nulls even before discounting the overlap
+            return false;
+
+        if (entriesWithValue == null) // no value tree, so no entry can be in both
+            return true;
+
+        const int batchSize = 1024;
+        using var entriesScope = Allocator.Allocate(batchSize, out Span<long> entries);
+        using var termsScope = Allocator.Allocate(batchSize, out Span<long> terms);
+
+        var it = postingList.Iterate();
+        while (deficit > 0 && remaining >= deficit && it.Fill(entries, out var read))
+        {
+            EntryIdEncodings.DecodeAndDiscardFrequency(entries, read);
+            entriesWithValue.GetFor(entries[..read], terms[..read], long.MinValue);
+
+            for (int i = 0; i < read; i++)
+            {
+                if (terms[i] == long.MinValue) // a null on an entry with no value in the tree we would scan
+                    deficit--;
+            }
+
+            remaining -= read;
+        }
+
+        return deficit <= 0;
     }
 
     public bool TryGetTermsOfField(in FieldMetadata field, out ExistsTermProvider<Lookup<CompactKeyLookup>.ForwardIterator> existsTermProvider)
