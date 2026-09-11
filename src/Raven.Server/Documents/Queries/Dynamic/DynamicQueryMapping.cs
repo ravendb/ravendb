@@ -241,22 +241,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 }
             }
 
-            if (query.Metadata.IsGroupBy)
-            {
-                result.IsGroupBy = true;
-                result.GroupByFieldNames = query.Metadata.GroupBy.Select(x => x.Name.Value).ToList();
-                result.GroupByFields = CreateGroupByFields(query, mapFields);
-
-                foreach (var field in mapFields)
-                {
-                    if (field.Value.AggregationOperation == AggregationOperation.None)
-                    {
-                        throw new InvalidQueryException($"Field '{field.Key}' is neither an aggregation operation nor part of the group by key", query.Metadata.QueryText,
-                            query.QueryParameters);
-                    }
-                }
-            }
-
             if (query.Metadata.HasHighlightings)
             {
                 foreach (var highlighting in query.Metadata.Highlightings)
@@ -278,6 +262,28 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         value.HasSuggestions = true;
                     else
                         mapFields[fieldName] = DynamicQueryMappingItem.Create(fieldName, AggregationOperation.None, isFullTextSearch: false, isExactSearch: false, hasHighlighting: false, hasSuggestions: true, spatial: null);
+                }
+            }
+
+            // auto indexes have no field options to inherit, and the analyzer factories assert on this name
+            if (mapFields.ContainsKey(Constants.Documents.Indexing.Fields.AllFields) ||
+                (query.Metadata.IsGroupBy && query.Metadata.GroupByFieldNames.Contains(Constants.Documents.Indexing.Fields.AllFields)))
+                throw new InvalidQueryException($"Field '{Constants.Documents.Indexing.Fields.AllFields}' is reserved and cannot be used in a query.",
+                    query.Metadata.QueryText, query.QueryParameters);
+
+            if (query.Metadata.IsGroupBy)
+            {
+                result.IsGroupBy = true;
+                result.GroupByFieldNames = query.Metadata.GroupBy.Select(x => x.Name.Value).ToList();
+                result.GroupByFields = CreateGroupByFields(query, mapFields);
+
+                foreach (var field in mapFields)
+                {
+                    if (field.Value.AggregationOperation == AggregationOperation.None)
+                    {
+                        throw new InvalidQueryException($"Field '{field.Key}' is neither an aggregation operation nor part of the group by key", query.Metadata.QueryText,
+                            query.QueryParameters);
+                    }
                 }
             }
 
