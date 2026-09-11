@@ -36,6 +36,38 @@ public class EmbedNoticePageTests(ITestOutputHelper output) : QuillTestBase(outp
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_link_that_has_spent_its_invocations_renders_a_notice_instead_of_a_chat_box()
+    {
+        await using var app = await NewAppAsync();
+        var channelId = await ProvisionAsync(app, [HostOrigin]);
+        var token = (await app.MintEmbedLinkAsync(new MintEmbedLinkRequest(channelId, MaxInvocations: 1))).Token;
+        await ExhaustAsync(app, token);
+
+        using var response = await GetPageAsync(app, token);
+
+        Assert.Equal(HttpStatusCode.Gone, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("This conversation has ended", body);
+        Assert.Contains("usage limit", body);
+        Assert.Contains("invocation_limit", body);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_link_outlives_its_usable_window_so_a_late_visitor_still_gets_the_notice()
+    {
+        await using var app = await NewAppAsync();
+        var channelId = await ProvisionAsync(app, [HostOrigin]);
+        var minted = await app.MintEmbedLinkAsync(new MintEmbedLinkRequest(channelId));
+
+        using var session = app.Store.OpenAsyncSession(app.Slug);
+        var link = await session.LoadAsync<EmbedLink>(EmbedLink.IdPrefix + minted.Token);
+        var expires = session.Advanced.GetMetadataFor(link)[Raven.Client.Constants.Documents.Metadata.Expires];
+
+        Assert.Equal(link.ExpiresAt + EmbedLinkLimits.SpentLinkRetention,
+            DateTime.Parse((string)expires!).ToUniversalTime(), TimeSpan.FromSeconds(1));
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task An_unknown_link_renders_a_notice()
     {
         await using var app = await NewAppAsync();
@@ -85,6 +117,14 @@ public class EmbedNoticePageTests(ITestOutputHelper output) : QuillTestBase(outp
         using var session = app.Store.OpenAsyncSession(app.Slug);
         var link = await session.LoadAsync<EmbedLink>(EmbedLink.IdPrefix + token);
         link.ExpiresAt = DateTime.UtcNow.AddMinutes(-1);
+        await session.SaveChangesAsync();
+    }
+
+    private static async Task ExhaustAsync(QuillApp app, string token)
+    {
+        using var session = app.Store.OpenAsyncSession(app.Slug);
+        var link = await session.LoadAsync<EmbedLink>(EmbedLink.IdPrefix + token);
+        link.InvocationCount = link.MaxInvocations;
         await session.SaveChangesAsync();
     }
 

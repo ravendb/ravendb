@@ -317,6 +317,26 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task SetupTry_returns_400_for_a_sample_object_that_is_not_json()
+    {
+        await using var app = await NewAppAsync();
+
+        var resp = await Host.Client.PostAsJsonAsync(QuillRoutes.SetupTry(app.Slug),
+            new
+            {
+                prompt = "hi",
+                configuration = new
+                {
+                    name = "Draft", systemPrompt = "p", connectionStringName = "demo-llm",
+                    sampleObject = "not json at all",
+                },
+            });
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        Assert.Contains("sampleObject must be a JSON object", await resp.Content.ReadAsStringAsync());
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task SetupTry_returns_404_for_unknown_slug()
     {
         // raw: setup/try is a streaming endpoint — no typed happy wrapper to reuse

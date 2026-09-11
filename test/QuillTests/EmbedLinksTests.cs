@@ -419,6 +419,58 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
         Assert.False(string.IsNullOrEmpty(body));
     }
 
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Chat_rejects_an_oversized_prompt_with_413()
+    {
+        await using var h = await HarnessAsync();
+        var token = await MintAsync(h.App, h.ChannelId);
+
+        var longPrompt = await Assert.ThrowsAsync<QuillHttpException>(
+            () => h.App.SendEmbedChatAsync(token, new string('a', 40_000)));
+        Assert.Equal(HttpStatusCode.RequestEntityTooLarge, longPrompt.StatusCode);
+        Assert.Contains("prompt_too_large", longPrompt.Body);
+
+        var hugeBody = await Assert.ThrowsAsync<QuillHttpException>(
+            () => h.App.SendEmbedChatAsync(token, new string('a', 2_000_000)));
+        Assert.Equal(HttpStatusCode.RequestEntityTooLarge, hugeBody.StatusCode);
+
+        using var session = h.Store.OpenAsyncSession(h.Database);
+        var link = await session.LoadAsync<EmbedLink>(EmbedLink.IdPrefix + token);
+        Assert.Equal(0, link.InvocationCount);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Mint_with_malformed_body_returns_the_api_error_shape()
+    {
+        await using var h = await HarnessAsync();
+
+        using var content = new StringContent("""{"channelId":"x","ttlSeconds":"abc"}""",
+            System.Text.Encoding.UTF8, "application/json");
+        var resp = await h.Client.PostAsync(QuillRoutes.EmbedLinks(h.Slug), content);
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        var body = await resp.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("   at ", body);
+        using var json = JsonDocument.Parse(body);
+        Assert.True(json.RootElement.TryGetProperty("error", out _), body);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Deleting_the_channel_revokes_its_links()
+    {
+        await using var h = await HarnessAsync();
+        var token = await MintAsync(h.App, h.ChannelId);
+
+        await h.App.DeleteChannelAsync(h.ChannelId);
+
+        var links = await h.App.GetEmbedLinksAsync();
+        Assert.DoesNotContain(links, l => l.Token == token);
+
+        using var session = h.Store.OpenAsyncSession(h.Database);
+        var link = await session.LoadAsync<EmbedLink>(EmbedLink.IdPrefix + token);
+        Assert.True(link.Revoked);
+    }
+
     private async Task<Harness> HarnessAsync(bool provisionChannel = true, string[]? origins = null)
     {
         var app = await NewAppAsync();

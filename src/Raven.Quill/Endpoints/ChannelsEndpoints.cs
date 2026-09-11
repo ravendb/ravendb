@@ -870,11 +870,23 @@ public static class ChannelsEndpoints
         HttpContext ctx,
         CancellationToken ct)
     {
+        var links = await session.LoadAllStartingWithAsync<EmbedLink>(EmbedLink.IdPrefix, ct);
+        var revoked = 0;
+        foreach (var link in links)
+        {
+            if (link.Revoked == false &&
+                string.Equals(link.ChannelId, channel.ShortId, StringComparison.OrdinalIgnoreCase))
+            {
+                link.Revoked = true;
+                revoked++;
+            }
+        }
+
         session.Delete(channel);
         await session.SaveChangesAsync(ct);
 
         if (logger.IsInfoEnabled)
-            logger.Info($"Deleted iFrame channel slug={slug} channelId={channelId}");
+            logger.Info($"Deleted iFrame channel slug={slug} channelId={channelId} revokedLinks={revoked}");
         if (logger.AuditEnabled)
             logger.Audit("DELETE", $"Channel '{channelId}' in App '{slug}'", ctx);
 
