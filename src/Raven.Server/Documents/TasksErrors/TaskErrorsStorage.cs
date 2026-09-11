@@ -184,7 +184,7 @@ public unsafe class TaskErrorsStorage
 
     private static TaskProcessErrorTableValue ReadProcessError(ref TableValueReader reader, string taskName)
     {
-        var createdAt = new DateTime(Bits.SwapBytes(*(long*)reader.Read(Schemas.TaskProcessErrors.TaskProcessErrorsTable.CreatedAtIndex, out _)));
+        var createdAt = new DateTime(Bits.SwapBytes(*(long*)reader.Read(Schemas.TaskProcessErrors.TaskProcessErrorsTable.CreatedAtIndex, out _)), DateTimeKind.Utc);
         var affectedDocumentsCount = Bits.SwapBytes(*(long*)reader.Read(Schemas.TaskProcessErrors.TaskProcessErrorsTable.AffectedDocumentsCountIndex, out _));
         var step = Bits.SwapBytes(*(long*)reader.Read(Schemas.TaskProcessErrors.TaskProcessErrorsTable.StepIndex, out _));
         var error = reader.ReadString(Schemas.TaskProcessErrors.TaskProcessErrorsTable.ErrorIndex);
@@ -201,7 +201,7 @@ public unsafe class TaskErrorsStorage
 
     private static TaskItemErrorTableValue ReadItemError(ref TableValueReader reader, string taskName)
     {
-        var createdAt = new DateTime(Bits.SwapBytes(*(long*)reader.Read(Schemas.TaskItemErrors.TaskItemErrorsTable.CreatedAtIndex, out _)));
+        var createdAt = new DateTime(Bits.SwapBytes(*(long*)reader.Read(Schemas.TaskItemErrors.TaskItemErrorsTable.CreatedAtIndex, out _)), DateTimeKind.Utc);
         var documentId = reader.ReadString(Schemas.TaskItemErrors.TaskItemErrorsTable.DocumentIdIndex);
         var step = Bits.SwapBytes(*(long*)reader.Read(Schemas.TaskItemErrors.TaskItemErrorsTable.StepIndex, out _));
         var error = reader.ReadString(Schemas.TaskItemErrors.TaskItemErrorsTable.ErrorIndex);
