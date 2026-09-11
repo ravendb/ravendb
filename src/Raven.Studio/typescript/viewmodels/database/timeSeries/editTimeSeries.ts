@@ -13,7 +13,10 @@ import generalUtils = require("common/generalUtils");
 import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
 import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import deleteTimeSeries = require("viewmodels/database/timeSeries/deleteTimeSeries");
-import filterTimeSeries = require("viewmodels/database/timeSeries/filterTimeSeries");
+import deleteTimeSeriesCommand = require("commands/database/documents/timeSeries/deleteTimeSeriesCommand");
+import FilterTimeSeriesModal = require("components/pages/database/timeSeries/FilterTimeSeriesModal");
+import DeleteTimeSeriesRangeModal = require("components/pages/database/timeSeries/DeleteTimeSeriesRangeModal");
+import TimeSeriesFilterBadge = require("components/pages/database/timeSeries/TimeSeriesFilterBadge");
 import datePickerBindingHandler = require("common/bindingHelpers/datePickerBindingHandler");
 import timeSeriesEntryModel = require("models/database/timeSeries/timeSeriesEntryModel");
 import getTimeSeriesConfigurationCommand = require("commands/database/documents/timeSeries/getTimeSeriesConfigurationCommand");
@@ -25,18 +28,20 @@ import popoverUtils = require("common/popoverUtils");
 import moment = require("moment");
 import typeUtils = require("common/typeUtils");
 
+type timeSeriesDisplayTimezone = "utc" | "local";
+
 class timeSeriesInfo {
     name = ko.observable<string>();
-    
+
     totalNumberOfEntries = ko.observable<number>();
-    
+
     nameAndNumberFormatted: KnockoutComputed<string>;
-    
+
     constructor(name: string, numberOfEntries: number) {
         this.name(name);
-        
+
         this.totalNumberOfEntries(numberOfEntries);
-        
+
         this.initObservables();
     }
     
@@ -54,7 +59,7 @@ class timeSeriesInfo {
 }
 
 class editTimeSeries extends viewModelBase {
-    static timeSeriesFormat = "YYYY-MM-DD HH:mm:ss.SSS";
+    static timeSeriesFormat = generalUtils.timeSeriesFullDateFormat;
     static pageSize = 100;
     
     view = require("views/database/timeSeries/editTimeSeries.html");
@@ -74,8 +79,15 @@ class editTimeSeries extends viewModelBase {
     
     localStartDateInFilter = ko.observable<moment.Moment>();
     localEndDateInFilter = ko.observable<moment.Moment>();
-    
-    filterText: KnockoutComputed<string>;
+
+    // Display-only zone for grid timestamps. Defaults to UTC (how the raw data is stored).
+    displayTimezone = ko.observable<timeSeriesDisplayTimezone>("utc");
+    displayTimezoneLabel: KnockoutComputed<string>;
+
+    filterTimeSeriesModalView = ko.observable<ReactInKnockoutOptions<typeof FilterTimeSeriesModal.default>>();
+    deleteRangeModalView = ko.observable<ReactInKnockoutOptions<typeof DeleteTimeSeriesRangeModal.default>>();
+    filterBadgeView: ReactInKnockout<typeof TimeSeriesFilterBadge.default>;
+
     hasFilter: KnockoutComputed<boolean>;
     
     itemsSoFar = ko.observable<number>();
@@ -96,7 +108,7 @@ class editTimeSeries extends viewModelBase {
     constructor() {
         super();
         
-        this.bindToCurrentInstance("currentSeriesWasChanged", "createTimeSeries", "deleteTimeSeries", "plotTimeSeries", "plotGroupedTimeSeries");
+        this.bindToCurrentInstance("currentSeriesWasChanged", "createTimeSeries", "deleteTimeSeries", "plotTimeSeries", "plotGroupedTimeSeries", "setDisplayTimezone");
         
         this.initObservables();
         datePickerBindingHandler.install();
@@ -210,34 +222,41 @@ class editTimeSeries extends viewModelBase {
             this.createTimeSeries(true);
         }
         
+        // Stored timestamps are UTC. Display them either as-is (with a trailing Z) or converted to the
+        // browser's local zone, per the global time zone toggle.
         const formatTimeSeriesDate = (timestamp: string) => {
             const dateToFormat = moment.utc(timestamp);
+            if (this.displayTimezone() === "local") {
+                return dateToFormat.local().format(editTimeSeries.timeSeriesFormat);
+            }
             return dateToFormat.format(editTimeSeries.timeSeriesFormat) + "Z";
         };
-        
+
         const grid = this.gridController();
         grid.headerVisible(true);
 
         const check = new checkedColumn(true);
-        
+
         const editColumn = new actionColumn<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>(
             grid, item => this.editItem(item), "Edit", `<i class="icon-edit"></i>`, "70px",
             {
                 title: () => 'Edit item'
             });
 
-        const timestampColumn = new textColumn<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>(grid, x => formatTimeSeriesDate(x.Timestamp), "Date", "20%");
-        
         grid.init((s) => this.fetchSeries(s).done(result => this.checkColumns(result)), () => {
             const { valuesCount, hasTag } = this.columnsCacheInfo;
-            
+
             const columnNames = this.getColumnNamesToUse(valuesCount);
-            
+
+            // Rebuilt on every column refresh so the header and formatting track the current time zone.
+            const timestampColumn = new textColumn<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>(
+                grid, x => formatTimeSeriesDate(x.Timestamp), this.dateColumnHeader(), "20%");
+
             const valueColumns = columnNames
-                .map((name, idx) => 
+                .map((name, idx) =>
                     new textColumn<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>(
                         grid, x => x.Values[idx] ?? "n/a", name, "130px"));
-            
+
             const columns = [ check, editColumn, timestampColumn ];
 
             columns.push(...valueColumns);
@@ -255,8 +274,12 @@ class editTimeSeries extends viewModelBase {
                 const value = column.getCellValue && column.getCellValue(item);
                 if (column.header === "Edit") {
                     return null;
-                } else if (column.header === "Date") {
-                    onValue(moment.utc(item.Timestamp).local(), item.Timestamp);
+                } else if (column.header === this.dateColumnHeader()) {
+                    // Tooltip shows the same instant in the opposite zone for quick cross-reference.
+                    const opposite = this.displayTimezone() === "local"
+                        ? moment.utc(item.Timestamp)
+                        : moment.utc(item.Timestamp).local();
+                    onValue(opposite, item.Timestamp);
                 } else if (value !== undefined) {
                     onValue(generalUtils.escapeHtml(value), value);
                 }
@@ -321,13 +344,13 @@ class editTimeSeries extends viewModelBase {
 
         const numberOfItemsFetched = result.Entries.length;
         this.itemsSoFar(this.itemsSoFar() + numberOfItemsFetched);
-        
+
         if (!result.To ||
             numberOfItemsFetched < editTimeSeries.pageSize ||
             (this.localEndDateInFilter() &&(new Date(result.To)) >= this.localEndDateInFilter().toDate())) {
             return this.itemsSoFar();
         }
-        
+
         return this.itemsSoFar() + 1; // indicate there are more results to scroll for
     }
     
@@ -357,6 +380,20 @@ class editTimeSeries extends viewModelBase {
 
     private refresh(hard = false) {
         this.gridController().reset(hard);
+    }
+
+    private dateColumnHeader(): string {
+        return this.displayTimezone() === "local" ? "Date (Local)" : "Date (UTC)";
+    }
+
+    setDisplayTimezone(timezone: timeSeriesDisplayTimezone) {
+        if (this.displayTimezone() === timezone) {
+            return;
+        }
+        this.displayTimezone(timezone);
+        // Rebuild the columns (header + cell formatting depend on the zone), then redraw the rows.
+        this.gridController().markColumnsDirty();
+        this.refresh();
     }
 
     private activateByCreateNew(docId: string) {
@@ -435,7 +472,13 @@ class editTimeSeries extends viewModelBase {
     }
     
     deleteTimeSeries() {
-        const deleteDialog = new deleteTimeSeries(this.timeSeriesName(), this.documentId(), this.activeDatabase(), this.deleteCriteria());
+        const criteria = this.deleteCriteria();
+        if (criteria.mode === "range") {
+            this.openDeleteRangeModal();
+            return;
+        }
+
+        const deleteDialog = new deleteTimeSeries(this.timeSeriesName(), this.documentId(), this.activeDatabase(), criteria);
         app.showBootstrapDialog(deleteDialog)
             .done((postDeleteAction: postTimeSeriesDeleteAction) => {
                 switch (postDeleteAction) {
@@ -572,32 +615,22 @@ class editTimeSeries extends viewModelBase {
             return tsInfo ? tsInfo.nameAndNumberFormatted() : "<creating new>";
         });
         
-        this.filterText = ko.pureComputed<string>(() => {
-            const start = this.localStartDateInFilter();
-            const end = this.localEndDateInFilter();
-
-            if (!start && !end) {
-                return "";
-            }
-            
-            let text = "Showing entries with ";
-            
-            if (start) {
-                text += `date &gt;= <code>${start.clone().utc().format(editTimeSeries.timeSeriesFormat)}Z</code>`;
-            }
-            
-            if (start && end) {
-                text += " and ";
-            }
-            
-            if (end) {
-                text += `date &lt;= <code>${end.clone().utc().format(editTimeSeries.timeSeriesFormat)}Z</code>`;
-            }
-            
-            return text;
-        });
+        this.filterBadgeView = ko.pureComputed(() => ({
+            component: TimeSeriesFilterBadge.default,
+            props: {
+                startDate: this.localStartDateInFilter() || null,
+                endDate: this.localEndDateInFilter() || null,
+                // Render the filter bounds in the same zone the grid's timestamps use,
+                // otherwise the badge can read local while the table reads UTC.
+                timezone: this.displayTimezone(),
+                onEdit: () => this.openFilterDialog(),
+                onClear: () => this.clearFilter(),
+            },
+        }));
         
         this.hasFilter = ko.pureComputed<boolean>(() => !!this.localStartDateInFilter() || !!this.localEndDateInFilter());
+
+        this.displayTimezoneLabel = ko.pureComputed(() => this.displayTimezone() === "local" ? "Local" : "UTC");
     }
 
     plotTimeSeries() {
@@ -661,19 +694,92 @@ class editTimeSeries extends viewModelBase {
     }
     
     openFilterDialog() {
-        const filterDialog = new filterTimeSeries(this.localStartDateInFilter(), this.localEndDateInFilter());
-        
-        app.showBootstrapDialog(filterDialog)
-            .done((filterDates: filterTimeSeriesDates<moment.Moment>) => {
-                if (filterDates) {
+        this.filterTimeSeriesModalView({
+            component: FilterTimeSeriesModal.default,
+            props: {
+                startDate: this.localStartDateInFilter() || null,
+                endDate: this.localEndDateInFilter() || null,
+                // Seed the picker with the grid's zone so both agree; applying doesn't change it.
+                timezone: this.displayTimezone(),
+                onApply: (filterDates: filterTimeSeriesDates<moment.Moment>) => {
                     this.localStartDateInFilter(filterDates.startDate || undefined);
                     this.localEndDateInFilter(filterDates.endDate || undefined);
-                }
-            })
-            .always(() => {
-                this.itemsSoFar(0);
-                this.refresh();
-            })
+                    this.itemsSoFar(0);
+                    this.refresh();
+                },
+                close: () => this.filterTimeSeriesModalView(null),
+            },
+        });
+    }
+
+    clearFilter() {
+        this.localStartDateInFilter(undefined);
+        this.localEndDateInFilter(undefined);
+        this.itemsSoFar(0);
+        this.refresh();
+    }
+
+    private openDeleteRangeModal() {
+        // Prefill the delete range from the active filter (if any); the dialog re-counts live.
+        this.deleteRangeModalView({
+            component: DeleteTimeSeriesRangeModal.default,
+            props: {
+                timeSeriesName: this.timeSeriesName(),
+                startDate: this.localStartDateInFilter() || null,
+                endDate: this.localEndDateInFilter() || null,
+                timezone: this.displayTimezone(),
+                resolveCount: (range: filterTimeSeriesDates<moment.Moment>) => this.resolveRangeCount(range),
+                onDelete: (range: filterTimeSeriesDates<moment.Moment>) => this.executeRangeDelete(range),
+                close: () => this.deleteRangeModalView(null),
+            },
+        });
+    }
+
+    // Count the entries in a candidate delete range. Fetches one page: an exact total when the
+    // server reports one (incremental series) or the whole range fits in a page; otherwise a
+    // lower bound. Only a 404 means an empty range; any other failure rejects so the dialog can
+    // show an "unknown count" state rather than pretending the range is empty.
+    private resolveRangeCount(range: filterTimeSeriesDates<moment.Moment>): Promise<{ count: number; exact: boolean }> {
+        return new Promise((resolve, reject) => {
+            new getTimeSeriesCommand(this.documentId(), this.timeSeriesName(), this.activeDatabase(),
+                0, editTimeSeries.pageSize, true, range.startDate || undefined, range.endDate || undefined)
+                .execute()
+                .done((result) => {
+                    if (result.TotalResults) {
+                        resolve({ count: result.TotalResults, exact: true });
+                        return;
+                    }
+                    const fetched = result.Entries.length;
+                    resolve({ count: fetched, exact: fetched < editTimeSeries.pageSize });
+                })
+                .fail((xhr: JQueryXHR) => {
+                    if (xhr.status === 404) {
+                        resolve({ count: 0, exact: true });
+                    } else {
+                        reject();
+                    }
+                });
+        });
+    }
+
+    private executeRangeDelete(range: filterTimeSeriesDates<moment.Moment>): Promise<void> {
+        const dto: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesOperation.DeleteOperation[] = [
+            {
+                From: range.startDate ? range.startDate.clone().utc().format(generalUtils.utcFullDateFormat) : null,
+                To: range.endDate ? range.endDate.clone().utc().format(generalUtils.utcFullDateFormat) : null,
+            },
+        ];
+
+        return new Promise<void>((resolve, reject) => {
+            new deleteTimeSeriesCommand(this.documentId(), this.timeSeriesName(), dto, this.activeDatabase())
+                .execute()
+                .done(() => {
+                    messagePublisher.reportSuccess("Deleted time series values");
+                    this.refresh();
+                    resolve();
+                })
+                .fail(() => reject());
+        });
     }
 }
 
