@@ -268,8 +268,9 @@ public static class CoraxQueryBuilder
                 var maxTermToScan = builderParameters.Take switch
                 {
                     < 0 => int.MaxValue, // meaning, take all
-                    // We cannot apply this optimization when we are returning statistics (RavenDB-21525).
-                    var take when builderParameters.Query.SkipStatistics => (long)take + 1, 
+                    // We cannot apply this optimization when we are returning statistics (RavenDB-21525),
+                    // nor when a document holds several terms in the sort field, because the cap counts terms, not documents.
+                    var take when builderParameters.Query.SkipStatistics && indexSearcher.HasMultipleTermsInField(sortBy.Field) == false => (long)take + 1, 
                     int.MaxValue => (long)int.MaxValue + 1, // avoid overflow
                     _ => int.MaxValue
                 };
