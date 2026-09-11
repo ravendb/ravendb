@@ -25,6 +25,7 @@ export function AppDataSource() {
     const dashboardAppQuery = useQuery(api.queries.stats.dashboardApp(slug));
 
     const sourceType = dashboardAppQuery.data?.source.type ?? "";
+    const sourceDatabase = dashboardAppQuery.data?.source.database ?? "";
     // Only external database sources carry a portable connection + mapping, matching the wizard's gate.
     const isExternalSource = PROVIDER_OPTIONS.some((option) => option.label === sourceType);
 
@@ -43,9 +44,11 @@ export function AppDataSource() {
                                     {sourceType}
                                 </DetailHeaderMetaItem>
                             )}
-                            <DetailHeaderMetaItem icon={Database} mono tooltip="Source database">
-                                {appQuery.data.database}
-                            </DetailHeaderMetaItem>
+                            {sourceDatabase && (
+                                <DetailHeaderMetaItem icon={Database} mono tooltip="Source database">
+                                    {sourceDatabase}
+                                </DetailHeaderMetaItem>
+                            )}
                             <DetailHeaderMetaItem icon={CalendarClock}>
                                 Connected{" "}
                                 <Timestamp value={appQuery.data.createdAt} dateVariant="short" textVariant="inherit" />
