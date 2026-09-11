@@ -14,6 +14,14 @@ namespace Raven.Client.Extensions
     ///</summary>
     internal static class ExpressionExtensions
     {
+        public static Expression SkipConvertExpressions(this Expression expression)
+        {
+            while (expression.NodeType == ExpressionType.Convert || expression.NodeType == ExpressionType.ConvertChecked)
+                expression = ((UnaryExpression)expression).Operand;
+
+            return expression;
+        }
+
         public static MemberInfo ToProperty(this LambdaExpression expr)
         {
             var expression = expr.Body;

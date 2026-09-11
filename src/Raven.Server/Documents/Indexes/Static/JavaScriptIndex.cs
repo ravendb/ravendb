@@ -13,6 +13,7 @@ using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.AI.Embeddings;
@@ -295,20 +296,26 @@ function map(name, lambda) {
 
         internal static AbstractJavaScriptIndex Create(IndexDefinition definition, RavenConfiguration configuration, long indexVersion)
         {
-            switch (definition.SourceType)
+            try
             {
-                case IndexSourceType.Documents:
-                    return new JavaScriptIndex(definition, configuration, indexVersion);
+                switch (definition.SourceType)
+                {
+                    case IndexSourceType.Documents:
+                        return new JavaScriptIndex(definition, configuration, indexVersion);
 
-                case IndexSourceType.TimeSeries:
-                    return new TimeSeriesJavaScriptIndex(definition, configuration, indexVersion);
+                    case IndexSourceType.TimeSeries:
+                        return new TimeSeriesJavaScriptIndex(definition, configuration, indexVersion);
 
-                case IndexSourceType.Counters:
-                    return new CountersJavaScriptIndex(definition, configuration, indexVersion);
-
-                default:
-                    throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");
+                    case IndexSourceType.Counters:
+                        return new CountersJavaScriptIndex(definition, configuration, indexVersion);
+                }
             }
+            catch (Exception e) when (e is IndexCompilationException == false && e is IndexCreationException == false)
+            {
+                IndexCompilationException.ThrowFor(definition.Name, e.Message, e);
+            }
+
+            throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");
         }
 
         private void ProcessFields(IndexDefinition definition, Dictionary<string, Dictionary<string, List<JavaScriptMapOperation>>> collectionFunctions)
@@ -440,15 +447,29 @@ function map(name, lambda) {
 
             var mapReferencedCollections = new List<MapMetadata>();
             var additionalSources = sb.ToString();
-            foreach (var map in maps)
+            for (var i = 0; i < maps.Count; i++)
             {
-                var result = ExecuteCodeAndCollectReferencedCollections(map, additionalSources);
-                mapReferencedCollections.Add(result);
+                try
+                {
+                    var result = ExecuteCodeAndCollectReferencedCollections(maps[i], additionalSources);
+                    mapReferencedCollections.Add(result);
+                }
+                catch (Exception e)
+                {
+                    IndexCompilationException.ThrowFor(Definition.Name, e.Message, e, nameof(IndexDefinition.Maps), definition.Maps.ElementAt(i));
+                }
             }
 
             if (definition.Reduce != null)
             {
-                _engine.ExecuteWithReset(definition.Reduce);
+                try
+                {
+                    _engine.ExecuteWithReset(definition.Reduce);
+                }
+                catch (Exception e)
+                {
+                    IndexCompilationException.ThrowFor(Definition.Name, e.Message, e, nameof(IndexDefinition.Reduce), definition.Reduce);
+                }
             }
 
             return mapReferencedCollections;
