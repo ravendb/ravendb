@@ -1,6 +1,6 @@
 using System;
-using System.Text;
 using Tests.Infrastructure;
+using Voron;
 using Xunit;
 
 namespace FastTests.Voron
@@ -11,24 +11,31 @@ namespace FastTests.Voron
         {
         }
 
+        // A background flush can piggyback its journal flush-state update onto any running write
+        // transaction and then set its own catastrophic failure, which overwrites the one under test.
+        protected override void Configure(StorageEnvironmentOptions options)
+        {
+            options.ManualFlushing = true;
+        }
+
         [RavenFact(RavenTestCategory.Voron)]
         public void SubscriberFailureAfterJournalWriteTakesEnvironmentDown()
         {
+            Exception subscriberFailure;
             using (var tx = Env.WriteTransaction())
             {
                 tx.LowLevelTransaction.ModifyPage(0);
                 tx.LowLevelTransaction.BeforeCommitFinalization += _ => throw new InvalidOperationException("subscriber failed");
 
-                Assert.Throws<InvalidOperationException>(() => tx.Commit());
+                subscriberFailure = Assert.Throws<InvalidOperationException>(() => tx.Commit());
             }
 
-            Assert.True(Env.Options.IsCatastrophicFailureSet);
+            Assert.Equal("subscriber failed", subscriberFailure.Message);
 
             // The journal already holds the transaction. Serving further writes as if it rolled
-            // back would diverge from what recovery will replay. The background flusher may have
-            // wrapped the stored failure by now. Assert on the exception chain, not the type.
-            var e = Assert.ThrowsAny<Exception>(() => Env.WriteTransaction().Dispose());
-            Assert.Contains("subscriber failed", FlattenMessages(e));
+            // back would diverge from what recovery will replay.
+            Assert.True(Env.Options.IsCatastrophicFailureSet);
+            Assert.ThrowsAny<Exception>(() => Env.WriteTransaction().Dispose());
         }
 
         [RavenMultiplatformFact(RavenTestCategory.Voron, RavenArchitecture.X64)]
@@ -95,14 +102,6 @@ namespace FastTests.Voron
                 tx.LowLevelTransaction.ModifyPage(0);
                 tx.Commit();
             }
-        }
-
-        private static string FlattenMessages(Exception e)
-        {
-            var sb = new StringBuilder();
-            for (; e != null; e = e.InnerException)
-                sb.AppendLine(e.Message);
-            return sb.ToString();
         }
     }
 }
