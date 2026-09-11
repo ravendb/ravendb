@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using Sparrow;
 using Sparrow.Compression;
 using Sparrow.Server;
@@ -25,10 +26,21 @@ public partial class Hnsw
             node.VectorId = VectorId;
             node.PostingListId = PostingListId;
             node.EdgesPerLevel.EnsureCapacityFor(allocator, CountOfLevels);
+
+            // CountOfLevels sized the allocation above. The record must deliver exactly that
+            // many level lists. The adds below are unchecked and would run past the capacity.
+            var levels = 0;
             while (NextReadEdges(out var list))
             {
+                if (levels == CountOfLevels)
+                    throw new InvalidDataException($"Corrupt HNSW node record: it holds more level lists than the {CountOfLevels} it declares");
+
                 node.EdgesPerLevel.AddUnsafe(list);
+                levels++;
             }
+
+            if (levels != CountOfLevels)
+                throw new InvalidDataException($"Corrupt HNSW node record: it declares {CountOfLevels} level lists but holds only {levels}");
         }
 
         private bool NextReadEdges(out NativeList<long> list)
@@ -39,21 +51,41 @@ public partial class Hnsw
                 return false;
             }
 
-            var count = VariableSizeEncoding.Read<int>(_buffer, out int offset, _offset);
-            _offset += offset;
+            var count = ReadBoundedVarInt(_buffer, ref _offset);
+
+            // Every edge costs at least one byte. A valid edge count cannot exceed the bytes
+            // remaining. The count is persisted bytes sizing a native allocation.
+            if (count < 0 || count > _buffer.Length - _offset)
+                throw new InvalidDataException($"Corrupt HNSW node record: edge count {count} does not fit the {_buffer.Length - _offset} bytes remaining in the record");
+
             list = new NativeList<long>();
-            list.EnsureCapacityFor(allocator, count);
+            list.EnsureCapacityFor(allocator, (int)count);
             long prev = 0;
             for (int i = 0; i < count; i++)
             {
-                var item = VariableSizeEncoding.Read<long>(_buffer, out offset, _offset);
-                _offset += offset;
-                prev += item;
+                prev += ReadBoundedVarInt(_buffer, ref _offset);
                 Debug.Assert(prev >= 0, "prev >= 0");
                 list.AddUnsafe(prev);
             }
 
             return true;
+        }
+
+        /// Reads a LEB128 varint without stepping past the buffer. The record is persisted bytes.
+        /// A truncated varint must fail as a corrupt-record error, not read adjacent memory.
+        internal static long ReadBoundedVarInt(ReadOnlySpan<byte> buffer, ref int offset)
+        {
+            ulong result = 0;
+            for (int shift = 0; shift < 64; shift += 7)
+            {
+                if (offset >= buffer.Length)
+                    throw new InvalidDataException("Corrupt HNSW node record: truncated varint");
+                byte b = buffer[offset++];
+                result |= (ulong)(b & 0x7F) << shift;
+                if (b < 0x80)
+                    return (long)result;
+            }
+            throw new InvalidDataException("Corrupt HNSW node record: varint exceeds 64 bits");
         }
 
         public UnmanagedSpan ReadVector(in SearchState state) => ReadVector(VectorId, in state);

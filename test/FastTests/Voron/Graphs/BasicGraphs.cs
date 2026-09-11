@@ -520,4 +520,20 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
             Assert.Equal(3, read);
         }
     }
+
+    [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Vector)]
+    public void GraphCannotBeCreatedWithSingleEdgePerNode()
+    {
+        using var _ = Slice.From(Allocator, "test", out var treeName);
+
+        using (var txw = Env.WriteTransaction())
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                Hnsw.Create(txw.LowLevelTransaction, treeName, 16, numberOfEdges: 1, 12, VectorEmbeddingType.Single));
+
+            // The floor, not a blanket rejection: 2 edges is a legal graph.
+            Hnsw.Create(txw.LowLevelTransaction, treeName, 16, numberOfEdges: 2, 12, VectorEmbeddingType.Single);
+            txw.Commit();
+        }
+    }
 }
