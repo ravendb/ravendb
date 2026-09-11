@@ -89,7 +89,7 @@ export async function parseConfigFile(file: File): Promise<WizardConfig> {
     const result = wizardConfigSchema.safeParse(json);
 
     if (!result.success) {
-        throw new Error(result.error.issues[0]?.message || "The file does not look like an exported configuration.");
+        throw new Error(firstIssueMessage(result.error, "The file does not look like an exported configuration."));
     }
 
     return {
@@ -104,12 +104,18 @@ export function parseConfigTables(tables: CdcSinkTableConfig[]) {
 
     if (!result.success) {
         throw new Error(
-            result.error.issues[0]?.message ||
+            firstIssueMessage(
+                result.error,
                 "The configuration's table mapping is invalid or was exported from an incompatible version.",
+            ),
         );
     }
 
     return result.data;
+}
+
+function firstIssueMessage(error: z.ZodError, fallback: string) {
+    return error.issues[0]?.message || fallback;
 }
 
 type AnyTableConfig = {
