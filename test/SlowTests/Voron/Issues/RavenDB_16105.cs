@@ -58,7 +58,8 @@ namespace SlowTests.Voron.Issues
                 var scratchFile = Env.ScratchBufferPool.GetScratchBufferFile(0);
 
                 var state = tx.LowLevelTransaction.PagerTransactionState.ForCrypto![scratchFile.Pager];
-                long positionInScratchBuffer = Env.WriteTransactionPool.ScratchPagesInUse[p.PageNumber].PositionInScratchBuffer;
+                Assert.True(tx.LowLevelTransaction.TryGetScratchPage(p.PageNumber, out var scratchPage));
+                long positionInScratchBuffer = scratchPage.PositionInScratchBuffer;
                 // starting position 66 in the scratch file + 58 pages of actual allocation
                 for (int i = numberOfAllocatedPages; i < Bits.PowerOf2(numberOfAllocatedPages); i++)
                 {

@@ -421,7 +421,7 @@ rvn_sync_pager(void *handle,
     struct handle *handle_ptr = handle;
     if (!io_ring_setup_successful())
     {
-        if (_flush_file(handle_ptr->file_fd))
+        if (fdatasync(handle_ptr->file_fd) != 0)
         {
             *detailed_error_code = errno;
             return FAIL_SYNC_FILE;
@@ -554,6 +554,10 @@ int32_t rvn_write_io_ring(
     if (*detailed_error_code)
     {
         rc = FAIL_IO_RING_WRITE_RESULT;
+    }
+    else if (rc == SUCCESS)
+    {
+        _mark_dirty_pages(handle, buffers, count);
     }
 
     int unlock_rc = pthread_mutex_unlock(&handle_ptr->global_state->writes_arena.lock);

@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Server;
 using Voron.Data.BTrees;
@@ -10,10 +11,11 @@ using Voron.Impl;
 
 namespace Voron.Data.Compression
 {
-    public sealed unsafe class DecompressedLeafPage : TreePage, IDisposable
+    public sealed unsafe class DecompressedLeafPage : IDisposable
     {
-        public DecompressedLeafPage(byte* basePtr, int pageSize, DecompressionUsage usage, TreePage original, ByteStringContext.InternalScope disposable) : base(basePtr, pageSize)
+        public DecompressedLeafPage(byte* basePtr, int pageSize, DecompressionUsage usage, TreePage original, ByteStringContext.InternalScope disposable)
         {
+            Page = new TreePage(basePtr, pageSize);
             Original = original;
             _disposable = disposable;
             Usage = usage;
@@ -23,7 +25,123 @@ namespace Voron.Data.Compression
             Flags = Original.Flags & ~PageFlags.Compressed;
         }
 
+        public TreePage Page;
+
         public TreePage Original;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static implicit operator TreePage(DecompressedLeafPage page) => page.Page;
+
+        public long PageNumber
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => Page.PageNumber;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            set => Page.PageNumber = value;
+        }
+
+        public ushort NumberOfEntries
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => Page.NumberOfEntries;
+        }
+
+        public byte* Base
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => Page.Base;
+        }
+
+        public int PageSize
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => Page.PageSize;
+        }
+
+        public sbyte LastMatch
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => Page.LastMatch;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            set => Page.LastMatch = value;
+        }
+
+        public short LastSearchPosition
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => Page.LastSearchPosition;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            set => Page.LastSearchPosition = value;
+        }
+
+        public ushort Lower
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => Page.Lower;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            set => Page.Lower = value;
+        }
+
+        public ushort Upper
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => Page.Upper;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            set => Page.Upper = value;
+        }
+
+        public PageFlags Flags
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => Page.Flags;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            set => Page.Flags = value;
+        }
+
+        public TreePageFlags TreeFlags
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => Page.TreeFlags;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            set => Page.TreeFlags = value;
+        }
+
+        public ushort* KeysOffsets
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => Page.KeysOffsets;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public TreeNodeHeader* GetNode(int n) => Page.GetNode(n);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public TreeNodeHeader* Search(LowLevelTransaction tx, Slice key, bool backward = false) => Page.Search(tx, key, backward);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IDisposable GetNodeKey(LowLevelTransaction tx, int nodeNumber, out Slice key) => Page.GetNodeKey(tx, nodeNumber, out key);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void RemoveNode(int index) => Page.RemoveNode(index);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int CalcSizeUsed() => Page.CalcSizeUsed();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool HasSpaceFor(LowLevelTransaction tx, int len) => Page.HasSpaceFor(tx, len);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int NodePositionFor(LowLevelTransaction tx, Slice key) => Page.NodePositionFor(tx, key);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public byte* AddPageRefNode(int index, Slice key, long pageNumber) => Page.AddPageRefNode(index, key, pageNumber);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public byte* AddDataNode(int index, Slice key, int dataSize) => Page.AddDataNode(index, key, dataSize);
+
+        [System.Diagnostics.Conditional("VALIDATE")]
+        public void DebugValidate(Tree tree, long rootPageNumber) => Page.DebugValidate(tree, rootPageNumber);
+
         private ByteStringContext.InternalScope _disposable;
 
         public bool Cached;
@@ -118,7 +236,7 @@ namespace Voron.Data.Compression
 
             using (GetNodeKey(tx, middleNodeIndex, out var middleNodeKey))
             {
-                tree.FindPageFor(middleNodeKey, node: out _, cursor: out var cursorConstructor, allowCompressed: true);
+                tree.FindPageFor(middleNodeKey, node: out _, cursor: out var treeCursor, allowCompressed: true);
 
                 // let's copy key and data of a node that we'll remove
 
@@ -137,11 +255,11 @@ namespace Voron.Data.Compression
 
                     Search(tx, key);
 
-                    using (var cursor = cursorConstructor.Build(key))
                     {
+                        ref var cursor = ref treeCursor;
                         cursor.SetTopPage(this); // we need to use uncompressed page here because it might have some modifications (e.g. deleted node)
 
-                        var pageSplitter = new TreePageSplitter(tx, tree, key, valueReader.Length, PageNumber, flags, cursor,
+                        var pageSplitter = new TreePageSplitter(tx, tree, key, valueReader.Length, PageNumber, flags, ref cursor,
                             splittingOnDecompressed: true);
 
                         var pos = pageSplitter.Execute();

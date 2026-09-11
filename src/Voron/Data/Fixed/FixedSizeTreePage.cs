@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+using System;
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Sparrow;
@@ -6,26 +7,55 @@ using Voron.Global;
 
 namespace Voron.Data.Fixed
 {
-    public sealed unsafe class FixedSizeTreePage<TVal>
+    // laid out to fit in 16 bytes, so a page can be passed and returned in registers.
+    //   _ptr 8 + _entrySize 2 + LastSearchPosition 2 + _tombstoneBitmapSize 1
+    //   + LastMatch 1 + Dirty 1 = 15, padded to 16.
+    // The widths are chosen from the actual ranges, not from habit:
+    //   _entrySize            <= a page, and a branch entry is 16 bytes
+    //   LastSearchPosition    <= entries per page (~1000 at the smallest entry size)
+    //   _tombstoneBitmapSize  <= 126 bytes at the smallest entry size (see the assert)
+    //   LastMatch             is only ever tested for its SIGN
+    // PageSize is not stored at all: every construction site passes
+    // Constants.Storage.PageSize, so it is a constant rather than a per-page field.
+    public unsafe struct FixedSizeTreePage<TVal>
         where TVal : unmanaged, IBinaryNumber<TVal>, IMinMaxValue<TVal>
     {
         private readonly byte* _ptr;
-        private readonly int _entrySize;
-        private readonly int _pageSize;
+        private ushort _entrySize;
 
-        public int LastMatch;
-        public int LastSearchPosition;
+        private byte _tombstoneBitmapSize; // cached, 0 means uncomputed
+
+        public sbyte LastMatch; // sign only
+        public short LastSearchPosition;
         public bool Dirty;
+
+        public readonly bool IsValid
+        {
+             [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => _ptr != null;
+        }
 
         public FixedSizeTreePage(byte* b, int entrySize, int pageSize)
         {
+            Debug.Assert(pageSize == Constants.Storage.PageSize,
+                $"FixedSizeTreePage assumes {Constants.Storage.PageSize} byte pages, got {pageSize}");
+
             _ptr = b;
-            _pageSize = pageSize;
+            _tombstoneBitmapSize = 0;
+            LastMatch = 0;
+            LastSearchPosition = 0;
+            Dirty = false;
 
             if (IsBranch)
                 _entrySize = FixedSizeTree<TVal>.BranchEntrySize;
             else
-                _entrySize = entrySize;
+                _entrySize = checked((ushort)entrySize);
+        }
+
+        public void RefreshEntrySize()
+        {
+            _entrySize = checked((ushort)(IsBranch ? FixedSizeTree<TVal>.BranchEntrySize : LeafEntrySize));
+            _tombstoneBitmapSize = 0;
         }
 
         private FixedSizeTreePageHeader* Header
@@ -59,7 +89,7 @@ namespace Voron.Data.Fixed
         public int PageSize
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _pageSize; }
+            get { return Constants.Storage.PageSize; }
         }
 
         public bool IsLeaf
@@ -74,10 +104,16 @@ namespace Voron.Data.Fixed
             get { return (Header->TreeFlags & FixedSizeTreePageFlags.Branch) == FixedSizeTreePageFlags.Branch; }
         }
 
+        public bool HasTombstonesBitmap
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return (Header->TreeFlags & FixedSizeTreePageFlags.HasTombstonesBitmap) == FixedSizeTreePageFlags.HasTombstonesBitmap; }
+        }
+
         public int PageMaxSpace
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _pageSize - Constants.FixedSizeTree.PageHeaderSize; }
+            get { return Constants.Storage.PageSize - Constants.FixedSizeTree.PageHeaderSize; }
         }
 
 
@@ -87,6 +123,18 @@ namespace Voron.Data.Fixed
             get { return Header->NumberOfEntries; }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set { Header->NumberOfEntries = value; }
+        }
+
+        public int NumberOfActiveEntries
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return HasTombstonesBitmap ? Header->NumberOfEntries - Header->NumberOfTombstones : Header->NumberOfEntries; }
+        }
+
+        public int NumberOfTombstones
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return HasTombstonesBitmap ? Header->NumberOfTombstones : 0; }
         }
 
         public ushort StartPosition
@@ -141,7 +189,27 @@ namespace Voron.Data.Fixed
         internal FixedSizeTreeEntry* GetEntry(int position)
         {
             Debug.Assert(position >= 0 && ((position == 0 && NumberOfEntries == 0) || position < NumberOfEntries) ,$"FixedSizeTreePage: Requested an out of range entry {position} from [0-{NumberOfEntries-1}]");
+            AssertEntrySizeMatchesThePage();
             return GetEntry(Pointer + StartPosition, position, _entrySize);
+        }
+
+        [Conditional("DEBUG")]
+        private void AssertFitsNextToTombstonesBitmap()
+        {
+            int capacity = GetTombstonesLayout(Constants.Storage.PageSize, LeafEntrySize).Capacity;
+
+            Debug.Assert(NumberOfEntries <= capacity,
+                $"FixedSizeTreePage: page {PageNumber} holds {NumberOfEntries} entries, more than the {capacity} that fit next to a tombstone bitmap");
+        }
+
+        [Conditional("DEBUG")]
+        private void AssertEntrySizeMatchesThePage()
+        {
+            var expected = IsBranch ? FixedSizeTree<TVal>.BranchEntrySize : LeafEntrySize;
+            if (_entrySize == expected)
+                return;
+
+            Debug.Fail($"FixedSizeTreePage: page {PageNumber} is a {FixedTreeFlags} with entries of {expected} bytes, but it was wrapped with entries of {_entrySize} bytes");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -166,6 +234,7 @@ namespace Voron.Data.Fixed
         public void RemoveEntry(int pos)
         {
             System.Diagnostics.Debug.Assert(pos >= 0 && pos < NumberOfEntries);
+            System.Diagnostics.Debug.Assert(HasTombstonesBitmap == false, "Entries of a page with a tombstone bitmap have to be removed through AddTombstone / CompactTombstones");
             NumberOfEntries--;
 
             var size = (ushort)_entrySize;
@@ -179,6 +248,224 @@ namespace Voron.Data.Fixed
             Memory.Move(Pointer + StartPosition + (pos * size),
                    Pointer + StartPosition + ((pos + 1) * size),
                    (NumberOfEntries - pos) * size);
+        }
+
+        // -------------------------------------------------------------------------------------------------
+        // Tombstones
+        //
+        // A converted leaf page reserves the tail of the page for a bitmap with one bit per entry slot, and
+        // pins its entries at the page header (StartPosition never moves), so the bit index of an entry is
+        // its position in the entries array. Deleting is then a single bit write instead of memmoving half
+        // of the page, at the cost of a compaction once the page fills up or drops below the merge threshold.
+        // -------------------------------------------------------------------------------------------------
+
+        public static (int Capacity, int BitmapSize) GetTombstonesLayout(int pageSize, int entrySize)
+        {
+            int usableSpace = pageSize - Constants.FixedSizeTree.PageHeaderSize;
+            int capacity = (usableSpace * 8) / (entrySize * 8 + 1);
+            return (capacity, (capacity + 7) / 8);
+        }
+
+        private int LeafEntrySize
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return Header->ValueSize + sizeof(long); }
+        }
+
+        private int TombstonesBitmapSize
+        {
+            get
+            {
+                if (_tombstoneBitmapSize == 0)
+                {
+                    var size = GetTombstonesLayout(Constants.Storage.PageSize, LeafEntrySize).BitmapSize;
+                    Debug.Assert(size > 0 && size <= byte.MaxValue,
+                        $"tombstone bitmap of {size} bytes does not fit the byte-wide cache");
+                    _tombstoneBitmapSize = (byte)size;
+                }
+
+                return _tombstoneBitmapSize;
+            }
+        }
+
+        private byte* TombstonesBitmap
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _ptr + Constants.Storage.PageSize - TombstonesBitmapSize; }
+        }
+
+        public void InitializeTombstones()
+        {
+            Debug.Assert(IsLeaf, "Only leaf pages track tombstones");
+            Debug.Assert(HasTombstonesBitmap == false, "Page already tracks tombstones");
+            AssertFitsNextToTombstonesBitmap();
+            AssertEntrySizeMatchesThePage();
+
+            ResetStartPosition();
+
+            ClearTombstones();
+
+            Header->TreeFlags |= FixedSizeTreePageFlags.HasTombstonesBitmap;
+        }
+
+        public void ClearTombstones()
+        {
+            Memory.Set(_ptr + Constants.Storage.PageSize - TombstonesBitmapSize, 0, TombstonesBitmapSize);
+            Header->NumberOfTombstones = 0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool IsTombstoned(int position)
+        {
+            if (HasTombstonesBitmap == false)
+                return false;
+
+            Debug.Assert(position >= 0, $"FixedSizeTreePage: Requested the tombstone of a negative entry {position}");
+
+            if (position >= NumberOfEntries)
+                return false; // past the end of the entries, there is nothing there to tombstone
+
+            return (TombstonesBitmap[position >> 3] & (byte)(1 << (position & 7))) != 0;
+        }
+
+        public void AddTombstone(int position)
+        {
+            Debug.Assert(HasTombstonesBitmap, "Page does not track tombstones");
+            Debug.Assert(position >= 0 && position < NumberOfEntries);
+            Debug.Assert(IsTombstoned(position) == false, $"Entry {position} in page {PageNumber} is already tombstoned");
+
+            TombstonesBitmap[position >> 3] |= (byte)(1 << (position & 7));
+            Header->NumberOfTombstones++;
+        }
+
+        public void RemoveTombstone(int position)
+        {
+            Debug.Assert(HasTombstonesBitmap, "Page does not track tombstones");
+            Debug.Assert(position >= 0 && position < NumberOfEntries);
+            Debug.Assert(IsTombstoned(position), $"Entry {position} in page {PageNumber} is not tombstoned");
+
+            TombstonesBitmap[position >> 3] &= (byte)~(1 << (position & 7));
+            Header->NumberOfTombstones--;
+        }
+
+        public void CompactTombstones()
+        {
+            Debug.Assert(HasTombstonesBitmap, "Page does not track tombstones");
+            AssertEntrySizeMatchesThePage();
+
+            if (Header->NumberOfTombstones == 0)
+                return;
+
+            var entries = Pointer + StartPosition;
+            var entrySize = LeafEntrySize;
+            var numberOfEntries = NumberOfEntries;
+            var read = 0;
+            var write = 0;
+
+            while (read < numberOfEntries)
+            {
+                while (read < numberOfEntries && IsTombstoned(read))
+                    read++;
+
+                var runStart = read;
+                while (read < numberOfEntries && IsTombstoned(read) == false)
+                    read++;
+
+                var runLength = read - runStart;
+                if (runLength == 0)
+                    continue;
+
+                if (write != runStart)
+                {
+                    Memory.Move(entries + (write * entrySize),
+                        entries + (runStart * entrySize),
+                        runLength * entrySize);
+                }
+
+                write += runLength;
+            }
+
+            NumberOfEntries = (ushort)write;
+            ClearTombstones();
+        }
+
+        public int CountActiveEntriesFrom(int position)
+        {
+            var numberOfEntries = NumberOfEntries;
+            if (position >= numberOfEntries)
+                return 0;
+
+            return numberOfEntries - position - CountTombstones(position, numberOfEntries);
+        }
+
+        public int CountActiveEntriesBefore(int position)
+        {
+            if (position <= 0)
+                return 0;
+
+            return position - CountTombstones(0, position);
+        }
+
+        private int CountTombstones(int from, int toExclusive)
+        {
+            if (HasTombstonesBitmap == false || Header->NumberOfTombstones == 0 || from >= toExclusive)
+                return 0;
+
+            var bitmap = TombstonesBitmap;
+            var firstByte = from >> 3;
+            var lastByte = (toExclusive - 1) >> 3;
+
+            var firstMask = 0xFF << (from & 7);
+            var lastMask = 0xFF >> (7 - ((toExclusive - 1) & 7));
+
+            if (firstByte == lastByte)
+                return BitOperations.PopCount((uint)(bitmap[firstByte] & firstMask & lastMask));
+
+            var count = BitOperations.PopCount((uint)(bitmap[firstByte] & firstMask & 0xFF));
+            for (int i = firstByte + 1; i < lastByte; i++)
+            {
+                count += BitOperations.PopCount((uint)bitmap[i]);
+            }
+
+            return count + BitOperations.PopCount((uint)(bitmap[lastByte] & lastMask));
+        }
+
+        public int AdvanceToActiveEntry(int position, int count)
+        {
+            var numberOfEntries = NumberOfEntries;
+            if (HasTombstonesBitmap == false || Header->NumberOfTombstones == 0)
+                return Math.Min(position + count, numberOfEntries);
+
+            for (; position < numberOfEntries; position++)
+            {
+                if (IsTombstoned(position))
+                    continue;
+
+                if (count-- == 0)
+                    return position;
+            }
+
+            return numberOfEntries;
+        }
+
+        public int RetreatToActiveEntry(int position, int count)
+        {
+            if (count == 0)
+                return position;
+
+            if (HasTombstonesBitmap == false || Header->NumberOfTombstones == 0)
+                return position - count;
+
+            for (position--; position >= 0; position--)
+            {
+                if (IsTombstoned(position))
+                    continue;
+
+                if (--count == 0)
+                    return position;
+            }
+
+            return 0;
         }
     }
 }

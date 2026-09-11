@@ -221,17 +221,17 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 Slice pageKey;
                 using (TreeNodeHeader.ToSlicePtr(allocator, node, out pageKey))
                 {
-                    page.LastMatch = SliceComparer.CompareInline(key, pageKey);
+                    page.LastMatch = (sbyte)Math.Sign(SliceComparer.CompareInline(key, pageKey));
                 }
 
-                page.LastSearchPosition = page.LastMatch > 0 ? 1 : 0;
+                page.LastSearchPosition = (short)(page.LastMatch > 0 ? 1 : 0);
                 return page.LastSearchPosition == 0 ? node : null;
             }
 
         MultipleEntryKey:
             {
-                page.LastMatch = lastMatch;
-                page.LastSearchPosition = lastSearchPosition;
+                page.LastMatch = (sbyte)Math.Sign(lastMatch);
+                page.LastSearchPosition = (short)lastSearchPosition;
 
                 if (lastSearchPosition >= numberOfEntries)
                     return null;
@@ -319,17 +319,17 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 Slice pageKey;
                 using (TreeNodeHeader.ToSlicePtr(allocator, node, out pageKey))
                 {
-                    page.LastMatch = SliceComparer.CompareInline(key, pageKey);
+                    page.LastMatch = (sbyte)Math.Sign(SliceComparer.CompareInline(key, pageKey));
                 }
 
-                page.LastSearchPosition = page.LastMatch > 0 ? 1 : 0;
+                page.LastSearchPosition = (short)(page.LastMatch > 0 ? 1 : 0);
                 return page.LastSearchPosition == 0 ? node : null;
             }
 
         MultipleEntryKey:
             {
-                page.LastMatch = lastMatch;
-                page.LastSearchPosition = lastSearchPosition;
+                page.LastMatch = (sbyte)Math.Sign(lastMatch);
+                page.LastSearchPosition = (short)lastSearchPosition;
 
                 if (lastSearchPosition >= numberOfEntries)
                     return null;

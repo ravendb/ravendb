@@ -6,6 +6,7 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
 using Sparrow.Json;
+using System.Runtime.CompilerServices;
 
 namespace Raven.Server.Documents.Handlers.Processors.Documents;
 
@@ -15,6 +16,7 @@ internal sealed class DocumentHandlerProcessorForPut : AbstractDocumentHandlerPr
     {
     }
 
+    [AsyncMethodBuilder(typeof(PoolingAsyncValueTaskMethodBuilder))]
     protected override async ValueTask HandleDocumentPutAsync(string id, string changeVector, BlittableJsonReaderObject doc, DocumentsOperationContext context)
     {
         var changeVectorLsv = context.GetLazyString(changeVector);

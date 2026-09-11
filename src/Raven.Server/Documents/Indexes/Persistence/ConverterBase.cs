@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
@@ -69,9 +69,10 @@ namespace Raven.Server.Documents.Indexes.Persistence
 
         protected static bool IsArrayOfTypeValueObject(BlittableJsonReaderObject val)
         {
-            foreach (var propertyName in val.GetPropertyNames())
+            for (int i = 0; i < val.Count; i++)
             {
-                if (propertyName.Length == 0 || propertyName[0] != '$')
+                var propertyName = val.GetPropertyNameByIndexAsSpan(i);
+                if (propertyName.Length == 0 || propertyName[0] != (byte)'$')
                 {
                     return false;
                 }

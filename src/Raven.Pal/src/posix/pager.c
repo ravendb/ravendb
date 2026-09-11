@@ -16,6 +16,7 @@
 #include <libgen.h>
 #include <limits.h>
 #include <string.h>
+#include <time.h>
 #if !__APPLE__
 #include <sys/eventfd.h>
 #endif
@@ -25,6 +26,36 @@
 #include "internal_posix.h"
 
 extern struct rvn_configuration g_cfg;
+
+static int64_t
+_stopwatch(void)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (int64_t)ts.tv_sec * 1000000000 + ts.tv_nsec;
+}
+
+static int64_t
+_elapsed(int64_t start, int64_t now)
+{
+    return (now - start) / 100;
+}
+
+#include "../pager_writeback.inl"
+
+EXPORT int32_t
+rvn_pager_get_device_id(void *handle, uint64_t *device_id, int32_t *detailed_error_code)
+{
+    struct handle *handle_ptr = handle;
+    struct stat st;
+    if (fstat(handle_ptr->file_fd, &st) == -1)
+    {
+        *detailed_error_code = errno;
+        return FAIL_STAT_FILE;
+    }
+    *device_id = (uint64_t)st.st_dev;
+    return SUCCESS;
+}
 
 int32_t rvn_lock_memory(struct handle *handle, void *mem, int64_t size, int32_t *detailed_error_code)
 {
@@ -199,6 +230,7 @@ void delete_global_state(struct handle_global_state *global_state)
         close(global_state->fsync_dir_arena.eventfd);
     free(global_state->writes_arena.arena);
     free(global_state->fsync_dir_arena.arena);
+    _free_dirty_bitmaps(global_state->dirty_bitmap);
     free(global_state->file_path);
     pthread_mutex_destroy(&global_state->writes_arena.lock);
     pthread_mutex_destroy(&global_state->fsync_dir_arena.lock);
@@ -588,6 +620,7 @@ int32_t rvn_write_file_io(
         if (rc != SUCCESS)
             return rc;
     }
+    _mark_dirty_pages(handle, buffers, count);
     return SUCCESS;
 }
 
@@ -604,6 +637,7 @@ int32_t rvn_write_mmap(
         int64_t size = (int64_t)buffers[i].count_of_pages * VORON_PAGE_SIZE;
         memcpy((char *)handle_ptr->write_address + offset, buffers[i].ptr, (size_t)size);
     }
+    _mark_dirty_pages(handle, buffers, count);
     return SUCCESS;
 }
 

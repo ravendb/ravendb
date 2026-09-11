@@ -170,6 +170,42 @@ EXPORT int32_t
 rvn_sync_pager(void* handle,
     int32_t* detailed_error_code);
 
+struct rvn_writeback_stats
+{
+    int64_t bytes_written;
+    int64_t ranges_written;
+    int64_t set_bits_remaining;
+    int64_t total_wait_ticks;
+    int64_t max_range_wait_ticks;
+    int64_t bytes_skipped;
+    int64_t pages_deferred_hot; 
+};
+
+/* Walks the pager's dirty pages and pushes the corresponding ranges to the device as a pipelined stream:
+    Blocking; returns once all dirty ranges have been pushed AND completed.
+   pipeline_depth == 0 is trickle mode: initiate the writeback without waiting (background work).
+   Contiguous dirty runs shorter than min_write_size_bytes are left to the kernel's writeback (0 = no minimum).
+   Any failure *must* be treated as catastrophic, see fsync-gate*/
+EXPORT int32_t
+rvn_pager_writeback_dirty(void* handle,
+    int32_t pipeline_depth,
+    int32_t block_size_bytes,
+    int32_t min_write_size_bytes,
+    struct rvn_writeback_stats* stats,
+    int32_t* detailed_error_code);
+
+EXPORT int32_t
+rvn_pager_reset_dirty_tracking(void* handle,
+    int64_t* reset_pages,
+    int32_t* detailed_error_code);
+
+/* st_dev on posix, volume serial number on windows - groups pagers that share
+   a physical device so the caller can budget writeback per device. */
+EXPORT int32_t
+rvn_pager_get_device_id(void* handle,
+    uint64_t* device_id,
+    int32_t* detailed_error_code);
+
 EXPORT int32_t
 rvn_pager_set_sparse_region(void* handle,
     int64_t offset,
@@ -217,10 +253,35 @@ EXPORT int32_t
 rvn_close_journal(void* handle, int32_t* detailed_error_code);
 
 EXPORT int32_t
-rvn_write_journal(void* handle, struct journal_entry* buffer, int64_t count_of_entries, int64_t offset, int32_t* detailed_error_code);
+rvn_create_journal_write_context(void** context, int32_t* detailed_error_code);
+
+EXPORT int32_t
+rvn_free_journal_write_context(void* context, int32_t* detailed_error_code);
+
+EXPORT int32_t
+rvn_write_journal(void* handle, void* context, struct journal_entry* buffer, int64_t count_of_entries, int64_t offset, int32_t* detailed_error_code);
 
 EXPORT int32_t 
 rvn_hard_link_non_durable(const char *src, const char *dst, int32_t *detailed_error_code);
+
+EXPORT int32_t
+rvn_move_file_durable(const char *src, const char *dst, int32_t *detailed_error_code);
+
+/* asked before each chunk of zeroing. Returns how many milliseconds to wait before asking again:
+   0 - keep going, write the next chunk now
+  <0 - abort the zeroing, leaving the file partially zeroed (*zeroed_bytes says how far it got)
+  >0 - sleep that long, then ask again
+   All pacing policy (activity detection, stall budgets) lives with the caller. */
+typedef int32_t (*rvn_zeroing_pacing)(void *state);
+
+/* This fills the journal file with zeroes, to avoid file system costs during future writes (which fallocate doesn't solve).
+   Problem is that this also takes I/O bandwidth, and we *don't* want to stall the real journal writes. Therefor, we fill
+   the file in chunks, and ask the pacing callback between chunks.
+*/
+EXPORT int32_t
+rvn_create_zeroed_file(const char *path, int64_t size,
+                       rvn_zeroing_pacing pacing, void *pacing_state,
+                       int64_t *zeroed_bytes, int32_t *detailed_error_code);
 
 EXPORT int32_t 
 rvn_ensure_hard_link_non_durable(const char *src, const char *dst, int32_t *detailed_error_code);

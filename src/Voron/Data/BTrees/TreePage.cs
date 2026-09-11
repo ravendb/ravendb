@@ -15,14 +15,21 @@ using Constants = Voron.Global.Constants;
 
 namespace Voron.Data.BTrees
 {
-    public unsafe class TreePage
+    // laid out to fit in 16 bytes, so a page can be passed and returned in registers
+    public unsafe struct TreePage
     {
-        public readonly int PageSize;
         public byte* Base;
+        public int PageSize;
+        public short LastSearchPosition;
+        public sbyte LastMatch; // sign only
 
-        public int LastMatch;
-        public int LastSearchPosition;
         public bool Dirty;
+
+        public bool IsValid
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return Base != null; }
+        }
 
         public TreePage(byte* basePtr, int pageSize)
         {
@@ -130,12 +137,12 @@ namespace Voron.Data.BTrees
                         // Compare the keys we are looking for.
                         var pageKey = TreeNodeHeader.GetKeyPtr(node, out var pageKeyLength);
                         lastMatch = Memory.Compare(keyPtr, pageKey, Math.Min(keySize, pageKeyLength));
-                        LastMatch = lastMatch != 0 ? lastMatch : keySize - pageKeyLength;
+                        LastMatch = (sbyte)Math.Sign(lastMatch != 0 ? lastMatch : keySize - pageKeyLength);
 
                         if (backward)
-                            LastSearchPosition = LastMatch < 0 ? -1 : 0;
+                            LastSearchPosition = (short)(LastMatch < 0 ? -1 : 0);
                         else
-                            LastSearchPosition = LastMatch > 0 ? 1 : 0;
+                            LastSearchPosition = (short)(LastMatch > 0 ? 1 : 0);
                         
                         return LastSearchPosition == 0 ? node : null;
                     }
@@ -199,8 +206,8 @@ namespace Voron.Data.BTrees
                 }
             }
 
-            LastMatch = lastMatch;
-            LastSearchPosition = lastSearchPosition;
+            LastMatch = (sbyte)Math.Sign(lastMatch);
+            LastSearchPosition = (short)lastSearchPosition;
 
             if (backward)
             {
@@ -483,7 +490,7 @@ namespace Voron.Data.BTrees
             }
 
             if (LastSearchPosition > i)
-                LastSearchPosition = i;
+                LastSearchPosition = (short)i;
         }
 
         public int NodePositionFor(LowLevelTransaction tx, Slice key)

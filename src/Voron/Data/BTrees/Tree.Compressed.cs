@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using Sparrow;
 using Voron.Global;
@@ -279,7 +279,7 @@ namespace Voron.Data.BTrees
             decompressedPage.RemoveNode(decompressedPage.LastSearchPosition);
         }
 
-        private void DeleteOnCompressedPage(TreePage page, Slice keyToDelete, ref TreeCursorConstructor cursorConstructor)
+        private void DeleteOnCompressedPage(TreePage page, Slice keyToDelete, ref TreeCursor cursorConstructor)
         {
             var tombstoneNodeSize = page.GetRequiredSpace(keyToDelete, 0);
 
@@ -306,11 +306,11 @@ namespace Voron.Data.BTrees
 
                 RemoveLeafNode(decompressed);
 
-                using (var cursor = cursorConstructor.Build(keyToDelete))
                 {
-                    var treeRebalancer = new TreeRebalancer(_llt, this, cursor);
-                    var changedPage = (TreePage)decompressed;
-                    while (changedPage != null)
+                    ref var cursor = ref cursorConstructor;
+                    var treeRebalancer = new TreeRebalancer(_llt, this, ref cursor);
+                    TreePage changedPage = decompressed;
+                    while (changedPage.IsValid)
                     {
                         changedPage = treeRebalancer.Execute(changedPage);
                     }
@@ -340,7 +340,7 @@ namespace Voron.Data.BTrees
             }
             else
             {
-                var page = SearchForPage(key, true, out _, out node, addToRecentlyFoundPages: false);
+                var page = FindPageFor(key, out node, allowCompressed: true);
 
                 if (page.IsCompressed)
                 {

@@ -629,11 +629,11 @@ namespace Voron.Impl
 
             // delete table data
 
-            table.DeleteByPrimaryKey(Slices.BeforeAllKeys, x =>
+            table.DeleteByPrimaryKey(Slices.BeforeAllKeys, (in TableValueReader reader) =>
             {
                 if (schema.Key.IsGlobal)
                 {
-                    return table.IsOwned(x.Reader.Id);
+                    return table.IsOwned(reader.Id);
                 }
 
                 return true;

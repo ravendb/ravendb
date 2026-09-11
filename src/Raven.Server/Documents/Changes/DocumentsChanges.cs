@@ -18,40 +18,49 @@ namespace Raven.Server.Documents.Changes
         {
             OnIndexChange?.Invoke(indexChange);
 
+            if (HasConnections == false)
+                return;
+
             foreach (var connection in Connections)
                 connection.Value.SendIndexChanges(indexChange);
         }
 
-        public void RaiseNotifications(DocumentChange documentChange)
+        public void RaiseInternalDocumentChangeNotification(DocumentChange documentChange)
         {
             OnDocumentChange?.Invoke(documentChange);
+        }
 
+        public void SendDocumentChangeToConnections(DocumentChange documentChange)
+        {
             foreach (var connection in Connections)
             {
-                if (!connection.Value.IsDisposed)
-                    connection.Value.SendDocumentChanges(documentChange);
+                connection.Value.SendDocumentChanges(documentChange);
             }
         }
 
-        public void RaiseNotifications(CounterChange counterChange)
+        public void RaiseInternalCounterChangeNotification(CounterChange counterChange)
         {
             OnCounterChange?.Invoke(counterChange);
+        }
 
+        public void SendCounterChangeToConnections(CounterChange counterChange)
+        {
             foreach (var connection in Connections)
             {
-                if (!connection.Value.IsDisposed)
-                    connection.Value.SendCounterChanges(counterChange);
+                connection.Value.SendCounterChanges(counterChange);
             }
         }
 
-        public void RaiseNotifications(TimeSeriesChange timeSeriesChange)
+        public void RaiseInternalTimeSeriesChangeNotification(TimeSeriesChange timeSeriesChange)
         {
             OnTimeSeriesChange?.Invoke(timeSeriesChange);
+        }
 
+        public void SendTimeSeriesChangeToConnections(TimeSeriesChange timeSeriesChange)
+        {
             foreach (var connection in Connections)
             {
-                if (!connection.Value.IsDisposed)
-                    connection.Value.SendTimeSeriesChanges(timeSeriesChange);
+                connection.Value.SendTimeSeriesChanges(timeSeriesChange);
             }
         }
     }

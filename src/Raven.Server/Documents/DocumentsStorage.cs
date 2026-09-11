@@ -1,6 +1,5 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -11,6 +10,7 @@ using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Extensions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents;
@@ -22,6 +22,7 @@ using Raven.Server.Documents.Refresh;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Revisions;
+using Raven.Server.Documents.Schemas;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
@@ -35,7 +36,6 @@ using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
-using Sparrow.Threading;
 using Voron;
 using Voron.Data;
 using Voron.Data.Fixed;
@@ -79,18 +79,13 @@ namespace Raven.Server.Documents
 
         public Action<Transaction> OnBeforeCommit { get; protected set; }
 
-        protected Dictionary<string, CollectionName> _collectionsCache;
+        private static readonly IReadOnlyDictionary<string, CollectionName> EmptyCollections = new Dictionary<string, CollectionName>();
 
-        // maps each collection's Documents and Tombstones table-name slices to its CollectionName, so the
-        // transaction-cache compute resolves a modified table to its collection with a single slice lookup
-        // (no table-name string parsing). grown copy-on-write alongside _collectionsCache; the key slices are
-        // allocated from _collectionTablesContext, which outlives the transactions that read the map.
-        private ByteStringContext _collectionTablesContext;
-        private Dictionary<Slice, CollectionName> _collectionTablesReverse;
+        private protected static IReadOnlyDictionary<string, CollectionName> GetCollectionsMap(LowLevelTransaction llt)
+        {
+            return llt.TryGetClientState(out DocumentTransactionCache cache) ? cache.Collections ?? EmptyCollections : EmptyCollections;
+        }
 
-        // scratch set for the collections modified by the committing transaction. reused across commits and cleared
-        // on each use - safe because the transaction-cache compute always runs on the single merger thread.
-        private readonly HashSet<CollectionName> _modifiedCollectionsScratch = new(CollectionNameComparer.Instance);
         private static readonly Slice LastReplicatedEtagsSlice;
         private static readonly Slice EtagsSlice;
         private static readonly Slice LastEtagSlice;
@@ -171,13 +166,6 @@ namespace Raven.Server.Documents
                 Environment?.Dispose();
             });
 
-            exceptionAggregator.Execute(() =>
-            {
-                _collectionTablesContext?.Dispose();
-                _collectionTablesReverse?.Clear();
-                _modifiedCollectionsScratch.Clear();
-            });
-
             exceptionAggregator.ThrowIfNeeded();
         }
 
@@ -210,28 +198,10 @@ namespace Raven.Server.Documents
             options.OnRecoverableFailure += DocumentDatabase.HandleRecoverableFailure;
 
             options.GenerateNewDatabaseId = generateNewDatabaseId;
-            options.CompressTxAboveSizeInBytes = DocumentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
-            options.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
-            options.EnablePrefetching = DocumentDatabase.Configuration.Storage.EnablePrefetching;
-            options.DiscardVirtualMemory = DocumentDatabase.Configuration.Storage.DiscardVirtualMemory;
-            options.UseSequentialReadAheadHintForJournalRecovery = DocumentDatabase.Configuration.Storage.UseSequentialReadAheadHintForJournalRecovery;
-            options.TimeToSyncAfterFlushInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlush.AsTimeSpan.TotalSeconds;
             options.AddToInitLog = _addToInitLog;
             options.Encryption.MasterKey = DocumentDatabase.MasterKey?.ToArray();
             options.Encryption.RegisterForJournalCompressionHandler();
-            options.DoNotConsiderMemoryLockFailureAsCatastrophicError = DocumentDatabase.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
-            if (DocumentDatabase.Configuration.Storage.MaxScratchBufferSize.HasValue)
-                options.MaxScratchBufferSize = DocumentDatabase.Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
-            options.PrefetchSegmentSize = DocumentDatabase.Configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
-            options.PrefetchResetThreshold = DocumentDatabase.Configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
-            options.SyncJournalsCountThreshold = DocumentDatabase.Configuration.Storage.SyncJournalsCountThreshold;
-            options.IgnoreInvalidJournalErrors = DocumentDatabase.Configuration.Storage.IgnoreInvalidJournalErrors;
-            options.SkipChecksumValidationOnDatabaseLoading = DocumentDatabase.Configuration.Storage.SkipChecksumValidationOnDatabaseLoading;
-            options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions = DocumentDatabase.Configuration.Storage.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions;
-            options.DisableSparseRegions = DocumentDatabase.Configuration.Storage.DisableSparseRegions;
-            options.JournalsCompressionAcceleration = DocumentDatabase.Configuration.Storage.JournalsCompressionAcceleration;
-            options.MinimumSharedJournalsMergeCount = DocumentDatabase.Configuration.Indexing.MinimumSharedJournalsMergeCount;
-            options.MaxLogFileSize = DocumentDatabase.Configuration.Storage.MaxJournalFileSize.GetValue(SizeUnit.Bytes);
+            VoronOptionsFromConfiguration.Apply(options, DocumentDatabase.Configuration);
             try
             {
                 Initialize(options);
@@ -310,9 +280,7 @@ namespace Raven.Server.Documents
                     DocumentPut = CreateDocumentPutAction();
 
                     InitializeLastEtag(tx);
-                    _collectionsCache = ReadCollections(tx);
-                    _collectionTablesContext = new ByteStringContext(SharedMultipleUseFlag.None);
-                    _collectionTablesReverse = BuildCollectionTablesReverseMap(tx, _collectionsCache.Values);
+                    SeedTransactionCache(tx);
 
                     var cv = GetDatabaseChangeVector(tx);
                     var lastEtagInChangeVector = ChangeVectorUtils.GetEtagById(cv, DocumentDatabase.DbBase64Id);
@@ -345,6 +313,45 @@ namespace Raven.Server.Documents
             return new DocumentPutAction(this, DocumentDatabase);
         }
 
+        private void ComputeCollectionEtags(Transaction tx, CollectionName collection, DocumentTransactionCache.CollectionCache[] etags)
+        {
+            ref var entry = ref etags[collection.Index];
+            entry.LastDocumentEtag = ReadLast(tx, DocumentDatabase.GetDocsSchemaForCollection(collection), Schemas.Documents.CollectionEtagsIndex,
+                collection, CollectionTableType.Documents, out var reader)
+                ? TableValueToEtag((int)DocumentsTable.Etag, reader)
+                : 0;
+            entry.LastTombstoneEtag = ReadLast(tx, TombstonesSchema, Schemas.Tombstones.CollectionEtagsIndex,
+                collection, CollectionTableType.Tombstones, out reader)
+                ? TableValueToEtag((int)TombstoneTable.Etag, reader)
+                : 0;
+        }
+
+        [Conditional("DEBUG")]
+        private void AssertIncrementalCacheMatchesFullScan(Transaction tx, IReadOnlyDictionary<string, CollectionName> collections,
+            DocumentTransactionCache.CollectionCache[] incremental)
+        {
+            var full = new DocumentTransactionCache.CollectionCache[collections.Count];
+            foreach (var collection in collections.Values)
+            {
+                ComputeCollectionEtags(tx, collection, full);
+            }
+
+            foreach (var collection in collections.Values)
+            {
+                var expected = full[collection.Index];
+                var actual = collection.Index < incremental.Length ? incremental[collection.Index] : default;
+
+                if (expected.LastDocumentEtag != actual.LastDocumentEtag || expected.LastTombstoneEtag != actual.LastTombstoneEtag)
+                {
+                    throw new InvalidOperationException(
+                        $"Incremental documents transaction cache disagrees with a full scan for collection '{collection.Name}' (index {collection.Index}): " +
+                        $"incremental has documents={actual.LastDocumentEtag}/tombstones={actual.LastTombstoneEtag}, " +
+                        $"a full scan has documents={expected.LastDocumentEtag}/tombstones={expected.LastTombstoneEtag}. " +
+                        "A write to this collection's tables did not go through DocumentsTransaction.GetOrOpenDocumentsTable / GetOrOpenTombstonesTable.");
+                }
+            }
+        }
+
         private void ComputeTransactionCache_BeforeCommit(LowLevelTransaction llt)
         {
             var tx = llt.Transaction;
@@ -353,7 +360,6 @@ namespace Raven.Server.Documents
 
             var currentCache = new DocumentTransactionCache
             {
-                FullyComputed = true,
                 LastDocumentEtag = ReadLastDocumentEtag(tx),
                 LastAttachmentsEtag = ReadLastAttachmentsEtag(tx),
                 LastConflictEtag = ReadLastConflictsEtag(tx),
@@ -365,154 +371,99 @@ namespace Raven.Server.Documents
                 ConflictsCount = ConflictsStorage.GetNumberOfConflicts(tx)
             };
 
-            // note the role change: before this the DocumentTransactionCache client state was effectively write-only
-            // on a write tx (every reader is behind IsWriteTransaction == false, and the old full-scan compute
-            // overwrote it rather than reading it), so writing it was harmless; now it is the *input* to the
-            // incremental compute. we read the previous cache from the client state - a fresh write tx inherits the
-            // last committed one, an async-commit clone inherits the committing tx's freshly computed one (Voron
-            // propagates client state through the immutable env record, so unlike a manual publish there is no
-            // overwrite to guard against here). when it is fully computed we start a builder from its immutable
-            // dictionary (O(1), no copy) and recompute only the modified collections; otherwise (first commit after
-            // startup) we full-scan to seed it.
-            ImmutableDictionary<string, DocumentTransactionCache.CollectionCache>.Builder builder;
-            if (llt.TryGetClientState(out DocumentTransactionCache previousCache) && previousCache.FullyComputed)
-            {
-                // the base is always the last *committed* cache (client state advances only on commit), so no
-                // mutable state survives across transactions - a rolled-back tx leaves nothing behind here.
-                builder = previousCache.LastEtagsByCollection.ToBuilder();
+            llt.TryGetClientState(out DocumentTransactionCache previousCache);
+            var collectionsForReads = previousCache.Collections;
+            var collectionsForWrites = TryAddCollectionsCreatedInTransaction(tx, collectionsForReads);
+            var collections = collectionsForWrites ?? collectionsForReads;
 
-                UpdateCollectionCachesForModifiedCollections(tx, builder);
+            currentCache.EtagsByCollectionIndex = 
+                  RecomputeChangedCollectionEtags(tx, collections, collectionsForWrites, previousCache.EtagsByCollectionIndex);
 
-                AssertIncrementalCacheMatchesFullScan(tx, builder);
-            }
-            else
-            {
-                builder = ImmutableDictionary.CreateBuilder<string, DocumentTransactionCache.CollectionCache>(StringComparer.OrdinalIgnoreCase);
+            AssertIncrementalCacheMatchesFullScan(tx, collections, currentCache.EtagsByCollectionIndex);
 
-                ComputeCollectionCaches(tx, builder);
-            }
+            currentCache.Collections = collections;
+            currentCache.RevisionsCount = tx.ReadTree(Schemas.Revisions.RevisionsCountSlice)?.ReadHeader().NumberOfEntries ?? 0;
+            currentCache.Published = true; // this instance is immutable from here on
 
-            currentCache.LastEtagsByCollection = builder.ToImmutable();
-
-            // we set it on the current transaction because we aren't committed yet
-            // this is used to remember the metadata about collections / documents for
-            // common operations. Thread safety is inherited from the voron transaction
             tx.LowLevelTransaction.UpdateClientState(currentCache);
         }
 
-        private void ComputeCollectionCaches(Transaction tx, ImmutableDictionary<string, DocumentTransactionCache.CollectionCache>.Builder cache)
+        private Dictionary<string, CollectionName> TryAddCollectionsCreatedInTransaction(Transaction tx,
+            IReadOnlyDictionary<string, CollectionName> collectionsForReads)
         {
+            var collectionsTable = tx.OpenTable(CollectionsSchema, CollectionsSlice);
+            if (collectionsTable.NumberOfEntries == collectionsForReads.Count) // we only ever _add_ new collections
+                return null;
+
             using (ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
             {
-                Table.TableValueHolder holder = default;
-                foreach (var collection in IterateCollectionNames(tx, ctx))
-                    ComputeCollectionCache(tx, new CollectionName(collection), cache, ref holder);
-            }
-        }
-
-        private void UpdateCollectionCachesForModifiedCollections(Transaction tx, ImmutableDictionary<string, DocumentTransactionCache.CollectionCache>.Builder cache)
-        {
-            // recompute only the collections this tx touched: existing ones via the reverse map (a miss is a
-            // non-collection table), plus any it created. collect first, then compute - recompute mutates tx.Tables.
-            // the scratch set is reused across commits (the compute always runs on the single merger thread). we
-            // clear it at the START of every use, never at the end - so it does not matter who left it dirty: a
-            // compute that threw, or a rolled-back tx, leaves stale entries, but the next commit wipes them here
-            // before reading. it is pure transient scratch, never stored in the published cache.
-            _modifiedCollectionsScratch.Clear();
-
-            foreach (var table in tx.Tables)
-            {
-                if (_collectionTablesReverse.TryGetValue(table.Name, out var collectionName))
-                    _modifiedCollectionsScratch.Add(collectionName);
-            }
-
-            if (tx.Owner is DocumentsOperationContext { Transaction: { } documentsTransaction })
-            {
-                var createdCollections = documentsTransaction.CollectionsCreatedInTransaction;
-                if (createdCollections != null)
+                var collectionsForWrites = new Dictionary<string, CollectionName>(collectionsForReads, StringComparer.OrdinalIgnoreCase);
+               foreach (var entry in collectionsTable.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
                 {
-                    foreach (var collectionName in createdCollections)
-                        _modifiedCollectionsScratch.Add(collectionName);
+                    var collection = TableValueToId(ctx, (int)CollectionsTable.Name, entry).ToString();
+                    if (collectionsForWrites.ContainsKey(collection))
+                        continue;
+
+                    collectionsForWrites[collection] = new CollectionName(collection) { Index = collectionsForWrites.Count };
                 }
-            }
 
-            if (_modifiedCollectionsScratch.Count == 0)
-                return;
-
-            Table.TableValueHolder holder = default;
-            foreach (var collectionName in _modifiedCollectionsScratch)
-                ComputeCollectionCache(tx, collectionName, cache, ref holder);
-        }
-
-        private Dictionary<Slice, CollectionName> BuildCollectionTablesReverseMap(Transaction tx, IEnumerable<CollectionName> collections)
-        {
-            var map = new Dictionary<Slice, CollectionName>(SliceComparer.Instance);
-            foreach (var collection in collections)
-                AddToCollectionTablesReverseMap(tx, map, collection);
-            return map;
-        }
-
-        private void AddToCollectionTablesReverseMap(Transaction tx, Dictionary<Slice, CollectionName> map, CollectionName collection)
-        {
-            // the map and its slice context are grown copy-on-write and only under the write-transaction lock,
-            // so concurrent commits can't race on the shared ByteStringContext / dictionary. assert we hold it.
-            Debug.Assert(tx.IsWriteTransaction, "The collection tables reverse map must only be modified under a write transaction");
-
-            Slice.From(_collectionTablesContext, collection.GetTableName(CollectionTableType.Documents), ByteStringType.Immutable, out var documentsTableName);
-            Slice.From(_collectionTablesContext, collection.GetTableName(CollectionTableType.Tombstones), ByteStringType.Immutable, out var tombstonesTableName);
-            map[documentsTableName] = collection;
-            map[tombstonesTableName] = collection;
-        }
-
-        private void ComputeCollectionCache(Transaction tx, CollectionName collectionName, ImmutableDictionary<string, DocumentTransactionCache.CollectionCache>.Builder cache, ref Table.TableValueHolder holder)
-        {
-            if (ReadLastDocument(tx, collectionName, CollectionTableType.Documents, ref holder) == false)
-            {
-                cache.Remove(collectionName.Name);
-                return;
-            }
-
-            var colCache = new DocumentTransactionCache.CollectionCache
-            {
-                LastDocumentEtag = TableValueToEtag((int)DocumentsTable.Etag, ref holder.Reader),
-                LastChangeVector = TableValueToChangeVector((int)DocumentsTable.ChangeVector, ref holder.Reader),
-            };
-
-            if (ReadLastDocument(tx, collectionName, CollectionTableType.Tombstones, ref holder))
-            {
-                colCache.LastTombstoneEtag = TableValueToEtag((int)DocumentsTable.Etag, ref holder.Reader);
-            }
-            cache[collectionName.Name] = colCache;
-        }
-
-        // DEBUG-only safety net: the incrementally-updated cache must be identical to a from-scratch full scan.
-        // any divergence means the modified-collection detection or the carry-forward is wrong. compiled out of
-        // release builds, so it costs nothing there; in DEBUG it validates on every write commit across all tests.
-        [Conditional("DEBUG")]
-        private void AssertIncrementalCacheMatchesFullScan(Transaction tx, ImmutableDictionary<string, DocumentTransactionCache.CollectionCache>.Builder incremental)
-        {
-            var full = ImmutableDictionary.CreateBuilder<string, DocumentTransactionCache.CollectionCache>(StringComparer.OrdinalIgnoreCase);
-            ComputeCollectionCaches(tx, full);
-
-            if (incremental.Count != full.Count)
-                throw new InvalidOperationException(
-                    $"Incremental documents transaction cache has {incremental.Count} collection(s), a full scan has {full.Count}.");
-
-            foreach (var kvp in full)
-            {
-                if (incremental.TryGetValue(kvp.Key, out var incrementalEntry) == false)
-                    throw new InvalidOperationException(
-                        $"Incremental documents transaction cache is missing collection '{kvp.Key}' that a full scan produced.");
-
-                if (incrementalEntry.LastDocumentEtag != kvp.Value.LastDocumentEtag ||
-                    incrementalEntry.LastTombstoneEtag != kvp.Value.LastTombstoneEtag ||
-                    incrementalEntry.LastChangeVector != kvp.Value.LastChangeVector)
-                    throw new InvalidOperationException(
-                        $"Incremental documents transaction cache diverged from a full scan for collection '{kvp.Key}': " +
-                        $"incremental (doc={incrementalEntry.LastDocumentEtag}, tombstone={incrementalEntry.LastTombstoneEtag}, cv={incrementalEntry.LastChangeVector}) " +
-                        $"vs full (doc={kvp.Value.LastDocumentEtag}, tombstone={kvp.Value.LastTombstoneEtag}, cv={kvp.Value.LastChangeVector}).");
+                return collectionsForWrites;
             }
         }
+
+        private void SeedTransactionCache(Transaction tx)
+        {
+            var collections = TryAddCollectionsCreatedInTransaction(tx, EmptyCollections) ??
+                              new Dictionary<string, CollectionName>(StringComparer.OrdinalIgnoreCase);
+
+            tx.LowLevelTransaction.UpdateClientState(new DocumentTransactionCache
+            {
+                Collections = collections,
+                EtagsByCollectionIndex = ComputeAllCollectionEtags(tx, collections),
+                Published = true // this transaction's own commit hook will carry it forward, it must not be mutated in place
+            });
+        }
+
+        private DocumentTransactionCache.CollectionCache[] ComputeAllCollectionEtags(Transaction tx,
+            IReadOnlyDictionary<string, CollectionName> collections)
+        {
+            var etags = new DocumentTransactionCache.CollectionCache[collections.Count];
+
+            foreach (var collection in collections.Values)
+            {    
+                ComputeCollectionEtags(tx, collection, etags);
+            }
+
+            return etags;
+        }
+
+        private DocumentTransactionCache.CollectionCache[] RecomputeChangedCollectionEtags(Transaction tx,
+            IReadOnlyDictionary<string, CollectionName> collections, Dictionary<string, CollectionName> collectionsCreatedHere,
+            DocumentTransactionCache.CollectionCache[] carried)
+        {
+            var touched = (tx.Owner as DocumentsOperationContext)?.Transaction?.CollectionsTouched;
+
+            if (touched is null or { Count: 0 } && collectionsCreatedHere == null)
+                return carried; // nothing to recompute, previous array reused as is
+
+            var etags = new DocumentTransactionCache.CollectionCache[collections.Count];
+            Array.Copy(carried, etags, carried.Length);
+
+            foreach (var collection in touched ?? [])
+            {
+                ComputeCollectionEtags(tx, collection, etags);
+            }
+
+            if (collectionsCreatedHere == null)
+                return etags;
+
+            foreach (var collection in collectionsCreatedHere.Values)
+            {
+                ComputeCollectionEtags(tx, collection, etags);
+            }
+            return etags;
+        }
+
 
         public static ChangeVector GetDatabaseChangeVector(DocumentsOperationContext context)
         {
@@ -940,7 +891,7 @@ namespace Raven.Server.Documents
                 {
                     token.ThrowIfCancellationRequested();
 
-                    var document = TableValueToDocument(context, ref result.Value.Reader, fields);
+                    var document = TableValueToDocument(context, result.Value, fields);
                     string documentId = document.Id;
                     if (documentId.StartsWith(idPrefix, StringComparison.OrdinalIgnoreCase) == false)
                     {
@@ -987,11 +938,11 @@ namespace Raven.Server.Documents
             var table = context.DocumentsTable(this);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekBackwardFromLast(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], start))
+            foreach (var result in table.SeekBackwardFromLast(Schemas.Documents.AllDocsEtagsIndex, start))
             {
                 if (take-- <= 0)
                     yield break;
-                yield return TableValueToDocument(context, ref result.Reader, fields);
+                yield return TableValueToDocument(context, result, fields);
             }
         }
 
@@ -1000,17 +951,17 @@ namespace Raven.Server.Documents
             var table = context.DocumentsTable(this);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekBackwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], etag, skip))
+            foreach (var result in table.SeekBackwardFrom(Schemas.Documents.AllDocsEtagsIndex, etag, skip))
             {
                 if (take-- <= 0)
                     yield break;
-                yield return TableValueToDocument(context, ref result.Reader, fields);
+                yield return TableValueToDocument(context, result, fields);
             }
         }
 
         public IEnumerable<Document> GetDocumentsInReverseEtagOrder(DocumentsOperationContext context, string collection, long start, long take, DocumentFields fields = DocumentFields.All)
         {
-            var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
             if (collectionName == null)
                 yield break;
 
@@ -1021,11 +972,11 @@ namespace Raven.Server.Documents
                 yield break;
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekBackwardFromLast(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice], start))
+            foreach (var result in table.SeekBackwardFromLast(Schemas.Documents.CollectionEtagsIndex, start))
             {
                 if (take-- <= 0)
                     yield break;
-                yield return TableValueToDocument(context, ref result.Reader, fields);
+                yield return TableValueToDocument(context, result, fields);
             }
         }
 
@@ -1065,14 +1016,14 @@ namespace Raven.Server.Documents
             var table = context.DocumentsTable(this, onCorruptedDataHandler);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], etag, start))
+            foreach (var result in table.SeekForwardFrom(Schemas.Documents.AllDocsEtagsIndex, etag, start))
             {
                 if (take-- <= 0)
                 {
                     yield break;
                 }
 
-                yield return TableValueToDocument(context, ref result.Reader, fields);
+                yield return TableValueToDocument(context, result, fields);
             }
         }
 
@@ -1081,9 +1032,9 @@ namespace Raven.Server.Documents
             var table = context.DocumentsTable(this);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], etag, 0))
+            foreach (var result in table.SeekForwardFrom(Schemas.Documents.AllDocsEtagsIndex, etag, 0))
             {
-                yield return DocumentReplicationItem.From(TableValueToDocument(context, ref result.Reader, fields), context);
+                yield return DocumentReplicationItem.From(TableValueToDocument(context, result, fields), context);
             }
         }
 
@@ -1106,7 +1057,7 @@ namespace Raven.Server.Documents
                 if (take-- <= 0)
                     continue; // we need to calculate totalCount correctly
 
-                yield return TableValueToDocument(context, ref reader, fields);
+                yield return TableValueToDocument(context, reader, fields);
             }
         }
 
@@ -1140,7 +1091,7 @@ namespace Raven.Server.Documents
                         if (take-- <= 0)
                             continue; // we need to calculate totalCount correctly
 
-                        yield return TableValueToDocument(context, ref reader, fields);
+                        yield return TableValueToDocument(context, reader, fields);
         }
                 }
             }
@@ -1179,7 +1130,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, string collection, long etag, long start, long take, DocumentFields fields = DocumentFields.All)
         {
-            var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
             if (collectionName == null)
                 yield break;
 
@@ -1190,14 +1141,14 @@ namespace Raven.Server.Documents
                 yield break;
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice], etag, start))
+            foreach (var result in table.SeekForwardFrom(Schemas.Documents.CollectionEtagsIndex, etag, start))
             {
                 if (take-- <= 0)
                     yield break;
 
                 _forTestingPurposes?.DelayDocumentLoad?.Wait(DocumentDatabase.DatabaseShutdown);
 
-                yield return TableValueToDocument(context, ref result.Reader, fields);
+                yield return TableValueToDocument(context, result, fields);
             }
         }
 
@@ -1266,7 +1217,7 @@ namespace Raven.Server.Documents
             {
                 if (IsTombstoneOfId(tombstoneKey, lowerId))
                 {
-                    var current = TableValueToTombstone(context, ref tvh.Reader);
+                    var current = TableValueToTombstone(context, tvh);
                     if (mostRecent == null ||
                         GetConflictStatusForVersion(context, current.ChangeVector, mostRecent.ChangeVector) == ConflictStatus.Update)
                     {
@@ -1291,7 +1242,7 @@ namespace Raven.Server.Documents
                 throw new ArgumentException("Argument is null or whitespace", nameof(id));
             return Get(context, id.AsSpan(), fields, throwOnConflict);
         }
-
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Document Get(DocumentsOperationContext context, ReadOnlyMemory<char> id, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true)
         {
@@ -1299,7 +1250,7 @@ namespace Raven.Server.Documents
                 throw new ArgumentException("Argument is null", nameof(id));
             return Get(context, id.Span, fields, throwOnConflict);
         }
-
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private Document Get(DocumentsOperationContext context, ReadOnlySpan<char> id, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true)
         {
@@ -1330,7 +1281,7 @@ namespace Raven.Server.Documents
             if (GetTableValueReaderForDocument(context, lowerId, throwOnConflict, out TableValueReader tvr) == false)
                 return null;
 
-            var doc = TableValueToDocument(context, ref tvr, fields, skipValidationInDebug);
+            var doc = TableValueToDocument(context, tvr, fields, skipValidationInDebug);
 
             context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(doc);
 
@@ -1340,29 +1291,25 @@ namespace Raven.Server.Documents
         public Document GetByEtag(DocumentsOperationContext context, long etag)
         {
             var table = context.DocumentsTable(this);
-            var index = DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice];
 
-            if (table.Read(context.Allocator, index, etag, out var tvr) == false)
+            if (table.Read(context.Allocator, AllDocsEtagsIndex, etag, out var tvr) == false)
                 return null;
 
-            return TableValueToDocument(context, ref tvr);
+            return TableValueToDocument(context, tvr);
         }
 
         public Tombstone GetTombstoneByEtag(DocumentsOperationContext context, long etag)
         {
             var table = context.TombstonesTable(this);
-            var index = TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice];
-
-            if (table.Read(context.Allocator, index, etag, out var tvr) == false)
+            if (table.Read(context.Allocator, AllTombstonesEtagsIndex, etag, out var tvr) == false)
                 return null;
 
-            return TableValueToTombstone(context, ref tvr);
+            return TableValueToTombstone(context, tvr);
         }
 
         public long GetNumberOfTombstones(DocumentsOperationContext context)
         {
-            var fstIndex = TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice];
-            var fst = context.Transaction.InnerTransaction.FixedTreeFor(fstIndex.Name, sizeof(long));
+            var fst = context.Transaction.InnerTransaction.FixedTreeFor(AllTombstonesEtagsIndex.Name, sizeof(long));
             return fst.NumberOfEntries;
         }
 
@@ -1371,9 +1318,9 @@ namespace Raven.Server.Documents
             var table = context.DocumentsTable(this);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], 0, 0))
+            foreach (var result in table.SeekForwardFrom(AllDocsEtagsIndex, 0, 0))
             {
-                yield return TableValueToId(context, (int)DocumentsTable.Id, ref result.Reader);
+                yield return TableValueToId(context, (int)DocumentsTable.Id, result);
             }
         }
 
@@ -1392,7 +1339,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public static (int ActualSize, int AllocatedSize, bool IsCompressed) GetMetrics(Table table, TableValueReader tvr)
+        public static (int ActualSize, int AllocatedSize, bool IsCompressed) GetMetrics(Table table, in TableValueReader tvr)
         {
             var info = table.GetInfoFor(tvr.Id);
             return (tvr.Size, info.AllocatedSize, info.IsCompressed);
@@ -1420,7 +1367,7 @@ namespace Raven.Server.Documents
             var table = context.TombstonesTable(this);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var _ in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag, 0))
+            foreach (var _ in table.SeekForwardFrom(Schemas.Tombstones.AllTombstonesEtagsIndex, etag, 0))
             {
                 if (maxAllowed-- < 0)
                     return true;
@@ -1433,12 +1380,12 @@ namespace Raven.Server.Documents
             var table = context.TombstonesTable(this);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag, start))
+            foreach (var result in table.SeekForwardFrom(Schemas.Tombstones.AllTombstonesEtagsIndex, etag, start))
             {
                 if (take-- <= 0)
                     yield break;
 
-                yield return TableValueToTombstone(context, ref result.Reader);
+                yield return TableValueToTombstone(context, result);
             }
         }
 
@@ -1447,12 +1394,12 @@ namespace Raven.Server.Documents
             var table = context.TombstonesTable(this);
 
             var tombstones = new List<Tombstone>();
-            foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag, start))
+            foreach (var result in table.SeekForwardFrom(Schemas.Tombstones.AllTombstonesEtagsIndex, etag, start))
             {
                 if (take-- <= 0)
                     break;
 
-                var tombstone = TableValueToTombstone(context, ref result.Reader);
+                var tombstone = TableValueToTombstone(context, result);
                 tombstones.Add(tombstone.CloneInternal(context));
             }
 
@@ -1467,12 +1414,12 @@ namespace Raven.Server.Documents
             var table = context.TombstonesTable(this);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekBackwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag, start))
+            foreach (var result in table.SeekBackwardFrom(Schemas.Tombstones.AllTombstonesEtagsIndex, etag, start))
             {
                 if (take-- <= 0)
                     yield break;
 
-                yield return TableValueToTombstone(context, ref result.Reader);
+                yield return TableValueToTombstone(context, result);
             }
         }
 
@@ -1486,9 +1433,9 @@ namespace Raven.Server.Documents
             var table = context.TombstonesTable(this);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag, 0))
+            foreach (var result in table.SeekForwardFrom(Schemas.Tombstones.AllTombstonesEtagsIndex, etag, 0))
             {
-                var tombstoneItem = TombstoneReplicationItem.From(context, TableValueToTombstone(context, ref result.Reader));
+                var tombstoneItem = TombstoneReplicationItem.From(context, TableValueToTombstone(context, result));
 
                 if (revisionTombstonesWithId == false && tombstoneItem is RevisionTombstoneReplicationItem revisionTombstone)
                     revisionTombstone.StripDocumentIdFromKeyIfNeeded(context);
@@ -1509,12 +1456,12 @@ namespace Raven.Server.Documents
                 yield break;
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], etag, start))
+            foreach (var result in table.SeekForwardFrom(Schemas.Tombstones.CollectionEtagsIndex, etag, start))
             {
                 if (take-- <= 0)
                     yield break;
 
-                yield return TableValueToTombstone(context, ref result.Reader);
+                yield return TableValueToTombstone(context, result);
             }
         }
 
@@ -1529,7 +1476,7 @@ namespace Raven.Server.Documents
             }
             else
             {
-                var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
+                var collectionName = GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
                 if (collectionName == null)
                     return null;
 
@@ -1568,7 +1515,7 @@ namespace Raven.Server.Documents
             }
             else
             {
-                var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
+                var collectionName = GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
                 if (collectionName == null)
                     yield break;
 
@@ -1581,12 +1528,12 @@ namespace Raven.Server.Documents
                 yield break;
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], etag, start))
+            foreach (var result in table.SeekForwardFrom(Schemas.Tombstones.CollectionEtagsIndex, etag, start))
             {
                 if (take-- <= 0)
                     yield break;
 
-                yield return TableValueToTombstone(context, ref result.Reader);
+                yield return TableValueToTombstone(context, result);
             }
         }
 
@@ -1596,57 +1543,49 @@ namespace Raven.Server.Documents
             {
                 if (tx.LowLevelTransaction.TryGetClientState(out DocumentTransactionCache cache))
                 {
-                    if (cache.LastEtagsByCollection.TryGetValue(collection, out var col))
+                    if (cache.TryGetCollectionEtags(collection, out var col))
                         return col.LastDocumentEtag;
                 }
             }
-            Table.TableValueHolder result = null;
-            if (LastDocument(tx, collection, ref result) == false)
+            if (LastDocument(tx, collection, out var reader) == false)
                 return 0;
 
-            return TableValueToEtag((int)DocumentsTable.Etag, ref result.Reader);
+            return TableValueToEtag((int)DocumentsTable.Etag, reader);
         }
 
         public string GetLastDocumentChangeVector(Transaction tx, string collection)
         {
-            if (tx.IsWriteTransaction == false)
-            {
-                if (tx.LowLevelTransaction.TryGetClientState(out DocumentTransactionCache cache))
-                {
-                    if (cache.LastEtagsByCollection.TryGetValue(collection, out var col))
-                        return col.LastChangeVector;
-                }
-            }
-            Table.TableValueHolder result = null;
-            if (LastDocument(tx, collection, ref result) == false)
+            // read from storage: the transaction cache deliberately does not carry change vectors
+            if (LastDocument(tx, collection, out var reader) == false)
                 return null;
 
-            return TableValueToChangeVector((int)DocumentsTable.ChangeVector, ref result.Reader);
+            return TableValueToChangeVector((int)DocumentsTable.ChangeVector, reader);
         }
 
-        private bool LastDocument(Transaction transaction, string collection, ref Table.TableValueHolder result)
+        private bool LastDocument(Transaction transaction, string collection, out TableValueReader reader)
         {
-            var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = GetCollection(transaction, collection, throwIfDoesNotExist: false);
             if (collectionName == null)
+            {
+                reader = default;
                 return false;
+            }
 
-            return ReadLastDocument(transaction, collectionName, CollectionTableType.Documents, ref result);
+            return ReadLast(transaction, DocumentDatabase.GetDocsSchemaForCollection(collectionName), Schemas.Documents.CollectionEtagsIndex,
+                collectionName, CollectionTableType.Documents, out reader);
         }
 
-        private bool ReadLastDocument(Transaction transaction, CollectionName collectionName, CollectionTableType collectionType, ref Table.TableValueHolder result)
+        private bool ReadLast(Transaction transaction, TableSchema schema, TableSchema.FixedSizeKeyIndexDef collectionEtagsIndex,
+            CollectionName collectionName, CollectionTableType collectionType, out TableValueReader reader)
         {
-            var table = transaction.OpenTable(DocumentDatabase.GetDocsSchemaForCollection(collectionName),
-                collectionName.GetTableName(collectionType));
-
-            // ReSharper disable once UseNullPropagation
+            var table = transaction.OpenTable(schema, collectionName.GetTableName(collectionType));
             if (table == null)
+            {
+                reader = default;
                 return false;
+            }
 
-            result = table.ReadLast(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice]);
-            if (result == null)
-                return false;
-
-            return true;
+            return table.ReadLast(collectionEtagsIndex, out reader);
         }
 
         public long GetLastTombstoneEtag(Transaction tx, string collection)
@@ -1655,12 +1594,12 @@ namespace Raven.Server.Documents
             {
                 if (tx.LowLevelTransaction.TryGetClientState(out DocumentTransactionCache cache))
                 {
-                    if (cache.LastEtagsByCollection.TryGetValue(collection, out var col))
+                    if (cache.TryGetCollectionEtags(collection, out var col))
                         return col.LastTombstoneEtag;
                 }
             }
 
-            var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = GetCollection(tx, collection, throwIfDoesNotExist: false);
             if (collectionName == null)
                 return 0;
 
@@ -1671,11 +1610,10 @@ namespace Raven.Server.Documents
             if (table == null)
                 return 0;
 
-            var result = table.ReadLast(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice]);
-            if (result == null)
+            if (table.ReadLast(Schemas.Tombstones.CollectionEtagsIndex, out var reader) == false)
                 return 0;
 
-            return TableValueToEtag(1, ref result.Reader);
+            return TableValueToEtag(1, reader);
         }
 
         public bool HasTombstonesWithEtagGreaterThanStartAndLowerThanOrEqualToEnd(DocumentsOperationContext context, string collection,
@@ -1685,7 +1623,7 @@ namespace Raven.Server.Documents
             if (start >= end)
                 return false;
 
-            var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
             if (collectionName == null)
                 return false;
 
@@ -1695,13 +1633,13 @@ namespace Raven.Server.Documents
             if (table == null)
                 return false;
 
-            return table.HasEntriesGreaterThanStartAndLowerThanOrEqualToEnd(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], start, end);
+            return table.HasEntriesGreaterThanStartAndLowerThanOrEqualToEnd(Schemas.Tombstones.CollectionEtagsIndex, start, end);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal Document TableValueToDocument(DocumentsOperationContext context, ref TableValueReader tvr, DocumentFields fields = DocumentFields.All, bool skipValidationInDebug = false)
+        internal Document TableValueToDocument(DocumentsOperationContext context, in TableValueReader tvr, DocumentFields fields = DocumentFields.All, bool skipValidationInDebug = false)
         {
-            var document = ParseDocument(context, ref tvr, fields);
+            var document = ParseDocument(context, tvr, fields);
 #if DEBUG
             if (skipValidationInDebug == false)
             {
@@ -1740,86 +1678,86 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static Document ParseDocument(DocumentsOperationContext context, ref TableValueReader tvr, DocumentFields fields)
+        private static Document ParseDocument(DocumentsOperationContext context, in TableValueReader tvr, DocumentFields fields)
         {
-            if (TableValueReader.TryCast<N1>(ref tvr, out var tvr1))
-                return ParseDocument(context, ref tvr1, fields);
-            if (TableValueReader.TryCast<N2>(ref tvr, out var tvr2))
-                return ParseDocument(context, ref tvr2, fields);
+            if (TableValueReader.TryCast<N1>(tvr, out var tvr1))
+                return ParseDocument(context, tvr1, fields);
+            if (TableValueReader.TryCast<N2>(tvr, out var tvr2))
+                return ParseDocument(context, tvr2, fields);
 
             // It will fail on TableValueReader if this is not the case, this is a safe case.
-            TableValueReader.TryCast<N4>(ref tvr, out var tvr4);
-            return ParseDocument(context, ref tvr4, fields);
+            TableValueReader.TryCast<N4>(tvr, out var tvr4);
+            return ParseDocument(context, tvr4, fields);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static Document ParseDocument<TTableValueReader>(DocumentsOperationContext context, ref TTableValueReader tvr, DocumentFields fields)
+        private static Document ParseDocument<TTableValueReader>(DocumentsOperationContext context, in TTableValueReader tvr, DocumentFields fields)
             where TTableValueReader : struct, ITableValueReader
         {
             if (fields == DocumentFields.All)
             {
                 var doc = new Document(context, tvr.Id);
-                return InitializeDocument(context, doc, ref tvr);
+                return InitializeDocument(context, doc, tvr);
             }
 
-            return ParseDocumentPartial(context, ref tvr, fields);
+            return ParseDocumentPartial(context, tvr, fields);
         }
 
-        private static Document ParseDocumentPartial<TTableValueReader>(DocumentsOperationContext context, ref TTableValueReader tvr, DocumentFields fields)
+        private static Document ParseDocumentPartial<TTableValueReader>(DocumentsOperationContext context, in TTableValueReader tvr, DocumentFields fields)
             where TTableValueReader : struct, ITableValueReader
         {
             var result = new Document(context, tvr.Id);
 
             if (fields.Contain(DocumentFields.LowerId))
-                result.LowerId = TableValueToString(context, (int)DocumentsTable.LowerId, ref tvr);
+                result.LowerId = TableValueToString(context, (int)DocumentsTable.LowerId, tvr);
 
             if (fields.Contain(DocumentFields.Id))
-                result.Id = TableValueToId(context, (int)DocumentsTable.Id, ref tvr);
+                result.Id = TableValueToId(context, (int)DocumentsTable.Id, tvr);
 
             if (fields.Contain(DocumentFields.Data))
                 result.Data = new BlittableJsonReaderObject(tvr.Read((int)DocumentsTable.Data, out int size), size, context);
 
             if (fields.Contain(DocumentFields.ChangeVector))
-                result.ChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref tvr);
+                result.ChangeVector = TableValueToChangeVector((int)DocumentsTable.ChangeVector, tvr);
 
-            result.Etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr);
-            result.LastModified = TableValueToDateTime((int)DocumentsTable.LastModified, ref tvr);
-            result.Flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr);
+            result.Etag = TableValueToEtag((int)DocumentsTable.Etag, tvr);
+            result.LastModified = TableValueToDateTime((int)DocumentsTable.LastModified, tvr);
+            result.Flags = TableValueToFlags((int)DocumentsTable.Flags, tvr);
             result.StorageId = tvr.Id;
-            result.TransactionMarker = TableValueToShort((int)DocumentsTable.TransactionMarker, nameof(DocumentsTable.TransactionMarker), ref tvr);
+            result.TransactionMarker = TableValueToShort((int)DocumentsTable.TransactionMarker, nameof(DocumentsTable.TransactionMarker), tvr);
 
             return result;
         }
 
-        private static Document InitializeDocument<TTableValueReader>(JsonOperationContext context, Document document, ref TTableValueReader tvr)
+        private static Document InitializeDocument<TTableValueReader>(JsonOperationContext context, Document document, in TTableValueReader tvr)
             where TTableValueReader : struct, ITableValueReader
         {
             document.StorageId = tvr.Id;
-            document.LowerId = TableValueToString(context, (int)DocumentsTable.LowerId, ref tvr);
-            document.Id = TableValueToId(context, (int)DocumentsTable.Id, ref tvr);
-            document.Etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr);
+            document.LowerId = TableValueToString(context, (int)DocumentsTable.LowerId, tvr);
+            document.Id = TableValueToId(context, (int)DocumentsTable.Id, tvr);
+            document.Etag = TableValueToEtag((int)DocumentsTable.Etag, tvr);
             document.Data = new BlittableJsonReaderObject(tvr.Read((int)DocumentsTable.Data, out int size), size, context);
-            document.ChangeVector = TableValueToChangeVector((int)DocumentsTable.ChangeVector, ref tvr);
-            document.LastModified = TableValueToDateTime((int)DocumentsTable.LastModified, ref tvr);
-            document.Flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr);
-            document.TransactionMarker = TableValueToShort((int)DocumentsTable.TransactionMarker, nameof(DocumentsTable.TransactionMarker), ref tvr);
+            document.ChangeVector = TableValueToChangeVector((int)DocumentsTable.ChangeVector, tvr);
+            document.LastModified = TableValueToDateTime((int)DocumentsTable.LastModified, tvr);
+            document.Flags = TableValueToFlags((int)DocumentsTable.Flags, tvr);
+            document.TransactionMarker = TableValueToShort((int)DocumentsTable.TransactionMarker, nameof(DocumentsTable.TransactionMarker), tvr);
 
             return document;
         }
 
-        public static Document ParseRawDataSectionDocumentWithValidation(JsonOperationContext context, ref TableValueReader tvr, int expectedSize)
+        public static Document ParseRawDataSectionDocumentWithValidation(JsonOperationContext context, in TableValueReader tvr, int expectedSize)
         {
             var datPtr = tvr.Read((int)DocumentsTable.Data, out int size);
             if (size > expectedSize || size <= 0)
                 throw new ArgumentException("Data size is invalid, possible corruption when parsing BlittableJsonReaderObject", nameof(size));
 
             BlittableJsonReaderObject.BlittableValidation(context, datPtr, size);
-
+            
             var doc = new Document();
-            return InitializeDocument(context, doc, ref tvr);
+            return InitializeDocument(context, doc, tvr);
         }
 
-        public static Tombstone TableValueToTombstone(JsonOperationContext context, ref TableValueReader tvr)
+        public static Tombstone TableValueToTombstone(JsonOperationContext context, in TableValueReader tvr)
         {
             if (tvr.Pointer == null)
                 return null;
@@ -1827,28 +1765,28 @@ namespace Raven.Server.Documents
             var result = new Tombstone
             {
                 StorageId = tvr.Id,
-                LowerId = TableValueToString(context, (int)TombstoneTable.LowerId, ref tvr),
-                Etag = TableValueToEtag((int)TombstoneTable.Etag, ref tvr),
-                DeletedEtag = TableValueToEtag((int)TombstoneTable.DeletedEtag, ref tvr),
+                LowerId = TableValueToString(context, (int)TombstoneTable.LowerId, tvr),
+                Etag = TableValueToEtag((int)TombstoneTable.Etag, tvr),
+                DeletedEtag = TableValueToEtag((int)TombstoneTable.DeletedEtag, tvr),
                 Type = *(Tombstone.TombstoneType*)tvr.Read((int)TombstoneTable.Type, out int _),
                 TransactionMarker = *(short*)tvr.Read((int)TombstoneTable.TransactionMarker, out int _),
-                ChangeVector = TableValueToChangeVector((int)TombstoneTable.ChangeVector, ref tvr),
-                LastModified = TableValueToDateTime((int)TombstoneTable.LastModified, ref tvr),
-                Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr),
+                ChangeVector = TableValueToChangeVector((int)TombstoneTable.ChangeVector, tvr),
+                LastModified = TableValueToDateTime((int)TombstoneTable.LastModified, tvr),
+                Flags = TableValueToFlags((int)TombstoneTable.Flags, tvr),
             };
 
             switch (result.Type)
             {
                 case Tombstone.TombstoneType.Document:
-                    result.Collection = TableValueToId(context, (int)TombstoneTable.Collection, ref tvr);
+                    result.Collection = TableValueToId(context, (int)TombstoneTable.Collection, tvr);
                     result.LowerId = UnwrapLowerIdIfNeeded(context, result.LowerId);
                     break;
                 case Tombstone.TombstoneType.Revision:
-                    result.Collection = TableValueToId(context, (int)TombstoneTable.Collection, ref tvr);
-                    result.RevisionVersion = ReadRevisionVersion(ref tvr);
+                    result.Collection = TableValueToId(context, (int)TombstoneTable.Collection, tvr);
+                    result.RevisionVersion = ReadRevisionVersion(context, tvr);
                     break;
                 case Tombstone.TombstoneType.Attachment:
-                    result.RevisionVersion = ReadRevisionVersion(ref tvr);
+                    result.RevisionVersion = ReadRevisionVersion(context, tvr);
                     break;
             }
 
@@ -1856,10 +1794,10 @@ namespace Raven.Server.Documents
         }
 
         // Field 9 (TombstoneTable.RevisionVersion) -- present only on Hashed-form RT/RAT writes; legacy 9-field rows have no slot.
-        private static string ReadRevisionVersion(ref TableValueReader tvr)
+        private static string ReadRevisionVersion(JsonOperationContext context, in TableValueReader tvr)
         {
             return tvr.Count > (int)TombstoneTable.RevisionVersion
-                ? TableValueToChangeVector((int)TombstoneTable.RevisionVersion, ref tvr)
+                ? TableValueToChangeVector((int)TombstoneTable.RevisionVersion, tvr)
                 : null;
         }
 
@@ -1892,7 +1830,7 @@ namespace Raven.Server.Documents
             var fromResharding = nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromResharding);
 
             var local = GetDocumentOrTombstone(context, lowerId, throwOnConflict: false);
-            var modifiedTicks = GetOrCreateLastModifiedTicks(lastModifiedTicks);
+            var modifiedTicks = GetOrCreateLastModifiedTicks(context, lastModifiedTicks);
 
             if (local.Tombstone != null)
             {
@@ -1966,13 +1904,7 @@ namespace Raven.Server.Documents
                 // that. Another issue is that the last tombstone etag has changed, and we need
                 // to let the indexes catch up to us here, even if they'll just do a noop.
 
-                context.Transaction.AddAfterCommitNotification(new DocumentChange
-                {
-                    Type = DocumentChangeTypes.Delete,
-                    Id = id,
-                    ChangeVector = changeVector,
-                    CollectionName = collectionName.Name,
-                });
+                context.Transaction.AddAfterCommitNotification(collectionName.Name, id, changeVector, DocumentChangeTypes.Delete);
 
                 return new DeleteOperationResult
                 {
@@ -1992,7 +1924,7 @@ namespace Raven.Server.Documents
 
                 var flags = GetFlagsFromOldDocumentForDelete(newFlags, doc.Flags, nonPersistentFlags);
 
-                var table = context.Transaction.InnerTransaction.OpenTable(DocumentDatabase.GetDocsSchemaForCollection(collectionName, flags), collectionName.GetTableName(CollectionTableType.Documents));
+                var table = context.Transaction.GetOrOpenDocumentsTable(collectionName, DocumentDatabase.GetDocsSchemaForCollection(collectionName, flags));
 
                 long etag;
                 using (Slice.From(context.Allocator, doc.LowerId, out Slice tombstoneId))
@@ -2067,13 +1999,7 @@ namespace Raven.Server.Documents
 
                 table.Delete(doc.StorageId);
 
-                context.Transaction.AddAfterCommitNotification(new DocumentChange
-                {
-                    Type = DocumentChangeTypes.Delete,
-                    Id = id,
-                    ChangeVector = changeVector,
-                    CollectionName = collectionName.Name,
-                });
+                context.Transaction.AddAfterCommitNotification(collectionName.Name, id, changeVector, DocumentChangeTypes.Delete);
 
                 return new DeleteOperationResult
                 {
@@ -2116,13 +2042,7 @@ namespace Raven.Server.Documents
                     nonPersistentFlags).Etag;
 
                 // We've to add notification since we're updating last tombstone etag, and we can end up in situation when our indexes will be stale due unprocessed tombstones after replication.
-                context.Transaction.AddAfterCommitNotification(new DocumentChange
-                {
-                    Type = DocumentChangeTypes.Delete,
-                    Id = id,
-                    ChangeVector = changeVector,
-                    CollectionName = collectionName.Name,
-                });
+                context.Transaction.AddAfterCommitNotification(collectionName.Name, id, changeVector, DocumentChangeTypes.Delete);
 
                 return new DeleteOperationResult
                 {
@@ -2147,6 +2067,18 @@ namespace Raven.Server.Documents
                 ActualChangeVector = actual,
                 ExpectedChangeVector = expected
             };
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public long GetOrCreateLastModifiedTicks(DocumentsOperationContext context, long? lastModifiedTicks)
+        {
+            if (lastModifiedTicks.HasValue)
+            {
+                Debug.Assert(lastModifiedTicks.Value != DateTime.MinValue.Ticks, $"lastModifiedTicks cannot have DateTime.MinValue. {_name}");
+                return lastModifiedTicks.Value;
+            }
+
+            return context.Transaction.GetOrCreateLastModifiedTicks();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2186,12 +2118,12 @@ namespace Raven.Server.Documents
 
                     if (beforeDeleted != null)
                     {
-                        var doc = TableValueToDocument(context, ref reader);
+                        var doc = TableValueToDocument(context, reader);
 
                         beforeDeleted(doc);
                     }
 
-                    var id = TableValueToId(context, (int)DocumentsTable.Id, ref reader);
+                    var id = TableValueToId(context, (int)DocumentsTable.Id, reader);
 
                     var deleteOperationResult = Delete(context, id, null, flags);
                     if (deleteOperationResult != null)
@@ -2264,8 +2196,7 @@ namespace Raven.Server.Documents
 
             Debug.Assert(changeVector != null, "changeVector can't be null");
 
-            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
-                collectionName.GetTableName(CollectionTableType.Tombstones));
+            var table = context.Transaction.GetOrOpenTombstonesTable(collectionName, TombstonesSchema);
 
             FlagsProperlySet(flags, changeVector);
 
@@ -2293,7 +2224,7 @@ namespace Raven.Server.Documents
                 var tombstoneTable = context.TombstonesTable(this);
                 if (tombstoneTable.ReadByKey(lowerId, out var tvr))
                 {
-                    var tombstoneCollection = TableValueToId(context, (int)TombstoneTable.Collection, ref tvr);
+                    var tombstoneCollection = TableValueToId(context, (int)TombstoneTable.Collection, tvr);
                     var tombstoneCollectionName = ExtractCollectionName(context, tombstoneCollection);
 
                     if (tombstoneCollectionName != collectionName)
@@ -2464,15 +2395,11 @@ namespace Raven.Server.Documents
             // conflict instead
             var tx = context.Transaction.InnerTransaction;
 
-            var collectionObject = new CollectionName(collection);
-            var collectionName = isTombstone ?
-                collectionObject.GetTableName(CollectionTableType.Tombstones) :
-                collectionObject.GetTableName(CollectionTableType.Documents);
+            var collectionObject = GetCollection(tx, collection, throwIfDoesNotExist: true);
 
-            //make sure that the relevant collection tree exists
             Table table = isTombstone ?
-                tx.OpenTable(TombstonesSchema, collectionName) :
-                tx.OpenTable(DocumentDatabase.GetDocsSchemaForCollection(collectionObject), collectionName);
+                context.Transaction.GetOrOpenTombstonesTable(collectionObject, TombstonesSchema) :
+                context.Transaction.GetOrOpenDocumentsTable(collectionObject, DocumentDatabase.GetDocsSchemaForCollection(collectionObject));
 
             table.Delete(storageId);
         }
@@ -2481,13 +2408,20 @@ namespace Raven.Server.Documents
         public PutOperationResults Put(DocumentsOperationContext context, string id,
             string expectedChangeVector, BlittableJsonReaderObject document, long? lastModifiedTicks = null, string changeVector = null,
             string oldChangeVectorForClusterTransactionIndexCheck = null,
-            DocumentFlags flags = DocumentFlags.None, NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None)
+            DocumentFlags flags = DocumentFlags.None, NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None,
+            string knownCollectionName = null, BlittableJsonReaderObject knownMetadata = null)
         {
             ChangeVector cv = null;
             if (changeVector != null)
                 cv = context.GetChangeVector(changeVector);
 
-            return DocumentPut.PutDocument(context, id, expectedChangeVector, document, lastModifiedTicks, cv, oldChangeVectorForClusterTransactionIndexCheck, flags, nonPersistentFlags);
+            if (knownCollectionName == null) // request handling threads already got those (optimization), but callers from the merger tx don't, so we need to extract it here
+            {
+                knownCollectionName = CollectionName.GetCollectionName(document);
+                document.TryGetMetadata(out knownMetadata);
+            }
+
+            return DocumentPut.PutDocument(context, id, expectedChangeVector, document, lastModifiedTicks, cv, oldChangeVectorForClusterTransactionIndexCheck, flags, nonPersistentFlags, knownCollectionName, knownMetadata);
         }
 
         public long GetNumberOfDocumentsToProcess(DocumentsOperationContext context, string collection, long afterEtag, out long totalCount, Stopwatch overallDuration)
@@ -2513,7 +2447,7 @@ namespace Raven.Server.Documents
         private long GetNumberOfItemsToProcess(DocumentsOperationContext context, string collection, long afterEtag, bool tombstones, out long totalCount,
             Stopwatch overallDuration)
         {
-            var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
             if (collectionName == null)
             {
                 totalCount = 0;
@@ -2527,13 +2461,13 @@ namespace Raven.Server.Documents
                 table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
                     collectionName.GetTableName(CollectionTableType.Tombstones));
 
-                indexDef = TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice];
+                indexDef = Schemas.Tombstones.CollectionEtagsIndex;
             }
             else
             {
                 table = context.Transaction.InnerTransaction.OpenTable(DocumentDatabase.GetDocsSchemaForCollection(collectionName),
                     collectionName.GetTableName(CollectionTableType.Documents));
-                indexDef = DocsSchema.FixedSizeIndexes[CollectionEtagsSlice];
+                indexDef = Schemas.Documents.CollectionEtagsIndex;
             }
 
             if (table == null)
@@ -2553,12 +2487,12 @@ namespace Raven.Server.Documents
             if (tombstones)
             {
                 table = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
-                indexDef = TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice];
+                indexDef = Schemas.Tombstones.AllTombstonesEtagsIndex;
             }
             else
             {
                 table = new Table(DocsSchema, context.Transaction.InnerTransaction);
-                indexDef = DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice];
+                indexDef = Schemas.Documents.AllDocsEtagsIndex;
             }
 
             return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out totalCount, overallDuration);
@@ -2573,14 +2507,14 @@ namespace Raven.Server.Documents
 
         public long GetNumberOfDocuments(DocumentsOperationContext context)
         {
-            var fstIndex = DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice];
+            var fstIndex = Schemas.Documents.AllDocsEtagsIndex;
             var fst = context.Transaction.InnerTransaction.FixedTreeFor(fstIndex.Name, sizeof(long));
             return fst.NumberOfEntries;
         }
 
         public long GetNumberOfDocumentsFor(string collection, DocumentsOperationContext context)
         {
-            var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
             if (collectionName == null)
                 return 0;
 
@@ -2589,7 +2523,7 @@ namespace Raven.Server.Documents
             if (collectionTable == null)
                 return 0;
 
-            var indexDef = DocsSchema.FixedSizeIndexes[CollectionEtagsSlice];
+            var indexDef = Schemas.Documents.CollectionEtagsIndex;
             return collectionTable.GetNumberOfEntriesFor(indexDef);
         }
 
@@ -2601,7 +2535,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<CollectionStats> GetCollections(DocumentsOperationContext context)
         {
-            foreach (var kvp in _collectionsCache)
+            foreach (var kvp in GetCollectionsMap(context.Transaction.InnerTransaction.LowLevelTransaction))
             {
                 var collectionTable = context.Transaction.InnerTransaction.OpenTable(DocumentDatabase.GetDocsSchemaForCollection(kvp.Value),
                     kvp.Value.GetTableName(CollectionTableType.Documents));
@@ -2622,7 +2556,7 @@ namespace Raven.Server.Documents
 
         public List<string> GetCollectionsNames(DocumentsOperationContext context)
         {
-            return _collectionsCache.Keys.ToList();
+            return GetCollectionsMap(context.Transaction.InnerTransaction.LowLevelTransaction).Keys.ToList();
         }
 
         public CollectionDetails GetCollectionDetails(DocumentsOperationContext context, string collection)
@@ -2639,7 +2573,7 @@ namespace Raven.Server.Documents
                 CounterEntriesSize = new Client.Util.Size(),
                 TimeSeriesSegmentsSize = new Client.Util.Size()
             };
-            CollectionName collectionName = GetCollection(collection, throwIfDoesNotExist: false);
+            CollectionName collectionName = GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
 
             if (collectionName != null)
             {
@@ -2691,27 +2625,26 @@ namespace Raven.Server.Documents
 
         public long DeleteTombstonesBefore(DocumentsOperationContext context, string collection, long etag, long numberOfEntriesToDelete)
         {
-            string tableName;
+            Table table;
 
             if (collection == Schemas.Attachments.AttachmentsTombstones ||
                 collection == Schemas.Revisions.RevisionsTombstones)
             {
-                tableName = collection;
+                table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collection);
             }
             else
             {
-                var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
+                var collectionName = GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
                 if (collectionName == null)
                     return 0;
 
-                tableName = collectionName.GetTableName(CollectionTableType.Tombstones);
+                table = context.Transaction.GetOrOpenTombstonesTable(collectionName, TombstonesSchema);
             }
 
-            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, tableName);
             if (table == null)
                 return 0;
 
-            var deleteCount = table.DeleteBackwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], etag, numberOfEntriesToDelete);
+            var deleteCount = table.DeleteBackwardFrom(Schemas.Tombstones.CollectionEtagsIndex, etag, numberOfEntriesToDelete);
             if (_logger.IsDebugEnabled && deleteCount > 0)
                 _logger.Debug($"Deleted {deleteCount:#,#;;0} tombstones earlier than {etag} in {collection}");
             if (deleteCount > 0)
@@ -2756,7 +2689,7 @@ namespace Raven.Server.Documents
             localChangeVector = localChangeVector.StripTrxnTags(context);
 
             var originalStatus = ChangeVectorUtils.GetConflictStatus(remoteChangeVector, localChangeVector, mode: mode);
-
+            
             if (originalStatus == ConflictStatus.Conflict && HasUnusedDatabaseIds())
             {
                 // We need to distinguish between few cases here
@@ -2773,7 +2706,7 @@ namespace Raven.Server.Documents
                 // case 2: incoming change vector A:10, B:11, C:10 -> conflict              (original: conflict, after: conflict)
                 // case 3: incoming change vector A:11, B:10, C:10 -> update                (original: update, after: already merged)
                 // case 4: incoming change vector A:11, B:12, C:10 -> update                (original: conflict, after: update)
-
+              
                 remoteChangeVector.TryRemoveIds(UnusedDatabaseIds, context, out remoteChangeVector);
                 var skipValidation = localChangeVector.TryRemoveIds(UnusedDatabaseIds, context, out localChangeVector);
                 context.SkipChangeVectorValidation |= skipValidation;
@@ -2821,9 +2754,20 @@ namespace Raven.Server.Documents
             }
         }
 
-        public CollectionName GetCollection(string collection, bool throwIfDoesNotExist)
+
+
+        public CollectionName GetCollection(Transaction transaction, string collection, bool throwIfDoesNotExist)
         {
-            if (_collectionsCache.TryGetValue(collection, out CollectionName collectionName) == false && throwIfDoesNotExist)
+            if (GetCollectionsMap(transaction.LowLevelTransaction).TryGetValue(collection, out CollectionName collectionName) == false && throwIfDoesNotExist)
+                throw new InvalidOperationException($"There is no collection for '{collection}'.");
+
+            return collectionName;
+        }
+
+        public CollectionName GetCollectionFromLatestCommittedState(string collection, bool throwIfDoesNotExist)
+        {
+            var collections = Environment.TryGetClientState(out DocumentTransactionCache current) ? current.Collections ?? EmptyCollections : EmptyCollections;
+            if (collections.TryGetValue(collection, out CollectionName collectionName) == false && throwIfDoesNotExist)
                 throw new InvalidOperationException($"There is no collection for '{collection}'.");
 
             return collectionName;
@@ -2837,7 +2781,7 @@ namespace Raven.Server.Documents
 
         public CollectionName ExtractCollectionName(DocumentsOperationContext context, string collectionName)
         {
-            if (_collectionsCache.TryGetValue(collectionName, out CollectionName name))
+            if (GetCollectionsMap(context.Transaction.InnerTransaction.LowLevelTransaction).TryGetValue(collectionName, out CollectionName name))
                 return name;
 
             if (context.Transaction == null)
@@ -2870,22 +2814,6 @@ namespace Raven.Server.Documents
                 DocsSchema.Create(context.Transaction.InnerTransaction, name.GetTableName(CollectionTableType.Documents), 16);
                 TombstonesSchema.Create(context.Transaction.InnerTransaction, name.GetTableName(CollectionTableType.Tombstones), 16);
 
-                // Add to cache ONLY if the transaction was committed.
-                // this would prevent NREs next time a PUT is run,since if a transaction
-                // is not committed, DocsSchema and TombstonesSchema will not be actually created..
-                // has to happen after the commit, but while we are holding the write tx lock
-                context.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += _ =>
-                {
-                    var collectionNames = new Dictionary<string, CollectionName>(_collectionsCache, StringComparer.OrdinalIgnoreCase)
-                    {
-                        [name.Name] = name
-                    };
-                    _collectionsCache = collectionNames;
-
-                    var collectionTables = new Dictionary<Slice, CollectionName>(_collectionTablesReverse, SliceComparer.Instance);
-                    AddToCollectionTablesReverseMap(context.Transaction.InnerTransaction, collectionTables, name);
-                    _collectionTablesReverse = collectionTables;
-                };
             }
             return name;
         }
@@ -3038,48 +2966,13 @@ namespace Raven.Server.Documents
         {
             throw new InvalidOperationException("This method requires active transaction, and no active transactions in the current context...");
         }
-
-        private IEnumerable<string> IterateCollectionNames(Transaction tx, JsonOperationContext context)
-        {
-            var collections = tx.OpenTable(CollectionsSchema, CollectionsSlice);
-            foreach (var tvr in collections.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
-            {
-                var collection = TableValueToId(context, (int)CollectionsTable.Name, ref tvr.Reader);
-                yield return collection.ToString();
-            }
-        }
-
-        private Dictionary<string, CollectionName> ReadCollections(Transaction tx)
-        {
-            var result = new Dictionary<string, CollectionName>(StringComparer.OrdinalIgnoreCase);
-
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            {
-                var collections = tx.OpenTable(CollectionsSchema, CollectionsSlice);
-                foreach (var tvr in collections.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
-                {
-                    var collection = TableValueToId(context, (int)CollectionsTable.Name, ref tvr.Reader);
-                    var collectionName = new CollectionName(collection);
-                    result.Add(collection, collectionName);
-
-                    var documentsTree = tx.ReadTree(collectionName.GetTableName(CollectionTableType.Documents), RootObjectType.Table);
-                    NewPageAllocator.MaybePrefetchSections(documentsTree, tx.LowLevelTransaction);
-
-                    var tombstonesTree = tx.ReadTree(collectionName.GetTableName(CollectionTableType.Tombstones), RootObjectType.Table);
-                    NewPageAllocator.MaybePrefetchSections(tombstonesTree, tx.LowLevelTransaction);
-                }
-            }
-
-            return result;
-        }
-
         public static Dictionary<string, CollectionName> ReadCollections(Transaction tx, JsonOperationContext context)
         {
             var result = new Dictionary<string, CollectionName>(StringComparer.OrdinalIgnoreCase);
             var collections = tx.OpenTable(CollectionsSchema, CollectionsSlice);
             foreach (var tvr in collections.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
             {
-                var collection = TableValueToId(context, (int)CollectionsTable.Name, ref tvr.Reader);
+                var collection = TableValueToId(context, (int)CollectionsTable.Name, tvr);
                 var collectionName = new CollectionName(collection);
                 result.Add(collection, collectionName);
             }
@@ -3088,7 +2981,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static long TableValueToEtag<TTableValueReader>(int index, ref TTableValueReader tvr)
+        public static long TableValueToEtag<TTableValueReader>(int index, in TTableValueReader tvr)
             where TTableValueReader : struct, ITableValueReader
         {
             var ptr = tvr.Read(index, out _);
@@ -3097,7 +2990,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static long TableValueToLong<TTableValueReader>(int index, ref TTableValueReader tvr)
+        public static long TableValueToLong<TTableValueReader>(int index, in TTableValueReader tvr)
             where TTableValueReader : struct, ITableValueReader
         {
             var ptr = tvr.Read(index, out _);
@@ -3105,14 +2998,14 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static DocumentFlags TableValueToFlags<TTableValueReader>(int index, ref TTableValueReader tvr)
+        public static DocumentFlags TableValueToFlags<TTableValueReader>(int index, in TTableValueReader tvr)
             where TTableValueReader : struct, ITableValueReader
         {
             return *(DocumentFlags*)tvr.Read(index, out _);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static RemoteAttachmentFlags TableValueToAttachmentFlags(int index, ref TableValueReader tvr)
+        public static RemoteAttachmentFlags TableValueToAttachmentFlags(int index, in TableValueReader tvr)
         {
             var ptr = tvr.Read(index, out _);
             var etag = Bits.SwapBytes(*(int*)ptr);
@@ -3120,7 +3013,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static short TableValueToShort<TTableValueReader>(int index, string name, ref TTableValueReader tvr)
+        public static short TableValueToShort<TTableValueReader>(int index, string name, in TTableValueReader tvr)
             where TTableValueReader : struct, ITableValueReader
         {
             var value = *(short*)tvr.Read(index, out int size);
@@ -3142,14 +3035,14 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static DateTime TableValueToDateTime<TTableValueReader>(int index, ref TTableValueReader tvr)
+        public static DateTime TableValueToDateTime<TTableValueReader>(int index, in TTableValueReader tvr)
             where TTableValueReader : struct, ITableValueReader
         {
             return new DateTime(*(long*)tvr.Read(index, out _), DateTimeKind.Utc);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static DateTime? TableValueToNullableDateTime(int index, ref TableValueReader tvr)
+        public static DateTime? TableValueToNullableDateTime(int index, in TableValueReader tvr)
         {
             var ticks = *(long*)tvr.Read(index, out _);
             if (ticks < 0)
@@ -3158,7 +3051,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static LazyStringValue TableValueToString<TTableValueReader>(JsonOperationContext context, int index, ref TTableValueReader tvr)
+        public static LazyStringValue TableValueToString<TTableValueReader>(JsonOperationContext context, int index, in TTableValueReader tvr)
             where TTableValueReader : struct, ITableValueReader
         {
             var ptr = tvr.Read(index, out int size);
@@ -3166,7 +3059,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static string TableValueToChangeVector<TTableValueReader>(int index, ref TTableValueReader tvr)
+        public static string TableValueToChangeVector<TTableValueReader>(int index, in TTableValueReader tvr)
             where TTableValueReader : struct, ITableValueReader
         {
             var ptr = tvr.Read(index, out int size);
@@ -3174,7 +3067,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ChangeVector TableValueToChangeVector<TTableValueReader>(DocumentsOperationContext context, int index, ref TTableValueReader tvr)
+        public static ChangeVector TableValueToChangeVector<TTableValueReader>(DocumentsOperationContext context, int index, in TTableValueReader tvr)
             where TTableValueReader : struct, ITableValueReader
         {
             var ptr = tvr.Read(index, out int size);
@@ -3182,7 +3075,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static LazyStringValue TableValueToId<TTableValueReader>(JsonOperationContext context, int index, ref TTableValueReader tvr)
+        public static LazyStringValue TableValueToId<TTableValueReader>(JsonOperationContext context, int index, in TTableValueReader tvr)
             where TTableValueReader : struct, ITableValueReader
         {
             var ptr = tvr.Read(index, out _);
@@ -3194,7 +3087,7 @@ namespace Raven.Server.Documents
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ByteStringContext.InternalScope TableValueToSlice<TTableValueReader>(DocumentsOperationContext context,
-            int index, ref TTableValueReader tvr, out Slice slice)
+            int index, in TTableValueReader tvr, out Slice slice)
             where TTableValueReader : struct, ITableValueReader
         {
             var ptr = tvr.Read(index, out int size);

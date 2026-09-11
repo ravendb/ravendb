@@ -280,5 +280,59 @@ namespace FastTests.Voron.Tables
                 Assert.True(itemsTable.DeleteByIndex(fixedSizedIndex, 1L));
             }
         }
+        // The FSI cache in Table addresses trees by FixedSizeKeyIndexDef.CachePosition. This test
+        // pins the two invariants that make that safe: DefineFixedSizeIndex assigns dense,
+        // define-order positions, and GetFixedSizeTree resolves each position back to the tree with
+        // the matching name (so a position never aliases the wrong index within a schema).
+        [RavenFact(RavenTestCategory.Voron)]
+        public void FixedSizeIndexPositionsAreDenseAndResolveByName()
+        {
+            Slice.From(Allocator, "EtagA", out var a);
+            Slice.From(Allocator, "EtagB", out var b);
+            Slice.From(Allocator, "EtagC", out var c);
+
+            var defA = new TableSchema.FixedSizeKeyIndexDef { Name = a, IsGlobal = false, StartIndex = 1 };
+            var defB = new TableSchema.FixedSizeKeyIndexDef { Name = b, IsGlobal = true, StartIndex = 1 };
+            var defC = new TableSchema.FixedSizeKeyIndexDef { Name = c, IsGlobal = false, StartIndex = 1 };
+
+            var schema = new TableSchema()
+                .DefineKey(new TableSchema.IndexDef { StartIndex = 0, Count = 1 })
+                .DefineFixedSizeIndex(defA)
+                .DefineFixedSizeIndex(defB)
+                .DefineFixedSizeIndex(defC);
+
+            // dense, in define order
+            Assert.Equal(0, defA.CachePosition);
+            Assert.Equal(1, defB.CachePosition);
+            Assert.Equal(2, defC.CachePosition);
+            Assert.Equal(3, schema.FixedSizeIndexes.Count);
+
+            // a def registered in another schema keeps a consistent position when defined in the
+            // same order - this is what lets base/compressed schema variants share positions
+            var defA2 = new TableSchema.FixedSizeKeyIndexDef { Name = a, IsGlobal = false, StartIndex = 1 };
+            var defB2 = new TableSchema.FixedSizeKeyIndexDef { Name = b, IsGlobal = true, StartIndex = 1 };
+            new TableSchema()
+                .DefineKey(new TableSchema.IndexDef { StartIndex = 0, Count = 1 })
+                .DefineFixedSizeIndex(defA2)
+                .DefineFixedSizeIndex(defB2);
+            Assert.Equal(defA.CachePosition, defA2.CachePosition);
+            Assert.Equal(defB.CachePosition, defB2.CachePosition);
+
+            using (var tx = Env.WriteTransaction())
+            {
+                schema.Create(tx, "Items", 16);
+                var table = tx.OpenTable(schema, "Items");
+
+                // each def resolves, by its cache position, to a fixed size tree whose name matches
+                foreach (var def in new[] { defA, defB, defC })
+                {
+                    var tree = table.GetFixedSizeTree(def);
+                    Assert.True(SliceComparer.Equals(def.Name, tree.Name),
+                        $"position {def.CachePosition} resolved to tree '{tree.Name}' but the def is '{def.Name}'");
+                }
+                tx.Commit();
+            }
+        }
+
     }
 }

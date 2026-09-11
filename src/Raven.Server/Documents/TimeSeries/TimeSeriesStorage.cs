@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public long PurgeSegmentsAndDeletedRanges(DocumentsOperationContext context, string collection, long upto, long numberOfEntriesToDelete)
         {
-            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = _documentsStorage.GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
             if (collectionName == null)
                 return 0;
 
@@ -93,9 +93,9 @@ namespace Raven.Server.Documents.TimeSeries
             if (table == null || table.NumberOfEntries == 0 || numberOfEntriesToDelete <= 0)
                 return 0;
 
-            var deleted = table.DeleteBackwardFrom(DeleteRangesSchema.FixedSizeIndexes[CollectionDeletedRangesEtagsSlice], upto, numberOfEntriesToDelete, beforeDelete: tableValueHolder =>
+            var deleted = table.DeleteBackwardFrom(Schemas.DeletedRanges.CollectionDeletedRangesEtagsIndex, upto, numberOfEntriesToDelete, beforeDelete: (in TableValueReader tableValueHolder) =>
             {
-                var reader = tableValueHolder.Reader;
+                var reader = tableValueHolder;
 
                 var keyPtr = reader.Read((int)DeletedRangeTable.RangeKey, out var keySize);
                 AddStatsCleanupCandidate(context, statsCleanupCandidates, keyPtr, keySize);
@@ -151,13 +151,13 @@ namespace Raven.Server.Documents.TimeSeries
                             break;
                         }
 
-                        if (table.FindByIndex(TimeSeriesSchema.FixedSizeIndexes[CollectionTimeSeriesEtagsSlice], etag, out var reader))
+                        if (table.FindByIndex(Schemas.TimeSeries.CollectionTimeSeriesEtagsIndex, etag, out var reader))
                         {
                             var keyPtr = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
                             AddStatsCleanupCandidate(context, statsCleanupCandidates, keyPtr, keySize);
                         }
 
-                        if (table.DeleteByIndex(TimeSeriesSchema.FixedSizeIndexes[CollectionTimeSeriesEtagsSlice], etag))
+                        if (table.DeleteByIndex(Schemas.TimeSeries.CollectionTimeSeriesEtagsIndex, etag))
                             deletedCount++;
 
                         outdated.Add(it.CurrentKey.Clone(context.Allocator));
@@ -192,7 +192,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public long GetNumberOfTimeSeriesDeletedRanges(DocumentsOperationContext context)
         {
-            var fstIndex = DeleteRangesSchema.FixedSizeIndexes[AllDeletedRangesEtagSlice];
+            var fstIndex = Schemas.DeletedRanges.AllDeletedRangesEtagIndex;
             var fst = context.Transaction.InnerTransaction.FixedTreeFor(fstIndex.Name, sizeof(long));
             return fst.NumberOfEntries;
         }
@@ -271,7 +271,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                 if (deleteRangesTable.ReadByKey(sliceHolder.TimeSeriesKeySlice, out var tableValueReader))
                 {
-                    var storedDeletedRangeChangeVector = ExtractDeletedRangeChangeVector(context, ref tableValueReader);
+                    var storedDeletedRangeChangeVector = ExtractDeletedRangeChangeVector(context, tableValueReader);
 
                     if (ChangeVectorUtils.GetConflictStatus(deletedRangeChangeVector, storedDeletedRangeChangeVector) == ConflictStatus.AlreadyMerged)
                     {
@@ -502,13 +502,13 @@ namespace Raven.Server.Documents.TimeSeries
 
             foreach (var (_, tvh) in table.SeekByPrimaryKeyPrefix(prefix, key, 0))
             {
-                return GetBaseline(tvh.Reader);
+                return GetBaseline(tvh);
             }
 
             return null;
         }
 
-        private static DateTime GetBaseline(TableValueReader reader)
+        private static DateTime GetBaseline(in TableValueReader reader)
         {
             var key = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
             return GetBaseline(key, keySize);
@@ -586,7 +586,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private static TimeSeriesValuesSegment TableValueToSegment(ref TableValueReader segmentValueReader, out DateTime baseline)
+        private static TimeSeriesValuesSegment TableValueToSegment(in TableValueReader segmentValueReader, out DateTime baseline)
         {
             var segmentPtr = segmentValueReader.Read((int)TimeSeriesTable.Segment, out int segmentSize);
             var segment = new TimeSeriesValuesSegment(segmentPtr, segmentSize);
@@ -672,7 +672,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             if (table.ReadByKey(key, out var tvr))
             {
-                var existingChangeVector = DocumentsStorage.TableValueToChangeVector(context, (int)TimeSeriesTable.ChangeVector, ref tvr);
+                var existingChangeVector = DocumentsStorage.TableValueToChangeVector(context, (int)TimeSeriesTable.ChangeVector, tvr);
 
                 var status = ChangeVectorUtils.GetConflictStatus(changeVector, existingChangeVector);
 
@@ -736,16 +736,8 @@ namespace Raven.Server.Documents.TimeSeries
 
                 holder.AppendToNewSegment(segment, baseline);
 
-                context.Transaction.AddAfterCommitNotification(new TimeSeriesChange
-                {
-                    CollectionName = collectionName.Name,
-                    ChangeVector = holder.ChangeVector,
-                    DocumentId = documentId,
-                    Name = name,
-                    Type = TimeSeriesChangeTypes.Put,
-                    From = DateTime.MinValue,
-                    To = DateTime.MaxValue
-                });
+                context.Transaction.AddAfterCommitNotification(collectionName.Name, documentId, name, holder.ChangeVector,
+                    TimeSeriesChangeTypes.Put, DateTime.MinValue, DateTime.MaxValue);
             }
 
             return true;
@@ -770,16 +762,8 @@ namespace Raven.Server.Documents.TimeSeries
                 else
                     holder.AppendExistingSegment(segment);
 
-                context.Transaction.AddAfterCommitNotification(new TimeSeriesChange
-                {
-                    CollectionName = collectionName.Name,
-                    ChangeVector = holder.ChangeVector,
-                    DocumentId = documentId,
-                    Name = name,
-                    Type = TimeSeriesChangeTypes.Put,
-                    From = DateTime.MinValue,
-                    To = DateTime.MaxValue
-                });
+                context.Transaction.AddAfterCommitNotification(collectionName.Name, documentId, name, holder.ChangeVector,
+                    TimeSeriesChangeTypes.Put, DateTime.MinValue, DateTime.MaxValue);
 
                 return true;
             }
@@ -817,7 +801,7 @@ namespace Raven.Server.Documents.TimeSeries
                     }
                 }
 
-                var prevSegment = TableValueToSegment(ref tvr, out var prevBaseline);
+                var prevSegment = TableValueToSegment(tvr, out var prevBaseline);
                 var last = prevSegment.GetLastTimestamp(prevBaseline);
                 return last >= baseline;
             }
@@ -857,7 +841,7 @@ namespace Raven.Server.Documents.TimeSeries
                     }
                 }
 
-                var prevSegment = TableValueToSegment(ref tvr, out var prevBaseline);
+                var prevSegment = TableValueToSegment(tvr, out var prevBaseline);
                 var prevLastTimestamp = prevSegment.GetLastTimestamp(prevBaseline);
 
                 if (canUpdateExistingSegment)
@@ -884,7 +868,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                 foreach (var (_, tableValueHolder) in table.SeekByPrimaryKeyPrefix(sliceHolder.TimeSeriesPrefixSlice, Slices.Empty, skip: 0))
                 {
-                    var item = CreateDeletedRangeItem(context, ref tableValueHolder.Reader);
+                    var item = CreateDeletedRangeItem(context, tableValueHolder);
                     
                     if (item.From > baseline || item.To < segment.GetLastTimestamp(baseline))
                         continue;
@@ -1008,13 +992,13 @@ namespace Raven.Server.Documents.TimeSeries
             private void Initialize()
             {
                 Debug.Assert(_tvr.Equals(default) == false);
-                var readOnlySegment = TableValueToSegment(ref _tvr, out BaselineDate);
+                var readOnlySegment = TableValueToSegment(_tvr, out BaselineDate);
 
                 // while appending or deleting, we might change the same segment.
                 // So we clone it.
                 Debug.Assert(_clonedReadonlySegment == null);
                 _clonedReadonlySegment = readOnlySegment.Clone(_context, out ReadOnlySegment);
-                ReadOnlyChangeVector = DocumentsStorage.TableValueToChangeVector(_context, (int)TimeSeriesTable.ChangeVector, ref _tvr);
+                ReadOnlyChangeVector = DocumentsStorage.TableValueToChangeVector(_context, (int)TimeSeriesTable.ChangeVector, _tvr);
 
                 SliceHolder.SetBaselineToKey(BaselineDate);
 
@@ -1838,16 +1822,8 @@ namespace Raven.Server.Documents.TimeSeries
 
                 if (appendEnumerator.IteratedValues > 0)
                 {
-                    context.Transaction.AddAfterCommitNotification(new TimeSeriesChange
-                    {
-                        CollectionName = collectionName.Name,
-                        ChangeVector = context.LastDatabaseChangeVector,
-                        DocumentId = documentId,
-                        Name = name,
-                        Type = TimeSeriesChangeTypes.Put,
-                        From = appendEnumerator.First,
-                        To = appendEnumerator.Last
-                    });
+                    context.Transaction.AddAfterCommitNotification(collectionName.Name, documentId, name, context.LastDatabaseChangeVector,
+                        TimeSeriesChangeTypes.Put, appendEnumerator.First, appendEnumerator.Last);
                 }
             }
 
@@ -2440,13 +2416,13 @@ namespace Raven.Server.Documents.TimeSeries
             var table =  context.TimesSeriesTable(this);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(TimeSeriesSchema.FixedSizeIndexes[AllTimeSeriesEtagSlice], etag, 0))
+            foreach (var result in table.SeekForwardFrom(Schemas.TimeSeries.AllTimeSeriesEtagIndex, etag, 0))
             {
-                yield return CreateTimeSeriesSegmentItem(context, ref result.Reader, includeDocumentChangeVector);
+                yield return CreateTimeSeriesSegmentItem(context, result, includeDocumentChangeVector);
             }
         }
 
-        internal TimeSeriesReplicationItem CreateTimeSeriesSegmentItem(DocumentsOperationContext context, ref TableValueReader reader, bool includeDocumentChangeVector)
+        internal TimeSeriesReplicationItem CreateTimeSeriesSegmentItem(DocumentsOperationContext context, in TableValueReader reader, bool includeDocumentChangeVector)
         {
             var etag = *(long*)reader.Read((int)TimeSeriesTable.Etag, out _);
             var changeVectorPtr = reader.Read((int)TimeSeriesTable.ChangeVector, out int changeVectorSize);
@@ -2457,9 +2433,9 @@ namespace Raven.Server.Documents.TimeSeries
                 Type = ReplicationBatchItem.ReplicationItemType.TimeSeriesSegment,
                 ChangeVector = Encoding.UTF8.GetString(changeVectorPtr, changeVectorSize),
                 Segment = new TimeSeriesValuesSegment(segmentPtr, segmentSize),
-                Collection = DocumentsStorage.TableValueToId(context, (int)TimeSeriesTable.Collection, ref reader),
+                Collection = DocumentsStorage.TableValueToId(context, (int)TimeSeriesTable.Collection, reader),
                 Etag = Bits.SwapBytes(etag),
-                TransactionMarker = DocumentsStorage.TableValueToShort((int)TimeSeriesTable.TransactionMarker, nameof(TimeSeriesTable.TransactionMarker), ref reader)
+                TransactionMarker = DocumentsStorage.TableValueToShort((int)TimeSeriesTable.TransactionMarker, nameof(TimeSeriesTable.TransactionMarker), reader)
             };
 
             var keyPtr = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
@@ -2503,15 +2479,15 @@ namespace Raven.Server.Documents.TimeSeries
             var table = context.DeleteRangesTable(this);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(DeleteRangesSchema.FixedSizeIndexes[AllDeletedRangesEtagSlice], etag, 0))
+            foreach (var result in table.SeekForwardFrom(Schemas.DeletedRanges.AllDeletedRangesEtagIndex, etag, 0))
             {
-                yield return CreateDeletedRangeItem(context, ref result.Reader);
+                yield return CreateDeletedRangeItem(context, result);
             }
         }
 
         public IEnumerable<TimeSeriesDeletedRangeItem> GetDeletedRangesFrom(DocumentsOperationContext context, string collection, long fromEtag)
         {
-            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = _documentsStorage.GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
             if (collectionName == null)
                 yield break;
             var table = GetOrCreateDeleteRangesTable(context.Transaction.InnerTransaction, collectionName);
@@ -2519,9 +2495,9 @@ namespace Raven.Server.Documents.TimeSeries
                 yield break;
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(DeleteRangesSchema.FixedSizeIndexes[CollectionDeletedRangesEtagsSlice], fromEtag, 0))
+            foreach (var result in table.SeekForwardFrom(Schemas.DeletedRanges.CollectionDeletedRangesEtagsIndex, fromEtag, 0))
             {
-                yield return CreateDeletedRangeItem(context, ref result.Reader);
+                yield return CreateDeletedRangeItem(context, result);
             }
         }
 
@@ -2530,20 +2506,20 @@ namespace Raven.Server.Documents.TimeSeries
             var table = context.DeleteRangesTable(this);
             using var dispose = DocumentIdWorker.GetLoweredIdSliceFromId(context, docId, out var documentKeyPrefix, SpecialChars.RecordSeparator);
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach ((_, Table.TableValueHolder tvh) in table.SeekByPrimaryKeyPrefix(documentKeyPrefix, Slices.Empty, 0))
+            foreach ((_, TableValueReader tvh) in table.SeekByPrimaryKeyPrefix(documentKeyPrefix, Slices.Empty, 0))
             {
-                var item = CreateDeletedRangeItem(context, ref tvh.Reader);
+                var item = CreateDeletedRangeItem(context, tvh);
                 yield return item;
             }
         }
 
-        private static ChangeVector ExtractDeletedRangeChangeVector(DocumentsOperationContext context, ref TableValueReader reader)
+        private static ChangeVector ExtractDeletedRangeChangeVector(DocumentsOperationContext context, in TableValueReader reader)
         {
             var changeVectorPtr = reader.Read((int)DeletedRangeTable.ChangeVector, out int changeVectorSize);
             return context.GetChangeVector(Encoding.UTF8.GetString(changeVectorPtr, changeVectorSize));
         }
 
-        private static TimeSeriesDeletedRangeItem CreateDeletedRangeItem(DocumentsOperationContext context, ref TableValueReader reader)
+        private static TimeSeriesDeletedRangeItem CreateDeletedRangeItem(DocumentsOperationContext context, in TableValueReader reader)
         {
             var etag = *(long*)reader.Read((int)DeletedRangeTable.Etag, out _);
             var changeVectorPtr = reader.Read((int)DeletedRangeTable.ChangeVector, out int changeVectorSize);
@@ -2552,11 +2528,11 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 Type = ReplicationBatchItem.ReplicationItemType.DeletedTimeSeriesRange,
                 ChangeVector = Encoding.UTF8.GetString(changeVectorPtr, changeVectorSize),
-                Collection = DocumentsStorage.TableValueToId(context, (int)DeletedRangeTable.Collection, ref reader),
+                Collection = DocumentsStorage.TableValueToId(context, (int)DeletedRangeTable.Collection, reader),
                 Etag = Bits.SwapBytes(etag),
-                TransactionMarker = DocumentsStorage.TableValueToShort((int)DeletedRangeTable.TransactionMarker, nameof(DeletedRangeTable.TransactionMarker), ref reader),
-                From = DocumentsStorage.TableValueToDateTime((int)DeletedRangeTable.From, ref reader),
-                To = DocumentsStorage.TableValueToDateTime((int)DeletedRangeTable.To, ref reader),
+                TransactionMarker = DocumentsStorage.TableValueToShort((int)DeletedRangeTable.TransactionMarker, nameof(DeletedRangeTable.TransactionMarker), reader),
+                From = DocumentsStorage.TableValueToDateTime((int)DeletedRangeTable.From, reader),
+                To = DocumentsStorage.TableValueToDateTime((int)DeletedRangeTable.To, reader),
             };
 
             var keyPtr = reader.Read((int)DeletedRangeTable.RangeKey, out int keySize);
@@ -2572,31 +2548,31 @@ namespace Raven.Server.Documents.TimeSeries
             if (table.ReadByKey(key, out var reader) == false)
                 return null;
 
-            return CreateTimeSeriesItem(context, ref reader, fields);
+            return CreateTimeSeriesItem(context, reader, fields);
         }
 
         public TimeSeriesSegmentEntry GetTimeSeries(DocumentsOperationContext context, long etag, TimeSeriesSegmentEntryFields fields = TimeSeriesSegmentEntryFields.All)
         {
             var table = context.TimesSeriesTable(this);
-            var index = TimeSeriesSchema.FixedSizeIndexes[AllTimeSeriesEtagSlice];
+            var index = Schemas.TimeSeries.AllTimeSeriesEtagIndex;
 
             if (table.Read(context.Allocator, index, etag, out var tvr) == false)
                 return null;
 
-            return CreateTimeSeriesItem(context, ref tvr, fields);
+            return CreateTimeSeriesItem(context, tvr, fields);
         }
 
         public TimeSeriesDeletedRangeEntry GetTimeSeriesDeletedRange(DocumentsOperationContext context, long etag)
         {
             var table = context.DeleteRangesTable(this);
-            var index = DeleteRangesSchema.FixedSizeIndexes[AllDeletedRangesEtagSlice];
+            var index = Schemas.DeletedRanges.AllDeletedRangesEtagIndex;
 
             if (table.Read(context.Allocator, index, etag, out var tvr) == false)
                 return null;
 
-            return CreateTimeSeriesDeletedRangeItem(context, ref tvr);
+            return CreateTimeSeriesDeletedRangeItem(context, tvr);
 
-            static TimeSeriesDeletedRangeEntry CreateTimeSeriesDeletedRangeItem(DocumentsOperationContext context, ref TableValueReader reader)
+            static TimeSeriesDeletedRangeEntry CreateTimeSeriesDeletedRangeItem(DocumentsOperationContext context, in TableValueReader reader)
             {
                 var etag = *(long*)reader.Read((int)DeletedRangeTable.Etag, out _);
                 var keyPtr = reader.Read((int)DeletedRangeTable.RangeKey, out int keySize);
@@ -2620,12 +2596,12 @@ namespace Raven.Server.Documents.TimeSeries
         {
             var table =  context.TimesSeriesTable(this);
 
-            foreach (var result in table.SeekForwardFrom(TimeSeriesSchema.FixedSizeIndexes[AllTimeSeriesEtagSlice], fromEtag, 0))
+            foreach (var result in table.SeekForwardFrom(Schemas.TimeSeries.AllTimeSeriesEtagIndex, fromEtag, 0))
             {
                 if (take-- <= 0)
                     yield break;
 
-                var item = CreateTimeSeriesItem(context, ref result.Reader, fields);
+                var item = CreateTimeSeriesItem(context, result, fields);
                 if (item.Etag > toEtag)
                     yield break;
 
@@ -2640,12 +2616,12 @@ namespace Raven.Server.Documents.TimeSeries
         {
             var table = context.DeleteRangesTable(this);
 
-            foreach (var result in table.SeekForwardFrom(DeleteRangesSchema.FixedSizeIndexes[AllDeletedRangesEtagSlice], fromEtag, 0))
+            foreach (var result in table.SeekForwardFrom(Schemas.DeletedRanges.AllDeletedRangesEtagIndex, fromEtag, 0))
             {
                 if (take-- <= 0)
                     yield break;
 
-                var item = CreateTimeSeriesDeletedRangeIndexItem(context, ref result.Reader);
+                var item = CreateTimeSeriesDeletedRangeIndexItem(context, result);
                 if (item.Etag > toEtag)
                     yield break;
 
@@ -2653,7 +2629,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        internal static TombstoneIndexItem CreateTimeSeriesDeletedRangeIndexItem(DocumentsOperationContext context, ref TableValueReader reader)
+        internal static TombstoneIndexItem CreateTimeSeriesDeletedRangeIndexItem(DocumentsOperationContext context, in TableValueReader reader)
         {
             var etag = *(long*)reader.Read((int)DeletedRangeTable.Etag, out _);
             var keyPtr = reader.Read((int)DeletedRangeTable.RangeKey, out int keySize);
@@ -2667,8 +2643,8 @@ namespace Raven.Server.Documents.TimeSeries
                 Name = name,
                 Etag = Bits.SwapBytes(etag),
                 Type = IndexItemType.TimeSeries,
-                From = DocumentsStorage.TableValueToDateTime((int)DeletedRangeTable.From, ref reader),
-                To = DocumentsStorage.TableValueToDateTime((int)DeletedRangeTable.To, ref reader)
+                From = DocumentsStorage.TableValueToDateTime((int)DeletedRangeTable.From, reader),
+                To = DocumentsStorage.TableValueToDateTime((int)DeletedRangeTable.To, reader)
             };
         }
 
@@ -2677,7 +2653,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         private IEnumerable<TimeSeriesSegmentEntry> GetTimeSeriesFrom(DocumentsOperationContext context, string collection, long fromEtag, long toEtag, long take, TimeSeriesSegmentEntryFields fields = TimeSeriesSegmentEntryFields.All)
         {
-            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = _documentsStorage.GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
             if (collectionName == null)
                 yield break;
 
@@ -2686,12 +2662,12 @@ namespace Raven.Server.Documents.TimeSeries
             if (table == null)
                 yield break;
 
-            foreach (var result in table.SeekForwardFrom(TimeSeriesSchema.FixedSizeIndexes[CollectionTimeSeriesEtagsSlice], fromEtag, skip: 0))
+            foreach (var result in table.SeekForwardFrom(Schemas.TimeSeries.CollectionTimeSeriesEtagsIndex, fromEtag, skip: 0))
             {
                 if (take-- <= 0)
                     yield break;
 
-                var item = CreateTimeSeriesItem(context, ref result.Reader, fields);
+                var item = CreateTimeSeriesItem(context, result, fields);
                 if (item.Etag > toEtag)
                     yield break;
 
@@ -2704,7 +2680,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         private IEnumerable<TombstoneIndexItem> GetTimeSeriesDeletedRangeIndexItems(DocumentsOperationContext context, string collection, long fromEtag, long toEtag, long take)
         {
-            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = _documentsStorage.GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
             if (collectionName == null)
                 yield break;
 
@@ -2713,12 +2689,12 @@ namespace Raven.Server.Documents.TimeSeries
             if (table == null)
                 yield break;
 
-            foreach (var result in table.SeekForwardFrom(DeleteRangesSchema.FixedSizeIndexes[CollectionDeletedRangesEtagsSlice], fromEtag, skip: 0))
+            foreach (var result in table.SeekForwardFrom(Schemas.DeletedRanges.CollectionDeletedRangesEtagsIndex, fromEtag, skip: 0))
             {
                 if (take-- <= 0)
                     yield break;
 
-                var item = CreateTimeSeriesDeletedRangeIndexItem(context, ref result.Reader);
+                var item = CreateTimeSeriesDeletedRangeIndexItem(context, result);
                 if (item.Etag > toEtag)
                     yield break;
 
@@ -2726,7 +2702,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        internal static TimeSeriesSegmentEntry CreateTimeSeriesItem(JsonOperationContext context, ref TableValueReader reader, TimeSeriesSegmentEntryFields fields = TimeSeriesSegmentEntryFields.All)
+        internal static TimeSeriesSegmentEntry CreateTimeSeriesItem(JsonOperationContext context, in TableValueReader reader, TimeSeriesSegmentEntryFields fields = TimeSeriesSegmentEntryFields.All)
         {
             if (fields.Contain(TimeSeriesSegmentEntryFields.All))
             {
@@ -2748,15 +2724,15 @@ namespace Raven.Server.Documents.TimeSeries
                     ChangeVector = Encoding.UTF8.GetString(changeVectorPtr, changeVectorSize),
                     Segment = new TimeSeriesValuesSegment(segmentPtr, segmentSize),
                     SegmentSize = segmentSize,
-                    Collection = DocumentsStorage.TableValueToId(context, (int)TimeSeriesTable.Collection, ref reader),
+                    Collection = DocumentsStorage.TableValueToId(context, (int)TimeSeriesTable.Collection, reader),
                     Start = baseline,
                     Etag = Bits.SwapBytes(etag),
                 };
             }
 
-            return CreateTimeSeriesItemPartial(context, ref reader, fields);
+            return CreateTimeSeriesItemPartial(context, reader, fields);
 
-            static TimeSeriesSegmentEntry CreateTimeSeriesItemPartial(JsonOperationContext context, ref TableValueReader reader, TimeSeriesSegmentEntryFields fields)
+            static TimeSeriesSegmentEntry CreateTimeSeriesItemPartial(JsonOperationContext context, in TableValueReader reader, TimeSeriesSegmentEntryFields fields)
             {
                 var result = new TimeSeriesSegmentEntry();
 
@@ -2801,7 +2777,7 @@ namespace Raven.Server.Documents.TimeSeries
                 }
 
                 if (fields.Contain(TimeSeriesSegmentEntryFields.Collection))
-                    result.Collection = DocumentsStorage.TableValueToId(context, (int)TimeSeriesTable.Collection, ref reader);
+                    result.Collection = DocumentsStorage.TableValueToId(context, (int)TimeSeriesTable.Collection, reader);
 
                 result.Etag = Bits.SwapBytes(*(long*)reader.Read((int)TimeSeriesTable.Etag, out _));
 
@@ -2887,7 +2863,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public long GetNumberOfTimeSeriesSegments(DocumentsOperationContext context)
         {
-            var fstIndex = TimeSeriesSchema.FixedSizeIndexes[AllTimeSeriesEtagSlice];
+            var fstIndex = Schemas.TimeSeries.AllTimeSeriesEtagIndex;
             var fst = context.Transaction.InnerTransaction.FixedTreeFor(fstIndex.Name, sizeof(long));
             return fst.NumberOfEntries;
         }
@@ -2943,16 +2919,15 @@ namespace Raven.Server.Documents.TimeSeries
         {
             var table =  context.TimesSeriesTable(this);
 
-            var result = table.ReadLast(TimeSeriesSchema.FixedSizeIndexes[AllTimeSeriesEtagSlice]);
-            if (result == null)
+            if (table.ReadLast(Schemas.TimeSeries.AllTimeSeriesEtagIndex, out var reader) == false)
                 return 0;
 
-            return DocumentsStorage.TableValueToEtag((int)TimeSeriesTable.Etag, ref result.Reader);
+            return DocumentsStorage.TableValueToEtag((int)TimeSeriesTable.Etag, reader);
         }
 
         public long GetLastTimeSeriesEtag(DocumentsOperationContext context, string collection)
         {
-            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = _documentsStorage.GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
             if (collectionName == null)
                 return 0;
 
@@ -2962,27 +2937,25 @@ namespace Raven.Server.Documents.TimeSeries
             if (table == null)
                 return 0;
 
-            var result = table.ReadLast(TimeSeriesSchema.FixedSizeIndexes[CollectionTimeSeriesEtagsSlice]);
-            if (result == null)
+            if (table.ReadLast(Schemas.TimeSeries.CollectionTimeSeriesEtagsIndex, out var reader) == false)
                 return 0;
 
-            return DocumentsStorage.TableValueToEtag((int)TimeSeriesTable.Etag, ref result.Reader);
+            return DocumentsStorage.TableValueToEtag((int)TimeSeriesTable.Etag, reader);
         }
 
         public long GetLastTimeSeriesDeletedRangesEtag(DocumentsOperationContext context)
         {
             var table = context.DeleteRangesTable(this);
 
-            var result = table.ReadLast(DeleteRangesSchema.FixedSizeIndexes[AllDeletedRangesEtagSlice]);
-            if (result == null)
+            if (table.ReadLast(Schemas.DeletedRanges.AllDeletedRangesEtagIndex, out var reader) == false)
                 return 0;
 
-            return DocumentsStorage.TableValueToEtag((int)DeletedRangeTable.Etag, ref result.Reader);
+            return DocumentsStorage.TableValueToEtag((int)DeletedRangeTable.Etag, reader);
         }
 
         public long GetLastTimeSeriesDeletedRangesEtag(DocumentsOperationContext context, string collection)
         {
-            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = _documentsStorage.GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
             if (collectionName == null)
                 return 0;
 
@@ -2992,11 +2965,10 @@ namespace Raven.Server.Documents.TimeSeries
             if (table == null)
                 return 0;
 
-            var result = table.ReadLast(DeleteRangesSchema.FixedSizeIndexes[CollectionDeletedRangesEtagsSlice]);
-            if (result == null)
+            if (table.ReadLast(Schemas.DeletedRanges.CollectionDeletedRangesEtagsIndex, out var reader) == false)
                 return 0;
 
-            return DocumentsStorage.TableValueToEtag((int)DeletedRangeTable.Etag, ref result.Reader);
+            return DocumentsStorage.TableValueToEtag((int)DeletedRangeTable.Etag, reader);
         }
 
         private static void MarkSegmentAsPendingDeletion(DocumentsOperationContext context, string collection, long etag)
@@ -3010,7 +2982,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public long GetNumberOfTimeSeriesSegmentsToProcess(DocumentsOperationContext context, string collection, in long afterEtag, out long totalCount, Stopwatch overallDuration)
         {
-            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = _documentsStorage.GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
             if (collectionName == null)
             {
                 totalCount = 0;
@@ -3025,14 +2997,14 @@ namespace Raven.Server.Documents.TimeSeries
                 return 0;
             }
 
-            var indexDef = TimeSeriesSchema.FixedSizeIndexes[CollectionTimeSeriesEtagsSlice];
+            var indexDef = Schemas.TimeSeries.CollectionTimeSeriesEtagsIndex;
 
             return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out totalCount, overallDuration);
         }
 
         public long GetNumberOfTimeSeriesDeletedRangesToProcess(DocumentsOperationContext context, string collection, in long afterEtag, out long totalCount, Stopwatch overallDuration)
         {
-            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = _documentsStorage.GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
             if (collectionName == null)
             {
                 totalCount = 0;
@@ -3047,7 +3019,7 @@ namespace Raven.Server.Documents.TimeSeries
                 return 0;
             }
 
-            var indexDef = DeleteRangesSchema.FixedSizeIndexes[CollectionDeletedRangesEtagsSlice];
+            var indexDef = Schemas.DeletedRanges.CollectionDeletedRangesEtagsIndex;
 
             return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out totalCount, overallDuration);
         }
@@ -3147,16 +3119,8 @@ namespace Raven.Server.Documents.TimeSeries
             ChangeVector changeVector,
             CollectionName collectionName)
         {
-            context.Transaction.AddAfterCommitNotification(new TimeSeriesChange
-            {
-                ChangeVector = changeVector,
-                DocumentId = deletionRangeRequest.DocumentId,
-                Name = deletionRangeRequest.Name,
-                Type = TimeSeriesChangeTypes.Delete,
-                From = deletionRangeRequest.From,
-                To = deletionRangeRequest.To,
-                CollectionName = collectionName.Name
-            });
+            context.Transaction.AddAfterCommitNotification(collectionName.Name, deletionRangeRequest.DocumentId, deletionRangeRequest.Name, changeVector,
+                TimeSeriesChangeTypes.Delete, deletionRangeRequest.From, deletionRangeRequest.To);
         }
     }
 

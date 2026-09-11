@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Runtime.ExceptionServices;
@@ -67,7 +67,15 @@ namespace Voron
 
                     if (_flushWriterEvent.Wait(5000) == false)
                     {
-                        if (_envsToSync.Count == 0)
+                        if (_maybeNeedToFlush.IsEmpty == false)
+                        {
+                            // we have pending flush requests, but no activity has occurred for a while
+                            // can happen if we yield to other operations and no new flush requests come in
+                            _flushWriterEvent.Set();
+                            continue;
+                        }
+
+                        if (_envsToSync.IsEmpty)
                             continue;
 
                         if (_log.IsDebugEnabled)
@@ -118,8 +126,7 @@ namespace Voron
                 if (env.IsDisposing || env.Disposed)
                     continue;
 
-                if (force == false && envSyncReq.Value.IsRequired == false &&
-                    env.Journal.Files.Count + env.Journal.Applicator.JournalsToDeleteCount <= env.Options.SyncJournalsCountThreshold)
+                if (force == false && envSyncReq.Value.IsRequired == false && env.WriteFlow.ShouldSyncNow(env) == false)
                     continue;
 
                 var isSyncRun = Interlocked.CompareExchange(ref envSyncReq.Value.IsSyncRun, 1, 0);
@@ -134,11 +141,11 @@ namespace Voron
 
             for (int i = 0; i < parallelSyncsPerIo; i++)
             {
-                ThreadPool.QueueUserWorkItem(SyncAllEnvironmentsInMountPoint);
+                ThreadPool.QueueUserWorkItem(DrainSyncQueue);
             }
         }
 
-        private void SyncAllEnvironmentsInMountPoint(object mt)
+        private void DrainSyncQueue(object state)
         {
             while (_storageEnvironments.TryDequeue(out var req))
             {
@@ -180,7 +187,7 @@ namespace Voron
                 // if there is high traffic into the queue, we want to abort after 
                 // we processed whatever was already in there, to avoid holding up
                 // the rest of the operations
-                limit > 0 &&
+                limit-- > 0 &&
                 _maybeNeedToFlush.TryDequeue(out req))
             {
                 var envToFlush = req.Env;
@@ -201,6 +208,12 @@ namespace Voron
                 if (envToFlush.Journal.Applicator.ShouldFlush == false)
                     continue; // nothing to do
 
+                if (envToFlush.WriteFlow.ShouldFlusherYieldToJournal(envToFlush.Journal.IsJournalWriteActive, numberOfNewPagesSinceLastFlush))
+                {
+                    _maybeNeedToFlush.Enqueue(req);
+                    continue;
+                }
+
                 if (numberOfNewPagesSinceLastFlush < envToFlush.Options.MaxNumberOfPagesInJournalBeforeFlush)
                 {
                     // we haven't reached the point where we have to flush, but we might want to, if we have enough 
@@ -218,7 +231,6 @@ namespace Voron
                 envToFlush.LastFlushTime = DateTime.UtcNow;
 
                 _concurrentFlushesAvailable.Wait();
-                limit--;
 
                 ThreadPool.QueueUserWorkItem(env =>
                 {

@@ -555,12 +555,16 @@ namespace Raven.Client.Documents.Session.Operations
         {
             documentInfo.Metadata.Modifications = new DynamicJsonValue(documentInfo.Metadata);
 
-            foreach (var propertyName in batchResult.GetPropertyNames())
+            // the value comes along with the name, so there is no lookup per property
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+            for (int i = 0; i < batchResult.Count; i++)
             {
-                if (propertyName == nameof(ICommandData.Type))
+                batchResult.GetPropertyByIndex(i, ref prop);
+
+                if (prop.Name == nameof(ICommandData.Type))
                     continue;
 
-                documentInfo.Metadata.Modifications[propertyName] = batchResult[propertyName];
+                documentInfo.Metadata.Modifications[prop.Name] = prop.Value;
             }
             documentInfo.Id = id;
             documentInfo.ChangeVector = changeVector;

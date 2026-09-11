@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Voron.Global;
@@ -6,22 +6,24 @@ using Voron.Impl;
 
 namespace Voron.Data.BTrees
 {
-    public sealed unsafe class ParentPageAction
+    public unsafe ref struct ParentPageAction
     {
         private readonly TreePage _currentPage;
-        private readonly TreePage _parentPage;
+        private readonly ref TreePage _parentPage;
         private readonly Tree _tree;
-        private readonly TreeCursor _cursor;
+        private readonly ref TreeCursor _cursor;
         private readonly LowLevelTransaction _tx;
 
-        public ParentPageAction(TreePage parentPage, TreePage currentPage, Tree tree, TreeCursor cursor, LowLevelTransaction tx)
+        public ParentPageAction(ref TreePage parentPage, TreePage currentPage, Tree tree, ref TreeCursor cursor, LowLevelTransaction tx)
         {
-            _parentPage = parentPage;
+            _parentPage = ref parentPage;
             _currentPage = currentPage;
             _tree = tree;
-            _cursor = cursor;
+            _cursor = ref cursor;
             _tx = tx;
         }
+
+        public TreePage ParentPage => _parentPage;
 
         public TreePage ParentOfAddedPageRef { get; private set; }
 
@@ -39,8 +41,9 @@ namespace Voron.Data.BTrees
                 // the sequential-insert optimization that appends without a key search - so it must reflect
                 // the position of this separator instead of a leftover from the descent or another fix-up
                 _parentPage.NodePositionFor(_tx, separator);
+                _cursor.SyncTopPage(_parentPage);
 
-                var pageSplitter = new TreePageSplitter(_tx, _tree, separator, -1, pageRefNumber, TreeNodeFlags.PageRef, _cursor);
+                var pageSplitter = new TreePageSplitter(_tx, _tree, separator, -1, pageRefNumber, TreeNodeFlags.PageRef, ref _cursor);
 
                 var posToInsert = pageSplitter.Execute();
 
@@ -53,7 +56,7 @@ namespace Voron.Data.BTrees
                     if (_cursor.CurrentPage.GetNode(i)->PageNumber == _currentPage.PageNumber)
                     {
                         adjustParentPageOnCursor = false;
-                        _cursor.CurrentPage.LastSearchPosition = i;
+                        _cursor.CurrentPageRef.LastSearchPosition = (short)i;
                         break;
                     }
                 }
@@ -66,13 +69,17 @@ namespace Voron.Data.BTrees
                     _cursor.Pop();
                     _cursor.Push(_parentPage);
 
-                    EnsureValidLastSearchPosition(_parentPage, _currentPage.PageNumber, originalLastSearchPositionOfParent);
+                    EnsureValidLastSearchPosition(ref _parentPage, _currentPage.PageNumber, originalLastSearchPositionOfParent);
+                    _cursor.SyncTopPage(_parentPage);
                 }
 
                 Debug.Assert(_cursor.CurrentPage.GetNode(_cursor.CurrentPage.LastSearchPosition)->PageNumber == _currentPage.PageNumber, 
                             "The parent page is not referencing a page which is being split");
-                Debug.Assert(Enumerable.Range(0, ParentOfAddedPageRef.NumberOfEntries).Any(i => ParentOfAddedPageRef.GetNode(i)->PageNumber == pageRefNumber),
+#if DEBUG
+                var parentOfAddedPageRef = ParentOfAddedPageRef;
+                Debug.Assert(Enumerable.Range(0, parentOfAddedPageRef.NumberOfEntries).Any(i => parentOfAddedPageRef.GetNode(i)->PageNumber == pageRefNumber),
                             "The parent page of a page reference isn't referencing it");
+#endif
 
                 return posToInsert;
             }
@@ -84,18 +91,19 @@ namespace Voron.Data.BTrees
 
             var pos = _parentPage.AddPageRefNode(nodePos.Value, separator, pageRefNumber);
 
-            EnsureValidLastSearchPosition(_parentPage, _currentPage.PageNumber, originalLastSearchPositionOfParent);
+            EnsureValidLastSearchPosition(ref _parentPage, _currentPage.PageNumber, originalLastSearchPositionOfParent);
+            _cursor.SyncTopPage(_parentPage);
 
             return pos;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void EnsureValidLastSearchPosition(TreePage page, long referencedPageNumber, int originalLastSearchPosition)
+        private static void EnsureValidLastSearchPosition(ref TreePage page, long referencedPageNumber, int originalLastSearchPosition)
         {
             if (page.NumberOfEntries <= originalLastSearchPosition || page.GetNode(originalLastSearchPosition)->PageNumber != referencedPageNumber)
-                page.LastSearchPosition = page.NodePositionReferencing(referencedPageNumber);
+                page.LastSearchPosition = (short)page.NodePositionReferencing(referencedPageNumber);
             else
-                page.LastSearchPosition = originalLastSearchPosition;
+                page.LastSearchPosition = (short)originalLastSearchPosition;
         }
     }
 }

@@ -254,7 +254,7 @@ namespace Raven.Server.Documents.Revisions
                     "the docId on the wire (RevisionTombstonesWithId).");
             }
 
-            Register(TableValueToSlice(context, (int)RevisionsTable.LowerId, ref tvr, out _docIdSlice));
+            Register(TableValueToSlice(context, (int)RevisionsTable.LowerId, tvr, out _docIdSlice));
 
             TombstoneKey = new RevisionTombstoneKey(
                 revisionKey,
@@ -401,7 +401,7 @@ namespace Raven.Server.Documents.Revisions
                 long revisionEtag;
                 if (foundRevision)
                 {
-                    revisionEtag = TableValueToEtag((int)RevisionsTable.Etag, ref revTvr);
+                    revisionEtag = TableValueToEtag((int)RevisionsTable.Etag, revTvr);
                     revisionsTable.Delete(revTvr.Id);
                     using (GetKeyPrefix(context.Allocator, tombstoneKey.DocIdSlice, out Slice prefixSlice))
                         IncrementCountOfRevisions(context, prefixSlice, -1);

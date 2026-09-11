@@ -1,4 +1,7 @@
-using System;
+﻿using System;
+#if NET6_0_OR_GREATER
+using System.Diagnostics.CodeAnalysis;
+#endif
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -192,7 +195,7 @@ namespace Sparrow.Json
                 _lazyStringTempBuffer = new char[Bits.NextAllocationSize(charCount)];
             return _lazyStringTempBuffer;
         }
-        
+
         private static byte[] GetLazyStringTempComparisonBuffer(int charCount)
         {
             // Inlined from Encodings.Utf8.GetMaxByteCount(charCount) to avoid virtual dispatch indirection.
@@ -462,7 +465,39 @@ namespace Sparrow.Json
         {
             return (string)this; // invoke the implicit string conversion
         }
-        
+
+
+       
+        public bool TryAsCharSpan(Span<char> buffer, out ReadOnlySpan<char> chars, out int required)
+        {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
+
+            if (_string != null)
+            {
+                chars = _string.AsSpan();
+                required = _string.Length;
+                return true;
+            }
+
+            required = Encodings.Utf8.GetMaxCharCount(Size);
+            if (required > buffer.Length)
+            {
+                chars = default;
+                return false;
+            }
+
+#if NETCOREAPP
+            var written = Encodings.Utf8.GetChars(new ReadOnlySpan<byte>(_buffer, Size), buffer);
+#else
+            int written;
+            fixed (char* pBuffer = buffer)
+                written = Encodings.Utf8.GetChars(_buffer, Size, pBuffer, buffer.Length);
+#endif
+            chars = buffer.Slice(0, written);
+            return true;
+        }
+
 #if NET8_0_OR_GREATER
         public string ToString(string format, IFormatProvider formatProvider) => ToString();
 

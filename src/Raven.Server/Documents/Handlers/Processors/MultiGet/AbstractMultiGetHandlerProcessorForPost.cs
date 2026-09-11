@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -229,15 +229,16 @@ internal abstract class AbstractMultiGetHandlerProcessorForPost<TRequestHandler,
         httpContext.Request.QueryString = new QueryString(query);
         if (request.TryGet(nameof(GetRequest.Headers), out BlittableJsonReaderObject headers))
         {
-            foreach (var header in headers.GetPropertyNames())
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+            for (int i = 0; i < headers.Count; i++)
             {
-                if (headers.TryGet(header, out string value) == false)
-                    continue;
+                headers.GetPropertyByIndex(i, ref prop);
+                BlittableJsonReaderObject.ConvertType(prop.Value, out string value);
 
                 if (string.IsNullOrWhiteSpace(value))
                     continue;
 
-                httpContext.Request.Headers[header] = value;
+                httpContext.Request.Headers[prop.Name] = value;
             }
         }
         // initiated to use it at the end of for

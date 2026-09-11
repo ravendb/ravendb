@@ -51,30 +51,10 @@ namespace Raven.Server.Documents
             options.OnRecoverableFailure += _db.HandleRecoverableFailure;
             options.OnRecoveryError += _db.HandleOnConfigurationRecoveryError;
             options.OnIntegrityErrorOfAlreadySyncedData += _db.HandleOnConfigurationIntegrityErrorOfAlreadySyncedData;
-            options.CompressTxAboveSizeInBytes = _db.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
             options.SchemaVersion = SchemaUpgrader.CurrentVersion.ConfigurationVersion;
             options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Configuration, this, null, null);
-            options.ForceUsing32BitsPager = _db.Configuration.Storage.ForceUsing32BitsPager;
-            options.EnablePrefetching = _db.Configuration.Storage.EnablePrefetching;
-            options.DiscardVirtualMemory = _db.Configuration.Storage.DiscardVirtualMemory;
-            options.UseSequentialReadAheadHintForJournalRecovery = _db.Configuration.Storage.UseSequentialReadAheadHintForJournalRecovery;
-            options.TimeToSyncAfterFlushInSec = (int)_db.Configuration.Storage.TimeToSyncAfterFlush.AsTimeSpan.TotalSeconds;
             options.Encryption.MasterKey = _db.MasterKey?.ToArray();
-
-            options.DoNotConsiderMemoryLockFailureAsCatastrophicError = _db.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
-            if (_db.Configuration.Storage.MaxScratchBufferSize.HasValue)
-                options.MaxScratchBufferSize = _db.Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
-            options.PrefetchSegmentSize = _db.Configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
-            options.PrefetchResetThreshold = _db.Configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
-            options.SyncJournalsCountThreshold = _db.Configuration.Storage.SyncJournalsCountThreshold;
-            options.IgnoreInvalidJournalErrors = _db.Configuration.Storage.IgnoreInvalidJournalErrors;
-            options.SkipChecksumValidationOnDatabaseLoading = _db.Configuration.Storage.SkipChecksumValidationOnDatabaseLoading;
-            options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions = _db.Configuration.Storage.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions;
-
-            options.DisableSparseRegions = _db.Configuration.Storage.DisableSparseRegions;
-            options.JournalsCompressionAcceleration = _db.Configuration.Storage.JournalsCompressionAcceleration;
-            options.MinimumSharedJournalsMergeCount = _db.Configuration.Indexing.MinimumSharedJournalsMergeCount;
-            options.MaxLogFileSize = _db.Configuration.Storage.MaxJournalFileSize.GetValue(SizeUnit.Bytes);
+            VoronOptionsFromConfiguration.Apply(options, _db.Configuration);
             try
             {
                 DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, _db.Configuration.Storage, _db.Name, DirectoryExecUtils.EnvironmentType.Configuration, _logger);

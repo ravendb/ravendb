@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using Voron.Data.BTrees;
 using Voron.Global;
@@ -57,7 +58,7 @@ namespace Voron.Impl.Journal
         public TransactionMarker TxMarker;
 
         [FieldOffset(111)]
-        public bool Reserved2;
+        public byte DurableTxIdDeltaAtSubmit;
 
         [FieldOffset(112)]
         public long CompressedSize;
@@ -89,7 +90,29 @@ namespace Voron.Impl.Journal
             var timestamp = new DateTime(TimeStampTicksUtc).ToString("g");
             return $"HeaderMarker: {validMarker}, TransactionId: {TransactionId}, JournalId: {JournalId} NextPageNumber: {NextPageNumber}, LastPageNumber: {LastPageNumber}, " +
                    $"PageCount: {PageCount}, Hash: {Hash}, Root: {Root}, TxMarker: {TxMarker}, CompressedSize: {CompressedSize}," +
-                   $" UncompressedSize: {UncompressedSize}, TimeStamp: {timestamp}";
+                   $" UncompressedSize: {UncompressedSize}, LastDurableTxIdAtSubmit: {LastDurableTxIdAtSubmit}, TimeStamp: {timestamp}";
+        }
+
+        public long LastDurableTxIdAtSubmit => DurableTxIdDeltaAtSubmit == 0 ? TransactionId : TransactionId - DurableTxIdDeltaAtSubmit;
+
+        public void SetLastDurableTxIdAtSubmit(long lastDurableTxId)
+        {
+            var delta = TransactionId - lastDurableTxId;
+            if (delta < 0)
+                ThrowInvalidLastDurableTxIdAtSubmit(lastDurableTxId, delta);
+
+            // delta too high cannot be represented in a byte, so we will just set it to 0, and trust the recovery for this.
+            // > 255 is *really* rare, and adding a corruption handling to recover from this isn't worth it
+            DurableTxIdDeltaAtSubmit = delta is 0 or > byte.MaxValue ? (byte)0 : (byte)delta;
+        }
+
+        [DoesNotReturn]
+        private void ThrowInvalidLastDurableTxIdAtSubmit(long lastDurableTxId, long delta)
+        {
+            throw new InvalidOperationException(
+                $"Cannot record the durability watermark of transaction {TransactionId}: the last durable transaction of its environment is {lastDurableTxId}, " +
+                $"which is {-delta} transactions ahead of it. Journal transaction ids are handed out in order under the write lock, " +
+                "so a later transaction cannot already be durable - the durability tracking of this environment no longer matches its journal.");
         }
     }
     

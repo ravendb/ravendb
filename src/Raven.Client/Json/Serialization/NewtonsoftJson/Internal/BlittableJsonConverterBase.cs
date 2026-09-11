@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
@@ -145,8 +145,12 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
         private static bool TrySimplifyJson(BlittableJsonReaderObject document, Type rootType)
         {
             var simplified = false;
-            foreach (var propertyName in document.GetPropertyNames())
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+            for (int i = 0; i < document.Count; i++)
             {
+                document.GetPropertyByIndex(i, ref prop);
+
+                string propertyName = prop.Name;
                 var propertyType = GetPropertyType(propertyName, rootType);
                 if (propertyType == typeof(JObject) || propertyType == typeof(JArray) || propertyType == typeof(JValue))
                 {
@@ -154,7 +158,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
                     continue;
                 }
 
-                var propertyValue = document[propertyName];
+                var propertyValue = prop.Value;
 
                 if (propertyValue is BlittableJsonReaderArray propertyArray)
                 {

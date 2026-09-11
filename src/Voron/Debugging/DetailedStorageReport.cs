@@ -16,6 +16,7 @@ namespace Voron.Debugging
         public long JournalsInBytes { get; set; }
         public long HardLinkedJournalsInBytes { get; set; }
         public long TempBuffersInBytes { get; set; }
+        public long TempRecyclableJournalsInBytes { get; set; }
     }
 
     public class EnvironmentStorageReport
@@ -100,7 +101,6 @@ namespace Voron.Debugging
     public enum TempBufferType
     {
         Scratch,
-        [Obsolete("It's not used anymore, but we keep it for backward compatibility - deserialization of JSON from debug packages prior to 8.0 version")]
         RecyclableJournal
     }
 

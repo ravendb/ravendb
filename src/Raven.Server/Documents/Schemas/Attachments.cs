@@ -1,4 +1,4 @@
-﻿using Sparrow.Server;
+using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
 
@@ -8,6 +8,12 @@ namespace Raven.Server.Documents.Schemas
     {
         internal static readonly TableSchema AttachmentsSchemaBase = new TableSchema();
         internal static readonly TableSchema ShardingAttachmentsSchemaBase = new TableSchema();
+
+        internal static readonly TableSchema.FixedSizeKeyIndexDef AttachmentsEtagIndex;
+
+        internal static readonly TableSchema.DynamicKeyIndexDef AttachmentsFlagAndHashIndex;
+        internal static readonly TableSchema.DynamicKeyIndexDef AttachmentsBucketAndHashIndex;
+        internal static readonly TableSchema.DynamicKeyIndexDef AttachmentsBucketAndEtagIndex;
 
         internal static readonly Slice AttachmentsSlice;
         internal static readonly Slice AttachmentsMetadataSlice;
@@ -54,6 +60,34 @@ namespace Raven.Server.Documents.Schemas
                 Slice.From(ctx, "AttachmentsFlagAndHash", ByteStringType.Immutable, out AttachmentsFlagAndHashSlice);
             }
 
+            AttachmentsEtagIndex = new TableSchema.FixedSizeKeyIndexDef
+            {
+                StartIndex = (int)AttachmentsTable.Etag,
+                Name = AttachmentsEtagSlice
+            };
+            AttachmentsFlagAndHashIndex = new TableSchema.DynamicKeyIndexDef
+            {
+                GenerateKey = RemoteAttachmentsStorage.GenerateFlagAndHashForAttachments,
+                IsGlobal = true,
+                Name = AttachmentsFlagAndHashSlice,
+                SupportDuplicateKeys = true
+            };
+            AttachmentsBucketAndHashIndex = new TableSchema.DynamicKeyIndexDef
+            {
+                GenerateKey = AttachmentsStorage.GenerateBucketAndHashForAttachments,
+                IsGlobal = true,
+                Name = AttachmentsBucketAndHashSlice,
+                SupportDuplicateKeys =  true
+            };
+            AttachmentsBucketAndEtagIndex = new TableSchema.DynamicKeyIndexDef
+            {
+                GenerateKey = AttachmentsStorage.GenerateBucketAndEtagIndexKeyForAttachments,
+                OnEntryChanged = AttachmentsStorage.UpdateBucketStatsForAttachments,
+                IsGlobal = true,
+                Name = AttachmentsBucketAndEtagSlice
+            };
+
+
             DefineIndexesForAttachmentsSchema(AttachmentsSchemaBase);
             DefineIndexesForShardingAttachmentsSchema();
 
@@ -64,24 +98,14 @@ namespace Raven.Server.Documents.Schemas
                     StartIndex = (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType,
                     Count = 1
                 });
-                schema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-                {
-                    StartIndex = (int)AttachmentsTable.Etag,
-                    Name = AttachmentsEtagSlice
-                });
+                schema.DefineFixedSizeIndex(AttachmentsEtagIndex);
                 schema.DefineIndex(new TableSchema.IndexDef
                 {
                     StartIndex = (int)AttachmentsTable.Hash,
                     Count = 1,
                     Name = AttachmentsHashSlice
                 });
-                schema.DefineIndex(new TableSchema.DynamicKeyIndexDef
-                {
-                    GenerateKey = RemoteAttachmentsStorage.GenerateFlagAndHashForAttachments,
-                    IsGlobal = true,
-                    Name = AttachmentsFlagAndHashSlice,
-                    SupportDuplicateKeys = true
-                });
+                schema.DefineIndex(AttachmentsFlagAndHashIndex);
             }
 
             void DefineIndexesForShardingAttachmentsSchema()
@@ -91,21 +115,9 @@ namespace Raven.Server.Documents.Schemas
                 // the order here is important,
                 // in the index 'AttachmentsBucketAndEtagSlice' we rely on the fact that we see the changes that were done during 'AttachmentsBucketAndHashSlice'
 
-                ShardingAttachmentsSchemaBase.DefineIndex(new TableSchema.DynamicKeyIndexDef
-                {
-                    GenerateKey = AttachmentsStorage.GenerateBucketAndHashForAttachments,
-                    IsGlobal = true,
-                    Name = AttachmentsBucketAndHashSlice,
-                    SupportDuplicateKeys =  true
-                });
+                ShardingAttachmentsSchemaBase.DefineIndex(AttachmentsBucketAndHashIndex);
 
-                ShardingAttachmentsSchemaBase.DefineIndex(new TableSchema.DynamicKeyIndexDef
-                {
-                    GenerateKey = AttachmentsStorage.GenerateBucketAndEtagIndexKeyForAttachments,
-                    OnEntryChanged = AttachmentsStorage.UpdateBucketStatsForAttachments,
-                    IsGlobal = true,
-                    Name = AttachmentsBucketAndEtagSlice
-                });
+                ShardingAttachmentsSchemaBase.DefineIndex(AttachmentsBucketAndEtagIndex);
             }
         }
     }

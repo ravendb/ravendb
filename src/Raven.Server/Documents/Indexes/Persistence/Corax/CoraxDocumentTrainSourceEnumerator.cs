@@ -18,7 +18,7 @@ public class CoraxDocumentTrainSourceEnumerator
     
     public IEnumerable<Document> GetDocumentsForDictionaryTraining(DocumentsOperationContext context, string collection, CoraxDocumentTrainSourceState state, DocumentFields fields = DocumentFields.All)
     {
-        var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+        var collectionName = _documentsStorage.GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
         if (collectionName == null)
             yield break;
 
@@ -28,7 +28,7 @@ public class CoraxDocumentTrainSourceEnumerator
         
         state.InitializeState(table, table.NumberOfEntries);
         
-        foreach (var (key, result) in table.IterateForDictionaryTraining(_documentsStorage.DocsSchema.FixedSizeIndexes[Schemas.Documents.CollectionEtagsSlice], state.DocumentSkip, seek: state.CurrentKey))
+        foreach (var (key, result) in table.IterateForDictionaryTraining(Schemas.Documents.CollectionEtagsIndex, state.DocumentSkip, seek: state.CurrentKey))
         {
             //Update inner key in order to seek after transaction refresh
             state.CurrentKey = key;
@@ -37,7 +37,7 @@ public class CoraxDocumentTrainSourceEnumerator
                 yield break;
 
             state.Token.ThrowIfCancellationRequested();
-            yield return _documentsStorage.TableValueToDocument(context, ref result.Reader, fields);
+            yield return _documentsStorage.TableValueToDocument(context, result, fields);
         }
     }
 
@@ -45,10 +45,10 @@ public class CoraxDocumentTrainSourceEnumerator
     {
         var table = context.DocumentsTable(_documentsStorage);
 
-        var numberOfEntries = table.GetNumberOfEntriesFor(_documentsStorage.DocsSchema.FixedSizeIndexes[Schemas.Documents.AllDocsEtagsSlice]);
+        var numberOfEntries = table.GetNumberOfEntriesFor(Schemas.Documents.AllDocsEtagsIndex);
 
         state.InitializeState(table, numberOfEntries);
-        foreach (var (key, result) in table.IterateForDictionaryTraining(_documentsStorage.DocsSchema.FixedSizeIndexes[Schemas.Documents.AllDocsEtagsSlice], state.DocumentSkip, state.CurrentKey))
+        foreach (var (key, result) in table.IterateForDictionaryTraining(Schemas.Documents.AllDocsEtagsIndex, state.DocumentSkip, state.CurrentKey))
         {
             state.CurrentKey = key;
             
@@ -56,7 +56,7 @@ public class CoraxDocumentTrainSourceEnumerator
                 yield break;
             
             state.Token.ThrowIfCancellationRequested();
-            yield return _documentsStorage.TableValueToDocument(context, ref result.Reader, fields);
+            yield return _documentsStorage.TableValueToDocument(context, result, fields);
         }
     }
 }

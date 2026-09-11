@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.ComponentModel;
 using Microsoft.Extensions.Configuration;
 using Raven.Server.Config.Attributes;
@@ -8,6 +9,8 @@ using Raven.Server.ServerWide;
 using Sparrow;
 using Sparrow.Platform;
 using Sparrow.Server.Platform;
+
+using Voron;
 
 namespace Raven.Server.Config.Categories
 {
@@ -18,13 +21,24 @@ namespace Raven.Server.Config.Categories
         {
             // On Windows, DiscardVirtualMemory can result in high CPU usage due to contention on the
             // PTE entry (in Win Server 2016 and Win Server 2019), we want to avoid it by default.
-            DiscardVirtualMemory = PlatformDetails.RunningOnPosix;
+            // On arm64 Linux kernels [7.0..7.1.9) madvise(MADV_DONTNEED) triggers CVE-2026-74674
+            DiscardVirtualMemory = PlatformDetails.RunningOnPosix && HasStalePagingStructureCacheBug() == false;
 
             // The sequential read-ahead hint relies on posix_fadvise, which exists on Linux but not macOS.
             UseSequentialReadAheadHintForJournalRecovery = PlatformDetails.RunningOnLinux;
         }
 
-        [Description("You can use this setting to specify whether to disable or enable discard virtual memory. By default, on windows, it will be disabled.")]
+        // CVE-2026-74674: on arm64 Linux, kernels [7.0, 7.1.9)
+        private static bool HasStalePagingStructureCacheBug()
+        {
+            if (PlatformDetails.RunningOnLinux == false || RuntimeInformation.ProcessArchitecture != Architecture.Arm64)
+                return false;
+
+            Version kernel = Environment.OSVersion.Version;
+            return kernel >= new Version(7, 0) && kernel < new Version(7, 1, 9);
+        }
+
+        [Description("You can use this setting to specify whether to disable or enable discard virtual memory. Enabled by default on Posix, except on arm64 Linux kernels 7.0 up to 7.1.9 (CVE-2026-74674). Disabled by default on Windows.")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [ConfigurationEntry("Storage.DiscardVirtualMemory", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public bool DiscardVirtualMemory { get; set; }
@@ -58,6 +72,23 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(10)]
         [ConfigurationEntry("Storage.MaxConcurrentFlushes", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int MaxConcurrentFlushes { get; set; }
+
+        [Description("Number of journal writes that may be in flight concurrently (in flight transactions).")]
+        [MinValue(1)]
+        [DefaultValue(4)]
+        [ConfigurationEntry("Storage.MaxConcurrentJournalWrites", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int MaxConcurrentJournalWrites { get; set; }
+
+        [Description("EXPERT: Journal writes become eligible for pipelining once their measured write latency exceeds this value (ticks, 10,000 per millisecond). Pipelining also requires small write batches - large batches are bandwidth bound and stay on the group-commit path. Set to 0 to make writes always eligible.")]
+        [DefaultValue(20_000)]
+        [ConfigurationEntry("Storage.PipelineJournalWritesAboveLatencyInTicks", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public long PipelineJournalWritesAboveLatencyInTicks { get; set; }
+
+        [Description("EXPERT: The journal write size that batch consolidation aims for. 0 (the default) lets the server adapt the target at runtime from measured throughput.")]
+        [DefaultValue(0)]
+        [SizeUnit(SizeUnit.Kilobytes)]
+        [ConfigurationEntry("Storage.ConsolidationTargetWriteSizeInKb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public Size ConsolidationTargetWriteSize { get; set; }
 
         [Description("Time to sync after flush in seconds")]
         [DefaultValue(30)]
@@ -117,11 +148,48 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(2)]
         [ConfigurationEntry("Storage.SyncJournalsCountThreshold", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int SyncJournalsCountThreshold { get; set; }
+
+        [Description("Block size for paced dirty-data writeback before the durability barrier to prevent blocking journal writes; set to 0 to disable and use monolithic fsync.")]
+        [DefaultValue(32)]
+        [ConfigurationEntry("Storage.SyncWritebackBlockSizeInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int SyncWritebackBlockSizeInMb { get; set; }
+
+        [Description("Moving-average sync cost threshold per device; exceeding this value switches writeback from trickle to drain mode to handle elevated I/O latency or exhausted burst credits.")]
+        [DefaultValue(100)]
+        [ConfigurationEntry("Storage.SyncWritebackBarrierCostThresholdInMs", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int SyncWritebackBarrierCostThresholdInMs { get; set; }
+
+        [Description("Minimum contiguous dirty run for paced writeback; shorter runs are left to the OS writeback to avoid burning the device IOPS budget on unmergeable small requests. Set to 0 to write back every dirty run.")]
+        [DefaultValue(64)]
+        [ConfigurationEntry("Storage.SyncWritebackMinContiguousSizeInKb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int SyncWritebackMinContiguousSizeInKb { get; set; }
+
+        [Description("Amount of unsynced data that triggers a sync of the data file.")]
+        [DefaultValue(256)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [ConfigurationEntry("Storage.MaxUnsyncedSizeBeforeSyncInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public Size MaxUnsyncedSizeBeforeSync { get; set; }
+
+        [Description("Hard bound on delaying the sync of the data file. A sparse dirty set may delay the sync past Storage.MaxUnsyncedSizeBeforeSyncInMb to consolidate scattered writes, but never past this.")]
+        [DefaultValue(768)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [ConfigurationEntry("Storage.MaxUnsyncedSizeBeforeMandatorySyncInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public Size MaxUnsyncedSizeBeforeMandatorySync { get; set; }
+
+        [Description("Time-weighted device queue depth threshold (iostat aqu-sz) that switches writeback from trickle to paced drain mode; reverts when queue stays below 60% of this value for 30 seconds.")]
+        [DefaultValue(5)]
+        [ConfigurationEntry("Storage.SyncWritebackDrainQueueDepthThreshold", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int SyncWritebackDrainQueueDepthThreshold { get; set; }
         
         [Description("EXPERT: Determine the acceleration level that Voron will use when compressing journals.")]
         [DefaultValue(1)]
-        [ConfigurationEntry("Storage.JournalsCompressionAcceleration", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        [ConfigurationEntry("Storage.JournalsCompressionAcceleration", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int JournalsCompressionAcceleration { get; set; }
+
+        [Description("Compression algorithm for journal transactions. Auto picks Zstd on a bandwidth-capped volume, where its better ratio buys back device budget, and Lz4 on a measured-fast device, where CPU is the constraint.")]
+        [DefaultValue(JournalCompressionAlgorithm.Auto)]
+        [ConfigurationEntry("Storage.JournalsCompressionAlgorithm", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public JournalCompressionAlgorithm JournalsCompressionAlgorithm { get; set; }
 
         /// <summary>
         /// Specifies the time interval between each IoMetrics Cleaner run
@@ -170,6 +238,12 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(false)]
         [ConfigurationEntry("Storage.Encrypted.DisableBuffersPooling", ConfigurationEntryScope.ServerWideOnly)]
         public bool DisableEncryptionBuffersPooling { get; set; }
+
+        [Description("Max number of recyclable journals that will be reused. ")]
+        [DefaultValue(32)]
+        [MinValue(0)]
+        [ConfigurationEntry("Storage.MaxNumberOfRecyclableJournals", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int MaxNumberOfRecyclableJournals { get; set; }
 
         [Description("Disable further usage of sparse regions for the FS to reclaim free pages. In order to clear existing sparse regions you need to do that manually.")]
         [DefaultValue(false)]

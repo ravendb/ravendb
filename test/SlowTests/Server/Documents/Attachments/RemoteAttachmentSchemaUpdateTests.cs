@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.IO;
 using System.IO.Compression;
@@ -265,7 +265,7 @@ namespace SlowTests.Server.Documents.Attachments
                     // Test 2: Verify all existing attachments have RemoteAttachmentFlags.None
                     foreach (var result in attachmentTable.SeekForwardFrom(Raven.Server.Documents.Schemas.Attachments.AttachmentsSchemaBase.FixedSizeIndexes[Raven.Server.Documents.Schemas.Attachments.AttachmentsEtagSlice], 0, 0))
                     {
-                        var attachment = TableValueToAttachmentTableValueReader(context, ref result.Reader);
+                        var attachment = TableValueToAttachmentTableValueReader(context, result);
                         // Verify all migrated attachments have RemoteAttachmentFlags.None
                         Assert.Equal(RemoteAttachmentFlags.None, attachment.Flags);
 
@@ -548,7 +548,7 @@ namespace SlowTests.Server.Documents.Attachments
                         Assert.NotNull(attachmentTable);
                         foreach (var result in attachmentTable.SeekForwardFrom(Raven.Server.Documents.Schemas.Attachments.AttachmentsSchemaBase.FixedSizeIndexes[Raven.Server.Documents.Schemas.Attachments.AttachmentsEtagSlice], 0, 0))
                         {
-                            var attachment = TableValueToAttachmentTableValueReader(context, ref result.Reader);
+                            var attachment = TableValueToAttachmentTableValueReader(context, result);
                             // Verify all migrated attachments have RemoteAttachmentFlags.None
                             Assert.Equal(RemoteAttachmentFlags.None, attachment.Flags);
 
@@ -619,23 +619,23 @@ namespace SlowTests.Server.Documents.Attachments
             public RemoteAttachmentFlags Flags;
         }
 
-        internal static unsafe AttachmentTableValueReader TableValueToAttachmentTableValueReader(DocumentsOperationContext context, ref TableValueReader tvr)
+        internal static unsafe AttachmentTableValueReader TableValueToAttachmentTableValueReader(DocumentsOperationContext context, in TableValueReader tvr)
         {
             var result = new AttachmentTableValueReader
             {
                 StorageId = tvr.Id,
-                Key = DocumentsStorage.TableValueToString(context, (int)Raven.Server.Documents.Schemas.Attachments.AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType, ref tvr),
-                Etag = DocumentsStorage.TableValueToEtag((int)Raven.Server.Documents.Schemas.Attachments.AttachmentsTable.Etag, ref tvr),
-                ChangeVector = DocumentsStorage.TableValueToChangeVector(context, (int)Raven.Server.Documents.Schemas.Attachments.AttachmentsTable.ChangeVector, ref tvr),
-                Name = DocumentsStorage.TableValueToId(context, (int)Raven.Server.Documents.Schemas.Attachments.AttachmentsTable.Name, ref tvr),
-                ContentType = DocumentsStorage.TableValueToId(context, (int)Raven.Server.Documents.Schemas.Attachments.AttachmentsTable.ContentType, ref tvr),
-                Size = DocumentsStorage.TableValueToLong((int)Raven.Server.Documents.Schemas.Attachments.AttachmentsTable.Size, ref tvr),
-                Identifier = DocumentsStorage.TableValueToString(context, (int)Raven.Server.Documents.Schemas.Attachments.AttachmentsTable.Identifier, ref tvr),
-                RemoteAt = DocumentsStorage.TableValueToNullableDateTime((int)Raven.Server.Documents.Schemas.Attachments.AttachmentsTable.RemoteAt, ref tvr),
-                Flags = DocumentsStorage.TableValueToAttachmentFlags((int)Raven.Server.Documents.Schemas.Attachments.AttachmentsTable.Flags, ref tvr)
+                Key = DocumentsStorage.TableValueToString(context, (int)Raven.Server.Documents.Schemas.Attachments.AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType, tvr),
+                Etag = DocumentsStorage.TableValueToEtag((int)Raven.Server.Documents.Schemas.Attachments.AttachmentsTable.Etag, tvr),
+                ChangeVector = DocumentsStorage.TableValueToChangeVector(context, (int)Raven.Server.Documents.Schemas.Attachments.AttachmentsTable.ChangeVector, tvr),
+                Name = DocumentsStorage.TableValueToId(context, (int)Raven.Server.Documents.Schemas.Attachments.AttachmentsTable.Name, tvr),
+                ContentType = DocumentsStorage.TableValueToId(context, (int)Raven.Server.Documents.Schemas.Attachments.AttachmentsTable.ContentType, tvr),
+                Size = DocumentsStorage.TableValueToLong((int)Raven.Server.Documents.Schemas.Attachments.AttachmentsTable.Size, tvr),
+                Identifier = DocumentsStorage.TableValueToString(context, (int)Raven.Server.Documents.Schemas.Attachments.AttachmentsTable.Identifier, tvr),
+                RemoteAt = DocumentsStorage.TableValueToNullableDateTime((int)Raven.Server.Documents.Schemas.Attachments.AttachmentsTable.RemoteAt, tvr),
+                Flags = DocumentsStorage.TableValueToAttachmentFlags((int)Raven.Server.Documents.Schemas.Attachments.AttachmentsTable.Flags, tvr)
             };
 
-            DocumentsStorage.TableValueToSlice(context, (int)Raven.Server.Documents.Schemas.Attachments.AttachmentsTable.Hash, ref tvr, out result.Base64Hash);
+            DocumentsStorage.TableValueToSlice(context, (int)Raven.Server.Documents.Schemas.Attachments.AttachmentsTable.Hash, tvr, out result.Base64Hash);
 
             result.TransactionMarker = *(short*)tvr.Read((int)Raven.Server.Documents.Schemas.Attachments.AttachmentsTable.TransactionMarker, out int _);
 

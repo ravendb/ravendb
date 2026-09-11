@@ -1048,11 +1048,11 @@ public sealed class FilteredReplicationTestsPullReplicationCompositeChangeVector
             {
                 foreach (var counterGroup in table.SeekByPrimaryKeyPrefix(key, Slices.Empty, 0))
                 {
-                    var reader = counterGroup.Value.Reader;
+                    var reader = counterGroup.Value;
                     return DocumentsStorage.TableValueToChangeVector(
                         context,
                         (int)Raven.Server.Documents.Schemas.Counters.CountersTable.ChangeVector,
-                        ref reader);
+                        reader);
                 }
             }
 
