@@ -18,4 +18,4 @@ public sealed record ApplianceAppResponse(
     DateTime UpdatedAt);
 
 // ConnectionString is always ""; the real one is a secret
-public sealed record AppSource(string Type, string ConnectionString);
+public sealed record AppSource(string Type, string ConnectionString, string Database);
