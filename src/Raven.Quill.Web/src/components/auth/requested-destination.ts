@@ -10,6 +10,7 @@ export function requestedDestination(state: unknown): string | null {
 
     const isPathInThisApp = from.startsWith("/") && !from.startsWith("//") && !from.startsWith("/\\");
     const isLogin = from === LOGIN_PATH || from.startsWith(`${LOGIN_PATH}?`) || from.startsWith(`${LOGIN_PATH}#`);
+    const isRoot = from === "/" || from.startsWith("/?") || from.startsWith("/#");
 
-    return isPathInThisApp && !isLogin ? from : null;
+    return isPathInThisApp && !isLogin && !isRoot ? from : null;
 }

@@ -25,4 +25,10 @@ describe("requestedDestination", () => {
         expect(requestedDestination({ from: "/login" })).toBeNull();
         expect(requestedDestination({ from: "/login?next=/usage" })).toBeNull();
     });
+
+    it("drops the root so signing in from it still picks the landing page by apps", () => {
+        expect(requestedDestination({ from: "/" })).toBeNull();
+        expect(requestedDestination({ from: "/?tab=all" })).toBeNull();
+        expect(requestedDestination({ from: "/#top" })).toBeNull();
+    });
 });
