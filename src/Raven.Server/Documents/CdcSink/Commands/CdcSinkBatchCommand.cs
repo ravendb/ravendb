@@ -158,7 +158,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                     ProcessDocumentGroup(context, documentId, ops);
                     ProcessedSuccessfully += ops.Count;
                     _statistics?.ConsumeSuccess(ops.Count);
-                    _statsScope?.RecordProcessedMessage();
+                    _statsScope?.RecordProcessedMessages(ops.Count);
                 }
                 catch (Exception e) when (IsTolerablePerDocumentError(e))
                 {
