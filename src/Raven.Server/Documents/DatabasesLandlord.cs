@@ -13,6 +13,7 @@ using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -55,6 +56,20 @@ namespace Raven.Server.Documents
         internal SemaphoreSlim _databaseSemaphore;
         internal TimeSpan _concurrentDatabaseLoadTimeout;
         internal int _dueTimeOnRetry = 60_000;
+
+        // Caps how many database event hooks may run concurrently. Each hook occupies a thread pool
+        // thread for up to its timeout, and starving the pool here delays the raft index notifications
+        // that every cluster write waits on - so an unbounded hook can time out unrelated cluster
+        // operations. Delivery is best-effort by design, so we drop rather than queue when saturated.
+        internal const int MaxConcurrentDatabaseEventExecs = 8;
+
+        private static readonly TimeSpan DatabaseEventExecDrainTimeout = TimeSpan.FromSeconds(5);
+
+        // deliberately never disposed: an in-flight hook would then fail on Release() during shutdown,
+        // and SemaphoreSlim needs no disposal as long as AvailableWaitHandle is never used
+        private readonly SemaphoreSlim _databaseEventExecSemaphore = new SemaphoreSlim(MaxConcurrentDatabaseEventExecs);
+
+        private readonly ConcurrentDictionary<Task, object> _databaseEventExecTasks = new ConcurrentDictionary<Task, object>();
 
         public DatabasesLandlord(ServerStore serverStore)
         {
@@ -104,6 +119,8 @@ namespace Raven.Server.Documents
             internal Action DelayNotifyFeaturesAboutStateChange;
             internal ManualResetEventSlim AfterDatabaseRemovedFromIdle = null;
             internal bool SkipShouldContinueDisposeCheck = false;
+            internal Action<string> OnDatabaseDeleteExecAttempt;
+            internal Action<string, Exception> OnDatabaseDeleteExecCompleted;
         }
 
         private async Task HandleClusterDatabaseChanged(string databaseName, long index, string type, ClusterDatabaseChangeType changeType, object changeState)
@@ -133,6 +150,29 @@ namespace Raven.Server.Documents
                             // was removed, need to make sure that it isn't loaded
                             UnloadDatabase(databaseName, dbRecordIsNull: true);
                             return;
+                        }
+
+                        if (_serverStore.IsLeader() && type == nameof(DeleteDatabaseCommand) && rawRecord.EntireDatabasePendingDeletion())
+                        {
+                            DatabaseConfiguration databasesConfiguration = _serverStore.Configuration.Databases;
+                            if (string.IsNullOrEmpty(databasesConfiguration.OnDatabaseDeleteExec) == false)
+                            {
+                                // Everything the hook needs is read here, while the cluster read transaction is
+                                // still open. The task started below outlives this scope, and 'rawRecord' nulls its
+                                // backing blittable on dispose, so it must not be touched from the task.
+                                // 'changeState' carries the applied command and is guaranteed to hold no blittable.
+                                bool hardDelete = true;
+                                if (changeState is DeleteDatabaseCommand deleteDatabaseCommand)
+                                {
+                                    hardDelete = deleteDatabaseCommand.HardDelete;
+                                }
+                                else if (_logger.IsInfoEnabled)
+                                {
+                                    _logger.Info($"Could not determine whether the deletion of database '{databaseName}' at index {index} is a hard or a soft delete, assuming a hard delete.");
+                                }
+
+                                StartDatabaseDeleteExec(databaseName, hardDelete, index, type, databasesConfiguration);
+                            }
                         }
 
                         if (rawRecord.IsSharded)
@@ -498,6 +538,110 @@ namespace Raven.Server.Documents
             throw new InvalidOperationException($"Unknown cluster database change type: {type}");
         }
 
+        private void DrainDatabaseEventExecs()
+        {
+            Task[] inFlight = _databaseEventExecTasks.Keys.ToArray();
+            if (inFlight.Length == 0)
+                return;
+
+            try
+            {
+                // the hooks observe ServerShutdown, which is cancelled before we get here
+                if (Task.WhenAll(inFlight).Wait(DatabaseEventExecDrainTimeout) == false && _logger.IsInfoEnabled)
+                {
+                    _logger.Info(
+                        $"Abandoned {inFlight.Length} in-flight database event hook(s) after waiting {DatabaseEventExecDrainTimeout} during shutdown.");
+                }
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Failure while waiting for in-flight database event hooks during shutdown", e);
+            }
+        }
+
+        private void StartDatabaseDeleteExec(string databaseName, bool hardDelete, long index, string type, DatabaseConfiguration configuration)
+        {
+            string configurationKey = RavenConfiguration.GetKey(x => x.Databases.OnDatabaseDeleteExec);
+
+            if (_databaseEventExecSemaphore.Wait(0) == false)
+            {
+                if (_logger.IsOperationsEnabled)
+                {
+                    _logger.Operations(
+                        $"Dropped the '{configurationKey}' hook for database '{databaseName}' (raft index {index}): " +
+                        $"{MaxConcurrentDatabaseEventExecs} hooks are already running. Delivery of this event is best-effort.");
+                }
+
+                ForTestingPurposes?.OnDatabaseDeleteExecCompleted?.Invoke(databaseName, null);
+                return;
+            }
+
+            // captured once on purpose: the shutdown token source is disposed after this landlord, so
+            // reading ServerShutdown again from inside the task could throw ObjectDisposedException
+            CancellationToken shutdownToken = _serverStore.ServerShutdown;
+
+            // Fire-and-forget, and it must stay that way. HandleClusterDatabaseChanged is awaited before
+            // NotifyListenersAbout(index) runs, and DeleteDatabasesOperation waits on that notification
+            // with its own timeout - awaiting a hook that can retry would turn a successful delete into
+            // an apparent failure.
+            Task execTask = Task.Run(() => RunDatabaseDeleteExecAsync(databaseName, hardDelete, index, type, configuration, shutdownToken), CancellationToken.None);
+
+            _databaseEventExecTasks.TryAdd(execTask, null);
+            _ = execTask.ContinueWith(static (completed, state) => ((ConcurrentDictionary<Task, object>)state).TryRemove(completed, out _),
+                _databaseEventExecTasks, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+        }
+
+        private async Task RunDatabaseDeleteExecAsync(string databaseName, bool hardDelete, long index, string type, DatabaseConfiguration configuration,
+            CancellationToken token)
+        {
+            Exception error = null;
+            try
+            {
+                await DatabaseExecUtils.ExecuteOnDatabaseDeleteAsync(new DatabaseExecUtils.OnDatabaseDeleteParameters
+                {
+                    Executable = configuration.OnDatabaseDeleteExec,
+                    Arguments = configuration.OnDatabaseDeleteExecArguments,
+                    Timeout = configuration.OnDatabaseDeleteExecTimeout.AsTimeSpan,
+                    MaxRetryDuration = configuration.OnDatabaseDeleteExecMaxRetryDuration.AsTimeSpan,
+                    DatabaseName = databaseName,
+                    HardDelete = hardDelete,
+                    Logger = _logger,
+                    OnAttempt = () => ForTestingPurposes?.OnDatabaseDeleteExecAttempt?.Invoke(databaseName)
+                }, token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+                // the server is shutting down, this is not a hook failure
+            }
+            catch (Exception e)
+            {
+                error = e;
+
+                string configurationKey = RavenConfiguration.GetKey(x => x.Databases.OnDatabaseDeleteExec);
+                string title = $"The '{configurationKey}' hook failed for database '{databaseName}'";
+                string message =
+                    $"The database deletion hook did not complete successfully. The deletion itself was not affected. " +
+                    $"Raft index: {index}, command: {type}, deletion kind: {(hardDelete ? "hard" : "soft")}. Error: {e.Message}";
+
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations(title, e);
+
+                // server-scoped on purpose: the deletion drops the database's own notifications storage,
+                // so a database-scoped alert would be erased by the very event that raised it. Being
+                // server-scoped is also why the key has to carry the database name: the notification id
+                // is built from the alert type and the key alone, so without it every failure would
+                // overwrite the previous one and dismissing it once would mute the channel for good.
+                _serverStore.NotificationCenter.Add(AlertRaised.Create(null, title, message, AlertType.DatabaseEventExecFailure,
+                    NotificationSeverity.Error, key: databaseName, details: new ExceptionDetails(e)));
+            }
+            finally
+            {
+                _databaseEventExecSemaphore.Release();
+                ForTestingPurposes?.OnDatabaseDeleteExecCompleted?.Invoke(databaseName, error);
+            }
+        }
+
         private void NotifyLeaderAboutRemoval(string dbName, string databaseId, string requestId = null)
         {
             requestId ??= RaftIdGenerator.NewId();
@@ -556,6 +700,12 @@ namespace Raven.Server.Documents
         public void Dispose()
         {
             _disposing.CloseAndLock();
+
+            // Bounded drain of in-flight database event hooks. Deliberately not registered with
+            // '_disposing': CloseAndLock() blocks until every visitor exits, so holding the guard for the
+            // length of a hook's retry budget would stall this dispose and everything ordered after it.
+            DrainDatabaseEventExecs();
+
             var exceptionAggregator = new ExceptionAggregator(_logger, "Failure to dispose landlord");
             try
             {

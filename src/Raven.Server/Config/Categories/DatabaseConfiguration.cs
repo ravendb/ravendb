@@ -162,5 +162,54 @@ namespace Raven.Server.Config.Categories
         [TimeUnit(TimeUnit.Minutes)]
         [ConfigurationEntry("Databases.RegularCleanupThresholdInMin", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting RegularCleanupThreshold { get; set; }
+
+        /// <summary>
+        /// EXPERT: A command or executable to run on the leader node when an entire database is deleted from the cluster.
+        /// Fires when the deletion starts, not when it completes, and cannot delay or prevent it. Delivery is best-effort.
+        /// </summary>
+        [Description("EXPERT: A command or executable to run on the leader node when an entire database is deleted from the cluster. " +
+                     "RavenDB will execute: command [user-arg-1] ... [user-arg-n] -- <database-name> <database-name-base64> <hard|soft>. " +
+                     "The hook fires when the deletion starts, not when it completes, and it can neither delay nor prevent the deletion. " +
+                     "Delivery is best-effort: the event may be delivered more than once (retries, or a repeated delete request) and may be " +
+                     "lost if cluster leadership changes while it is being dispatched, so the script must be idempotent. " +
+                     "Some removal paths raise no event at all - a replication factor reduction, and a database whose topology references " +
+                     "nodes that are no longer cluster members, whose record is removed in the same cluster transaction. " +
+                     "The script inherits the environment of the RavenDB server process, including any RAVEN_ prefixed secrets, and its " +
+                     "standard output and standard error are written to the server log and, when the hook fails, into the alert raised in " +
+                     "the notification center, which is persisted.")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Databases.OnDatabaseDelete.Exec", ConfigurationEntryScope.ServerWideOnly)]
+        public string OnDatabaseDeleteExec { get; set; }
+
+        /// <summary>
+        /// EXPERT: The optional user arguments for the 'Databases.OnDatabaseDelete.Exec' command or executable.
+        /// </summary>
+        [Description("EXPERT: The optional user arguments for the 'Databases.OnDatabaseDelete.Exec' command or executable. The arguments must be escaped for the command line. " +
+                     "This value is never written to the log, but it is passed to the process on its command line and is therefore visible to any local user " +
+                     "listing processes. Pass a credential through the environment or a file the script reads instead.")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Databases.OnDatabaseDelete.Exec.Arguments", ConfigurationEntryScope.ServerWideOnly, isSecured: true)]
+        public string OnDatabaseDeleteExecArguments { get; set; }
+
+        /// <summary>
+        /// EXPERT: The number of seconds to wait for a single execution of the 'Databases.OnDatabaseDelete.Exec' executable to exit.
+        /// </summary>
+        [Description("EXPERT: The number of seconds to wait for a single execution of the 'Databases.OnDatabaseDelete.Exec' executable to exit. Default: 30 seconds")]
+        [DefaultValue(30)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Databases.OnDatabaseDelete.Exec.TimeoutInSec", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting OnDatabaseDeleteExecTimeout { get; set; }
+
+        /// <summary>
+        /// EXPERT: The total number of seconds available to all attempts of the 'Databases.OnDatabaseDelete.Exec' executable,
+        /// including the delays between retries. A failing script is attempted up to 3 times.
+        /// </summary>
+        [Description("EXPERT: The total number of seconds available to all attempts of the 'Databases.OnDatabaseDelete.Exec' executable, " +
+                     "including the delays between retries. A failing script is attempted up to 3 times; a failure that cannot resolve on " +
+                     "retry, such as a missing executable, is attempted once. Default: 90 seconds")]
+        [DefaultValue(90)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Databases.OnDatabaseDelete.Exec.MaxRetryDurationInSec", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting OnDatabaseDeleteExecMaxRetryDuration { get; set; }
     }
 }
