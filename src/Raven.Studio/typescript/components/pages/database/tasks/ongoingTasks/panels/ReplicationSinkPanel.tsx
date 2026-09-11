@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import {
     BaseOngoingTaskPanelProps,
     ConnectionStringItem,
@@ -28,6 +28,7 @@ import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { ExternalReplicationTaskDistribution } from "components/pages/database/tasks/ongoingTasks/partials/ExternalReplicationTaskDistribution";
 import { Icon } from "components/common/Icon";
+import { ReplicationCursorDetailItem } from "components/pages/database/tasks/ongoingTasks/partials/ReplicationCursorDetailItem";
 
 type ReplicationSinkPanelProps = BaseOngoingTaskPanelProps<OngoingTaskReplicationSinkInfo>;
 
@@ -60,12 +61,8 @@ function Details(props: ReplicationSinkPanelProps & { canEdit: boolean }) {
                 </RichPanelDetailItem>
             ))}
 
-            {data.shared.hubCursor && (
-                <RichPanelDetailItem label="Hub Cursor">{data.shared.hubCursor}</RichPanelDetailItem>
-            )}
-            {data.shared.sinkCursor && (
-                <RichPanelDetailItem label="Sink Cursor">{data.shared.sinkCursor}</RichPanelDetailItem>
-            )}
+            <ReplicationCursorDetailItem label="Hub Cursor" cursor={data.shared.hubCursor} />
+            <ReplicationCursorDetailItem label="Sink Cursor" cursor={data.shared.sinkCursor} />
         </RichPanelDetails>
     );
 }
