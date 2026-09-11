@@ -55,7 +55,6 @@ export function createAppsQueries(api: ServerApi["apps"]) {
 
                     return {
                         configurations: result?.status === "Success" ? result.configurations : [],
-                        isConsentRequired: result?.status === "ConsentRequired",
                         failureStatus: result == null || result.status === "Success" ? null : result.status,
                     };
                 },
