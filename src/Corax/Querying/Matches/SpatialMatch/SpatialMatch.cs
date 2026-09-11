@@ -36,6 +36,7 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
     private IDisposable _startsWithDisposeHandler;
     // entry -> distance to the shape centre, -1 when it has no matching point
     private Dictionary<long, double> _alreadyReturned;
+    private double _maxDistance; // the farthest entry this match returned - the least relevant one, which Score grades against
     private long _fieldRootPage;
     private double _xShapeCenter;
     private double _yShapeCenter;
@@ -144,7 +145,7 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
             return false;
 
         // the entry is open right here, so keep its distance for Score instead of reading it again there
-        _alreadyReturned.Add(id, typeof(TBoosting) == typeof(HasBoosting) ? DistanceFromCentre(latitude, longitude) : 0);
+        Record(id, typeof(TBoosting) == typeof(HasBoosting) ? DistanceFromCentre(latitude, longitude) : 0);
         return true;
     }
 
@@ -162,8 +163,15 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
             if (_alreadyReturned.ContainsKey(id))
                 continue;
 
-            _alreadyReturned.Add(id, TryGetMatchingPoint(id, out var latitude, out var longitude) ? DistanceFromCentre(latitude, longitude) : -1);
+            Record(id, TryGetMatchingPoint(id, out var latitude, out var longitude) ? DistanceFromCentre(latitude, longitude) : -1);
         }
+    }
+
+    private void Record(long id, double distance)
+    {
+        _alreadyReturned.Add(id, distance);
+        if (distance > _maxDistance)
+            _maxDistance = distance;
     }
 
     private double DistanceFromCentre(double latitude, double longitude)
@@ -228,30 +236,22 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
         if (typeof(TBoosting) != typeof(HasBoosting))
             ThrowPrimitiveHasNoBoostingData();
 
-        const double bias = 0.01;
-
-        // Fill and AndWith recorded every entry this match returned together with its distance, so nothing is read here.
-        // Anything else in matches came from the other side of an OR and is not ours.
-        using var _ = _allocator.Allocate(matches.Length, out Span<double> distances);
-        double maxDistance = 0;
-        for (int i = 0; i < matches.Length; ++i)
-        {
-            distances[i] = _alreadyReturned != null && _alreadyReturned.TryGetValue(matches[i], out var distance) ? distance : -1;
-            maxDistance = Math.Max(distances[i], maxDistance);
-        }
-
-        if (maxDistance == 0) // every matched point sits at the center - nothing to grade
+        // Fill and AndWith recorded every entry this match returned together with its distance and kept the farthest one,
+        // so this is a single pass with nothing read and nothing allocated. A miss means the entry came from the other
+        // side of an OR and is not ours.
+        if (_maxDistance == 0) // nothing returned, or every matched point sits at the centre - nothing to grade
             return;
 
+        const double bias = 0.01;
         for (int i = 0; i < matches.Length; ++i)
         {
-            if (distances[i] < 0)
+            if (_alreadyReturned.TryGetValue(matches[i], out var distance) == false || distance < 0)
                 continue;
 
             var relativeDistance = bias +
                                    (_spatialRelation is not Utils.Spatial.SpatialRelation.Disjoint
-                                       ? 1.0 - (distances[i] / maxDistance)
-                                       : (distances[i] / maxDistance));
+                                       ? 1.0 - (distance / _maxDistance)
+                                       : (distance / _maxDistance));
             scores[i] += (float)relativeDistance * boostFactor;
         }
     }
