@@ -30,11 +30,11 @@ public static class AiConnectionStringsEndpoints
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
         group.MapGet("/", ListAsync)
             .WithName("aiConnectionStrings.list")
-            .Produces<List<AiConnectionString>>()
+            .Produces<List<AiConnectionStringResponse>>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
         group.MapGet("/{name}", GetByNameAsync)
             .WithName("aiConnectionStrings.detail")
-            .Produces<AiConnectionString>()
+            .Produces<AiConnectionStringResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
         group.MapDelete("/{name}", DeleteAsync)
             .WithName("aiConnectionStrings.delete")
@@ -57,14 +57,15 @@ public static class AiConnectionStringsEndpoints
         if (existing is null || existing.Results.Count == 0)
             return Results.NotFound(new ApiErrorResponse($"connection string '{name}' not found"));
 
-        var usedBy = existing.Results.Single().UsedBy;
-
-        // block delete: an agent still references this CS (would orphan it)
-        if (usedBy.Count > 0)
+        // RavenDB refuses to remove a server-wide AI connection string that an agent, a GenAI task or
+        // an embeddings task still references (see AssertServerWideConnectionStringNotInUse), so block
+        // on exactly that set instead of letting the operation throw.
+        var usedBy = MapUsages(existing.Results.Single());
+        if (usedBy.Length > 0)
         {
             return Results.Conflict(new AiConnectionStringDeleteConflictResponse(
-                $"connection string '{name}' is referenced by agent(s); remove them first",
-                usedBy.Select(used => $"App:{used.DatabaseName}, ID: {used.Identifier}, Kind: {used.Kind}").ToArray()));
+                $"connection string '{name}' is in use; remove everything that uses it first",
+                usedBy));
         }
 
         await store.Maintenance.Server
@@ -90,12 +91,11 @@ public static class AiConnectionStringsEndpoints
         if (result is null || result.Results.Count == 0)
             return Results.NotFound(new ApiErrorResponse($"connection string '{name}' not found"));
 
-        var connectionString = result.Results.SingleOrDefault()?.ConnectionString as AiConnectionString;
-        if (connectionString is null)
+        var serverWide = result.Results.Single();
+        if (serverWide.ConnectionString is not AiConnectionString connectionString)
             return Results.NotFound(new ApiErrorResponse($"connection string '{name}' not found"));
 
-
-        return Results.Ok(connectionString);
+        return Results.Ok(new AiConnectionStringResponse(connectionString, MapUsages(serverWide)));
     }
 
     private static async Task<IResult> ListAsync(
@@ -105,9 +105,35 @@ public static class AiConnectionStringsEndpoints
         var r = await store.Maintenance.Server
             .SendAsync(new GetServerWideConnectionStringsOperation(), ct);
 
-        var results = r.Results.Select(c => c.ConnectionString).OfType<AiConnectionString>().ToList();
+        var results = new List<AiConnectionStringResponse>();
+        foreach (var serverWide in r.Results)
+        {
+            if (serverWide.ConnectionString is not AiConnectionString connectionString)
+                continue;
+
+            results.Add(new AiConnectionStringResponse(connectionString, MapUsages(serverWide)));
+        }
+
         return Results.Ok(results);
     }
+
+    // Ongoing tasks carry a numeric Id and agents a string Identifier; the contract exposes one handle for both.
+    private static AiConnectionStringUsage[] MapUsages(ServerWideConnectionString serverWide) =>
+        serverWide.UsedBy
+            .Select(used => MapUsageKind(used.Kind) is { } kind
+                ? new AiConnectionStringUsage(kind, used.Identifier ?? used.Id?.ToString(), used.Name, used.DatabaseName)
+                : null)
+            .OfType<AiConnectionStringUsage>()
+            .ToArray();
+
+    private static AiConnectionStringUsageKind? MapUsageKind(ConnectionStringUsageKind kind) =>
+        kind switch
+        {
+            ConnectionStringUsageKind.AiAgent => AiConnectionStringUsageKind.AiAgent,
+            ConnectionStringUsageKind.GenAi => AiConnectionStringUsageKind.GenAi,
+            ConnectionStringUsageKind.EmbeddingsGeneration => AiConnectionStringUsageKind.EmbeddingsGeneration,
+            _ => null,
+        };
 
     private static async Task<IResult> PostAsync(
         AiConnectionString body,

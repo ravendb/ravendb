@@ -1,14 +1,25 @@
-import type { AiConnectionString, AiConnectionStringTestResponse } from "@/api/generated/server-api";
+import type {
+    AiConnectionString,
+    AiConnectionStringResponse,
+    AiConnectionStringTestResponse,
+} from "@/api/generated/server-api";
 import { getServerConnectionStringName } from "@/components/ai-connection-string/ai-connection-string-utils";
 import { apiHttp } from "./api-http";
 
 export const aiConnectionStringsMocks = {
-    list: (connectionStrings: AiConnectionString[] = sampleConnectionStrings) =>
+    list: (connectionStrings: AiConnectionStringResponse[] = sampleConnectionStringResponses) =>
         apiHttp.get("/api/ai/connection-strings", ({ response }) => response(200).json(connectionStrings)),
-    detail: (connectionString: AiConnectionString = sampleChatConnectionString) =>
-        apiHttp.get("/api/ai/connection-strings/{name}", ({ params, response }) =>
-            response(200).json({ ...connectionString, name: params.name, identifier: params.name }),
-        ),
+    detail: (connectionStrings: AiConnectionStringResponse[] = sampleConnectionStringResponses) =>
+        apiHttp.get("/api/ai/connection-strings/{name}", ({ params, response }) => {
+            const match = connectionStrings.find((item) => item.connectionString.name === params.name);
+            if (!match) {
+                return response(404).json({ error: `connection string '${params.name}' not found` });
+            }
+            return response(200).json({
+                connectionString: { ...match.connectionString, name: params.name, identifier: params.name },
+                usedBy: match.usedBy,
+            });
+        }),
     create: () =>
         apiHttp.post("/api/ai/connection-strings", async ({ request, response }) => {
             const connectionString = await request.json();
@@ -37,6 +48,49 @@ export const sampleConnectionStrings: AiConnectionString[] = [
         identifier: "embeddings",
         modelType: "TextEmbeddings",
         embeddedSettings: {},
+    },
+];
+
+export const sampleConnectionStringResponses: AiConnectionStringResponse[] = sampleConnectionStrings.map(
+    (connectionString) => ({ connectionString, usedBy: [] }),
+);
+
+export const sampleUsedByAgentsConnectionStringResponses: AiConnectionStringResponse[] = [
+    {
+        connectionString: sampleChatConnectionString,
+        usedBy: [
+            { kind: "AiAgent", identifier: "support-agent", name: "Support agent", databaseName: "northwind" },
+            { kind: "AiAgent", identifier: "sales-agent", name: null, databaseName: "crm" },
+        ],
+    },
+    ...sampleConnectionStringResponses.slice(1),
+];
+
+export const sampleUsedByTasksConnectionStringResponses: AiConnectionStringResponse[] = [
+    {
+        connectionString: sampleChatConnectionString,
+        usedBy: [
+            { kind: "AiAgent", identifier: "support-agent", name: "Support agent", databaseName: "northwind" },
+            { kind: "GenAi", identifier: "12", name: "Summarize orders", databaseName: "northwind" },
+        ],
+    },
+    ...sampleConnectionStringResponses.slice(1),
+];
+
+export const sampleUsedByTasksVertexConnectionStringResponses: AiConnectionStringResponse[] = [
+    {
+        connectionString: {
+            name: "vertex-embeddings",
+            identifier: "vertex-embeddings",
+            modelType: "TextEmbeddings",
+            vertexSettings: {
+                googleCredentialsJson: '{ "type": "service_account" }',
+                model: "gemini-embedding-001",
+                location: "us-central1",
+                aiVersion: "V1",
+            },
+        },
+        usedBy: [{ kind: "EmbeddingsGeneration", identifier: "7", name: "Index products", databaseName: "northwind" }],
     },
 ];
 

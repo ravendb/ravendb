@@ -2,6 +2,7 @@ import { useFormContext } from "react-hook-form";
 import { FormAutocomplete } from "@/components/form/form-autocomplete";
 import { FormInput } from "@/components/form/form-input";
 import type { ConnectionStringFormData } from "@/components/ai-connection-string/ai-connection-string-utils";
+import { useIsModelLocked } from "@/components/ai-connection-string/model-lock-context";
 import { AdvancedFields } from "@/components/ai-connection-string/provider-fields/advanced-fields";
 import { EmbeddingsMaxConcurrentBatchesField } from "@/components/ai-connection-string/provider-fields/shared-fields";
 
@@ -9,6 +10,7 @@ const ENDPOINTS = ["https://api-inference.huggingface.com/"];
 
 export function HuggingFaceFields() {
     const { control, getValues } = useFormContext<ConnectionStringFormData>();
+    const isModelLocked = useIsModelLocked();
 
     const settings = getValues("huggingFaceSettings");
     const hasAdvancedValues = Boolean(settings.endpoint || settings.embeddingsMaxConcurrentBatches != null);
@@ -27,6 +29,7 @@ export function HuggingFaceFields() {
                 name="huggingFaceSettings.model"
                 label="Model"
                 placeholder="sentence-transformers/all-MiniLM-L6-v2"
+                disabled={isModelLocked}
             />
             <AdvancedFields defaultOpen={hasAdvancedValues}>
                 <FormAutocomplete

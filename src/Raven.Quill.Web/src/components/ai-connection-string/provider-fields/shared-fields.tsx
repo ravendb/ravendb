@@ -1,6 +1,7 @@
 import { type FieldPath, useFormContext, useWatch } from "react-hook-form";
 import { FormInput } from "@/components/form/form-input";
 import type { ConnectionStringFormData } from "@/components/ai-connection-string/ai-connection-string-utils";
+import { useIsModelLocked } from "@/components/ai-connection-string/model-lock-context";
 import { FormCardSwitch } from "@/components/form/form-card-switch";
 
 type PromptCacheProvider = Extract<
@@ -63,6 +64,7 @@ export function TemperatureField({ baseName }: { baseName: TemperatureProvider }
 
 export function DimensionsField({ baseName }: { baseName: DimensionsProvider }) {
     const { control } = useFormContext<ConnectionStringFormData>();
+    const isModelLocked = useIsModelLocked();
     const name = `${baseName}.dimensions` satisfies FieldPath<ConnectionStringFormData>;
 
     return (
@@ -70,6 +72,7 @@ export function DimensionsField({ baseName }: { baseName: DimensionsProvider }) 
             control={control}
             name={name}
             type="number"
+            disabled={isModelLocked}
             label="Dimensions (optional)"
             placeholder="Model default"
             description="The number of dimensions for the output embeddings."
