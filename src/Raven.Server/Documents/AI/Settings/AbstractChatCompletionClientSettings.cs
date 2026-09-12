@@ -21,6 +21,8 @@ internal abstract class AbstractChatCompletionClientSettings
 
     public virtual bool SupportsToolChoiceNone => true;
 
+    public virtual bool SupportsToolsWithStructuredOutput => true;
+
     public virtual bool EnablePromptCaching => true;
 
     public Uri GetBaseEndpointUri() => _settings.GetBaseEndpointUri();

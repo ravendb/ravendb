@@ -20,6 +20,8 @@ internal class OllamaChatCompletionClientSettings : AbstractChatCompletionClient
     // Instead, the tools array is omitted entirely once tools are disabled.
     public override bool SupportsToolChoiceNone => false;
 
+    public override bool SupportsToolsWithStructuredOutput => false;
+
     public override string GetRelativeCompletionUri() => "v1/" + base.GetRelativeCompletionUri();
 
     public override string GetRelativeModelsUri() => "v1/" + base.GetRelativeModelsUri();
