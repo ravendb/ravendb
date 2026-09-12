@@ -116,7 +116,22 @@ internal abstract class AbstractChatCompletionClientSettings
         _ = choice0.TryGet(ChatCompletionClient.Constants.ResponseFields.Refusal, out string refusal)
             || (message != null && message.TryGet(ChatCompletionClient.Constants.ResponseFields.Refusal, out refusal));
 
-        return refusal;
+        if (string.IsNullOrEmpty(refusal) == false)
+            return refusal;
+
+        if (string.Equals(GetFinishReason(choice0), ChatCompletionClient.Constants.ResponseFields.FinishReasonContentFilter, StringComparison.OrdinalIgnoreCase))
+        {
+            isCompleteMessage = true;
+            return "Response blocked due to content policy";
+        }
+
+        return null;
+    }
+
+    public virtual string GetFinishReason(BlittableJsonReaderObject choice0)
+    {
+        choice0.TryGet(ChatCompletionClient.Constants.ResponseFields.FinishReason, out string finishReason);
+        return finishReason;
     }
 
     public virtual ValueTask<BlittableJsonReaderObject> TryGetResponseContentAsync(JsonOperationContext context, Stream stream)

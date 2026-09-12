@@ -234,17 +234,18 @@ public class ChatCompletionClient : IDisposable
             }
 
             var choice = (BlittableJsonReaderObject)choices[0];
-            if (choice.TryGet(Constants.ResponseFields.FinishReason, out string chunkFinishReason))
-                result.RecordFinishReason(chunkFinishReason);
+            result.RecordFinishReason(_settings.GetFinishReason(choice));
 
-            if (choice.TryGet(Constants.ResponseFields.Delta, out BlittableJsonReaderObject delta))
+            // Probe the refusal on every choice, not only on chunks that carry a delta: Azure and Google signal it on
+            // the choice itself (finish_reason / content_filter_results), possibly on a terminal chunk with no delta.
+            var hasDelta = choice.TryGet(Constants.ResponseFields.Delta, out BlittableJsonReaderObject delta);
+            var refusalDelta = _settings.GetRefusal(choice, delta, streaming: true, out var refusalIsComplete);
+            if (string.IsNullOrEmpty(refusalDelta) == false)
+                result.RecordRefusal(refusalDelta, refusalIsComplete);
+
+            if (hasDelta)
             {
-                var refusalDelta = _settings.GetRefusal(choice, delta, streaming: true, out var _);
-                if (string.IsNullOrEmpty(refusalDelta) == false)
-                {
-                    result.SetRefusal(streamingContext.GetLazyString(refusalDelta));
-                }
-                else if (delta.TryGet(Constants.ResponseFields.Content, out LazyStringValue content) && content?.Length > 0)
+                if (delta.TryGet(Constants.ResponseFields.Content, out LazyStringValue content) && content?.Length > 0)
                 {
                     toolCallState.AddAndReset();
 
@@ -268,7 +269,13 @@ public class ChatCompletionClient : IDisposable
         }
 
         // Some OpenAI-like APIs return an empty array instead of omitting the field when no tool calls are made
-        if (toolCallState.TryGetToolCallsForMessage(out var allToolCalls))
+        var hasToolCalls = toolCallState.TryGetToolCallsForMessage(out var allToolCalls);
+
+        // Refusal first, then a token-limit cut, and both before returning tool calls: a filtered or cut stream can
+        // carry partial tool-call deltas that must not reach the agent loop.
+        result.ThrowIfRefusedOrTruncated(response, hasToolCalls);
+
+        if (hasToolCalls)
         {
             return new AiResponse(AiResponseType.Tool)
             {
@@ -325,7 +332,7 @@ public class ChatCompletionClient : IDisposable
         private BlittableJsonReaderObject _message;
         private string _finishReason;
         private bool _sawContent;
-        private bool _refused;
+        private StringBuilder _refusal;
 
         public AiResultBuilder(SseStreamingJsonParser parser)
         {
@@ -339,10 +346,34 @@ public class ChatCompletionClient : IDisposable
                 _finishReason = finishReason;
         }
 
-        public bool SetRefusal(LazyStringValue refusalDelta)
+        // OpenAI streams the refusal as text fragments to concatenate; Azure and Google derive a full message per chunk
+        // that may repeat and must be kept once. The text is kept apart from the answer so it is neither parsed as
+        // JSON nor returned as content.
+        public void RecordRefusal(string refusal, bool isCompleteMessage)
         {
-            _refused = true;
-            return AcceptContent(refusalDelta);
+            if (isCompleteMessage)
+                _refusal ??= new StringBuilder(refusal);
+            else
+                (_refusal ??= new StringBuilder()).Append(refusal);
+        }
+
+        // Runs before tool calls are returned. Partial plain text is still an answer; a cut structured object or a cut
+        // tool call is not.
+        public void ThrowIfRefusedOrTruncated(HttpResponseMessage response, bool hasToolCalls)
+        {
+            if (_refusal is { Length: > 0 })
+                RefusedToAnswerException.Throw(_refusal.ToString(), "[streaming]", _finishReason, GetRequestId(response.Headers));
+
+            if ((_parser != null || hasToolCalls) &&
+                string.Equals(_finishReason, Constants.ResponseFields.FinishReasonLength, StringComparison.OrdinalIgnoreCase))
+            {
+                var what = hasToolCalls ? "tool call" : "structured answer";
+                throw new TooManyTokensException(
+                    $"The model response was truncated (finish_reason='length') before producing a complete {what}.{GetReasoningPreview()}")
+                {
+                    RequestId = GetRequestId(response.Headers)
+                };
+            }
         }
 
         public bool AcceptContent(LazyStringValue content)
@@ -373,21 +404,11 @@ public class ChatCompletionClient : IDisposable
 
         public void FinalizeOrThrow(JsonOperationContext context, HttpResponseMessage response)
         {
-            if (_refused)
-                RefusedToAnswerException.Throw(_message.ToString(), "[streaming]", _finishReason, GetRequestId(response.Headers));
-
             if (_parser == null)
             {
                 TryPromoteReasoningFallback(out _pendingChunk);
                 return;
             }
-
-            if (string.Equals(_finishReason, Constants.ResponseFields.FinishReasonLength, StringComparison.OrdinalIgnoreCase))
-                throw new TooManyTokensException(
-                    $"The model response was truncated (finish_reason='length') before producing a complete structured answer.{GetReasoningPreview()}")
-                {
-                    RequestId = GetRequestId(response.Headers)
-                };
 
             if (_message == null && _sawContent == false && _reasoningFallback is { Length: > 0 })
             {
@@ -454,6 +475,17 @@ public class ChatCompletionClient : IDisposable
             return true;
 
         return TryGetDeltaReasoning(delta, out content);
+    }
+
+    // Whether the message carries something to return. Providers whose refusal detection is a heuristic over the
+    // shape of the message (Google) use this so GetRefusal stays safe to call on any response.
+    internal static bool HasContentOrToolCalls(BlittableJsonReaderObject message)
+    {
+        if (message == null)
+            return false;
+
+        return TryGetDeltaContent(message, out _)
+               || (message.TryGet(Constants.ResponseFields.ToolCalls, out BlittableJsonReaderArray calls) && calls is { Length: > 0 });
     }
 
     private static bool TryGetDeltaReasoning(BlittableJsonReaderObject delta, out LazyStringValue reasoning)
@@ -576,6 +608,8 @@ public class ChatCompletionClient : IDisposable
     {
         public BlittableJsonReaderObject Message;
         private BlittableJsonReaderObject _choice0;
+        private string _finishReason;
+        private bool _lengthTruncated;
 
         public void EnsureSuccessfulResponse()
         {
@@ -595,22 +629,35 @@ public class ChatCompletionClient : IDisposable
 
             _choice0 = (BlittableJsonReaderObject)choices[0];
 
-            if (_choice0.TryGet(Constants.ResponseFields.Message, out Message) == false)
+            // Some providers (e.g. Gemini's OpenAI-compatible API) omit "message" entirely and carry the refusal
+            // (e.g. finish_reason "content_filter: PROHIBITED_CONTENT") or the finish_reason on the bare choice,
+            // so Message can legitimately be null at this point.
+            _choice0.TryGet(Constants.ResponseFields.Message, out Message);
+
+            // A refusal or a token-limit stop still reports the tokens it consumed - account for them before throwing.
+            var hasUsage = responseContent.TryGet(Constants.ResponseFields.Usage, out BlittableJsonReaderObject usageJson);
+            if (hasUsage)
+                usage.UpdateFrom(usageJson);
+
+            // Same order as the streaming path: refusal, then length, then tool calls / content.
+            _finishReason = client.GetFinishReason(_choice0);
+            _lengthTruncated = string.Equals(_finishReason, Constants.ResponseFields.FinishReasonLength, StringComparison.OrdinalIgnoreCase);
+
+            var refusal = client.GetRefusal(_choice0, Message);
+            if (string.IsNullOrEmpty(refusal) == false)
+                RefusedToAnswerException.Throw(refusal, responseContent.ToString(), _finishReason, GetRequestId(response.Headers));
+
+            if (Message == null)
             {
-                // Some providers (e.g. Gemini's OpenAI-compatible API) express a refusal as a choice with no
-                // message - only a finish_reason such as "content_filter: PROHIBITED_CONTENT". Surface that as
-                // a refusal instead of failing with "No message property".
-                _choice0.TryGet(Constants.ResponseFields.FinishReason, out string finishReason);
-                var refusal = client.GetRefusal(_choice0, message: null);
-                if (string.IsNullOrEmpty(refusal) == false)
-                    RefusedToAnswerException.Throw(refusal, responseContent.ToString(), finishReason, GetRequestId(response.Headers));
+                // A token-limit stop that produced no message at all is still a cut, not a malformed response.
+                if (_lengthTruncated)
+                    throw Truncated();
 
                 throw UnexpectedResponseException.Create(message: "No message property in choice", response, responseContent);
             }
 
-            if (responseContent.TryGet(Constants.ResponseFields.Usage, out BlittableJsonReaderObject usageJson) == false)
+            if (hasUsage == false)
                 throw UnexpectedResponseException.Create(message: "No usage in response content", response, responseContent);
-            usage.UpdateFrom(usageJson);
         }
 
         public bool TryParseToolCalls(out List<AiToolCall> toolCalls)
@@ -620,6 +667,10 @@ public class ChatCompletionClient : IDisposable
                 toolCalls = null;
                 return false;
             }
+
+            // A token-limit cut inside the tool call (even a partial call) must not reach the agent loop.
+            if (_lengthTruncated)
+                throw Truncated();
 
             toolCalls = [];
             foreach (BlittableJsonReaderObject call in calls)
@@ -1020,6 +1071,8 @@ public class ChatCompletionClient : IDisposable
 
     private string GetRefusal(BlittableJsonReaderObject choice0, BlittableJsonReaderObject message) => _settings.GetRefusal(choice0, message);
 
+    private string GetFinishReason(BlittableJsonReaderObject choice0) => _settings.GetFinishReason(choice0);
+
     internal static string GetRequestId(HttpResponseHeaders headers)
     {
         if (headers.TryGetValues(Constants.Headers.XRequestId, out IEnumerable<string> values))
@@ -1265,6 +1318,7 @@ public class ChatCompletionClient : IDisposable
             public const string Reasoning = "reasoning";
             public const string FinishReason = "finish_reason";
             public const string FinishReasonLength = "length";
+            public const string FinishReasonContentFilter = "content_filter";
             public const string ToolCalls = "tool_calls";
             public const string Refusal = "refusal";
             public const string Usage = "usage";
