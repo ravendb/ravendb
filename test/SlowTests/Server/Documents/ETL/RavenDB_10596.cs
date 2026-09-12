@@ -11,6 +11,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Server.Collections;
 using Tests.Infrastructure;
 using Xunit;
+using Raven.Server.Documents.TasksErrors;
 
 namespace SlowTests.Server.Documents.ETL
 {

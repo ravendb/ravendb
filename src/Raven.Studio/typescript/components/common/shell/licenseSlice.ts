@@ -25,10 +25,16 @@ const initialState: LicenseState = {
     },
 };
 
+// 0 in MaxClusterSize means Infinity, in other fields null means Infinity
+// for consistency we convert 0 to null
+export function normalizeMaxClusterSize(maxClusterSize: number): number | null {
+    return maxClusterSize === 0 ? null : maxClusterSize;
+}
+
 const licenseTiers: Record<LicenseType, number> = {
     None: 0,
     Invalid: 0,
-    Reserved: 0,
+    Quill: 0,
     Community: 1,
     Essential: 1,
     Professional: 2,
@@ -44,15 +50,11 @@ export const licenseSlice = createSlice({
         statusLoaded: (store, { payload: status }: PayloadAction<LicenseStatus>) => {
             store.status = status;
 
-            // 0 in MaxClusterSize means Infinity, in other fields null means Infinity
-            // for consistency we convert 0 to null
-            if (
-                store.status?.Attributes &&
-                "MaxClusterSize" in store.status.Attributes &&
-                store.status.Attributes.MaxClusterSize === 0
-            ) {
-                store.status.Attributes.MaxClusterSize = null;
-                store.status.MaxClusterSize = null;
+            if (store.status?.Attributes && "MaxClusterSize" in store.status.Attributes) {
+                store.status.Attributes.MaxClusterSize = normalizeMaxClusterSize(
+                    store.status.Attributes.MaxClusterSize as number
+                );
+                store.status.MaxClusterSize = normalizeMaxClusterSize(store.status.MaxClusterSize);
             }
         },
         supportLoaded: (store, { payload: status }: PayloadAction<Raven.Server.Commercial.LicenseSupportInfo>) => {

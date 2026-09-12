@@ -41,4 +41,19 @@ describe("DatabaseUtils", function () {
             expect(result).toEqual("dbName_shard_3");
         });
     });
+
+    describe("namesEqualIgnoreCase", function () {
+        it("true when names differ only in casing", () => {
+            expect(DatabaseUtils.namesEqualIgnoreCase("Northwind", "northWIND")).toBe(true);
+        });
+
+        it("false when names differ", () => {
+            expect(DatabaseUtils.namesEqualIgnoreCase("Northwind", "orders")).toBe(false);
+        });
+
+        it("false when any name is not provided", () => {
+            expect(DatabaseUtils.namesEqualIgnoreCase("Northwind", null)).toBe(false);
+            expect(DatabaseUtils.namesEqualIgnoreCase(null, null)).toBe(false);
+        });
+    });
 });

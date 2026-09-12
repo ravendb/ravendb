@@ -224,6 +224,19 @@ internal class AiConversation : IAiConversationOperations
         AddAction(actionName, t.ExecuteAsync);
     }
 
+    public void Handle<TResult>(string actionName, Func<Task<TResult>> action, AiHandleErrorStrategy aiHandleError = AiHandleErrorStrategy.SendErrorsToModel)
+        where TResult : class
+        => Handle<string, TResult>(actionName, (_, __) => action(), aiHandleError);
+
+    public void Handle(string actionName, Func<object> action, AiHandleErrorStrategy aiHandleError = AiHandleErrorStrategy.SendErrorsToModel)
+        => Handle<string>(actionName, (_, __) => action(), aiHandleError);
+
+    public void Receive(string actionName, Func<AiAgentActionRequest, Task> action, AiHandleErrorStrategy aiHandleError = AiHandleErrorStrategy.SendErrorsToModel)
+        => Receive<string>(actionName, (req, _) => action(req), aiHandleError);
+
+    public void Receive(string actionName, Action<AiAgentActionRequest> action, AiHandleErrorStrategy aiHandleError = AiHandleErrorStrategy.SendErrorsToModel)
+        => Receive<string>(actionName, (req, _) => action(req), aiHandleError);
+
     private void AddAction(string actionName, HandleActionDelegate t)
     {
         if (_invocations.ContainsKey(actionName))
@@ -234,6 +247,22 @@ internal class AiConversation : IAiConversationOperations
 
     public AiAnswer<TAnswer> Run<TAnswer>() => AsyncHelpers.RunSync(() => RunAsync<TAnswer>());
 
+    public AiAnswer<TAnswer> RunWithSchema<TAnswer>(AiOutputOptions outputOptions) => AsyncHelpers.RunSync(() => RunWithSchemaAsync<TAnswer>(outputOptions));
+
+    public Task<AiAnswer<TAnswer>> RunWithSchemaAsync<TAnswer>(TAnswer sampleObject, CancellationToken token = default)
+    {
+        return RunWithSchemaAsync<TAnswer>(new AiOutputOptions { SampleObject = sampleObject }, token);
+    }
+
+    public Task<AiAnswer<TAnswer>> RunWithSchemaAsync<TAnswer>(string schema, CancellationToken token = default)
+    {
+        return RunWithSchemaAsync<TAnswer>(new AiOutputOptions { OutputSchema = schema }, token);
+    }
+
+    public AiAnswer<TAnswer> RunWithSchema<TAnswer>(TAnswer sampleObject) => AsyncHelpers.RunSync(() => RunWithSchemaAsync<TAnswer>(sampleObject));
+
+    public AiAnswer<TAnswer> RunWithSchema<TAnswer>(string schema) => AsyncHelpers.RunSync(() => RunWithSchemaAsync<TAnswer>(schema));
+
     public Task<AiAnswer<TAnswer>> StreamAsync<TAnswer>(Expression<Func<TAnswer, string>> streamPropertyPath, Func<string, Task> streamedChunksCallback, CancellationToken token = default)
     {
         return StreamAsync<TAnswer>(streamPropertyPath.ToPropertyPath(_aiOperations._store.Conventions), streamedChunksCallback, token);
@@ -241,21 +270,98 @@ internal class AiConversation : IAiConversationOperations
 
     public async Task<AiAnswer<TAnswer>> StreamAsync<TAnswer>(string streamPropertyPath, Func<string, Task> streamedChunksCallback, CancellationToken token = default)
     {
+        if (typeof(TAnswer) == typeof(string))
+            return await StreamWithSchemaAsync<TAnswer>(streamPropertyPath, streamedChunksCallback, new AiOutputOptions { NoSchema = true }, token).ConfigureAwait(false);
+
         while (true)
         {
-            var r = await RunAsyncInternal<TAnswer>(streamPropertyPath, streamedChunksCallback, token).ConfigureAwait(false);
+            var r = await RunAsyncInternal<TAnswer>(streamPropertyPath, streamedChunksCallback, outputOptions: null, token).ConfigureAwait(false);
             if (await HandleServerReplyAsync(r, token).ConfigureAwait(false))
                 return r;
         }
+    }
+
+    public Task<AiAnswer<TAnswer>> StreamWithSchemaAsync<TAnswer>(Expression<Func<TAnswer, string>> streamPropertyPath, Func<string, Task> streamedChunksCallback, TAnswer sampleObject, CancellationToken token = default)
+    {
+        return StreamWithSchemaAsync<TAnswer>(streamPropertyPath.ToPropertyPath(_aiOperations._store.Conventions), streamedChunksCallback, new AiOutputOptions { SampleObject = sampleObject }, token);
+    }
+
+    public Task<AiAnswer<TAnswer>> StreamWithSchemaAsync<TAnswer>(string streamPropertyPath, Func<string, Task> streamedChunksCallback, TAnswer sampleObject, CancellationToken token = default)
+    {
+        return StreamWithSchemaAsync<TAnswer>(streamPropertyPath, streamedChunksCallback, new AiOutputOptions { SampleObject = sampleObject }, token);
+    }
+
+    public Task<AiAnswer<TAnswer>> StreamWithSchemaAsync<TAnswer>(Expression<Func<TAnswer, string>> streamPropertyPath, Func<string, Task> streamedChunksCallback, AiOutputOptions outputOptions, CancellationToken token = default)
+    {
+        return StreamWithSchemaAsync<TAnswer>(streamPropertyPath.ToPropertyPath(_aiOperations._store.Conventions), streamedChunksCallback, outputOptions, token);
+    }
+
+    public async Task<AiAnswer<TAnswer>> StreamWithSchemaAsync<TAnswer>(string streamPropertyPath, Func<string, Task> streamedChunksCallback, AiOutputOptions outputOptions, CancellationToken token = default)
+    {
+        ValidateOutputOptions<TAnswer>(outputOptions);
+
+        while (true)
+        {
+            var r = await RunAsyncInternal<TAnswer>(streamPropertyPath, streamedChunksCallback, outputOptions, token).ConfigureAwait(false);
+            if (await HandleServerReplyAsync(r, token).ConfigureAwait(false))
+                return r;
+        }
+    }
+
+    public Task<AiAnswer<string>> StreamAsync(Func<string, Task> streamedChunksCallback, CancellationToken token = default)
+    {
+        return StreamWithSchemaAsync<string>(string.Empty, streamedChunksCallback, new AiOutputOptions { NoSchema = true }, token);
+    }
+
+    public AiAnswer<TAnswer> Stream<TAnswer>(string streamPropertyPath, Action<string> streamedChunksCallback)
+        => AsyncHelpers.RunSync(() => StreamAsync<TAnswer>(streamPropertyPath, chunk => { streamedChunksCallback(chunk); return Task.CompletedTask; }));
+
+    public AiAnswer<TAnswer> Stream<TAnswer>(Expression<Func<TAnswer, string>> streamPropertyPath, Action<string> streamedChunksCallback)
+        => AsyncHelpers.RunSync(() => StreamAsync<TAnswer>(streamPropertyPath, chunk => { streamedChunksCallback(chunk); return Task.CompletedTask; }));
+
+    public AiAnswer<TAnswer> StreamWithSchema<TAnswer>(string streamPropertyPath, Action<string> streamedChunksCallback, AiOutputOptions outputOptions)
+        => AsyncHelpers.RunSync(() => StreamWithSchemaAsync<TAnswer>(streamPropertyPath, chunk => { streamedChunksCallback(chunk); return Task.CompletedTask; }, outputOptions));
+
+    public AiAnswer<TAnswer> StreamWithSchema<TAnswer>(Expression<Func<TAnswer, string>> streamPropertyPath, Action<string> streamedChunksCallback, AiOutputOptions outputOptions)
+        => AsyncHelpers.RunSync(() => StreamWithSchemaAsync<TAnswer>(streamPropertyPath, chunk => { streamedChunksCallback(chunk); return Task.CompletedTask; }, outputOptions));
+
+    public AiAnswer<string> Stream(Action<string> streamedChunksCallback)
+        => AsyncHelpers.RunSync(() => StreamAsync(chunk => { streamedChunksCallback(chunk); return Task.CompletedTask; }));
+
+    public Task<AiAnswer<string>> RunAsync(CancellationToken token = default)
+    {
+        return RunWithSchemaAsync<string>(new AiOutputOptions { NoSchema = true }, token);
+    }
+
+    public AiAnswer<string> Run()
+    {
+        return AsyncHelpers.RunSync(() => RunAsync());
     }
 
     public async Task<AiAnswer<TAnswer>> RunAsync<TAnswer>(CancellationToken token = default)
     {
         _dispatchedToolIds.Clear();
 
+        if (typeof(TAnswer) == typeof(string))
+            return await RunWithSchemaAsync<TAnswer>(new AiOutputOptions { NoSchema = true }, token).ConfigureAwait(false);
+
         while (true)
         {
-            var r = await RunAsyncInternal<TAnswer>(streamPropertyPath: null, streamedChunksCallback: null, token).ConfigureAwait(false);
+            var r = await RunAsyncInternal<TAnswer>(streamPropertyPath: null, streamedChunksCallback: null, outputOptions: null, token).ConfigureAwait(false);
+            if (await HandleServerReplyAsync(r, token).ConfigureAwait(false))
+                return r;
+        }
+    }
+
+    public async Task<AiAnswer<TAnswer>> RunWithSchemaAsync<TAnswer>(AiOutputOptions outputOptions, CancellationToken token = default)
+    {
+        _dispatchedToolIds.Clear();
+
+        ValidateOutputOptions<TAnswer>(outputOptions);
+
+        while (true)
+        {
+            var r = await RunAsyncInternal<TAnswer>(streamPropertyPath: null, streamedChunksCallback: null, outputOptions, token).ConfigureAwait(false);
             if (await HandleServerReplyAsync(r, token).ConfigureAwait(false))
                 return r;
         }
@@ -301,7 +407,32 @@ internal class AiConversation : IAiConversationOperations
 
     public event Func<UnhandledActionEventArgs, Task> OnUnhandledAction;
 
-    private async Task<AiAnswer<TAnswer>> RunAsyncInternal<TAnswer>(string streamPropertyPath, Func<string, Task> streamedChunksCallback, CancellationToken token = default)
+    private static void ValidateOutputOptions<TAnswer>(AiOutputOptions outputOptions)
+    {
+        if (outputOptions == null)
+            throw new ArgumentNullException(nameof(outputOptions));
+
+        if (typeof(TAnswer) == typeof(string))
+        {
+            if (outputOptions.OutputSchema != null || outputOptions.SampleObject != null)
+                throw new InvalidOperationException("When the answer type is a raw string you cannot set an output schema, because the model is expected to return just a string, with no structure. " +
+                                                    $"You can either set {nameof(AiOutputOptions.NoSchema)} to true, or remove the output schema and sample object.");
+
+            outputOptions.NoSchema = true;
+        }
+        else if (outputOptions.NoSchema)
+        {
+            throw new InvalidOperationException($"When {nameof(AiOutputOptions.NoSchema)} is set to true, the answer type cannot be a structured type like '{typeof(TAnswer).Name}'. " +
+                                                $"You can either set {nameof(AiOutputOptions.NoSchema)} to false, or change the answer type to string.");
+        }
+        else if (outputOptions.SampleObject != null && outputOptions.SampleObject is not TAnswer)
+        {
+            throw new InvalidOperationException($"{nameof(AiOutputOptions.SampleObject)} is of type '{outputOptions.SampleObject.GetType().Name}' but the expected answer type is '{typeof(TAnswer).Name}'. " +
+                                                $"The sample object must match the answer type.");
+        }
+    }
+
+    private async Task<AiAnswer<TAnswer>> RunAsyncInternal<TAnswer>(string streamPropertyPath, Func<string, Task> streamedChunksCallback, AiOutputOptions outputOptions, CancellationToken token = default)
     {
         if (
             // if this is null, it is the first time we call RunAsync, so we are going to the server to get the pending actions
@@ -314,7 +445,7 @@ internal class AiConversation : IAiConversationOperations
                 Status = AiConversationResult.Done
             };
         }
-        var op = new RunConversationOperation<TAnswer>(_agentId, _conversationId, _promptParts, [.. _actionResponses.Values], _artificialActions, _options, _changeVector, _attachmentsCommands, streamPropertyPath, streamedChunksCallback, _debug, _cancelPendingActionTools);
+        var op = new RunConversationOperation<TAnswer>(_agentId, _conversationId, _promptParts, [.. _actionResponses.Values], _artificialActions, _options, _changeVector, _attachmentsCommands, streamPropertyPath, streamedChunksCallback, outputOptions, _debug, _cancelPendingActionTools);
 
         try
         {

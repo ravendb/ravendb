@@ -2550,7 +2550,7 @@ namespace Raven.Client.Util
                                 }
                                 else if (mce.Arguments[0] is MethodCallExpression mce2)
                                 {
-                                    var value = Expression.Lambda(mce2).Compile().DynamicInvoke();
+                                    var value = Expression.Lambda(mce2).Compile(preferInterpretation: true).DynamicInvoke();
                                     switch (value)
                                     {
                                         case string s:

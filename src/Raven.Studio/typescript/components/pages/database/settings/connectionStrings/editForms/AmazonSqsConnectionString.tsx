@@ -5,13 +5,13 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { yupObjectSchema } from "components/utils/yupUtils";
 import { Control, SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { useAppUrls } from "components/hooks/useAppUrls";
 import { FormInput, FormLabel, FormSelect } from "components/common/Form";
 import Badge from "react-bootstrap/Badge";
 import Form from "react-bootstrap/Form";
 import { useAsyncCallback } from "react-async-hook";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import ConnectionStringUsedByTasks from "components/pages/database/settings/connectionStrings/editForms/shared/ConnectionStringUsedByTasks";
+import ExcludedDatabasesFormSelect from "components/pages/database/settings/connectionStrings/editForms/shared/ExcludedDatabasesFormSelect";
 import { useServices } from "components/hooks/useServices";
 import ConnectionTestResult from "components/common/connectionTests/ConnectionTestResult";
 import { useAppSelector } from "components/store";
@@ -33,6 +33,7 @@ export default function AmazonSqsConnectionString({
     onSave,
 }: AmazonSqsConnectionStringProps) {
     const usedNames = useAppSelector(connectionStringSelectors.connections)["AmazonSqs"].map((x) => x.name);
+    const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
 
     const { control, handleSubmit, trigger } = useForm<FormData>({
         mode: "all",
@@ -50,7 +51,6 @@ export default function AmazonSqsConnectionString({
     });
 
     const formValues = useWatch({ control });
-    const { forCurrentDatabase } = useAppUrls();
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
@@ -60,10 +60,10 @@ export default function AmazonSqsConnectionString({
             return;
         }
 
-        return tasksService.testAmazonSqsServerConnection(
-            databaseName,
-            mapAmazonSqsConnectionStringSettingsToDto(formValues)
-        );
+        const dto = mapAmazonSqsConnectionStringSettingsToDto(formValues);
+        return isServerWide
+            ? tasksService.testServerWideAmazonSqsServerConnection(dto)
+            : tasksService.testAmazonSqsServerConnection(databaseName, dto);
     });
 
     // Clear test result after changing auth type
@@ -135,10 +135,14 @@ export default function AmazonSqsConnectionString({
                 </div>
             )}
 
-            <ConnectionStringUsedByTasks
-                tasks={initialConnection.usedByTasks}
-                urlProvider={forCurrentDatabase.editAmazonSqsEtl}
-            />
+            <ConnectionStringUsedByTasks tasks={initialConnection.usedBy} connectionType={initialConnection.type} />
+            {isServerWide && (
+                <ExcludedDatabasesFormSelect
+                    control={control}
+                    name="excludedDatabases"
+                    usedBy={initialConnection.usedBy}
+                />
+            )}
         </Form>
     );
 }
@@ -211,6 +215,7 @@ function getStringRequiredSchema(authType: AmazonSqsAuthenticationType) {
 const schema = yupObjectSchema<FormData>({
     name: connectionStringsUtils.nameSchema,
     authType: yup.string<AmazonSqsAuthenticationType>(),
+    excludedDatabases: yup.array().of(yup.string()).optional(),
     settings: yupObjectSchema<FormData["settings"]>({
         basic: yupObjectSchema<FormData["settings"]["basic"]>({
             accessKey: getStringRequiredSchema("basic"),
@@ -236,5 +241,5 @@ function getDefaultValues(initialConnection: AmazonSqsConnection, isForNewConnec
         };
     }
 
-    return _.omit(initialConnection, "type", "usedByTasks");
+    return _.omit(initialConnection, "type", "usedBy");
 }

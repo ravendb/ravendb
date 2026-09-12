@@ -55,7 +55,8 @@ namespace Raven.Server.Dashboard
 
         public long GenAiCount { get; set; }
 
-
+        public long CdcSinkCount { get; set; }
+        
         public long Total { get; set; }
 
         public DynamicJsonValue ToJson()
@@ -81,7 +82,8 @@ namespace Raven.Server.Dashboard
                 [nameof(AzureServiceBusSinkCount)] = AzureServiceBusSinkCount,
                 [nameof(SnowflakeEtlCount)] = SnowflakeEtlCount,
                 [nameof(EmbeddingsGenerationCount)] = EmbeddingsGenerationCount,
-                [nameof(GenAiCount)] = GenAiCount
+                [nameof(GenAiCount)] = GenAiCount,
+                [nameof(CdcSinkCount)] = CdcSinkCount
             };
         }
     }

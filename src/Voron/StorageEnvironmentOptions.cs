@@ -1427,6 +1427,14 @@ namespace Voron
             internal Action<long> BeforeLinkFiles;
 
             internal bool SimulateCannotLinkJournals;
+
+            internal Func<long, PartialJournalWriteFailure> SimulatePartialJournalWriteFailure;
+
+            internal sealed class PartialJournalWriteFailure
+            {
+                public long NumberOf4KbsToWrite;
+                public Exception Error;
+            }
         }
     }
 }

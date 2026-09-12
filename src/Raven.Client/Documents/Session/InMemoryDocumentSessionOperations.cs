@@ -2509,9 +2509,13 @@ more responsive application.
                 public void UpdateEntityDocumentInfo(DocumentInfo documentInfo, BlittableJsonReaderObject document)
                 {
                     var clusterId = _session.SessionInfo?.ClusterTransactionId;
-                    if (clusterId is not null)
+                    if (clusterId is not null && documentInfo.ChangeVector is not null)
                     {
-                        var clusterTxIndex = ClientChangeVectorUtils.GetEtagById(documentInfo.ChangeVector, clusterId);
+                        var cv = documentInfo.ChangeVector.Split(ClientChangeVectorUtils.Separator);
+                        if (cv.Length > 2)
+                            throw new InvalidOperationException($"The document '{documentInfo.Id}' has invalid change vector '{documentInfo.ChangeVector}'");
+
+                        var clusterTxIndex = ClientChangeVectorUtils.GetEtagById(cv.Last(), clusterId);
                         if (clusterTxIndex > 0)
                         {
                             _session.SessionInfo.LastClusterTransactionIndex = Math.Max(_session.SessionInfo.LastClusterTransactionIndex ?? 0, clusterTxIndex);

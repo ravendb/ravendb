@@ -1,10 +1,11 @@
-import { EtlTaskWithErrors, TasksFiltersState } from "./tasksErrorsUtils";
+import { TaskWithErrors, TasksFiltersState } from "./tasksErrorsUtils";
 import { filterTasksWithErrors } from "components/pages/database/tasks/tasksErrors/utils/filterTasksErrors";
 
-function makeTask(overrides: Partial<EtlTaskWithErrors> = {}): EtlTaskWithErrors {
+function makeTask(overrides: Partial<TaskWithErrors> = {}): TaskWithErrors {
     return {
         etlName: "MyTask",
         etlType: "Raven",
+        category: "Etl",
         transformations: [
             {
                 transformationName: "Script1",
@@ -23,6 +24,32 @@ function makeTask(overrides: Partial<EtlTaskWithErrors> = {}): EtlTaskWithErrors
                         nodeTag: "B",
                         shardNumber: null,
                         DocumentId: "doc/2",
+                        Error: "err",
+                        Step: "Load",
+                        CreatedAt: "2024-01-01",
+                    },
+                ],
+                processErrors: [],
+            },
+        ],
+        ...overrides,
+    };
+}
+
+function makeCdcTask(overrides: Partial<TaskWithErrors> = {}): TaskWithErrors {
+    return {
+        etlName: "MyCdcSink",
+        etlType: undefined,
+        category: "CdcSink",
+        transformations: [
+            {
+                transformationName: "",
+                itemErrors: [
+                    {
+                        TaskName: "MyCdcSink",
+                        nodeTag: "A",
+                        shardNumber: null,
+                        DocumentId: "doc/1",
                         Error: "err",
                         Step: "Load",
                         CreatedAt: "2024-01-01",
@@ -140,5 +167,32 @@ describe("filterTasksWithErrors - shard filter", () => {
 
         expect(result[0].transformations[0].itemErrors).toHaveLength(1);
         expect(result[0].transformations[0].itemErrors[0].shardNumber).toBe(1);
+    });
+});
+
+describe("filterTasksWithErrors - task type filter", () => {
+    test("returns all tasks when no task-type filter is set", () => {
+        const result = filterTasksWithErrors([makeTask(), makeCdcTask()], [], emptyFilters);
+        expect(result).toHaveLength(2);
+    });
+
+    test("shows CDC Sink errors when filtering by the CDC Sink task type", () => {
+        const result = filterTasksWithErrors([makeTask(), makeCdcTask()], [], {
+            ...emptyFilters,
+            taskTypes: ["CdcSink"],
+        });
+
+        expect(result).toHaveLength(1);
+        expect(result[0].category).toBe("CdcSink");
+    });
+
+    test("hides CDC Sink errors when filtering by an ETL task type only", () => {
+        const result = filterTasksWithErrors([makeTask(), makeCdcTask()], [], {
+            ...emptyFilters,
+            taskTypes: ["RavenEtl"],
+        });
+
+        expect(result).toHaveLength(1);
+        expect(result[0].category).toBe("Etl");
     });
 });

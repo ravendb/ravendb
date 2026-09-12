@@ -78,6 +78,7 @@ const mockJQueryPromise = () => $().promise();
 studioSettings.default.configureLoaders(mockJQueryPromise, mockJQueryPromise, mockJQueryPromise, mockJQueryPromise);
 
 Storage.prototype.getObject = jest.fn(() => null);
+Storage.prototype.setObject = jest.fn();
 
 global.define = function() {};
 
@@ -105,6 +106,20 @@ Object.defineProperty(HTMLElement.prototype, "scrollTo", {
 
 if (!window.ResizeObserver) {
   window.ResizeObserver = ROP.ResizeObserver;
+}
+
+if (!window.IntersectionObserver) {
+  window.IntersectionObserver = class {
+    constructor(callback) {
+      this.callback = callback;
+    }
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+    takeRecords() {
+      return [];
+    }
+  };
 }
 
 window.HTMLElement.prototype.getBoundingClientRect = () => ({

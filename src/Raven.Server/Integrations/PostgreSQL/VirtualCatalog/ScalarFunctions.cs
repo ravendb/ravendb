@@ -54,32 +54,11 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
             if (args[0] is not string setting)
                 return false;
 
-            // The settings pgAdmin probes for during connection / property inspection. Real PG
-            // would read these from postgresql.conf; we hand back static defaults that match
-            // what RavenDB's PG endpoint behaves like (UTF-8 everywhere, single namespace).
-            result = setting.ToLowerInvariant() switch
-            {
-                "max_index_keys"     => "32",
-                "lc_collate"         => "C",
-                "lc_ctype"           => "C",
-                "lc_monetary"        => "C",
-                "lc_numeric"         => "C",
-                "lc_time"            => "C",
-                "server_encoding"    => "UTF8",
-                "client_encoding"    => "UTF8",
-                "default_tablespace" => "",            // empty string ⇒ pg_default
-                "search_path"        => "\"$user\", public",
-                "timezone"           => "UTC",
-                // Version probes. Many drivers / BI tools call current_setting('server_version')
-                // (and the *_num form) right after connecting to decide which SQL dialect features
-                // to use. Mirror the 13.3 banner reported by version() (see VersionFunction).
-                "server_version"     => "13.3",
-                "server_version_num" => "130003",
-                "standard_conforming_strings" => "on",
-                "integer_datetimes"  => "on",
-                _ => null,
-            };
-            return result != null;
+            if (PgSettings.TryGetValue(setting, out var value) == false)
+                return false;
+
+            result = value;
+            return true;
         }
     }
 
@@ -180,6 +159,151 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
         }
     }
 
+    internal sealed class CurrentSchemaFunction : ScalarFunction
+    {
+        private const string Schema = "public";
+
+        public override string Name => "current_schema";
+        public override string ResultColumnName => "current_schema";
+        public override PgType PgType => PgName.Default;
+
+        public override bool TryEvaluate(IReadOnlyList<object> args, VirtualQueryContext ctx, out object result)
+        {
+            result = null;
+            if (args is { Count: > 0 })
+                return false;
+            result = Schema;
+            return true;
+        }
+    }
+
+    // Tables and functions are always visible: one schema, and every pg_proc row is a pg_catalog builtin.
+    internal sealed class PgIsVisibleFunction : ScalarFunction
+    {
+        private readonly string _name;
+
+        public PgIsVisibleFunction(string name) { _name = name; }
+
+        public override string Name => _name;
+        public override string ResultColumnName => _name;
+        public override PgType PgType => PgBool.Default;
+
+        public override bool TryEvaluate(IReadOnlyList<object> args, VirtualQueryContext ctx, out object result)
+        {
+            result = null;
+            if (args is not { Count: 1 })
+                return false;
+
+            if (args[0] == null)
+                return true; // NULL oid -> NULL.
+
+            result = true;
+            return true;
+        }
+    }
+
+    // Not constant true like the above: the information_schema domain types are off the search_path.
+    internal sealed class PgTypeIsVisibleFunction : ScalarFunction
+    {
+        private static readonly HashSet<string> SearchedSchemas =
+            new(StringComparer.OrdinalIgnoreCase) { "pg_catalog", "public" };
+
+        // Built once: evaluated per pg_type row, so re-scanning per call would be quadratic.
+        private static readonly Lazy<Dictionary<long, string>> SchemaByTypeOid = new(BuildSchemaByTypeOid);
+
+        public override string Name => "pg_type_is_visible";
+        public override string ResultColumnName => "pg_type_is_visible";
+        public override PgType PgType => PgBool.Default;
+
+        public override bool TryEvaluate(IReadOnlyList<object> args, VirtualQueryContext ctx, out object result)
+        {
+            result = null;
+            if (args is not { Count: 1 })
+                return false;
+
+            if (args[0] == null)
+                return true; // NULL oid -> NULL.
+
+            if (CatalogOid.TryRead(args[0], out var oid) == false)
+                return false;
+
+            // Unknown oid -> NULL, not false: PG checks the syscache before calling TypeIsVisible.
+            if (SchemaByTypeOid.Value.TryGetValue(oid, out var schema) == false)
+                return true;
+
+            result = SearchedSchemas.Contains(schema);
+            return true;
+        }
+
+        private static Dictionary<long, string> BuildSchemaByTypeOid()
+        {
+            var namespaceNames = ReadCatalogColumn("pg_namespace", "oid", "nspname");
+            var typeNamespaces = ReadCatalogColumn("pg_type", "oid", "typnamespace");
+
+            var result = new Dictionary<long, string>(typeNamespaces.Count);
+            foreach (var (typeOid, rawNamespace) in typeNamespaces)
+            {
+                // The empty string never matches a searched schema.
+                var schema = string.Empty;
+                if (CatalogOid.TryRead(rawNamespace, out var namespaceOid) &&
+                    namespaceNames.TryGetValue(namespaceOid, out var name))
+                    schema = name as string ?? string.Empty;
+
+                result[typeOid] = schema;
+            }
+
+            return result;
+        }
+
+        // CSV-backed catalogs serve the same cached rows to every query, so ctx is unused.
+        private static Dictionary<long, object> ReadCatalogColumn(string tableName, string keyColumn, string valueColumn)
+        {
+            var result = new Dictionary<long, object>();
+            if (PgVirtualDatabase.TryGetTable("pg_catalog", tableName, out var table) == false)
+                return result;
+
+            var keyIndex = ColumnIndex(table, keyColumn);
+            var valueIndex = ColumnIndex(table, valueColumn);
+            if (keyIndex < 0 || valueIndex < 0)
+                return result;
+
+            foreach (var row in table.EnumerateRows(ctx: null))
+            {
+                if (CatalogOid.TryRead(row[keyIndex], out var key))
+                    result[key] = row[valueIndex];
+            }
+
+            return result;
+        }
+
+        private static int ColumnIndex(PgVirtualTable table, string name)
+        {
+            for (int i = 0; i < table.Columns.Count; i++)
+            {
+                if (string.Equals(table.Columns[i].Name, name, StringComparison.OrdinalIgnoreCase))
+                    return i;
+            }
+
+            return -1;
+        }
+    }
+
+    // Oids arrive as int (CSV rows), long (integer literals) or string (quoted literals).
+    internal static class CatalogOid
+    {
+        public static bool TryRead(object value, out long oid)
+        {
+            switch (value)
+            {
+                case long l: oid = l; return true;
+                case int i: oid = i; return true;
+                case short s: oid = s; return true;
+                case string str when long.TryParse(str, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed): oid = parsed; return true;
+                default: oid = 0; return false;
+            }
+        }
+    }
+
     // Maps a PG encoding integer to its name. We always serve UTF8 (encoding id 6 in PG); for any
     // input we return "UTF8" since that's the only encoding our wire format produces.
     internal sealed class PgEncodingToCharFunction : ScalarFunction
@@ -273,6 +397,7 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
             [1083] = "time without time zone",
             [1114] = "timestamp without time zone",
             [1184] = "timestamp with time zone",
+            [1186] = "interval",
             [1700] = "numeric",
             [2950] = "uuid",
             [3802] = "jsonb",
@@ -293,23 +418,11 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
             if (args[0] == null)
                 return true;
 
-            if (TryGetOid(args[0], out var oid) == false)
+            if (CatalogOid.TryRead(args[0], out var oid) == false)
                 return false;
 
             result = TypeNames.TryGetValue(oid, out var name) ? name : oid.ToString(CultureInfo.InvariantCulture);
             return true;
-        }
-
-        private static bool TryGetOid(object value, out long oid)
-        {
-            switch (value)
-            {
-                case long l: oid = l; return true;
-                case int i: oid = i; return true;
-                case short s: oid = s; return true;
-                case string str when long.TryParse(str, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed): oid = parsed; return true;
-                default: oid = 0; return false;
-            }
         }
     }
 }

@@ -12,6 +12,7 @@ using Raven.Server.Documents.Handlers.Processors.Batches;
 using Raven.Server.Documents.Sharding.Handlers.Batches;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -45,7 +46,7 @@ internal sealed class ShardedBatchHandlerProcessorForBulkDocs : AbstractBatchHan
         }
     }
 
-    protected override ValueTask WaitForIndexesAsync(IndexBatchOptions options, string lastChangeVector, long lastTombstoneEtag,
+    protected override ValueTask WaitForIndexesAsync(IndexBatchOptions options, ChangeVector lastChangeVector, long lastTombstoneEtag,
         HashSet<string> modifiedCollections, CancellationToken token = default)
     {
         // no-op
@@ -53,7 +54,7 @@ internal sealed class ShardedBatchHandlerProcessorForBulkDocs : AbstractBatchHan
         return ValueTask.CompletedTask;
     }
 
-    protected override ValueTask WaitForReplicationAsync(TransactionOperationContext context, ReplicationBatchOptions options, string lastChangeVector)
+    protected override ValueTask WaitForReplicationAsync(TransactionOperationContext context, ReplicationBatchOptions options, ChangeVector lastChangeVector)
     {
         // no-op
         // this is passed as a parameter when we execute transaction on each shard

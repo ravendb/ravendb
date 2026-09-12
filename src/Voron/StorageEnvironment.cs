@@ -174,6 +174,9 @@ namespace Voron
                 var remainingBits = _lastValidPageAfterLoad % (8 * sizeof(long));
 
                 _validPagesAfterLoad = new long[_lastValidPageAfterLoad / (8 * sizeof(long)) + (remainingBits == 0 ? 0 : 1)];
+                // Pad only the high bits of the last word that do not cover real pages.
+                // When the page count is a multiple of 64 the last word holds only real pages.
+                if (remainingBits != 0)
                 _validPagesAfterLoad[^1] |= unchecked(((long)ulong.MaxValue << (int)remainingBits));
 
                 options.InvokeOnDirectoryInitialize();
@@ -309,7 +312,7 @@ namespace Voron
             var txHeader = stackalloc TransactionHeader[1];
 
             Options.AddToInitLog?.Invoke(LogLevel.Debug, "Starting Recovery");
-            bool hadIntegrityIssues = _journal.RecoverDatabase(txHeader, out var lastJournalNumber, Options.AddToInitLog);
+            bool hadIntegrityIssues = _journal.RecoverDatabase(txHeader, Options.AddToInitLog, out var lastJournalNumber, out var skippedInvalidJournals);
             var successString = hadIntegrityIssues ? "(with integrity issues)" : "(successfully)";
             Options.AddToInitLog?.Invoke(LogLevel.Debug, $"Recovery Ended {successString}");
 
@@ -322,7 +325,14 @@ namespace Voron
 
             var fileHeader = _headerAccessor.CopyHeader();
             var nextPageNumber = (txHeader->TransactionId == 0 ? fileHeader.LastPageNumber : txHeader->LastPageNumber) + 1;
-            
+
+            if (skippedInvalidJournals)
+            {
+                Debug.Assert(Options.IgnoreInvalidJournalErrors == true, "Options.IgnoreInvalidJournalErrors == true");
+
+                nextPageNumber = Math.Max(nextPageNumber, _currentStateRecord.DataPagerState.NumberOfAllocatedPages);
+            }
+
             _currentStateRecord = _currentStateRecord with
             {
                 TransactionId = txHeader->TransactionId == 0 ? fileHeader.TransactionId : txHeader->TransactionId,
@@ -1042,11 +1052,14 @@ namespace Voron
             return generator.Generate(detailedReportInput);
         }
 
-        public unsafe Dictionary<long, string> GetPageOwners(Transaction tx, Func<PostingList, List<long>> onPostingList = null)
+        public unsafe Dictionary<long, string> GetPageOwners(Transaction tx, Func<PostingList, List<long>> onPostingList = null,
+            Dictionary<long, (string ClaimedTableName, byte TableType, long NumberOfPages, long SizeInBytes)> unownedOverflowPages = null)
         {
             var r = new Dictionary<long, string>();
+            var numberOfAllocatedPages = tx.LowLevelTransaction.DataPagerState.NumberOfAllocatedPages;
+            var sectionOwnerHashToTableName = new Dictionary<ulong, string>();
             RegisterPages(_freeSpaceHandling.AllPages(tx.LowLevelTransaction), "Freed Page");
-            for (long pageNumber = NextPageNumber; pageNumber < tx.LowLevelTransaction.DataPagerState.NumberOfAllocatedPages; pageNumber++)
+            for (long pageNumber = NextPageNumber; pageNumber < numberOfAllocatedPages; pageNumber++)
             {
                 r[pageNumber] = "Unused Page";
             }
@@ -1146,9 +1159,21 @@ namespace Voron
                                 var readResult = tableTree.Read(TableSchema.ActiveSectionSlice);
                                 long pageNumber = readResult.Reader.Read<long>();
                                 var activeDataSmallSection = new ActiveRawDataSmallSection(tx, pageNumber);
+                                sectionOwnerHashToTableName[activeDataSmallSection.SectionOwnerHash] = name;
                                 RegisterSectionPages(activeDataSmallSection, name + "/" + TableSchema.ActiveSectionSlice);
                                 RegisterTableSection(tableTree, name, TableSchema.ActiveCandidateSectionSlice);
                                 RegisterTableSection(tableTree, name, TableSchema.InactiveSectionSlice);
+
+                                // Large values (> RawDataSection.MaxItemSize) live on standalone overflow pages
+                                // that belong to no section and no page-set, so we register them explicitly here,
+                                var largeValueName = name + "/LargeValue";
+                                foreach (var largeValuePageNumber in table.GetAllLargeValuePageNumbers())
+                                {
+                                    var largeValuePage = tx.LowLevelTransaction.GetPage(largeValuePageNumber);
+                                    var numberOfLargeValuePages = Paging.GetNumberOfOverflowPages(largeValuePage.OverflowSize);
+                                    for (int p = 0; p < numberOfLargeValuePages; p++)
+                                        r.Add(largeValuePageNumber + p, largeValueName);
+                                }
                                 break;
                             case RootObjectType.Container:
                                 var container = tx.OpenContainer(currentKey);
@@ -1181,6 +1206,37 @@ namespace Voron
                                 throw new ArgumentOutOfRangeException(nameof(type), type.ToString());
                         }
                     } while (rootIterator.MoveNext());
+                }
+            }
+
+            if (unownedOverflowPages != null)
+            {
+                for (long pageNumber = 0; pageNumber < numberOfAllocatedPages; pageNumber++)
+                {
+                    if (r.ContainsKey(pageNumber))
+                        continue;
+
+                    var page = tx.LowLevelTransaction.GetPage(pageNumber);
+                    if (page.PageNumber != pageNumber ||
+                        page.IsOverflow == false ||
+                        (page.Flags & PageFlags.RawData) != PageFlags.RawData ||
+                        page.OverflowSize <= 0)
+                        continue;
+
+                    var header = (RawDataOverflowPageHeader*)page.Pointer;
+                    sectionOwnerHashToTableName.TryGetValue(header->SectionOwnerHash, out var claimedTableName);
+
+                    long numberOfPages = Paging.GetNumberOfOverflowPages(page.OverflowSize);
+                    long run = 1;
+                    while (run < numberOfPages &&
+                           pageNumber + run < numberOfAllocatedPages &&
+                           r.ContainsKey(pageNumber + run) is false)
+                    {
+                        run++;
+                    }
+
+                    unownedOverflowPages[pageNumber] = (claimedTableName, header->TableType, run, page.OverflowSize);
+                    pageNumber += run - 1;
                 }
             }
 

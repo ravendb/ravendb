@@ -114,7 +114,7 @@ namespace Sparrow.Binary
             int i = 0;
             for (; i + sizeof(ulong) <= lengthInBytes; i += sizeof(ulong))
             {
-                ulong l = *(ulong*)(Bits + i);
+                ulong l = Unsafe.ReadUnaligned<ulong>(Bits + i);
                 if (l != 0)
                     return ResolveIndex(i, l, Count);
             }

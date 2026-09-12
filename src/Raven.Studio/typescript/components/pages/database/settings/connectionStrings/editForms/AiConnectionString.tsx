@@ -5,6 +5,7 @@ import { Icon } from "components/common/Icon";
 import { ConnectionFormData, EditConnectionStringFormProps, AiConnection } from "../connectionStringsTypes";
 import { yupResolver } from "@hookform/resolvers/yup";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
+import ExcludedDatabasesFormSelect from "./shared/ExcludedDatabasesFormSelect";
 import { SelectOptionWithIcon, SingleValueWithIcon } from "components/common/select/Select";
 import RichAlert from "components/common/RichAlert";
 import OptionalLabel from "components/common/OptionalLabel";
@@ -16,7 +17,6 @@ import OpenAiSettings from "components/pages/database/settings/connectionStrings
 import EmbeddedSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/EmbeddedSettings";
 import MistralAiSettings from "./aiFields/MistralAiSettings";
 import VertexSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/VertexSettings";
-import { useAppUrls } from "components/hooks/useAppUrls";
 import TaskUtils from "components/utils/TaskUtils";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { connectionStringSelectors } from "../store/connectionStringsSlice";
@@ -45,6 +45,7 @@ export interface AiConnectionStringProps extends EditConnectionStringFormProps {
 
 export default function AiConnectionString({ initialConnection, isForNewConnection, onSave }: AiConnectionStringProps) {
     const usedNames = useAppSelector(connectionStringSelectors.connections)["Ai"].map((x) => x.name);
+    const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
 
     const form = useForm<FormData>({
         mode: "all",
@@ -63,8 +64,6 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
     });
 
     const { control, handleSubmit, setValue, watch } = form;
-
-    const { forCurrentDatabase } = useAppUrls();
 
     const formValues = useWatch({ control });
     const { connectorType, modelType } = formValues;
@@ -89,7 +88,7 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
         setValue("identifier", TaskUtils.getGeneratedIdentifier(formValues.name));
     };
 
-    const isUsedByAnyTask = !!initialConnection.usedByTasks?.length;
+    const isUsedByAnyTask = !!initialConnection.usedBy?.length;
 
     const handleSave: SubmitHandler<FormData> = (formData: FormData) => {
         onSave({
@@ -184,10 +183,14 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                     </RichAlert>
                 )}
 
-                <ConnectionStringUsedByTasks
-                    tasks={initialConnection.usedByTasks}
-                    urlProvider={forCurrentDatabase.editEmbeddingsGeneration}
-                />
+                <ConnectionStringUsedByTasks tasks={initialConnection.usedBy} connectionType={initialConnection.type} />
+                {isServerWide && (
+                    <ExcludedDatabasesFormSelect
+                        control={control}
+                        name="excludedDatabases"
+                        usedBy={initialConnection.usedBy}
+                    />
+                )}
             </Form>
         </FormProvider>
     );

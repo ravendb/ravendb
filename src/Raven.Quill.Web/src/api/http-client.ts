@@ -1,0 +1,286 @@
+export type ApiRequestOptions = Omit<RequestInit, "body"> & {
+    body?: unknown;
+    responseType?: ApiResponseType;
+    searchParams?: Record<string, boolean | number | string | undefined>;
+};
+
+export type ApiResponseType = "arrayBuffer" | "auto" | "blob" | "json" | "response" | "text" | "void";
+
+export type ApiTransport = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+
+export type ApiClientOptions = {
+    baseUrl?: string;
+    transport?: ApiTransport;
+};
+
+export class ApiError<TDetails = unknown> extends Error {
+    readonly status: number;
+    readonly details: TDetails | undefined;
+
+    constructor(message: string, status: number, details: TDetails | undefined) {
+        super(message);
+        this.name = "ApiError";
+        this.status = status;
+        this.details = details;
+    }
+}
+
+export function isApiError<TDetails = unknown>(error: unknown): error is ApiError<TDetails> {
+    return error instanceof ApiError;
+}
+
+export function createApiClient({ baseUrl = "/api", transport = fetch }: ApiClientOptions = {}) {
+    const normalizedBaseUrl = baseUrl.replace(/\/+$/, "");
+
+    async function request<TResponse, TError = unknown>(
+        path: string,
+        { body, headers, responseType = "auto", searchParams, ...init }: ApiRequestOptions = {},
+    ): Promise<TResponse> {
+        const url = createUrl(normalizedBaseUrl, path, searchParams);
+        const requestHeaders = new Headers(headers);
+        const { contentType, serializedBody } = serializeRequestBody(body);
+
+        if (contentType && !requestHeaders.has("Content-Type")) {
+            requestHeaders.set("Content-Type", contentType);
+        }
+
+        const requestInit: RequestInit = {
+            credentials: "same-origin",
+            ...init,
+            headers: requestHeaders,
+        };
+
+        if (serializedBody !== undefined) {
+            requestInit.body = serializedBody;
+        }
+
+        const response = await transport(url, requestInit);
+
+        if (!response.ok) {
+            throw await createApiError<TError>(response);
+        }
+
+        return await parseResponse<TResponse>(response, responseType, init.method);
+    }
+
+    return {
+        delete: <TResponse, TError = unknown>(path: string, options?: ApiRequestOptions) =>
+            request<TResponse, TError>(path, { ...options, method: "DELETE" }),
+        get: <TResponse, TError = unknown>(path: string, options?: ApiRequestOptions) =>
+            request<TResponse, TError>(path, { ...options, method: "GET" }),
+        patch: <TResponse, TError = unknown>(path: string, body?: unknown, options?: ApiRequestOptions) =>
+            request<TResponse, TError>(path, { ...options, body, method: "PATCH" }),
+        post: <TResponse, TError = unknown>(path: string, body?: unknown, options?: ApiRequestOptions) =>
+            request<TResponse, TError>(path, { ...options, body, method: "POST" }),
+        put: <TResponse, TError = unknown>(path: string, body?: unknown, options?: ApiRequestOptions) =>
+            request<TResponse, TError>(path, { ...options, body, method: "PUT" }),
+    };
+}
+
+export type ApiClient = ReturnType<typeof createApiClient>;
+
+async function createApiError<TDetails>(response: Response) {
+    const details = await readErrorDetails<TDetails>(response);
+    const message = getErrorMessage(details) ?? `Request failed with ${response.status}`;
+
+    return new ApiError<TDetails>(message, response.status, details);
+}
+
+function getErrorMessage(details: unknown) {
+    if (typeof details !== "object" || details === null) {
+        return undefined;
+    }
+
+    if ("message" in details && typeof details.message === "string") {
+        return details.message;
+    }
+
+    if ("detail" in details && typeof details.detail === "string") {
+        return details.detail;
+    }
+
+    if ("error" in details && typeof details.error === "string") {
+        return details.error;
+    }
+
+    if ("errors" in details && Array.isArray(details.errors)) {
+        const messages = details.errors.filter((error): error is string => typeof error === "string");
+
+        if (messages.length > 0) {
+            return messages.join("\n");
+        }
+    }
+
+    return undefined;
+}
+
+async function readErrorDetails<TDetails>(response: Response): Promise<TDetails | undefined> {
+    if (isEmptyResponse(response)) {
+        return undefined;
+    }
+
+    const contentType = response.headers.get("Content-Type") ?? "";
+    const rawBody = await response.text();
+
+    if (rawBody === "") {
+        return undefined;
+    }
+
+    if (!contentType.includes("application/json")) {
+        return rawBody as TDetails;
+    }
+
+    try {
+        return JSON.parse(rawBody) as TDetails;
+    } catch (parseError) {
+        return {
+            parseError,
+            rawBody,
+        } as TDetails;
+    }
+}
+
+function createUrl(baseUrl: string, path: string, searchParams?: ApiRequestOptions["searchParams"]) {
+    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+    const url = `${baseUrl}${normalizedPath}`;
+
+    if (!searchParams) {
+        return url;
+    }
+
+    const [urlWithoutHash = url, hash = ""] = url.split("#", 2);
+    const querySeparator = urlWithoutHash.includes("?") ? "&" : "?";
+    const query = new URLSearchParams();
+
+    for (const [key, value] of Object.entries(searchParams)) {
+        if (value !== undefined) {
+            query.set(key, String(value));
+        }
+    }
+
+    const queryString = query.toString();
+
+    if (!queryString) {
+        return url;
+    }
+
+    const hashSuffix = hash ? `#${hash}` : "";
+
+    return `${urlWithoutHash}${querySeparator}${queryString}${hashSuffix}`;
+}
+
+function serializeRequestBody(body: unknown) {
+    if (body === undefined) {
+        return {
+            contentType: undefined,
+            serializedBody: undefined,
+        };
+    }
+
+    if (body === null) {
+        return {
+            contentType: "application/json",
+            serializedBody: "null",
+        };
+    }
+
+    if (typeof body === "string") {
+        return {
+            contentType: undefined,
+            serializedBody: body,
+        };
+    }
+
+    if (isBodyInit(body)) {
+        return {
+            contentType: undefined,
+            serializedBody: body,
+        };
+    }
+
+    return {
+        contentType: "application/json",
+        serializedBody: JSON.stringify(body),
+    };
+}
+
+function isBodyInit(value: unknown): value is BodyInit {
+    if (value instanceof ArrayBuffer || ArrayBuffer.isView(value)) {
+        return true;
+    }
+
+    if (typeof Blob !== "undefined" && value instanceof Blob) {
+        return true;
+    }
+
+    if (typeof FormData !== "undefined" && value instanceof FormData) {
+        return true;
+    }
+
+    if (typeof ReadableStream !== "undefined" && value instanceof ReadableStream) {
+        return true;
+    }
+
+    if (typeof URLSearchParams !== "undefined" && value instanceof URLSearchParams) {
+        return true;
+    }
+
+    return false;
+}
+
+function isEmptyResponse(response: Response, method?: string) {
+    return (
+        method?.toUpperCase() === "HEAD" ||
+        response.status === 204 ||
+        response.status === 205 ||
+        response.body === null ||
+        response.headers.get("Content-Length") === "0"
+    );
+}
+
+async function parseResponse<TResponse>(
+    response: Response,
+    responseType: ApiResponseType,
+    method?: string,
+): Promise<TResponse> {
+    if (responseType === "response") {
+        return response as TResponse;
+    }
+
+    if (responseType === "void" || isEmptyResponse(response, method)) {
+        return undefined as TResponse;
+    }
+
+    if (responseType === "arrayBuffer") {
+        return (await response.arrayBuffer()) as TResponse;
+    }
+
+    if (responseType === "blob") {
+        return (await response.blob()) as TResponse;
+    }
+
+    if (responseType === "json") {
+        return (await response.json()) as TResponse;
+    }
+
+    if (responseType === "text") {
+        return (await response.text()) as TResponse;
+    }
+
+    const contentType = response.headers.get("Content-Type") ?? "";
+
+    if (contentType.includes("application/json")) {
+        return (await response.json()) as TResponse;
+    }
+
+    if (contentType.startsWith("text/")) {
+        return (await response.text()) as TResponse;
+    }
+
+    if (!contentType) {
+        const text = await response.text();
+        return (text === "" ? undefined : text) as TResponse;
+    }
+
+    return (await response.blob()) as TResponse;
+}

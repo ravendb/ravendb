@@ -4,6 +4,7 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -50,6 +51,19 @@ public partial class ShardedDatabaseContext
         {
             tag = null;
             error = null;
+            return OngoingTaskConnectionStatus.None;
+        }
+
+        protected override OngoingTaskConnectionStatus GetCdcSinkTaskConnectionStatus(DatabaseRecord record, CdcSinkConfiguration config,
+            out string tag, out string error, out DateTime? lastBatchTime, out string lastCheckpoint,
+            out DateTime? lastActivityTime, out string healthIssue)
+        {
+            tag = null;
+            error = null;
+            lastBatchTime = null;
+            lastCheckpoint = null;
+            lastActivityTime = null;
+            healthIssue = null;
             return OngoingTaskConnectionStatus.None;
         }
 

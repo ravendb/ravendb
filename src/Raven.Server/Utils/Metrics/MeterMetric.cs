@@ -28,7 +28,17 @@ namespace Raven.Server.Utils.Metrics
 
         // Ring-buffer of aggregated quanta. Each bucket carries its quantum start timestamp so readers can
         // distinguish fresh from wrapped/stale data without scanning or zeroing the whole array.
-        private readonly Bucket[] _buckets = new Bucket[BucketCount];
+        private Bucket[] _buckets;
+
+        private Bucket[] EnsureBuckets()
+        {
+            // Lazy Create
+            if (_buckets is not null)
+                return _buckets;
+
+            var created = new Bucket[BucketCount];
+            return Interlocked.CompareExchange(ref _buckets, created, null) ?? created;
+        }
 
         private long _count;
         private readonly long _startTime;
@@ -122,9 +132,10 @@ namespace Raven.Server.Utils.Metrics
             var bucketSeconds = BucketDurationNanoseconds / (double)Clock.NanosecondsInSecond;
 
             var buckets = new List<(long Start, double Rate)>();
-            for (int i = 0; i < BucketCount; i++)
+            var ring = _buckets;
+            for (int i = 0; ring != null && i < BucketCount; i++)
             {
-                ref var bucket = ref _buckets[i];
+                ref var bucket = ref ring[i];
                 var start = Volatile.Read(ref bucket.Start);
                 if (start == 0)
                     continue;
@@ -162,11 +173,13 @@ namespace Raven.Server.Utils.Metrics
         // This ensures no thread observes half-initialized state. The loop runs only at quantum boundaries.
         private void AddToBucket(long timestamp, long value, long duration)
         {
+            var buckets = EnsureBuckets();
+
             var quantum = timestamp / BucketDurationNanoseconds;
             var bucketStart = quantum * BucketDurationNanoseconds;
             var index = (int)(quantum % BucketCount);
 
-            ref var bucket = ref _buckets[index];
+            ref var bucket = ref buckets[index];
 
             const long ClaimedStart = -1; // sentinel: bucket claimed for reinitialization
 
@@ -243,16 +256,20 @@ namespace Raven.Server.Utils.Metrics
 
         private long Accumulate(long windowNs, out long totalDuration, out long bucketsExamined)
         {
+            totalDuration = 0L;
+            bucketsExamined = 0L;
+
+            var buckets = _buckets;
+            if (buckets == null)
+                return 0L; // lazy buffer not allocated => no samples recorded yet
+
             var now = _now();
             var lowerBound = now - windowNs;
 
             var total = 0L;
-            totalDuration = 0L;
-            bucketsExamined = 0L;
-
             for (int i = 0; i < BucketCount; i++)
             {
-                ref var bucket = ref _buckets[i];
+                ref var bucket = ref buckets[i];
                 // Skip buckets that were never initialised or fully pre-date the window. Only buckets whose
                 // quantum overlaps the requested range contribute to the final aggregates.
                 var start = Volatile.Read(ref bucket.Start);

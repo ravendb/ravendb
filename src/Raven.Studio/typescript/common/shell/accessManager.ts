@@ -212,7 +212,12 @@ class accessManager {
             return null;
         }
 
-        return accessManager.databasesAccess[DatabaseUtils.default.shardGroupKey(name)];
+        const groupKey = DatabaseUtils.default.shardGroupKey(name);
+        const matchingName = Object.keys(accessManager.databasesAccess).find((x) =>
+            DatabaseUtils.default.namesEqualIgnoreCase(x, groupKey)
+        );
+
+        return matchingName != null ? accessManager.databasesAccess[matchingName] : undefined;
     }
 
 }

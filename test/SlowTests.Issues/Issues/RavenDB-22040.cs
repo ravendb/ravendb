@@ -42,8 +42,8 @@ public class RavenDB_22040 : ReplicationTestBase
             await Indexes.WaitForIndexingAsync(store);
         }
 
-        t1.Mend();
-        t2.Mend();
+        await t1.MendAsync();
+        await t2.MendAsync();
 
         await WaitForDocumentInClusterAsync<Order>(cluster.Nodes, database, order1.Id, predicate: null, defaultTimeout);
 
@@ -63,8 +63,8 @@ public class RavenDB_22040 : ReplicationTestBase
             await session.SaveChangesAsync();
         }
 
-        t1.Mend();
-        t2.Mend();
+        await t1.MendAsync();
+        await t2.MendAsync();
 
         await WaitForDocumentInClusterAsync<Employee>(cluster.Nodes, database, markerDocument.Id, null, defaultTimeout);
         await Indexes.WaitForIndexingAsync(store, database, timeout: defaultTimeout, nodeTag: "A");

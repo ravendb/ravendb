@@ -10,7 +10,8 @@ import { SharedStubs } from "test/stubs/SharedStubs";
 import ReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.ReplicationTaskProgress;
 import InternalReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.InternalReplicationTaskProgress;
 import { mockJQueryError } from "test/mocks/utils";
-import EtlErrors = Raven.Server.Documents.ETL.Stats.TaskErrors;
+import { ServerWideConnectionStringDto } from "components/pages/database/settings/connectionStrings/store/connectionStringsMapsFromDto";
+import TaskErrors = Raven.Server.Documents.TasksErrors.TaskErrors;
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
 
 export default class MockTasksService extends AutoMockService<TasksService> {
@@ -20,6 +21,20 @@ export default class MockTasksService extends AutoMockService<TasksService> {
 
     withGetTasks(dto?: MockedValue<OngoingTasksResult>) {
         return this.mockResolvedValue(this.mocks.getOngoingTasks, dto, TasksStubs.getTasksList());
+    }
+
+    withGetTasksPerLocation(
+        customize: (dto: OngoingTasksResult, location: databaseLocationSpecifier) => void,
+        shouldThrow?: (location: databaseLocationSpecifier) => boolean
+    ) {
+        return this.mocks.getOngoingTasks.mockImplementation(async (db, location) => {
+            if (shouldThrow?.(location)) {
+                throw mockJQueryError("This is error message");
+            }
+            const dto = TasksStubs.getTasksList();
+            customize(dto, location);
+            return dto;
+        });
     }
 
     withThrowingGetTasks(
@@ -66,6 +81,10 @@ export default class MockTasksService extends AutoMockService<TasksService> {
         return this.mockResolvedValue(this.mocks.getSubscriptionTaskInfo, dto, TasksStubs.getSubscription());
     }
 
+    withGetCdcSinkTaskInfo(dto?: MockedValue<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskCdcSink>) {
+        return this.mockResolvedValue(this.mocks.getCdcSinkTaskInfo, dto, TasksStubs.getCdcSink());
+    }
+
     withGetSubscriptionConnectionDetails(
         dto?: MockedValue<Raven.Server.Documents.TcpHandlers.SubscriptionConnectionsDetails>
     ) {
@@ -88,6 +107,12 @@ export default class MockTasksService extends AutoMockService<TasksService> {
         return this.mockResolvedValue(this.mocks.getConnectionStrings, dto, DatabasesStubs.connectionStrings());
     }
 
+    withServerWideConnectionStrings(dto?: MockedValue<{ Results: ServerWideConnectionStringDto[] }>) {
+        return this.mockResolvedValue(this.mocks.getServerWideConnectionStrings, dto, {
+            Results: DatabasesStubs.serverWideConnectionStrings(),
+        });
+    }
+
     withTestClusterNodeConnection(dto?: Raven.Server.Web.System.NodeConnectionTestResult) {
         return this.mockResolvedValue(
             this.mocks.testClusterNodeConnection,
@@ -102,6 +127,14 @@ export default class MockTasksService extends AutoMockService<TasksService> {
             dto,
             SharedStubs.nodeConnectionTestSuccessResult()
         );
+    }
+
+    withTestCdcSink(dto?: Raven.Client.Documents.Operations.CdcSink.Test.TestCdcSinkMappingResult) {
+        return this.mockResolvedValue(this.mocks.testCdcSink, dto, TasksStubs.testCdcSink());
+    }
+
+    withGetCdcSinkTaskSchema(dto?: MockedValue<Raven.Client.Documents.Operations.CdcSink.Schema.CdcSinkSourceSchema>) {
+        return this.mockResolvedValue(this.mocks.getCdcSinkTaskSchema, dto, TasksStubs.cdcSinkTaskSchema());
     }
 
     withTestSnowflakeConnectionString(dto?: Raven.Server.Web.System.NodeConnectionTestResult) {
@@ -168,11 +201,11 @@ export default class MockTasksService extends AutoMockService<TasksService> {
         return this.mockResolvedValue(this.mocks.getLocalFolderPathOptions, dto, TasksStubs.localFolderPathOptions());
     }
 
-    withTestAiConnectionString(dto?: Raven.Server.Web.System.NodeConnectionTestResult) {
+    withTestAiConnectionString(dto?: Raven.Server.Documents.AI.AiConnectionTestResult) {
         return this.mockResolvedValue(
             this.mocks.testAiConnectionString,
             dto,
-            SharedStubs.nodeConnectionTestSuccessResult()
+            SharedStubs.aiConnectionTestSuccessResult()
         );
     }
 
@@ -196,8 +229,8 @@ export default class MockTasksService extends AutoMockService<TasksService> {
         return this.mockResolvedValue(this.mocks.getAiModels, dto, SharedStubs.aiModels());
     }
 
-    withEtlErrors(dto?: MockedValue<EtlErrors[]>) {
-        return this.mockResolvedValue(this.mocks.getEtlErrors, dto, TasksStubs.etlErrors());
+    withTaskErrors(dto?: MockedValue<TaskErrors[]>) {
+        return this.mockResolvedValue(this.mocks.getTaskErrors, dto, TasksStubs.taskErrors());
     }
 
     withEtlStats(dto?: MockedValue<EtlTaskStats[]>) {

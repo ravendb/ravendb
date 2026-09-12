@@ -18,7 +18,6 @@ export default function Chatbot() {
         initialWidth: 400,
         minWidth: 400,
         maxWidth: 600,
-        isSkipChatbot: true,
     });
 
     useEffect(() => {

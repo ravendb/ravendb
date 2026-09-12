@@ -29,7 +29,7 @@ public sealed class UploaderSettings
     public string TaskName;
 
     public BackupType? BackupType;
-    public Action OnBackupException;
+    public Action<Action> RegisterOnBackupException;
     internal BackupConfiguration.BackupDestination Destination;
     public static UploaderSettings GenerateUploaderSettingsForOlap(DocumentDatabase database, string taskName, S3Settings s3Settings, AzureSettings azureSettings, GlacierSettings glacierSettings, GoogleCloudSettings googleCloudSettings, FtpSettings ftpSettings)
     {
@@ -68,7 +68,7 @@ public sealed class UploaderSettings
     }
 
     public static UploaderSettings GenerateUploaderSettingsForBackup(DocumentDatabase database, BackupConfiguration configuration, string taskName, bool isServerWide, bool backupToLocalFolder,
-        Action backupException)
+        Action<Action> registerOnBackupException)
     {
         var destination = BackupConfigurationHelper.GetBackupDestinationForDirectUpload(backupToLocalFolder, configuration, database.Configuration.Backup);
         return new UploaderSettings(database.Configuration.Backup)
@@ -87,7 +87,7 @@ public sealed class UploaderSettings
             TaskName = taskName,
             BackupType = configuration.BackupType,
             Destination = destination,
-            OnBackupException = backupException
+            RegisterOnBackupException = registerOnBackupException
         };
     }
 }

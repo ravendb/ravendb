@@ -38,6 +38,12 @@ export default class DatabaseUtils {
         return DatabaseUtils.isSharded(name) ? name.split("$")[0] : name;
     }
 
+    // Database names are case-insensitive, e.g. a certificate may define permissions
+    // with different letter casing than the actual database name
+    static namesEqualIgnoreCase(name1: string, name2: string) {
+        return name1 != null && name2 != null && name1.toLowerCase() === name2.toLowerCase();
+    }
+
     static shardNumber(name: string): number {
         if (name.includes("$")) {
             return parseInt(name.split("$")[1], 10);

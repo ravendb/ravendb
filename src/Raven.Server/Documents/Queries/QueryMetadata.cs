@@ -152,7 +152,7 @@ function __actual_func(args) {
             }
 
             stringBuilder.Append("  return ");
-            queryVisitor.VisitExpression(query.Filter);
+            queryVisitor.VisitExpression(JavascriptCodeQueryVisitor.HandleMetadataNullComparison(query.Filter));
 
             stringBuilder.Append(@";
 
@@ -2957,6 +2957,19 @@ function execute(doc, args){
             return sb.ToString();
         }
         
+        internal string GetVectorSourceFieldName(string fieldName, MethodExpression vectorExpression, BlittableJsonReaderObject parameters)
+        {
+            if(IsDynamic == false)
+                return fieldName;
+                
+            // For "where vector.search(embedding.text(Name, ai.task('tasks/1')), $q)" this returns "Name",
+            // whereas GetVectorFieldName returns "vector.search(embedding.text(Name,ai.task('tasks/1')))".
+            if (vectorExpression.Arguments.Count > 0 && vectorExpression.Arguments[0] is MethodExpression innerExpression)
+                return ExtractFieldNameFromArgument(innerExpression.Arguments[0], withoutAlias: true, innerExpression.Name.Value, parameters, QueryText).Value;
+
+            return ExtractFieldNameFromArgument(vectorExpression.Arguments[0], withoutAlias: true, vectorExpression.Name.Value, parameters, QueryText).Value;
+        }
+
         internal string GetSpatialFieldName(MethodExpression spatialExpression, BlittableJsonReaderObject parameters)
         {
             var sb = new StringBuilder();
@@ -3154,7 +3167,7 @@ function execute(doc, args){
             Acornima.Parser parser = new(new ParserOptions
             {
                 AllowReturnOutsideFunction = true,
-                OnNode = (node, context) => validator.Visit(node),
+                OnNode = (node, in _) => validator.Visit(node),
                 Tolerant = true
             });
             Script script = parser.ParseScript("return " + Query.SelectFunctionBody.FunctionText);

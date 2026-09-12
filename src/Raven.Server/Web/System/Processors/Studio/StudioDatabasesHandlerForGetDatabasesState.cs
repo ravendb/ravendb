@@ -22,6 +22,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server.Logging;
+using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Web.System.Processors.Studio;
 

@@ -57,7 +57,7 @@ public partial class Hnsw
             _alreadySeen = new (searchState.Llt.Allocator);
             _postingListResults = new(_searchState.Llt.Allocator);
             _pforDecoder = new(searchState.Llt.Allocator);
-            _maximumDistance = searchState.MinimumSimilarityToDistance(minimumSimilarity);
+            _maximumDistance = MinimumSimilarityToDistance(searchState.Options.SimilarityMethod, searchState.Options.VectorSizeBytes, minimumSimilarity);
             _vectorsSearcher.MoveNextBatch(); // prime the first batch
         }
         

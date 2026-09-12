@@ -1,11 +1,11 @@
 ﻿import {
     RichPanel,
-    RichPanelHeader,
-    RichPanelInfo,
-    RichPanelName,
     RichPanelActions,
     RichPanelDetailItem,
     RichPanelDetails,
+    RichPanelHeader,
+    RichPanelInfo,
+    RichPanelName,
 } from "components/common/RichPanel";
 import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
@@ -15,33 +15,46 @@ import { useAppSelector } from "components/store";
 import { useAsyncCallback } from "react-async-hook";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useServices } from "components/hooks/useServices";
-import { connectionStringsActions } from "./store/connectionStringsSlice";
+import { connectionStringsActions, connectionStringSelectors } from "./store/connectionStringsSlice";
 import { useDispatch } from "react-redux";
 import useConfirm from "components/common/ConfirmDialog";
-import useUniqueId from "components/hooks/useUniqueId";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import copyToClipboard from "common/copyToClipboard";
+import { useAppUrls } from "components/hooks/useAppUrls";
+import { serverWideConnectionStringPrefix, getServerWideShortName } from "./connectionStringsUtils";
+import { getAccessRequiredMessage } from "components/utils/accessUtils";
 
 interface ConnectionStringsPanelProps {
     connection: Connection;
 }
 
-export default function ConnectionStringsPanel(props: ConnectionStringsPanelProps) {
-    const { connection } = props;
+export default function ConnectionStringsPanel({ connection }: ConnectionStringsPanelProps) {
+    const { appUrl } = useAppUrls();
+    const viewContext = useAppSelector(connectionStringSelectors.viewContext);
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
+    const hasOperatorAccess = useAppSelector(accessManagerSelectors.isOperatorOrAbove);
+
+    const isServerWide = viewContext === "serverWideConnectionStrings";
+
+    const hasWriteAccess = isServerWide ? hasOperatorAccess : hasDatabaseAdminAccess;
 
     const confirm = useConfirm();
     const dispatch = useDispatch();
     const { tasksService } = useServices();
 
-    const deleteButtonId = useUniqueId("delete");
-    const isDeleteDisabled = connection.usedByTasks?.length > 0;
+    const isInheritedFromServerWide = !isServerWide && connection.name?.startsWith(serverWideConnectionStringPrefix);
 
-    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
+    const isDeleteDisabled = connection.usedBy?.length > 0 || isInheritedFromServerWide || !hasWriteAccess;
+    const isEditDisabled = isInheritedFromServerWide || !hasWriteAccess;
 
     const asyncDelete = useAsyncCallback(async () => {
-        await tasksService.deleteConnectionString(databaseName, getDtoEtlType(connection.type), connection.name);
+        if (isServerWide) {
+            await tasksService.deleteServerWideConnectionString(getDtoEtlType(connection.type), connection.name);
+        } else {
+            await tasksService.deleteConnectionString(databaseName, getDtoEtlType(connection.type), connection.name);
+        }
         dispatch(connectionStringsActions.connectionDeleted(connection));
     });
 
@@ -69,34 +82,75 @@ export default function ConnectionStringsPanel(props: ConnectionStringsPanelProp
                     <RichPanelInfo>
                         <RichPanelName>{connection.name}</RichPanelName>
                     </RichPanelInfo>
-                    {hasDatabaseAdminAccess && (
-                        <RichPanelActions>
+                    <RichPanelActions>
+                        <ConditionalPopover
+                            conditions={[
+                                {
+                                    isActive: !hasWriteAccess,
+                                    message: getAccessRequiredMessage(isServerWide ? "Operator" : "DatabaseAdmin"),
+                                },
+                                {
+                                    isActive: isInheritedFromServerWide,
+                                    message: (
+                                        <>
+                                            This connection string is managed server-wide. To edit or delete it, go to{" "}
+                                            <a
+                                                href={appUrl.forServerWideConnectionStrings(
+                                                    connection.type,
+                                                    getServerWideShortName(connection.name)
+                                                )}
+                                            >
+                                                Server-Wide Connection Strings
+                                            </a>
+                                            .
+                                        </>
+                                    ),
+                                },
+                            ]}
+                        >
                             <Button
                                 variant="secondary"
                                 title="Edit connection string"
                                 onClick={() => dispatch(connectionStringsActions.editConnectionModalOpened(connection))}
+                                disabled={isEditDisabled}
                             >
                                 <Icon icon="edit" margin="m-0" />
                             </Button>
-                            <ConditionalPopover
-                                conditions={{
-                                    isActive: isDeleteDisabled,
+                        </ConditionalPopover>
+                        <ConditionalPopover
+                            conditions={[
+                                {
+                                    isActive: !hasWriteAccess,
+                                    message: getAccessRequiredMessage(isServerWide ? "Operator" : "DatabaseAdmin"),
+                                },
+                                {
+                                    isActive: isInheritedFromServerWide,
+                                    message: (
+                                        <>
+                                            This connection string is managed server-wide. To edit or delete it, go to{" "}
+                                            <a href={appUrl.forServerWideConnectionStrings()}>
+                                                Server-Wide Connection Strings
+                                            </a>
+                                            .
+                                        </>
+                                    ),
+                                },
+                                {
+                                    isActive: connection.usedBy?.length > 0,
                                     message: "Connection string is being used by an ongoing task",
-                                }}
-                            >
-                                <div id={deleteButtonId}>
-                                    <ButtonWithSpinner
-                                        variant="danger"
-                                        title="Delete connection string"
-                                        disabled={isDeleteDisabled}
-                                        onClick={onDelete}
-                                        icon="trash"
-                                        isSpinning={asyncDelete.loading}
-                                    />
-                                </div>
-                            </ConditionalPopover>
-                        </RichPanelActions>
-                    )}
+                                },
+                            ]}
+                        >
+                            <ButtonWithSpinner
+                                variant="danger"
+                                title="Delete connection string"
+                                disabled={isDeleteDisabled}
+                                onClick={onDelete}
+                                icon="trash"
+                                isSpinning={asyncDelete.loading}
+                            />
+                        </ConditionalPopover>
+                    </RichPanelActions>
                 </RichPanelHeader>
 
                 {"identifier" in connection && (

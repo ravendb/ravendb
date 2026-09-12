@@ -15,8 +15,9 @@ export default function IndexErrors() {
     return (
         <Row className="content-margin">
             <Col>
-                <div className="flex-shrink-0 hstack gap-2 align-items-start">
+                <div className="flex-shrink-0 hstack gap-2 align-items-start justify-content-between">
                     <AboutViewHeading icon="index-errors" title="Index Errors" />
+                    <IndexErrorsAboutView />
                 </div>
                 <IndexErrorsActions
                     refresh={asyncFetchAllErrorCount.execute}
@@ -34,9 +35,6 @@ export default function IndexErrors() {
                         table={indexErrorsPanelTable}
                     />
                 ))}
-            </Col>
-            <Col sm={12} lg={4}>
-                <IndexErrorsAboutView />
             </Col>
         </Row>
     );

@@ -282,6 +282,8 @@ public unsafe partial class Pager : IDisposable
     public byte* AcquirePagePointerWithOverflowHandling(State state, ref PagerTransactionState txState, long pageNumber)
     {
         var pageHeader = (PageHeader*)AcquirePagePointer(state, ref txState, pageNumber);
+        ThrowIfOverflowExtentExceedsAllocatedPages(state, pageNumber, pageHeader);
+
         if (_functions.EnsureMapped == null) 
             return (byte*)pageHeader;
 
@@ -306,6 +308,8 @@ public unsafe partial class Pager : IDisposable
     public byte* AcquireRawPagePointerWithOverflowHandling(State state, ref PagerTransactionState txState, long pageNumber)
     {
         var pageHeader = (PageHeader*)AcquireRawPagePointer(state, ref txState, pageNumber);
+        ThrowIfOverflowExtentExceedsAllocatedPages(state, pageNumber, pageHeader);
+
         if (_functions.EnsureMapped == null)
             return (byte*)pageHeader;
 
@@ -338,6 +342,28 @@ public unsafe partial class Pager : IDisposable
         VoronUnrecoverableErrorException.Raise(Options,
             "The page " + pageNumber + " was not allocated, allocated pages: " + state.NumberOfAllocatedPages + " in " + FileName);
         return null; // never hit
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void ThrowIfOverflowExtentExceedsAllocatedPages(State state, long pageNumber, PageHeader* pageHeader)
+    {
+        // OverflowSize is only defined on overflow pages, other page types hold their own fields at that offset
+        if ((pageHeader->Flags & PageFlags.Overflow) != PageFlags.Overflow)
+            return;
+
+        // the persisted size is untrusted, its extent must fit the allocated file
+        int overflowSize = pageHeader->OverflowSize;
+        if (overflowSize < 0 || pageNumber + Paging.GetNumberOfOverflowPages(overflowSize) > state.NumberOfAllocatedPages)
+            ThrowOverflowExtentExceedsAllocatedPages(state, pageNumber, overflowSize);
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private void ThrowOverflowExtentExceedsAllocatedPages(State state, long pageNumber, int overflowSize)
+    {
+        VoronUnrecoverableErrorException.Raise(Options,
+            "The overflow page " + pageNumber + " has an invalid overflow size of " + overflowSize +
+            " bytes, spanning " + Paging.GetNumberOfOverflowPages(overflowSize) + " pages, but only " +
+            state.NumberOfAllocatedPages + " pages are allocated in " + FileName);
     }
 
     public byte* AcquireRawPagePointer(State state, ref PagerTransactionState txState, long pageNumber)
@@ -679,5 +705,10 @@ public unsafe partial class Pager : IDisposable
             PalHelper.ThrowLastError(rc, errorCode, "Failed to get file size for " + state.Pager.FileName);
 
         return (totalSize, physicalSize);
+    }
+
+    public override string ToString()
+    {
+        return FileName;
     }
 }

@@ -8,30 +8,39 @@ export const connectionStringsUpdateUrlMiddleware = createListenerMiddleware();
 connectionStringsUpdateUrlMiddleware.startListening({
     actionCreator: connectionStringsActions.editConnectionModalOpened,
     effect: (action) => {
-        if (!getIsConnectionStringsPage()) {
+        if (getIsServerWideConnectionStringsPage()) {
+            const url = appUrl.forServerWideConnectionStrings(action.payload.type, action.payload.name);
+            history.pushState(null, null, url);
             return;
         }
 
-        const url = appUrl.forConnectionStrings(
-            activeDatabase.default.database(),
-            action.payload.type,
-            action.payload.name
-        );
-
-        history.pushState(null, null, url);
+        if (getIsConnectionStringsPage()) {
+            const url = appUrl.forConnectionStrings(
+                activeDatabase.default.database(),
+                action.payload.type,
+                action.payload.name
+            );
+            history.pushState(null, null, url);
+        }
     },
 });
 
 connectionStringsUpdateUrlMiddleware.startListening({
     actionCreator: connectionStringsActions.editConnectionModalClosed,
     effect: () => {
-        if (!getIsConnectionStringsPage()) {
+        if (getIsServerWideConnectionStringsPage()) {
+            const url = appUrl.forServerWideConnectionStrings();
+            history.pushState(null, null, url);
             return;
         }
 
-        const url = appUrl.forCurrentDatabase().connectionStrings();
-        history.pushState(null, null, url);
+        if (getIsConnectionStringsPage()) {
+            const url = appUrl.forCurrentDatabase().connectionStrings();
+            history.pushState(null, null, url);
+        }
     },
 });
 
 const getIsConnectionStringsPage = () => window.location.href.includes("settings/connectionStrings");
+const getIsServerWideConnectionStringsPage = () =>
+    window.location.href.includes("settings/serverWideConnectionStrings");

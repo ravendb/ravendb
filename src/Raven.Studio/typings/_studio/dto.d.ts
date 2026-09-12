@@ -408,6 +408,7 @@ declare module studio.settings {
     type numberFormatting = "raw" | "formatted";
     type dontShowAgain = "UnsupportedBrowser";
     type saveLocation = "local" | "remote";
+    type ongoingTaskDisplayMode = "expanded" | "compact";
 }
 
 interface IndexingPerformanceStatsWithCache extends Raven.Client.Documents.Indexes.IndexingPerformanceStats {
@@ -425,7 +426,7 @@ interface IOMetricsRecentStatsWithCache extends Raven.Server.Utils.IoMetrics.IOM
 
 type subscriptionType =  "SubscriptionConnection" | "SubscriptionBatch" | "AggregatedBatchesInfo";
 
-type ongoingTaskStatType = Raven.Server.Documents.Replication.Stats.LiveReplicationPerformanceCollector.ReplicationPerformanceType | StudioEtlType | subscriptionType | StudioQueueSinkType;
+type ongoingTaskStatType = Raven.Server.Documents.Replication.Stats.LiveReplicationPerformanceCollector.ReplicationPerformanceType | StudioEtlType | subscriptionType | StudioQueueSinkType | "CdcSink";
 
 interface ReplicationPerformanceBaseCache {
     StartedAsDate: Date;
@@ -455,6 +456,15 @@ interface QueueSinkPerformanceBaseWithCache extends Raven.Server.Documents.Queue
     HasScriptErrors: boolean;
     HasReadErrors: boolean;
     Type: StudioQueueSinkType;
+}
+
+interface CdcSinkPerformanceBaseWithCache extends Raven.Server.Documents.CdcSink.Stats.Performance.CdcSinkPerformanceStats {
+    StartedAsDate: Date;
+    CompletedAsDate: Date;
+    HasErrors: boolean;
+    HasScriptErrors: boolean;
+    HasReadErrors: boolean;
+    Type: "CdcSink";
 }
 
 interface SubscriptionConnectionPerformanceStatsWithCache extends Raven.Server.Documents.Subscriptions.Stats.SubscriptionConnectionPerformanceStats {
@@ -917,13 +927,13 @@ interface TimeSeriesOperation extends Raven.Client.Documents.Operations.TimeSeri
 type StudioTaskType = "Replication" | "PullReplicationAsHub" | "PullReplicationAsSink" | "Backup" | "Subscription" |
     "RavenEtl" | "SqlEtl" | "SnowflakeEtl" | "OlapEtl" | "ElasticSearchEtl" |
     "KafkaQueueEtl" | "RabbitQueueEtl" | "AzureQueueStorageQueueEtl" | "AmazonSqsQueueEtl" |
-    "KafkaQueueSink" | "RabbitQueueSink" | "AzureServiceBusQueueSink" | "EmbeddingsGeneration" | "GenAi";
+    "KafkaQueueSink" | "RabbitQueueSink" | "AzureServiceBusQueueSink" | "CdcSink" | "EmbeddingsGeneration" | "GenAi";
 
 type StudioEtlType = "Raven" | "Sql" | "Snowflake" | "Olap" | "ElasticSearch" | "Kafka" | "RabbitMQ" | "AzureQueueStorage" | "AmazonSqs" | "EmbeddingsGeneration" | "GenAi";
 
 type StudioQueueSinkType = "KafkaQueueSink" | "RabbitQueueSink" | "AzureServiceBusQueueSink";
 
-type FilterOngoingTaskType = Raven.Client.Documents.Operations.ETL.EtlType  | Raven.Client.Documents.Operations.ETL.Queue.QueueBrokerType | "Subscription" | "Replication";
+type FilterOngoingTaskType = Raven.Client.Documents.Operations.ETL.EtlType  | Raven.Client.Documents.Operations.ETL.Queue.QueueBrokerType | "Subscription" | "Replication" | "CdcSink";
 
 type TaskDestinationType = "Collection" | "Table" | "Queue" | "Topic" | "Index";
 
@@ -1095,6 +1105,10 @@ type TombstonesStateOnWire = Omit<Raven.Server.Documents.TombstoneCleaner.Tombst
 
 // Server ToJson() method converts the version object to a string
 type LicenseStatus = Omit<Raven.Server.Commercial.LicenseStatus, "Version"> & { Version: string };
+
+type UserDomainsAndLicenseInfo = Omit<Raven.Server.Commercial.UserDomainsAndLicenseInfo, "LicenseStatus"> & {
+    LicenseStatus: LicenseStatus;
+};
 
 
 type SqlConnectionStringFactoryName =

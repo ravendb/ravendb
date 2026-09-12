@@ -13,6 +13,7 @@ using Raven.Server.Documents.ETL;
 using Raven.Server.SqlMigration;
 using Tests.Infrastructure;
 using Xunit;
+using Raven.Server.Documents.TasksErrors;
 
 namespace SlowTests.Issues;
 

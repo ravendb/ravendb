@@ -111,6 +111,11 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
             icon: "icon-subscription",
             colorClass: "subscription"
         },
+        "CdcSink": {
+            nameForUI: "CDC Sink",
+            icon: "icon-sql-etl",
+            colorClass: "cdc-sink"
+        },
     }
 
     protected gridController = ko.observable<virtualGridController<taskItem>>();
@@ -342,6 +347,8 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
                 return "EmbeddingsGeneration";
             case "GenAiCount":
                 return "GenAi";
+            case "CdcSinkCount":
+                return "CdcSink";
             default:
                 throw new Error("Unknown task type count received:" + input);
             }

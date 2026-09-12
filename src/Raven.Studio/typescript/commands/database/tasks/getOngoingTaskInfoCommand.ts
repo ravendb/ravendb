@@ -5,6 +5,7 @@ import endpoints = require("endpoints");
 class getOngoingTaskInfoCommand<T extends Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication |
     Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription |
     Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup |
+    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskCdcSink |
     Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsSink |
     Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtl |
     Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtl |
@@ -72,6 +73,10 @@ class getOngoingTaskInfoCommand<T extends Raven.Client.Documents.Operations.Ongo
 
     static forBackup(db: database | string, taskId: number, reportFailure = true) { 
         return new getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup>(db, "Backup", null, taskId, undefined, reportFailure);
+    }
+
+    static forCdcSink(db: database | string, taskId: number) {
+        return new getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskCdcSink>(db, "CdcSink", null, taskId);
     }
 
     static forRavenEtl(db: database | string, taskId: number) {

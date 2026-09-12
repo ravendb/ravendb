@@ -47,7 +47,7 @@ public class RavenDB_26693 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Google, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Google | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanRunConversationWithStreaming(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -89,7 +89,7 @@ public class RavenDB_26693 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanRunThenCancelStreamWithActionTool(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -163,7 +163,7 @@ public class RavenDB_26693 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanContinueConversationAfterCancelWithPendingActionTool(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -238,7 +238,7 @@ public class RavenDB_26693 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanRunThenCancelStreamWithSubAgentActionTool(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);

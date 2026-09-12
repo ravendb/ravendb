@@ -80,4 +80,15 @@ namespace Raven.Client.Exceptions
         {
         }
     }
+
+    public sealed class QueryToolFailedException : AiException
+    {
+        public QueryToolFailedException(string message) : base(message)
+        {
+        }
+
+        public QueryToolFailedException(string message, Exception e) : base(message, e)
+        {
+        }
+    }
 }

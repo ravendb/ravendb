@@ -43,13 +43,7 @@ export function DatabaseCustomSortersInfoHub({ databaseSortersCount }: DatabaseC
 
     return (
         <AboutViewAnchored>
-            <AccordionItemWrapper
-                targetId="1"
-                icon="about"
-                color="info"
-                description="Get additional info on this feature"
-                heading="About this view"
-            >
+            <AccordionItemWrapper targetId="1" icon="about" color="info">
                 <p>
                     A <strong>Custom Sorter</strong> allows you to define how documents will be ordered in the query
                     results
@@ -101,17 +95,20 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         community: { value: 1 },
         professional: { value: Infinity },
         enterprise: { value: Infinity },
+        quill: { value: Infinity },
     },
     {
         featureName: "Limit per cluster",
         community: { value: 5 },
         professional: { value: Infinity },
         enterprise: { value: Infinity },
+        quill: { value: Infinity },
     },
     {
         featureName: "Server-wide custom sorters",
         community: { value: false },
         professional: { value: true },
         enterprise: { value: true },
+        quill: { value: true },
     },
 ];

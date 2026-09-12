@@ -4,9 +4,10 @@ import aiAgentsTypes = require("components/pages/database/aiHub/aiAgents/utils/a
 import { ChatAiAgentAttachment } from "components/pages/database/aiHub/aiAgents/chat/utils/chatAiAgentValidation";
 
 export interface RunAiAgentRequestDto
-    extends Omit<Raven.Client.Documents.Operations.AI.Agents.ConversionRequestBody, "UserPrompt"> {
+    extends Omit<Raven.Client.Documents.Operations.AI.Agents.ConversionRequestBody, "UserPrompt" | "OutputOptions"> {
     UserPrompt: string | { type: "text"; text: string }[];
     attachments?: ChatAiAgentAttachment[];
+    OutputOptions?: Raven.Client.Documents.AI.AiOutputOptions;
 }
 
 interface AttachmentPutCommandBase {

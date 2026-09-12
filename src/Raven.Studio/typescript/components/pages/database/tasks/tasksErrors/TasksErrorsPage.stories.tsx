@@ -56,7 +56,7 @@ export const Default: StoryObj<TasksErrorsPageArgs> = {
             [db.name]: databaseAccess,
         });
 
-        tasksService.withEtlErrors(hasErrors ? TasksStubs.etlErrors() : []);
+        tasksService.withTaskErrors(hasErrors ? TasksStubs.taskErrors() : []);
 
         const etlStats = hasErrors ? TasksStubs.etlStats() : [];
         if (databaseType === "sharded") {

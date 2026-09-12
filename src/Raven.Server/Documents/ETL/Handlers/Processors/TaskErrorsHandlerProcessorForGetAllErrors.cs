@@ -7,6 +7,7 @@ using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Http;
+using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents.ETL.Handlers.Processors;
 
@@ -35,7 +36,7 @@ internal sealed class TaskErrorsHandlerProcessorForGetAllErrors : AbstractTaskEr
             foreach (var (taskName, processErrors, itemErrors) in storage.ReadAllErrorsGroupedByTask(taskType))
             {
                 processesByName.TryGetValue(taskName, out var process);
-                response.Results.Add(BuildTaskErrors(taskName, process, processErrors, itemErrors));
+                response.Results.Add(BuildTaskErrors(taskName, process, processErrors, itemErrors, taskType));
             }
         }
 

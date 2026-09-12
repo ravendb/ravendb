@@ -2,7 +2,7 @@ import React from "react";
 import classNames from "classnames";
 import { Icon } from "components/common/Icon";
 import Badge from "react-bootstrap/Badge";
-import { EtlTaskWithErrors, getHealthStatusFromStats, healthStatusToBadge } from "../utils/tasksErrorsUtils";
+import { TaskWithErrors, getHealthStatusFromStats, healthStatusToBadge } from "../utils/tasksErrorsUtils";
 import { ThemeColor } from "components/models/common";
 import { databaseLocationComparator } from "components/utils/common";
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
@@ -18,7 +18,7 @@ export function TaskPill({ color }: TaskPillProps) {
 interface TaskPillGroupMessageProps {
     etlTaskStatsList: EtlTaskStats[];
     allEtlTaskStats: EtlTaskStats[];
-    tasksWithErrors: EtlTaskWithErrors[];
+    tasksWithErrors: TaskWithErrors[];
 }
 
 export function TaskPillGroupMessage({

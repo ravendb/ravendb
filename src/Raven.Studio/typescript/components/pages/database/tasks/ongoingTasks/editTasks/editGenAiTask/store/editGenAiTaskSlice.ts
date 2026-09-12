@@ -17,7 +17,7 @@ interface EditGenAiTaskState {
     taskId: number;
     sourceView: EditAiTaskSourceView;
     currentStep: EditGenAiTaskStepId;
-    connectionStringTest: loadableData<Raven.Server.Web.System.NodeConnectionTestResult>;
+    connectionStringTest: loadableData<Raven.Server.Documents.AI.AiConnectionTestResult>;
     contextTest: loadableData<
         { value: string; attachments?: Raven.Server.Documents.ETL.Providers.AI.AiAttachment[] }[]
     >;
@@ -30,7 +30,6 @@ interface EditGenAiTaskState {
     globalTestResult: Raven.Server.Documents.ETL.Providers.AI.GenAi.Test.GenAiTestScriptResult;
     isPlaygroundCollapsed: boolean;
     isPlaygroundEditMode: boolean;
-    aiConnectionStrings: Record<string, Raven.Client.Documents.Operations.AI.AiConnectionString>;
     isTestOpen: boolean;
     isDocumentInfoVisible: boolean;
     isContextInfoVisible: boolean;
@@ -53,7 +52,6 @@ const initialState: EditGenAiTaskState = {
     globalTestResult: null,
     isPlaygroundCollapsed: false,
     isPlaygroundEditMode: false,
-    aiConnectionStrings: {},
     isTestOpen: false,
     isDocumentInfoVisible: true,
     isContextInfoVisible: true,
@@ -90,12 +88,6 @@ export const editGenAiTaskSlice = createSlice({
         },
         isPlaygroundEditModeSet: (state, action: PayloadAction<boolean>) => {
             state.isPlaygroundEditMode = action.payload;
-        },
-        aiConnectionStringsSet: (
-            state,
-            action: PayloadAction<Record<string, Raven.Client.Documents.Operations.AI.AiConnectionString>>
-        ) => {
-            state.aiConnectionStrings = action.payload;
         },
         isTestOpenSet: (state, action: PayloadAction<boolean>) => {
             state.isTestOpen = action.payload;
@@ -249,7 +241,7 @@ const testConnectionString = createAsyncThunk(
         connectorType: Raven.Client.Documents.Operations.AI.AiConnectorType;
         modelType: Raven.Client.Documents.Operations.AI.AiModelType;
         settings: AiConnectionStringsSettings;
-    }): Promise<Raven.Server.Web.System.NodeConnectionTestResult> => {
+    }): Promise<Raven.Server.Documents.AI.AiConnectionTestResult> => {
         return services.tasksService.testAiConnectionString(
             payload.databaseName,
             payload.connectorType,
@@ -296,7 +288,6 @@ export const editGenAiTaskSelectors = {
     isPlaygroundCollapsed: (state: RootState) => state.editGenAiTask.isPlaygroundCollapsed,
     isPlaygroundEditMode: (state: RootState) => state.editGenAiTask.isPlaygroundEditMode,
     globalTestResult: (state: RootState) => state.editGenAiTask.globalTestResult,
-    aiConnectionStrings: (state: RootState) => state.editGenAiTask.aiConnectionStrings,
     isDocumentInfoVisible: (state: RootState) => state.editGenAiTask.isDocumentInfoVisible,
     isContextInfoVisible: (state: RootState) => state.editGenAiTask.isContextInfoVisible,
     isModelInputInfoVisible: (state: RootState) => state.editGenAiTask.isModelInputInfoVisible,

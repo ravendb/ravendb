@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
@@ -7,6 +7,7 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Collections;
 using Sparrow.Json;
+using Sparrow.Utils;
 
 namespace Raven.Server.Utils;
 
@@ -14,7 +15,6 @@ public sealed class ChangeVector
 {
     internal static readonly PerCoreContainer<FastList<ChangeVector>> PerCoreChangeVectors = new PerCoreContainer<FastList<ChangeVector>>(32);
 
-    private const char Separator = '|';
     private string _changeVector;
 
     private ChangeVector _order;
@@ -45,12 +45,12 @@ public sealed class ChangeVector
         if (changeVector == null)
             return;
 
-        if (changeVector.Contains(Separator))
+        if (changeVector.Contains(ClientChangeVectorUtils.Separator))
         {
             if (throwOnRecursion)
                 throw new ArgumentException("Recursion was detected");
 
-            var parts = changeVector.Split(Separator);
+            var parts = changeVector.Split(ClientChangeVectorUtils.Separator);
             if (parts.Length != 2)
                 throw new ArgumentException($"Invalid change vector {changeVector}");
 
@@ -202,6 +202,18 @@ public sealed class ChangeVector
             return;
 
         MergeWithDatabaseChangeVector(context, context.GetChangeVector(changeVector));
+    }
+
+    internal static ChangeVector GetLocalCvFromPriorAndUpdateDbCv(DocumentsOperationContext context, ChangeVector priorChangeVector, DocumentDatabase database, long etag)
+    {
+        ArgumentNullException.ThrowIfNull(priorChangeVector);
+
+        var changeVector = MergeWithDatabaseChangeVector(context, priorChangeVector);
+        changeVector = changeVector.UpdateVersion(database.ServerStore.NodeTag, database.DbBase64Id, etag, context);
+        changeVector = changeVector.UpdateOrder(database.ServerStore.NodeTag, database.DbBase64Id, etag, context);
+        context.LastDatabaseChangeVector = changeVector.Order;
+
+        return changeVector;
     }
 
     public static ChangeVector MergeWithNewDatabaseChangeVector(DocumentsOperationContext context, ChangeVector changeVector, long? newEtag = null)
@@ -394,7 +406,7 @@ public sealed class ChangeVector
         if (IsSingle)
             return _changeVector;
 
-        return $"{_order._changeVector}{Separator}{_version._changeVector}";
+        return $"{_order._changeVector}{ClientChangeVectorUtils.Separator}{_version._changeVector}";
     }
 }
 

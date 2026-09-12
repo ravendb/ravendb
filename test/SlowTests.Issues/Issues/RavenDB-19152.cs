@@ -93,8 +93,8 @@ namespace SlowTests.Issues
                 await session.SaveChangesAsync();
             }
 
-            rep1.Mend();
-            rep2.Mend();
+            await rep1.MendAsync();
+            await rep2.MendAsync();
 
             // wait until the conflict is resolved
 

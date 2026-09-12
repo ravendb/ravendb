@@ -11,7 +11,7 @@ import { EmptySet } from "components/common/EmptySet";
 import { LoadError } from "components/common/LoadError";
 import {
     AI_ONLY_TASK_TYPES,
-    EtlTaskWithErrors,
+    TaskWithErrors,
     getTaskPillColor,
     getTasksWithErrors,
     GroupByType,
@@ -69,14 +69,14 @@ export default function TasksErrorsPage({
                 initialTaskTypes={
                     aiOnly
                         ? AI_ONLY_TASK_TYPES
-                        : (queryParams?.taskTypes?.split(",").filter(Boolean) as StudioEtlType[])
+                        : (queryParams?.taskTypes?.split(",").filter(Boolean) as StudioTaskType[])
                 }
                 initialNodeTags={queryParams?.nodeTags?.split(",").filter(Boolean)}
                 initialShardNumbers={queryParams?.shardNumbers?.split(",").filter(Boolean)}
                 initialHealthStatuses={
                     queryParams?.healthStatuses
                         ?.split(",")
-                        .filter(Boolean) as Raven.Server.Documents.ETL.EtlProcessHealthStatus[]
+                        .filter(Boolean) as Raven.Server.Documents.TasksErrors.OngoingTaskHealthStatus[]
                 }
                 initialGroupBy={queryParams?.groupBy as GroupByType}
                 onRefresh={handleRefresh}
@@ -86,13 +86,13 @@ export default function TasksErrorsPage({
 }
 
 interface TasksErrorsPageBodyProps {
-    tasksWithErrors: EtlTaskWithErrors[];
+    tasksWithErrors: TaskWithErrors[];
     flattenAllEtlStats: EtlTaskStats[];
     initialSearchText?: string;
-    initialTaskTypes?: StudioEtlType[];
+    initialTaskTypes?: StudioTaskType[];
     initialNodeTags?: string[];
     initialShardNumbers?: string[];
-    initialHealthStatuses?: Raven.Server.Documents.ETL.EtlProcessHealthStatus[];
+    initialHealthStatuses?: Raven.Server.Documents.TasksErrors.OngoingTaskHealthStatus[];
     initialGroupBy?: GroupByType;
     onRefresh: () => void;
 }
@@ -208,8 +208,8 @@ function useTasksErrorsData() {
     const db = useAppSelector(databaseSelectors.activeDatabase);
     const { tasksService } = useServices();
 
-    const getEtlErrors = useCallback(
-        async (location: databaseLocationSpecifier) => tasksService.getEtlErrors(db.name, location),
+    const getTaskErrors = useCallback(
+        async (location: databaseLocationSpecifier) => tasksService.getTaskErrors(db.name, location),
         [db.name]
     );
 
@@ -219,10 +219,10 @@ function useTasksErrorsData() {
     );
 
     const {
-        result: asyncFetchAllEtlErrors,
-        loading: isLoadingEtlErrors,
-        refresh: refreshEtlErrors,
-    } = useDatabaseWideAsync(getEtlErrors);
+        result: asyncFetchAllTaskErrors,
+        loading: isLoadingTaskErrors,
+        refresh: refreshTaskErrors,
+    } = useDatabaseWideAsync(getTaskErrors);
 
     const {
         result: asyncFetchAllEtlStats,
@@ -230,22 +230,22 @@ function useTasksErrorsData() {
         refresh: refreshEtlStats,
     } = useDatabaseWideAsync(getEtlStats);
 
-    const isLoading = isLoadingEtlErrors || isLoadingEtlStats;
+    const isLoading = isLoadingTaskErrors || isLoadingEtlStats;
 
     const hasAnyError =
-        !isLoading && (asyncFetchAllEtlErrors.some((x) => x.error) || asyncFetchAllEtlStats.some((x) => x.error));
+        !isLoading && (asyncFetchAllTaskErrors.some((x) => x.error) || asyncFetchAllEtlStats.some((x) => x.error));
 
     const handleRefresh = useCallback(async () => {
-        await refreshEtlErrors();
+        await refreshTaskErrors();
         await refreshEtlStats();
-    }, [refreshEtlErrors, refreshEtlStats]);
+    }, [refreshTaskErrors, refreshEtlStats]);
 
     const flattenAllEtlStats: EtlTaskStats[] = isLoading ? [] : asyncFetchAllEtlStats.flatMap((x) => x.data);
 
     const tasksWithErrors = isLoading
         ? []
         : getTasksWithErrors(
-              asyncFetchAllEtlErrors.flatMap((x) =>
+              asyncFetchAllTaskErrors.flatMap((x) =>
                   (x.data ?? []).map((error) => ({
                       ...error,
                       nodeTag: x.location.nodeTag,

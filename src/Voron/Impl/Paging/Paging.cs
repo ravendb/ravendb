@@ -18,8 +18,8 @@ namespace Voron.Impl.Paging
             if ((header->Flags & PageFlags.Overflow) != PageFlags.Overflow)
                 return 1;
 
-            var overflowSize = header->OverflowSize + Constants.Tree.PageHeaderSize;
-            return checked((overflowSize / Constants.Storage.PageSize) + (overflowSize % Constants.Storage.PageSize == 0 ? 0 : 1));
+            long overflowSize = (long)header->OverflowSize + Constants.Tree.PageHeaderSize;
+            return (int)(overflowSize / Constants.Storage.PageSize) + (overflowSize % Constants.Storage.PageSize == 0 ? 0 : 1);
         }
     }
 }

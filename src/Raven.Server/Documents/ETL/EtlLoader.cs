@@ -35,6 +35,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Server.Logging;
+using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents.ETL
 {
@@ -1004,7 +1005,7 @@ namespace Raven.Server.Documents.ETL
                     if (existingProcessNames.Contains(process.Name))
                         continue;
 
-                    _database.TaskErrorsStorage.DeleteTaskErrorsTablesForTask(process.Name, TaskTypeExtensions.FromEtlType(process.EtlType));
+                    _database.TaskErrorsStorage.DeleteTaskErrorsTablesForTask(process.Name, TaskTypeExtensions.GetTaskCategoryFromEtlType(process.EtlType));
                 }
             }
 

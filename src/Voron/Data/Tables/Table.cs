@@ -1062,6 +1062,99 @@ namespace Voron.Data.Tables
             }
         }
 
+        // Large values live on standalone overflow pages that belong to no section or page-set, so there is no
+        // enumerator; we find them by walking every entry (via one local index) and taking the page-aligned ids.
+        internal IEnumerable<long> GetAllLargeValuePageNumbers()
+        {
+            foreach (var id in EnumerateAllEntryIds())
+            {
+                // A page-aligned id means the value is stored on its own overflow page(s).
+                if (id % Constants.Storage.PageSize == 0)
+                    yield return id / Constants.Storage.PageSize;
+            }
+
+            IEnumerable<long> EnumerateAllEntryIds()
+            {
+                if (_schema.Key is { IsGlobal: false })
+                {
+                    var tree = GetTree(_schema.Key);
+                    if (tree == null)
+                        yield break;
+
+                    using (var it = tree.Iterate(_prefetch))
+                    {
+                        if (it.Seek(Slices.BeforeAllKeys) == false)
+                            yield break;
+
+                        do
+                        {
+                            yield return it.CreateReaderForCurrent().Read<long>();
+                        } while (it.MoveNext());
+                    }
+
+                    yield break;
+                }
+
+                var variableSizeIndex = _schema.Indexes.Values.FirstOrDefault(x => x.IsGlobal == false);
+                if (variableSizeIndex != null)
+                {
+                    var tree = GetTree(variableSizeIndex);
+                    if (tree == null)
+                        yield break;
+
+                    using (var it = tree.Iterate(_prefetch))
+                    {
+                        if (it.Seek(Slices.BeforeAllKeys) == false)
+                            yield break;
+
+                        do
+                        {
+                            var value = it.CurrentKey.Clone(_tx.Allocator);
+                            try
+                            {
+                                var fstIndex = GetFixedSizeTree(tree, value, 0, variableSizeIndex.IsGlobal);
+                                using (var entryIt = fstIndex.Iterate())
+                                {
+                                    if (entryIt.Seek(long.MinValue) == false)
+                                        continue;
+
+                                    do
+                                    {
+                                        yield return entryIt.CurrentKey;
+                                    } while (entryIt.MoveNext());
+                                }
+                            }
+                            finally
+                            {
+                                value.Release(_tx.Allocator);
+                            }
+                        } while (it.MoveNext());
+                    }
+
+                    yield break;
+                }
+
+                var fixedSizeIndex = _schema.FixedSizeIndexes.Values.FirstOrDefault(x => x.IsGlobal == false);
+                if (fixedSizeIndex != null)
+                {
+                    var fst = GetFixedSizeTree(fixedSizeIndex);
+                    using (var it = fst.Iterate(_prefetch))
+                    {
+                        if (it.Seek(long.MinValue) == false)
+                            yield break;
+
+                        do
+                        {
+                            yield return ReadFixedSizeIndexEntryId(it);
+                        } while (it.MoveNext());
+                    }
+                }
+
+                // A table with only global indexes cannot be enumerated locally (StorageCompaction throws in
+                // that case); we simply skip it here
+            }
+        }
+
         internal long Insert(ref TableValueReader reader)
         {
             AssertWritableTable();
@@ -2227,6 +2320,9 @@ namespace Voron.Data.Tables
             reader = new TableValueReader(id, ptr, size);
         }
 
+        // Extracted because a pointer deref cannot appear inside an iterator block (see EnumerateAllEntryIds).
+        private long ReadFixedSizeIndexEntryId(FixedSizeTree.IFixedSizeIterator it) => *(long*)it.ValuePtr(out int _);
+
         private void GetTableValueReader(IIterator it, out TableValueReader reader)
         {
             var id = it.CreateReaderForCurrent().Read<long>();
@@ -2258,7 +2354,7 @@ namespace Voron.Data.Tables
             return true;
         }
 
-        public long DeleteBackwardFrom(TableSchema.FixedSizeKeyIndexDef index, long value, long numberOfEntriesToDelete)
+        public long DeleteBackwardFrom(FixedSizeKeyIndexDef index, long value, long numberOfEntriesToDelete, Action<TableValueHolder> beforeDelete = null)
         {
             AssertWritableTable();
 
@@ -2267,6 +2363,7 @@ namespace Voron.Data.Tables
 
             long deleted = 0;
             var fst = GetFixedSizeTree(index);
+            TableValueHolder tableValueHolder = null;
             // deleting from a table can shift things around, so we delete 
             // them one at a time
             while (deleted < numberOfEntriesToDelete)
@@ -2279,7 +2376,22 @@ namespace Voron.Data.Tables
                     if (it.CurrentKey > value)
                         return deleted;
 
-                    Delete(it.CreateReaderForCurrent().Read<long>());
+                    var id = it.CreateReaderForCurrent().Read<long>();
+
+                    if (beforeDelete != null)
+                    {
+                        var ptr = DirectRead(id, out int size, out bool compressed);
+                        tableValueHolder ??= new TableValueHolder();
+                        tableValueHolder.Reader = new TableValueReader(id, ptr, size);
+                        beforeDelete(tableValueHolder);
+                        Delete(id, ptr, size, compressed);
+                    }
+                    else
+                    {
+                        Delete(id);
+                    }
+
+
                     deleted++;
                 }
             }

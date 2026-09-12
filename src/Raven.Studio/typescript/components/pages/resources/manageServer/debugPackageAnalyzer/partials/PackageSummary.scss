@@ -1,0 +1,43 @@
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.package-summary {
+    min-width: 340px;
+    padding: sizes.$gutter-xs sizes.$gutter-sm;
+    border-radius: sizes.$border-radius;
+    background: colors.$panel-bg-1-var;
+
+    .package-summary-identity {
+        display: flex;
+        align-items: center;
+        gap: sizes.$gutter-xxs;
+    }
+
+    .package-summary-icon {
+        font-size: 1.4rem;
+        color: colors.$text-muted-var;
+        flex-shrink: 0;
+    }
+
+    .package-summary-file {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .package-summary-name {
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .package-summary-created {
+        font-size: 0.75rem;
+    }
+
+    .package-summary-verdict {
+        margin-top: sizes.$gutter-xs;
+        padding-top: sizes.$gutter-xs;
+        border-top: 1px solid colors.$border-color-light-var;
+    }
+}

@@ -258,6 +258,8 @@ namespace Raven.Server.Commercial
 
         public bool HasServerWideAnalyzers => Enabled(LicenseAttribute.ServerWideAnalyzers);
 
+        public bool HasServerWideConnectionStrings => Enabled(LicenseAttribute.ServerWideConnectionStrings);
+
         public bool HasIndexCleanup => Enabled(LicenseAttribute.IndexCleanup);
 
         public bool HasPeriodicBackup => Enabled(LicenseAttribute.PeriodicBackup);
@@ -267,6 +269,8 @@ namespace Raven.Server.Commercial
         public bool HasStudioConfiguration => Enabled(LicenseAttribute.StudioConfiguration);
 
         public bool HasQueueSink => Enabled(LicenseAttribute.QueueSink);
+
+        public bool HasCdcSink => Enabled(LicenseAttribute.CdcSink);
 
         public bool HasDataArchival => Enabled(LicenseAttribute.DataArchival);
 
@@ -346,6 +350,7 @@ namespace Raven.Server.Commercial
                 [nameof(HasPullReplicationAsHub)] = HasPullReplicationAsHub,
                 [nameof(HasPullReplicationAsSink)] = HasPullReplicationAsSink,
                 [nameof(HasEncryptedBackups)] = HasEncryptedBackups,
+                [nameof(HasSso)] = HasSso,
                 [nameof(CanAutoRenewLetsEncryptCertificate)] = CanAutoRenewLetsEncryptCertificate,
                 [nameof(IsCloud)] = IsCloud,
                 [nameof(HasDocumentsCompression)] = HasDocumentsCompression,
@@ -369,11 +374,13 @@ namespace Raven.Server.Commercial
                 [nameof(HasServerWideExternalReplications)] = HasServerWideExternalReplications,
                 [nameof(HasServerWideCustomSorters)] = HasServerWideCustomSorters,
                 [nameof(HasServerWideAnalyzers)] = HasServerWideAnalyzers,
+                [nameof(HasServerWideConnectionStrings)] = HasServerWideConnectionStrings,
                 [nameof(HasIndexCleanup)] = HasIndexCleanup,
                 [nameof(HasPeriodicBackup)] = HasPeriodicBackup,
                 [nameof(HasClientConfiguration)] = HasClientConfiguration,
                 [nameof(HasStudioConfiguration)] = HasStudioConfiguration,
                 [nameof(HasQueueSink)] = HasQueueSink,
+                [nameof(HasCdcSink)] = HasCdcSink,
                 [nameof(HasDataArchival)] = HasDataArchival,
                 [nameof(HasRevisionsInSubscriptions)] = HasRevisionsInSubscriptions,
                 [nameof(HasMultiNodeSharding)] = HasMultiNodeSharding,

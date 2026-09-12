@@ -250,8 +250,9 @@ public partial class ConversationDocument([NotNull] string agent, BlittableJsonR
     public const string DateProperty = "date";
     public const string UsageProperty = "usage";
     public const string SummaryProperty = "summary";
+    public const string OutputSchemaProperty = "output_schema";
 
-    public void AddMessage(JsonOperationContext context, BlittableJsonReaderObject msg, AiUsage usage)
+    public void AddMessage(JsonOperationContext context, BlittableJsonReaderObject msg, AiUsage usage, bool isNoSchema = false)
     {
         var currentDate = DateTime.UtcNow;
         if (currentDate <= LastMessageAt)
@@ -261,6 +262,8 @@ public partial class ConversationDocument([NotNull] string agent, BlittableJsonR
         msg.Modifications[DateProperty] = currentDate;
         if (usage != null)
             msg.Modifications[UsageProperty] = usage.ToJson();
+        if (isNoSchema)
+            msg.Modifications[OutputSchemaProperty] = "none";
         Messages.Add(msg);
         LastMessageAt = currentDate;
     }

@@ -14,21 +14,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         
         
         protected LuceneAnalyzerAdapter(LuceneAnalyzer analyzer,
-            delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, ref byte[], void> functionUtf8,
-            delegate*<Analyzer, ReadOnlySpan<char>, ref Span<char>, ref Span<Token>, void> functionUtf16) : 
-            base(functionUtf8, functionUtf16, default(NullTokenizer), NoTransformers)
+            delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, ref byte[], void> functionUtf8) : 
+            base(functionUtf8, default(NullTokenizer), NoTransformers)
         {
             Analyzer = analyzer;
         }
-
-        internal static void Run(Analyzer adapter, ReadOnlySpan<char> source, ref Span<char> output, ref Span<Token> tokens)
-        {
-            // PERF: Currently we are not going to be supporting the use of UTF-16 in the Lucene Analyzer Adapter. 
-            //       A proper implementation of SpanTextReader for ReadOnlySpan<char> should be built in order to
-            //       avoid the GetBytes conversions required. 
-            throw new NotImplementedException();
-        }
-
+        
         /// <summary>
         /// Creates instance of Corax analyzer with underlying lucene analyzer.
         /// </summary>

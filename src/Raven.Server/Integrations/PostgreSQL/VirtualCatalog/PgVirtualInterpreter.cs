@@ -14,6 +14,10 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
         {
             result = null;
 
+            // SHOW parses to a VariableShowStmt, so it has to be checked before the SELECT paths.
+            if (PgShowStatement.TryExecute(queryText, out result))
+                return true;
+
             if (SelectStmtShape.TryParseSelectStatements(queryText, out var selects) == false)
                 return false;
 
@@ -1136,6 +1140,17 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
             // CASE WHEN: walk the WHEN/ELSE results and use the most-specific type.
             if (expr.CaseExpr != null)
                 return (InferCaseType(expr.CaseExpr, sources), format);
+
+            // A bool advertised as text goes out as "False", which a client reads back as true.
+            if (expr.FuncCall?.Funcname is { Count: > 0 } funcname)
+            {
+                var name = funcname[^1]?.String?.Sval;
+                if (string.IsNullOrEmpty(name) == false && PgVirtualDatabase.TryGetFunction(name, out var function))
+                    return (function.PgType, format);
+            }
+
+            if (expr.BoolExpr != null)
+                return (PgBool.Default, format);
 
             return (PgText.Default, format);
         }

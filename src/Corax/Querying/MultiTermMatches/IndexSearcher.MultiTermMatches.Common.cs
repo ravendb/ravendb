@@ -63,8 +63,19 @@ public partial class IndexSearcher
     private CompactKey BuildBackwardStartsWithSeekLimit<TTermsProvider>(CompactTree terms, ReadOnlySpan<byte> prefix)
         where TTermsProvider : struct, ITermsProvider
     {
-        if (typeof(TTermsProvider) != typeof(StartsWithTermsProvider<Lookup<CompactKeyLookup>.BackwardIterator>) || prefix.Length == 0)
+        // A backward pattern scan is bounded the same way, by the literal run before the first wildcard.
+        if (typeof(TTermsProvider) == typeof(PatternTermsProvider<Lookup<CompactKeyLookup>.BackwardIterator>))
+        {
+            int patternPrefixLength = prefix.IndexOfAny(Constants.Search.PatternSymbols);
+            if (patternPrefixLength <= 0)
+                return null; // the pattern opens with a wildcard, so there is no prefix block to bound
+
+            prefix = prefix[..patternPrefixLength];
+        }
+        else if (typeof(TTermsProvider) != typeof(StartsWithTermsProvider<Lookup<CompactKeyLookup>.BackwardIterator>) || prefix.Length == 0)
+        {
             return null;
+        }
 
         using var _ = _transaction.Allocator.Allocate(prefix.Length, out Span<byte> successor);
         int len = TryWritePrefixSuccessor(prefix, successor);
@@ -117,6 +128,12 @@ public partial class IndexSearcher
 
         if (typeof(TTermsProvider) == typeof(NotContainsTermsProvider<Lookup<CompactKeyLookup>.BackwardIterator>))
             return (TTermsProvider)(object)new NotContainsTermsProvider<Lookup<CompactKeyLookup>.BackwardIterator>(this, termTree, field, term);
+
+        if (typeof(TTermsProvider) == typeof(PatternTermsProvider<Lookup<CompactKeyLookup>.ForwardIterator>))
+            return (TTermsProvider)(object)new PatternTermsProvider<Lookup<CompactKeyLookup>.ForwardIterator>(this, termTree, field, term, seekTerm, token);
+
+        if (typeof(TTermsProvider) == typeof(PatternTermsProvider<Lookup<CompactKeyLookup>.BackwardIterator>))
+            return (TTermsProvider)(object)new PatternTermsProvider<Lookup<CompactKeyLookup>.BackwardIterator>(this, termTree, field, term, seekTerm, token);
 
         if (typeof(TTermsProvider) == typeof(ExistsTermsProvider<Lookup<CompactKeyLookup>.ForwardIterator>))
             return (TTermsProvider)(object)new ExistsTermsProvider<Lookup<CompactKeyLookup>.ForwardIterator>(this, termTree, field);

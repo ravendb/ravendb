@@ -80,6 +80,19 @@ public partial class IndexSearcher
         };
     }
 
+    /// <summary>Glob query over a field's terms, where '*' absorbs any run and '?' matches one symbol.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public IQueryMatch PatternQuery(in FieldMetadata field, string pattern, bool forward = true, in CancellationToken token = default)
+        => PatternQuery(field, EncodeAndApplyAnalyzer(field, pattern), forward, token);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public IQueryMatch PatternQuery(in FieldMetadata field, Slice pattern, bool forward = true, in CancellationToken token = default)
+    {
+        return forward
+            ? TermsProviderMatchBuilder<PatternTermsProvider<Lookup<CompactKeyLookup>.ForwardIterator>>(field, pattern, token: token)
+            : TermsProviderMatchBuilder<PatternTermsProvider<Lookup<CompactKeyLookup>.BackwardIterator>>(field, pattern, token: token);
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IQueryMatch ExistsQuery(in FieldMetadata field, bool forward = true, in CancellationToken token = default)
     {

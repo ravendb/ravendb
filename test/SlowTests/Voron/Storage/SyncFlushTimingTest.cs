@@ -114,6 +114,8 @@ namespace SlowTests.Voron.Storage
         {
             for (var i = 0; i < 100; i++)
             {
+                TestContext.Current.CancellationToken.ThrowIfCancellationRequested();
+
                 using (var tx = Env.WriteTransaction())
                 {
                     var tree = tx.CreateTree("foo");

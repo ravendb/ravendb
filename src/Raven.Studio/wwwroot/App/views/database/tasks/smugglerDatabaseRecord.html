@@ -66,6 +66,11 @@
                         <label data-bind="attr: { for: 'includeGenAi_' + instanceCounter }" class="margin-right margin-right-sm">GenAI</label>
                         <a class="js-warning-ai-connection-strings" tabindex="0" data-bind="visible: includeGenAi() && !includeAiConnectionStrings()"><small><i class="icon-warning text-warning"></i></small></a>
                     </div>
+                    <div class="toggle">
+                        <input type="checkbox" data-bind="checked: includeCdcSinks, attr: { id: 'includeCdcSinks_' + instanceCounter }, requiredAccess: 'DatabaseAdmin', requiredAccessOptions: { strategy: 'disable' }">
+                        <label data-bind="attr: { for: 'includeCdcSinks_' + instanceCounter }" class="margin-right margin-right-sm">CDC Sinks</label>
+                        <a class="js-warning-cdc-sink" tabindex="0" data-bind="visible: includeCdcSinks() && !includeSqlConnectionStrings()"><small><i class="icon-warning text-warning"></i></small></a>
+                    </div>
                     <div class="bg-info padding padding-xs margin-top margin-top-sm"><small><i class="icon-info"></i> Imported ongoing tasks will be disabled by default.</small></div>
                 </div>
             </div>

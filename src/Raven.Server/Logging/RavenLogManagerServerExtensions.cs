@@ -85,7 +85,13 @@ internal static class RavenLogManagerServerExtensions
             new ConsoleTarget
             {
                 DetectConsoleAvailable = true,
+                // The rvn tool compiles this file but does not register the ${rvn:...} renderer, so it must
+                // use the NodeTag-free layout. The server uses the NodeTag-bearing server layout.
+#if RVN
                 Layout = Constants.Logging.DefaultLayout,
+#else
+                Layout = Constants.Logging.DefaultServerLayout,
+#endif
             }
         }
     };
@@ -348,9 +354,9 @@ internal static class RavenLogManagerServerExtensions
             CreateDirs = true,
             FileName = configuration.Logs.Path.Combine(configuration.Logs.FileName).FullPath,
             ArchiveNumbering = ArchiveNumberingMode.DateAndSequence,
-            Header = Constants.Logging.DefaultHeaderAndFooterLayout,
-            Layout = Constants.Logging.DefaultLayout,
-            Footer = Constants.Logging.DefaultHeaderAndFooterLayout,
+            Header = Constants.Logging.DefaultServerHeaderAndFooterLayout,
+            Layout = Constants.Logging.DefaultServerLayout,
+            Footer = Constants.Logging.DefaultServerHeaderAndFooterLayout,
             ConcurrentWrites = false,
             WriteFooterOnArchivingOnly = true,
             ArchiveAboveSize = archiveAboveSize.GetValue(SizeUnit.Bytes),
@@ -514,9 +520,9 @@ internal static class RavenLogManagerServerExtensions
             CreateDirs = true,
             FileName = configuration.Security.AuditLogPath.Combine(configuration.Security.AuditLogFileName).FullPath,
             ArchiveNumbering = ArchiveNumberingMode.DateAndSequence,
-            Header = Constants.Logging.DefaultHeaderAndFooterLayout,
-            Layout = Constants.Logging.DefaultLayout,
-            Footer = Constants.Logging.DefaultHeaderAndFooterLayout,
+            Header = Constants.Logging.DefaultServerHeaderAndFooterLayout,
+            Layout = Constants.Logging.DefaultServerLayout,
+            Footer = Constants.Logging.DefaultServerHeaderAndFooterLayout,
             ConcurrentWrites = false,
             WriteFooterOnArchivingOnly = true,
             ArchiveAboveSize = configuration.Security.AuditLogArchiveAboveSize.GetValue(SizeUnit.Bytes),

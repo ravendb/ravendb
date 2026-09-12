@@ -17,10 +17,12 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Senders;
 using Raven.Server.Documents.Replication.Stats;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Tests.Infrastructure;
+using Voron;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -83,7 +85,12 @@ namespace SlowTests.Issues
                         var revisionsAttachment = attachments.First();
                         Assert.Equal("bucfDXJ3eWRJYpgggJrnskJtMuMyFohjO2GHATxTmUs=", revisionsAttachment.Base64Hash.ToString());
                         Assert.StartsWith("A:10", revisionsAttachment.ChangeVector);
-                        Assert.StartsWith($"user/1\u001er\u001e{revisionsAttachment.ChangeVector}\u001e1\u001e{revisionsAttachment.Base64Hash}\u001eimage/png", revisionsAttachment.Key);
+
+                        using (Slice.From(documentsContext.Allocator, revisionsAttachment.ChangeVector, out Slice rawCvSlice))
+                        using (RevisionsStorage.GetRevisionKeyHashSlice(documentsContext.Allocator, rawCvSlice, out Slice prefixedHashSlice))
+                        {
+                            Assert.StartsWith($"user/1\u001er\u001e{prefixedHashSlice}\u001e1\u001e{revisionsAttachment.Base64Hash}\u001eimage/png", revisionsAttachment.Key);
+                        }
                     }
                 }
             }
@@ -153,7 +160,7 @@ namespace SlowTests.Issues
                         }
                         // Replication from source to firstDestination
                         await SetupReplicationAsync(source, firstDestination);
-                        await EnsureReplicatingAsync(source, firstDestination, server);
+                        await EnsureReplicatingAsync(source, firstDestination);
 
                         var stats = await GetDatabaseStatisticsAsync(source, servers: servers);
                         Assert.True(await WaitForValueAsync(async () => await AssertReplicationAsync(firstDestination, firstDestination.Database, stats, servers), true, reasonableWaitTime, 333));
@@ -165,7 +172,7 @@ namespace SlowTests.Issues
                             await session.SaveChangesAsync();
                         }
 
-                        await EnsureReplicatingAsync(source, firstDestination, server);
+                        await EnsureReplicatingAsync(source, firstDestination);
 
                         stats = await GetDatabaseStatisticsAsync(source, servers: servers);
                         Assert.True(await WaitForValueAsync(async () => await AssertReplicationAsync(firstDestination, firstDestination.Database, stats, servers), true, reasonableWaitTime, 333));

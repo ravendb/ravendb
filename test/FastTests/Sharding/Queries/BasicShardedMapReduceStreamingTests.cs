@@ -189,6 +189,18 @@ namespace FastTests.Sharding.Queries
                     session.Store(new User { Name = "Jane", Count = 10 }, "users/4");
                     session.SaveChanges();
 
+                    // Streaming does not wait for non-stale results, and the auto map-reduce index used below
+                    // is created lazily by the query itself - so a bare WaitForIndexing here sees no index yet
+                    // and returns immediately. Materialize the query once as a regular (non-streaming) query,
+                    // which creates the auto-index and waits for non-stale results by default, then wait across
+                    // all shards. Otherwise the stream can open before the reduce completes and return 0 rows.
+                    session.Advanced.RawQuery<UserMapReduce.Result>(
+                            @"
+from Users
+group by Name
+select sum(""Count"") as Sum, key() as Name").ToList();
+                    Indexes.WaitForIndexing(store);
+
                     var query1 = session.Advanced.RawQuery<UserMapReduce.Result>(
                             @"
 from Users

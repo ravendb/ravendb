@@ -17,8 +17,13 @@ import {
 } from "../connectionStringsTypes";
 import assertUnreachable from "components/utils/assertUnreachable";
 import ApiKeyAuthentication = Raven.Client.Documents.Operations.ETL.ElasticSearch.ApiKeyAuthentication;
+import AiConnectionStringDto = Raven.Client.Documents.Operations.AI.AiConnectionString;
+import RavenConnectionStringDto = Raven.Client.Documents.Operations.ETL.RavenConnectionString;
+import SqlConnectionStringDto = Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString;
+import SnowflakeConnectionStringDto = Raven.Client.Documents.Operations.ETL.Snowflake.SnowflakeConnectionString;
+import OlapConnectionStringDto = Raven.Client.Documents.Operations.ETL.OLAP.OlapConnectionString;
 
-export function mapRavenConnectionStringToDto(connection: RavenConnection): ConnectionStringDto {
+export function mapRavenConnectionStringToDto(connection: RavenConnection): RavenConnectionStringDto {
     return {
         Type: "Raven",
         Name: connection.name,
@@ -27,7 +32,7 @@ export function mapRavenConnectionStringToDto(connection: RavenConnection): Conn
     };
 }
 
-export function mapSqlConnectionStringToDto(connection: SqlConnection): ConnectionStringDto {
+export function mapSqlConnectionStringToDto(connection: SqlConnection): SqlConnectionStringDto {
     return {
         Type: "Sql",
         Name: connection.name,
@@ -36,7 +41,7 @@ export function mapSqlConnectionStringToDto(connection: SqlConnection): Connecti
     };
 }
 
-export function mapSnowflakeConnectionStringToDto(connection: SnowflakeConnection): ConnectionStringDto {
+export function mapSnowflakeConnectionStringToDto(connection: SnowflakeConnection): SnowflakeConnectionStringDto {
     return {
         Type: "Snowflake",
         Name: connection.name,
@@ -44,7 +49,7 @@ export function mapSnowflakeConnectionStringToDto(connection: SnowflakeConnectio
     };
 }
 
-export function mapOlapConnectionStringToDto(connection: OlapConnection): ConnectionStringDto {
+export function mapOlapConnectionStringToDto(connection: OlapConnection): OlapConnectionStringDto {
     return {
         Type: "Olap",
         Name: connection.name,
@@ -118,7 +123,7 @@ export function mapRabbitMqStringToDto(connection: RabbitMqConnection): Connecti
 }
 
 export function mapAzureQueueStorageConnectionStringSettingsToDto(
-    connection: Omit<AzureQueueStorageConnection, "type" | "usedByTasks">
+    connection: Omit<AzureQueueStorageConnection, "type" | "usedBy">
 ): Raven.Client.Documents.Operations.ETL.Queue.AzureQueueStorageConnectionSettings {
     switch (connection.authType) {
         case "connectionString": {
@@ -160,7 +165,7 @@ export function mapAzureQueueStorageConnectionStringSettingsToDto(
 }
 
 export function mapAmazonSqsConnectionStringSettingsToDto(
-    connection: Omit<AmazonSqsConnection, "type" | "usedByTasks">
+    connection: Omit<AmazonSqsConnection, "type" | "usedBy">
 ): Raven.Client.Documents.Operations.ETL.Queue.AmazonSqsConnectionSettings {
     switch (connection.authType) {
         case "basic": {
@@ -205,7 +210,7 @@ export function mapAmazonSqsConnectionStringToDto(connection: AmazonSqsConnectio
 }
 
 export function mapAzureServiceBusConnectionStringSettingsToDto(
-    connection: Omit<AzureServiceBusConnection, "type" | "usedByTasks">
+    connection: Omit<AzureServiceBusConnection, "type" | "usedBy">
 ): Raven.Client.Documents.Operations.ETL.Queue.AzureServiceBusConnectionSettings {
     switch (connection.authType) {
         case "connectionString": {
@@ -254,7 +259,7 @@ export function mapAzureServiceBusConnectionStringToDto(connection: AzureService
     };
 }
 
-export function mapAiConnectionStringToDto(connection: AiConnection): ConnectionStringDto {
+export function mapAiConnectionStringToDto(connection: AiConnection): AiConnectionStringDto {
     return {
         Type: "Ai",
         Name: connection.name,
@@ -320,6 +325,8 @@ export function mapAiConnectionStringToDto(connection: AiConnection): Connection
                       Model: connection.openAiSettings.model,
                       OrganizationId: connection.openAiSettings.organizationId,
                       ProjectId: connection.openAiSettings.projectId,
+                      ReasoningEffort:
+                          connection.modelType === "Chat" ? connection.openAiSettings.reasoningEffort : null,
                       Dimensions: mapDimensionsToDto(connection),
                       EmbeddingsMaxConcurrentBatches: mapEmbeddingsMaxConcurrentBatchesToDto(connection),
                       EnablePromptCache: connection.openAiSettings.enablePromptCache,

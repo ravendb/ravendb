@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
@@ -30,7 +29,12 @@ namespace Raven.Server.Documents.Revisions
 
         internal static void UpdateBucketStatsForRevisions(Transaction tx, Slice key, ref TableValueReader oldValue, ref TableValueReader newValue)
         {
-            ShardedDocumentsStorage.UpdateBucketStatsInternal(tx, key, ref newValue, changeVectorIndex: (int)RevisionsTable.ChangeVector, sizeChange: newValue.Size - oldValue.Size);
+            var changeVectorIndex = (int)RevisionsTable.FullChangeVector;
+            if (newValue is { Size: > 0, Count: 12 })
+                // this is a legacy revision record, which doesn't have the full change vector, so we need to use the revision PK as the change vector index
+                changeVectorIndex = (int)RevisionsTable.RevisionPk;
+
+            ShardedDocumentsStorage.UpdateBucketStatsInternal(tx, key, ref newValue, changeVectorIndex, sizeChange: newValue.Size - oldValue.Size);
         }
 
     }

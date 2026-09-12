@@ -8,6 +8,6 @@ const { DefaultGatherDebugInfo } = composeStories(Stories);
 describe("GatherDebugInfo", () => {
     it("can render", async () => {
         const { screen } = rtlRender(<DefaultGatherDebugInfo />);
-        expect(await screen.findByText("Create package for")).toBeInTheDocument();
+        expect(await screen.findByText("Gather Debug Info")).toBeInTheDocument();
     });
 });

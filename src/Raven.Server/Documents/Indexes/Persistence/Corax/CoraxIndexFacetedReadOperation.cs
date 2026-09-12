@@ -148,7 +148,10 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
                     if (facetsByName.TryGetValue(result.Key, out facetValues) == false)
                         facetsByName[result.Key] = facetValues = new Dictionary<string, FacetValues>();
 
-                    var metadata = GetFieldMetadata(result.Key);
+                    // RavenDB-27054: use AggregateBy (the actual indexed field) rather than result.Key, which is
+                    // the facet's display name/alias when one was supplied (e.g. 'facet(BrandName as Merk)').
+                    // Reading the index by the alias resolves to a non-existent field and yields empty/NRE facets.
+                    var metadata = GetFieldMetadata(result.Value.AggregateBy);
 
                     var provider = _indexSearcher.TextualAggregation(metadata, forward: result.Value.Options.TermSortMode is not FacetTermSortMode.ValueDesc);
                     // When WHERE is present, we must NOT set SortedIds: UpdateFacetResults uses it as the

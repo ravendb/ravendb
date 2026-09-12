@@ -1,0 +1,140 @@
+name: labels
+
+on:
+  pull_request_target
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  labels:
+    name: Label
+    runs-on: windows-latest
+    steps:
+      # must run before the checkout, so it resolves changed files via the GitHub API
+      # instead of the local (base branch) working tree
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: changes
+        with:
+          filters: |
+            studio:
+              - 'src/Raven.Studio/**/*'
+            outsideStudio:
+              - '!src/Raven.Studio/**/*'
+            client:
+              - 'src/Raven.Client/**/*'
+            quill:
+              - 'src/Raven.Quill/**/*'
+              - 'src/Raven.Quill.Web/**/*'
+              - 'test/QuillTests/**/*'
+              - 'docker/quill/**/*'
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Parse Labels
+        shell: pwsh
+        env:
+          # Studio is labelled only when nothing outside src/Raven.Studio was touched
+          studioOnly: ${{ steps.changes.outputs.studio == 'true' && steps.changes.outputs.outsideStudio != 'true' }}
+          clientTouched: ${{ steps.changes.outputs.client }}
+          quillTouched: ${{ steps.changes.outputs.quill }}
+        run: |
+          $branch = "${{ github.event.pull_request.base.ref }}"
+          $labels = New-Object System.Collections.Generic.List[string]
+
+          # --- labels derived from the base branch ---
+
+          if ($branch -like 'release/*') {
+            # release labels
+            $labels.Add('release')
+
+            $parts = $branch.Split('/')
+
+            if ($parts.Length -ge 2 -and $parts[1] -ieq 'custom') {
+              $labels.Add('custom')
+            }
+
+            # Find a segment starting with v that looks like a version
+            $versionSeg = $parts | Where-Object { $_ -match '^v\d+(\.\d+)*' } | Select-Object -First 1
+            if ($versionSeg) {
+              # Only keep the leading vX.Y (e.g., v5.4-net60-... -> v5.4)
+              if ($versionSeg -match '^(v\d+\.\d+)') {
+                $labels.Add($Matches[1])
+              } elseif ($versionSeg -match '^(v\d+)$') {
+                $labels.Add($Matches[1])
+              }
+            }
+          }
+          elseif ($branch -like 'v*' -or $branch -like 'feature/*') {
+            # old behavior: single label = last path segment
+            $label = $branch.Split('/')[-1]
+            if (-not [string]::IsNullOrWhiteSpace($label)) {
+              $labels.Add($label)
+            }
+          }
+
+          # --- labels derived from the changed paths ---
+
+          if (($branch -like 'v*' -or $branch -like 'feature*') -and $env:studioOnly -eq 'true') {
+            $labels.Add('Studio')
+          }
+
+          # Client API changes need migration tracking only on version branches (e.g. v7.2)
+          if ($branch -like 'v*' -and $env:clientTouched -eq 'true') {
+            $labels.Add('migrate-ClientApi')
+          }
+
+          if (($branch -like 'v*' -or $branch -like 'feature*') -and $env:quillTouched -eq 'true') {
+            $labels.Add('area-Quill')
+          }
+
+          $unique = $labels | Select-Object -Unique
+          $labelStr = ($unique) -join ','
+          echo "labelsToApply=$labelStr" >> $env:GITHUB_ENV
+
+      - name: Set Labels
+        if: env.labelsToApply != ''
+        env:
+          githubOwner: ${{ github.event.pull_request.base.repo.owner.login }}
+          repoName: ${{ github.event.repository.name }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          $json = @'
+            ${{ toJson(github.event.pull_request.labels.*.name) }}
+          '@
+          $existing = @()
+          if (-not [string]::IsNullOrWhiteSpace($json)) {
+              $parsed = $null
+              try {
+                  $parsed = $json | ConvertFrom-Json
+              } catch {
+                  $parsed = @()
+              }
+
+              if ($null -ne $parsed) {
+                  switch ($parsed.GetType().Name) {
+                      'Object[]' { $existing = @($parsed | ForEach-Object { $_.ToString() }) }
+                      'String'   { $existing = @("$parsed") }
+                      default    { $existing = @() }
+                  }
+              }
+          }
+          Write-Host "Existing labels: $existing"
+
+          $labels = $env:labelsToApply.Split(',') | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique
+
+          $toAdd = @($labels | Where-Object { $existing -notcontains $_ })
+          if ($toAdd.Count -eq 0) {
+              Write-Host "No new labels to add."
+              exit 0
+          }
+
+          Write-Host "Adding labels: $toAdd"
+
+          ./scripts/githubActions/set_github_label.ps1 `
+            -owner ${{env.githubOwner}} `
+            -repo ${{env.repoName}} `
+            -pullRequestId ${{ github.event.pull_request.number }} `
+            -labels $toAdd

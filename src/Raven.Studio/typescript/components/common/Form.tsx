@@ -2,6 +2,7 @@ import React, { ComponentProps, ReactNode, useCallback, useEffect, useRef, useSt
 import genUtils from "common/generalUtils";
 import { Checkbox, CheckboxProps, Radio, Switch } from "components/common/Checkbox";
 import {
+    ArrayPath,
     Control,
     ControllerProps,
     FieldError,
@@ -19,7 +20,7 @@ import AceEditor, { AceEditorProps } from "./ace/AceEditor";
 import classNames from "classnames";
 import DurationPicker, { DurationPickerProps } from "./DurationPicker";
 import SelectCreatable from "./select/SelectCreatable";
-import { GetOptionValue, GroupBase, InputActionMeta, OnChangeValue, OptionsOrGroups } from "react-select";
+import { ActionMeta, GetOptionValue, GroupBase, InputActionMeta, OnChangeValue, OptionsOrGroups } from "react-select";
 import Select, { InputNotHidden, SelectValue } from "./select/Select";
 import DatePicker, { type DatePickerProps } from "./DatePicker";
 import { Icon } from "components/common/Icon";
@@ -275,6 +276,7 @@ export function FormSelectCreatable<
         ComponentProps<typeof SelectCreatable<Option, IsMulti, Group>> & {
             customOptions?: OptionsOrGroups<Option, Group>;
             optionCreator?: (value: string) => any;
+            afterSelect?: (options: OnChangeValue<Option, IsMulti>, actionMeta: ActionMeta<Option>) => void;
             addon?: ReactNode | string;
         }
 ) {
@@ -292,8 +294,10 @@ export function FormSelectCreatable<
         shouldUnregister,
     });
 
-    const valueAccessor = rest.getOptionValue ?? ((option: any) => option.value);
-    const optionCreator = rest.optionCreator ?? ((value: string) => ({ value, label: value }));
+    const { afterSelect, getOptionValue, optionCreator, customOptions: initialCustomOptions, ...selectRest } = rest;
+    const valueAccessor = getOptionValue ?? ((option: any) => option.value);
+    const createOption = optionCreator ?? ((value: string) => ({ value, label: value }));
+    const options = selectRest.options ?? [];
 
     const getOptionsFromValue = (
         formValues: PathValue<TFieldValues, TName>,
@@ -306,18 +310,23 @@ export function FormSelectCreatable<
     };
 
     const [customOptions, setCustomOptions] = useState<OptionsOrGroups<Option, Group>>(
-        rest.customOptions ?? getOptionsFromValue(formValues, optionCreator)
+        initialCustomOptions ?? getOptionsFromValue(formValues, createOption)
     );
 
-    const selectedOptions = getFormSelectedOptions<Option>(
-        formValues,
-        [...rest.options, ...customOptions],
-        valueAccessor
-    );
+    const selectedOptions = getFormSelectedOptions<Option>(formValues, [...options, ...customOptions], valueAccessor);
 
     const onCreateOption = (value: string) => {
-        setCustomOptions((options) => [...options, optionCreator(value)]);
-        onChange(rest.isMulti ? [...formValues, value] : value);
+        const createdOption = createOption(value);
+
+        setCustomOptions((options) => [...options, createdOption]);
+        onChange(selectRest.isMulti ? [...formValues, value] : value);
+    };
+
+    const onSelectChange = (options: OnChangeValue<Option, IsMulti>, actionMeta: ActionMeta<Option>) => {
+        onChange(
+            Array.isArray(options) ? options.map((x) => valueAccessor(x)) : options ? valueAccessor(options) : null
+        );
+        afterSelect?.(options, actionMeta);
     };
 
     return (
@@ -325,14 +334,11 @@ export function FormSelectCreatable<
             <InputGroup className="d-flex flex-grow-1">
                 <SelectCreatable
                     value={selectedOptions}
-                    onChange={(options: OnChangeValue<Option, IsMulti>) => {
-                        onChange(
-                            Array.isArray(options) ? options.map((x) => valueAccessor(x)) : valueAccessor(options)
-                        );
-                    }}
+                    onChange={onSelectChange}
                     onCreateOption={onCreateOption}
                     disabled={formState.isSubmitting}
-                    {...rest}
+                    getOptionValue={getOptionValue}
+                    {...selectRest}
                 />
                 {addon && <InputGroup.Text>{addon}</InputGroup.Text>}
             </InputGroup>
@@ -352,6 +358,7 @@ export function FormSelectAutocomplete<
         ComponentProps<typeof SelectCreatable<Option, IsMulti, Group>> & {
             customOptions?: OptionsOrGroups<Option, Group>;
             optionCreator?: (value: string) => any;
+            afterSelect?: (options: OnChangeValue<Option, IsMulti>, actionMeta: ActionMeta<Option>) => void;
             addon?: ReactNode | string;
         }
 ) {
@@ -504,7 +511,7 @@ export function FormAceEditor<
             onChange={onChange}
             value={value}
             validationErrorMessage={error?.message}
-            readOnly={formState.isSubmitting || disabled}
+            disabled={formState.isSubmitting || disabled}
             {...rest}
         />
     );
@@ -945,15 +952,17 @@ export const FormVerificationCodeInput = ({ name, control, onLastDigitInsertSubm
 
 interface FormErrorIconProps<TFieldValues extends FieldValues> {
     control: Control<TFieldValues>;
-    paths: FieldPath<TFieldValues>[];
+    paths: (FieldPath<TFieldValues> | ArrayPath<TFieldValues>)[];
     onError?: () => void;
     errorMessage?: ReactNode;
+    iconClassName?: string;
 }
 
 export function FormErrorIcon<TFieldValues extends FieldValues>({
     control,
     paths,
     onError,
+    iconClassName,
 }: FormErrorIconProps<TFieldValues>) {
     const { hasErrors, message } = useErrorMessage({ control, paths });
 
@@ -974,14 +983,14 @@ export function FormErrorIcon<TFieldValues extends FieldValues>({
                 message: message,
             }}
         >
-            <Icon icon="warning" color="danger" margin="ms-1" />
+            <Icon icon="warning" color="danger" margin="ms-1" className={iconClassName} />
         </ConditionalPopover>
     );
 }
 
 interface UseErrorMessageProps<TFieldValues extends FieldValues> {
     control: Control<TFieldValues>;
-    paths: FieldPath<TFieldValues>[];
+    paths: (FieldPath<TFieldValues> | ArrayPath<TFieldValues>)[];
 }
 
 export function useErrorMessage<TFieldValues extends FieldValues>({
@@ -990,13 +999,29 @@ export function useErrorMessage<TFieldValues extends FieldValues>({
 }: UseErrorMessageProps<TFieldValues>) {
     const formState = useFormState({
         control,
-        name: paths,
+        name: paths as FieldPath<TFieldValues>[],
     });
 
     let error: FieldError = undefined;
 
+    const getErrorForPath = (path: string): FieldError => {
+        const fieldError = _.get(formState.errors, path);
+
+        if (!fieldError) {
+            return null;
+        }
+
+        // If the error for the path is an object without a message, it means that it's an error for a nested field
+        if (!fieldError?.message) {
+            return getErrorForPath(`${path}.${Object.keys(fieldError)[0]}`);
+        }
+
+        return fieldError;
+    };
+
     for (const path of paths) {
-        error = _.get(formState.errors, path);
+        error = getErrorForPath(path);
+
         if (error) {
             break;
         }

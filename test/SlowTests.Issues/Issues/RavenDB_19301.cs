@@ -65,8 +65,8 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                b1.Mend();
-                b2.Mend();
+                await b1.MendAsync();
+                await b2.MendAsync();
 
                 Assert.Equal(2, WaitUntilHasConflict(store1, "users/1").Length);
                 Assert.Equal(2, WaitUntilHasConflict(store2, "users/1").Length);

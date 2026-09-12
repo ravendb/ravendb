@@ -1,0 +1,45 @@
+{
+  "_comment": "Northwind CdcSinkConfiguration for the W3 Map step of the E2E test. Targets the full canonical Northwind dump shipped under the 'northwind-full' dataset (test/SlowTests/Data/npgsql.northwind-full.{create,insert}.sql) -- 830 orders / 91 customers / 77 products. All Postgres tables are lowercase plural; column names use snake_case lowercase since the dump declares everything unquoted.",
+  "Name": "wizard-cdc",
+  "ConnectionStringName": "wizard-source",
+  "Tables": [
+    {
+      "CollectionName": "Customers",
+      "SourceTableSchema": "public",
+      "SourceTableName": "customers",
+      "PrimaryKeyColumns": ["customer_id"],
+      "Columns": [
+        { "Column": "customer_id",  "Name": "Id" },
+        { "Column": "company_name", "Name": "CompanyName" },
+        { "Column": "contact_name", "Name": "ContactName" },
+        { "Column": "city",         "Name": "City" },
+        { "Column": "country",      "Name": "Country" }
+      ]
+    },
+    {
+      "CollectionName": "Orders",
+      "SourceTableSchema": "public",
+      "SourceTableName": "orders",
+      "PrimaryKeyColumns": ["order_id"],
+      "Columns": [
+        { "Column": "order_id",    "Name": "Id" },
+        { "Column": "customer_id", "Name": "CustomerId" },
+        { "Column": "order_date",  "Name": "OrderDate" },
+        { "Column": "freight",     "Name": "Freight" }
+      ]
+    },
+    {
+      "CollectionName": "Products",
+      "SourceTableSchema": "public",
+      "SourceTableName": "products",
+      "PrimaryKeyColumns": ["product_id"],
+      "Columns": [
+        { "Column": "product_id",     "Name": "Id" },
+        { "Column": "product_name",   "Name": "ProductName" },
+        { "Column": "unit_price",     "Name": "UnitPrice" },
+        { "Column": "units_in_stock", "Name": "UnitsInStock" },
+        { "Column": "discontinued",   "Name": "Discontinued" }
+      ]
+    }
+  ]
+}

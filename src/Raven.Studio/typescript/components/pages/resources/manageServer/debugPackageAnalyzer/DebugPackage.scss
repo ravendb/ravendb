@@ -1,0 +1,165 @@
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.flex-window.debug-package-window-fill {
+    height: 100%;
+    flex-grow: 1;
+    min-height: 0;
+}
+
+.debug-package-analyzer {
+    .file-dropzone {
+        body[data-theme="blue"] & {
+            color: colors.$secondary-var;
+
+            .text-muted {
+                color: colors.$secondary-var !important;
+            }
+        }
+    }
+
+    &.debug-package-analyzer--fill {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .debug-package-upload {
+        flex-grow: 1;
+        min-height: 0;
+    }
+
+    .debug-package-dropzone {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+
+        .file-dropzone {
+            flex-grow: 1;
+        }
+    }
+
+    body[data-theme="dark"] &,
+    body[data-theme="classic"] & {
+        .database-index-definitions {
+            .rich-panel-item {
+                --bs-card-bg: colors.$panel-bg-2-var;
+            }
+
+            .index-definition-body {
+                background: colors.$well-bg-var;
+
+                .code,
+                .code .code-classes {
+                    background-color: colors.$panel-bg-1-var;
+                }
+            }
+        }
+    }
+
+    body[data-theme="light"] & {
+        .panel-header-bg {
+            background-color: colors.$panel-bg-2-var !important;
+        }
+
+        .database-index-definitions .rich-panel-item {
+            background-color: colors.$panel-bg-2-var;
+
+            .card-header {
+                background-color: colors.$panel-bg-2-var;
+            }
+
+            .index-definition-body {
+                background: colors.$pre-bg-var;
+            }
+        }
+    }
+
+    body[data-theme="blue"] & {
+        .virtual-table {
+            --text-color: #232e45;
+            --text-muted: #2f3a52;
+            --text-emphasis: #172138;
+            --panel-header-bg: #f4f5fb;
+            --panel-bg-1: #e1e3ef;
+            --panel-bg-2: #c8ccdf;
+            --panel-bg-3: #a9b0c6;
+            --well-bg: #c8ccdf;
+            --border-color-light: #c5c8d4;
+            --row-bg: #ffffff;
+            --row-even-bg: #f0f1f6;
+            color: var(--text-color);
+        }
+    }
+
+    body[data-theme="blue"] & {
+        .small-label,
+        .issue-group-header {
+            color: colors.$text-muted-var;
+        }
+
+        .react-select-container {
+            .react-select__control--is-disabled {
+                background-color: colors.$input-bg-var !important;
+            }
+
+            .react-select__value-container * {
+                color: colors.$body-bg-var !important;
+            }
+
+            .react-select__placeholder {
+                color: colors.$secondary-var !important;
+            }
+
+            .react-select__dropdown-indicator {
+                color: colors.$body-bg-var;
+            }
+        }
+    }
+
+    .debug-package-exception-details {
+        max-height: 320px;
+        overflow: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-size: 0.75rem;
+        padding: sizes.$gutter-xs;
+        background-color: colors.$panel-bg-2-var;
+        border-radius: sizes.$border-radius-sm;
+    }
+
+    h2 .icon-addon-search::after {
+        right: -5%;
+        bottom: -7%;
+    }
+
+    .debug-package-analyze-icon {
+        font-size: 6rem;
+        line-height: 1;
+    }
+
+    .group-by-control {
+        min-width: 200px;
+    }
+
+    .overview-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+
+        .stat-tile {
+            min-width: 0;
+
+            &.w-100 {
+                grid-column: 1 / -1;
+            }
+        }
+
+        .stat-tile-value {
+            font-weight: 600;
+        }
+    }
+
+    .database-context-group-heading {
+        font-size: 1.25rem;
+        margin: 0;
+    }
+}

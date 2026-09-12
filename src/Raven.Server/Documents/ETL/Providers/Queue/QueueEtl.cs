@@ -20,6 +20,7 @@ using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Exceptions.ETL.QueueEtl;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents.ETL.Providers.Queue;
 

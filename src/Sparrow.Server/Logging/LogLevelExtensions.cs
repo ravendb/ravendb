@@ -1,5 +1,6 @@
 using System;
 using Sparrow.Logging;
+using LogLevel = Sparrow.Logging.LogLevel;
 
 namespace Sparrow.Server.Logging;
 

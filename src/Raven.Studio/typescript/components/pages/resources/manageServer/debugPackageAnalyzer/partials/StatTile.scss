@@ -1,0 +1,28 @@
+.stat-tile-label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+// truncate long text inside stat-tile (flex container prevents auto-truncation)
+.stat-tile-value {
+    min-width: 0;
+    overflow: hidden;
+}
+
+.stat-tile-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+// truncate long node URLs inside stat-tile (flex container prevents auto-truncation)
+.node-url-link {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+    min-width: 0;
+    max-width: 260px;
+}

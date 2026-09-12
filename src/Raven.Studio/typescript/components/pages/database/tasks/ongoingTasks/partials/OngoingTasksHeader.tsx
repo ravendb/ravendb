@@ -71,7 +71,7 @@ export function OngoingTasksHeader(props: OngoingTasksHeaderProps) {
                         <>
                             <div id="NewTaskButton">
                                 <Button
-                                    href={forCurrentDatabase.addNewOngoingTask(isAiOnly)()}
+                                    href={forCurrentDatabase.addNewOngoingTaskUrl(isAiOnly)()}
                                     className="rounded-pill"
                                 >
                                     <Icon icon="ongoing-tasks" addon="plus" />
@@ -84,16 +84,14 @@ export function OngoingTasksHeader(props: OngoingTasksHeaderProps) {
                     <FlexGrow />
 
                     {isClusterAdminOrClusterNode && !isAiOnly && (
-                        <Button
-                            variant="link"
-                            size="sm"
-                            target="_blank"
+                        <a
+                            className="btn btn-link btn-sm"
                             href={serverWideTasksUrl}
                             title="Go to the Server-Wide Tasks view"
                         >
                             <Icon icon="server-wide-tasks" />
                             Server-Wide Tasks
-                        </Button>
+                        </a>
                     )}
 
                     {isAiOnly ? <AiTasksInfoHub /> : <AboutView />}
@@ -131,13 +129,7 @@ function AboutView() {
 
     return (
         <AboutViewFloating>
-            <AccordionItemWrapper
-                icon="about"
-                color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
-                targetId="about-view"
-            >
+            <AccordionItemWrapper icon="about" color="info" targetId="about-view">
                 <div>
                     <ul>
                         <li>

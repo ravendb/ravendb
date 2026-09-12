@@ -55,6 +55,10 @@ namespace Raven.Server.Documents.Handlers.Processors.Studio
 
                 writer.WritePropertyName(nameof(FooterStatistics.CountOfAiTasksErrors));
                 writer.WriteInteger(stats.CountOfAiTasksErrors);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(FooterStatistics.CountOfCdcSinkTasksErrors));
+                writer.WriteInteger(stats.CountOfCdcSinkTasksErrors);
 
                 writer.WriteEndObject();
             }

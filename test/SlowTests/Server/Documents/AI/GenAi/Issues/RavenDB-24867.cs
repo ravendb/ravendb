@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Server.Documents.ETL;
 using Tests.Infrastructure;
 using Xunit;
+using Raven.Server.Documents.TasksErrors;
 
 namespace SlowTests.Server.Documents.AI.GenAi.Issues;
 
