@@ -16,5 +16,10 @@ namespace Raven.Server.Integrations.PostgreSQL.Exceptions
         {
             ErrorCode = errorCode;
         }
+
+        public PgErrorException(string errorCode, string errorMessage, Exception innerException) : base(errorMessage, innerException)
+        {
+            ErrorCode = errorCode;
+        }
     }
 }

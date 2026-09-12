@@ -71,20 +71,22 @@ public partial class RavenTestBase
                 _config = config;
             }
 
-            public void Mend()
+            public async Task MendAsync()
             {
                 foreach (var (shardNumber, brokenReplication) in ShardReplications)
                 {
-                    brokenReplication.Mend();
+                    await brokenReplication.MendAsync();
                 }
             }
 
-            public void Break()
+            public IAsyncDisposable Break()
             {
+                var handles = new List<IAsyncDisposable>();
                 foreach (var (shardNumber, shardReplication) in ShardReplications)
                 {
-                    shardReplication.Break();
+                    handles.Add(shardReplication.Break());
                 }
+                return new CompositeAsyncDisposable(handles);
             }
 
             public void ReplicateOnce(string docId)

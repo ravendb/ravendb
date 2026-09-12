@@ -434,6 +434,20 @@ internal static partial class QueryPlanBuilder
             List<ClauseInfo> clauses = walkerCtx.Clauses;
             walkerCtx.Clauses = saved;
 
+            // A group that folds to a constant must still say so in the plan. `X or true` is ALL, not X: without
+            // the sentinel the parent AND-s `X` in and silently drops every document only the `true` branch
+            // matched. Append the absorbing sentinel rather than replacing the sub-clauses, because those leaves
+            // may carry boost and still have to resolve into ResolvedMatches for Score() - OR-ing MatchAll in
+            // gives ALL for the result set while leaving the boosted leaves intact for scoring.
+            if (expr is BooleanOp.True or BooleanOp.False)
+            {
+                clauses.Add(new ClauseInfo
+                {
+                    ClauseType = expr is BooleanOp.True ? ClauseType.MatchAll : ClauseType.MatchNothing,
+                    OriginalIndex = clauses.Count
+                });
+            }
+
             ClauseInfo clauseInfo = new() { ClauseType = clauseType, OriginalIndex = walkerCtx.Clauses.Count, SubClauses = clauses };
 
             walkerCtx.Clauses.Add(clauseInfo);
@@ -952,7 +966,8 @@ internal static partial class QueryPlanBuilder
             ClauseType = ClauseType.Vector,
             OriginalIndex = walkerCtx.Clauses.Count,
             Bindings = [vectorValueBinding, minimumMatchBinding, numberOfCandidatesBinding, aiTaskBinding],
-            VectorMethod = vecMethod
+            VectorMethod = vecMethod,
+            VectorSourceFieldName = walkerCtx.Metadata.GetVectorSourceFieldName(vectorFieldName, method, walkerCtx.QueryParameters)
         });
         return BooleanOp.Leaf;
     }

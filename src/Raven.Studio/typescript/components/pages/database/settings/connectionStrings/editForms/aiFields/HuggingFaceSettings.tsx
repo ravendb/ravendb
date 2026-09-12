@@ -11,6 +11,7 @@ import ConnectionTestResult from "components/common/connectionTests/ConnectionTe
 import { useServices } from "components/hooks/useServices";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { connectionStringSelectors } from "components/pages/database/settings/connectionStrings/store/connectionStringsSlice";
 import { useAsyncCallback } from "react-async-hook";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import OptionalLabel from "components/common/OptionalLabel";
@@ -22,6 +23,7 @@ export default function HuggingFaceSettings({ isUsedByAnyTask }: { isUsedByAnyTa
     const { control, trigger } = useFormContext<FormData>();
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
 
     const formValues = useWatch({ control });
 
@@ -31,11 +33,14 @@ export default function HuggingFaceSettings({ isUsedByAnyTask }: { isUsedByAnyTa
             return;
         }
 
-        return tasksService.testAiConnectionString(databaseName, "HuggingFace", formValues.modelType, {
+        const settings = {
             ApiKey: formValues.huggingFaceSettings.apiKey,
             Endpoint: formValues.huggingFaceSettings.endpoint,
             Model: formValues.huggingFaceSettings.model,
-        });
+        };
+        return isServerWide
+            ? tasksService.testServerWideAiConnectionString("HuggingFace", formValues.modelType, settings)
+            : tasksService.testAiConnectionString(databaseName, "HuggingFace", formValues.modelType, settings);
     });
 
     return (

@@ -9,6 +9,7 @@ using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Querying.Matches;
 using Corax.Querying.Matches.Meta;
+using Sparrow;
 using Sparrow.Server;
 using Voron;
 using Voron.Util;
@@ -128,6 +129,7 @@ public partial class IndexSearcher
         {
             Constants.Search.SearchMatchOptions.Exists => ExistsQuery(field, token: cancellationToken),
             Constants.Search.SearchMatchOptions.StartsWith => StartWithQuery(field, analyzedTerm, token: cancellationToken),
+            Constants.Search.SearchMatchOptions.PatternMatch => PatternQuery(field, analyzedTerm, token: cancellationToken),
             Constants.Search.SearchMatchOptions.EndsWith => EndsWithQuery(field, analyzedTerm, token: cancellationToken),
             Constants.Search.SearchMatchOptions.Contains => ContainsQuery(field, analyzedTerm, token: cancellationToken),
             _ => throw new ArgumentOutOfRangeException(nameof(termType), termType.ToString())
@@ -429,11 +431,12 @@ public partial class IndexSearcher
                     Constants.Search.SearchMatchOptions.Contains => (1, -1),
                     Constants.Search.SearchMatchOptions.TermMatch => (0, 0),
                     Constants.Search.SearchMatchOptions.Exists => (0, 0),
+                    Constants.Search.SearchMatchOptions.PatternMatch => (0, 0),
                     _ => throw new InvalidExpressionException("Unknown flag inside Search match.")
                 };
 
-                // Rewrite term without asterisks.
-                if (termType is not (Constants.Search.SearchMatchOptions.Exists or Constants.Search.SearchMatchOptions.TermMatch))
+                // Rewrite term without asterisks. A pattern keeps them - they are the pattern.
+                if (termType is not (Constants.Search.SearchMatchOptions.Exists or Constants.Search.SearchMatchOptions.TermMatch or Constants.Search.SearchMatchOptions.PatternMatch))
                     Slice.From(Allocator, valueAsSpan.Slice(startIncrement, valueAsSpan.Length - startIncrement + lengthIncrement), ByteStringType.Immutable, out value);
 
                 if (termType is Constants.Search.SearchMatchOptions.TermMatch)
@@ -493,24 +496,31 @@ public partial class IndexSearcher
 
     private Constants.Search.SearchMatchOptions GetTermType(ReadOnlySpan<byte> termValue)
     {
-        if (termValue.IsEmpty)
+        if (termValue.IsEmpty || termValue.ContainsAny(Constants.Search.PatternSymbols) == false)
             return Constants.Search.SearchMatchOptions.TermMatch;
 
-        Constants.Search.SearchMatchOptions mode = default;
+        bool hasPrefixAsterisk = termValue[0] == '*';
+        bool hasSuffixAsterisk = termValue[^1] == '*' && (termValue.Length <= 2 || termValue[^2] != '\\');
 
-        if (termValue[0] == '*')
-            mode |= Constants.Search.SearchMatchOptions.EndsWith;
-
-        if (termValue[^1] == '*')
-        {
-            if (termValue.Length <= 2 || termValue[^2] != '\\')
-                mode |= Constants.Search.SearchMatchOptions.StartsWith;
-        }
-
-        if (mode == Constants.Search.SearchMatchOptions.Contains && termValue.Count((byte)'*') == termValue.Length)
+        if (hasPrefixAsterisk && hasSuffixAsterisk && termValue.Count((byte)'*') == termValue.Length)
             return Constants.Search.SearchMatchOptions.Exists;
 
-        return mode;
+        // Anything left between the outer asterisks that is itself a wildcard makes this a glob rather than a
+        // startsWith / endsWith / contains (RavenDB-27286).
+        var len = termValue.Length - hasSuffixAsterisk.ToInt32();
+        var leftTerm = termValue[hasPrefixAsterisk.ToInt32()..len];
+        if (hasPrefixAsterisk && leftTerm.ContainsAny(Constants.Search.PatternSymbols))
+            return Constants.Search.SearchMatchOptions.PatternMatch;
+
+        if (hasPrefixAsterisk && hasSuffixAsterisk)
+            return Constants.Search.SearchMatchOptions.Contains;
+
+        if (hasPrefixAsterisk)
+            return Constants.Search.SearchMatchOptions.EndsWith;
+
+        return hasSuffixAsterisk
+            ? Constants.Search.SearchMatchOptions.StartsWith
+            : Constants.Search.SearchMatchOptions.TermMatch;
     }
 
     private Analyzer CreateWildcardAnalyzer(in FieldMetadata field, ref Analyzer analyzer)

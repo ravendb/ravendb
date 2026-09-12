@@ -22,13 +22,7 @@ export function RemoteAttachmentsInfoHub() {
 
     return (
         <AboutViewAnchored defaultOpen={hasRemoteAttachments ? null : "licensing"}>
-            <AccordionItemWrapper
-                targetId="about"
-                icon="about"
-                color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
-            >
+            <AccordionItemWrapper targetId="about" icon="about" color="info">
                 <div>
                     <p>
                         To reduce local storage usage, attachments can be <strong>stored remotely</strong> instead of
@@ -78,5 +72,6 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         community: { value: false },
         professional: { value: false },
         enterprise: { value: true },
+        quill: { value: true },
     },
 ];

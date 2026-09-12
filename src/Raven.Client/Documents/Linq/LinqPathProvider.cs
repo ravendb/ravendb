@@ -386,14 +386,14 @@ namespace Raven.Client.Documents.Linq
                     return true;
                 case ExpressionType.MemberInit:
                     var memberInitExpression = ((MemberInitExpression)expression);
-                    value = Expression.Lambda(memberInitExpression).Compile().DynamicInvoke();
+                    value = Expression.Lambda(memberInitExpression).Compile(preferInterpretation: true).DynamicInvoke();
                     return true;
                 case ExpressionType.New:
                     value = GetNewExpressionValue(expression);
                     return true;
                 case ExpressionType.Lambda:
                     var lambda = ((LambdaExpression)expression);
-                    value = lambda.Compile().DynamicInvoke();
+                    value = lambda.Compile(preferInterpretation: true).DynamicInvoke();
                     return true;
                 case ExpressionType.Call:
                     if (expression is MethodCallExpression mce)
@@ -425,13 +425,13 @@ namespace Raven.Client.Documents.Linq
                             }
                         }
                     }
-                    value = Expression.Lambda(expression).Compile().DynamicInvoke();
+                    value = Expression.Lambda(expression).Compile(preferInterpretation: true).DynamicInvoke();
                     return true;
                 case ExpressionType.Convert:
                     var unaryExpression = (UnaryExpression)expression;
                     if (unaryExpression.Type.IsNullableType())
                         return GetValueFromExpressionWithoutConversion(unaryExpression.Operand, out value);
-                    value = Expression.Lambda(expression).Compile().DynamicInvoke();
+                    value = Expression.Lambda(expression).Compile(preferInterpretation: true).DynamicInvoke();
                     return true;
                 case ExpressionType.NewArrayInit:
                     var expressions = ((NewArrayExpression)expression).Expressions;
@@ -465,7 +465,7 @@ namespace Raven.Client.Documents.Linq
             {
                 if (mce.Arguments[index].NodeType == ExpressionType.Lambda)
                 {
-                    args[index] = ((LambdaExpression)mce.Arguments[index]).Compile();
+                    args[index] = ((LambdaExpression)mce.Arguments[index]).Compile(preferInterpretation: true);
                     continue;
                 }
                 if (GetValueFromExpressionWithoutConversion(mce.Arguments[index], out var value) == false)
@@ -524,10 +524,9 @@ namespace Raven.Client.Documents.Linq
             {
                 return property.GetValue(obj, null);
             }
-            if (memberInfo is FieldInfo)
+            if (memberInfo is FieldInfo field)
             {
-                var value = Expression.Lambda(memberExpression).Compile().DynamicInvoke();
-                return value;
+                return field.GetValue(obj);
             }
             throw new NotSupportedException("MemberInfo type not supported: " + memberInfo.GetType().FullName);
         }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http.Features.Authentication;
@@ -24,6 +25,8 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             : base(requestHandler)
         {
         }
+
+        protected override HttpStatusCode GetResponseStatusCode() => HttpStatusCode.Created;
 
         protected override void OnBeforeUpdateConfiguration(ref BlittableJsonReaderObject configuration, JsonOperationContext context)
         {

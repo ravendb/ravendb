@@ -1,0 +1,98 @@
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.debug-package-analyzer {
+    .analysis-results,
+    .cluster-observer-decisions {
+        .issue-group-header {
+            display: flex;
+            align-items: center;
+            gap: sizes.$gutter-xxs;
+            width: 100%;
+            padding: sizes.$gutter-xxs sizes.$gutter-xxxs sizes.$gutter-xxs;
+            background: none;
+            border: none;
+            text-align: left;
+            cursor: pointer;
+            color: colors.$secondary-var;
+            font-size: sizes.$font-size-xs;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .issue-list {
+            &--capped {
+                position: relative;
+            }
+
+            &__fade {
+                position: absolute;
+                inset-inline: 0;
+                bottom: 0;
+                display: flex;
+                justify-content: center;
+                align-items: flex-end;
+                padding-bottom: sizes.$gutter-xs;
+                height: 5rem;
+                background: linear-gradient(180deg, transparent, colors.$panel-bg-1-var);
+                pointer-events: none;
+            }
+
+            &__show-all {
+                pointer-events: auto;
+            }
+        }
+
+        .issue-row {
+            padding: sizes.$gutter-xs;
+            border-radius: sizes.$border-radius-sm;
+            background: colors.$panel-bg-2-var;
+            margin-bottom: sizes.$gutter-xxs;
+            line-height: 1.35;
+
+            .icon-danger,
+            .icon-warning,
+            .icon-info {
+                font-size: 1.125rem;
+            }
+
+            &:last-child {
+                margin-bottom: 0;
+            }
+        }
+
+        .issue-title {
+            font-size: 0.875rem;
+            line-height: 1.3;
+            line-break: anywhere;
+        }
+
+        .issue-description {
+            font-size: 0.8125rem;
+            line-height: 1.4;
+            line-break: anywhere;
+
+            &.clamped {
+                display: -webkit-box;
+                -webkit-line-clamp: 3;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+        }
+
+        .issue-recommendation {
+            font-size: 0.8125rem;
+            line-height: 1.4;
+        }
+
+        .analysis-result-metadata {
+            display: flex;
+            flex-direction: row;
+            flex-shrink: 0;
+            gap: sizes.$gutter-xxxs;
+            align-self: baseline;
+            align-items: center;
+        }
+    }
+}

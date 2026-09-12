@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using System.Linq;
 using Tests.Infrastructure;
+using Voron.Data.Tables;
 using Xunit;
 
 namespace FastTests.Voron.Tables
@@ -8,6 +10,46 @@ namespace FastTests.Voron.Tables
     {
         public Allocations(ITestOutputHelper output) : base(output)
         {
+        }
+
+        [RavenFact(RavenTestCategory.Voron)]
+        public void NewPageAllocatorMustAccountForAllSections()
+        {
+            using (var tx = Env.WriteTransaction())
+            {
+                var parent = tx.CreateTree("parent");
+                var allocator = new NewPageAllocator(tx.LowLevelTransaction, parent);
+                allocator.Create();
+
+                // right after Create() there is exactly one section, so even a single-section scan sees all of it
+                int sectionCapacity = allocator.AllPages().Count;
+                Assert.True(sectionCapacity > 0);
+
+                var firstSection = new List<long>();
+                for (int i = 0; i < sectionCapacity; i++)
+                    firstSection.Add(allocator.AllocateSinglePage(0).PageNumber);
+
+                var secondSection = new List<long>();
+                for (int i = 0; i < 20; i++)
+                    secondSection.Add(allocator.AllocateSinglePage(0).PageNumber);
+
+                allocator.FreePage(firstSection[5]);
+                allocator.FreePage(firstSection[10]);
+                allocator.FreePage(firstSection[15]);
+                allocator.FreePage(secondSection[3]);
+                allocator.FreePage(secondSection[7]);
+
+                var expectedFree = 3 + (sectionCapacity - 20) + 2;
+
+                var allPages = allocator.AllPages();
+                Assert.Equal(expectedFree, allPages.Count);
+                Assert.Contains(firstSection[5], allPages);
+                Assert.Contains(secondSection[3], allPages);
+
+                var report = allocator.GetNumberOfPreAllocatedFreePages();
+                Assert.Equal(expectedFree, report.NumberOfFreePages);
+                Assert.Equal(2L * sectionCapacity, report.NumberOfOriginallyAllocatedPages);
+            }
         }
 
         [RavenMultiplatformFact(RavenTestCategory.Voron, RavenArchitecture.AllX64)]

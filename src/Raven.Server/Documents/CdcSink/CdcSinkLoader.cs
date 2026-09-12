@@ -1,0 +1,444 @@
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.CdcSink;
+using Raven.Client.Documents.Operations.ETL.SQL;
+using Raven.Client.ServerWide;
+using Raven.Client.Util;
+using Raven.Server.Logging;
+using Raven.Server.ServerWide;
+using Raven.Server.Utils;
+using Sparrow.Logging;
+using Sparrow.Server.Logging;
+using Raven.Server.Documents.TasksErrors;
+
+namespace Raven.Server.Documents.CdcSink;
+
+public class CdcSinkLoader : IDisposable
+{
+    private CdcSinkProcess[] _processes = [];
+
+    private readonly HashSet<string> _uniqueConfigurationNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+    private DatabaseRecord _databaseRecord;
+    private readonly object _loadProcessedLock = new object();
+    private readonly DocumentDatabase _database;
+    private readonly ServerStore _serverStore;
+    protected RavenLogger Logger;
+    public CdcSinkProcess[] Processes => _processes;
+
+    public event Action<(string ConfigurationName, string TableName, CdcSinkProcessStatistics Statistics)> BatchCompleted;
+
+    public void OnBatchCompleted(string configurationName, string tableName, CdcSinkProcessStatistics statistics)
+    {
+        BatchCompleted?.Invoke((configurationName, tableName, statistics));
+    }
+
+    public event Action<CdcSinkProcess> ProcessAdded;
+
+    public event Action<CdcSinkProcess> ProcessRemoved;
+
+    public List<CdcSinkConfiguration> Sinks;
+
+    public IEnumerable<string> GetCdcSinkProcessNamesFromRecord()
+    {
+        if (Sinks != null)
+        {
+            foreach (var config in Sinks)
+            {
+                yield return config.Name;
+            }
+        }
+    }
+
+    public void Initialize(DatabaseRecord record)
+    {
+        LoadProcesses(record, record.CdcSinks, toRemove: null);
+    }
+
+    public CdcSinkLoader() { }
+
+    public CdcSinkLoader(DocumentDatabase documentDatabase, ServerStore serverStore)
+    {
+        _database = documentDatabase;
+        _serverStore = serverStore;
+        Logger = documentDatabase.Loggers.GetLogger(GetType());
+    }
+
+    private void LoadProcesses(DatabaseRecord record, List<CdcSinkConfiguration> newDestinations,
+        List<CdcSinkProcess> toRemove)
+    {
+        lock (_loadProcessedLock)
+        {
+            _databaseRecord = record;
+
+            Sinks = _databaseRecord.CdcSinks;
+
+            var processes = new List<CdcSinkProcess>(_processes);
+
+            if (toRemove != null && toRemove.Count > 0)
+            {
+                foreach (var process in toRemove)
+                {
+                    processes.Remove(process);
+                    _uniqueConfigurationNames.Remove(process.Configuration.Name);
+
+                    OnProcessRemoved(process);
+                }
+            }
+
+            var ensureUniqueConfigurationNames = new HashSet<string>(_uniqueConfigurationNames, StringComparer.OrdinalIgnoreCase);
+
+            var newProcesses = new List<CdcSinkProcess>();
+            if (newDestinations != null && newDestinations.Count > 0)
+                newProcesses.AddRange(GetRelevantProcesses(newDestinations, ensureUniqueConfigurationNames));
+
+            processes.AddRange(newProcesses);
+            _processes = processes.ToArray();
+
+            foreach (var process in newProcesses)
+            {
+                // Isolate per-process startup: a throw while starting one sink must not prevent
+                // the remaining sinks from starting on a database-record change.
+                try
+                {
+                    process.Start();
+
+                    OnProcessAdded(process);
+                }
+                catch (Exception e)
+                {
+                    LogConfigurationError(process.Configuration, new List<string> { $"Failed to start the CDC Sink process. Error: {e}" });
+                }
+
+                _uniqueConfigurationNames.Add(process.Configuration.Name);
+            }
+        }
+    }
+
+    private IEnumerable<CdcSinkProcess> GetRelevantProcesses(List<CdcSinkConfiguration> configurations,
+        HashSet<string> uniqueNames)
+    {
+        foreach (var config in configurations)
+        {
+            CdcSinkProcess process;
+
+            // Isolate per-configuration handling: a failure while preparing one sink (e.g. an
+            // unsupported provider in CreateProcess, or a transient error reading process state)
+            // must not poison the remaining sinks on a database-record change. Alert and continue.
+            try
+            {
+                if (_databaseRecord.SqlConnectionStrings.TryGetValue(config.ConnectionStringName, out var sqlConnection) == false)
+                {
+                    LogConfigurationError(config,
+                        new List<string> { $"Connection string named '{config.ConnectionStringName}' was not found." });
+
+                    continue;
+                }
+
+                config.Initialize(sqlConnection);
+
+                if (ValidateConfiguration(config, uniqueNames) == false)
+                    continue;
+
+                var processState = CdcSinkProcess.GetProcessState(_database, config.Name);
+                var whoseTaskIsIt = OngoingTasksUtils.WhoseTaskIsIt(_serverStore, _databaseRecord.Topology, config, processState, _database.NotificationCenter);
+                if (whoseTaskIsIt != _serverStore.NodeTag)
+                    continue;
+
+                process = CreateProcess(config, _database);
+            }
+            catch (Exception e)
+            {
+                LogConfigurationError(config, new List<string> { $"Failed to create the CDC Sink process. Error: {e}" });
+                continue;
+            }
+
+            if (process != null)
+                yield return process;
+        }
+    }
+
+    protected virtual CdcSinkProcess CreateProcess(CdcSinkConfiguration configuration, DocumentDatabase database)
+    {
+        return configuration.Connection?.FactoryName switch
+        {
+            "Npgsql" => new PostgresCdcSinkProcess(configuration, database),
+            "Microsoft.Data.SqlClient" => new SqlServerCdcSinkProcess(configuration, database),
+            "MySql.Data.MySqlClient" or "MySqlConnector.MySqlConnectorFactory" => new MySqlCdcSinkProcess(configuration, database),
+            _ => throw new NotSupportedException($"CDC is not supported for provider '{configuration.Connection?.FactoryName}'")
+        };
+    }
+
+    private bool ValidateConfiguration(CdcSinkConfiguration config, HashSet<string> uniqueNames)
+    {
+        if (config.Validate(out List<string> errors) == false)
+        {
+            LogConfigurationError(config, errors);
+            return false;
+        }
+
+        if (uniqueNames.Add(config.Name) == false)
+        {
+            LogConfigurationError(config,
+                new List<string> { $"CDC Sink with name '{config.Name}' is already defined" });
+            return false;
+        }
+
+        return true;
+    }
+
+    private void OnProcessRemoved(CdcSinkProcess process)
+    {
+        ProcessRemoved?.Invoke(process);
+    }
+
+    private void OnProcessAdded(CdcSinkProcess process)
+    {
+        ProcessAdded?.Invoke(process);
+    }
+
+    public virtual void Dispose()
+    {
+        var ea = new ExceptionAggregator(Logger, "Could not dispose CDC Sink loader");
+
+        Parallel.ForEach(_processes, x => ea.Execute(x.Dispose));
+
+        ea.ThrowIfNeeded();
+    }
+
+    private bool IsMyTask(DatabaseRecord record, CdcSinkConfiguration config, ref Dictionary<string, string> responsibleNodes)
+    {
+        var processState = CdcSinkProcess.GetProcessState(_database, config.Name);
+        var whoseTaskIsIt = OngoingTasksUtils.WhoseTaskIsIt(_serverStore, record.Topology, config, processState, _database.NotificationCenter);
+
+        responsibleNodes[config.Name] = whoseTaskIsIt;
+
+        return whoseTaskIsIt == _serverStore.NodeTag;
+    }
+
+
+
+    private void LogConfigurationError(CdcSinkConfiguration config, List<string> errors)
+    {
+        var errorMessage =
+            $"Invalid CDC Sink configuration for '{config.Name}'{(config.Connection != null ? $" ({config.GetDestination()})" : string.Empty)}. " +
+            $"Reason{(errors.Count > 1 ? "s" : string.Empty)}: {string.Join(";", errors)}.";
+
+        if (Logger.IsInfoEnabled)
+            Logger.Info(errorMessage);
+
+        _database.TaskErrorsStorage.StoreProcessError(TaskCategory.CdcSink, new TaskProcessError
+        {
+            CreatedAt = SystemTime.UtcNow,
+            TaskName = config.Name,
+            Step = TaskErrorStep.Configuration,
+            Error = errorMessage
+        });
+    }
+
+    private static string GetStopReason(
+        CdcSinkProcess process,
+        DatabaseRecord record,
+        List<CdcSinkConfiguration> myCdcSinks,
+        Dictionary<string, string> responsibleNodes)
+    {
+        CdcSinkConfigurationCompareDifferences? differences = null;
+        var transformationDiffs =
+            new List<(string TransformationName, CdcSinkConfigurationCompareDifferences Difference)>();
+
+        var reason = "Database record change. ";
+
+        CdcSinkConfiguration existing = null;
+        foreach (var x in myCdcSinks)
+        {
+            if (x.Name.Equals(process.Configuration.Name, StringComparison.OrdinalIgnoreCase))
+            {
+                existing = x;
+                break;
+            }
+        }
+
+        if (existing != null)
+            differences = process.Configuration.Compare(existing, record.SqlConnectionStrings, transformationDiffs);
+
+        if (differences != null)
+        {
+            reason += $"Configuration changes: {differences}. Details: ";
+
+            foreach (var transformationDiff in transformationDiffs)
+            {
+                reason += $"Script '{transformationDiff.TransformationName}' - {transformationDiff.Difference}. ";
+            }
+        }
+        else
+        {
+            if (responsibleNodes.TryGetValue(process.Configuration.Name, out var responsibleNode))
+            {
+                reason += $"CDC Sink was moved to another node. Responsible node is: {responsibleNode}";
+            }
+            else
+            {
+                reason +=
+                    $"CDC Sink was deleted or moved to another node (no configuration named '{process.Configuration.Name}' was found). ";
+            }
+        }
+
+        return reason;
+    }
+
+    public void HandleDatabaseRecordChange(DatabaseRecord record)
+    {
+        var myCdcSinks = new List<CdcSinkConfiguration>();
+        var responsibleNodes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var config in record.CdcSinks)
+        {
+            if (IsMyTask(record, config, ref responsibleNodes))
+            {
+                myCdcSinks.Add(config);
+            }
+        }
+
+        var processesPerConfig = new Dictionary<string, List<CdcSinkProcess>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var process in _processes)
+        {
+            if (processesPerConfig.TryGetValue(process.Configuration.Name, out var list) == false)
+            {
+                list = new List<CdcSinkProcess>();
+                processesPerConfig[process.Configuration.Name] = list;
+            }
+            list.Add(process);
+        }
+
+        var unchangedConfigs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (configName, processList) in processesPerConfig)
+        {
+            var process = processList[0];
+
+            CdcSinkConfiguration existing = null;
+
+            foreach (var config in myCdcSinks)
+            {
+                var diff = process.Configuration.Compare(config, record.SqlConnectionStrings);
+
+                if (diff == CdcSinkConfigurationCompareDifferences.None)
+                {
+                    existing = config;
+                    break;
+                }
+            }
+
+            if (existing != null)
+            {
+                unchangedConfigs.Add(configName);
+                myCdcSinks.Remove(existing);
+            }
+        }
+
+        var toRemoveList = new List<CdcSinkProcess>();
+        foreach (var (configName, processList) in processesPerConfig)
+        {
+            if (unchangedConfigs.Contains(configName))
+                continue;
+            for (int i = 0; i < processList.Count; i++)
+                toRemoveList.Add(processList[i]);
+        }
+
+        // Stop old processes BEFORE starting new ones. PostgreSQL replication slots
+        // allow only one consumer, so the old process must release its connection
+        // before the replacement can connect.
+        if (toRemoveList.Count > 0)
+        {
+            Parallel.ForEach(toRemoveList, process =>
+            {
+                try
+                {
+                    if (_database.DatabaseShutdown.IsCancellationRequested)
+                        return;
+
+                    using (process)
+                    {
+                        string reason = GetStopReason(process, record, myCdcSinks, responsibleNodes);
+                        process.Stop(reason);
+                    }
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsErrorEnabled)
+                        Logger.Error(
+                            $"Failed to dispose CDC sink process {process.Name} on the database record change", e);
+                }
+            });
+        }
+
+        // Drop the dedicated error storage only when past errors no longer apply: the sink was
+        // deleted, or reconfigured on this node so a fresh replacement starts clean. Preserve it
+        // when the sink merely moved to another node, or only had its enabled/disabled flag toggled
+        // - toggling doesn't invalidate past errors, so an operator disabling a failing sink can
+        // still inspect why it failed.
+        if (toRemoveList.Count > 0)
+        {
+            var configsByName = new Dictionary<string, CdcSinkConfiguration>(StringComparer.OrdinalIgnoreCase);
+            foreach (var config in record.CdcSinks)
+                configsByName[config.Name] = config;
+
+            foreach (var process in toRemoveList)
+            {
+                var name = process.Configuration.Name;
+
+                if (configsByName.TryGetValue(name, out var newConfig) == false)
+                {
+                    // Deleted from the record.
+                    _database.TaskErrorsStorage.DeleteTaskErrorsTablesForTask(process.Name, TaskCategory.CdcSink);
+                    continue;
+                }
+
+                var onThisNode = responsibleNodes.TryGetValue(name, out var responsibleNode) &&
+                                 responsibleNode == _serverStore.NodeTag;
+                if (onThisNode == false)
+                    continue; // Moved to another node - keep the history.
+
+                var diff = process.Configuration.Compare(newConfig, record.SqlConnectionStrings);
+                if (diff == CdcSinkConfigurationCompareDifferences.ConfigurationDisabled)
+                    continue; // Only the enabled/disabled flag toggled - keep the history.
+
+                _database.TaskErrorsStorage.DeleteTaskErrorsTablesForTask(process.Name, TaskCategory.CdcSink);
+            }
+        }
+
+        LoadProcesses(record, myCdcSinks, toRemoveList);
+
+        // Drop error storage for sinks that no longer exist in the record. The per-process cleanup above
+        // only visits loaded processes, so a configuration that never produced one - an invalid connection
+        // string, a validation failure, a duplicate name, a CreateProcess throw - but recorded a
+        // configuration error (see LogConfigurationError) would otherwise leak its errors forever once the
+        // task is deleted: shown against a task that no longer exists and counted in the footer badge.
+        // Names still in the record are kept, so a sink that moved to another node, is disabled, or is
+        // still misconfigured keeps its history.
+        DeleteErrorsForRemovedTasks(record);
+    }
+
+    private void DeleteErrorsForRemovedTasks(DatabaseRecord record)
+    {
+        var storedNames = _database.TaskErrorsStorage.GetStoredTaskNames(TaskCategory.CdcSink);
+        if (storedNames.Count == 0)
+            return;
+
+        var configuredNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (record.CdcSinks != null)
+        {
+            foreach (var config in record.CdcSinks)
+                configuredNames.Add(config.Name);
+        }
+
+        foreach (var storedName in storedNames)
+        {
+            if (configuredNames.Contains(storedName) == false)
+                _database.TaskErrorsStorage.DeleteTaskErrorsTablesForTask(storedName, TaskCategory.CdcSink);
+        }
+    }
+}

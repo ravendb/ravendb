@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Handlers.Processors;
 using Sparrow.Json;
+using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents.ETL.Handlers.Processors;
 
@@ -20,11 +21,13 @@ internal abstract class AbstractTaskErrorsHandlerProcessorBase<TRequestHandler, 
         string taskName,
         EtlProcess process,
         IEnumerable<TaskProcessErrorTableValue> processErrors,
-        IEnumerable<TaskItemErrorTableValue> itemErrors)
+        IEnumerable<TaskItemErrorTableValue> itemErrors,
+        TaskCategory taskCategory)
     {
         return new TaskErrors
         {
             TaskName = taskName,
+            Category = taskCategory,
             EtlType = process?.EtlType,
             EtlSubType = process?.EtlSubType,
             ProcessErrors = processErrors.Select(x => x.ToTaskProcessError()).ToArray(),

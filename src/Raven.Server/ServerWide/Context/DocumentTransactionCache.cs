@@ -1,10 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections.Immutable;
 
 namespace Raven.Server.ServerWide.Context
 {
     public sealed class DocumentTransactionCache
     {
+        // false on the initial empty instance; set to true by every compute (full or incremental). an
+        // incremental cache built from a fully-computed base stays complete, so the flag propagates.
+        public bool FullyComputed;
+
         public long LastDocumentEtag;
         public long LastTombstoneEtag;
         public long LastCounterEtag;
@@ -22,6 +26,6 @@ namespace Raven.Server.ServerWide.Context
             public string LastChangeVector;
         }
 
-        public readonly Dictionary<string, CollectionCache> LastEtagsByCollection = new(StringComparer.OrdinalIgnoreCase);
+        public ImmutableDictionary<string, CollectionCache> LastEtagsByCollection = ImmutableDictionary.Create<string, CollectionCache>(StringComparer.OrdinalIgnoreCase);
     }
 }

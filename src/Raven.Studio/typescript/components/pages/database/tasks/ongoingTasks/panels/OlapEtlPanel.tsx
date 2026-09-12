@@ -2,7 +2,6 @@
 import {
     ConnectionStringItem,
     EmptyScriptsWarning,
-    ICanShowTransformationScriptPreview,
     OngoingTaskActions,
     OngoingTaskName,
     OngoingTaskResponsibleNode,
@@ -26,14 +25,14 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { useAppSelector } from "components/store";
 import { Icon } from "components/common/Icon";
 import { EtlPanelBaseProps, useEtlPanel } from "./etlPanelUtils";
-import { EtlPanelErrors, EtlPanelHealthBadge, EtlPanelProgressItem, EtlPanelToggleButton } from "./EtlPanelComponents";
+import { TaskPanelErrors, EtlPanelHealthBadge, EtlPanelProgressItem, EtlPanelToggleButton } from "./EtlPanelComponents";
 
 type OlapEtlPanelProps = EtlPanelBaseProps<OngoingTaskOlapEtlInfo>;
 
-export function OlapEtlPanel(props: OlapEtlPanelProps & ICanShowTransformationScriptPreview) {
+export function OlapEtlPanel(props: OlapEtlPanelProps) {
     const { data, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState, etlStats } = props;
 
-    const { forCurrentDatabase, appUrl } = useAppUrls();
+    const { forCurrentDatabase } = useAppUrls();
     const editUrl = forCurrentDatabase.editOlapEtl(data.shared.taskId)();
 
     const {
@@ -42,7 +41,6 @@ export function OlapEtlPanel(props: OlapEtlPanelProps & ICanShowTransformationSc
         detailsVisible,
         toggleDetails,
         onEdit,
-        showPreview,
         taskHealth,
         errorCount,
         errorsByLocation,
@@ -50,7 +48,6 @@ export function OlapEtlPanel(props: OlapEtlPanelProps & ICanShowTransformationSc
     } = useEtlPanel(props, editUrl);
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const connectionStringsUrl = appUrl.forConnectionStrings(databaseName, "Olap", data.shared.connectionStringName);
 
     return (
         <RichPanel>
@@ -97,7 +94,8 @@ export function OlapEtlPanel(props: OlapEtlPanelProps & ICanShowTransformationSc
                     connectionStringDefined
                     canEdit={canEdit}
                     connectionStringName={data.shared.connectionStringName}
-                    connectionStringsUrl={connectionStringsUrl}
+                    connectionStringType="Olap"
+                    databaseName={databaseName}
                 />
                 {data.shared.destinations.map((dst) => (
                     <RichPanelDetailItem data-testid="destination" label="Destination" key={dst} title={dst}>
@@ -112,7 +110,7 @@ export function OlapEtlPanel(props: OlapEtlPanelProps & ICanShowTransformationSc
                     </div>
                 </RichPanelDetailItem>
                 <EtlPanelHealthBadge taskHealth={taskHealth} />
-                <EtlPanelErrors
+                <TaskPanelErrors
                     errorCount={errorCount}
                     errorsByLocation={errorsByLocation}
                     goToTaskErrors={goToTaskErrors}
@@ -122,7 +120,7 @@ export function OlapEtlPanel(props: OlapEtlPanelProps & ICanShowTransformationSc
             </RichPanelDetails>
             <Collapse in={detailsVisible}>
                 <div>
-                    <OngoingEtlTaskDistribution task={data} showPreview={showPreview} etlStats={etlStats} />
+                    <OngoingEtlTaskDistribution task={data} etlStats={etlStats} />
                 </div>
             </Collapse>
         </RichPanel>

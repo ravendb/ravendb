@@ -75,12 +75,23 @@ public partial class DebugPackageAnalyzerHandler : ServerRequestHandler
         
         if (TryGetDatabaseReportOrSetNotFound(packageId, nodeTag, dbName, out var dbReport) == false)
             return;
-        
-        var responseStream = ResponseBodyStream();
 
-        await dbReport.DatabaseInfo.DatabaseRecordEntry.Content.CopyToAsync(responseStream);
+        await WriteEntryOrNotFoundAsync(dbReport.DatabaseInfo?.DatabaseRecordEntry);
     }
-    
+
+    [RavenAction("/debug/info-package/analyzer/databases/tasks", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+    public async Task GetTasks()
+    {
+        var packageId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("packageId");
+        var nodeTag = GetQueryStringValueAndAssertIfSingleAndNotEmpty("nodeTag");
+        var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+        if (TryGetDatabaseReportOrSetNotFound(packageId, nodeTag, dbName, out var dbReport) == false)
+            return;
+
+        await WriteEntryOrNotFoundAsync(dbReport.TasksInfo?.OngoingTasksEntry);
+    }
+
     [RavenAction("/debug/info-package/analyzer/databases/indexes", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
     public async Task GetIndexes()
     {
@@ -91,9 +102,7 @@ public partial class DebugPackageAnalyzerHandler : ServerRequestHandler
         if (TryGetDatabaseReportOrSetNotFound(packageId, nodeTag, dbName, out var dbReport) == false)
             return;
         
-        var responseStream = ResponseBodyStream();
-
-        await dbReport.IndexesInfo.DefinitionsEntry.Content.CopyToAsync(responseStream);
+        await WriteEntryOrNotFoundAsync(dbReport.IndexesInfo?.DefinitionsEntry);
     }
     
     [RavenAction("/debug/info-package/analyzer/databases/indexes/stats", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
@@ -123,9 +132,7 @@ public partial class DebugPackageAnalyzerHandler : ServerRequestHandler
         if (TryGetDatabaseReportOrSetNotFound(packageId, nodeTag, dbName, out var dbReport) == false)
             return;
         
-        var responseStream = ResponseBodyStream();
-
-        await dbReport.IndexesInfo.PerformanceEntry.Content.CopyToAsync(responseStream);
+        await WriteEntryOrNotFoundAsync(dbReport.IndexesInfo?.PerformanceEntry);
     }
     
     [RavenAction("/debug/info-package/analyzer/databases/indexes/errors", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
@@ -138,9 +145,7 @@ public partial class DebugPackageAnalyzerHandler : ServerRequestHandler
         if (TryGetDatabaseReportOrSetNotFound(packageId, nodeTag, dbName, out var dbReport) == false)
             return;
         
-        var responseStream = ResponseBodyStream();
-
-        await dbReport.IndexesInfo.ErrorsEntry.Content.CopyToAsync(responseStream);
+        await WriteEntryOrNotFoundAsync(dbReport.IndexesInfo?.ErrorsEntry);
     }
     
     [RavenAction("/debug/info-package/analyzer/databases/configuration/settings", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
@@ -153,9 +158,7 @@ public partial class DebugPackageAnalyzerHandler : ServerRequestHandler
         if (TryGetDatabaseReportOrSetNotFound(packageId, nodeTag, dbName, out var dbReport) == false)
             return;
         
-        var responseStream = ResponseBodyStream();
-
-        await dbReport.Settings.SettingsEntry.Content.CopyToAsync(responseStream);
+        await WriteEntryOrNotFoundAsync(dbReport.Settings?.SettingsEntry);
     }
     
     private bool TryGetDatabaseReportOrSetNotFound(string packageId, string nodeTag, string dbName, out DebugPackageDatabaseReport dbReport)

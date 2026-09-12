@@ -1,4 +1,4 @@
-import { Column, SortDirection } from "@tanstack/react-table";
+import { Column, RowData, SortDirection } from "@tanstack/react-table";
 import classNames from "classnames";
 import { Icon } from "components/common/Icon";
 import { useMemo, useRef, useState } from "react";
@@ -7,6 +7,14 @@ import Button from "react-bootstrap/Button";
 import Dropdown from "react-bootstrap/Dropdown";
 import { CustomDropdownToggle } from "components/common/Dropdown";
 import { FormLabel } from "components/common/Form";
+
+declare module "@tanstack/react-table" {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    interface ColumnMeta<TData extends RowData, TValue> {
+        // shown in the column filter input, e.g. to hint at server-side prefix (startsWith) filtering
+        filterPlaceholder?: string;
+    }
+}
 
 interface VirtualTableColumnSettingsProps<T> {
     column: Column<T, unknown>;
@@ -113,7 +121,7 @@ export default function VirtualTableColumnSettings<T>({ column, isCompact }: Vir
                                 <Form.Control
                                     ref={filterInputRef}
                                     type="text"
-                                    placeholder="Search..."
+                                    placeholder={column.columnDef.meta?.filterPlaceholder ?? "Search..."}
                                     value={localFilter}
                                     onChange={(e) => handleFilterChange(e.target.value)}
                                     className="pe-4"

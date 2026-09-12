@@ -1,0 +1,52 @@
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.node-location-tabs {
+    display: flex;
+    gap: sizes.$gutter-xs;
+
+    .node-location-tab {
+        display: flex;
+        align-items: center;
+        gap: sizes.$gutter-xs;
+        padding: sizes.$gutter-xxs sizes.$gutter-xs;
+        margin-bottom: sizes.$gutter-xxs;
+        cursor: pointer;
+        border-radius: sizes.$border-radius;
+        font-size: 0.8125rem;
+        color: colors.$text-muted-color;
+        position: relative;
+        border: none;
+        background: none;
+        white-space: nowrap;
+        transition:
+            background 0.15s ease,
+            color 0.15s ease;
+
+        &::after {
+            content: "";
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: transparent;
+            transition: background 0.15s ease;
+            z-index: 1;
+        }
+
+        &:hover:not(.active) {
+            background: rgba(colors.$gray-400, 0.08);
+            color: colors.$text-emphasis-color;
+        }
+
+        &.active {
+            background: rgba(colors.$gray-400, 0.1);
+            color: colors.$text-emphasis-color;
+
+            &::after {
+                background: colors.$text-emphasis-color;
+            }
+        }
+    }
+}

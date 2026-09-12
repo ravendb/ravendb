@@ -39,7 +39,8 @@ import { isEmpty } from "common/typeUtils";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/esm/Col";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
-import { setupWizardConstants, setupWizardGA4Prefixes } from "components/setupWizard/utils/setupWizardConstants";
+import { setupWizardGA4Prefixes } from "components/setupWizard/utils/setupWizardConstants";
+import { getMaxClusterSize } from "components/setupWizard/utils/setupWizardUtils";
 import useBoolean from "hooks/useBoolean";
 import { SetupWizardInfoPopover } from "components/setupWizard/partials/SetupWizardInfoPopover";
 import { components, OptionProps, SingleValueProps } from "react-select";
@@ -914,7 +915,7 @@ function AddAnotherNode({ onAddNode }: AddAnotherNodeProps) {
     const nodeData = getValues("nodeAddressStep.nodes");
 
     const hasLicense = !!licenseKeyStep?.licenseInfo;
-    const maxClusterSize = licenseKeyStep?.licenseInfo?.maxClusterSize ?? setupWizardConstants.AGPL_MAX_CLUSTER_SIZE;
+    const maxClusterSize = getMaxClusterSize(licenseKeyStep?.licenseInfo);
     const isMaxClusterNodes = nodeData?.length >= maxClusterSize;
 
     return (
@@ -1208,7 +1209,7 @@ export function SetupWizardNodeAddressStepFooter() {
     const nodeData = getValues("nodeAddressStep.nodes");
     const licenseKeyStep = getValues("licenseKeyStep");
 
-    const maxClusterSize = licenseKeyStep?.licenseInfo?.maxClusterSize ?? setupWizardConstants.AGPL_MAX_CLUSTER_SIZE;
+    const maxClusterSize = getMaxClusterSize(licenseKeyStep?.licenseInfo);
     const hasExceededLicenseLimit = nodeData?.length > maxClusterSize;
 
     const isEditing = nodeData?.some((node) => node.isEditing);
@@ -1418,7 +1419,7 @@ function LicenseLimitExceededMessage() {
     const nodeData = getValues("nodeAddressStep.nodes");
     const licenseKeyStep = getValues("licenseKeyStep");
 
-    const maxClusterSize = licenseKeyStep?.licenseInfo?.maxClusterSize ?? setupWizardConstants.AGPL_MAX_CLUSTER_SIZE;
+    const maxClusterSize = getMaxClusterSize(licenseKeyStep?.licenseInfo);
     const currentNodeCount = nodeData?.length;
 
     return (

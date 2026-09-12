@@ -16,4 +16,8 @@ public interface IMultiPartUploader
     void CompleteUpload();
 
     Task CompleteUploadAsync();
+
+    void Abort();
+
+    Task AbortAsync();
 }

@@ -377,7 +377,7 @@ internal static partial class QueryPlanBuilder
         if (searchMeta.IsDynamic && indexFieldsMapping != null)
             result = searchMeta.ChangeAnalyzer(searchMeta.Mode, indexFieldsMapping.SearchAnalyzer(searchMeta.FieldName.ToString()));
 
-        if (searchMeta.Analyzer is Lucene.LuceneAnalyzerAdapter laa && indexFieldsMapping != null)
+        if (result.Analyzer is Lucene.LuceneAnalyzerAdapter laa && indexFieldsMapping != null)
         {
             global::Corax.Analyzers.Analyzer replacementAnalyzer = laa.Analyzer switch
             {
@@ -392,7 +392,7 @@ internal static partial class QueryPlanBuilder
             };
 
             if (replacementAnalyzer != null)
-                result = searchMeta.ChangeAnalyzer(global::Corax.FieldIndexingMode.Search, replacementAnalyzer);
+                result = result.ChangeAnalyzer(global::Corax.FieldIndexingMode.Search, replacementAnalyzer);
         }
 
         return result;

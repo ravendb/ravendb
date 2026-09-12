@@ -34,7 +34,7 @@ Foreach ($commit in $allCommits)
     $loweredMessage = $message.ToLowerInvariant()
 
     # Rule 1: Title must contain a recognized issue key or be a merge/bump/WIP commit
-    $match = $loweredMessage -match "^(ravendb|rdoc|rdbqa|rdbc|rdbs|rdbcl|hrint)-\d+" `
+    $match = $loweredMessage -match "^(ravendb|rdoc|rdbqa|rdbc|rdbs|rdbcl|hrint|quill)-\d+" `
         -or $loweredMessage -match "^merge branch" `
         -or $loweredMessage -match "^merge remote" `
         -or $loweredMessage -match "^merge pull request" `

@@ -91,7 +91,7 @@ namespace FastTests
             return await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
         }
 
-        protected virtual async ValueTask<DatabaseStatistics> GetDatabaseStatisticsAsync(DocumentStore store, string database = null, DatabaseRecord record = null, List<RavenServer> servers = null)
+        protected virtual async ValueTask<DatabaseStatistics> GetDatabaseStatisticsAsync(IDocumentStore store, string database = null, DatabaseRecord record = null, List<RavenServer> servers = null)
         {
             var dbRecord = record ?? await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database ?? store.Database));
             if (dbRecord.IsSharded)

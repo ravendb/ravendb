@@ -1,0 +1,86 @@
+#!/command/with-contenv sh
+set -e
+
+exec 2>&1
+
+# The volume layout (ravendb/, certs/, setup/, ...) is created and owned by 00-prepare, a dependency
+# of this service, so we don't mkdir it here (root mkdir into a quill-owned tree is what 00-prepare
+# centralizes to avoid).
+SETUP_DIR="${RAVEN_QUILL_SETUP_PACKAGE_PATH:-/var/lib/quill/setup}"
+SETUP_SETTINGS="$SETUP_DIR/A/settings.json"
+
+# Wait for activation (02-web) to unpack the setup package. Log a heartbeat every 60s: the wait is
+# unbounded (activation retries in 02-web until the package arrives)
+if [ ! -f "$SETUP_SETTINGS" ]; then
+    echo "01-ravendb: waiting for the setup package at $SETUP_SETTINGS..."
+    waited=0
+    while [ ! -f "$SETUP_SETTINGS" ]; do
+        sleep 2
+        waited=$((waited + 2))
+        if [ $((waited % 60)) -eq 0 ]; then
+            echo "01-ravendb: still waiting for the setup package after ${waited}s (activation runs in 02-web; check its log)"
+        fi
+    done
+fi
+
+# The admin client cert's thumbprint is written by the .NET activation endpoint
+# next to the unpacked package as the file `admin-thumbprint`. Reading it here
+# rather than extracting from the PFX with openssl avoids PKCS#12 bag-ordering
+# quirks and one less binary dependency in the runtime image.
+[ -h "$SETUP_SETTINGS" ] && { echo "01-ravendb: refusing symlinked settings source; aborting." >&2; exit 1; }
+cp --remove-destination "$SETUP_SETTINGS" /app/ravendb/settings.json
+
+# Phase 1: nginx owns :443, so bind RavenDB's HTTPS to loopback:$RAVENDB_PORT instead. settings.json
+# wins over env in RavenDB's config precedence, so rewrite the copied file (keep https — the
+# scheme-match validator requires ServerUrl/PublicServerUrl schemes to agree). The appliance connects
+# to RavenDB on this port (RavenStoreFactory.RavenInternalPort); nginx passes db.*/a.* through to it.
+RAVENDB_PORT="${RAVEN_QUILL_RAVENDB_INTERNAL_PORT:-8443}"
+sed -i -E "s#(\"ServerUrl\"[[:space:]]*:[[:space:]]*\")https://[^\"]*(\")#\1https://127.0.0.1:${RAVENDB_PORT}\2#" /app/ravendb/settings.json
+sed -i -E "s#(\"ServerUrl\.Tcp\"[[:space:]]*:[[:space:]]*\"tcp://)[^\"]*(:[0-9]+\")#\1127.0.0.1\2#" /app/ravendb/settings.json
+
+NODE_HOST="$(jq -r '.PublicServerUrl' "$SETUP_SETTINGS" | sed -E 's#^https?://##; s#[:/].*##')"
+if [ -n "$NODE_HOST" ]; then
+    grep -q "[[:space:]]$NODE_HOST\$" /etc/hosts || echo "127.0.0.1 $NODE_HOST" >> /etc/hosts
+fi
+
+CERT_DIR=/var/lib/quill/certs
+
+PFX="$(basename "$(ls "$SETUP_DIR"/A/cluster.server.certificate.*.pfx | head -n1)")"
+
+if ! printf '%s\n' "$PFX" | grep -qE '^cluster\.server\.certificate\.[A-Za-z0-9._-]+\.pfx$'; then
+    echo "01-ravendb: refusing certificate with unexpected filename '$PFX'; aborting." >&2
+    exit 1
+fi
+
+SRC_PFX="$SETUP_DIR/A/$PFX"
+DEST_PFX="$CERT_DIR/$PFX"
+
+[ -h "$SRC_PFX" ] && { echo "01-ravendb: refusing symlinked certificate source; aborting." >&2; exit 1; }
+[ -h "$DEST_PFX" ] && rm -f "$DEST_PFX"
+[ -f "$DEST_PFX" ] || cp --remove-destination "$SRC_PFX" "$DEST_PFX"
+
+chown -h quill:quill "$DEST_PFX"
+chmod 600 "$DEST_PFX"
+
+for d in "$CERT_DIR" "$SETUP_DIR" "$SETUP_DIR/A"; do
+    [ -h "$d" ] && continue
+    chmod 700 "$d" 2>/dev/null || true
+done
+
+sed -i "s#\"$PFX\"#\"$DEST_PFX\"#" /app/ravendb/settings.json
+
+if [ -f "$SETUP_DIR/admin-thumbprint" ]; then
+    export RAVEN_Security_WellKnownCertificates_Admin="$(cat "$SETUP_DIR/admin-thumbprint")"
+fi
+
+if [ -f "$SETUP_DIR/license.json" ]; then
+    export RAVEN_License_Path="$SETUP_DIR/license.json"
+    export RAVEN_License_Eula_Accepted=true
+fi
+
+cd /app/ravendb
+
+chown quill:quill /app/ravendb/settings.json
+
+export HOME=/var/lib/quill
+exec s6-setuidgid quill dotnet /app/ravendb/Raven.Server.dll

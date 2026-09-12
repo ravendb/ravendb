@@ -23,14 +23,19 @@ export type StudioConnectionType =
     | "AzureServiceBus"
     | "Ai";
 
-export interface ConnectionStringUsedTask {
-    id: number;
+export interface ConnectionStringUsage {
+    kind: Raven.Client.Documents.Operations.ConnectionStrings.ConnectionStringUsageKind;
+    id?: number;
+    identifier?: string;
     name: string;
+    // Set only for server-wide connection strings, whose usages are aggregated across databases.
+    databaseName?: string;
 }
 
 interface ConnectionBase {
     name?: string;
-    usedByTasks?: ConnectionStringUsedTask[];
+    usedBy?: ConnectionStringUsage[];
+    excludedDatabases?: string[];
 }
 
 export interface RavenConnection extends ConnectionBase {
@@ -196,6 +201,7 @@ export interface AiConnection extends ConnectionBase {
         model?: string;
         organizationId?: string;
         projectId?: string;
+        reasoningEffort?: string;
         dimensions?: number;
         embeddingsMaxConcurrentBatches?: number;
         enablePromptCache?: boolean;
@@ -230,6 +236,10 @@ export type Connection =
     | AzureServiceBusConnection
     | AiConnection;
 
+export type ConnectionsByType = {
+    [K in StudioConnectionType]: Extract<Connection, { type: K }>[];
+};
+
 export type ConnectionStringDto = Partial<
     | ElasticSearchConnectionStringDto
     | OlapConnectionStringDto
@@ -248,4 +258,17 @@ export interface EditConnectionStringFormProps {
     onSave: (x: Connection) => void;
 }
 
-export type ConnectionFormData<T extends Connection> = Omit<T, "type" | "usedByTasks">;
+export type ConnectionFormData<T extends Connection> = Omit<T, "type" | "usedBy">;
+
+export type WithExcludedDatabases<T> = T & {
+    ExcludedDatabases?: string[];
+};
+
+export type ServerWideConnectionStringDto =
+    | WithExcludedDatabases<RavenConnectionStringDto>
+    | WithExcludedDatabases<SqlConnectionStringDto>
+    | WithExcludedDatabases<SnowflakeConnectionStringDto>
+    | WithExcludedDatabases<OlapConnectionStringDto>
+    | WithExcludedDatabases<ElasticSearchConnectionStringDto>
+    | WithExcludedDatabases<QueueConnectionStringDto>
+    | WithExcludedDatabases<AiConnectionSettingsDto>;

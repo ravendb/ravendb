@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Raven.Server.SqlMigration.Model;
 using Raven.Server.SqlMigration.Schema;
 using Sparrow.Json.Parsing;
@@ -13,7 +15,36 @@ namespace Raven.Server.SqlMigration.Oracle
         protected override string FactoryName => "Oracle.ManagedDataAccess.Client";
 
         public OracleDatabaseMigrator(string connectionString) : base(connectionString)
-        {   
+        {
+        }
+
+        /// <summary>
+        /// Oracle uses <c>:pN</c> parameter placeholders, but the shared
+        /// <see cref="GenericDatabaseMigrator.BuildSelectByPrimaryKeyQuery"/> emits <c>@pN</c>.
+        /// FetchRowsAsync was added for the CDC sink's preview endpoint, which already rejects
+        /// Oracle at the handler level (<c>CdcSinkSchemaDiscovery.IsSupportedFactoryName</c>).
+        /// Throw immediately here as a defensive guard so a future caller can't silently
+        /// produce SQL that Oracle cannot bind. If FetchRowsAsync ever needs to run on Oracle,
+        /// override <c>BuildSelectByPrimaryKeyQuery</c> / <c>BuildLimitedSelectQuery</c> with
+        /// Oracle-native syntax (<c>:pN</c> placeholders and <c>FETCH NEXT n ROWS ONLY</c>)
+        /// before removing this override.
+        /// </summary>
+        public override Task<MigratorRowFetchResult> FetchRowsAsync(
+            string tableSchema,
+            string tableName,
+            IReadOnlyList<string> primaryKeyColumns,
+            RowFetchMode mode,
+            IReadOnlyList<string> primaryKeyValues,
+            int maxRows,
+            CancellationToken ct)
+        {
+            throw new NotSupportedException(
+                "FetchRowsAsync is not supported on Oracle. " +
+                "The shared row-fetch builder uses @pN parameter placeholders and dialect-specific " +
+                "row-limit syntax that Oracle does not accept. The CDC sink (the only production " +
+                "caller) already rejects Oracle at the handler level; if you need to enable this " +
+                "for Oracle, override BuildSelectByPrimaryKeyQuery / BuildLimitedSelectQuery to use " +
+                "Oracle-native syntax first.");
         }
 
         protected override string QuoteColumn(string columnName)
@@ -95,6 +126,12 @@ namespace Raven.Server.SqlMigration.Oracle
 
 
             return inputQuery;
+        }
+
+        protected override string BuildLimitedSelectQuery(string quotedTable, string whereClause, string orderByClause, int maxRows)
+        {
+            var where = string.IsNullOrEmpty(whereClause) ? string.Empty : $" where {whereClause}";
+            return $"select * from {quotedTable}{where}{orderByClause} fetch next {maxRows} rows only";
         }
 
         protected override string GetSelectAllQueryForTable(string tableSchema, string tableName)

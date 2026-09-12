@@ -12,7 +12,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Exceptions.Security;
@@ -230,16 +229,13 @@ namespace Raven.Server.Web.System
                         fullResult.UserDomainsWithIps.Domains.Add(domain.Key, list);
                     }
 
-                    licenseStatus = await SetupManager
+                    fullResult.LicenseStatus = await SetupManager
                         .GetUpdatedLicenseStatus(ServerStore, licenseInfo.License)
                         .ConfigureAwait(false);
-                    fullResult.MaxClusterSize = licenseStatus.MaxClusterSize;
-                    fullResult.LicenseType = licenseStatus.Type;
 
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
-                        var blittable = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(fullResult, context);
-                        context.Write(writer, blittable);
+                        context.Write(writer, fullResult.ToJson());
                     }
                 }
                 catch (LicenseExpiredException)
@@ -281,8 +277,7 @@ namespace Raven.Server.Web.System
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    var blittable = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(userDomainsWithIps, context);
-                    context.Write(writer, blittable);
+                    context.Write(writer, userDomainsWithIps.ToJson());
                 }
             }
         }

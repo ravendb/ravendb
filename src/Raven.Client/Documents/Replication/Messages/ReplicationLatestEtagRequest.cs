@@ -18,6 +18,12 @@ namespace Raven.Client.Documents.Replication.Messages
 
         public ReplicationType ReplicationsType { get; set; }
 
+        /// <summary>
+        /// Indicates that the source database can use composite item change vectors for pull replication.
+        /// Both sides must declare this before pull replication may send order|version item change vectors.
+        /// </summary>
+        public bool SupportsPullReplicationCompositeChangeVectors { get; set; }
+
         public long MigrationIndex { get; set; }
 
         public string ShardedDatabaseId { get; set; }
@@ -35,7 +41,7 @@ namespace Raven.Client.Documents.Replication.Messages
     public sealed class ReplicationInitialRequest
     {
         public string PullReplicationDefinitionName { get; set; }
-        
+
         public string PullReplicationSinkTaskName { get; set; }
 
         public TcpConnectionInfo Info { get; set; }

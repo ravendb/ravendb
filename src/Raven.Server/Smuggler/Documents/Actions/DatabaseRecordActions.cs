@@ -20,6 +20,7 @@ using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
+using Raven.Server.ServerWide.Commands.CdcSink;
 using Raven.Server.ServerWide.Commands.QueueSink;
 using Raven.Server.ServerWide.Commands.Sorters;
 using Raven.Server.ServerWide.Context;
@@ -650,7 +651,28 @@ public sealed class DatabaseRecordActions : IDatabaseRecordActions
 
             result.DatabaseRecord.QueueSinksUpdated = true;
         }
-        
+
+        if (databaseRecord.CdcSinks.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.CdcSinks))
+        {
+            if (_log.IsInfoEnabled)
+                _log.Info("Configuring CDC sink configuration from smuggler");
+            foreach (var sink in databaseRecord.CdcSinks)
+            {
+                _currentDatabaseRecord?.CdcSinks.ForEach(x =>
+                {
+                    if (x.Name.Equals(sink.Name, StringComparison.OrdinalIgnoreCase))
+                    {
+                        tasks.Add(_server.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.CdcSink, _name, RaftIdGenerator.DontCareId)));
+                    }
+                });
+                sink.TaskId = 0;
+                sink.Disabled = true;
+                tasks.Add(_server.SendToLeaderAsync(new AddCdcSinkCommand(sink, _name, RaftIdGenerator.DontCareId)));
+            }
+
+            result.DatabaseRecord.CdcSinksUpdated = true;
+        }
+
         if (databaseRecord.SnowflakeConnectionStrings.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.SnowflakeConnectionStrings))
         {
             if (_log.IsInfoEnabled)

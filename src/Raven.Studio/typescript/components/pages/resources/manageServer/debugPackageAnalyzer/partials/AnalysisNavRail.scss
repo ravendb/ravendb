@@ -1,0 +1,144 @@
+@use "Content/scss/bs5variables";
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.analysis-rail {
+    display: flex;
+    flex-direction: column;
+    gap: sizes.$gutter-xxs;
+    background-color: colors.$panel-bg-1-var;
+    padding: sizes.$gutter-xs;
+}
+
+.analysis-rail-scope {
+    display: flex;
+    flex-direction: column;
+    gap: sizes.$gutter-xxxs;
+}
+
+.analysis-rail-scope-btn {
+    display: flex;
+    align-items: center;
+    gap: sizes.$gutter-xxs;
+    width: 100%;
+    border: 1px solid transparent;
+    background: transparent;
+    border-radius: sizes.$border-radius-sm !important;
+    padding: sizes.$gutter-xxxs sizes.$gutter-xxs;
+    color: inherit;
+    text-align: left;
+    transition: none;
+
+    &:hover {
+        filter: colors.$hover-filter-var;
+        transition: bs5variables.$transition-base;
+    }
+
+    &.active {
+        background-color: colors.$panel-bg-2-var;
+        color: colors.$text-color-var;
+    }
+}
+
+.analysis-rail-controls {
+    display: flex;
+    flex-direction: column;
+    gap: sizes.$gutter-sm;
+    padding: sizes.$gutter-xxs 0;
+
+    .small-label {
+        margin-bottom: sizes.$gutter-xxxs;
+    }
+}
+
+.analysis-rail-divider {
+    height: 1px;
+    background-color: colors.$border-color-light-var;
+}
+
+.analysis-rail-sections {
+    list-style: none;
+    margin: 0 !important;
+    padding: 0 !important;
+    flex-direction: column;
+}
+
+.analysis-rail-group-label {
+    text-transform: uppercase;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: sizes.$gutter-xxs sizes.$gutter-xxs sizes.$gutter-xxxs;
+    color: colors.$border-color-light-var;
+
+    &:first-child {
+        padding-top: sizes.$gutter-xxxs;
+    }
+}
+
+.analysis-rail-section-btn {
+    position: relative;
+    display: block;
+    width: 100%;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    padding: sizes.$gutter-xxxs sizes.$gutter-xxs;
+    opacity: 0.8;
+
+    &::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 1px;
+        background-color: transparent;
+        height: sizes.$gutter-sm;
+        margin: auto 0;
+        border-radius: sizes.$border-radius-sm;
+    }
+
+    &:hover {
+        opacity: 1;
+        filter: colors.$hover-filter-var;
+    }
+
+    &.active {
+        opacity: 1;
+        font-weight: 600;
+        color: colors.$primary-var;
+
+        &::after {
+            background-color: colors.$primary-var;
+        }
+    }
+}
+
+@media (min-width: 1200px) {
+    .analysis-rail {
+        position: sticky;
+        top: sizes.$gutter-sm;
+        max-height: 100vh;
+        overflow-y: auto;
+        // The rail is a sticky stacking context; without an explicit z-index it shares the auto level
+        // with the sibling content area, which (coming later in the DOM) then paints over the rail -
+        // including the fixed-position selector dropdown that overflows into the content. Lifting the
+        // whole rail context above the content fixes that; the rail and content don't overlap spatially
+        // (separate grid columns), so this only affects the overflowing dropdown.
+        z-index: bs5variables.$zindex-sticky;
+    }
+}
+
+@media (max-width: 1199.98px) {
+    .analysis-rail-scope {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+
+    .analysis-rail-scope-btn {
+        width: auto;
+    }
+}

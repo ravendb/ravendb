@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.TasksErrors;
 using Raven.Server.NotificationCenter.Notifications;
 
 namespace Raven.Server.NotificationCenter.BackgroundWork;
@@ -63,11 +64,14 @@ public sealed class DatabaseStatsSender : AbstractDatabaseStatsSender
                 CountOfStaleIndexes = staleIndexes.Count,
                 StaleIndexes = staleIndexes.ToArray(),
                 CountOfIndexingErrors = countOfIndexingErrors,
+                CountOfEtlTasksErrors = database.TaskErrorsStorage.ReadTotalErrorsCount(TaskCategory.Etl),
+                CountOfAiTasksErrors = database.TaskErrorsStorage.ReadTotalErrorsCount(TaskCategory.Ai),
+                CountOfCdcSinkTasksErrors = database.TaskErrorsStorage.ReadTotalErrorsCount(TaskCategory.CdcSink),
                 LastEtag = database.DocumentsStorage.ReadLastEtag(context.Documents.Transaction.InnerTransaction),
                 GlobalChangeVector = DocumentsStorage.GetDatabaseChangeVector(context.Documents),
                 LastIndexingErrorTime = lastIndexingErrorTime,
                 Collections = database.DocumentsStorage.GetCollections(context.Documents)
-                    .ToDictionary(x => x.Name, x => new DatabaseStatsChanged.ModifiedCollection(x.Name, x.Count, database.DocumentsStorage.GetLastDocumentChangeVector(context.Documents.Transaction.InnerTransaction, context.Documents, x.Name))),
+                    .ToDictionary(x => x.Name, x => new DatabaseStatsChanged.ModifiedCollection(x.Name, x.Count, database.DocumentsStorage.GetLastDocumentChangeVector(context.Documents.Transaction.InnerTransaction, x.Name))),
                 CountOfRevisions = database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context.Documents)
             };
         }

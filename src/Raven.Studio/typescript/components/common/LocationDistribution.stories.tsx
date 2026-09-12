@@ -58,13 +58,24 @@ const Template = (args: { withSummary: boolean; withLegend: boolean }) => {
                 <div>5</div>
                 <div>2</div>
                 <div>2</div>
-                <ProgressCircle state="success" icon="check">
+                <ProgressCircle state="success" icon="check" onClick={() => {}}>
                     up to date
                 </ProgressCircle>
             </DistributionItem>
             <DistributionItem>
                 <div className="top node">
                     <Icon icon="node" /> B
+                </div>
+                <div>5</div>
+                <div>2</div>
+                <div>2</div>
+                <ProgressCircle state="running" progress={0.47} onClick={() => {}}>
+                    Running
+                </ProgressCircle>
+            </DistributionItem>
+            <DistributionItem>
+                <div className="top node">
+                    <Icon icon="node" /> C
                 </div>
                 <div>5</div>
                 <div>2</div>

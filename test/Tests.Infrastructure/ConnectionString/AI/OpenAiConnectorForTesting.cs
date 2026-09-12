@@ -1,4 +1,4 @@
-using Raven.Client.Documents.Operations.AI;
+﻿using Raven.Client.Documents.Operations.AI;
 
 namespace Tests.Infrastructure.ConnectionString.AI;
 
@@ -33,12 +33,14 @@ internal static class OpenAiConnectorHelper
 {
     public const string Endpoint = "https://api.openai.com/";
 
+    private const string MinimalReasoningEffort = "minimal";
+
     public static AiConnectionString CreateAiConnectionString(string model, AiModelType modelType)
     {
         return new AiConnectionString
         {
             ModelType = modelType,
-            OpenAiSettings = new OpenAiSettings(RavenTestHelper.EnvironmentVariables.AiIntegrationOpenAiApiKey, Endpoint, model, reasoningEffort: OpenAiReasoningEffort.Minimal, seed: 48)
+            OpenAiSettings = new OpenAiSettings(RavenTestHelper.EnvironmentVariables.AiIntegrationOpenAiApiKey, Endpoint, model, reasoningEffort: MinimalReasoningEffort, seed: 48)
         };
     }
 }

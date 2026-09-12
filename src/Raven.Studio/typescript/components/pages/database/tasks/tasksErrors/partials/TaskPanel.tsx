@@ -30,18 +30,18 @@ import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import {
     EtlHealthStatus,
-    EtlTaskWithErrors,
-    EtlTransformationWithErrors,
+    TaskWithErrors,
+    TransformationWithErrors,
     FlatError,
     flattenTransformationErrors,
     getEtlEditLink,
-    getEtlTypeIcon,
-    getEtlTypeLabel,
     getPopoverMessageForTaskHealth,
-    getTaskCategory,
     getTaskHealthStatus,
+    getTaskTypeDisplay,
     healthStatusToBadge,
+    taskHasTransformations,
     SHOW_WIDTH_SIZE,
+    TaskCategory,
 } from "../utils/tasksErrorsUtils";
 import {
     CellAffectedDocumentsWrapper,
@@ -55,16 +55,16 @@ import {
 } from "./TasksErrorsCells";
 import { DeleteErrorsModal } from "./DeleteModals";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
-import { DatabaseAccessPopover } from "components/common/DatabaseAccessPopover";
+import { AccessPopover } from "components/common/AccessPopover";
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
 
-interface EtlTypeRichPanelItemProps {
-    etlType: StudioEtlType;
+interface TaskTypeRichPanelItemProps {
+    category: TaskCategory;
+    etlType?: StudioEtlType;
 }
 
-function EtlTypeRichPanelItem({ etlType }: EtlTypeRichPanelItemProps) {
-    const icon = getEtlTypeIcon(etlType);
-    const label = getEtlTypeLabel(etlType);
+function TaskTypeRichPanelItem({ category, etlType }: TaskTypeRichPanelItemProps) {
+    const { icon, label } = getTaskTypeDisplay(category, etlType);
 
     return (
         <RichPanelDetailItem>
@@ -154,13 +154,14 @@ function useTasksErrorsPanelTableColumns(availableWidth: number, hasProcessError
 
 interface NestedTaskPanelDetailsTableProps {
     width: number;
-    itemErrors: EtlTransformationWithErrors["itemErrors"];
-    processErrors: EtlTransformationWithErrors["processErrors"];
+    itemErrors: TransformationWithErrors["itemErrors"];
+    processErrors: TransformationWithErrors["processErrors"];
     etlName: string;
     transformationName: string;
     healthStatus: EtlHealthStatus;
     taskId?: number;
     etlType?: StudioEtlType;
+    category: TaskCategory;
 }
 
 function NestedTaskPanelDetailsTable({
@@ -172,6 +173,7 @@ function NestedTaskPanelDetailsTable({
     healthStatus,
     taskId,
     etlType,
+    category,
 }: NestedTaskPanelDetailsTableProps) {
     const columns = useTasksErrorsPanelTableColumns(width, processErrors.length > 0);
     const data = useMemo<FlatError[]>(
@@ -183,8 +185,9 @@ function NestedTaskPanelDetailsTable({
                 healthStatus,
                 taskId,
                 etlType,
+                category,
             })),
-        [itemErrors, processErrors, etlName, transformationName, healthStatus, taskId, etlType]
+        [itemErrors, processErrors, etlName, transformationName, healthStatus, taskId, etlType, category]
     );
 
     const tasksErrorsPanelTable = useReactTable({
@@ -212,12 +215,13 @@ function NestedTaskPanelDetailsTable({
     );
 }
 
-interface NestedTaskPanelDetailsProps extends EtlTransformationWithErrors {
+interface NestedTaskPanelDetailsProps extends TransformationWithErrors {
     width: number;
     etlName: string;
     healthStatus: EtlHealthStatus;
     taskId?: number;
     etlType?: StudioEtlType;
+    category: TaskCategory;
 }
 
 function NestedTaskPanelDetails({
@@ -230,9 +234,8 @@ function NestedTaskPanelDetails({
     const { value: isNestedDetailsVisible, toggle: toggleNestedDetailsVisible } = useBoolean(true);
 
     const totalErrors = processErrors.length + itemErrors.length;
-    const isAiTask = getTaskCategory(rest.etlType) === "Ai";
 
-    if (isAiTask) {
+    if (!taskHasTransformations(rest.category)) {
         return (
             <Card className="bg-black p-3">
                 <NestedTaskPanelDetailsTable
@@ -273,12 +276,12 @@ function NestedTaskPanelDetails({
     );
 }
 
-interface TaskPanelProps extends EtlTaskWithErrors {
+interface TaskPanelProps extends TaskWithErrors {
     etlStats: EtlTaskStats[];
     onRefresh: () => void;
 }
 
-export function TaskPanel({ etlName, etlType, transformations, etlStats, onRefresh }: TaskPanelProps) {
+export function TaskPanel({ etlName, etlType, category, transformations, etlStats, onRefresh }: TaskPanelProps) {
     const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.getHasDatabaseWriteAccess)();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const db = useAppSelector(databaseSelectors.activeDatabase);
@@ -307,12 +310,12 @@ export function TaskPanel({ etlName, etlType, transformations, etlStats, onRefre
                         </a>
                     </RichPanelInfo>
                     <RichPanelActions>
-                        <DatabaseAccessPopover accessRequired="DatabaseReadWrite">
+                        <AccessPopover accessRequired="DatabaseReadWrite">
                             <Button variant="danger" disabled={!hasDatabaseWriteAccess} onClick={toggleDeleteModal}>
                                 <Icon icon="trash" />
                                 Delete errors
                             </Button>
-                        </DatabaseAccessPopover>
+                        </AccessPopover>
                     </RichPanelActions>
                 </RichPanelHeader>
                 <RichPanelDetails>
@@ -326,7 +329,7 @@ export function TaskPanel({ etlName, etlType, transformations, etlStats, onRefre
                             <Icon icon={isDetailsVisible ? "fold" : "unfold"} margin="m-0" />
                         </Button>
                     </RichPanelDetailItem>
-                    {etlType && <EtlTypeRichPanelItem etlType={etlType} />}
+                    <TaskTypeRichPanelItem category={category} etlType={etlType} />
                     <RichPanelDetailItem contentClassName="d-flex gap-1 align-items-center">
                         <Icon icon="warning" color="danger" margin="m-0" />
                         <span>Errors</span> <b>{errorsCount}</b>
@@ -381,6 +384,7 @@ export function TaskPanel({ etlName, etlType, transformations, etlStats, onRefre
                                         healthStatus={taskHealth}
                                         taskId={taskId}
                                         etlType={etlType}
+                                        category={category}
                                     />
                                 ))}
                             </div>
@@ -393,6 +397,7 @@ export function TaskPanel({ etlName, etlType, transformations, etlStats, onRefre
                     mode="task"
                     etlName={etlName}
                     etlType={etlType}
+                    category={category}
                     transformations={transformations}
                     errorsCount={errorsCount}
                     toggle={toggleDeleteModal}

@@ -17,7 +17,7 @@ public class RavenDB_26344_StreamExtensionsSparseCopy(ITestOutputHelper output) 
     public void CopyToPreservingSparseRegions_ShouldCreateHoleForZeroRunSpanningMultipleReadBuffers()
     {
         int pageSize = Constants.Storage.PageSize;
-        int sparsePages = FreeSpaceHandling.NumberOfFreePagesForSparseConsideration + 17;
+        int sparsePages = FreeSpaceHandling.MinNumberOfContiguousFreePagesForSparseRegion + 17;
         var source = new byte[(2 + sparsePages) * pageSize];
 
         Fill(source, 0, pageSize, 1);
@@ -38,7 +38,7 @@ public class RavenDB_26344_StreamExtensionsSparseCopy(ITestOutputHelper output) 
     public void CopyToPreservingSparseRegions_ShouldCreateHoleForZeroRunSpanningNonPageAlignedReads()
     {
         int pageSize = Constants.Storage.PageSize;
-        int sparsePages = FreeSpaceHandling.NumberOfFreePagesForSparseConsideration + 17;
+        int sparsePages = FreeSpaceHandling.MinNumberOfContiguousFreePagesForSparseRegion + 17;
         var source = new byte[(2 + sparsePages) * pageSize];
 
         Fill(source, 0, pageSize, 11);
@@ -59,7 +59,7 @@ public class RavenDB_26344_StreamExtensionsSparseCopy(ITestOutputHelper output) 
     public void CopyToPreservingSparseRegions_ShouldPreserveTrailingSparseHoleAtEndOfStream()
     {
         int pageSize = Constants.Storage.PageSize;
-        int sparsePages = FreeSpaceHandling.NumberOfFreePagesForSparseConsideration + 9;
+        int sparsePages = FreeSpaceHandling.MinNumberOfContiguousFreePagesForSparseRegion + 9;
         var source = new byte[(1 + sparsePages) * pageSize];
 
         Fill(source, 0, pageSize, 3);
@@ -79,7 +79,7 @@ public class RavenDB_26344_StreamExtensionsSparseCopy(ITestOutputHelper output) 
     public void CopyToPreservingSparseRegions_ShouldPreserveTrailingSparseHoleAtEndOfStreamWithNonPageAlignedReads()
     {
         int pageSize = Constants.Storage.PageSize;
-        int sparsePages = FreeSpaceHandling.NumberOfFreePagesForSparseConsideration + 9;
+        int sparsePages = FreeSpaceHandling.MinNumberOfContiguousFreePagesForSparseRegion + 9;
         var source = new byte[(1 + sparsePages) * pageSize];
 
         Fill(source, 0, pageSize, 13);
@@ -99,7 +99,7 @@ public class RavenDB_26344_StreamExtensionsSparseCopy(ITestOutputHelper output) 
     public void CopyToPreservingSparseRegions_ShouldWriteZeroRunBelowSparseThreshold()
     {
         int pageSize = Constants.Storage.PageSize;
-        int zeroPages = FreeSpaceHandling.NumberOfFreePagesForSparseConsideration - 1;
+        int zeroPages = FreeSpaceHandling.MinNumberOfContiguousFreePagesForSparseRegion - 1;
         var source = new byte[(2 + zeroPages) * pageSize];
 
         Fill(source, 0, pageSize, 4);
@@ -120,7 +120,7 @@ public class RavenDB_26344_StreamExtensionsSparseCopy(ITestOutputHelper output) 
     public void CopyToPreservingSparseRegions_ShouldWriteZeroRunBelowSparseThresholdWithNonPageAlignedReads()
     {
         int pageSize = Constants.Storage.PageSize;
-        int zeroPages = FreeSpaceHandling.NumberOfFreePagesForSparseConsideration - 1;
+        int zeroPages = FreeSpaceHandling.MinNumberOfContiguousFreePagesForSparseRegion - 1;
         var source = new byte[(2 + zeroPages) * pageSize];
 
         Fill(source, 0, pageSize, 14);
@@ -141,7 +141,7 @@ public class RavenDB_26344_StreamExtensionsSparseCopy(ITestOutputHelper output) 
     public void CopyToPreservingSparseRegions_ShouldCreateHoleForZeroRunAtSparseThreshold()
     {
         int pageSize = Constants.Storage.PageSize;
-        int sparsePages = FreeSpaceHandling.NumberOfFreePagesForSparseConsideration;
+        int sparsePages = FreeSpaceHandling.MinNumberOfContiguousFreePagesForSparseRegion;
         var source = new byte[(2 + sparsePages) * pageSize];
 
         Fill(source, 0, pageSize, 16);
@@ -162,7 +162,7 @@ public class RavenDB_26344_StreamExtensionsSparseCopy(ITestOutputHelper output) 
     public void CopyToPreservingSparseRegions_ShouldWritePartialPageTailAfterSparseHole()
     {
         int pageSize = Constants.Storage.PageSize;
-        int sparsePages = FreeSpaceHandling.NumberOfFreePagesForSparseConsideration + 5;
+        int sparsePages = FreeSpaceHandling.MinNumberOfContiguousFreePagesForSparseRegion + 5;
         int tailLength = pageSize / 2;
         var source = new byte[((1 + sparsePages) * pageSize) + tailLength];
 
@@ -184,7 +184,7 @@ public class RavenDB_26344_StreamExtensionsSparseCopy(ITestOutputHelper output) 
     public void CopyToPreservingSparseRegions_ShouldWritePartialPageTailAfterSparseHoleWithNonPageAlignedReads()
     {
         int pageSize = Constants.Storage.PageSize;
-        int sparsePages = FreeSpaceHandling.NumberOfFreePagesForSparseConsideration + 5;
+        int sparsePages = FreeSpaceHandling.MinNumberOfContiguousFreePagesForSparseRegion + 5;
         int tailLength = pageSize / 2;
         var source = new byte[((1 + sparsePages) * pageSize) + tailLength];
 
@@ -254,7 +254,7 @@ public class RavenDB_26344_StreamExtensionsSparseCopy(ITestOutputHelper output) 
     public void CopyToPreservingSparseRegions_ShouldHandleMultipleSparseRegions()
     {
         int pageSize = Constants.Storage.PageSize;
-        int sparsePages = FreeSpaceHandling.NumberOfFreePagesForSparseConsideration + 11;
+        int sparsePages = FreeSpaceHandling.MinNumberOfContiguousFreePagesForSparseRegion + 11;
         int totalPages = 1 + sparsePages + 1 + sparsePages + 1;
         var source = new byte[totalPages * pageSize];
 
@@ -278,7 +278,7 @@ public class RavenDB_26344_StreamExtensionsSparseCopy(ITestOutputHelper output) 
     public void CopyToPreservingSparseRegions_ShouldHandleAllZeroStreamWithPartialPageTail()
     {
         int pageSize = Constants.Storage.PageSize;
-        int sparsePages = FreeSpaceHandling.NumberOfFreePagesForSparseConsideration + 1;
+        int sparsePages = FreeSpaceHandling.MinNumberOfContiguousFreePagesForSparseRegion + 1;
         int tailLength = 100;
         var source = new byte[(sparsePages * pageSize) + tailLength];
 
@@ -346,7 +346,7 @@ public class RavenDB_26344_StreamExtensionsSparseCopy(ITestOutputHelper output) 
     public void CopyToPreservingSparseRegions_ShouldHandleEntirelyZeroPageAlignedStream()
     {
         int pageSize = Constants.Storage.PageSize;
-        int sparsePages = FreeSpaceHandling.NumberOfFreePagesForSparseConsideration + 20;
+        int sparsePages = FreeSpaceHandling.MinNumberOfContiguousFreePagesForSparseRegion + 20;
         var source = new byte[sparsePages * pageSize];
 
         using var input = new MemoryStream(source);
@@ -364,7 +364,7 @@ public class RavenDB_26344_StreamExtensionsSparseCopy(ITestOutputHelper output) 
     public void CopyToPreservingSparseRegions_ShouldCreateHoleForExactThresholdZeroRunFollowedByPartialTail()
     {
         int pageSize = Constants.Storage.PageSize;
-        int sparsePages = FreeSpaceHandling.NumberOfFreePagesForSparseConsideration;
+        int sparsePages = FreeSpaceHandling.MinNumberOfContiguousFreePagesForSparseRegion;
         int tailLength = 137;
         var source = new byte[(sparsePages * pageSize) + tailLength];
 

@@ -51,7 +51,7 @@ class amazonSqsTaskTestMode {
     debugOutput = ko.observableArray<string>([]);
 
     // all kinds of alerts:
-    transformationErrors = ko.observableArray<Raven.Server.Documents.ETL.TaskItemError>([]);
+    transformationErrors = ko.observableArray<Raven.Server.Documents.TasksErrors.TaskItemError>([]);
 
     warningsCount = ko.pureComputed(() => {
         return this.transformationErrors().length;

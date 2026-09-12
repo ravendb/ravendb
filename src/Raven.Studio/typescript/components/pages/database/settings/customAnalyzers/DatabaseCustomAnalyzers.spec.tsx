@@ -26,7 +26,7 @@ describe("DatabaseCustomAnalyzers", () => {
         );
         await waitForLoad();
 
-        expect(screen.queryByText(/Professional +/)).toBeInTheDocument();
+        expect(screen.queryByTestId("license-restricted-badge")).toBeInTheDocument();
     });
 
     it("can render license limit alerts and disable add button", async () => {

@@ -80,7 +80,7 @@ namespace Raven.Client.Documents.Session.Tokens
         }
 
         public string FieldName { get; protected set; }
-        public WhereOperator WhereOperator { get; private set; }
+        public WhereOperator WhereOperator { get; protected set; }
         public string ParameterName { get; protected set; }
         public WhereOptions Options;
         
@@ -95,7 +95,7 @@ namespace Raven.Client.Documents.Session.Tokens
             };
         }
 
-        public WhereToken AddAlias(string alias)
+        public virtual WhereToken AddAlias(string alias)
         {
             if (FieldName == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                 return this;

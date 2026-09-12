@@ -43,6 +43,13 @@ public sealed class ClauseInfo
 
     public VectorSourceKind VectorMethod { get; init; }
 
+    /// <summary>
+    /// For a dynamic index, the *source* document field behind a vector.search (e.g. "Name" for
+    /// vector.search(embedding.text(Name, ai.task(...)), $q)), which is what highlight() names.
+    /// Equal to FieldName on a static index. Resolved at parse time, alongside FieldName.
+    /// </summary>
+    public string VectorSourceFieldName { get; init; }
+
     /// <summary>Set for any negated clause appearing in an OR chain.
     /// Example: `WHERE Name != 'a' OR Age = 25` or `WHERE NOT exists(Tags) OR Score &gt; 10`.
     /// IL emitter builds the complement at execution time via FillAllEntries + AndNot(positive form.

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -76,7 +76,7 @@ namespace Tests.Infrastructure
         public async Task<ReplicationInstance> BreakReplication(Raven.Server.ServerWide.ServerStore from, string databaseName)
         {
             var replication = await ReplicationInstance.GetReplicationInstanceAsync(from.Server, databaseName, new ReplicationManager.ReplicationOptions());
-            replication.Break();
+            _ = replication.Break();
             return replication;
         }
 
@@ -594,7 +594,7 @@ namespace Tests.Infrastructure
             public ChangeVector GetChangeVector(string version, string order)
             {
                 return new ChangeVector(new ChangeVector(version, throwOnRecursion: true, this), 
-                    new ChangeVector(version, throwOnRecursion: true, this));
+                    new ChangeVector(order, throwOnRecursion: true, this));
             }
         }
 

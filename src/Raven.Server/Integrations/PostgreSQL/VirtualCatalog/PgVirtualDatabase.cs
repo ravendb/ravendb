@@ -30,7 +30,12 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
             RegisterTable(new PgCatalogPgRangeTable());
             RegisterTable(EmptyCatalogTables.PgEnum);
             RegisterTable(new PgCatalogPgClassTable());
-            RegisterTable(EmptyCatalogTables.PgAttribute);
+            RegisterTable(new PgCatalogPgAttributeTable());
+            RegisterTable(EmptyCatalogTables.PgAttrdef);
+            RegisterTable(EmptyCatalogTables.PgSequence);
+            RegisterTable(EmptyCatalogTables.PgIndex);
+            RegisterTable(EmptyCatalogTables.PgConstraint);
+            RegisterTable(EmptyCatalogTables.PgAm);
             RegisterTable(new PgCatalogPgNamespaceTable());
             RegisterTable(EmptyCatalogTables.PgExtension);
             RegisterTable(EmptyCatalogTables.PgReplicationSlots);
@@ -45,7 +50,11 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
             RegisterFunction(new VersionFunction());
             RegisterFunction(new CurrentSettingFunction());
             RegisterFunction(new CurrentDatabaseFunction());
+            RegisterFunction(new CurrentSchemaFunction());
             RegisterFunction(new PgEncodingToCharFunction());
+            RegisterFunction(new PgIsVisibleFunction("pg_table_is_visible"));
+            RegisterFunction(new PgIsVisibleFunction("pg_function_is_visible"));
+            RegisterFunction(new PgTypeIsVisibleFunction());
             RegisterFunction(new HasDatabasePrivilegeFunction());
             RegisterFunction(new HasSchemaPrivilegeFunction());
             RegisterFunction(new PgBackendPidFunction());

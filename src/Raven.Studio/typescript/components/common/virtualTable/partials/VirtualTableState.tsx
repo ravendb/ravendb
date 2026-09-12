@@ -14,7 +14,7 @@ export function VirtualTableState(props: VirtualTableStateProps) {
             {isLoading && <Spinner className="spinner-gradient table-state" data-testid="loader" />}
             {isEmpty && !isLoading && (
                 <div className="table-state">
-                    <EmptySet>No results</EmptySet>
+                    <EmptySet compact>No results</EmptySet>
                 </div>
             )}
         </>

@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -29,11 +29,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         {
             if (_pullReplication == null)
             {
-                if (configuration.TryGet(nameof(UpdatePullReplicationAsSinkCommand.PullReplicationAsSink), out BlittableJsonReaderObject pullReplicationBlittable) == false)
-                {
-                    throw new InvalidDataException($"{nameof(UpdatePullReplicationAsSinkCommand.PullReplicationAsSink)} was not found.");
-                }
-
+                var pullReplicationBlittable = GetPullReplicationAsSinkConfiguration(configuration);
                 _pullReplication = JsonDeserializationClient.PullReplicationAsSink(pullReplicationBlittable);
             }
 
@@ -49,8 +45,16 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
 
         protected override ValueTask OnAfterUpdateConfiguration(TransactionOperationContext context, BlittableJsonReaderObject configuration, string raftRequestId)
         {
-            RequestHandler.LogTaskToAudit(Web.RequestHandler.UpdatePullReplicationOnSinkNodeDebugTag, _taskId, configuration);
+            RequestHandler.LogTaskToAudit(Web.RequestHandler.UpdatePullReplicationOnSinkNodeDebugTag, _taskId, GetPullReplicationAsSinkConfiguration(configuration));
             return ValueTask.CompletedTask;
+        }
+
+        private static BlittableJsonReaderObject GetPullReplicationAsSinkConfiguration(BlittableJsonReaderObject configuration)
+        {
+            if (configuration.TryGet(nameof(UpdatePullReplicationAsSinkCommand.PullReplicationAsSink), out BlittableJsonReaderObject pullReplicationBlittable))
+                return pullReplicationBlittable;
+
+            throw new InvalidDataException($"{nameof(UpdatePullReplicationAsSinkCommand.PullReplicationAsSink)} was not found.");
         }
     }
 }

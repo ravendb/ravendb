@@ -23,6 +23,9 @@ namespace Raven.Server.Documents
         public string ChangeVector;
         public DateTime LastModified;
 
+        // Parent revision's version-only CV; populated only on Hashed RT and RAT rows (TombstoneTable.RevisionVersion field 9), null elsewhere and on legacy 9-field rows.
+        public string RevisionVersion;
+
         #endregion
 
         public enum TombstoneType : byte

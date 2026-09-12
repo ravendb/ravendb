@@ -872,6 +872,7 @@ namespace Raven.Server.Web
         public const string PutConnectionStringDebugTag = "put-connection-string";
         public const string AddEtlDebugTag = "etl-add";
         public const string AddQueueSinkDebugTag = "queue-sink-add";
+        public const string AddCdcSinkDebugTag = "cdc-sink-add";
         public const string UpdateExternalReplicationDebugTag = "update_external_replication";
         public const string ReadRevisionsConfigTag = "read-revisions-config";
         public const string ConflictedRevisionsConfigTag = "conflicted-revisions-config";

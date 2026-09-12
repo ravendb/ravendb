@@ -49,7 +49,14 @@ namespace Sparrow.Server.Platform
                 throw new FileNotFoundException(txt);
 
             if ((specialErrnoCodes & PalFlags.ErrnoSpecialCodes.NoSpc) != 0)
+            {
+                // ENOSPC from io-ring creation is the native 'queue too small' sentinel, not a disk-full condition
+                if (rc == PalFlags.FailCodes.FailCreateIoRing)
+                    throw new InvalidOperationException(
+                        $"Failed to create I/O ring, most likely because the requested queue size is too small. Check the 'Storage.IoRingQueueSize' configuration option. {txt}");
+
                 throw new DiskFullException(txt);
+            }
 
             if (PlatformDetails.RunningOnWindows)
             {

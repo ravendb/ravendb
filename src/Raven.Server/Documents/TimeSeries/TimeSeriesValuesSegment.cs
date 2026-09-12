@@ -12,6 +12,7 @@ using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
+using Sparrow.Utils;
 using Voron;
 
 namespace Raven.Server.Documents.TimeSeries

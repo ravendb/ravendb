@@ -18,6 +18,7 @@ using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
+using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
@@ -147,7 +148,9 @@ namespace Raven.Client.ServerWide
         public List<QueueEtlConfiguration> QueueEtls = [];
         
         public List<QueueSinkConfiguration> QueueSinks = [];
-        
+
+        public List<CdcSinkConfiguration> CdcSinks = [];
+
         public List<SnowflakeEtlConfiguration> SnowflakeEtls = [];
         
         public List<EmbeddingsGenerationConfiguration> EmbeddingsGenerations = [];
@@ -517,6 +520,8 @@ namespace Raven.Client.ServerWide
                 throw new InvalidOperationException($"Can't use task name '{taskName}', there is already a Snowflake ETL task with that name");
             if (QueueSinks.Any(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidOperationException($"Can't use task name '{taskName}', there is already a Queue Sink task with that name");
+            if (CdcSinks.Any(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidOperationException($"Can't use task name '{taskName}', there is already a CDC Sink task with that name");
             if (EmbeddingsGenerations.Any(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidOperationException($"Can't use task name '{taskName}', there is already an Embeddings Generation task with that name");
             if (GenAis.Any(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase)))

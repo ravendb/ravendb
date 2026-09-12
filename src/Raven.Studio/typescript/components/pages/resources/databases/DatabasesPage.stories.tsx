@@ -20,14 +20,14 @@ export default {
     },
 } satisfies Meta<typeof DatabasesPage>;
 
-function commonInit() {
+function commonInit(localNodeTag = "A", nodeTags = ["A", "B", "C"]) {
     const { cluster } = mockStore;
-    cluster.with_Cluster();
+    cluster.with_Cluster(nodeTags, localNodeTag);
 
     const { accessManager } = mockStore;
     accessManager.with_securityClearance("ClusterAdmin");
 
-    clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
+    clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => localNodeTag);
 }
 
 function getDatabaseNamesForNode(nodeTag: string, dto: DatabaseSharedInfo): string[] {
@@ -52,6 +52,18 @@ export const Cluster: StoryFn<typeof DatabasesPage> = () => {
     commonInit();
 
     const value = mockStore.databases.with_Cluster();
+
+    mockServices.databasesService.withGetDatabasesState((tag) => getDatabaseNamesForNode(tag, value));
+
+    return <DatabasesPage />;
+};
+
+export const ClusterViewedFromUnrelatedNode: StoryFn<typeof DatabasesPage> = () => {
+    commonInit("D", ["A", "B", "C", "D"]);
+
+    const value = mockStore.databases.with_Cluster((db) => {
+        db.currentNode.isRelevant = false;
+    });
 
     mockServices.databasesService.withGetDatabasesState((tag) => getDatabaseNamesForNode(tag, value));
 

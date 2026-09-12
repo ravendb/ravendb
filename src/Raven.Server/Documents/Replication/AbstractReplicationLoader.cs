@@ -82,8 +82,11 @@ namespace Raven.Server.Documents.Replication
             public Action<DatabaseOutgoingReplicationHandler> OnOutgoingReplicationStart;
             public Action<Exception> OnIncomingReplicationHandlerFailure;
             public Action OnIncomingReplicationHandlerStart;
+            public Action BeforePullReplicationAsSinkHandoff;
             public Action BeforeDisposingIncomingReplicationHandlers;
             public Func<Stream, Stream> WrapIncomingReplicationStream;
+            public Func<ExternalReplicationBase, bool?> ShouldOwnExternalReplicationTask;
+            public Func<PullReplicationAsSink, string, string[], string[]> SelectPullReplicationRemoteUrls;
         }
 
         public int GetNextReplicationStatsId() => Interlocked.Increment(ref _replicationStatsId);
@@ -291,14 +294,19 @@ namespace Raven.Server.Documents.Replication
         protected virtual DynamicJsonValue GetInitialRequestMessage(ReplicationLatestEtagRequest replicationLatestEtagRequest,
             ReplicationLoader.PullReplicationParams replParams = null)
         {
-            return new DynamicJsonValue
+            var response = new DynamicJsonValue
             {
                 [nameof(ReplicationMessageReply.Type)] = nameof(ReplicationMessageReply.ReplyType.Ok),
                 [nameof(ReplicationMessageReply.MessageType)] = ReplicationMessageType.Heartbeat,
                 [nameof(ReplicationMessageReply.NodeTag)] = _server.NodeTag,
                 [nameof(ReplicationMessageReply.AcceptablePaths)] = replParams?.AllowedPaths,
-                [nameof(ReplicationMessageReply.PreventDeletionsMode)] = replParams?.PreventDeletionsMode
+                [nameof(ReplicationMessageReply.PreventDeletionsMode)] = replParams?.PreventDeletionsMode,
             };
+
+            if (replParams != null && replParams.Mode == PullReplicationMode.HubToSink)
+                response[nameof(ReplicationMessageReply.LastConfirmedChangeVector)] = ReplicationUtils.ReadCursorFromClusterFor(Server, _databaseName, replParams.TaskId, ExternalReplicationState.ReplicationStateType.HubCursor);
+
+            return response;
         }
 
         public ClusterTopology GetClusterTopology()

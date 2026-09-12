@@ -29,6 +29,7 @@ using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 using SVC = Raven.Server.Documents.SchemaValidation.SchemaValidatorConstants;
+using Raven.Server.Documents.TasksErrors;
 
 namespace SlowTests.SchemaValidation;
 

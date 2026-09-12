@@ -60,6 +60,8 @@ namespace Raven.Server.Config
 
         public QueueSinkConfiguration QueueSink { get; }
 
+        public CdcSinkConfiguration CdcSink { get; }
+
         public ReplicationConfiguration Replication { get; }
 
         public ClusterConfiguration Cluster { get; }
@@ -181,6 +183,7 @@ namespace Raven.Server.Config
             Integrations = new IntegrationsConfiguration();
             ExportImport = new ExportImportConfiguration();
             QueueSink = new QueueSinkConfiguration();
+            CdcSink = new CdcSinkConfiguration();
             Sharding = new ShardingConfiguration();
             SchemaValidation = new SchemaValidationConfiguration();
         }
@@ -248,6 +251,7 @@ namespace Raven.Server.Config
             Integrations.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
             ExportImport.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
             QueueSink.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            CdcSink.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
             Sharding.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
             SchemaValidation.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
 

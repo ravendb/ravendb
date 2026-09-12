@@ -13,6 +13,7 @@ import ConnectionTestResult from "components/common/connectionTests/ConnectionTe
 import { useServices } from "components/hooks/useServices";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { connectionStringSelectors } from "components/pages/database/settings/connectionStrings/store/connectionStringsSlice";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import EmbeddingsMaxConcurrentBatches from "./EmbeddingsMaxConcurrentBatchesField";
 import { useAsyncDebounce } from "components/hooks/useAsyncDebounce";
@@ -24,6 +25,7 @@ export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
     const { control, trigger } = useFormContext<ConnectionFormData<AiConnection>>();
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
 
     const formValues = useWatch({ control });
 
@@ -33,7 +35,7 @@ export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
             return;
         }
 
-        return tasksService.testAiConnectionString(databaseName, "AzureOpenAi", formValues.modelType, {
+        const settings = {
             ApiKey: formValues.azureOpenAiSettings.apiKey,
             Endpoint: formValues.azureOpenAiSettings.endpoint,
             EnablePromptCache: formValues.azureOpenAiSettings.enablePromptCache,
@@ -43,7 +45,10 @@ export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
             Temperature: formValues.azureOpenAiSettings.isSetTemperature
                 ? formValues.azureOpenAiSettings.temperature
                 : null,
-        });
+        };
+        return isServerWide
+            ? tasksService.testServerWideAiConnectionString("AzureOpenAi", formValues.modelType, settings)
+            : tasksService.testAiConnectionString(databaseName, "AzureOpenAi", formValues.modelType, settings);
     });
 
     const asyncGetModelOptions = useAsyncDebounce(

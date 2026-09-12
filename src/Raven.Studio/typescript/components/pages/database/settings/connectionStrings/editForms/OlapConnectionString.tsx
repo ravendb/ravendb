@@ -14,11 +14,12 @@ import {
     defaultLocalFormData,
     defaultS3FormData,
 } from "components/common/formDestinations/utils/formDestinationsMapsFromDto";
-import { useAppUrls } from "components/hooks/useAppUrls";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
+import ExcludedDatabasesFormSelect from "./shared/ExcludedDatabasesFormSelect";
 import { useAppSelector } from "components/store";
 import { connectionStringSelectors } from "../store/connectionStringsSlice";
 import { ConnectionStringsNameContext, connectionStringsUtils } from "../connectionStringsUtils";
+import * as yup from "yup";
 
 type FormData = ConnectionFormData<OlapConnection>;
 
@@ -32,6 +33,7 @@ export default function OlapConnectionString({
     onSave,
 }: OlapConnectionStringProps) {
     const usedNames = useAppSelector(connectionStringSelectors.connections)["Olap"].map((x) => x.name);
+    const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
 
     const form = useForm<FormData>({
         mode: "all",
@@ -45,7 +47,6 @@ export default function OlapConnectionString({
 
     const { control, handleSubmit } = form;
     const formValues = useWatch({ control });
-    const { forCurrentDatabase } = useAppUrls();
 
     const handleSave = async () => {
         onSave({
@@ -69,18 +70,23 @@ export default function OlapConnectionString({
                     />
                 </div>
                 <FormDestinationList isForNewConnection={isForNewConnection} />
+                {isServerWide && (
+                    <ExcludedDatabasesFormSelect
+                        control={control}
+                        name="excludedDatabases"
+                        usedBy={initialConnection.usedBy}
+                    />
+                )}
             </Form>
 
-            <ConnectionStringUsedByTasks
-                tasks={initialConnection.usedByTasks}
-                urlProvider={forCurrentDatabase.editOlapEtl}
-            />
+            <ConnectionStringUsedByTasks tasks={initialConnection.usedBy} connectionType={initialConnection.type} />
         </FormProvider>
     );
 }
 
 const schema = yupObjectSchema<Omit<FormData, "destinations">>({
     name: connectionStringsUtils.nameSchema,
+    excludedDatabases: yup.array().of(yup.string()).optional(),
 }).concat(destinationsSchema);
 
 const yupSchemaResolver = yupResolver(schema);
@@ -100,5 +106,5 @@ function getDefaultValues(initialConnection: OlapConnection, isForNewConnection:
         };
     }
 
-    return _.omit(initialConnection, "type", "usedByTasks");
+    return _.omit(initialConnection, "type", "usedBy");
 }

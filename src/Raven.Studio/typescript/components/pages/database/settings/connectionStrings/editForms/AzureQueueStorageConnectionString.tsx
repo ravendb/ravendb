@@ -9,13 +9,13 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { yupObjectSchema } from "components/utils/yupUtils";
 import { Control, SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { useAppUrls } from "components/hooks/useAppUrls";
 import { FormInput, FormLabel, FormSelect } from "components/common/Form";
 import Badge from "react-bootstrap/Badge";
 import Form from "react-bootstrap/Form";
 import { useAsyncCallback } from "react-async-hook";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import ConnectionStringUsedByTasks from "components/pages/database/settings/connectionStrings/editForms/shared/ConnectionStringUsedByTasks";
+import ExcludedDatabasesFormSelect from "components/pages/database/settings/connectionStrings/editForms/shared/ExcludedDatabasesFormSelect";
 import { useServices } from "components/hooks/useServices";
 import ConnectionTestResult from "components/common/connectionTests/ConnectionTestResult";
 import { useAppSelector } from "components/store";
@@ -39,6 +39,7 @@ export default function AzureQueueStorageConnectionString({
     onSave,
 }: AzureQueueStorageConnectionStringProps) {
     const usedNames = useAppSelector(connectionStringSelectors.connections)["AzureQueueStorage"].map((x) => x.name);
+    const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
 
     const { control, handleSubmit, trigger } = useForm<FormData>({
         mode: "all",
@@ -56,7 +57,6 @@ export default function AzureQueueStorageConnectionString({
     });
 
     const formValues = useWatch({ control });
-    const { forCurrentDatabase } = useAppUrls();
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
@@ -66,10 +66,10 @@ export default function AzureQueueStorageConnectionString({
             return;
         }
 
-        return tasksService.testAzureQueueStorageServerConnection(
-            databaseName,
-            mapAzureQueueStorageConnectionStringSettingsToDto(formValues)
-        );
+        const dto = mapAzureQueueStorageConnectionStringSettingsToDto(formValues);
+        return isServerWide
+            ? tasksService.testServerWideAzureQueueStorageServerConnection(dto)
+            : tasksService.testAzureQueueStorageServerConnection(databaseName, dto);
     });
 
     // Clear test result after changing auth type
@@ -141,10 +141,14 @@ export default function AzureQueueStorageConnectionString({
                 </div>
             )}
 
-            <ConnectionStringUsedByTasks
-                tasks={initialConnection.usedByTasks}
-                urlProvider={forCurrentDatabase.editAzureQueueStorageEtl}
-            />
+            <ConnectionStringUsedByTasks tasks={initialConnection.usedBy} connectionType={initialConnection.type} />
+            {isServerWide && (
+                <ExcludedDatabasesFormSelect
+                    control={control}
+                    name="excludedDatabases"
+                    usedBy={initialConnection.usedBy}
+                />
+            )}
         </Form>
     );
 }
@@ -273,6 +277,7 @@ function getStringRequiredSchema(authType: AzureQueueStorageAuthenticationType) 
 const schema = yupObjectSchema<FormData>({
     name: connectionStringsUtils.nameSchema,
     authType: yup.string<AzureQueueStorageAuthenticationType>(),
+    excludedDatabases: yup.array().of(yup.string()).optional(),
     settings: yupObjectSchema<FormData["settings"]>({
         connectionString: yupObjectSchema<FormData["settings"]["connectionString"]>({
             connectionStringValue: yup
@@ -329,7 +334,7 @@ function getDefaultValues(initialConnection: AzureQueueStorageConnection, isForN
         };
     }
 
-    return _.omit(initialConnection, "type", "usedByTasks");
+    return _.omit(initialConnection, "type", "usedBy");
 }
 
 const exampleConnectionString =

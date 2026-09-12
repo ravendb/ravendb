@@ -1,0 +1,48 @@
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.analysis-verdict {
+    display: flex;
+    align-items: center;
+    gap: sizes.$gutter-xs;
+    flex-wrap: wrap;
+
+    .analysis-verdict-body {
+        display: flex;
+        gap: sizes.$gutter-xxs;
+        min-width: 0;
+    }
+
+    .severity-meter {
+        display: flex;
+        width: 180px;
+        height: sizes.$gutter-xxs;
+        border-radius: sizes.$border-radius-pill;
+        overflow: hidden;
+        background: var(--well-bg);
+    }
+
+    .severity-meter-segment {
+        min-width: sizes.$gutter-xxs;
+
+        &.severity-meter-segment--error {
+            background: colors.$danger-var;
+        }
+
+        &.severity-meter-segment--warning {
+            background: colors.$warning-var;
+        }
+
+        &.severity-meter-segment--info {
+            background: colors.$info-var;
+        }
+
+        &.severity-meter-segment--success {
+            background: colors.$success-var;
+        }
+    }
+
+    .analysis-verdict-link {
+        white-space: nowrap;
+    }
+}

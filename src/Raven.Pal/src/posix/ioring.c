@@ -401,6 +401,12 @@ wait_for_work_completion(struct handle *handle_ptr, struct submittion *submittio
         read_rc = eventfd_read(submittion->notifyfd, &v);
     } while (read_rc == -1 && errno == EINTR);
 
+    if (read_rc != 0)
+    {
+        *detailed_error_code = errno;
+        return FAIL_IO_RING_NO_RESULT;
+    }
+
     if (submittion->error)
     {
         *detailed_error_code = submittion->result;

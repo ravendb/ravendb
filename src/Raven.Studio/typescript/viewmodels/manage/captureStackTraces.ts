@@ -3,6 +3,8 @@ import d3 = require("d3");
 import moment = require("moment");
 import captureLocalStackTracesCommand = require("commands/maintenance/captureLocalStackTracesCommand");
 import captureClusterStackTracesCommand = require("commands/maintenance/captureClusterStackTracesCommand");
+import getDebugPackageThreadsStackTraceCommand = require("commands/maintenance/getDebugPackageThreadsStackTraceCommand");
+import getDebugPackageThreadsInfoCommand = require("commands/maintenance/getDebugPackageThreadsInfoCommand");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import copyToClipboard = require("common/copyToClipboard");
 import fileDownloader = require("common/fileDownloader");
@@ -99,8 +101,49 @@ class captureStackTraces extends viewModelBase {
     constructor() {
         super();
         this.bindToCurrentInstance("draw");
-        
+
         this.initObservables();
+    }
+
+    activate(args: any, parameters?: any) {
+        super.activate(args, parameters);
+
+        // opened from the Debug Package Analyzer: load the package's captured stacks for a node
+        // instead of waiting for a live capture or a manual import
+        if (args && args.packageId && args.nodeTag) {
+            this.loadFromPackage(args.packageId, args.nodeTag);
+        }
+    }
+
+    private loadFromPackage(packageId: string, nodeTag: string) {
+        this.spinners.loading(true);
+        this.error(null);
+        this.hasAnyData(false);
+        this.isImport(true);
+
+        // $.when resolves each deferred's args as an array; commandBase resolves with (result, status, xhr),
+        // so the payload is the first element. Clear the spinner before draw() so a draw error can't hang it.
+        $.when<any>(
+            new getDebugPackageThreadsStackTraceCommand(packageId, nodeTag).execute(),
+            new getDebugPackageThreadsInfoCommand(packageId, nodeTag).execute()
+        )
+            .done((stacksResult: any, threadsResult: any) => {
+                this.spinners.loading(false);
+
+                const stacks: rawStackTraceResponseItem[] = stacksResult[0];
+                const threadsInfo: Raven.Server.Dashboard.ThreadsInfo = threadsResult[0];
+
+                this.data = {
+                    Results: captureStackTraces.reverseStacks(stacks),
+                    Threads: (threadsInfo && threadsInfo.List) || [],
+                };
+                this.hasAnyData(true);
+                this.draw();
+            })
+            .fail((xhr: JQueryXHR) => {
+                this.spinners.loading(false);
+                this.error("Failed to load stack traces from the debug package: " + (xhr.responseText || xhr.statusText));
+            });
     }
     
     private initObservables() {

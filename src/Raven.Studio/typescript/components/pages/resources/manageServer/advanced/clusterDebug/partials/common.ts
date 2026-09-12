@@ -19,7 +19,13 @@ export interface ClusterDebugNodeInfo {
     installationLog: Raven.Server.Rachis.RachisDebugMessage[];
 }
 
-export function mapRaftDebugView(view: Raven.Server.Rachis.RaftDebugView): ClusterDebugNodeInfo {
+// referenceTimeUtc is the "now" the choked heuristic measures the last commit against. Live views leave it
+// at the wall-clock default; offline package snapshots pass the snapshot's own reference time so the
+// "no commits for over 2 minutes" check isn't tripped just because the package was captured in the past.
+export function mapRaftDebugView(
+    view: Raven.Server.Rachis.RaftDebugView,
+    referenceTimeUtc: moment.Moment = moment.utc()
+): ClusterDebugNodeInfo {
     return {
         term: view.Term,
         clusterVersion: view.CommandsVersion.Cluster,
@@ -33,7 +39,7 @@ export function mapRaftDebugView(view: Raven.Server.Rachis.RaftDebugView): Clust
         queueSize: queueSize(view),
         criticalError: view.Log.CriticalError,
         installingSnapshot: isInstallingSnapshot(view),
-        chocked: isChoked(view),
+        chocked: isChoked(view, referenceTimeUtc),
         progress: progress(view),
         connections: connections(view),
         installationLog: installationLog(view),
@@ -88,11 +94,11 @@ function progress(view: Raven.Server.Rachis.RaftDebugView) {
     return Math.ceil((100 * (logLength - queueLength)) / logLength);
 }
 
-function isChoked(view: Raven.Server.Rachis.RaftDebugView) {
+function isChoked(view: Raven.Server.Rachis.RaftDebugView, referenceTimeUtc: moment.Moment) {
     const queueSizeCheck = queueSize(view) >= 5;
 
     const lastCommit = moment.utc(view.Log.LastCommitedTime);
-    const lastCommitAgoInMs = moment.utc().diff(lastCommit);
+    const lastCommitAgoInMs = referenceTimeUtc.diff(lastCommit);
     const lastCommitCheck = lastCommitAgoInMs >= 2 * 60 * 1_000; // 2 minutes
 
     return queueSizeCheck && lastCommitCheck;

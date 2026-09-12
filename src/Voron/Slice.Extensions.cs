@@ -1,11 +1,18 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using Sparrow.Json;
 
 namespace Voron
 {
     public static class SliceExtensions
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]        
+        // Byte-faithful overload of JsonOperationContext.GetLazyString -- no JSON escape pass. Required
+        // for binary slices (e.g. revision-tombstone composite PKs) whose bytes (0x1E RecordSeparator
+        // among them) must reach the wire / consumer unchanged.
+        public static unsafe LazyStringValue GetLazyString(this JsonOperationContext context, Slice slice, bool longLived = false)
+            => context.GetLazyStringRaw(slice.Content.Ptr, slice.Size, longLived);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool StartWith(this Slice s1, ReadOnlySpan<byte> s2)
         {
             return s1.AsReadOnlySpan().StartsWith(s2);

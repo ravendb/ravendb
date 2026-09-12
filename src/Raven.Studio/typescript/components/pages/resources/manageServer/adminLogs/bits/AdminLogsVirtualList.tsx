@@ -88,7 +88,8 @@ export default function AdminLogsVirtualList(props: { availableHeightInPx: numbe
                                         />
                                     </div>
                                     <span className="text-truncate">
-                                        {log.Date} | {log.Level} | {log.Resource} | {log.Component} | {log.Message}
+                                        {log.Date} | {log.NodeTag ?? "?"} | {log.Level} | {log.Resource} |{" "}
+                                        {log.Component} | {log.Message}
                                     </span>
                                 </div>
                                 {log._meta.isExpanded && (
@@ -146,6 +147,8 @@ function getFormattedFieldName(fieldName: keyof AdminLogsMessage): string {
     switch (fieldName) {
         case "ThreadID":
             return "Thread ID";
+        case "NodeTag":
+            return "Node Tag";
         default:
             return fieldName;
     }

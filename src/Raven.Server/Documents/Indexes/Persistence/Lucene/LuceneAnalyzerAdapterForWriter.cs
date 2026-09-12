@@ -19,9 +19,8 @@ internal sealed unsafe class LuceneAnalyzerAdapterForWriter : LuceneAnalyzerAdap
     private ITermAttribute _term;
     
     private LuceneAnalyzerAdapterForWriter(LuceneAnalyzer analyzer,
-        delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, ref byte[], void> functionUtf8,
-        delegate*<Analyzer, ReadOnlySpan<char>, ref Span<char>, ref Span<Token>, void> functionUtf16) : 
-        base(analyzer, functionUtf8, functionUtf16)
+        delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, ref byte[], void> functionUtf8) : 
+        base(analyzer, functionUtf8)
     {
     }
 
@@ -78,6 +77,6 @@ internal sealed unsafe class LuceneAnalyzerAdapterForWriter : LuceneAnalyzerAdap
     
     internal static LuceneAnalyzerAdapterForWriter Create(LuceneAnalyzer analyzer)
     {
-        return new LuceneAnalyzerAdapterForWriter(analyzer, &Run, &Run) { _lazyStringReader = new LazyStringReader() };
+        return new LuceneAnalyzerAdapterForWriter(analyzer, &Run) { _lazyStringReader = new LazyStringReader() };
     }
 }

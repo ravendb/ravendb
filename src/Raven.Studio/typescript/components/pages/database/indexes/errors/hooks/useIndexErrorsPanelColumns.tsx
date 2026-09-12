@@ -1,6 +1,7 @@
 import { useAppSelector } from "components/store";
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
 import { CellContext, ColumnDef, Row, Table as TanstackTable } from "@tanstack/react-table";
+import { useMemo } from "react";
 import CellValue, { CellValueWrapper } from "components/common/virtualTable/cells/CellValue";
 import CellDocumentValue from "components/common/virtualTable/cells/CellDocumentValue";
 import { useAppUrls } from "hooks/useAppUrls";
@@ -14,7 +15,7 @@ import React from "react";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 const indexErrorsSheetConfig: Pick<OpenSheetOptions, "initialWidth" | "minWidth" | "maxWidth"> = {
-    initialWidth: "40%",
+    initialWidth: "60%",
     minWidth: "25%",
     maxWidth: "60%",
 };
@@ -42,72 +43,76 @@ const defaultCellSize = 95 / 5;
 
 export function useIndexErrorsPanelColumns(availableWidth: number) {
     const bodyWidth = virtualTableUtils.getTableBodyWidth(availableWidth);
-    const getSize = virtualTableUtils.getCellSizeProvider(bodyWidth);
 
-    const indexErrorsPanelColumns: ColumnDef<IndexErrorPerDocument>[] = [
-        {
-            header: "Show",
-            cell: CellValueButtonWrapper,
-            size: 70,
-        },
-        {
-            header: "Index Name",
-            accessorKey: "IndexName",
-            cell: HyperlinkIndexCellValue,
-            size: getSize(defaultCellSize),
-            filterFn: "arrIncludesSome",
-            enableColumnFilter: false,
-        },
-        {
-            header: "Document ID",
-            accessorKey: "Document",
-            cell: HyperLinkDocumentCellValue,
-            size: getSize(defaultCellSize),
-        },
-        {
-            header: "Date",
-            accessorKey: "LocalTime",
-            cell: CellValueRelativeTimeWrapper,
-            size: getSize(defaultCellSize),
-        },
-        {
-            header: "Action",
-            accessorKey: "Action",
-            cell: CellValueWrapper,
-            size: getSize(defaultCellSize / 2),
-            filterFn: "arrIncludesSome",
-            enableColumnFilter: false,
-        },
-        {
-            header: "Error",
-            accessorKey: "Error",
-            cell: IndexErrorsCellWithCopyWrapper,
-            size: getSize(defaultCellSize * 1.5),
-        },
-    ];
+    const indexErrorsPanelColumns = useMemo((): ColumnDef<IndexErrorPerDocument>[] => {
+        const getSize = virtualTableUtils.getCellSizeProvider(bodyWidth);
+        return [
+            {
+                header: "Show",
+                cell: CellValueButtonWrapper,
+                size: 70,
+            },
+            {
+                header: "Index Name",
+                accessorKey: "IndexName",
+                cell: HyperlinkIndexCellValue,
+                size: getSize(defaultCellSize),
+                filterFn: "arrIncludesSome",
+                enableColumnFilter: false,
+            },
+            {
+                header: "Document ID",
+                accessorKey: "Document",
+                cell: HyperLinkDocumentCellValue,
+                size: getSize(defaultCellSize),
+            },
+            {
+                header: "Date",
+                accessorKey: "LocalTime",
+                cell: CellValueRelativeTimeWrapper,
+                size: getSize(defaultCellSize),
+            },
+            {
+                header: "Action",
+                accessorKey: "Action",
+                cell: CellValueWrapper,
+                size: getSize(defaultCellSize / 2),
+                filterFn: "arrIncludesSome",
+                enableColumnFilter: false,
+            },
+            {
+                header: "Error",
+                accessorKey: "Error",
+                cell: IndexErrorsCellWithCopyWrapper,
+                size: getSize(defaultCellSize * 1.5),
+            },
+        ];
+    }, [bodyWidth]);
 
     return { indexErrorsPanelColumns };
 }
 
 type HyperLinkDocumentCellValueProps = Pick<
     CellContext<IndexErrorPerDocument, IndexErrorPerDocument["Document"]>,
-    "getValue"
+    "getValue" | "table"
 >;
 
-const HyperLinkDocumentCellValue = ({ getValue }: HyperLinkDocumentCellValueProps) => {
+const HyperLinkDocumentCellValue = ({ getValue, table }: HyperLinkDocumentCellValueProps) => {
     const dbName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const disableLinks = (table.options.meta as { disableLinks?: boolean })?.disableLinks;
 
-    return <CellDocumentValue value={getValue()} databaseName={dbName} hasHyperlinkForIds />;
+    return <CellDocumentValue value={getValue()} databaseName={dbName} hasHyperlinkForIds={!disableLinks} />;
 };
 
 type HyperlinkIndexCellValueProps = Pick<
     CellContext<IndexErrorPerDocument, IndexErrorPerDocument["IndexName"]>,
-    "getValue"
+    "getValue" | "table"
 >;
 
-const HyperlinkIndexCellValue = ({ getValue }: HyperlinkIndexCellValueProps) => {
+const HyperlinkIndexCellValue = ({ getValue, table }: HyperlinkIndexCellValueProps) => {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { appUrl } = useAppUrls();
+    const disableLinks = (table.options.meta as { disableLinks?: boolean })?.disableLinks;
 
     const getLinkToIndex = (cellValue: IndexErrorPerDocument["IndexName"]): string => {
         if (typeof cellValue !== "string") {
@@ -117,20 +122,16 @@ const HyperlinkIndexCellValue = ({ getValue }: HyperlinkIndexCellValueProps) => 
         return appUrl.forEditIndex(getValue(), databaseName);
     };
 
-    const editIndexLink = getLinkToIndex(getValue());
+    const editIndexLink = disableLinks ? null : getLinkToIndex(getValue());
     if (editIndexLink) {
         return (
-            <CellWithCopy value={getValue()}>
+            <div className="cell-value">
                 <a href={editIndexLink}>{String(getValue())}</a>
-            </CellWithCopy>
+            </div>
         );
     }
 
-    return (
-        <CellWithCopy value={getValue()}>
-            <CellValue value={getValue()} />
-        </CellWithCopy>
-    );
+    return <CellValue value={getValue()} />;
 };
 
 type CellValueButtonWrapperProps = CellContext<IndexErrorPerDocument, unknown>;
@@ -181,7 +182,13 @@ const IndexErrorsCellWithCopyWrapper = ({ getValue, row, table }: IndexErrorsCel
     );
 
     return (
-        <CellWithCopy additionalButtons={additionalButtons} value={getValue()}>
+        <CellWithCopy
+            additionalButtons={additionalButtons}
+            value={getValue()}
+            previewCode={String(getValue() ?? "")}
+            previewLanguage="csharp"
+            popoverMaxWidth="800px"
+        >
             <CellValue value={getValue()} />
         </CellWithCopy>
     );

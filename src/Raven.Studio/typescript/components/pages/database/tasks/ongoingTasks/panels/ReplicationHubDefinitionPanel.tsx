@@ -1,6 +1,7 @@
 ﻿import React from "react";
 import {
     BaseOngoingTaskPanelProps,
+    formatReplicationMode,
     OngoingTaskActions,
     OngoingTaskName,
     OngoingTaskStatus,
@@ -41,7 +42,9 @@ function Details(props: ReplicationHubPanelProps & { canEdit: boolean }) {
         <div>
             <RichPanelDetails>
                 {delayHumane && <RichPanelDetailItem label="Replication Delay Time">{delayHumane}</RichPanelDetailItem>}
-                <RichPanelDetailItem label="Replication Mode">{data.shared.taskMode}</RichPanelDetailItem>
+                <RichPanelDetailItem label="Replication Mode">
+                    {formatReplicationMode(data.shared.taskMode)}
+                </RichPanelDetailItem>
                 <RichPanelDetailItem label="Has Filtering">
                     {data.shared.hasFiltering ? "True" : "False"}
                 </RichPanelDetailItem>

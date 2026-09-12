@@ -1,8 +1,10 @@
-﻿using System;
+using System;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
+using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Tests.Infrastructure;
@@ -161,6 +163,35 @@ namespace SlowTests.Client.TimeSeries
                     var after2delete = ts.Get(DateTime.MinValue, DateTime.MaxValue)?.ToList();
                     Assert.Null(after2delete);
                 }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.TimeSeries)]
+        public async Task DeleteRangeForNonExistingTimeSeriesShouldBeNoOp()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/1-A");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.TimeSeriesFor("users/1-A", "HR").Delete(DateTime.MinValue, DateTime.MaxValue);
+                    session.SaveChanges();
+                }
+
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    Assert.Equal(0, database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRanges(context));
+                }
+
+                var ts = store.Operations.Send(new GetTimeSeriesOperation("users/1-A", "HR", DateTime.MinValue, DateTime.MaxValue));
+                Assert.Null(ts);
             }
         }
 

@@ -32,6 +32,8 @@ class globalSettings extends abstractSettings {
     tableFont = new simpleStudioSetting<string>("local", "default", x => this.saveSetting(x));
     monospaceFont = new simpleStudioSetting<string>("local", "default", x => this.saveSetting(x));
 
+    ongoingTaskDisplayMode = new simpleStudioSetting<studio.settings.ongoingTaskDisplayMode>("local", "expanded", x => this.saveSetting(x));
+
     constructor(remoteSettingsLoader: () => JQueryPromise<Raven.Client.ServerWide.Operations.Configuration.ServerWideStudioConfiguration>,
                 remoteSettingsSaver: (settings: Raven.Client.ServerWide.Operations.Configuration.ServerWideStudioConfiguration) => JQueryPromise<void>, 
                 onSettingChanged: (key: string, value: studioSetting<any>) => void) {

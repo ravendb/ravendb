@@ -25,7 +25,8 @@ namespace Raven.Server.Utils.Monitoring
         public AllDatabasesMetrics Databases { get; set; }
         public ServerEtlMetrics Etls { get; set; }
         public ServerAiTasksMetrics AiTasks { get; set; }
-        
+        public ServerCdcSinksMetrics CdcSinks { get; set; }
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -46,7 +47,8 @@ namespace Raven.Server.Utils.Monitoring
                 [nameof(Cluster)] = Cluster.ToJson(),
                 [nameof(Databases)] = Databases.ToJson(),
                 [nameof(Etls)] = Etls.ToJson(),
-                [nameof(AiTasks)] = AiTasks.ToJson()
+                [nameof(AiTasks)] = AiTasks.ToJson(),
+                [nameof(CdcSinks)] = CdcSinks.ToJson()
             };
         }
     }
@@ -310,7 +312,7 @@ namespace Raven.Server.Utils.Monitoring
         public int HealthyTasksCount { get; set; }
         public int ImpairedTasksCount { get; set; }
         public int FailedTasksCount { get; set; }
-        
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -320,6 +322,27 @@ namespace Raven.Server.Utils.Monitoring
                 [nameof(HealthyTasksCount)] = HealthyTasksCount,
                 [nameof(ImpairedTasksCount)] = ImpairedTasksCount,
                 [nameof(FailedTasksCount)] = FailedTasksCount
+            };
+        }
+    }
+
+    public sealed class ServerCdcSinksMetrics
+    {
+        public int Count { get; set; }
+        public long ErrorsCount { get; set; }
+        public int HealthyCdcSinksCount { get; set; }
+        public int ImpairedCdcSinksCount { get; set; }
+        public int FailedCdcSinksCount { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Count)] = Count,
+                [nameof(ErrorsCount)] = ErrorsCount,
+                [nameof(HealthyCdcSinksCount)] = HealthyCdcSinksCount,
+                [nameof(ImpairedCdcSinksCount)] = ImpairedCdcSinksCount,
+                [nameof(FailedCdcSinksCount)] = FailedCdcSinksCount
             };
         }
     }

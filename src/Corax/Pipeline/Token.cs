@@ -10,6 +10,8 @@ namespace Corax.Pipeline
         public int Offset;
         public uint Length;
         public TokenType Type;
+
+        public ReadOnlySpan<byte> Retrieve(ReadOnlySpan<byte> source) => source.Slice(Offset, (int)Length);
     }
 
     [Flags]
