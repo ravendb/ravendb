@@ -6,6 +6,7 @@ import { loadStatus } from "components/models/common";
 export const documentRevisionsConfigNames = {
     defaultConflicts: "Conflicting Document Defaults",
     defaultDocument: "Document Defaults",
+    conversations: "@conversations",
 } as const;
 
 export type DocumentRevisionsConfigName =
@@ -19,11 +20,11 @@ export interface DocumentRevisionsConfig extends RevisionsCollectionConfiguratio
 export interface DocumentRevisionsState {
     loadStatus: loadStatus;
     selectedConfigNames: DocumentRevisionsConfigName[];
-    configs: EntityState<DocumentRevisionsConfig, string>;
-    originalConfigs: EntityState<DocumentRevisionsConfig, string>;
+    configs: EntityState<DocumentRevisionsConfig, DocumentRevisionsConfigName>;
+    originalConfigs: EntityState<DocumentRevisionsConfig, DocumentRevisionsConfigName>;
 }
 
-const configsAdapter = createEntityAdapter<DocumentRevisionsConfig, string>({
+const configsAdapter = createEntityAdapter<DocumentRevisionsConfig, DocumentRevisionsConfigName>({
     selectId: (config) => config.Name,
 });
 
@@ -64,7 +65,9 @@ export const documentRevisionsSlice = createSlice({
         },
         allSelectedConfigNamesToggled: (state) => {
             if (state.selectedConfigNames.length === 0) {
-                state.selectedConfigNames = configsSelectors.selectIds(state.configs) as DocumentRevisionsConfigName[];
+                state.selectedConfigNames = configsSelectors
+                    .selectIds(state.configs)
+                    .filter((name) => name !== documentRevisionsConfigNames.conversations);
             } else {
                 state.selectedConfigNames = [];
             }
@@ -79,30 +82,38 @@ export const documentRevisionsSlice = createSlice({
         selectedConfigsDeleted: (state) => {
             configsAdapter.removeMany(
                 state.configs,
-                state.selectedConfigNames.filter((name) => name !== documentRevisionsConfigNames.defaultConflicts)
+                state.selectedConfigNames.filter(
+                    (name) =>
+                        name !== documentRevisionsConfigNames.defaultConflicts &&
+                        name !== documentRevisionsConfigNames.conversations
+                )
             );
             state.selectedConfigNames = [];
         },
         selectedConfigsDisabled: (state) => {
             configsAdapter.updateMany(
                 state.configs,
-                state.selectedConfigNames.map((name) => ({
-                    id: name,
-                    changes: {
-                        Disabled: true,
-                    },
-                }))
+                state.selectedConfigNames
+                    .filter((name) => name !== documentRevisionsConfigNames.conversations)
+                    .map((name) => ({
+                        id: name,
+                        changes: {
+                            Disabled: true,
+                        },
+                    }))
             );
         },
         selectedConfigsEnabled: (state) => {
             configsAdapter.updateMany(
                 state.configs,
-                state.selectedConfigNames.map((name) => ({
-                    id: name,
-                    changes: {
-                        Disabled: false,
-                    },
-                }))
+                state.selectedConfigNames
+                    .filter((name) => name !== documentRevisionsConfigNames.conversations)
+                    .map((name) => ({
+                        id: name,
+                        changes: {
+                            Disabled: false,
+                        },
+                    }))
             );
         },
         configsSaved: (state) => {
