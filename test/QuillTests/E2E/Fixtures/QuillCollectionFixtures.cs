@@ -1,11 +1,10 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Quill.AiHelper;
 using Raven.Quill.Contracts;
 using Raven.Quill.Feedback;
 using Raven.Quill.Hosting;
-using Raven.Quill.Licensing;
 using Raven.Quill.Wizard;
 using Xunit;
 
@@ -99,54 +98,9 @@ internal sealed class RecordingFeedbackSender : IFeedbackSender
     }
 }
 
-/// An <see cref="ILicenseStatsProvider"/> that answers usage from a canned payload (or throws when a test flips
-/// <see cref="IsUsageUnavailable"/>) while still forwarding the license read to the real provider, so the shared
-/// host's test server does not need a Quill license for the usage tests.
-internal sealed class StubLicenseStatsProvider : ILicenseStatsProvider
-{
-    /// The real provider, attached when the host's container first resolves <see cref="ILicenseStatsProvider"/>.
-    public ILicenseStatsProvider Real { get; set; } = null!;
-
-    public static readonly QuillUsageResponse DefaultUsage = new(
-        PerApplication:
-        [
-            new QuillApplicationUsage("topology-1", "support-copilot",
-                new DateTime(2026, 5, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2026, 5, 31, 23, 59, 59, DateTimeKind.Utc), 5200),
-        ],
-        ByPeriod:
-        [
-            new QuillPeriodUsage(new DateTime(2026, 5, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2026, 5, 2, 0, 0, 0, DateTimeKind.Utc), 5200),
-        ]);
-
-    public QuillUsageResponse Usage { get; set; } = DefaultUsage;
-
-    public bool IsUsageUnavailable { get; set; }
-
-    public (int Year, int? Month, int? Day)? LastUsagePeriod { get; private set; }
-
-    public Task<LicenseResponse> GetLicenseAsync(CancellationToken token) => Real.GetLicenseAsync(token);
-
-    public Task<QuillUsageResponse> GetUsageAsync(int year, int? month, int? day, CancellationToken token)
-    {
-        LastUsagePeriod = (year, month, day);
-        if (IsUsageUnavailable)
-            throw new LicenseUsageUnavailableException("stubbed license server outage");
-        return Task.FromResult(Usage);
-    }
-
-    public void Reset()
-    {
-        Usage = DefaultUsage;
-        IsUsageUnavailable = false;
-        LastUsagePeriod = null;
-    }
-}
-
 public sealed class QuillFeedbackFixture : QuillCollectionHost
 {
     internal RecordingFeedbackSender Feedback { get; } = new();
-
-    internal StubLicenseStatsProvider LicenseStats { get; } = new();
 }
 
 /// Base for the feedback tests: swaps the recording sender into the shared collection host and resets it per test.
@@ -154,8 +108,6 @@ public abstract class QuillFeedbackTestBase(ITestOutputHelper output, QuillFeedb
     : QuillTestBase(output, fixture)
 {
     internal RecordingFeedbackSender Feedback => fixture.Feedback;
-
-    internal StubLicenseStatsProvider LicenseStats => fixture.LicenseStats;
 
     protected override Task<QuillHost> NewHostAsync(
         Action<ApplianceOptions>? configure = null, Action<IServiceCollection>? configureServices = null,
@@ -165,12 +117,6 @@ public abstract class QuillFeedbackTestBase(ITestOutputHelper output, QuillFeedb
             {
                 services.RemoveAll<IFeedbackSender>();
                 services.AddSingleton<IFeedbackSender>(fixture.Feedback);
-                services.RemoveAll<ILicenseStatsProvider>();
-                services.AddSingleton<ILicenseStatsProvider>(sp =>
-                {
-                    fixture.LicenseStats.Real = new LicenseStatsProvider(sp.GetRequiredService<IAiHelperClient>());
-                    return fixture.LicenseStats;
-                });
                 configureServices?.Invoke(services);
             },
             setupPackagePath, seedChatConnectionString, longLived);
@@ -179,7 +125,6 @@ public abstract class QuillFeedbackTestBase(ITestOutputHelper output, QuillFeedb
     {
         await base.InitializeAsync();
         Feedback.Reset();
-        LicenseStats.Reset();
     }
 }
 
