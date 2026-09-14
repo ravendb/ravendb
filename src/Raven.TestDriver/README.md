@@ -12,11 +12,11 @@ Get the latest stable version from [NuGet](https://www.nuget.org/packages/RavenD
 ## Learning resources
 - **Test Driver Guide** - https://ravendb.net/articles/writing-unit-tests-with-ravendb-net-test-driver 🛣️
 - **Documentation** - https://ravendb.net/docs/article-page/start/test-driver 🎒
-- Code Samples - https://demo.ravendb.net/ 🧑‍💻
+- Code Samples - https://docs.ravendb.net/samples 🧑‍💻
 
 ## Community
 - **RavenDB's Discord** - https://discord.gg/ravendb 🍻
-- Articles & guides - https://ravendb.net/articles 📰
+- Articles & guides - https://docs.ravendb.net/guides 📰
 - YouTube - https://www.youtube.com/@ravendb_net 🍿
 - Blog - https://ayende.com/blog/ 🧑‍💻
 
