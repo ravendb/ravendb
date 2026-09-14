@@ -11,6 +11,7 @@ import { Alert, AlertTitle } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { Heading, Text } from "@/components/typography";
+import { DASHBOARD_API_KEY_DOCS_URL } from "@/lib/help-links";
 
 const INVALID_KEY_MESSAGE = "That API key wasn't accepted. Double-check it and try again.";
 const SIGN_IN_ERROR_MESSAGE = "We couldn't sign you in. Please try again in a moment.";
@@ -87,7 +88,15 @@ export function Login() {
             </section>
 
             <Text variant="caption" className="mt-6 max-w-sm text-center">
-                The Dashboard API key was issued when Quill was provisioned.
+                The Dashboard API key was issued when Quill was provisioned.{" "}
+                <a
+                    href={DASHBOARD_API_KEY_DOCS_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-medium text-primary-strong underline underline-offset-4"
+                >
+                    Where can I find my Dashboard API key?
+                </a>
             </Text>
         </AuthScreenLayout>
     );

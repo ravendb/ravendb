@@ -2,6 +2,9 @@ import { Activity, BookOpen, LifeBuoy, Users, type LucideIcon } from "lucide-rea
 
 const SUPPORT_URL = "https://ravendb.net/support";
 
+// link to: quill/security-and-architecture/operator-authentication#finding-or-recovering-your-dashboard-api-key
+export const DASHBOARD_API_KEY_DOCS_URL = "https://ravendb.net/l/QP6BKA";
+
 // Support carries the license id so the request arrives already identified. The id is
 // missing until the license query resolves, which just means a plain support link.
 export function getHelpLinks(licenseId: string | undefined): { label: string; href: string; icon: LucideIcon }[] {
