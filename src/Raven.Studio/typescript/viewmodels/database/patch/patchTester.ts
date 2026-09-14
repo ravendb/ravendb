@@ -86,8 +86,7 @@ class patchTester extends viewModelBase {
 
     private getAutoComplete() {
         const documentIdPrefix = this.documentId();
-        this.spinners.autocomplete(true);
-        
+
         if (!documentIdPrefix) {
             this.resetForm();
             this.docsIdsAutocompleteResults([]);
@@ -102,8 +101,13 @@ class patchTester extends viewModelBase {
             return;
         }
         
+        this.spinners.autocomplete(true);
+        
         this.docsIdsAutocompleteSource.fetch(documentIdPrefix, this.query())
             .done(results => {
+                if (this.documentId() !== documentIdPrefix) {
+                    return;
+                }
                 const term = documentIdPrefix.toLowerCase();
                 results = _.take(results.filter(x => x.toLowerCase().indexOf(term) !== -1), 10);
                 this.docsIdsAutocompleteResults(results);
