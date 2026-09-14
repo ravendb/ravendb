@@ -35,12 +35,22 @@ internal abstract class AbstractDatabaseNotificationCenterHandlerProcessorForWat
 
         using (var writer = new NotificationCenterWebSocketWriter<TOperationContext>(webSocket, notificationCenter, ContextPool, token.Token))
         {
-            using (notificationCenter.GetStored(out IEnumerable<NotificationTableValue> storedNotifications, postponed: false))
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext notificationsContext))
             {
-                foreach (var alert in storedNotifications)
+                var toSend = new List<BlittableJsonReaderObject>();
+                using (notificationCenter.GetStored(out IEnumerable<NotificationTableValue> storedNotifications, postponed: false))
                 {
-                    using (alert)
-                        await writer.WriteToWebSocket(alert.Json);
+                    foreach (var alert in storedNotifications)
+                    {
+                        using (alert)
+                            toSend.Add(alert.Json.Clone(notificationsContext));
+                    }
+                }
+
+                foreach (var json in toSend)
+                {
+                    using (json)
+                        await writer.WriteToWebSocket(json);
                 }
             }
 
