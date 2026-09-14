@@ -27,6 +27,7 @@ import useBoolean from "hooks/useBoolean";
 import useUniqueId from "hooks/useUniqueId";
 import "./IndexErrorsPanelTooltip.scss";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import DeleteIndexErrorsModal from "components/pages/database/indexes/errors/DeleteIndexErrorsModal";
 
 export interface IndexErrorsPanelProps {
     errorItem: ErrorInfoItem;
@@ -39,7 +40,11 @@ export function IndexErrorsPanel(props: IndexErrorsPanelProps) {
     const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.getHasDatabaseWriteAccess)();
 
     const {
-        handleClearErrors,
+        selectedErrors,
+        isDeleteModalOpen,
+        openDeleteModal,
+        closeDeleteModal,
+        asyncClearSelectedIndexErrors,
         hasErrors,
         mappedIndexErrors,
         newestDate,
@@ -120,7 +125,7 @@ export function IndexErrorsPanel(props: IndexErrorsPanelProps) {
                             <Button
                                 disabled={isLoading}
                                 variant="warning"
-                                onClick={handleClearErrors}
+                                onClick={openDeleteModal}
                                 title="Click to delete errors from the selected indexes"
                             >
                                 <Icon icon="trash" />
@@ -139,6 +144,15 @@ export function IndexErrorsPanel(props: IndexErrorsPanelProps) {
                     table={table}
                 />
             </div>
+            {isDeleteModalOpen && (
+                <DeleteIndexErrorsModal
+                    location={errorItem.location}
+                    selectedIndexNames={selectedErrors}
+                    isDeleting={asyncClearSelectedIndexErrors.loading}
+                    onConfirm={asyncClearSelectedIndexErrors.execute}
+                    onClose={closeDeleteModal}
+                />
+            )}
         </RichPanel>
     );
 }
