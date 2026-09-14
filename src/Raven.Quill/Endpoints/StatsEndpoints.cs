@@ -3,6 +3,7 @@ using Raven.Client.Documents;
 using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints.Helpers;
 using Raven.Quill.Licensing;
+using Raven.Quill.Logging;
 using Raven.Quill.Metrics;
 using Raven.Quill.Wizard;
 
@@ -93,6 +94,7 @@ public static class StatsEndpoints
         int year,
         int? month,
         int? day,
+        QuillLogger<StatsLogger> logger,
         CancellationToken ct)
     {
         List<App> apps = [];
@@ -109,7 +111,7 @@ public static class StatsEndpoints
             apps = await MetricsReadService.LoadAllAppsAsync(store, ct);
         }
 
-        var usage = await MetricsReadService.GetUsageAsync(provider, store, apps, year, month, day, ct);
+        var usage = await MetricsReadService.GetUsageAsync(provider, store, apps, year, month, day, logger, ct);
         return Results.Ok(usage);
     }
 
@@ -264,4 +266,6 @@ public static class StatsEndpoints
         var stats = await MetricsReadService.GetChannelStatsAsync(store, app.Database, ct);
         return Results.Ok(stats);
     }
+
+    internal sealed class StatsLogger;
 }

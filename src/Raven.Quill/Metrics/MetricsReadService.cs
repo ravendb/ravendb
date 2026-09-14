@@ -12,8 +12,10 @@ using Raven.Quill.Agents;
 using Raven.Quill.Cdc;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
+using Raven.Quill.Endpoints;
 using Raven.Quill.Endpoints.Helpers;
 using Raven.Quill.Licensing;
+using Raven.Quill.Logging;
 using Raven.Quill.Raven;
 using Raven.Quill.Wizard;
 
@@ -27,7 +29,8 @@ internal static class MetricsReadService
 
     public static async Task<UsageResponse> GetUsageAsync(
         ILicenseStatsProvider provider,
-        IDocumentStore store, List<App> apps, int year, int? month, int? day, CancellationToken ct)
+        IDocumentStore store, List<App> apps, int year, int? month, int? day,
+        QuillLogger<StatsEndpoints.StatsLogger> logger, CancellationToken ct)
     {
         var period = new UsagePeriod(year, month, day);
         var buckets = period.Buckets();
@@ -43,8 +46,8 @@ internal static class MetricsReadService
         var tokens = new long[buckets.Count];
         var writes = new long[buckets.Count];
 
-        var stats = await provider.GetUsageAsync(year, month, day, ct);
-        var statsPerApp = stats.PerApplication.GroupBy(p => p.TopologyId)
+        var writeUsage = await GetWriteUsageOrEmptyAsync(provider, year, month, day, logger, ct);
+        var statsPerApp = writeUsage.GroupBy(p => p.TopologyId)
             .ToDictionary(g => g.Key, g => g.ToList());
 
         var writesByApp = new List<AppWrites>(results.Count);
@@ -78,6 +81,24 @@ internal static class MetricsReadService
         for (var i = 0; i < buckets.Count; i++)
             points.Add(new UsagePoint(buckets[i], conversations[i], messages[i], tokens[i], writes[i]));
         return new UsageResponse(points, writesByApp);
+    }
+
+    // Conversations, messages and tokens come from the app databases; only the writes column depends on the
+    // license server, so an outage there degrades the writes to zero instead of failing the whole dashboard.
+    private static async Task<List<QuillApplicationUsage>> GetWriteUsageOrEmptyAsync(
+        ILicenseStatsProvider provider, int year, int? month, int? day,
+        QuillLogger<StatsEndpoints.StatsLogger> logger, CancellationToken ct)
+    {
+        try
+        {
+            return (await provider.GetUsageAsync(year, month, day, ct)).PerApplication;
+        }
+        catch (LicenseUsageUnavailableException ex)
+        {
+            if (logger.IsWarnEnabled)
+                logger.Warn(ex, "write usage unavailable from the license server; reporting zero writes");
+            return [];
+        }
     }
 
     private static async Task<(long[] Conversations, long[] Messages, long[] Tokens)> GetAppUsageAsync(IDocumentStore store, App app, UsagePeriod period, CancellationToken ct)

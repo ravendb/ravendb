@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using QuillTests.E2E.Fixtures;
@@ -32,21 +32,39 @@ public class SettingsEndpointsTests(ITestOutputHelper output, QuillFeedbackFixtu
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Usage_returns_quill_usage_payload()
+    public async Task Usage_returns_the_license_server_payload_for_the_requested_month()
     {
-        // ?year=&month=[&day=] — forwarded to RavenDB's /admin/license/quill/usage as year+month.
-        // A well-formed QuillUsageResponse { PerApplication, ByPeriod } shape must deserialize (values may be
-        // null when the server reports no usage); the typed read throws on a non-2xx or malformed body.
         var usage = await Host.GetSettingsUsageAsync(2026, month: 5);
-        Assert.NotNull(usage);
+
+        Assert.Equal((2026, 5, null), LicenseStats.LastUsagePeriod);
+        AssertSameUsage(StubLicenseStatsProvider.DefaultUsage, usage);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Usage_supports_the_year_view()
     {
-        // year only → the whole-year view; like the month view it proxies straight to /admin/license/quill/usage.
         var usage = await Host.GetSettingsUsageAsync(2026);
-        Assert.NotNull(usage);
+
+        Assert.Equal((2026, null, null), LicenseStats.LastUsagePeriod);
+        AssertSameUsage(StubLicenseStatsProvider.DefaultUsage, usage);
+    }
+
+    private static void AssertSameUsage(QuillUsageResponse expected, QuillUsageResponse actual)
+    {
+        Assert.Equal(expected.PerApplication, actual.PerApplication);
+        Assert.Equal(expected.ByPeriod, actual.ByPeriod);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Usage_surfaces_a_license_server_outage_as_bad_gateway()
+    {
+        // The endpoint must refuse rather than render a period of zero writes.
+        LicenseStats.IsUsageUnavailable = true;
+
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(() => Host.GetSettingsUsageAsync(2026, month: 5));
+
+        Assert.Equal(HttpStatusCode.BadGateway, ex.StatusCode);
+        Assert.Contains("license server", ex.Body);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
