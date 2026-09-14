@@ -457,36 +457,19 @@ public static class WizardEndpoints
         CdcSinkConfiguration configuration,
         string? defaultSchema)
     {
-        var covered = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var table in configuration.Tables)
-        {
-            if (table.Disabled)
-                continue;
-
-            Visit(table.SourceTableSchema, table.SourceTableName, table.EmbeddedTables);
-        }
+        var covered = new HashSet<CdcSinkConfiguration.TableInfo>(configuration.CollectAllTablesFlat(defaultSchema ?? string.Empty));
 
         return selectedSchema.Tables
-            .Where(table => covered.Contains(CoverageKey(table.SourceTableSchema, table.SourceTableName)) == false)
+            .Where(table => covered.Contains(new CdcSinkConfiguration.TableInfo
+            {
+                Schema = table.SourceTableSchema,
+                TableName = table.SourceTableName,
+            }) == false)
             .Select(table => string.IsNullOrWhiteSpace(table.SourceTableSchema)
                 ? table.SourceTableName
                 : $"{table.SourceTableSchema}.{table.SourceTableName}")
             .ToList();
-
-        void Visit(string? schemaName, string? tableName, List<CdcSinkEmbeddedTableConfig> embeddedTables)
-        {
-            var schema = string.IsNullOrWhiteSpace(schemaName) ? defaultSchema : schemaName;
-            if (string.IsNullOrWhiteSpace(tableName) == false)
-                covered.Add(CoverageKey(schema, tableName));
-
-            foreach (var embedded in embeddedTables)
-                Visit(embedded.SourceTableSchema, embedded.SourceTableName, embedded.EmbeddedTables);
-        }
     }
-
-    private static string CoverageKey(string? schemaName, string tableName) =>
-        $"{schemaName?.Trim()}\0{tableName.Trim()}";
 
     private static async Task<IResult> TestMappingAsync(
         TestMappingRequest body,
