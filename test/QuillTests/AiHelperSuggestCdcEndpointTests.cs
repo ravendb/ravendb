@@ -126,7 +126,7 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHe
             SourceTable("orders", schema: "sales", foreignKeysTo: ["order_lines"]),
             SourceTable("order_lines", schema: "sales"));
 
-        var resp = await Host.SuggestCdcAsync(RequestInSchema("sales", "orders", "order_lines"));
+        var resp = await Host.SuggestCdcAsync(RequestInSchema("sales", "x", "orders", "order_lines"));
 
         Assert.Equal("Success", resp.Status);
         Assert.Equal(new[] { "sales.order_lines" }, resp.UnmappedTables);
@@ -144,7 +144,7 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHe
             SourceTable("orders", schema: "shop", foreignKeysTo: ["order_lines"]),
             SourceTable("order_lines", schema: "shop"));
 
-        var resp = await Host.SuggestCdcAsync(RequestInSchema("shop", "orders", "order_lines"));
+        var resp = await Host.SuggestCdcAsync(RequestInSchema("shop", "x", "orders", "order_lines"));
 
         Assert.Equal("Success", resp.Status);
         Assert.Empty(resp.UnmappedTables);
@@ -386,10 +386,10 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHe
     };
 
     private static SuggestCdcRequest Request(string intentPrompt, params string[] selectedTables) =>
-        RequestInSchema("public", selectedTables);
+        RequestInSchema("public", intentPrompt, selectedTables);
 
-    private static SuggestCdcRequest RequestInSchema(string schema, params string[] selectedTables) =>
-        new("x", [.. selectedTables.Select(table => new SelectedSourceTable(table, schema))]);
+    private static SuggestCdcRequest RequestInSchema(string schema, string intentPrompt, params string[] selectedTables) =>
+        new(intentPrompt, [.. selectedTables.Select(table => new SelectedSourceTable(table, schema))]);
 
     private Task<QuillHost> NewMockAiHostAsync(string aiApiUrl, TimeSpan? aiAssistTimeout = null) =>
         NewHostAsync(
