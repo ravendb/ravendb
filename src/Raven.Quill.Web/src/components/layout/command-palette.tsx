@@ -15,11 +15,11 @@ import {
 } from "@/components/shadcn/ui/command";
 import { appNavigationSections, navigationItems } from "@/routes";
 import { appRoutes } from "@/lib/app-routes";
+import { DOCS_URL } from "@/lib/help-links";
 import { THEME_OPTIONS } from "@/lib/theme-options";
 import { Text } from "@/components/typography";
 
 const IS_MAC = typeof navigator !== "undefined" && navigator.platform.toUpperCase().includes("MAC");
-const DOCS_URL = "https://docs.ravendb.net/quill";
 
 type CommandPaletteProps = {
     slug?: string;

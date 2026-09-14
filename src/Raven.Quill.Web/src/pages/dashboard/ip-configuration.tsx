@@ -8,6 +8,7 @@ import { Button } from "@/components/shadcn/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/shadcn/ui/card";
 import { Field, FieldError, FieldLabel } from "@/components/shadcn/ui/field";
 import { Input } from "@/components/shadcn/ui/input";
+import { IP_CONFIGURATION_DOCS_URL } from "@/lib/help-links";
 import { containerNameForHost, isIpV4 } from "@/lib/subdomain-origin";
 import { Heading, Text } from "@/components/typography";
 import { api } from "@/api/api";
@@ -23,10 +24,27 @@ export function DashboardIpConfiguration({ hostname = window.location.hostname }
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between gap-3">
-                <Heading as="h1" variant="page">
-                    IP configuration
-                </Heading>
+            <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 space-y-1">
+                    <Heading as="h1" variant="page">
+                        IP configuration
+                    </Heading>
+                    <Text variant="muted" className="max-w-2xl">
+                        Quill&rsquo;s domains resolve through DNS records that point to the IP address of the host where
+                        Quill runs. These records must be updated whenever that address changes.
+                        <span className="mt-1 block">
+                            <a
+                                href={IP_CONFIGURATION_DOCS_URL}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="underline underline-offset-4 hover:text-primary-strong"
+                            >
+                                Learn more about IP configuration
+                            </a>
+                            .
+                        </span>
+                    </Text>
+                </div>
                 <Button
                     variant="outline"
                     size="sm"

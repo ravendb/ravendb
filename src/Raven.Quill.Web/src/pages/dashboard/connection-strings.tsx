@@ -29,7 +29,9 @@ export function DashboardConnectionStrings() {
                         AI connection strings
                     </Heading>
                     <Text variant="muted">
-                        Provider credentials agents use to reach a model, shared by every app on this server.
+                        AI connection strings contain the provider connection details and model settings that agents use
+                        to reach a language model.
+                        <span className="block">They are shared by every app on this server.</span>
                     </Text>
                 </div>
                 <AddAiConnectionString
