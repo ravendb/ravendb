@@ -1,3 +1,4 @@
+using FastTests;
 using System.Net;
 using Raven.Quill.Channels;
 using Raven.Quill.Discord;
@@ -8,7 +9,7 @@ using Xunit;
 
 namespace QuillTests;
 
-public class ChannelStreamingReplyTests
+public class ChannelStreamingReplyTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 {
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Whitespace_only_cut_segments_are_skipped_and_the_stream_recovers()
