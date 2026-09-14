@@ -1,9 +1,12 @@
 using FastTests;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Quill.Hosting;
+using Raven.Quill.AiHelper;
 using Raven.Quill.Infrastructure;
+using Raven.Quill.Licensing;
 using Raven.Quill.Wizard;
 using Xunit;
 using static Raven.Server.Utils.MetricCacher.Keys;
@@ -45,14 +48,19 @@ public abstract class QuillTestBase : RavenTestBase
         if (_collection is not null)
         {
             Host = await _collection.GetAsync(() => NewHostAsync(longLived: true));
+            LicenseStats.Reset();
             return;
         }
 
         Host = await SharedAppliance.GetAsync(() => BuildHostCoreAsync(longLived: true));
+        LicenseStats.Reset();
     }
 
     /// The shared host — the appliance under test. Most tests use this.
     protected QuillHost Host { get; set; } = null!;
+
+    /// The license usage double every host is built with; a test sets its payload or flips it to an outage.
+    internal StubLicenseStatsProvider LicenseStats => Host.Services.GetRequiredService<StubLicenseStatsProvider>();
 
     protected virtual Task<QuillHost> NewHostAsync(
         Action<ApplianceOptions>? configure = null, Action<IServiceCollection>? configureServices = null,
@@ -75,8 +83,22 @@ public abstract class QuillTestBase : RavenTestBase
             CreatedStores.TryRemove(config);
 
         return await QuillHost.CreateAsync(server, config,
-            setupPackagePath: setupPackagePath, configure: configure, configureServices: configureServices,
+            setupPackagePath: setupPackagePath, configure: configure,
+            configureServices: services =>
+            {
+                StubLicenseUsage(services);
+                configureServices?.Invoke(services);
+            },
             seedChatConnectionString: seedChatConnectionString);
+    }
+
+    // The test servers carry no Quill license, so usage is answered by a stub; license reads still go to the server.
+    private static void StubLicenseUsage(IServiceCollection services)
+    {
+        services.RemoveAll<ILicenseStatsProvider>();
+        services.AddSingleton<StubLicenseStatsProvider>(sp =>
+            new StubLicenseStatsProvider(new LicenseStatsProvider(sp.GetRequiredService<IAiHelperClient>())));
+        services.AddSingleton<ILicenseStatsProvider>(sp => sp.GetRequiredService<StubLicenseStatsProvider>());
     }
 
 

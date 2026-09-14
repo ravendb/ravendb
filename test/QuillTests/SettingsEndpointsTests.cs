@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using QuillTests.E2E.Fixtures;
@@ -47,12 +47,6 @@ public class SettingsEndpointsTests(ITestOutputHelper output, QuillFeedbackFixtu
 
         Assert.Equal((2026, null, null), LicenseStats.LastUsagePeriod);
         AssertSameUsage(StubLicenseStatsProvider.DefaultUsage, usage);
-    }
-
-    private static void AssertSameUsage(QuillUsageResponse expected, QuillUsageResponse actual)
-    {
-        Assert.Equal(expected.PerApplication, actual.PerApplication);
-        Assert.Equal(expected.ByPeriod, actual.ByPeriod);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -219,5 +213,11 @@ public class SettingsEndpointsTests(ITestOutputHelper output, QuillFeedbackFixtu
         Assert.Equal("Jane Doe", user.GetProperty("Name").GetString());
         Assert.Equal("user@example.com", user.GetProperty("Email").GetString());
         Assert.Equal("Quill-Test/1.0", user.GetProperty("UserAgent").GetString());
+    }
+
+    private static void AssertSameUsage(QuillUsageResponse expected, QuillUsageResponse actual)
+    {
+        Assert.Equal(expected.PerApplication, actual.PerApplication);
+        Assert.Equal(expected.ByPeriod, actual.ByPeriod);
     }
 }
