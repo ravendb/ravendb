@@ -442,7 +442,8 @@ public static class WizardEndpoints
             return Results.UnprocessableEntity(new ApiErrorResponse(Errors: errors.ToArray()));
         }
 
-        var unmappedTables = CollectUnmappedTables(selectedSchema, result.Configuration);
+        var defaultSchema = SqlConnectionStringValidation.DefaultSchemaFor(state.Provider, state.LastDiscoveredSchema.CatalogName);
+        var unmappedTables = CollectUnmappedTables(selectedSchema, result.Configuration, defaultSchema);
         if (unmappedTables.Count > 0 && logger.IsInfoEnabled)
             logger.Info(
                 $"SuggestCdc: configuration leaves {unmappedTables.Count} of {selectedSchema.Tables.Count} " +
@@ -451,7 +452,10 @@ public static class WizardEndpoints
         return Results.Ok(new SuggestCdcResponse(result.Configuration, result.Rationale, result.Status.ToString(), unmappedTables));
     }
 
-    private static List<string> CollectUnmappedTables(CdcSinkSourceSchema selectedSchema, CdcSinkConfiguration configuration)
+    private static List<string> CollectUnmappedTables(
+        CdcSinkSourceSchema selectedSchema,
+        CdcSinkConfiguration configuration,
+        string? defaultSchema)
     {
         var covered = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -460,7 +464,7 @@ public static class WizardEndpoints
             if (table.Disabled)
                 continue;
 
-            Visit(table.SourceTableSchema, table.SourceTableName, fallbackSchemaName: null, table.EmbeddedTables);
+            Visit(table.SourceTableSchema, table.SourceTableName, table.EmbeddedTables);
         }
 
         return selectedSchema.Tables
@@ -470,14 +474,14 @@ public static class WizardEndpoints
                 : $"{table.SourceTableSchema}.{table.SourceTableName}")
             .ToList();
 
-        void Visit(string? schemaName, string? tableName, string? fallbackSchemaName, List<CdcSinkEmbeddedTableConfig> embeddedTables)
+        void Visit(string? schemaName, string? tableName, List<CdcSinkEmbeddedTableConfig> embeddedTables)
         {
-            var schema = string.IsNullOrWhiteSpace(schemaName) ? fallbackSchemaName : schemaName;
+            var schema = string.IsNullOrWhiteSpace(schemaName) ? defaultSchema : schemaName;
             if (string.IsNullOrWhiteSpace(tableName) == false)
                 covered.Add(CoverageKey(schema, tableName));
 
             foreach (var embedded in embeddedTables)
-                Visit(embedded.SourceTableSchema, embedded.SourceTableName, schema, embedded.EmbeddedTables);
+                Visit(embedded.SourceTableSchema, embedded.SourceTableName, embedded.EmbeddedTables);
         }
     }
 

@@ -101,7 +101,7 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHe
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Embedded_tables_count_as_mapped_even_without_their_own_schema()
+    public async Task Embedded_tables_without_a_schema_resolve_to_the_provider_default()
     {
         Mock.CdcResponse = (200, AiHelperSamples.CdcEnvelope(AiHelperSamples.BuildCdcConfig()));
         await SeedDiscoveredSchemaAsync(
@@ -110,6 +110,41 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHe
             SourceTable("order_lines"));
 
         var resp = await Host.SuggestCdcAsync(Request("x", "orders", "order_lines"));
+
+        Assert.Equal("Success", resp.Status);
+        Assert.Empty(resp.UnmappedTables);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Embedded_tables_without_a_schema_do_not_inherit_a_non_default_root_schema()
+    {
+        var config = AiHelperSamples.BuildCdcConfig();
+        config.Tables[0].SourceTableSchema = "sales";
+        Mock.CdcResponse = (200, AiHelperSamples.CdcEnvelope(config));
+        await SeedDiscoveredSchemaAsync(
+            Host,
+            SourceTable("orders", schema: "sales", foreignKeysTo: ["order_lines"]),
+            SourceTable("order_lines", schema: "sales"));
+
+        var resp = await Host.SuggestCdcAsync(RequestInSchema("sales", "orders", "order_lines"));
+
+        Assert.Equal("Success", resp.Status);
+        Assert.Equal(new[] { "sales.order_lines" }, resp.UnmappedTables);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task On_mysql_the_default_schema_is_the_catalog()
+    {
+        var config = AiHelperSamples.BuildCdcConfig();
+        config.Tables[0].SourceTableSchema = "shop";
+        Mock.CdcResponse = (200, AiHelperSamples.CdcEnvelope(config));
+        await SeedDiscoveredSchemaAsync(
+            Host,
+            provider: "MySqlConnector.MySqlConnectorFactory",
+            SourceTable("orders", schema: "shop", foreignKeysTo: ["order_lines"]),
+            SourceTable("order_lines", schema: "shop"));
+
+        var resp = await Host.SuggestCdcAsync(RequestInSchema("shop", "orders", "order_lines"));
 
         Assert.Equal("Success", resp.Status);
         Assert.Empty(resp.UnmappedTables);
@@ -302,7 +337,10 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHe
 
     /// The three-table schema every test's wizard state carries. Discovery can't reach a real source here,
     /// so the state document is written directly.
-    private static async Task SeedDiscoveredSchemaAsync(QuillHost host, params CdcSinkSourceTable[] tables)
+    private static Task SeedDiscoveredSchemaAsync(QuillHost host, params CdcSinkSourceTable[] tables) =>
+        SeedDiscoveredSchemaAsync(host, provider: "Npgsql", tables);
+
+    private static async Task SeedDiscoveredSchemaAsync(QuillHost host, string provider, params CdcSinkSourceTable[] tables)
     {
         CdcSinkSourceTable[] discoveredTables = tables.Length > 0
             ? tables
@@ -315,7 +353,7 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHe
         using var session = host.Config.OpenAsyncSession();
         await session.StoreAsync(new WizardState
         {
-            Provider = "SqlClient",
+            Provider = provider,
             LastDiscoveredSchema = new CdcSinkSourceSchema
             {
                 CatalogName = "shop",
@@ -327,9 +365,9 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHe
         await session.SaveChangesAsync();
     }
 
-    private static CdcSinkSourceTable SourceTable(string name, string[]? foreignKeysTo = null) => new()
+    private static CdcSinkSourceTable SourceTable(string name, string schema = "public", string[]? foreignKeysTo = null) => new()
     {
-        SourceTableSchema = "public",
+        SourceTableSchema = schema,
         SourceTableName = name,
         IsCdcEnabled = true,
         PrimaryKeyColumns = ["id"],
@@ -341,14 +379,17 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output, QuillAiHe
         ForeignKeys = [.. (foreignKeysTo ?? []).Select(referenced => new CdcSinkSourceForeignKey
         {
             Columns = [$"{referenced}_id"],
-            ReferencedSchema = "public",
+            ReferencedSchema = schema,
             ReferencedTable = referenced,
             ReferencedColumns = ["id"],
         })],
     };
 
     private static SuggestCdcRequest Request(string intentPrompt, params string[] selectedTables) =>
-        new(intentPrompt, [.. selectedTables.Select(table => new SelectedSourceTable(table, "public"))]);
+        RequestInSchema("public", selectedTables);
+
+    private static SuggestCdcRequest RequestInSchema(string schema, params string[] selectedTables) =>
+        new("x", [.. selectedTables.Select(table => new SelectedSourceTable(table, schema))]);
 
     private Task<QuillHost> NewMockAiHostAsync(string aiApiUrl, TimeSpan? aiAssistTimeout = null) =>
         NewHostAsync(

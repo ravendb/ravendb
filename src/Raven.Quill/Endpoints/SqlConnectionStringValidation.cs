@@ -56,4 +56,30 @@ internal static class SqlConnectionStringValidation
         error = default!;
         return true;
     }
+
+    public static string? DefaultSchemaFor(string? provider, string? catalogName)
+    {
+        if (string.IsNullOrWhiteSpace(provider))
+            return null;
+
+        var factoryName = ProviderAliases.GetValueOrDefault(provider.Trim(), provider.Trim());
+
+        SqlProvider parsed;
+        try
+        {
+            parsed = SqlProviderParser.GetSupportedProvider(factoryName);
+        }
+        catch (Exception ex) when (ex is NotSupportedException or NotImplementedException)
+        {
+            return null;
+        }
+
+        return parsed switch
+        {
+            SqlProvider.Npgsql => "public",
+            SqlProvider.SqlClient => "dbo",
+            SqlProvider.MySqlClient or SqlProvider.MySqlConnectorFactory => catalogName,
+            _ => null,
+        };
+    }
 }
