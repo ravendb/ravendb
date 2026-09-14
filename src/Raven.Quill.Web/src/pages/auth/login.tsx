@@ -93,7 +93,7 @@ export function Login() {
                     href={DASHBOARD_API_KEY_DOCS_URL}
                     target="_blank"
                     rel="noreferrer"
-                    className="font-medium text-primary-strong underline underline-offset-4"
+                    className="font-medium text-primary-strong underline underline-offset-2 hover:text-foreground"
                 >
                     Where can I find my Dashboard API key?
                 </a>
