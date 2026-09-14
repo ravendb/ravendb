@@ -146,16 +146,18 @@ function mapToIndexNodeInfo(stats: IndexStats, location: databaseLocationSpecifi
     };
 }
 
+function initNodeInfo(location: databaseLocationSpecifier): IndexNodeInfo {
+    return {
+        location,
+        status: "idle",
+        details: null,
+        progress: null,
+        createdTimestamp: null,
+    };
+}
+
 function initNodesInfo(locations: databaseLocationSpecifier[]): IndexNodeInfo[] {
-    return locations.map(
-        (location): IndexNodeInfo => ({
-            location,
-            status: "idle",
-            details: null,
-            progress: null,
-            createdTimestamp: null,
-        })
-    );
+    return locations.map(initNodeInfo);
 }
 
 function markProgressAsCompleted(progress: Draft<IndexProgressInfo>) {
@@ -264,11 +266,7 @@ export const indexesStatsReducer: Reducer<IndexesStatsState, IndexesStatsReducer
             const incomingStats = action.stats;
 
             return produce(state, (draft) => {
-                const localIndexes: string[] = draft.indexes.map((x) => x.name);
                 const incomingIndexes = incomingStats.map((x) => x.Name);
-                const toDelete = localIndexes.filter(
-                    (x) => !incomingIndexes.includes(x) && !draft.resetInProgress.includes(x)
-                );
 
                 if (draft.resetInProgress.length > 0) {
                     draft.resetInProgress = draft.resetInProgress.filter((x) => !incomingIndexes.includes(x));
@@ -311,9 +309,24 @@ export const indexesStatsReducer: Reducer<IndexesStatsState, IndexesStatsReducer
                     }
                 });
 
-                if (toDelete.length > 0) {
-                    draft.indexes = draft.indexes.filter((x) => !toDelete.includes(x.name));
-                }
+                draft.indexes.forEach((index) => {
+                    if (incomingIndexes.includes(index.name)) {
+                        return;
+                    }
+
+                    const findIdx = index.nodesInfo.findIndex((x) =>
+                        databaseLocationComparator(x.location, incomingLocation)
+                    );
+
+                    if (findIdx !== -1) {
+                        index.nodesInfo.splice(findIdx, 1, initNodeInfo(incomingLocation));
+                    }
+                });
+
+                // drop the index once no location reports it anymore
+                draft.indexes = draft.indexes.filter(
+                    (x) => draft.resetInProgress.includes(x.name) || x.nodesInfo.some((n) => n.status !== "idle")
+                );
             });
         }
         case "DeleteIndexes":
