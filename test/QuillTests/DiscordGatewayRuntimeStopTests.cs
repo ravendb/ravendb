@@ -1,3 +1,4 @@
+using FastTests;
 using Microsoft.Extensions.DependencyInjection;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
@@ -9,7 +10,7 @@ using Xunit;
 
 namespace QuillTests;
 
-public class DiscordGatewayRuntimeStopTests
+public class DiscordGatewayRuntimeStopTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 {
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Stop_timeout_throws_and_the_late_exit_still_cleans_up()
