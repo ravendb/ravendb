@@ -1,8 +1,10 @@
-import { rtlRender } from "test/rtlTestUtils";
+import { rtlRender, waitFor } from "test/rtlTestUtils";
 import { composeStories } from "@storybook/react-webpack5";
 import * as stories from "./IndexErrors.stories";
 import { within } from "@testing-library/dom";
 import { IndexesStubs } from "test/stubs/IndexesStubs";
+import { mockServices } from "test/mocks/services/MockServices";
+import studioSettings from "common/settings/studioSettings";
 
 const { IndexErrorsStory } = composeStories(stories);
 
@@ -16,7 +18,10 @@ const textSelectors = {
     nodePanelItemStatusBadge: "OK",
     erroredNodePanelTotalErrorCount: "Total count",
     title: "Index Errors",
-    clearErrorsButtonLabel: "Delete Errors",
+    clearErrorsButtonLabel: "Delete errors",
+    confirmDeleteButtonLabel: "Delete",
+    typedConfirmationLabel: "Type DELETE to confirm",
+    requireTypedConfirmationLabel: "Require typed confirmation",
 };
 
 const totalErrorCount = IndexesStubs.getIndexesErrorCount().Results.reduce(
@@ -72,5 +77,57 @@ describe("IndexErrors", function () {
         const { screen } = rtlRender(<IndexErrorsStory hasErrors databaseAccess="DatabaseRead" isSharded={false} />);
 
         expect(screen.queryByClassName("icon-shard")).not.toBeInTheDocument();
+    });
+
+    describe("delete errors confirmation", () => {
+        afterEach(async () => {
+            const settings = await studioSettings.default.globalSettings();
+            settings.isRequireTypedConfirmationToDeleteIndexErrors.setValueLazy(true);
+        });
+
+        it("keeps Delete disabled until DELETE is typed, then clears index errors", async () => {
+            const { screen, fireClick, fillInput } = rtlRender(
+                <IndexErrorsStory hasErrors databaseAccess="DatabaseAdmin" isSharded={false} />
+            );
+
+            await fireClick(await screen.findByRole("button", { name: textSelectors.clearErrorsButtonLabel }));
+
+            expect(await screen.findByText(textSelectors.typedConfirmationLabel)).toBeInTheDocument();
+
+            const deleteButton = screen.getByRole("button", { name: textSelectors.confirmDeleteButtonLabel });
+            expect(deleteButton).toBeDisabled();
+
+            await fillInput(screen.getByPlaceholderText("DELETE"), "DELETE");
+            expect(deleteButton).toBeEnabled();
+
+            await fireClick(deleteButton);
+
+            await waitFor(() =>
+                expect(mockServices.indexesService.mock.clearIndexErrors).toHaveBeenCalledWith(
+                    [],
+                    expect.any(String),
+                    expect.objectContaining({ nodeTag: expect.any(String) })
+                )
+            );
+        });
+
+        it("allows deleting without typing when typed confirmation is switched off", async () => {
+            const { screen, fireClick } = rtlRender(
+                <IndexErrorsStory hasErrors databaseAccess="DatabaseAdmin" isSharded={false} />
+            );
+
+            await fireClick(await screen.findByRole("button", { name: textSelectors.clearErrorsButtonLabel }));
+            expect(await screen.findByText(textSelectors.typedConfirmationLabel)).toBeInTheDocument();
+
+            const requireTypedConfirmationSwitch = screen.getByLabelText(textSelectors.requireTypedConfirmationLabel);
+            await waitFor(() => expect(requireTypedConfirmationSwitch).toBeEnabled());
+
+            await fireClick(requireTypedConfirmationSwitch);
+
+            await waitFor(() =>
+                expect(screen.queryByText(textSelectors.typedConfirmationLabel)).not.toBeInTheDocument()
+            );
+            expect(screen.getByRole("button", { name: textSelectors.confirmDeleteButtonLabel })).toBeEnabled();
+        });
     });
 });
