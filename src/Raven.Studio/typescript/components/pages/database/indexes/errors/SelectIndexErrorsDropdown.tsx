@@ -31,7 +31,6 @@ export function SelectIndexErrorsDropdown({
     isLoading,
 }: SelectIndexErrorsDropdownProps) {
     const { setSelectedIndexes, labelText, selectedColumnFilters } = useIndexErrorsDropdown({
-        indexesList,
         filters,
         dropdownType,
         setFilters,
