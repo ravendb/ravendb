@@ -16,7 +16,8 @@ Check the runtime [prerequisites](https://ravendb.net/docs/article-page/server/e
 
 ## Community
 - **RavenDB's Discord** - https://discord.gg/ravendb 🍻
-- Articles & guides - https://docs.ravendb.net/guides 📰
+- Articles - https://ravendb.net/articles 📰
+- Guides - https://docs.ravendb.net/guides 📚
 - YouTube - https://www.youtube.com/@ravendb_net 🍿
 - Blog - https://ayende.com/blog/ 🧑‍💻
 
