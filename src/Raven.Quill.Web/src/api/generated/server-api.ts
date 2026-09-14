@@ -1941,6 +1941,7 @@ export interface components {
         UsageResponse: {
             points: components["schemas"]["UsagePoint"][];
             writesByApp: components["schemas"]["AppWrites"][];
+            isWritesUnavailable: boolean;
         };
         VerifyCdcRequest: {
             tables: components["schemas"]["VerifyCdcTableRequest"][];

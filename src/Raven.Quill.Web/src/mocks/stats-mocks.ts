@@ -75,6 +75,7 @@ export const sampleUsageResponse: UsageResponse = {
         { slug: "acme-warehouse", writes: 0 },
         { slug: "acme-internal", writes: 1200000 },
     ],
+    isWritesUnavailable: false,
 };
 
 export const sampleDashboardApps: ApplianceAppResponse[] = [

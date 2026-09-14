@@ -11,7 +11,6 @@ using Raven.Quill.Agents;
 using Raven.Quill.Cdc;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
-using Raven.Quill.Endpoints;
 using Raven.Quill.Endpoints.Helpers;
 using Raven.Quill.Licensing;
 using Raven.Quill.Logging;
@@ -26,10 +25,13 @@ internal static class MetricsReadService
 
     private const string UnknownModel = "unknown";
 
+    internal sealed class MetricsLogger;
+
+    private static readonly QuillLogger<MetricsLogger> Logger = new();
+
     public static async Task<UsageResponse> GetUsageAsync(
         ILicenseStatsProvider provider,
-        IDocumentStore store, List<App> apps, int year, int? month, int? day,
-        QuillLogger<StatsEndpoints.StatsLogger> logger, CancellationToken ct)
+        IDocumentStore store, List<App> apps, int year, int? month, int? day, CancellationToken ct)
     {
         var period = new UsagePeriod(year, month, day);
 
@@ -45,8 +47,9 @@ internal static class MetricsReadService
         var tokens = new long[buckets.Count];
         var writes = new long[buckets.Count];
 
-        var writeUsage = await GetWriteUsageOrEmptyAsync(provider, year, month, day, logger, ct);
-        var statsPerApp = writeUsage.GroupBy(p => p.TopologyId)
+        var writeUsage = await TryGetWriteUsageAsync(provider, year, month, day, ct);
+        var isWritesUnavailable = writeUsage is null;
+        var statsPerApp = (writeUsage ?? []).GroupBy(p => p.TopologyId)
             .ToDictionary(g => g.Key, g => g.ToList());
 
         var writesByApp = new List<AppWrites>(results.Length);
@@ -79,14 +82,13 @@ internal static class MetricsReadService
         var points = new List<UsagePoint>(buckets.Count);
         for (var i = 0; i < buckets.Count; i++)
             points.Add(new UsagePoint(buckets[i], conversations[i], messages[i], tokens[i], writes[i]));
-        return new UsageResponse(points, writesByApp);
+        return new UsageResponse(points, writesByApp, isWritesUnavailable);
     }
 
     // Conversations, messages and tokens come from the app databases; only the writes column depends on the
-    // license server, so an outage there degrades the writes to zero instead of failing the whole dashboard.
-    private static async Task<List<QuillApplicationUsage>> GetWriteUsageOrEmptyAsync(
-        ILicenseStatsProvider provider, int year, int? month, int? day,
-        QuillLogger<StatsEndpoints.StatsLogger> logger, CancellationToken ct)
+    // license server, so an outage there is reported as unavailable writes instead of failing the whole dashboard.
+    private static async Task<List<QuillApplicationUsage>?> TryGetWriteUsageAsync(
+        ILicenseStatsProvider provider, int year, int? month, int? day, CancellationToken ct)
     {
         try
         {
@@ -94,9 +96,9 @@ internal static class MetricsReadService
         }
         catch (LicenseUsageUnavailableException ex)
         {
-            if (logger.IsWarnEnabled)
-                logger.Warn(ex, "write usage unavailable from the license server; reporting zero writes");
-            return [];
+            if (Logger.IsWarnEnabled)
+                Logger.Warn(ex, "write usage unavailable from the license server; reporting writes as unavailable");
+            return null;
         }
     }
 
