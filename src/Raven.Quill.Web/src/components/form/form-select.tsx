@@ -20,6 +20,7 @@ type FormSelectProps<TFieldValues extends FieldValues, TName extends FieldPath<T
     description?: ReactNode;
     disabled?: boolean;
     label?: ReactNode;
+    labelAddon?: ReactNode;
     options: readonly FormSelectOption<TFieldValues[TName]>[];
     placeholder?: string;
     triggerClassName?: string;
@@ -33,6 +34,7 @@ export function FormSelect<TFieldValues extends FieldValues, TName extends Field
     description,
     disabled,
     label,
+    labelAddon,
     name,
     options,
     placeholder,
@@ -52,7 +54,15 @@ export function FormSelect<TFieldValues extends FieldValues, TName extends Field
 
     return (
         <Field className={className} data-invalid={invalid}>
-            {label != null && <FieldLabel htmlFor={generatedId}>{label}</FieldLabel>}
+            {label != null &&
+                (labelAddon ? (
+                    <div className="flex items-center gap-1">
+                        <FieldLabel htmlFor={generatedId}>{label}</FieldLabel>
+                        {labelAddon}
+                    </div>
+                ) : (
+                    <FieldLabel htmlFor={generatedId}>{label}</FieldLabel>
+                ))}
             <div className="flex items-center gap-2">
                 <Select
                     value={typeof value === "string" ? value : ""}

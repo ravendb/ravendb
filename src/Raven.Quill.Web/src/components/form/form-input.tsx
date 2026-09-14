@@ -12,6 +12,7 @@ type FormInputProps<TFieldValues extends FieldValues, TName extends FieldPath<TF
     UseControllerProps<TFieldValues, TName> & {
         addons?: ReactNode;
         label?: ReactNode;
+        labelAddon?: ReactNode;
         description?: ReactNode;
         /**
          * "responsive" puts the label and description in a column beside the control, stacking again
@@ -32,6 +33,7 @@ export function FormInput<TFieldValues extends FieldValues, TName extends FieldP
     disabled,
     id,
     label,
+    labelAddon,
     name,
     orientation = "vertical",
     type,
@@ -67,7 +69,17 @@ export function FormInput<TFieldValues extends FieldValues, TName extends FieldP
         afterChange?.(event);
     }
 
-    const labelNode = label != null ? <FieldLabel htmlFor={inputId}>{label}</FieldLabel> : null;
+    const labelNode =
+        label != null ? (
+            labelAddon ? (
+                <div className="flex items-center gap-1">
+                    <FieldLabel htmlFor={inputId}>{label}</FieldLabel>
+                    {labelAddon}
+                </div>
+            ) : (
+                <FieldLabel htmlFor={inputId}>{label}</FieldLabel>
+            )
+        ) : null;
     const errorNode = error?.message ? (
         <FieldDescription className="text-destructive">{error.message}</FieldDescription>
     ) : null;

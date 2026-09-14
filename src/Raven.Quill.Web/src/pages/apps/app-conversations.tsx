@@ -19,7 +19,9 @@ export function AppConversations() {
                         <Heading as="h1" variant="page">
                             Conversations
                         </Heading>
-                        <Text variant="muted">Live and historical chats across all channels.</Text>
+                        <Text variant="muted">
+                            View active and past conversations across all of this app&rsquo;s channels.
+                        </Text>
                     </div>
                     <DatePeriodPicker value={period} earliest={appStartDate} onChange={setPeriod} />
                 </div>
