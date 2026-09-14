@@ -15,7 +15,8 @@ Get the latest stable version from [NuGet](https://www.nuget.org/packages/RavenD
 
 ## Community
 - **RavenDB's Discord** - https://discord.gg/ravendb 🍻
-- Articles & guides - https://docs.ravendb.net/guides 📰
+- Articles - https://ravendb.net/articles 📰
+- Guides - https://docs.ravendb.net/guides 📚
 - YouTube - https://www.youtube.com/@ravendb_net 🍿
 - Blog - https://ayende.com/blog/ 🧑‍💻
 
