@@ -12,11 +12,11 @@ Check the runtime [prerequisites](https://ravendb.net/docs/article-page/server/e
 ## Learning resources
 - **Embedded Server Guide** - https://ravendb.net/articles/building-a-beer-vending-machine-program-with-ravendb-embedded-server 🛣️
 - **Documentation** - https://ravendb.net/docs/article-page/server/embedded 🎒
-- Code Samples - https://demo.ravendb.net/ 🧑‍💻
+- Code Samples - https://docs.ravendb.net/samples 🧑‍💻
 
 ## Community
 - **RavenDB's Discord** - https://discord.gg/ravendb 🍻
-- Articles & guides - https://ravendb.net/articles 📰
+- Articles & guides - https://docs.ravendb.net/guides 📰
 - YouTube - https://www.youtube.com/@ravendb_net 🍿
 - Blog - https://ayende.com/blog/ 🧑‍💻
 
