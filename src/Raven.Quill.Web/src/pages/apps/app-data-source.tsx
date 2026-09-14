@@ -50,7 +50,7 @@ export function AppDataSource() {
                                 </DetailHeaderMetaItem>
                             )}
                             <DetailHeaderMetaItem icon={CalendarClock}>
-                                Connected{" "}
+                                App created{" "}
                                 <Timestamp value={appQuery.data.createdAt} dateVariant="short" textVariant="inherit" />
                             </DetailHeaderMetaItem>
                         </>
