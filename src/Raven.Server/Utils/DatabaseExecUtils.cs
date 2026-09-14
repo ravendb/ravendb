@@ -51,6 +51,7 @@ namespace Raven.Server.Utils
             public TimeSpan MaxRetryDuration;
             public string DatabaseName;
             public bool HardDelete;
+            public long RaftIndex;
             public Logger Logger;
             public Action OnAttempt;
         }
@@ -70,16 +71,20 @@ namespace Raven.Server.Utils
             // '--' terminates the user supplied options. A database name may legally begin with '-'
             // ('--force' is a valid name), and without the sentinel a script using getopt / argparse /
             // a PowerShell param() block would parse the name as a flag.
-            string args = string.IsNullOrEmpty(userArgs)
-                ? $"-- {escapedDatabaseName} {databaseNameBase64} {deletionKind}"
-                : $"{userArgs} -- {escapedDatabaseName} {databaseNameBase64} {deletionKind}";
+            //
+            // The raft index identifies the deletion itself, which the name cannot: a database deleted
+            // and re-created under the same name produces two events with identical names, and a
+            // consumer that deduplicates by name alone would drop the second. Retries of one event share
+            // the index; a later deletion of a same-named database gets a higher one.
+            string hookArgs = $"-- {escapedDatabaseName} {databaseNameBase64} {deletionKind} {parameters.RaftIndex}";
+            string args = string.IsNullOrEmpty(userArgs) ? hookArgs : $"{userArgs} {hookArgs}";
 
             // Never put 'args' in a log line or an exception message. The user supplied part comes from
             // a secured configuration entry and may carry credentials, and the server log is readable by
             // an Operator while the settings endpoint redacts that value even for a cluster admin.
             int userArgsCount = userArgs.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
             string commandDescription =
-                $"'{parameters.Executable}' with {userArgsCount} configured argument(s), for the {deletionKind} deletion of database '{parameters.DatabaseName}'";
+                $"'{parameters.Executable}' with {userArgsCount} configured argument(s), for the {deletionKind} deletion of database '{parameters.DatabaseName}' (raft index {parameters.RaftIndex})";
 
             Stopwatch totalDuration = Stopwatch.StartNew();
 

@@ -167,7 +167,8 @@ Start-Sleep -Seconds 30";
 
                 string[] arguments = ReadHookArguments(outputFile);
 
-                Assert.Equal(3, arguments.Length);
+                Assert.Equal(4, arguments.Length);
+                Assert.True(long.TryParse(arguments[3], out long raftIndex) && raftIndex > 0, $"Expected a positive raft index as the fourth argument, got '{arguments[3]}'.");
                 Assert.Equal(databaseName, arguments[0]);
                 Assert.Equal(Convert.ToBase64String(Encoding.UTF8.GetBytes(databaseName)), arguments[1]);
                 Assert.Equal("soft", arguments[2]);
@@ -203,7 +204,8 @@ Start-Sleep -Seconds 30";
 
                 string[] arguments = ReadHookArguments(outputFile);
 
-                Assert.Equal(3, arguments.Length);
+                Assert.Equal(4, arguments.Length);
+                Assert.True(long.TryParse(arguments[3], out long raftIndex) && raftIndex > 0, $"Expected a positive raft index as the fourth argument, got '{arguments[3]}'.");
                 Assert.Equal(dashedName, arguments[0]);
                 Assert.Equal(Convert.ToBase64String(Encoding.UTF8.GetBytes(dashedName)), arguments[1]);
                 Assert.Equal("hard", arguments[2]);
@@ -240,7 +242,8 @@ Start-Sleep -Seconds 30";
 
                 string[] arguments = ReadHookArguments(outputFile);
 
-                Assert.Equal(3, arguments.Length);
+                Assert.Equal(4, arguments.Length);
+                Assert.True(long.TryParse(arguments[3], out long raftIndex) && raftIndex > 0, $"Expected a positive raft index as the fourth argument, got '{arguments[3]}'.");
                 Assert.Equal(databaseName, arguments[0]);
                 Assert.DoesNotContain("$", arguments[0]);
                 Assert.Equal("hard", arguments[2]);

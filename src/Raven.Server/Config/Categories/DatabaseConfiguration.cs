@@ -168,7 +168,9 @@ namespace Raven.Server.Config.Categories
         /// Fires when the deletion starts, not when it completes, and cannot delay or prevent it. Delivery is best-effort.
         /// </summary>
         [Description("EXPERT: A command or executable to run on the leader node when an entire database is deleted from the cluster. " +
-                     "RavenDB will execute: command [user-arg-1] ... [user-arg-n] -- <database-name> <database-name-base64> <hard|soft>. " +
+                     "RavenDB will execute: command [user-arg-1] ... [user-arg-n] -- <database-name> <database-name-base64> <hard|soft> <raft-index>. " +
+                     "The raft index identifies the deletion: retries of one event carry the same index, while a later deletion of a database " +
+                     "re-created under the same name carries a higher one, so deduplicate on the index rather than on the name. " +
                      "The hook fires when the deletion starts, not when it completes, and it can neither delay nor prevent the deletion. " +
                      "Delivery is best-effort: the event may be delivered more than once (retries, or a repeated delete request) and may be " +
                      "lost if cluster leadership changes while it is being dispatched, so the script must be idempotent. " +

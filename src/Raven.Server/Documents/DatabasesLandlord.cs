@@ -606,6 +606,7 @@ namespace Raven.Server.Documents
                     MaxRetryDuration = configuration.OnDatabaseDeleteExecMaxRetryDuration.AsTimeSpan,
                     DatabaseName = databaseName,
                     HardDelete = hardDelete,
+                    RaftIndex = index,
                     Logger = _logger,
                     OnAttempt = () => ForTestingPurposes?.OnDatabaseDeleteExecAttempt?.Invoke(databaseName)
                 }, token).ConfigureAwait(false);
