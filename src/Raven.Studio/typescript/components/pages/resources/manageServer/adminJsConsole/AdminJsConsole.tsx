@@ -27,6 +27,7 @@ import useBoolean from "components/hooks/useBoolean";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import RichAlert from "components/common/RichAlert";
 import DatabaseUtils from "components/utils/DatabaseUtils";
+import { DatabaseSharedInfo } from "components/models/databases";
 
 type TargetKind = "server" | "database" | "shard" | "orchestrator";
 
@@ -41,6 +42,41 @@ const accessibleVariableByKind: Record<TargetKind, string> = {
     orchestrator: "orchestratorCtx",
 };
 
+function getDatabaseTargets(db: DatabaseSharedInfo): TargetOption[] {
+    if (!db.isSharded) {
+        return db.currentNode.isRelevant
+            ? [{ value: db.name, label: db.name, icon: "database", kind: "database" }]
+            : [];
+    }
+
+    const shardTargets = db.shards
+        .filter((x) => x.currentNode.isRelevant)
+        .map(
+            (x): TargetOption => ({
+                value: x.name,
+                label: DatabaseUtils.formatName(x.name),
+                icon: "shard",
+                iconColor: "shard",
+                kind: "shard",
+            })
+        );
+
+    if (!db.currentNode.isRelevant) {
+        return shardTargets;
+    }
+
+    return [
+        {
+            value: db.name,
+            label: `${db.name} (orchestrator)`,
+            icon: "orchestrator",
+            iconColor: "orchestrator",
+            kind: "orchestrator",
+        },
+        ...shardTargets,
+    ];
+}
+
 // TODO https://issues.hibernatingrhinos.com/issue/RavenDB-7588
 
 export default function AdminJSConsole() {
@@ -53,36 +89,7 @@ export default function AdminJSConsole() {
     const adminJsConsoleDocsLink = useRavenLink({ hash: "IBUJ7M" });
 
     const allTargets: TargetOption[] = useMemo(() => {
-        const databaseTargets = allDatabases.flatMap((db): TargetOption[] =>
-            db.isSharded
-                ? [
-                      ...(db.currentNode.isRelevant
-                          ? [
-                                {
-                                    value: db.name,
-                                    label: `${db.name} (orchestrator)`,
-                                    icon: "orchestrator",
-                                    iconColor: "orchestrator",
-                                    kind: "orchestrator",
-                                } satisfies TargetOption,
-                            ]
-                          : []),
-                      ...db.shards
-                          .filter((x) => x.currentNode.isRelevant)
-                          .map(
-                              (x): TargetOption => ({
-                                  value: x.name,
-                                  label: DatabaseUtils.formatName(x.name),
-                                  icon: "shard",
-                                  iconColor: "shard",
-                                  kind: "shard",
-                              })
-                          ),
-                  ]
-                : db.currentNode.isRelevant
-                  ? [{ value: db.name, label: db.name, icon: "database", kind: "database" }]
-                  : []
-        );
+        const databaseTargets = allDatabases.flatMap(getDatabaseTargets);
 
         return [
             {
@@ -120,10 +127,7 @@ export default function AdminJSConsole() {
 
     const selectedTarget = watch("target");
 
-    const selectedTargetKind: TargetKind =
-        selectedTarget === serverTargetValue
-            ? "server"
-            : (allTargets.find((x) => x.value === selectedTarget)?.kind ?? "database");
+    const selectedTargetKind = allTargets.find((x) => x.value === selectedTarget)?.kind ?? "database";
 
     const accessibleVariable = accessibleVariableByKind[selectedTargetKind];
 
