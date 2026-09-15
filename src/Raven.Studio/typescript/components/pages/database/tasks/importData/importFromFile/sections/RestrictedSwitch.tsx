@@ -29,7 +29,7 @@ export default function RestrictedSwitch({ control, name, restriction, warning, 
             </ConditionalPopover>
             {warning && (
                 <PopoverWithHoverWrapper message={warning}>
-                    <Icon icon="warning" color="warning" margin="m-0" />
+                    <Icon icon="warning" color="warning" margin="m-0" data-testid="restricted-switch-warning" />
                 </PopoverWithHoverWrapper>
             )}
             {restriction?.reason === "license" && (
