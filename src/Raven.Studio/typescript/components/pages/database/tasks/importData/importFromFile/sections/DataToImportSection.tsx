@@ -8,16 +8,21 @@ import { FormSwitch } from "components/common/Form";
 import ImportSection from "./ImportSection";
 import { documentToggleKeys, ImportFromFileFormData } from "../importFromFileValidation";
 import { getItemsToWarnAbout } from "../importFromFileUtils";
+import { getLicenseLimitWarning } from "../importLicenseLimits";
 import { useImportRestrictions } from "../useImportRestrictions";
 import RestrictedSwitch from "./RestrictedSwitch";
 import CollectionsToImportPicker from "./CollectionsToImportPicker";
 import Card from "react-bootstrap/Card";
 import classNames from "classnames";
+import { useAppSelector } from "components/store";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
 
 export default function DataToImportSection() {
     const { control, setValue } = useFormContext<ImportFromFileFormData>();
     const documents = useWatch({ control, name: "documents" });
     const { documentToggles: documentToggleRestrictions } = useImportRestrictions();
+    const licenseStatus = useAppSelector(licenseSelectors.status);
+    const subscriptionsLimitWarning = getLicenseLimitWarning(licenseStatus, "subscriptions");
 
     const isImportAll = useWatch({ control, name: "collections.isImportAllCollections" });
 
@@ -133,9 +138,13 @@ export default function DataToImportSection() {
                     Include Compare Exchange Tombstones
                 </FormSwitch>
                 <hr className="my-1" />
-                <FormSwitch control={control} name="documents.isIncludeSubscriptions">
+                <RestrictedSwitch
+                    control={control}
+                    name="documents.isIncludeSubscriptions"
+                    warning={subscriptionsLimitWarning}
+                >
                     Include Subscriptions
-                </FormSwitch>
+                </RestrictedSwitch>
 
                 {itemsToWarnAbout.length > 0 && (
                     <Alert variant="warning" className="mt-3 mb-0">

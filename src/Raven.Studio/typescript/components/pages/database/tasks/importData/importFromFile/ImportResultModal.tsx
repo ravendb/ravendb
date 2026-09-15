@@ -1,4 +1,4 @@
-import React, { JSX, useEffect, useState } from "react";
+import React, { JSX, UIEvent, useEffect, useRef } from "react";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Collapse from "react-bootstrap/Collapse";
@@ -7,6 +7,7 @@ import Spinner from "react-bootstrap/Spinner";
 import Modal from "components/common/Modal";
 import Code from "components/common/Code";
 import { Icon } from "components/common/Icon";
+import useBoolean from "components/hooks/useBoolean";
 import genUtils from "common/generalUtils";
 import moment from "moment";
 
@@ -18,6 +19,7 @@ interface ImportResultRow {
     name: string;
     isNested: boolean;
     counts: Counts | null;
+    parent?: Counts | null;
 }
 
 interface ImportResultModalProps {
@@ -32,14 +34,27 @@ export default function ImportResultModal({ progress, status, startTime, endTime
     const rows = buildRows(progress);
     const duration = genUtils.formatAsTimeSpan(moment(endTime ?? undefined).diff(moment(startTime)));
 
-    const [isDetailsVisible, setIsDetailsVisible] = useState(false);
+    const { value: isDetailsVisible, setTrue: showDetails, toggle: toggleDetails } = useBoolean(false);
+    const { value: isLogPinnedToBottom, setValue: setIsLogPinnedToBottom } = useBoolean(true);
+    const logRef = useRef<HTMLDivElement>(null);
     const messages = progress?.Messages ?? [];
 
     useEffect(() => {
         if (status === "Faulted") {
-            setIsDetailsVisible(true);
+            showDetails();
         }
-    }, [status]);
+    }, [status, showDetails]);
+
+    useEffect(() => {
+        if (isLogPinnedToBottom) {
+            scrollToBottom(logRef.current);
+        }
+    }, [messages.length, isLogPinnedToBottom]);
+
+    const handleLogScroll = (e: UIEvent<HTMLDivElement>) => {
+        const { scrollHeight, scrollTop, clientHeight } = e.currentTarget;
+        setIsLogPinnedToBottom(scrollHeight - scrollTop - clientHeight < 8);
+    };
 
     return (
         <Modal size="lg" show onHide={onClose} className="modal-border bulge-primary">
@@ -49,15 +64,15 @@ export default function ImportResultModal({ progress, status, startTime, endTime
                 </h4>
             </Modal.Header>
             <Modal.Body>
-                <div className="d-flex justify-content-between border-bottom py-2">
+                <div className="import-result-row">
                     <span>Date</span>
                     <span>{moment(startTime).format("YYYY MMMM Do, h:mm A")}</span>
                 </div>
-                <div className="d-flex justify-content-between border-bottom py-2">
+                <div className="import-result-row">
                     <span>Duration</span>
                     <span>{duration}</span>
                 </div>
-                <div className="d-flex justify-content-between border-bottom py-2 align-items-center">
+                <div className="import-result-row">
                     <span>Status</span>
                     <OperationStatusBadge status={status} />
                 </div>
@@ -77,19 +92,19 @@ export default function ImportResultModal({ progress, status, startTime, endTime
                         ))}
                     </tbody>
                 </Table>
-                <Collapse in={isDetailsVisible}>
+                <Collapse in={isDetailsVisible} onEntered={() => scrollToBottom(logRef.current)}>
                     <div>
                         <Badge bg="info" className="mt-3">
                             All dates are in UTC
                         </Badge>
-                        <div className="mt-2" style={{ maxHeight: 300, overflowY: "auto" }}>
+                        <div ref={logRef} role="log" className="import-result-log mt-2" onScroll={handleLogScroll}>
                             <Code code={messages.join("\n")} language="plaintext" whiteSpace="pre-wrap" />
                         </div>
                     </div>
                 </Collapse>
             </Modal.Body>
             <Modal.Footer>
-                <Button variant="secondary" onClick={() => setIsDetailsVisible((prev) => !prev)}>
+                <Button variant="secondary" onClick={toggleDetails}>
                     <Icon icon="preview" /> {isDetailsVisible ? "Hide details" : "Show details"}
                 </Button>
                 <Button onClick={onClose} variant="secondary">
@@ -128,7 +143,7 @@ function OperationStatusBadge({ status }: { status: OperationStatus }) {
 }
 
 function ImportResultTableRow({ row, operationStatus }: { row: ImportResultRow; operationStatus: OperationStatus }) {
-    const rowStatus = getRowStatus(row.counts, operationStatus);
+    const rowStatus = getRowStatus(row, operationStatus);
     return (
         <tr>
             <td className={row.isNested ? "ps-4" : "fw-bold"}>
@@ -154,12 +169,17 @@ function buildRows(progress: SmugglerResult): ImportResultRow[] {
     return [
         { name: "Database Record", isNested: false, counts: progress.DatabaseRecord },
         { name: "Documents", isNested: false, counts: progress.Documents },
-        { name: "Attachments", isNested: true, counts: progress.Documents?.Attachments },
+        { name: "Attachments", isNested: true, counts: progress.Documents?.Attachments, parent: progress.Documents },
         { name: "Counters", isNested: true, counts: progress.Counters },
         { name: "Time Series", isNested: true, counts: progress.TimeSeries },
         { name: "Tombstones", isNested: true, counts: progress.Tombstones },
         { name: "Revisions", isNested: false, counts: progress.RevisionDocuments },
-        { name: "Attachments", isNested: true, counts: progress.RevisionDocuments?.Attachments },
+        {
+            name: "Attachments",
+            isNested: true,
+            counts: progress.RevisionDocuments?.Attachments,
+            parent: progress.RevisionDocuments,
+        },
         { name: "Conflicts", isNested: false, counts: progress.Conflicts },
         { name: "Indexes", isNested: false, counts: progress.Indexes },
         { name: "Identities", isNested: false, counts: progress.Identities },
@@ -170,21 +190,33 @@ function buildRows(progress: SmugglerResult): ImportResultRow[] {
     ].filter((row) => row.counts != null);
 }
 
-function getRowStatus(counts: Counts, operationStatus: OperationStatus): { label: string; icon: JSX.Element } {
+function getRowStatus(
+    { counts, parent }: ImportResultRow,
+    operationStatus: OperationStatus
+): { label: string; icon: JSX.Element } {
     if (counts.Skipped) {
         return { label: "Skipped", icon: <Icon icon="skip" color="warning" /> };
     }
     if (counts.Processed) {
         return counts.ErroredCount > 0
-            ? { label: "Processed with errors", icon: <Icon icon="warning" color="danger" /> }
+            ? { label: "Processed with errors", icon: <Icon icon="warning" color="warning" /> }
             : { label: "Processed", icon: <Icon icon="check" color="success" /> };
     }
     if (operationStatus === "InProgress") {
-        return { label: "Processing", icon: <Spinner size="sm" className="me-2" /> };
+        const isStarted = !!(counts.StartTime ?? parent?.StartTime);
+        return isStarted
+            ? { label: "Processing", icon: <Spinner size="sm" className="me-2" /> }
+            : { label: "Pending", icon: <Icon icon="waiting" /> };
     }
     return { label: "Not processed", icon: <Icon icon="cancel" color="danger" /> };
 }
 
 function getSkippedCount(counts: Counts): string {
     return "SkippedCount" in counts ? counts.SkippedCount.toLocaleString() : "-";
+}
+
+function scrollToBottom(element: HTMLElement | null) {
+    if (element) {
+        element.scrollTop = element.scrollHeight;
+    }
 }

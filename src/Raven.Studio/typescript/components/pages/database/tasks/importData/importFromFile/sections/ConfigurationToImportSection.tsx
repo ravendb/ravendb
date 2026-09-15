@@ -10,15 +10,19 @@ import ImportSection from "./ImportSection";
 import RestrictedSwitch from "./RestrictedSwitch";
 import {
     connectionStringKeys,
+    DatabaseSettingKey,
     databaseSettingKeys,
     ImportFromFileFormData,
     ongoingTaskKeys,
 } from "../importFromFileValidation";
 import { useImportRestrictions } from "../useImportRestrictions";
 import { getTasksMissingConnectionStrings } from "../importFromFileUtils";
+import { getLicenseLimitWarning } from "../importLicenseLimits";
 import Card from "react-bootstrap/Card";
 import { connectionStringLabels, databaseSettingLabels, ongoingTaskLabels } from "../importFromFileLabels";
 import classNames from "classnames";
+import { useAppSelector } from "components/store";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
 
 const missingConnectionStringWarning =
     "This task is selected without its connection string. It will be imported but won't run until a matching " +
@@ -33,6 +37,11 @@ export default function ConfigurationToImportSection() {
         restrictedOngoingTaskKeys,
         restrictedConnectionStringKeys,
     } = useImportRestrictions();
+    const licenseStatus = useAppSelector(licenseSelectors.status);
+    const settingLimitWarnings: Partial<Record<DatabaseSettingKey, string>> = {
+        sorters: getLicenseLimitWarning(licenseStatus, "customSorters"),
+        analyzers: getLicenseLimitWarning(licenseStatus, "customAnalyzers"),
+    };
 
     const isIncludeTasks = useWatch({ control, name: "configuration.isIncludeConnectionStringsAndOngoingTasks" });
     const isCustomizeTasks = useWatch({ control, name: "configuration.isCustomizeOngoingTasks" });
@@ -279,6 +288,7 @@ export default function ConfigurationToImportSection() {
                                     control={control}
                                     name={`configuration.databaseSettings.${key}`}
                                     restriction={settingRestrictions[key]}
+                                    warning={settingLimitWarnings[key]}
                                 >
                                     {databaseSettingLabels[key]}
                                 </RestrictedSwitch>
