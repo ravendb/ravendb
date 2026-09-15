@@ -107,7 +107,23 @@ export default function Azure() {
                                     <FormInput
                                         name={getName("accountKey")}
                                         control={control}
+                                        rules={{ deps: getName("sasToken") }}
                                         placeholder="Enter an account key"
+                                        type="password"
+                                        passwordPreview
+                                        autoComplete="off"
+                                    />
+                                </div>
+                                <div className="mb-2">
+                                    <FormLabel>
+                                        SAS token{" "}
+                                        <small className="text-muted fw-light">(instead of account key)</small>
+                                    </FormLabel>
+                                    <FormInput
+                                        name={getName("sasToken")}
+                                        control={control}
+                                        rules={{ deps: getName("accountKey") }}
+                                        placeholder="Enter a SAS token"
                                         type="password"
                                         passwordPreview
                                         autoComplete="off"

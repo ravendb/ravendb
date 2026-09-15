@@ -3,6 +3,7 @@ import jsonUtil = require("common/jsonUtil");
 import genUtils = require("common/generalUtils");
 import popoverUtils = require("common/popoverUtils");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
+import formDestinationsValidation = require("components/common/formDestinations/utils/formDestinationsValidation");
 
 class azureSettings extends backupSettings {
 
@@ -14,6 +15,7 @@ class azureSettings extends backupSettings {
     accountKey = ko.observable<string>();
     isKeyHidden = ko.observable<boolean>(true);
     sasToken = ko.observable<string>();
+    isSasTokenHidden = ko.observable<boolean>(true);
 
     targetOperation: string;
 
@@ -36,6 +38,7 @@ class azureSettings extends backupSettings {
             this.remoteFolderName,
             this.accountName,
             this.accountKey,
+            this.sasToken,
             this.configurationScriptDirtyFlag().isDirty
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
@@ -87,14 +90,25 @@ class azureSettings extends backupSettings {
 
         this.accountKey.extend({
             required: {
-                onlyIf: () => this.enabled()
+                onlyIf: () => this.enabled() && !this.sasToken(),
+                message: formDestinationsValidation.azureCredentialsMessages.required
             }
+        });
+
+        this.sasToken.extend({
+            validation: [
+                {
+                    validator: (sasToken: string) => !sasToken || !this.accountKey(),
+                    message: formDestinationsValidation.azureCredentialsMessages.exclusive
+                }
+            ]
         });
 
         this.localConfigValidationGroup = ko.validatedObservable({
             storageContainer: this.storageContainer,
             accountName: this.accountName,
-            accountKey: this.accountKey
+            accountKey: this.accountKey,
+            sasToken: this.sasToken
         });
     }
 
@@ -123,6 +137,10 @@ class azureSettings extends backupSettings {
 
     toggleIsKeyHidden() {
         this.isKeyHidden(!this.isKeyHidden());
+    }
+
+    toggleIsSasTokenHidden() {
+        this.isSasTokenHidden(!this.isSasTokenHidden());
     }
 }
 

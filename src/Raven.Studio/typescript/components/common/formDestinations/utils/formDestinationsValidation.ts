@@ -133,6 +133,11 @@ export const s3Schema = yupObjectSchema<WithoutAmazonAndBase<S3Destination>>({
     .concat(destinationBaseSchema)
     .concat(amazonSchema);
 
+export const azureCredentialsMessages = {
+    required: "Account key or SAS token is required",
+    exclusive: "Account key and SAS token cannot be used simultaneously",
+};
+
 export const azureSchema = yupObjectSchema<WithoutBase<AzureDestination>>({
     storageContainer: yup
         .string()
@@ -155,8 +160,30 @@ export const azureSchema = yupObjectSchema<WithoutBase<AzureDestination>>({
         }),
     remoteFolderName: yup.string().nullable(),
     accountName: yupRequiredStringForEnabled,
-    accountKey: yupRequiredStringForEnabled,
-    sasToken: yup.string().nullable(),
+    accountKey: yup
+        .string()
+        .nullable()
+        .when(["isEnabled", "config"], {
+            is: (isEnabled: boolean, config: BackupConfigurationScript) => isEnabled && !config.isOverrideConfig,
+            then: (schema) =>
+                schema.test(
+                    "account-key-or-sas-token",
+                    azureCredentialsMessages.required,
+                    (value, ctx) => !!value || !!ctx.parent.sasToken
+                ),
+        }),
+    sasToken: yup
+        .string()
+        .nullable()
+        .when(["isEnabled", "config"], {
+            is: (isEnabled: boolean, config: BackupConfigurationScript) => isEnabled && !config.isOverrideConfig,
+            then: (schema) =>
+                schema.test(
+                    "account-key-and-sas-token-exclusive",
+                    azureCredentialsMessages.exclusive,
+                    (value, ctx) => !value || !ctx.parent.accountKey
+                ),
+        }),
 }).concat(destinationBaseSchema);
 
 const googleCloudSchema = yupObjectSchema<WithoutBase<GoogleCloudDestination>>({
