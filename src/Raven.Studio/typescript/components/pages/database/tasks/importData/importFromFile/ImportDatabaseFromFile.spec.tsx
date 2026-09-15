@@ -30,6 +30,7 @@ const selectors = {
     noIncludeAlert: /At least one 'include' option must be checked/,
     licenseAlert: /Some data may not be imported/,
     accessAlert: /Some data cannot be imported/,
+    limitWarning: "restricted-switch-warning",
 };
 
 const enterpriseAiOnlyFlags: Partial<LicenseStatus> = {
@@ -721,6 +722,52 @@ describe("ImportDatabaseFromFile", () => {
 
             await expectImportRejected(rendered);
             expect(rendered.screen.getByText("Encryption key is required")).toBeInTheDocument();
+        });
+    });
+
+    describe("license limits", () => {
+        async function expectLimitPopover({ screen, user }: Rendered, warningIcon: HTMLElement, message: RegExp) {
+            await user.hover(warningIcon.closest("div"));
+            expect(await screen.findByText(message)).toBeInTheDocument();
+        }
+
+        it("explains the subscription limit of a limited license", async () => {
+            const rendered = rtlRender(<Default />);
+
+            const [subscriptionsWarning] = rendered.screen.getAllByTestId(selectors.limitWarning);
+            await expectLimitPopover(
+                rendered,
+                subscriptionsWarning,
+                /limits subscriptions to 3 per database and 15 per cluster/
+            );
+        });
+
+        it("explains the sorter and analyzer limits in the customized settings list", async () => {
+            const rendered = rtlRender(<Default />);
+            const { screen, fireClick } = rendered;
+            await selectFile(rendered);
+            await fireClick(screen.getAllByRole("button", { name: /^Customize$/ })[1]);
+
+            const [, sortersWarning, analyzersWarning] = screen.getAllByTestId(selectors.limitWarning);
+            await expectLimitPopover(
+                rendered,
+                sortersWarning,
+                /limits custom sorters to 1 per database and 5 per cluster/
+            );
+            await expectLimitPopover(
+                rendered,
+                analyzersWarning,
+                /limits custom analyzers to 1 per database and 5 per cluster/
+            );
+        });
+
+        it("shows no limit warnings for an unlimited license", async () => {
+            const rendered = rtlRender(<Default hasAllLicenseFeatures />);
+            const { screen, fireClick } = rendered;
+            await selectFile(rendered);
+            await fireClick(screen.getAllByRole("button", { name: /^Customize$/ })[1]);
+
+            expect(screen.queryAllByTestId(selectors.limitWarning)).toHaveLength(0);
         });
     });
 });
