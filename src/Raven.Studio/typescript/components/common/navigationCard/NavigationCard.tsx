@@ -11,8 +11,6 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { AccessPopover } from "components/common/AccessPopover";
 
-// Each variant must have matching styles registered via the navigation-card-variant
-// mixin (navigationCardVariants.scss) in the stylesheet of the page using the card.
 interface NavigationCardBaseProps<TVariant extends string = string> {
     title: string;
     description: string;
@@ -27,8 +25,6 @@ interface NavigationCardBaseProps<TVariant extends string = string> {
     compact?: boolean;
 }
 
-// A shown badge always needs its tier: rendering LicenseRestrictedBadge without one produces an
-// unstyled badge with an empty tooltip, so the two props travel together.
 export type NavigationCardLicenseProps =
     | { showLicenseBadge: true; licenseBadge: LicenseBadgeText }
     | { showLicenseBadge?: false; licenseBadge?: LicenseBadgeText };

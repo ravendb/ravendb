@@ -71,9 +71,7 @@ function ImportDatabaseFromFileContent() {
     );
 
     const hasExistingData =
-        !asyncEssentialStats.result ||
-        asyncEssentialStats.result.CountOfDocuments > 0 ||
-        asyncEssentialStats.result.CountOfIndexes > 0;
+        asyncEssentialStats.result?.CountOfDocuments > 0 || asyncEssentialStats.result?.CountOfIndexes > 0;
 
     const onInvalidSubmit = (errors: FieldErrors<ImportFromFileFormData>) => {
         const firstErrorPath = getFirstErrorPath(errors);
@@ -93,13 +91,12 @@ function ImportDatabaseFromFileContent() {
     const watchedConfiguration = useWatch({ control, name: "configuration" });
 
     const hasInclude = hasAnyInclude(
-        { documents: watchedDocuments, configuration: watchedConfiguration } as ImportFromFileFormData,
+        { documents: watchedDocuments, configuration: watchedConfiguration },
         restrictedSettingKeys,
         restrictedOngoingTaskKeys,
         restrictedConnectionStringKeys
     );
 
-    // The button stays enabled while the form is invalid so the click can point the user at the field
     const canImport = !!file && hasInclude && !isUploading && !formState.isSubmitting;
 
     return (

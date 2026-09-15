@@ -1,6 +1,7 @@
+import { connectionStringTokens, databaseSettingTokens, ongoingTaskTokens } from "./importFromFileUtils";
+
 type ImportOptions = Raven.Client.Documents.Smuggler.DatabaseSmugglerImportOptions;
 type DatabaseItemType = Raven.Client.Documents.Smuggler.DatabaseItemType;
-type DatabaseRecordItemType = Raven.Client.Documents.Smuggler.DatabaseRecordItemType;
 
 export const adminDefaultOperateOnTypes: DatabaseItemType[] = [
     "DatabaseRecord",
@@ -19,62 +20,22 @@ export const adminDefaultOperateOnTypes: DatabaseItemType[] = [
     "CompareExchangeTombstones",
 ];
 
-export const allSettingTokens: DatabaseRecordItemType[] = [
-    "Settings",
-    "ConflictSolverConfig",
-    "Client",
-    "Revisions",
-    "Refresh",
-    "Expiration",
-    "DocumentsCompression",
-    "SchemaValidation",
-    "DataArchival",
-    "TimeSeries",
-    "Sorters",
-    "Analyzers",
-    "PostgreSQLIntegration",
-];
+export const allSettingTokens = Object.values(databaseSettingTokens);
+export const allOngoingTaskTokens = Object.values(ongoingTaskTokens);
+export const allConnectionStringTokens = Object.values(connectionStringTokens);
 
-export const allOngoingTaskTokens: DatabaseRecordItemType[] = [
-    "PeriodicBackups",
-    "ExternalReplications",
-    "RavenEtls",
-    "SqlEtls",
-    "SnowflakeEtls",
-    "OlapEtls",
-    "ElasticSearchEtls",
-    "QueueEtls",
-    "HubPullReplications",
-    "SinkPullReplications",
-    "EmbeddingsGenerations",
-    "GenAiEtls",
-    "CdcSinks",
-    "AiAgents",
-    "RemoteAttachments",
-];
-
-export const allConnectionStringTokens: DatabaseRecordItemType[] = [
-    "RavenConnectionStrings",
-    "SqlConnectionStrings",
-    "SnowflakeConnectionStrings",
-    "OlapConnectionStrings",
-    "ElasticSearchConnectionStrings",
-    "QueueConnectionStrings",
-    "AiConnectionStrings",
-];
-
-export const adminDefaultDto: ImportOptions = {
+export const adminDefaultDto: Partial<Record<keyof ImportOptions, unknown>> = {
     IncludeExpired: true,
     IncludeArtificial: false,
     IncludeArchived: true,
     TransformScript: "",
     RemoveAnalyzers: false,
     EncryptionKey: undefined,
-    OperateOnTypes: adminDefaultOperateOnTypes.join(",") as DatabaseItemType,
+    OperateOnTypes: adminDefaultOperateOnTypes.join(","),
     OperateOnDatabaseRecordTypes: "None",
     Collections: null,
     MaxReadOpsPerSecond: null,
-} as ImportOptions;
+};
 
 export const without = <T>(list: T[], ...excluded: T[]) => list.filter((x) => !excluded.includes(x));
 

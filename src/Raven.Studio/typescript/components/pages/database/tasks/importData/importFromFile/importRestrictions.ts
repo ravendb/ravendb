@@ -20,11 +20,6 @@ import { mergeCapabilities, OngoingTaskTarget } from "components/pages/database/
 
 type LicenseStatusKey = keyof LicenseStatus;
 
-/**
- * Why an import entry is unavailable. The three reasons are independent and need different UI:
- * a license gap shows a license badge and can be lifted by upgrading, sharding and access level
- * cannot - so they get a plain explanation instead of a badge.
- */
 export type ImportRestrictionReason = "license" | "sharding" | "access";
 
 export interface ImportRestriction {
@@ -116,7 +111,7 @@ const ongoingTaskTargets: Record<OngoingTaskKey, OngoingTaskTarget[]> = {
     remoteAttachments: ["RemoteAttachments"],
 };
 
-export const ongoingTaskRules: Record<OngoingTaskKey, ImportRestrictionRule> = Object.fromEntries(
+export const ongoingTaskRules: Partial<Record<OngoingTaskKey, ImportRestrictionRule>> = Object.fromEntries(
     ongoingTaskKeys.map((key) => {
         const { licenseFlags, licenseBadge, isShardingSupported, accessRequired } = mergeCapabilities(
             ongoingTaskTargets[key]
@@ -134,9 +129,8 @@ export const ongoingTaskRules: Record<OngoingTaskKey, ImportRestrictionRule> = O
             } satisfies ImportRestrictionRule,
         ];
     })
-) as Record<OngoingTaskKey, ImportRestrictionRule>;
+);
 
-/** Which tasks each connection-string type feeds - it is gated exactly like the tasks that use it. */
 const connectionStringTargets: Record<ConnectionStringKey, OngoingTaskTarget[]> = {
     ravenConnectionStrings: ["RavenETL"],
     sqlConnectionStrings: ["SqlETL"],
@@ -147,7 +141,7 @@ const connectionStringTargets: Record<ConnectionStringKey, OngoingTaskTarget[]> 
     aiConnectionStrings: ["GenAi", "AiAgent", "EmbeddingsGeneration"],
 };
 
-export const connectionStringRules: Record<ConnectionStringKey, ImportRestrictionRule> = Object.fromEntries(
+export const connectionStringRules: Partial<Record<ConnectionStringKey, ImportRestrictionRule>> = Object.fromEntries(
     connectionStringKeys.map((key) => {
         const { licenseFlags, licenseBadge, accessRequired } = mergeCapabilities(connectionStringTargets[key]);
 
@@ -162,7 +156,7 @@ export const connectionStringRules: Record<ConnectionStringKey, ImportRestrictio
             } satisfies ImportRestrictionRule,
         ];
     })
-) as Record<ConnectionStringKey, ImportRestrictionRule>;
+);
 
 export function getLicenseRestrictionTooltip(label: string) {
     return `Data created with ${label} won't be imported - this feature isn't included in your license`;
@@ -176,17 +170,12 @@ export function getAccessRestrictionTooltip(label: string) {
     return `Your certificate doesn't grant sufficient permissions to import ${label}`;
 }
 
-/**
- * Resolves a rule against the current license / sharding / access state.
- * License is reported first because it is the only reason the user can act on.
- */
 export function resolveRestriction(
     rule: ImportRestrictionRule | undefined,
     context: {
         licenseStatus: LicenseStatus | null;
         isSharded: boolean;
         canHandleOperation: (requiredAccess: accessLevel) => boolean;
-        /** Set to false for groups where sharding is irrelevant (settings, connection strings). */
         isShardingChecked?: boolean;
     }
 ): ImportRestriction | null {
