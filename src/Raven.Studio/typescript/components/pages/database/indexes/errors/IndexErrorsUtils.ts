@@ -14,7 +14,6 @@ const mapItems = (indexErrorsDto: Raven.Client.Documents.Indexes.IndexErrors[]) 
                     Timestamp: moment.utc(errorDto.Timestamp).format(),
                     IndexName: value.Name,
                     LocalTime: genUtils.formatUtcDateAsLocal(errorDto.Timestamp),
-                    RelativeTime: genUtils.formatDurationByDate(moment.utc(errorDto.Timestamp), true),
                 })
             );
         }) ?? [];

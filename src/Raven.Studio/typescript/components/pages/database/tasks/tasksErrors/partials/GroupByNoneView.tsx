@@ -29,7 +29,6 @@ import {
 } from "../utils/tasksErrorsUtils";
 import {
     CellAffectedDocumentsWrapper,
-    CellDateWithRelativeTimeWrapper,
     CellErrorStepWrapper,
     CellErrorTypeWrapper,
     CellTaskTypeWrapper,
@@ -40,6 +39,7 @@ import {
     CellValueButtonWrapper,
     HyperLinkDocumentCellValue,
 } from "./TasksErrorsCells";
+import { CellDateWithRelativeTimeWrapper } from "components/common/virtualTable/cells/CellDateWithRelativeTime";
 import { DeleteErrorsModal } from "./DeleteModals";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { AccessPopover } from "components/common/AccessPopover";
