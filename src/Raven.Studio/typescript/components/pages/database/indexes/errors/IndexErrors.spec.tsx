@@ -22,6 +22,8 @@ const textSelectors = {
     confirmDeleteButtonLabel: "Delete",
     typedConfirmationLabel: "Type DELETE to confirm",
     requireTypedConfirmationLabel: "Require typed confirmation",
+    relativeTimePattern: /ago$/,
+    erroredDocumentId: IndexesStubs.getIndexErrorDetails()[2].Errors[0].Document,
 };
 
 const totalErrorCount = IndexesStubs.getIndexesErrorCount().Results.reduce(
@@ -62,6 +64,17 @@ describe("IndexErrors", function () {
         ).closest<HTMLElement>(classSelectors.erroredNodePanelTotalErrorCountContainer);
 
         expect(within(totalErrorsElement).getByText(`${totalErrorCount} errors`)).toBeInTheDocument();
+    });
+
+    it("shows relative time inline in the Date cell without hovering", async () => {
+        const { screen } = await rtlRender_WithWaitForLoad(
+            <IndexErrorsStory hasErrors databaseAccess="DatabaseAdmin" isSharded={false} />
+        );
+
+        expect(await screen.findByRole("heading", { name: textSelectors.title })).toBeInTheDocument();
+        await screen.findAllByText(textSelectors.erroredDocumentId);
+
+        expect(screen.getAllByText(textSelectors.relativeTimePattern).length).toBeGreaterThan(0);
     });
 
     it("does not show 'Delete errors' button for users with 'DatabaseRead' access", async () => {
