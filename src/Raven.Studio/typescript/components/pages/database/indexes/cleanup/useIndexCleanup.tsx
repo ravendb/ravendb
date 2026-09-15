@@ -392,7 +392,7 @@ function getIndexInfoForDelete(indexes: Raven.Client.Documents.Indexes.IndexStat
 export const formatIndexCleanupDate = (date: Date) => {
     return (
         <>
-            {moment.utc(date).local().fromNow()}{" "}
+            {genUtils.formatDurationByDate(moment.utc(date), true)}{" "}
             <small className="text-muted">({moment.utc(date).format("MM/DD/YY, h:mma")})</small>
         </>
     );

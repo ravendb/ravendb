@@ -216,7 +216,10 @@ function ConnectionStatusCell({
                                 </b>
                             </div>
                             {nextBatchRetryTime && (
-                                <small className="text-right"> ({moment(nextBatchRetryTime).fromNow()})</small>
+                                <small className="text-right">
+                                    {" "}
+                                    ({genUtils.formatDurationByDate(moment.utc(nextBatchRetryTime), true)})
+                                </small>
                             )}
                         </div>
                         <div className="d-flex gap-2">

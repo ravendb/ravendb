@@ -139,7 +139,9 @@ export default function TaskErrorDetailsSheet({
                             <div className="small">Date</div>
                             <div className="vstack align-items-end">
                                 <span>{moment(error.CreatedAt).format(genUtils.dateFormat)}</span>
-                                <small className="text-muted">{moment(error.CreatedAt).fromNow()}</small>
+                                <small className="text-muted">
+                                    {genUtils.formatDurationByDate(moment.utc(error.CreatedAt), true)}
+                                </small>
                             </div>
                         </SheetDetailRow>
                     )}
