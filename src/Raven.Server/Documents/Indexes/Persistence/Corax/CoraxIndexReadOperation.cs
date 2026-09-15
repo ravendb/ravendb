@@ -1154,10 +1154,33 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 mltQuery = IndexSearcher.And(mltQuery, moreLikeThisQuery.FilterQuery);
             }
 
-            if (mltQuery.DuplicatesOccurrenceStatus == DuplicatesOccurrence.Possible)
-                mltQuery = IndexSearcher.DeduplicationMatch(mltQuery);
-            
+            // take counts entries, the loop below counts documents: +1 for the base document, times fanout
+            long take = CoraxConstants.IndexSearcher.TakeAll;
+            if (query.Limit.HasValue)
+            {
+                var maxOutputsPerDocument = Math.Max(1, _maxNumberOfOutputsPerDocument); // zero until the index has run
+                take = query.Start + query.Limit.Value + 1;
+
+                take = take < 0 || take > int.MaxValue / maxOutputsPerDocument // query.Start is unbounded, and take is cast to int below
+                    ? CoraxConstants.IndexSearcher.TakeAll
+                    : take * maxOutputsPerDocument;
+
+                if (take > IndexSearcher.NumberOfEntries)
+                    take = CoraxConstants.IndexSearcher.TakeAll;
+            }
+
+            // SortingMatch memoizes and dedupes its input, so no DeduplicationMatch is needed
+            mltQuery = IndexSearcher.OrderBy(mltQuery, new OrderMetadata(hasBoost: true, MatchCompareFieldType.Score), (int)take, token);
+
             var ravenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (baseDocId.HasValue)
+            {
+                // by id, not by entry: on a fanout index the base document has several entries
+                var baseDocumentId = _documentIdReader.GetTermFor(baseDocId.Value);
+                if (baseDocumentId != null)
+                    ravenIds.Add(baseDocumentId);
+            }
+
             long[] ids = QueryPool.Rent(pageSize);
             var read = 0;
             long returnedDocs = 0;
@@ -1173,10 +1196,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     var hit = ids[i];
                     token.ThrowIfCancellationRequested();
 
-                    if (hit == baseDocId)
-                        continue;
-                    
                     var id = _documentIdReader.GetTermFor(hit);
+                    if (id == null)
+                        continue;
+
                     if (ravenIds.Add(id) == false)
                         continue;
 

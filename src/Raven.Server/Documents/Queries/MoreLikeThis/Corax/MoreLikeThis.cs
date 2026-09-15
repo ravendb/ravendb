@@ -8,7 +8,6 @@ using System.Text;
 using Corax.Analyzers;
 using Corax.Querying.Matches.Meta;
 using Lucene.Net.Util;
-using Raven.Client.Exceptions.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Sparrow.Json;
 using Sparrow.Server;
@@ -149,6 +148,7 @@ internal class RavenMoreLikeThis : MoreLikeThisBase, IDisposable
         var indexSearcher = _builderParameters.IndexSearcher;
         object cur;
         var qterms = 0;
+        var bestScore = 0f;
         IQueryMatch query = null;
         while ((cur = q.Pop()) is not null)
         {
@@ -160,16 +160,22 @@ internal class RavenMoreLikeThis : MoreLikeThisBase, IDisposable
             Debug.Assert(fieldName is not null);
             var term = ar[0] as string;
 
+            // scored matches, so the read path can order by score
+            var fieldMetadata = indexSearcher.GetFieldMetadata(fieldName).ChangeScoringMode(hasBoost: true);
+            IQueryMatch termQuery = indexSearcher.TermQuery(fieldMetadata, term);
+
             if (_boost)
             {
-                throw new NotSupportedInCoraxException("Boosting inside MoreLikeThis is not supported yet.");
+                if (qterms == 0) // the queue pops the best term first
+                    bestScore = (float)ar[2];
+
+                termQuery = indexSearcher.Boost(termQuery, _boostFactor * (float)ar[2] / bestScore);
             }
 
-            var fieldMetadata = indexSearcher.GetFieldMetadata(fieldName);
-            query = query is null 
-                ? indexSearcher.TermQuery(fieldMetadata, term) 
-                : indexSearcher.Or(query, indexSearcher.TermQuery(fieldMetadata, term));
-            
+            query = query is null
+                ? termQuery
+                : indexSearcher.Or(query, termQuery);
+
             qterms++;
 
             if (_maxQueryTerms > 0 && qterms >= _maxQueryTerms)
