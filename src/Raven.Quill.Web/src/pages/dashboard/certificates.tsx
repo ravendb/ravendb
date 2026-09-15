@@ -8,12 +8,7 @@ import { ApiState } from "@/components/data/api-state";
 import { CardListSkeleton } from "@/components/data/loading-skeletons";
 import { CountBadge } from "@/components/data/count-badge";
 import { Button } from "@/components/shadcn/ui/button";
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from "@/components/shadcn/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
 import { CertificateCard } from "@/pages/dashboard/certificates/certificate-card";
 import {
     getCertificateState,
@@ -25,7 +20,6 @@ import { GenerateCertificateDialog } from "@/pages/dashboard/certificates/genera
 import { CERTIFICATES_DOCS_URL } from "@/lib/help-links";
 import { originForSubdomain } from "@/lib/subdomain-origin";
 import { Heading, Text } from "@/components/typography";
-
 
 interface CertificateFilters {
     search: string;
@@ -60,8 +54,8 @@ export function DashboardCertificates() {
                         Certificates
                     </Heading>
                     <Text variant="muted" className="max-w-2xl">
-                        Client certificates provide access to RavenDB databases associated with Quill apps, either
-                        from applications using the RavenDB Client API or from RavenDB Studio in a browser.
+                        Client certificates provide access to RavenDB databases associated with Quill apps, either from
+                        applications using the RavenDB Client API or from RavenDB Studio in a browser.
                         <span className="mt-1 block">
                             <a
                                 href={CERTIFICATES_DOCS_URL}
