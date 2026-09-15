@@ -10,7 +10,6 @@ import { Icon } from "components/common/Icon";
 import genUtils from "common/generalUtils";
 import moment from "moment";
 
-type SmugglerProgress = Raven.Client.Documents.Smuggler.SmugglerProgressBase;
 type SmugglerResult = Raven.Client.Documents.Smuggler.SmugglerResult;
 type Counts = Raven.Client.Documents.Smuggler.SmugglerProgressBase.Counts;
 type OperationStatus = Raven.Client.Documents.Operations.OperationStatus;
@@ -22,7 +21,7 @@ interface ImportResultRow {
 }
 
 interface ImportResultModalProps {
-    progress: SmugglerProgress | null;
+    progress: SmugglerResult | null;
     status: OperationStatus;
     startTime: Date;
     endTime: Date | null;
@@ -31,14 +30,11 @@ interface ImportResultModalProps {
 
 export default function ImportResultModal({ progress, status, startTime, endTime, onClose }: ImportResultModalProps) {
     const rows = buildRows(progress);
-    // hh:mm:ss rather than humanize() - "a few seconds" is useless for comparing import runs
     const duration = genUtils.formatAsTimeSpan(moment(endTime ?? undefined).diff(moment(startTime)));
 
     const [isDetailsVisible, setIsDetailsVisible] = useState(false);
-    // progress updates and the final result are SmugglerResult objects carrying the log lines
-    const messages = (progress as SmugglerResult)?.Messages ?? [];
+    const messages = progress?.Messages ?? [];
 
-    // Knockout parity: reveal the log automatically when the operation fails
     useEffect(() => {
         if (status === "Faulted") {
             setIsDetailsVisible(true);
@@ -151,7 +147,7 @@ function ImportResultTableRow({ row, operationStatus }: { row: ImportResultRow; 
     );
 }
 
-function buildRows(progress: SmugglerProgress): ImportResultRow[] {
+function buildRows(progress: SmugglerResult): ImportResultRow[] {
     if (!progress) {
         return [];
     }
@@ -186,7 +182,6 @@ function getRowStatus(counts: Counts, operationStatus: OperationStatus): { label
     if (operationStatus === "InProgress") {
         return { label: "Processing", icon: <Spinner size="sm" className="me-2" /> };
     }
-    // the operation ended (failed or was canceled) before this item was reached
     return { label: "Not processed", icon: <Icon icon="cancel" color="danger" /> };
 }
 

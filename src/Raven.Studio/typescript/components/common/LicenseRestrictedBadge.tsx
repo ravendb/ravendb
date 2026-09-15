@@ -20,9 +20,6 @@ export default function LicenseRestrictedBadge({ className, licenseRequired }: L
     const iconName = getIconName(licenseRequired, isCloud);
     const popoverMessage = getPopoverMessage(licenseRequired, isCloud);
 
-    // the AI tier is drawn with the shared gradient rather than a flat colour, the same way
-    // FeatureAvailabilitySummary and the chatbot icons mark it - on cloud every tier reads
-    // as Production, so the gradient would misrepresent it there
     const isAiGradient = !isCloud && licenseRequired === "Enterprise AI";
 
     return (

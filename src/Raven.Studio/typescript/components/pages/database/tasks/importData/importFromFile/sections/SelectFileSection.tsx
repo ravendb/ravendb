@@ -39,16 +39,12 @@ export default function SelectFileSection() {
                         setValue("file", files[0] ?? null, { shouldValidate: true, shouldDirty: true })
                     }
                     maxFiles={1}
-                    // backup/snapshot extensions are selectable on purpose - dedicated alerts below
-                    // redirect the user to the Restore flow instead of a generic rejection
                     validExtensions={[
                         "ravendbdump",
                         ...backupExtensions,
                         "ravendb-snapshot",
                         "ravendb-encrypted-snapshot",
                     ]}
-                    // only .ravendbdump is actually importable - the rest are accepted so the
-                    // alerts below can redirect the user to the Restore flow
                     displayedExtensions={["ravendbdump"]}
                 />
                 {fileError && <div className="text-danger mt-2">{fileError}</div>}

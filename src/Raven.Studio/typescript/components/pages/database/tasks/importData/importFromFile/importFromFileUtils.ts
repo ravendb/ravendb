@@ -1,8 +1,11 @@
 import {
     ConnectionStringKey,
+    connectionStringKeys,
     DatabaseSettingKey,
+    databaseSettingKeys,
     ImportFromFileFormData,
     OngoingTaskKey,
+    ongoingTaskKeys,
 } from "./importFromFileValidation";
 import endpoints = require("endpoints");
 import appUrl = require("common/appUrl");
@@ -10,10 +13,11 @@ import appUrl = require("common/appUrl");
 type DatabaseItemType = Raven.Client.Documents.Smuggler.DatabaseItemType;
 type DatabaseRecordItemType = Raven.Client.Documents.Smuggler.DatabaseRecordItemType;
 type ImportOptions = Raven.Client.Documents.Smuggler.DatabaseSmugglerImportOptions;
+type ImportConfiguration = ImportFromFileFormData["configuration"];
 
 export type ImportCommandType = "PowerShell" | "Cmd" | "Bash";
 
-const databaseSettingTokens: Record<DatabaseSettingKey, DatabaseRecordItemType> = {
+export const databaseSettingTokens: Record<DatabaseSettingKey, DatabaseRecordItemType> = {
     settings: "Settings",
     conflictSolverConfig: "ConflictSolverConfig",
     client: "Client",
@@ -29,7 +33,7 @@ const databaseSettingTokens: Record<DatabaseSettingKey, DatabaseRecordItemType> 
     postgreSqlIntegration: "PostgreSQLIntegration",
 };
 
-const ongoingTaskTokens: Record<OngoingTaskKey, DatabaseRecordItemType> = {
+export const ongoingTaskTokens: Record<OngoingTaskKey, DatabaseRecordItemType> = {
     periodicBackups: "PeriodicBackups",
     externalReplications: "ExternalReplications",
     ravenEtls: "RavenEtls",
@@ -47,7 +51,7 @@ const ongoingTaskTokens: Record<OngoingTaskKey, DatabaseRecordItemType> = {
     remoteAttachments: "RemoteAttachments",
 };
 
-const connectionStringTokens: Record<ConnectionStringKey, DatabaseRecordItemType> = {
+export const connectionStringTokens: Record<ConnectionStringKey, DatabaseRecordItemType> = {
     ravenConnectionStrings: "RavenConnectionStrings",
     sqlConnectionStrings: "SqlConnectionStrings",
     snowflakeConnectionStrings: "SnowflakeConnectionStrings",
@@ -143,16 +147,16 @@ export function getDefaultFormData(isAdminAccessOrAbove: boolean): ImportFromFil
 }
 
 function pushGroupTokens<TKey extends string>(
+    keys: readonly TKey[],
     tokens: Record<TKey, DatabaseRecordItemType>,
-    // yup infers the form groups as index signatures, so literal-keyed Records aren't assignable
-    values: Record<string, boolean>,
+    values: Partial<Record<TKey, boolean>>,
     includeAll: boolean,
     result: DatabaseRecordItemType[],
-    excludedKeys: string[] = []
+    excludedKeys: readonly TKey[]
 ) {
-    (Object.keys(tokens) as TKey[]).forEach((key) => {
+    keys.forEach((key) => {
         if (excludedKeys.includes(key)) {
-            return; // license-restricted entries are never emitted
+            return;
         }
         if (includeAll || values[key]) {
             result.push(tokens[key]);
@@ -161,7 +165,7 @@ function pushGroupTokens<TKey extends string>(
 }
 
 export function getDatabaseRecordTypes(
-    formData: ImportFromFileFormData,
+    formData: Pick<ImportFromFileFormData, "configuration">,
     restrictedSettingKeys: DatabaseSettingKey[] = [],
     restrictedOngoingTaskKeys: OngoingTaskKey[] = [],
     restrictedConnectionStringKeys: ConnectionStringKey[] = []
@@ -180,15 +184,9 @@ export function getDatabaseRecordTypes(
         hasRestrictions;
 
     if (!isCustomized) {
-        // Knockout parity: non-customized mode
         return configuration.isIncludeIndexHistory ? ["IndexesHistory"] : ["None"];
     }
 
-    // The customized path was entered ONLY because of license restrictions - the user still asked
-    // for "import all settings". The server expands "None" to its full default record-type list
-    // (which additionally includes LockMode, QueueSinks and IndexesHistory - tokens Studio has no
-    // toggle for), so the explicit list emitted here must be "server defaults minus restricted"
-    // to avoid silently narrowing the import beyond the restricted features.
     const isRestrictionsOnlyBypass =
         configuration.isImportAllSettings &&
         !configuration.isCustomizeOngoingTasks &&
@@ -197,19 +195,27 @@ export function getDatabaseRecordTypes(
 
     const result: DatabaseRecordItemType[] = [];
 
-    (Object.keys(databaseSettingTokens) as (keyof typeof databaseSettingTokens)[]).forEach((key) => {
-        if (restrictedSettingKeys.includes(key)) {
-            return; // license-restricted settings are never emitted
-        }
-        if (configuration.isImportAllSettings || configuration.databaseSettings[key]) {
-            result.push(databaseSettingTokens[key]);
-        }
-    });
+    pushGroupTokens(
+        databaseSettingKeys,
+        databaseSettingTokens,
+        configuration.databaseSettings,
+        configuration.isImportAllSettings,
+        result,
+        restrictedSettingKeys
+    );
 
     if (configuration.isIncludeConnectionStringsAndOngoingTasks) {
         const includeAll = !configuration.isCustomizeOngoingTasks;
-        pushGroupTokens(ongoingTaskTokens, configuration.ongoingTasks, includeAll, result, restrictedOngoingTaskKeys);
         pushGroupTokens(
+            ongoingTaskKeys,
+            ongoingTaskTokens,
+            configuration.ongoingTasks,
+            includeAll,
+            result,
+            restrictedOngoingTaskKeys
+        );
+        pushGroupTokens(
+            connectionStringKeys,
             connectionStringTokens,
             configuration.connectionStrings,
             includeAll,
@@ -219,9 +225,8 @@ export function getDatabaseRecordTypes(
     }
 
     if (isRestrictionsOnlyBypass) {
-        // parity with the server's expansion of "None" - tokens Studio has no toggle for
-        result.push("LockMode", "QueueSinks");
-        result.push("IndexesHistory");
+        // the server expands "None" to these too, and Studio has no toggle for them
+        result.push("LockMode", "QueueSinks", "IndexesHistory");
     } else if (configuration.isIncludeIndexHistory) {
         result.push("IndexesHistory");
     }
@@ -299,17 +304,15 @@ export function toImportDto(
         TransformScript: processing.isUseTransformScript ? processing.transformScript : "",
         RemoveAnalyzers: configuration.isRemoveAnalyzers,
         EncryptionKey: processing.isEncrypted ? processing.encryptionKey : undefined,
-        OperateOnTypes: operateOnTypes.join(",") as DatabaseItemType,
-        OperateOnDatabaseRecordTypes: (databaseRecordTypes.length
-            ? databaseRecordTypes.join(",")
-            : undefined) as DatabaseRecordItemType,
+        OperateOnTypes: operateOnTypes.join(","),
+        OperateOnDatabaseRecordTypes: databaseRecordTypes.length ? databaseRecordTypes.join(",") : undefined,
         Collections: collections.isImportAllCollections ? null : collections.includedCollections,
         MaxReadOpsPerSecond: processing.isSetMaxReadOpsPerSecond ? processing.maxReadOpsPerSecond : null,
     } as ImportOptions;
 }
 
 export function hasAnyInclude(
-    formData: ImportFromFileFormData,
+    formData: Pick<ImportFromFileFormData, "documents" | "configuration">,
     restrictedSettingKeys: DatabaseSettingKey[] = [],
     restrictedOngoingTaskKeys: OngoingTaskKey[] = [],
     restrictedConnectionStringKeys: ConnectionStringKey[] = []
@@ -333,9 +336,6 @@ export function hasAnyInclude(
         d.isIncludeSubscriptions ||
         c.isIncludeIndexes ||
         c.isIncludeIdentities ||
-        // isIncludeConnectionStringsAndOngoingTasks on its own is NOT an include: with every task
-        // and connection string restricted or deselected the import would be a no-op, so the toggle
-        // only counts through the record types it actually yields below
         getDatabaseRecordTypes(
             formData,
             restrictedSettingKeys,
@@ -372,10 +372,6 @@ export function buildImportCurlCommand(
     }
 }
 
-/**
- * Ongoing tasks that cannot work without their connection string. Importing the task alone leaves a
- * task pointing at a connection string that does not exist in the target database.
- */
 const taskConnectionStringDependencies: Partial<Record<OngoingTaskKey, ConnectionStringKey>> = {
     externalReplications: "ravenConnectionStrings",
     hubReplications: "ravenConnectionStrings",
@@ -393,19 +389,21 @@ const taskConnectionStringDependencies: Partial<Record<OngoingTaskKey, Connectio
 };
 
 export function getTasksMissingConnectionStrings(
-    formData: Pick<ImportFromFileFormData, "configuration">,
+    configuration: Pick<
+        ImportConfiguration,
+        "isIncludeConnectionStringsAndOngoingTasks" | "isCustomizeOngoingTasks" | "ongoingTasks" | "connectionStrings"
+    >,
     restrictedOngoingTaskKeys: OngoingTaskKey[] = [],
     restrictedConnectionStringKeys: ConnectionStringKey[] = []
 ): OngoingTaskKey[] {
-    const { configuration } = formData;
-
     if (!configuration.isIncludeConnectionStringsAndOngoingTasks || !configuration.isCustomizeOngoingTasks) {
         return [];
     }
 
-    return (Object.keys(taskConnectionStringDependencies) as OngoingTaskKey[]).filter((taskKey) => {
+    return ongoingTaskKeys.filter((taskKey) => {
         const connectionStringKey = taskConnectionStringDependencies[taskKey];
         return (
+            connectionStringKey &&
             configuration.ongoingTasks[taskKey] &&
             !restrictedOngoingTaskKeys.includes(taskKey) &&
             !restrictedConnectionStringKeys.includes(connectionStringKey) &&
