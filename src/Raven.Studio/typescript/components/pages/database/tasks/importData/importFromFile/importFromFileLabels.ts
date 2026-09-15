@@ -1,11 +1,6 @@
 import IconName from "../../../../../../../typings/server/icons";
 import { ConnectionStringKey, DatabaseSettingKey, OngoingTaskKey } from "./importFromFileValidation";
 
-/**
- * Single source for the human-readable names of every import entry - used by the customize
- * switch rows and by the restriction rules (badges, tooltips), so the two can never drift apart.
- */
-
 export const databaseSettingLabels: Record<DatabaseSettingKey, string> = {
     settings: "Settings",
     conflictSolverConfig: "Conflict Solver Configuration",

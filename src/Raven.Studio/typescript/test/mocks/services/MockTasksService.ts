@@ -23,11 +23,9 @@ export default class MockTasksService extends AutoMockService<TasksService> {
         return this.mockResolvedValue(this.mocks.getOngoingTasks, dto, TasksStubs.getTasksList());
     }
 
-    /** Import-from-file flow: validation passes and the upload completes immediately. */
     withImportDatabaseFromFile() {
         this.mocks.validateSmugglerOptions.mockResolvedValue(undefined);
         this.mocks.getNextOperationId.mockResolvedValue(1234);
-        // only HasRevisionsConfiguration is read by the import view
         this.mocks.getDatabaseForStudio.mockResolvedValue({
             ...DatabasesStubs.nonShardedSingleNodeDatabaseDto(),
             HasRevisionsConfiguration: true,

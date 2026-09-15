@@ -5,15 +5,9 @@ import {
     resolveRestriction,
 } from "./importRestrictions";
 import { ongoingTaskKeys } from "./importFromFileValidation";
+import { LicenseStubs } from "test/stubs/LicenseStubs";
 
-const fullLicense = {
-    HasQueueEtl: true,
-    HasQueueSink: true,
-    HasGenAi: true,
-    HasAiAgent: true,
-    HasRavenEtl: true,
-    HasPullReplicationAsHub: true,
-} as LicenseStatus;
+const fullLicense = LicenseStubs.getStatus();
 
 const context = (overrides?: {
     licenseStatus?: Partial<LicenseStatus>;
@@ -21,7 +15,7 @@ const context = (overrides?: {
     deniedAccess?: boolean;
     isShardingChecked?: boolean;
 }) => ({
-    licenseStatus: { ...fullLicense, ...overrides?.licenseStatus } as LicenseStatus,
+    licenseStatus: { ...fullLicense, ...overrides?.licenseStatus },
     isSharded: overrides?.isSharded ?? false,
     canHandleOperation: () => !overrides?.deniedAccess,
     isShardingChecked: overrides?.isShardingChecked,

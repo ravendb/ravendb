@@ -162,8 +162,6 @@ function AnalysisBody({ summary }: DebugPackageAnalysisViewProps) {
         }
     }, [context]);
 
-    const handleSelectSection = selectSection;
-
     const hasScopeControls =
         (deferredContext === "node" && nodeTags.length > 0) ||
         (deferredContext === "database" && (databaseNames.length > 0 || nodeTags.length > 1));
@@ -270,7 +268,7 @@ function AnalysisBody({ summary }: DebugPackageAnalysisViewProps) {
                 scopeControls={scopeControls}
                 sections={entries}
                 activeSectionId={activeSectionId}
-                onSelectSection={handleSelectSection}
+                onSelectSection={selectSection}
             />
 
             <div className="analysis-content vstack" ref={contentRef}>

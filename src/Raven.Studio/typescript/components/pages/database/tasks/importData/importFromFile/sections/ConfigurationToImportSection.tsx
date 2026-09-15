@@ -64,12 +64,10 @@ export default function ConfigurationToImportSection() {
 
     const tasksMissingConnectionStrings = getTasksMissingConnectionStrings(
         {
-            configuration: {
-                isIncludeConnectionStringsAndOngoingTasks: isIncludeTasks,
-                isCustomizeOngoingTasks: isCustomizeTasks,
-                ongoingTasks,
-                connectionStrings,
-            } as ImportFromFileFormData["configuration"],
+            isIncludeConnectionStringsAndOngoingTasks: isIncludeTasks,
+            isCustomizeOngoingTasks: isCustomizeTasks,
+            ongoingTasks,
+            connectionStrings,
         },
         restrictedOngoingTaskKeys,
         restrictedConnectionStringKeys
@@ -78,8 +76,6 @@ export default function ConfigurationToImportSection() {
     const selectableOngoingTaskKeys = ongoingTaskKeys.filter((key) => !ongoingTaskRestrictions[key]);
     const selectableConnectionStringKeys = connectionStringKeys.filter((key) => !connectionStringRestrictions[key]);
 
-    // the length guard keeps "Select all" from reading as checked when everything is restricted
-    // (every() is vacuously true on an empty array) - possible for e.g. a DatabaseReadWrite user
     const areAllOngoingTasksSelected =
         selectableOngoingTaskKeys.length > 0 && selectableOngoingTaskKeys.every((key) => ongoingTasks[key]);
     const areAllConnectionStringsSelected =
@@ -99,8 +95,6 @@ export default function ConfigurationToImportSection() {
     };
 
     const resetCustomizedTasksToDefault = () => {
-        // restricted rows stay off on their own: useImportFromFileForm bakes false into
-        // defaultValues for every gated key, which is what resetField restores
         ongoingTaskKeys.forEach((key) => resetField(`configuration.ongoingTasks.${key}`));
         connectionStringKeys.forEach((key) => resetField(`configuration.connectionStrings.${key}`));
         setValue("configuration.isCustomizeOngoingTasks", false, { shouldDirty: true });

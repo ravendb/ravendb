@@ -24,7 +24,7 @@ export default function ImportCommandModal({ onClose }: ImportCommandModalProps)
         useImportRestrictions();
     const curlCommand = buildImportCurlCommand(
         commandType,
-        formData as ImportFromFileFormData,
+        formData,
         databaseName,
         restrictedSettingKeys,
         restrictedOngoingTaskKeys,

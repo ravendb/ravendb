@@ -13,7 +13,6 @@ interface RestrictedSwitchProps {
     control: Control<ImportFromFileFormData>;
     name: FieldPath<ImportFromFileFormData>;
     restriction?: ImportRestriction;
-    /** Shown as a warning icon next to the row - the switch stays usable. */
     warning?: ReactNode;
     children: ReactNode;
 }

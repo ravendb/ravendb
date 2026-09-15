@@ -23,8 +23,6 @@ class importParent extends viewModelBase {
         
         this.context = new shardingContext("allShards");
         
-        // the nav-tabs strip is gone from importParent.html - these child routes only route,
-        // they are not navigation entries anymore
         this.router = durandalRouter.createChildRouter()
             .map([
                 {
