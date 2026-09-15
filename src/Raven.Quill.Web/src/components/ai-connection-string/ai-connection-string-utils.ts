@@ -73,8 +73,6 @@ export function getProviderOptions(modelType: AiModelType): FormSelectOption<Pro
 
 const AI_VERSION_VALUES = ["", "V1", "V1_Beta"] as const;
 
-const REASONING_EFFORT_VALUES = ["default", "Minimal", "Low", "Medium", "High"] as const;
-
 const connectionStringObject = z.object({
     name: z.string().trim().min(1, "Name is required"),
     provider: z.enum(PROVIDER_KEYS),
@@ -87,7 +85,7 @@ const connectionStringObject = z.object({
         dimensions: z.number().nullable(),
         embeddingsMaxConcurrentBatches: z.number().nullable(),
         enablePromptCache: z.boolean(),
-        reasoningEffort: z.enum(REASONING_EFFORT_VALUES),
+        reasoningEffort: z.string(),
         isSetTemperature: z.boolean(),
         temperature: z.number().nullable(),
     }),
@@ -231,7 +229,7 @@ export function getDefaultValues(): ConnectionStringFormData {
             dimensions: null,
             embeddingsMaxConcurrentBatches: null,
             enablePromptCache: true,
-            reasoningEffort: "default",
+            reasoningEffort: "",
             isSetTemperature: false,
             temperature: null,
         },
@@ -321,7 +319,7 @@ export function mapFormDataToDto(values: ConnectionStringFormData, modelType: Ai
                     ...(isChat
                         ? {
                               enablePromptCache: settings.enablePromptCache,
-                              reasoningEffort: settings.reasoningEffort === "default" ? null : settings.reasoningEffort,
+                              reasoningEffort: trimOrNull(settings.reasoningEffort),
                               temperature: settings.isSetTemperature ? settings.temperature : null,
                           }
                         : {
@@ -479,7 +477,7 @@ export function mapDtoToFormData(dto: AiConnectionString): ConnectionStringFormD
                 dimensions: settings.dimensions ?? null,
                 embeddingsMaxConcurrentBatches: settings.embeddingsMaxConcurrentBatches ?? null,
                 enablePromptCache: settings.enablePromptCache ?? true,
-                reasoningEffort: settings.reasoningEffort ?? "default",
+                reasoningEffort: text(settings.reasoningEffort),
                 isSetTemperature: settings.temperature != null,
                 temperature: settings.temperature ?? null,
             },
