@@ -245,7 +245,23 @@ export function RemoteAttachmentsAzureFields({ asyncTest }: RemoteAttachmentsDes
                 <FormInput
                     name="azure.accountKey"
                     control={control}
+                    rules={{ deps: "azure.sasToken" }}
                     placeholder="Enter an account key"
+                    type="password"
+                    passwordPreview
+                    autoComplete="off"
+                />
+            </FormGroup>
+
+            <FormGroup>
+                <FormLabel>
+                    SAS token <small className="text-muted fw-light">(instead of account key)</small>
+                </FormLabel>
+                <FormInput
+                    name="azure.sasToken"
+                    control={control}
+                    rules={{ deps: "azure.accountKey" }}
+                    placeholder="Enter a SAS token"
                     type="password"
                     passwordPreview
                     autoComplete="off"
