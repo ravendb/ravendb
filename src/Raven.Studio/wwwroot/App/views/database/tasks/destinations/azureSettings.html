@@ -19,7 +19,7 @@
     </div>
 </div>
 <div class="row margin-bottom" data-bind="validationElement: accountKey">
-    <label class="control-label col-xs-12 col-sm-6 col-lg-4">Account key <i class="required"></i></label>
+    <label class="control-label col-xs-12 col-sm-6 col-lg-4">Account key <i class="required" data-bind="visible: !sasToken()"></i></label>
     <div class="col-xs-12 col-sm-6 col-lg-8" >
         <div class="input-group flex-grow">
             <input data-bind="textInput: accountKey, attr: { type: isKeyHidden() ? 'password' : 'text' }" class="form-control" />
@@ -27,6 +27,22 @@
                 <i class="icon-preview"></i>
             </button>
             <button type="button" class="btn btn-info" data-bind="click: toggleIsKeyHidden, visible: !isKeyHidden()" title="Hide characters">
+                <i class="icon-preview-off"></i>
+            </button>
+        </div>
+    </div>
+</div>
+<div class="row margin-bottom" data-bind="validationElement: sasToken">
+    <label class="control-label col-xs-12 col-sm-6 col-lg-4">
+        SAS token <i class="required" data-bind="visible: !accountKey()"></i> <small class="text-muted">(instead of account key)</small>
+    </label>
+    <div class="col-xs-12 col-sm-6 col-lg-8">
+        <div class="input-group flex-grow">
+            <input data-bind="textInput: sasToken, attr: { type: isSasTokenHidden() ? 'password' : 'text' }" class="form-control" />
+            <button type="button" class="btn btn-default" data-bind="click: toggleIsSasTokenHidden, visible: isSasTokenHidden()" title="View hidden characters">
+                <i class="icon-preview"></i>
+            </button>
+            <button type="button" class="btn btn-info" data-bind="click: toggleIsSasTokenHidden, visible: !isSasTokenHidden()" title="Hide characters">
                 <i class="icon-preview-off"></i>
             </button>
         </div>
