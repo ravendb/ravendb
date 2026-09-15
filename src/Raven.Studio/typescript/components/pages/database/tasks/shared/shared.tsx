@@ -542,8 +542,6 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
         },
     ];
 
-    // Licence badge, sharding support and required access all come from ongoingTaskCapabilities,
-    // shared with the import-from-file restrictions.
     const capabilitiesOf = (
         target: OngoingTaskTarget,
         customDisabledReason?: ReactNode

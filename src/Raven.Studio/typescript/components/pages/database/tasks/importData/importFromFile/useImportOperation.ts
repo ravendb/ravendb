@@ -12,11 +12,11 @@ import { useImportRestrictions } from "./useImportRestrictions";
 import { hasAnyInclude, toImportDto } from "./importFromFileUtils";
 import { ImportFromFileFormData } from "./importFromFileValidation";
 
-type SmugglerProgress = Raven.Client.Documents.Smuggler.SmugglerProgressBase;
+type SmugglerResult = Raven.Client.Documents.Smuggler.SmugglerResult;
 type OperationStatus = Raven.Client.Documents.Operations.OperationStatus;
 
 export interface OperationState {
-    progress: SmugglerProgress | null;
+    progress: SmugglerResult | null;
     status: OperationStatus;
     startTime: Date;
     endTime: Date | null;
@@ -35,7 +35,6 @@ export function useImportOperation() {
 
     const isUploading = uploadPercent != null;
 
-    // the import outlives the view: every async callback below has to check before touching state
     const isMounted = useIsMounted();
 
     const startImport = async (formData: ImportFromFileFormData) => {
@@ -91,7 +90,7 @@ export function useImportOperation() {
         setIsResultModalOpen(true);
         setUploadPercent(0);
 
-        const monitor = notificationCenter.instance.monitorOperation<SmugglerProgress>(
+        const monitor = notificationCenter.instance.monitorOperation<SmugglerResult>(
             databaseName,
             operationId,
             (progress) => {
@@ -102,7 +101,7 @@ export function useImportOperation() {
         );
 
         monitor
-            .done((result: SmugglerProgress) => {
+            .done((result: SmugglerResult) => {
                 if (isMounted()) {
                     setOperationState((prev) =>
                         prev ? { ...prev, progress: result, status: "Completed", endTime: new Date() } : prev
@@ -123,8 +122,7 @@ export function useImportOperation() {
                     return;
                 }
                 setUploadPercent(Math.round(percent));
-                // Knockout parity: hide the bar shortly after the upload itself completes - the
-                // request stays open until the server-side import finishes, which can take minutes
+                // the request stays open until the server-side import finishes
                 if (percent === 100) {
                     setTimeout(() => {
                         if (isMounted()) {
@@ -134,8 +132,7 @@ export function useImportOperation() {
                 }
             });
         } catch {
-            // the command reports the upload error itself; if the upload died before the server
-            // registered any progress, monitorOperation will never settle - mark Faulted ourselves
+            // when the upload fails before the server registers progress, monitorOperation never settles
             if (isMounted()) {
                 setOperationState((prev) =>
                     prev && prev.status === "InProgress" && !prev.progress
@@ -150,16 +147,13 @@ export function useImportOperation() {
         }
     };
 
-    // Knockout parity: refresh revisions config when import enabled it
-    const refreshRevisionsConfigurationWhenDone = (monitor: JQueryPromise<SmugglerProgress>) => {
+    const refreshRevisionsConfigurationWhenDone = (monitor: JQueryPromise<SmugglerResult>) => {
         const db = activeDatabaseTracker.default.database();
         if (!db || db.hasRevisionsConfiguration()) {
             return;
         }
 
         monitor.done(async () => {
-            // a rejection here would surface as an unhandled promise rejection inside a
-            // jQuery done callback - the refresh is best-effort, so swallow the failure
             try {
                 const dbInfo = await tasksService.getDatabaseForStudio(databaseName);
                 if (dbInfo.HasRevisionsConfiguration) {
@@ -167,7 +161,7 @@ export function useImportOperation() {
                     collectionsTracker.default.configureRevisions(db);
                 }
             } catch {
-                // ignore - the revisions config will refresh on the next full load
+                // best-effort refresh
             }
         });
     };

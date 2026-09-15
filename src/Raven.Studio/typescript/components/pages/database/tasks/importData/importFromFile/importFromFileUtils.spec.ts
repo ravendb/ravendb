@@ -20,6 +20,7 @@ import {
     allConnectionStringTokens,
     allOngoingTaskTokens,
     allSettingTokens,
+    operateOnTypesOf,
     without,
 } from "./importFromFileTestUtils";
 
@@ -94,12 +95,8 @@ describe("importFromFileUtils", () => {
         it("emits only checked tasks and connection strings in customize-tasks mode", () => {
             const data = createDefaultFormData();
             data.configuration.isCustomizeOngoingTasks = true;
-            Object.keys(data.configuration.ongoingTasks).forEach((key) => {
-                data.configuration.ongoingTasks[key as keyof typeof data.configuration.ongoingTasks] = false;
-            });
-            Object.keys(data.configuration.connectionStrings).forEach((key) => {
-                data.configuration.connectionStrings[key as keyof typeof data.configuration.connectionStrings] = false;
-            });
+            ongoingTaskKeys.forEach((key) => (data.configuration.ongoingTasks[key] = false));
+            connectionStringKeys.forEach((key) => (data.configuration.connectionStrings[key] = false));
             data.configuration.ongoingTasks.ravenEtls = true;
             const types = getDatabaseRecordTypes(data);
             expect(types).toContain("RavenEtls");
@@ -172,7 +169,7 @@ describe("importFromFileUtils", () => {
     describe("toImportDto", () => {
         it("maps default form data like Knockout defaults", () => {
             const dto = toImportDto(createDefaultFormData());
-            const types = (dto.OperateOnTypes as string).split(",");
+            const types = operateOnTypesOf(dto);
             expect(types).toEqual(
                 expect.arrayContaining([
                     "DatabaseRecord",
@@ -470,42 +467,44 @@ describe("importFromFileUtils", () => {
             const data = createDefaultFormData();
             data.configuration.isCustomizeOngoingTasks = false;
             connectionStringKeys.forEach((key) => (data.configuration.connectionStrings[key] = false));
-            expect(getTasksMissingConnectionStrings(data)).toEqual([]);
+            expect(getTasksMissingConnectionStrings(data.configuration)).toEqual([]);
         });
 
         it("returns nothing when tasks are excluded entirely", () => {
             const data = createCustomizedData();
             data.configuration.isIncludeConnectionStringsAndOngoingTasks = false;
             connectionStringKeys.forEach((key) => (data.configuration.connectionStrings[key] = false));
-            expect(getTasksMissingConnectionStrings(data)).toEqual([]);
+            expect(getTasksMissingConnectionStrings(data.configuration)).toEqual([]);
         });
 
         it("reports a task whose connection string is deselected", () => {
             const data = createCustomizedData();
             data.configuration.ongoingTasks.sqlEtls = true;
             data.configuration.connectionStrings.sqlConnectionStrings = false;
-            expect(getTasksMissingConnectionStrings(data)).toContain("sqlEtls");
+            expect(getTasksMissingConnectionStrings(data.configuration)).toContain("sqlEtls");
         });
 
         it("does not report a task whose connection string is selected", () => {
             const data = createCustomizedData();
             data.configuration.ongoingTasks.sqlEtls = true;
             data.configuration.connectionStrings.sqlConnectionStrings = true;
-            expect(getTasksMissingConnectionStrings(data)).not.toContain("sqlEtls");
+            expect(getTasksMissingConnectionStrings(data.configuration)).not.toContain("sqlEtls");
         });
 
         it("ignores restricted tasks - their data is never emitted", () => {
             const data = createCustomizedData();
             data.configuration.ongoingTasks.olapEtls = true;
             data.configuration.connectionStrings.olapConnectionStrings = false;
-            expect(getTasksMissingConnectionStrings(data, ["olapEtls"])).not.toContain("olapEtls");
+            expect(getTasksMissingConnectionStrings(data.configuration, ["olapEtls"])).not.toContain("olapEtls");
         });
 
         it("ignores tasks whose connection string is itself restricted", () => {
             const data = createCustomizedData();
             data.configuration.ongoingTasks.olapEtls = true;
             data.configuration.connectionStrings.olapConnectionStrings = false;
-            expect(getTasksMissingConnectionStrings(data, [], ["olapConnectionStrings"])).not.toContain("olapEtls");
+            expect(getTasksMissingConnectionStrings(data.configuration, [], ["olapConnectionStrings"])).not.toContain(
+                "olapEtls"
+            );
         });
     });
 
@@ -535,19 +534,19 @@ describe("importFromFileUtils", () => {
     describe("importFromFileSchema", () => {
         it("accepts a .ravendbdump file", async () => {
             await expect(
-                importFromFileSchema.validateAt("file", { file: { name: "x.ravendbdump" } as File })
+                importFromFileSchema.validateAt("file", { file: new File([], "x.ravendbdump") })
             ).resolves.toBeDefined();
         });
 
         it("rejects a RavenDB Snapshot file", async () => {
             await expect(
-                importFromFileSchema.validateAt("file", { file: { name: "x.ravendb-snapshot" } as File })
+                importFromFileSchema.validateAt("file", { file: new File([], "x.ravendb-snapshot") })
             ).rejects.toThrow(/Snapshot/);
         });
 
         it("rejects a RavenDB Encrypted Snapshot file", async () => {
             await expect(
-                importFromFileSchema.validateAt("file", { file: { name: "x.ravendb-encrypted-snapshot" } as File })
+                importFromFileSchema.validateAt("file", { file: new File([], "x.ravendb-encrypted-snapshot") })
             ).rejects.toThrow(/Snapshot/);
         });
     });

@@ -30,9 +30,6 @@ export function useImportFromFileForm() {
         hasAnyRestriction,
     } = useImportRestrictions();
 
-    // License state normally lives in Redux before mount, so the defaults are deterministic:
-    // restricted settings, ongoing tasks, connection strings and document toggles start unchecked.
-    // If the license status arrives (or changes) after mount, the effect below re-applies the gating.
     const defaults = getDefaultFormData(isAdminAccessOrAbove);
     restrictedSettingKeys.forEach((settingKey) => {
         defaults.configuration.databaseSettings[settingKey] = false;
@@ -47,8 +44,6 @@ export function useImportFromFileForm() {
         defaults.documents[toggleKey] = false;
     });
 
-    // Restricted rows live inside the "Customize" panels, so expand them up front - otherwise the
-    // user sees "Include Connection Strings & Ongoing Tasks" on with no hint that parts are off.
     if (hasAnyRestriction) {
         defaults.configuration.isCustomizeOngoingTasks = true;
         defaults.configuration.isImportAllSettings = false;
@@ -62,9 +57,6 @@ export function useImportFromFileForm() {
 
     const { control, setValue } = form;
 
-    // If the license status transitions after mount (e.g. it wasn't loaded yet when the view was
-    // deep-linked), re-apply the gating: newly restricted fields go off, newly allowed fields go
-    // back to their defaults. Restricted inputs are disabled in the UI, so no user intent is lost.
     const prevRestricted = useRef<{
         settings: Set<DatabaseSettingKey>;
         tasks: Set<OngoingTaskKey>;
@@ -135,11 +127,6 @@ export function useImportFromFileForm() {
             }
         });
 
-        // Newly gated rows sit inside the "Customize" panels, so expand them the same way the
-        // mount-time defaults do - otherwise the rows switch off behind a collapsed panel.
-        // Gated on an actual diff: the license status object gets a fresh identity on unrelated
-        // store updates (e.g. cluster topology notifications), and re-applying the expansion
-        // unconditionally would silently revert the user's customize choices.
         if (hasNewRestriction) {
             setValue("configuration.isCustomizeOngoingTasks", true);
             setValue("configuration.isImportAllSettings", false);
@@ -157,18 +144,12 @@ export function useImportFromFileForm() {
     const configuration = useWatch({ control, name: "configuration" });
     const isUseTransformScript = useWatch({ control, name: "processing.isUseTransformScript" });
 
-    // Knockout parity: disabling documents forces attachments off (the reverse direction -
-    // enabling counters/revisions/time series/attachments forcing documents on - is handled
-    // via FormSwitch afterChange in DataToImportSection, matching Knockout's directional
-    // subscriptions).
     useEffect(() => {
         if (!documents.isIncludeDocuments) {
             setValue("documents.isIncludeAttachments", false);
         }
     }, [documents.isIncludeDocuments, setValue]);
 
-    // Knockout parity: disabling indexes forces analyzer-removal and index-history off (the
-    // reverse direction is handled via FormSwitch afterChange in DataToImportSection).
     useEffect(() => {
         if (!configuration.isIncludeIndexes) {
             setValue("configuration.isRemoveAnalyzers", false);

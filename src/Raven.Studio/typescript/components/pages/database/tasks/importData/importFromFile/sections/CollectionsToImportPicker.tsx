@@ -10,26 +10,16 @@ import { FormInput } from "components/common/Form";
 import InnerForm from "components/common/InnerForm";
 import { ImportFromFileFormData } from "../importFromFileValidation";
 
-/**
- * Collections to import, typed in by hand: the server cannot list a dump file's collections before
- * the upload, so there is nothing to pick from. Two separate inputs on purpose - one adds a name,
- * the other only narrows the rows already added.
- */
 export default function CollectionsToImportPicker() {
     const { control: importControl, setValue, getValues } = useFormContext<ImportFromFileFormData>();
 
     const includedCollections = useWatch({ control: importControl, name: "collections.includedCollections" }) ?? [];
 
-    // Rows live in local state so deselecting only turns the toggle off - the trash icon removes
-    // the row entirely. The picker unmounts whenever "Import all collections" is active, so the
-    // rows are re-seeded from the form's included list on mount.
     const [manualCollections, setManualCollections] = useState<string[]>(
         () => getValues("collections.includedCollections") ?? []
     );
     const [addedCount, setAddedCount] = useState(0);
 
-    // A form of its own, separate from the page's import form: its only field is the name being
-    // typed, which is never submitted to the server - it just appends a row.
     const addCollectionForm = useForm({
         resolver: yupResolver(getAddCollectionSchema(manualCollections)),
         defaultValues: { collectionName: "" },
@@ -55,16 +45,11 @@ export default function CollectionsToImportPicker() {
         setManualCollections((prev) => [...prev, trimmed]);
         setIncludedCollections([...includedCollections, trimmed]);
         setAddedCount((prev) => prev + 1);
-        // setValue rather than reset: it clears the field without unregistering it, so the input
-        // keeps the ref that setFocus needs.
         setAddValue("collectionName", "");
         clearErrors("collectionName");
     };
 
-    // FormInput disables itself while the add form is submitting, and a disabled input silently
-    // ignores focus() - so refocusing is deferred until isSubmitting drops back to false. Counting
-    // additions rather than watching the list length keeps the trash icon from pulling focus back
-    // into the input.
+    // a disabled input ignores focus(), so wait until the add form has finished submitting
     const { isSubmitting: isAddSubmitting } = useFormState({ control: addControl });
 
     useEffect(() => {
@@ -183,7 +168,6 @@ interface FilterCollectionsFormData {
     filter: string;
 }
 
-// takes the current rows so the duplicate check is part of validation rather than a disabled button
 const getAddCollectionSchema = (existingCollections: string[]) =>
     yup.object({
         collectionName: yup
