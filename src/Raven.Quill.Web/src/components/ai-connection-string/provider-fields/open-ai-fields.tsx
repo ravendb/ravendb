@@ -2,7 +2,6 @@ import { useFormContext, useWatch } from "react-hook-form";
 import type { AiModelType } from "@/api/generated/server-api";
 import { FormAutocomplete } from "@/components/form/form-autocomplete";
 import { FormInput } from "@/components/form/form-input";
-import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
 import type { ConnectionStringFormData } from "@/components/ai-connection-string/ai-connection-string-utils";
 import { useIsModelLocked } from "@/components/ai-connection-string/model-lock-context";
 import { AdvancedFields } from "@/components/ai-connection-string/provider-fields/advanced-fields";
@@ -17,13 +16,7 @@ import { useAiModelOptions } from "@/components/ai-connection-string/use-ai-mode
 
 const ENDPOINTS = ["https://api.openai.com/v1/"];
 
-const REASONING_EFFORT_OPTIONS: FormSelectOption<ConnectionStringFormData["openAiSettings"]["reasoningEffort"]>[] = [
-    { value: "default", label: "Default" },
-    { value: "Minimal", label: "Minimal" },
-    { value: "Low", label: "Low" },
-    { value: "Medium", label: "Medium" },
-    { value: "High", label: "High" },
-];
+const REASONING_EFFORTS = ["none", "minimal", "low", "medium", "high", "xhigh", "max"];
 
 export function OpenAiFields({ modelType }: { modelType: AiModelType }) {
     const { control, getValues } = useFormContext<ConnectionStringFormData>();
@@ -35,7 +28,7 @@ export function OpenAiFields({ modelType }: { modelType: AiModelType }) {
         settings.endpoint ||
         settings.organizationId ||
         settings.projectId ||
-        settings.reasoningEffort !== "default" ||
+        settings.reasoningEffort ||
         settings.isSetTemperature ||
         settings.dimensions != null ||
         settings.embeddingsMaxConcurrentBatches != null,
@@ -118,12 +111,13 @@ export function OpenAiFields({ modelType }: { modelType: AiModelType }) {
                 />
                 {isChat ? (
                     <>
-                        <FormSelect
+                        <FormAutocomplete
                             control={control}
                             name="openAiSettings.reasoningEffort"
-                            label="Reasoning effort"
-                            options={REASONING_EFFORT_OPTIONS}
-                            description="How much the model reasons before answering. Applies to reasoning models only."
+                            label="Reasoning effort (optional)"
+                            placeholder="Select a reasoning effort or enter a new one"
+                            options={REASONING_EFFORTS}
+                            description="Sent to the provider as is. Model families accept different values, and OpenAI accepts lowercase only. Leave empty for the model default."
                         />
                         <PromptCacheField baseName="openAiSettings" />
                         <TemperatureField baseName="openAiSettings" />
