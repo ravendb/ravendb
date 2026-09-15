@@ -91,6 +91,7 @@ function mapFromDto(dto: RemoteAttachmentsConfiguration): RemoteAttachmentsFormD
                         ...defaultAzureFormData,
                         accountName: azureConfig.AccountName,
                         accountKey: azureConfig.AccountKey,
+                        sasToken: azureConfig.SasToken,
                         storageContainer: azureConfig.StorageContainer,
                         remoteFolderName: azureConfig.RemoteFolderName,
                     },
