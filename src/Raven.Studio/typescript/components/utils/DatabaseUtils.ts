@@ -1,6 +1,7 @@
 ﻿import { DatabaseLocalInfo, DatabaseSharedInfo, MergedDatabaseState } from "components/models/databases";
 import BackupInfo = Raven.Client.ServerWide.Operations.BackupInfo;
 import moment from "moment";
+import genUtils from "common/generalUtils";
 import { locationAwareLoadableData } from "components/models/common";
 
 export default class DatabaseUtils {
@@ -137,7 +138,7 @@ export default class DatabaseUtils {
         const diff = moment().utc().diff(dateInUtc);
         const durationInSeconds = moment.duration(diff).asSeconds();
 
-        const backupDate = moment.utc(backupInfo.LastBackup).local().fromNow();
+        const backupDate = genUtils.formatDurationByDate(dateInUtc, true);
 
         const text = `Backed up ${backupDate}`;
 

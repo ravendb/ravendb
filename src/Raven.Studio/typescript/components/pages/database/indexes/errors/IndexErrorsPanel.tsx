@@ -240,7 +240,7 @@ function IndexErrorsPanelDetailsStatus({
                                     </div>
                                     <div className="index-errors-details-tooltip__container">
                                         <b>Relative: </b>
-                                        <time>{moment(newestDate).fromNow()}</time>
+                                        <time>{genUtils.formatDurationByDate(moment.utc(newestDate), true)}</time>
                                     </div>
                                 </>
                             }

@@ -37,7 +37,7 @@ export default function CellDateWithRelativeTime({ value }: CellDateWithRelative
         >
             <small className="vstack cell-value value-string">
                 <span>{moment(dateValue).format(genUtils.dateFormat)}</span>
-                <small>{moment(dateValue).fromNow()}</small>
+                <small>{genUtils.formatDurationByDate(moment.utc(dateValue), true)}</small>
             </small>
         </PopoverWithHoverWrapper>
     );

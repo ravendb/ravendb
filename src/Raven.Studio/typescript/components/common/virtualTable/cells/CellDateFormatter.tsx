@@ -59,7 +59,7 @@ export function DateFormatterCell<TData, TValue>({
                     </div>
                     <div className="index-errors-details-tooltip__container">
                         <b>Relative: </b>
-                        <time>{moment(dateValue).fromNow()}</time>
+                        <time>{genUtils.formatDurationByDate(moment.utc(dateValue), true)}</time>
                     </div>
                 </>
             }
